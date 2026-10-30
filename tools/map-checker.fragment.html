@@ -91,6 +91,7 @@ textarea { min-height: 70px; resize: vertical; }
       <div class="chip seg" style="padding:0" role="group" aria-label="Tool">
         <button id="t-sel" aria-pressed="true">Inspect</button><button id="t-add" aria-pressed="false">Add connection</button><button id="t-shape" aria-pressed="false">Edit shapes</button>
       </div>
+      <button class="chip" id="chk-chip" title="Jump to the next area that is not checked yet" style="cursor:pointer"></button>
       <div class="chip" id="mode-hint" hidden></div>
     </div>
     <div class="readout" id="readout">Scroll to zoom, drag to pan.</div>
@@ -120,13 +121,13 @@ const ZN = { 5: '5th Panzer Army', 6: '6th Panzer Army', 7: '7th Army' };
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const ek = (a, b) => (a < b ? a + '-' + b : b + '-' + a);
 const orig = { areas: clone(DATA.areas), edges: clone(DATA.edges), polys: clone(DATA.polys) };
-let areas = clone(DATA.areas), edges = clone(DATA.edges), notes = {}, polys = clone(DATA.polys);
+let areas = clone(DATA.areas), edges = clone(DATA.edges), notes = {}, polys = clone(DATA.polys), checked = {};
 const STORE = 'fab-map-checker-v1';
-try { const s = JSON.parse(localStorage.getItem(STORE) || 'null'); if (s && s.areas) { areas = s.areas; edges = s.edges; notes = s.notes || {}; if (s.polys) polys = s.polys; } } catch (e) {}
-function save() { try { localStorage.setItem(STORE, JSON.stringify({ areas, edges, notes, polys })); } catch (e) {} }
+try { const s = JSON.parse(localStorage.getItem(STORE) || 'null'); if (s && s.areas) { areas = s.areas; edges = s.edges; notes = s.notes || {}; if (s.polys) polys = s.polys; if (s.checked) checked = s.checked; } } catch (e) {}
+function save() { try { localStorage.setItem(STORE, JSON.stringify({ areas, edges, notes, polys, checked })); } catch (e) {} }
 const byId = () => Object.fromEntries(areas.map((a) => [a.id, a]));
 let A = byId();
-const L = { conn: 'focus', dim: true, image: true, imgop: 100, zones: true, outlines: true, roads: true, fields: true, ticks: true, nums: true, names: false, tdn: false, entry: true };
+const L = { chk: 'show', conn: 'focus', dim: true, image: true, imgop: 100, zones: true, outlines: true, roads: true, fields: true, ticks: true, nums: true, names: false, tdn: false, entry: true };
 let tab = 'sel', tool = 'sel', sel = null, addFrom = null, selV = null, vdrag = null, sdrag = null, raf = 0, view = { x: 0, y: 0, w: W };
 function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
 const zone = (id) => A[id].zone;
@@ -153,8 +154,10 @@ function draw() {
   const k = Math.min(1.6, Math.max(0.55, sc * 1.1));
   const selA = sel && sel.type === 'area' ? sel.id : null, selE = sel && sel.type === 'edge' ? sel.key : null, nbSet = new Set(selA != null ? nbrs(selA) : []);
   g.edges.setAttribute('opacity', L.conn === 'focus' && selA == null && selE == null ? 0.5 : 1);
+  const hidden = (id) => L.chk === 'hide' && checked[id] && !(sel && sel.type === 'area' && sel.id === id), dimmed = (id) => L.chk === 'dim' && checked[id];
   if (L.zones || L.outlines) for (const a of areas) {
-    const near = selA == null || !L.dim || a.id === selA || nbSet.has(a.id), edited = JSON.stringify(polys[a.id]) !== JSON.stringify(orig.polys[a.id]);
+    if (hidden(a.id)) continue;
+    const near = !dimmed(a.id) && (selA == null || !L.dim || a.id === selA || nbSet.has(a.id)), edited = JSON.stringify(polys[a.id]) !== JSON.stringify(orig.polys[a.id]);
     const p = el('polygon', { points: pstr(a.id), 'data-area': a.id, fill: L.zones ? ZC[a.zone] : 'transparent', 'fill-opacity': L.zones ? (a.id === selA ? 0.42 : near ? 0.28 : 0.07) : 0, stroke: L.outlines ? (edited ? '#ffd400' : ZC[a.zone]) : 'none', 'stroke-opacity': near ? 1 : 0.35, 'stroke-width': (a.id === selA ? 3.6 : 2.2) * k, 'stroke-linejoin': 'round' }, g.zones);
     p.style.cursor = 'pointer';
   }
@@ -170,6 +173,8 @@ function draw() {
     const road = e.connection === 'road';
     if ((road && !L.roads) || (!road && !L.fields) || L.conn === 'off') continue;
     if (L.conn === 'focus' && selA != null && e.a !== selA && e.b !== selA) continue;
+    if (L.chk === 'hide' && checked[e.a] && checked[e.b] && !(selA === e.a || selA === e.b)) continue;
+    if (L.chk === 'dim' && checked[e.a] && checked[e.b]) { el('polyline', { points: pa.join(',') + ' ' + m.join(',') + ' ' + pb.join(','), fill: 'none', stroke: '#000', 'stroke-opacity': 0.14, 'stroke-width': 2 * k }, g.edges); continue; }
     if (L.conn === 'focus' && selE != null && ek(e.a, e.b) !== selE) continue;
     const pts = pa[0] + ',' + pa[1] + ' ' + m[0] + ',' + m[1] + ' ' + pb[0] + ',' + pb[1];
     const key = ek(e.a, e.b), isSel = sel && sel.type === 'edge' && sel.key === key;
@@ -192,8 +197,10 @@ function draw() {
     if (notes['e' + key]) el('circle', { cx: m[0] + 10 * k, cy: m[1] - 10 * k, r: 4 * k, fill: '#ff3b30', stroke: '#fff', 'stroke-width': 1 * k, 'pointer-events': 'none' }, g.ticks);
   }
   for (const a of areas) {
+    if (hidden(a.id)) continue;
     const p = a.seed, isSel = sel && sel.type === 'area' && sel.id === a.id, r = 13 * k;
-    const bg = el('g', { 'data-area': a.id, transform: 'translate(' + p[0] + ',' + p[1] + ')' }, g.badges); bg.style.cursor = 'pointer';
+    const bg = el('g', { 'data-area': a.id, transform: 'translate(' + p[0] + ',' + p[1] + ')' }, g.badges); bg.style.cursor = 'pointer'; if (dimmed(a.id)) bg.setAttribute('opacity', 0.35);
+    if (checked[a.id]) { el('circle', { cx: r * 0.85, cy: -r * 0.85, r: 7.5 * k, fill: '#1a9d5c', stroke: '#fff', 'stroke-width': 1.5 * k }, bg); const ck = el('text', { x: r * 0.85, y: -r * 0.85 + 3.6 * k, 'text-anchor': 'middle', 'font-size': 10 * k, 'font-weight': 700, fill: '#fff' }, bg); ck.textContent = '\u2713'; }
     if (addFrom === a.id) el('circle', { r: r + 9 * k, fill: 'none', stroke: '#ffd400', 'stroke-width': 3 * k }, bg);
     if (isSel) el('circle', { r: r + 7 * k, fill: 'none', stroke: '#0a84ff', 'stroke-width': 3.5 * k }, bg);
     if (L.nums) {
@@ -258,6 +265,9 @@ function svgPt(cx, cy) { const p = svg.createSVGPoint(); p.x = cx; p.y = cy; ret
 function zoomAt(cx, cy, f) {
   const before = svgPt(cx, cy), nw = Math.min(W * 1.3, Math.max(180, view.w * f)), ratio = nw / view.w;
   view.x = before.x - (before.x - view.x) * ratio; view.y = before.y - (before.y - view.y) * ratio; view.w = nw; draw(); }
+function toggleChecked(id) { if (checked[id]) delete checked[id]; else checked[id] = true; save(); updateChip(); draw(); render(); }
+function gotoNext(from) { const order = areas.map((a) => a.id), n = order.length, i = Math.max(0, order.indexOf(from)); for (let k = 1; k <= n; k++) { const id = order[(i + k) % n]; if (!checked[id]) { sel = { type: 'area', id }; tab = 'sel'; selV = null; focus(id, 560); updateChip(); render(); return; } } updateChip(); draw(); render(); }
+function updateChip() { const n = Object.keys(checked).length, c = $('#chk-chip'); if (c) c.innerHTML = '<span class="muted">Checked</span> <b class="mono">' + n + ' / ' + areas.length + '</b>' + (n === areas.length ? ' \u2713' : ' <span class="muted">\u2192 next</span>'); }
 function focus(id, zoom) { const p = pos(id); const nw = zoom || Math.min(view.w, 520); view.w = nw; const h = nw * H / W; view.x = p[0] - nw / 2; view.y = p[1] - h / 2; draw(); }
 
 /* ---------- pointer handling ---------- */
@@ -319,7 +329,9 @@ function renderSel() {
   if (!sel) { pane.innerHTML = '<div><h3>Nothing selected</h3><p class="hint">Click an area badge, a connection line or its marker on the map. Connections show the road or field link in the middle, and the boundary type where it crosses: blue is a river, white is open ground, magenta dashes mark an army boundary, brown hatch is the restricted boundary. Yellow rings are connections I added by hand.</p></div><div class="hint">Edit anything that does not match the printed map, or just leave a note. Everything you change is saved in this browser and listed under Export.</div>'; return; }
   if (sel.type === 'area') {
     const a = A[sel.id], ns = nbrs(a.id), key = 'a' + a.id, od = orig.areas.find((x) => x.id === a.id);
+    const edited = JSON.stringify(polys[a.id]) !== JSON.stringify(orig.polys[a.id]) || JSON.stringify(a) !== JSON.stringify(od);
     pane.innerHTML = '<div><div class="muted mono">AREA ' + a.id + '</div><h3>' + a.name + '</h3></div>' +
+      '<div class="row"><button class="btn ' + (checked[a.id] ? '' : 'primary') + '" id="b-chk">' + (checked[a.id] ? '\u2713 Checked' + (edited ? ' (edited)' : '') + ' \u2013 click to undo' : 'Mark as checked' + (edited ? ' (edited)' : '')) + '</button><button class="btn" id="b-chknext">' + (checked[a.id] ? 'Next unchecked' : 'Confirm and next') + '</button></div>' +
       '<div class="kv"><label>Zone</label><select id="f-zone"><option value="5">5 · 5th Panzer Army</option><option value="6">6 · 6th Panzer Army</option><option value="7">7 · 7th Army</option></select>' +
       '<label>TDN</label><select id="f-tdn"><option>0</option><option>1</option><option>2</option><option>3</option></select>' +
       '<label>Allied VP</label><input type="number" min="0" max="5" id="f-va" value="' + a.vp.allied + '"><label>German VP</label><input type="number" min="0" max="5" id="f-vg" value="' + a.vp.german + '">' +
@@ -332,6 +344,8 @@ function renderSel() {
     $('#f-zone').value = a.zone; $('#f-tdn').value = a.tdn;
     $('#f-zone').onchange = (e) => { a.zone = +e.target.value; save(); draw(); }; $('#f-tdn').onchange = (e) => { a.tdn = +e.target.value; save(); };
     $('#f-va').onchange = (e) => { a.vp.allied = +e.target.value; save(); }; $('#f-vg').onchange = (e) => { a.vp.german = +e.target.value; save(); }; $('#f-vm').onchange = (e) => { a.vp.mutual = e.target.checked; save(); };
+    $('#b-chk').onclick = () => { toggleChecked(a.id); };
+    $('#b-chknext').onclick = () => { if (!checked[a.id]) { checked[a.id] = true; save(); } gotoNext(a.id); };
     $('#b-add').onclick = () => { addFrom = a.id; setTool('add', true); draw(); }; $('#b-center').onclick = () => focus(a.id);
     const bi = (id, fn) => { const e = $('#' + id); if (e) e.onclick = fn; };
     bi('b-shape', () => { setTool('shape'); selV = null; draw(); render(); }); bi('b-redraw', () => startRedraw(a.id)); bi('b-undo', undo);
@@ -355,7 +369,8 @@ function renderSel() {
 }
 function renderLayers() {
   const cb = (k, label, sw) => '<label><input type="checkbox" data-l="' + k + '" ' + (L[k] ? 'checked' : '') + '> ' + label + '</label>';
-  pane.innerHTML = '<div><h2>Connections</h2><div class="seg" id="s-conn2"><button data-v="focus" aria-pressed="' + (L.conn === 'focus') + '">Selected area only</button><button data-v="all" aria-pressed="' + (L.conn === 'all') + '">All</button><button data-v="off" aria-pressed="' + (L.conn === 'off') + '">Hidden</button></div><p class="hint">With no area selected, "Selected area only" shows every connection faintly. Select an area to see just its own.</p></div>' +
+  pane.innerHTML = '<div><h2>Checked areas</h2><div class="seg" id="s-chk"><button data-v="show" aria-pressed="' + (L.chk === 'show') + '">Show</button><button data-v="dim" aria-pressed="' + (L.chk === 'dim') + '">Dim</button><button data-v="hide" aria-pressed="' + (L.chk === 'hide') + '">Hide</button></div><p class="hint">Mark an area as checked in its panel. Dim fades checked areas, Hide removes them (and connections between two checked areas) so only unfinished work stays visible. The selected area always stays visible.</p></div>' +
+    '<div><h2>Connections</h2><div class="seg" id="s-conn2"><button data-v="focus" aria-pressed="' + (L.conn === 'focus') + '">Selected area only</button><button data-v="all" aria-pressed="' + (L.conn === 'all') + '">All</button><button data-v="off" aria-pressed="' + (L.conn === 'off') + '">Hidden</button></div><p class="hint">With no area selected, "Selected area only" shows every connection faintly. Select an area to see just its own.</p></div>' +
     '<div><h2>Show</h2><div class="layers">' + cb('image', 'Printed map') + cb('dim', 'Dim areas away from selection') + cb('zones', 'Zone tint') + cb('outlines', 'Area outlines') + cb('nums', 'Area numbers') + cb('names', 'Area names') + cb('tdn', 'TDN and VP') + cb('roads', 'Road links') + cb('fields', 'Field links') + cb('ticks', 'Boundary types') + cb('entry', 'Entry areas') + '</div></div>' +
     '<div><h2>Map opacity</h2><input type="range" id="op" min="0" max="100" value="' + L.imgop + '" style="width:100%"></div>' +
     '<div><h2>Legend</h2><div class="legend">' +
@@ -368,6 +383,7 @@ function renderLayers() {
     '<div><svg width="44" height="14"><circle cx="22" cy="7" r="6" fill="none" stroke="#ffd400" stroke-width="2"/></svg>Connection added by hand</div>' +
     '<div><span style="width:44px;display:flex;gap:4px"><i style="background:' + ZC[5] + ';width:12px;height:12px;display:block"></i><i style="background:' + ZC[6] + ';width:12px;height:12px;display:block"></i><i style="background:' + ZC[7] + ';width:12px;height:12px;display:block"></i></span>Zone 5 / 6 / 7</div>' +
     '</div></div>';
+  pane.querySelectorAll('#s-chk button').forEach((b) => (b.onclick = () => { L.chk = b.dataset.v; draw(); renderLayers(); }));
   pane.querySelectorAll('#s-conn2 button').forEach((b) => (b.onclick = () => { L.conn = b.dataset.v; draw(); renderLayers(); }));
   pane.querySelectorAll('[data-l]').forEach((c) => (c.onchange = () => { L[c.dataset.l] = c.checked; draw(); }));
   $('#op').oninput = (e) => { L.imgop = +e.target.value; g.img.style.opacity = L.imgop / 100; };
@@ -424,9 +440,7 @@ function diff() {
 }
 function exportJson() {
   const nlist = Object.entries(notes).map(([k, v]) => ({ target: k[0] === 'a' ? 'area ' + k.slice(1) : 'connection ' + k.slice(1), note: v }));
-  return JSON.stringify({ map: 'FAB The Bulge', changes: diff(), notes: nlist,
-    edges: edges.map((e) => ({ a: e.a, b: e.b, connection: e.connection, river: !!e.river, restricted: !!e.restricted })),
-    areas: areas.map((a) => ({ id: a.id, name: a.name, zone: a.zone, tdn: a.tdn, vp: a.vp, seed: a.seed })),
+  return JSON.stringify({ map: 'FAB The Bulge', checked_areas: areas.filter((a) => checked[a.id]).map((a) => a.id), unchecked_areas: areas.filter((a) => !checked[a.id]).map((a) => a.id), changes: diff(), notes: nlist,
     polygons_changed: Object.fromEntries(areas.filter((a) => JSON.stringify(polys[a.id]) !== JSON.stringify(orig.polys[a.id])).map((a) => [a.id, polys[a.id]])) });
 }
 function renderExport() {
@@ -437,7 +451,7 @@ function renderExport() {
     '<div><h2>Full data</h2><textarea id="out" readonly aria-label="Exported JSON"></textarea></div>';
   const out = $('#out'); out.value = exportJson();
   $('#copy').onclick = async () => { const msg = $('#msg'); try { await navigator.clipboard.writeText(out.value); msg.textContent = 'Copied.'; } catch (e) { out.select(); msg.textContent = 'Select and copy the text below.'; } };
-  let armed = false; $('#reset').onclick = (ev) => { if (!armed) { armed = true; ev.target.textContent = 'Click again to confirm'; return; } areas = clone(orig.areas); edges = clone(orig.edges); notes = {}; sel = null; save(); draw(); render(); };
+  let armed = false; $('#reset').onclick = (ev) => { if (!armed) { armed = true; ev.target.textContent = 'Click again to confirm'; return; } areas = clone(orig.areas); edges = clone(orig.edges); notes = {}; checked = {}; sel = null; save(); updateChip(); draw(); render(); };
 }
 
 /* ---------- chrome ---------- */
@@ -460,6 +474,7 @@ $('#zfit').onclick = () => { view = { x: 0, y: 0, w: W }; draw(); };
 const dl = $('#areas-dl'); dl.innerHTML = areas.map((a) => '<option value="' + a.id + ' ' + a.name + '">').join('');
 $('#find').addEventListener('change', (ev) => { const q = ev.target.value.trim().toLowerCase(); const a = areas.find((x) => String(x.id) === q.split(' ')[0] || x.name.toLowerCase() === q) || areas.find((x) => x.name.toLowerCase().includes(q)); if (a) { sel = { type: 'area', id: a.id }; focus(a.id, 480); tab = 'sel'; render(); } });
 window.addEventListener('resize', () => draw());
-build(); render();
+$('#chk-chip').onclick = () => gotoNext(sel && sel.type === 'area' ? sel.id : 0);
+build(); updateChip(); render();
 })();
 </script>
