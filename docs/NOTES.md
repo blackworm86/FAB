@@ -55,3 +55,9 @@ Known weak spots to verify against the physical map:
 - **Missing: the Getting Started Card.** It holds the setup that the map bottom-right only hints at ("In the Available Box at Start"): which assets start in the Available Box and the cup, the label sticker orientation and the starting step of each block. The Player-Aid cards (combat table, turn track details) are also still missing.
 - Not yet extracted: the counter backs (`countersheet_back.webp` is low resolution), the Intro scenario sheet, and gear/back tiles (not needed for play).
 - Units that start reduced: 4th Infantry (2 steps, yellow triangle on the label) and 1st Infantry (arrives with 1 step) per the scenario rules; the label triangle marks the starting orientation.
+
+## Map review pass 1 (applied)
+
+Your export was applied with `tools/apply_pass1.py`: 18 connection edits (roads, rivers), 1 new connection (80–92), and 93 hand-drawn area shapes (`data/bulge/polygons.json`, your raw export in `polygons_user_pass1.json`; areas 21, 34, 44, 82, 84 keep my shapes).
+`data/bulge/edges.json` is now the reviewed source of truth (it is no longer regenerated from the image pipeline). The map checker was rebuilt on top of it.
+With a 12 px gap tolerance your shapes agree with the connection list almost everywhere. Left for pass 2: touching but unconnected 95–97, 61–76, 54–59, 91–95; connected but not touching 72–85.

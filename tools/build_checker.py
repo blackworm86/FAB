@@ -5,17 +5,27 @@ areas = json.load(open(D + 'areas.json')); edges = json.load(open(D + 'edges.jso
 B = cv2.imread(D + 'area_bodies.png', 0)
 im = cv2.imread('../docs/maps/FAB The Bulge Game Map.jpg')[:, :1740]
 H, W = im.shape[:2]
-polys = {int(k): v for k, v in json.load(open(D + 'polygons_auto.json')).items()}
-k21 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (21, 21))
-cache = {}
-def dil(i):
-    if i not in cache: cache[i] = cv2.dilate((B == i).astype(np.uint8), k21).astype(bool)
-    return cache[i]
-seed = {a['id']: a['seed'] for a in areas}
+polys = {int(k): v for k, v in json.load(open(D + 'polygons.json')).items()}
+import math
+def sample(P, step=5):
+    out = []
+    for i in range(len(P)):
+        a, b = P[i], P[(i + 1) % len(P)]; n = max(1, math.ceil(math.hypot(b[0] - a[0], b[1] - a[1]) / step))
+        out += [(a[0] + (b[0] - a[0]) * j / n, a[1] + (b[1] - a[1]) * j / n) for j in range(n)]
+    return out
+def dseg(p, a, b):
+    dx, dy = b[0] - a[0], b[1] - a[1]; l2 = dx * dx + dy * dy; t = max(0, min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2)) if l2 else 0
+    return math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy)
+def contact(a, b):
+    PB = polys[b]; hit = [p for p in sample(polys[a]) if min(dseg(p, PB[i], PB[(i + 1) % len(PB)]) for i in range(len(PB))) < 6]
+    if not hit: return None
+    mx, my = sum(p[0] for p in hit) / len(hit), sum(p[1] for p in hit) / len(hit)
+    m = min(hit, key=lambda p: math.hypot(p[0] - mx, p[1] - my)); return len(hit) * 5, [round(m[0]), round(m[1])]
 for e in edges:
-    ys, xs = np.nonzero(dil(e['a']) & dil(e['b']))
-    pa, pb = seed[e['a']], seed[e['b']]
-    e['mid'] = [int(xs.mean()), int(ys.mean())] if len(xs) else [(pa[0] + pb[0]) // 2, (pa[1] + pb[1]) // 2]
+    c = contact(e['a'], e['b'])
+    if c and c[0] >= 30: e['mid'] = c[1]
+    elif 'mid' not in e:
+        pa, pb = {a['id']: a['seed'] for a in areas}[e['a']], {a['id']: a['seed'] for a in areas}[e['b']]; e['mid'] = [(pa[0] + pb[0]) // 2, (pa[1] + pb[1]) // 2]
 BARS = {'A':[(1095,30,1237,52)],'B':[(960,30,1091,52)],'C':[(761,30,944,52)],'D':[(677,31,772,91),(626,77,695,126)],'E':[(440,162,525,187)],'F':[(63,162,244,187),(19,162,70,455),(234,162,309,187)],'G':[(19,571,43,744)],'H':[(19,758,43,931)],'J':[(123,1284,243,1371),(234,1376,329,1440)],'K':[(549,1536,700,1560)],'L':[(703,1536,799,1560)],'M':[(802,1536,975,1560)],'N':[(978,1536,1087,1560)],'P':[(1088,1536,1201,1560)],'Q':[(1204,1536,1421,1560)],'X':[(1685,1032,1708,1241)],'Y':[(1685,686,1708,792)],'Z':[(1685,418,1708,545)]}
 ent = {k: dict(side=v['side'], area=v['area'], rects=[list(r) for r in BARS[k]]) for k, v in entry.items()}
 ok, jpg = cv2.imencode('.jpg', im, [cv2.IMWRITE_JPEG_QUALITY, 80])

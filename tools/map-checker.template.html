@@ -216,6 +216,7 @@ function draw() {
 const pstr = (id) => polys[id].map((q) => q[0] + ',' + q[1]).join(' ');
 const scl = () => svg.getScreenCTM().a;
 const shape = { drawing: null, hist: [] };
+let tolPx = 12;
 function distSeg(p, a, b) { const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy; let t = l2 ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2 : 0; t = Math.max(0, Math.min(1, t)); const x = a[0] + t * dx, y = a[1] + t * dy; return { d: Math.hypot(p[0] - x, p[1] - y), pt: [x, y], t }; }
 function snapPt(p, exclude, off) {
   if (off) return p; const R = 9 / scl(); let best = null, bd = R;
@@ -232,7 +233,7 @@ function bbox(P) { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const q of
 function contact(a, b) {
   const A_ = bbox(polys[a]), B_ = bbox(polys[b]); if (A_[0] > B_[2] + 12 || B_[0] > A_[2] + 12 || A_[1] > B_[3] + 12 || B_[1] > A_[3] + 12) return null;
   const PB = polys[b], hit = [];
-  for (const p of sample(polys[a], 5)) { let d = 1e9; for (let i = 0; i < PB.length; i++) { d = Math.min(d, distSeg(p, PB[i], PB[(i + 1) % PB.length]).d); if (d < 6) break; } if (d < 6) hit.push(p); }
+  for (const p of sample(polys[a], 5)) { let d = 1e9; for (let i = 0; i < PB.length; i++) { d = Math.min(d, distSeg(p, PB[i], PB[(i + 1) % PB.length]).d); if (d < tolPx) break; } if (d < tolPx) hit.push(p); }
   if (!hit.length) return null;
   const mx = hit.reduce((s, q) => s + q[0], 0) / hit.length, my = hit.reduce((s, q) => s + q[1], 0) / hit.length;
   const m = hit.reduce((best, q) => (Math.hypot(q[0] - mx, q[1] - my) < Math.hypot(best[0] - mx, best[1] - my) ? q : best));
@@ -394,7 +395,8 @@ function renderChecks() {
   pane.innerHTML = '<div><h2>Rule examples &middot; ' + (res.length - bad.length) + ' of ' + res.length + ' match</h2><p class="hint">The play book names these connections, boundaries and zones. They are the only parts of the map I can verify without you.</p><div class="list">' + res.map(item).join('') + '</div></div>' +
     '<div><h2>Hand-added connections &middot; ' + man.length + '</h2><div class="list">' + (man.map((e) => '<button class="item" data-ck="' + ek(e.a, e.b) + '"><span class="tag flag">ADDED</span><span>' + nm(e.a) + ' – ' + nm(e.b) + '</span></button>').join('') || '<span class="hint">None.</span>') + '</div></div>' +
     '<div><h2>Areas with fewer than 3 neighbours &middot; ' + low.length + '</h2><div class="list">' + (low.map((a) => '<button class="item" data-ci="' + a.id + '"><span class="tag flag">' + nbrs(a.id).length + ' links</span><span>' + nm(a.id) + '</span></button>').join('') || '<span class="hint">None.</span>') + '</div><p class="hint">Edge areas can legitimately have few neighbours.</p></div>';
-  const cmp = document.createElement('div'); cmp.innerHTML = '<h2>Shapes vs connections</h2><p class="hint">Compares which area shapes touch with the connection list. It only means something once the shapes are right.</p><div class="row"><button class="btn" id="b-cmp">' + (contacts ? 'Recompute' : 'Compare now') + '</button></div><div id="cmp-out"></div>'; pane.appendChild(cmp);
+  const cmp = document.createElement('div'); cmp.innerHTML = '<h2>Shapes vs connections</h2><p class="hint">Compares which area shapes touch with the connection list. It only means something once the shapes are right.</p><div class="row"><label class="muted" for="tol">Gap tolerance</label><select id="tol" style="width:auto">' + [6, 12, 20, 30].map((v) => '<option' + (v === tolPx ? ' selected' : '') + '>' + v + '</option>').join('') + '</select><span class="muted">px</span><button class="btn" id="b-cmp">' + (contacts ? 'Recompute' : 'Compare now') + '</button></div><div id="cmp-out"></div>'; pane.appendChild(cmp);
+  $('#tol').onchange = (e) => { tolPx = +e.target.value; contacts = null; renderChecks(); };
   $('#b-cmp').onclick = () => { computeContacts(); renderChecks(); };
   if (contacts) { const have = new Set(edges.map((e) => ek(e.a, e.b))), add = Object.entries(contacts).filter(([k, c]) => !have.has(k) && c.len >= 40), lost = edges.filter((e) => { const c = contacts[ek(e.a, e.b)]; return !c || c.len < 20; });
     $('#cmp-out').innerHTML = '<h2 style="margin-top:10px">Touch, but no connection &middot; ' + add.length + '</h2><div class="list">' + (add.map(([k, c]) => '<div class="row"><button class="item" style="flex:1" data-jump="' + k + '"><span class="tag flag">' + c.len + 'px</span><span>' + k.split('-').map((i) => nm(+i)).join(' \u2013 ') + '</span></button><button class="btn" data-addc="' + k + '">Add</button></div>').join('') || '<span class="hint">None.</span>') + '</div>' +
