@@ -5,11 +5,7 @@ areas = json.load(open(D + 'areas.json')); edges = json.load(open(D + 'edges.jso
 B = cv2.imread(D + 'area_bodies.png', 0)
 im = cv2.imread('../docs/maps/FAB The Bulge Game Map.jpg')[:, :1740]
 H, W = im.shape[:2]
-polys = {}
-for a in areas:
-    cs, _ = cv2.findContours((B == a['id']).astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    c = max(cs, key=cv2.contourArea); c = cv2.approxPolyDP(c, 2.5, True)[:, 0]
-    polys[a['id']] = ' '.join(f'{x},{y}' for x, y in c)
+polys = {int(k): v for k, v in json.load(open(D + 'polygons_auto.json')).items()}
 k21 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (21, 21))
 cache = {}
 def dil(i):

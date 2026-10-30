@@ -89,7 +89,7 @@ textarea { min-height: 70px; resize: vertical; }
     <div class="bar">
       <div class="chip"><input id="find" type="search" placeholder="Area number or name" aria-label="Find area" list="areas-dl"><datalist id="areas-dl"></datalist></div>
       <div class="chip seg" style="padding:0" role="group" aria-label="Tool">
-        <button id="t-sel" aria-pressed="true">Inspect</button><button id="t-add" aria-pressed="false">Add connection</button>
+        <button id="t-sel" aria-pressed="true">Inspect</button><button id="t-add" aria-pressed="false">Add connection</button><button id="t-shape" aria-pressed="false">Edit shapes</button>
       </div>
       <div class="chip" id="mode-hint" hidden></div>
     </div>
@@ -119,15 +119,15 @@ const ZC = { 5: '#f0a500', 6: '#e5383b', 7: '#25a26a' };
 const ZN = { 5: '5th Panzer Army', 6: '6th Panzer Army', 7: '7th Army' };
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const ek = (a, b) => (a < b ? a + '-' + b : b + '-' + a);
-const orig = { areas: clone(DATA.areas), edges: clone(DATA.edges) };
-let areas = clone(DATA.areas), edges = clone(DATA.edges), notes = {};
+const orig = { areas: clone(DATA.areas), edges: clone(DATA.edges), polys: clone(DATA.polys) };
+let areas = clone(DATA.areas), edges = clone(DATA.edges), notes = {}, polys = clone(DATA.polys);
 const STORE = 'fab-map-checker-v1';
-try { const s = JSON.parse(localStorage.getItem(STORE) || 'null'); if (s && s.areas) { areas = s.areas; edges = s.edges; notes = s.notes || {}; } } catch (e) {}
-function save() { try { localStorage.setItem(STORE, JSON.stringify({ areas, edges, notes })); } catch (e) {} }
+try { const s = JSON.parse(localStorage.getItem(STORE) || 'null'); if (s && s.areas) { areas = s.areas; edges = s.edges; notes = s.notes || {}; if (s.polys) polys = s.polys; } } catch (e) {}
+function save() { try { localStorage.setItem(STORE, JSON.stringify({ areas, edges, notes, polys })); } catch (e) {} }
 const byId = () => Object.fromEntries(areas.map((a) => [a.id, a]));
 let A = byId();
-const L = { image: true, imgop: 100, zones: true, outlines: true, roads: true, fields: true, ticks: true, nums: true, names: false, tdn: false, entry: true };
-let tab = 'sel', tool = 'sel', sel = null, addFrom = null, view = { x: 0, y: 0, w: W };
+const L = { conn: 'focus', dim: true, image: true, imgop: 100, zones: true, outlines: true, roads: true, fields: true, ticks: true, nums: true, names: false, tdn: false, entry: true };
+let tab = 'sel', tool = 'sel', sel = null, addFrom = null, selV = null, vdrag = null, sdrag = null, raf = 0, view = { x: 0, y: 0, w: W };
 function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
 const zone = (id) => A[id].zone;
 const isArmy = (e) => zone(e.a) !== zone(e.b);
@@ -141,18 +141,21 @@ function build() {
   const defs = el('defs', {}, svg);
   const pat = el('pattern', { id: 'hatch', width: 6, height: 6, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, defs);
   el('rect', { width: 6, height: 6, fill: '#7b3f12' }, pat); el('line', { x1: 0, y1: 0, x2: 0, y2: 6, stroke: '#f3d9b8', 'stroke-width': 2 }, pat);
-  ['img', 'zones', 'outl', 'entry', 'edges', 'ticks', 'badges', 'sel'].forEach((k) => { g[k] = el('g', { id: 'g-' + k }, svg); });
+  ['img', 'zones', 'outl', 'entry', 'edges', 'ticks', 'badges', 'sel', 'handles'].forEach((k) => { g[k] = el('g', { id: 'g-' + k }, svg); });
   el('image', { href: IMG, x: 0, y: 0, width: W, height: H, preserveAspectRatio: 'none' }, g.img);
   draw();
 }
 function draw() {
   A = byId();
   g.img.style.display = L.image ? '' : 'none'; g.img.style.opacity = L.imgop / 100;
-  ['zones', 'outl', 'entry', 'edges', 'ticks', 'badges', 'sel'].forEach((k) => (g[k].innerHTML = ''));
+  ['zones', 'outl', 'entry', 'edges', 'ticks', 'badges', 'sel', 'handles'].forEach((k) => (g[k].innerHTML = ''));
   const sc = view.w / W; // size compensation so symbols keep a readable size when zoomed
   const k = Math.min(1.6, Math.max(0.55, sc * 1.1));
+  const selA = sel && sel.type === 'area' ? sel.id : null, selE = sel && sel.type === 'edge' ? sel.key : null, nbSet = new Set(selA != null ? nbrs(selA) : []);
+  g.edges.setAttribute('opacity', L.conn === 'focus' && selA == null && selE == null ? 0.5 : 1);
   if (L.zones || L.outlines) for (const a of areas) {
-    const p = el('polygon', { points: DATA.polys[a.id], 'data-area': a.id, fill: L.zones ? ZC[a.zone] : 'transparent', 'fill-opacity': L.zones ? 0.28 : 0, stroke: L.outlines ? ZC[a.zone] : 'none', 'stroke-width': 2.2 * k, 'stroke-linejoin': 'round' }, g.zones);
+    const near = selA == null || !L.dim || a.id === selA || nbSet.has(a.id), edited = JSON.stringify(polys[a.id]) !== JSON.stringify(orig.polys[a.id]);
+    const p = el('polygon', { points: pstr(a.id), 'data-area': a.id, fill: L.zones ? ZC[a.zone] : 'transparent', 'fill-opacity': L.zones ? (a.id === selA ? 0.42 : near ? 0.28 : 0.07) : 0, stroke: L.outlines ? (edited ? '#ffd400' : ZC[a.zone]) : 'none', 'stroke-opacity': near ? 1 : 0.35, 'stroke-width': (a.id === selA ? 3.6 : 2.2) * k, 'stroke-linejoin': 'round' }, g.zones);
     p.style.cursor = 'pointer';
   }
   if (L.entry) for (const [letter, en] of Object.entries(DATA.entry)) {
@@ -165,7 +168,9 @@ function draw() {
   for (const e of edges) {
     const pa = pos(e.a), pb = pos(e.b), m = e.mid || [(pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2];
     const road = e.connection === 'road';
-    if ((road && !L.roads) || (!road && !L.fields)) continue;
+    if ((road && !L.roads) || (!road && !L.fields) || L.conn === 'off') continue;
+    if (L.conn === 'focus' && selA != null && e.a !== selA && e.b !== selA) continue;
+    if (L.conn === 'focus' && selE != null && ek(e.a, e.b) !== selE) continue;
     const pts = pa[0] + ',' + pa[1] + ' ' + m[0] + ',' + m[1] + ' ' + pb[0] + ',' + pb[1];
     const key = ek(e.a, e.b), isSel = sel && sel.type === 'edge' && sel.key === key;
     el('polyline', { points: pts, fill: 'none', stroke: '#fff', 'stroke-opacity': 0.75, 'stroke-width': (road ? 7 : 5) * k, 'stroke-linejoin': 'round' }, g.edges);
@@ -203,7 +208,47 @@ function draw() {
       const t = el('text', { 'text-anchor': 'middle', y: r + (14 + i * 14) * k, 'font-size': 12.5 * k, 'font-weight': 600, fill: '#fff', stroke: '#000', 'stroke-width': 3.4 * k, 'paint-order': 'stroke', 'font-family': 'Barlow Semi Condensed, sans-serif' }, bg); t.textContent = s;
     });
   }
+  drawHandles(k);
   applyView();
+}
+
+/* ---------- shapes ---------- */
+const pstr = (id) => polys[id].map((q) => q[0] + ',' + q[1]).join(' ');
+const scl = () => svg.getScreenCTM().a;
+const shape = { drawing: null, hist: [] };
+function distSeg(p, a, b) { const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy; let t = l2 ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2 : 0; t = Math.max(0, Math.min(1, t)); const x = a[0] + t * dx, y = a[1] + t * dy; return { d: Math.hypot(p[0] - x, p[1] - y), pt: [x, y], t }; }
+function snapPt(p, exclude, off) {
+  if (off) return p; const R = 9 / scl(); let best = null, bd = R;
+  for (const id in polys) { if (+id === exclude) continue; for (const q of polys[id]) { const d = Math.hypot(p[0] - q[0], p[1] - q[1]); if (d < bd) { bd = d; best = q; } } }
+  if (best) return [best[0], best[1]];
+  let be = null, ed = R * 0.7;
+  for (const id in polys) { if (+id === exclude) continue; const P = polys[id]; for (let i = 0; i < P.length; i++) { const r = distSeg(p, P[i], P[(i + 1) % P.length]); if (r.d < ed) { ed = r.d; be = r.pt; } } }
+  return be ? [Math.round(be[0]), Math.round(be[1])] : p;
+}
+function pushHist(id) { shape.hist.push({ id, poly: clone(polys[id]), seed: clone(A[id].seed) }); if (shape.hist.length > 200) shape.hist.shift(); }
+function undo() { const h = shape.hist.pop(); if (!h) return; polys[h.id] = h.poly; A[h.id].seed = h.seed; updateMids(h.id); save(); draw(); render(); }
+function sample(P, step) { const out = []; for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length], n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / step)); for (let j = 0; j < n; j++) out.push([a[0] + (b[0] - a[0]) * j / n, a[1] + (b[1] - a[1]) * j / n]); } return out; }
+function bbox(P) { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const q of P) { x0 = Math.min(x0, q[0]); y0 = Math.min(y0, q[1]); x1 = Math.max(x1, q[0]); y1 = Math.max(y1, q[1]); } return [x0, y0, x1, y1]; }
+function contact(a, b) {
+  const A_ = bbox(polys[a]), B_ = bbox(polys[b]); if (A_[0] > B_[2] + 12 || B_[0] > A_[2] + 12 || A_[1] > B_[3] + 12 || B_[1] > A_[3] + 12) return null;
+  const PB = polys[b], hit = [];
+  for (const p of sample(polys[a], 5)) { let d = 1e9; for (let i = 0; i < PB.length; i++) { d = Math.min(d, distSeg(p, PB[i], PB[(i + 1) % PB.length]).d); if (d < 6) break; } if (d < 6) hit.push(p); }
+  if (!hit.length) return null;
+  const mx = hit.reduce((s, q) => s + q[0], 0) / hit.length, my = hit.reduce((s, q) => s + q[1], 0) / hit.length;
+  const m = hit.reduce((best, q) => (Math.hypot(q[0] - mx, q[1] - my) < Math.hypot(best[0] - mx, best[1] - my) ? q : best));
+  return { len: hit.length * 5, mid: [Math.round(m[0]), Math.round(m[1])] };
+}
+function updateMids(id) { for (const e of edges) if (e.a === id || e.b === id) { const c = contact(e.a, e.b); if (c && c.len >= 30) e.mid = c.mid; } }
+function startRedraw(id) { shape.drawing = { id, pts: [] }; selV = null; setTool('shape', true); draw(); render(); }
+function finishDraw() { const d = shape.drawing; if (!d || d.pts.length < 3) return; pushHist(d.id); polys[d.id] = d.pts; shape.drawing = null; updateMids(d.id); save(); setTool('shape', true); draw(); render(); }
+function cancelDraw() { shape.drawing = null; setTool('shape', true); draw(); render(); }
+function drawHandles(k) {
+  if (tool !== 'shape') return; const u = 1 / scl();
+  if (shape.drawing) { const d = shape.drawing; if (d.pts.length) el('polyline', { points: d.pts.map((q) => q.join(',')).join(' '), fill: 'none', stroke: '#ffd400', 'stroke-width': 3 * u, 'stroke-dasharray': (6 * u) + ' ' + (4 * u) }, g.handles);
+    d.pts.forEach((q, i) => el('circle', { cx: q[0], cy: q[1], r: (i === 0 ? 9 : 5.5) * u, fill: i === 0 ? '#ffd400' : '#fff', stroke: '#0a84ff', 'stroke-width': 2 * u, 'pointer-events': 'none' }, g.handles)); return; }
+  if (!(sel && sel.type === 'area')) return; const P = polys[sel.id];
+  el('polygon', { points: pstr(sel.id), fill: 'none', stroke: '#0a84ff', 'stroke-width': 3 * u, 'pointer-events': 'none' }, g.handles);
+  P.forEach((q, i) => { const c = el('circle', { cx: q[0], cy: q[1], r: (selV === i ? 8 : 6) * u, fill: selV === i ? '#ffd400' : '#fff', stroke: '#0a84ff', 'stroke-width': 2 * u, 'data-vi': i }, g.handles); c.style.cursor = 'move'; });
 }
 function applyView() { const h = view.w * H / W; svg.setAttribute('viewBox', view.x + ' ' + view.y + ' ' + view.w + ' ' + h); }
 function fit() { const r = svg.getBoundingClientRect(); const ar = r.width / Math.max(1, r.height); view.w = Math.max(W, H * ar); view.x = (W - view.w) / 2; const vh = view.w * H / W; view.y = 0; draw(); fixAspect(); }
@@ -217,18 +262,36 @@ function focus(id, zoom) { const p = pos(id); const nw = zoom || Math.min(view.w
 /* ---------- pointer handling ---------- */
 const ptrs = new Map(); let drag = null, pinch = null, moved = 0;
 svg.addEventListener('pointerdown', (ev) => { svg.setPointerCapture(ev.pointerId); ptrs.set(ev.pointerId, [ev.clientX, ev.clientY]); moved = 0;
+  if (tool === 'shape' && !shape.drawing && sel && sel.type === 'area' && ptrs.size === 1 && ev.button === 0) { const t = target(ev);
+    if (t.vi != null) { pushHist(sel.id); vdrag = { id: sel.id, i: +t.vi }; selV = vdrag.i; drag = null; return; }
+    if (t.badge && +t.area === sel.id) { pushHist(sel.id); sdrag = { id: sel.id }; drag = null; return; } }
   if (ptrs.size === 1) { drag = { x: ev.clientX, y: ev.clientY, vx: view.x, vy: view.y }; }
   if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), w: view.w }; drag = null; } });
-svg.addEventListener('pointermove', (ev) => { if (!ptrs.has(ev.pointerId)) { hover(ev); return; } ptrs.set(ev.pointerId, [ev.clientX, ev.clientY]);
+svg.addEventListener('pointermove', (ev) => { if (!ptrs.has(ev.pointerId)) { hover(ev); return; } const prevP = ptrs.get(ev.pointerId); ptrs.set(ev.pointerId, [ev.clientX, ev.clientY]);
+  if (vdrag || sdrag) { moved += Math.abs(ev.clientX - prevP[0]) + Math.abs(ev.clientY - prevP[1]); const q = svgPt(ev.clientX, ev.clientY), p0 = [Math.round(q.x), Math.round(q.y)];
+    if (vdrag) polys[vdrag.id][vdrag.i] = snapPt(p0, vdrag.id, ev.altKey); else A[sdrag.id].seed = p0;
+    if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); return; }
   if (pinch && ptrs.size === 2) { const [a, b] = [...ptrs.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]); const nw = pinch.w * pinch.d / Math.max(10, d); const f = nw / view.w; zoomAt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, f); moved = 99; return; }
   if (drag) { const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y; moved = Math.max(moved, Math.abs(dx) + Math.abs(dy)); if (moved > 5) { svg.classList.add('dragging'); const r = svg.getScreenCTM(); view.x = drag.vx - dx / r.a; view.y = drag.vy - dy / r.d; applyView(); } } });
-function endPtr(ev) { const wasClick = moved <= 5 && ptrs.size === 1; ptrs.delete(ev.pointerId); if (ptrs.size < 2) pinch = null; if (ptrs.size === 0) { drag = null; svg.classList.remove('dragging'); }
+function endPtr(ev) {
+  if (vdrag || sdrag) { const id = (vdrag || sdrag).id; ptrs.delete(ev.pointerId); if (moved <= 5) { shape.hist.pop(); const pv = vdrag; vdrag = sdrag = null; if (pv) selV = pv.i; draw(); render(); return; } vdrag = sdrag = null; updateMids(id); save(); draw(); render(); return; }
+  const wasClick = moved <= 5 && ptrs.size === 1; ptrs.delete(ev.pointerId); if (ptrs.size < 2) pinch = null; if (ptrs.size === 0) { drag = null; svg.classList.remove('dragging'); }
   if (wasClick && ev.type === 'pointerup') clickAt(ev); }
 svg.addEventListener('pointerup', endPtr); svg.addEventListener('pointercancel', endPtr);
 svg.addEventListener('wheel', (ev) => { ev.preventDefault(); zoomAt(ev.clientX, ev.clientY, Math.exp(ev.deltaY * 0.0015)); }, { passive: false });
-function target(ev) { const t = document.elementFromPoint(ev.clientX, ev.clientY); if (!t) return {}; const n = t.closest('[data-area]'), e = t.closest('[data-edge]'); return { area: n && n.getAttribute('data-area'), edge: e && e.getAttribute('data-edge'), badge: n && n.tagName === 'g' }; }
+function target(ev) { const t = document.elementFromPoint(ev.clientX, ev.clientY); if (!t) return {}; const n = t.closest('[data-area]'), e = t.closest('[data-edge]'); const h = t.closest('[data-vi]'); return { area: n && n.getAttribute('data-area'), edge: e && e.getAttribute('data-edge'), badge: n && n.tagName === 'g', vi: h ? h.getAttribute('data-vi') : null }; }
 function clickAt(ev) {
   const t = target(ev);
+  if (tool === 'shape') { const q = svgPt(ev.clientX, ev.clientY), p = [Math.round(q.x), Math.round(q.y)];
+    if (shape.drawing) { const d = shape.drawing, sp = snapPt(p, d.id, ev.altKey);
+      if (d.pts.length >= 3 && Math.hypot(sp[0] - d.pts[0][0], sp[1] - d.pts[0][1]) < 11 / scl()) { finishDraw(); return; }
+      d.pts.push(sp); draw(); render(); return; }
+    if (t.vi != null) return;
+    if (sel && sel.type === 'area' && !t.badge) { const P = polys[sel.id]; let bi = -1, bd = 10 / scl(), bp = null;
+      for (let i = 0; i < P.length; i++) { const r = distSeg(p, P[i], P[(i + 1) % P.length]); if (r.d < bd) { bd = r.d; bi = i; bp = r.pt; } }
+      if (bi >= 0) { pushHist(sel.id); P.splice(bi + 1, 0, [Math.round(bp[0]), Math.round(bp[1])]); selV = bi + 1; updateMids(sel.id); save(); draw(); render(); return; } }
+    if (t.area && !(sel && sel.type === 'area' && sel.id === +t.area)) { sel = { type: 'area', id: +t.area }; selV = null; tab = 'sel'; draw(); render(); }
+    return; }
   if (tool === 'add') {
     if (t.area) { const id = +t.area;
       if (addFrom == null) addFrom = id;
@@ -261,11 +324,18 @@ function renderSel() {
       '<label>Allied VP</label><input type="number" min="0" max="5" id="f-va" value="' + a.vp.allied + '"><label>German VP</label><input type="number" min="0" max="5" id="f-vg" value="' + a.vp.german + '">' +
       '<label>Mutual star</label><label style="color:var(--fg)"><input type="checkbox" id="f-vm" ' + (a.vp.mutual ? 'checked' : '') + '> yellow star</label></div>' +
       '<div><h2>Connected to ' + ns.length + ' areas</h2><div class="nb">' + ns.map((n) => '<button data-go="' + n + '" title="' + A[n].name + '">' + n + '</button>').join('') + '</div></div>' +
-      '<div class="row"><button class="btn" id="b-add">Add connection from here</button><button class="btn" id="b-center">Center on map</button></div>' + noteBox(key);
+      '<div class="row"><button class="btn" id="b-add">Add connection from here</button><button class="btn" id="b-center">Center on map</button></div>' +
+      '<div><h2>Shape &middot; ' + polys[a.id].length + ' corners' + (JSON.stringify(polys[a.id]) !== JSON.stringify(orig.polys[a.id]) ? ' &middot; edited' : '') + '</h2>' +
+      (shape.drawing && shape.drawing.id === a.id ? '<p class="hint"><b>Drawing.</b> Click each corner of ' + a.name + ' in order. Close the shape by clicking the yellow first point or pressing Enter.</p><div class="row"><button class="btn primary" id="b-finish">Finish shape</button><button class="btn" id="b-cancel">Cancel</button></div>' :
+      '<div class="row"><button class="btn" id="b-shape">Edit corners</button><button class="btn" id="b-redraw">Redraw by hand</button><button class="btn" id="b-undo">Undo</button><button class="btn danger" id="b-sreset">Reset shape</button></div><p class="hint">Corners snap to neighbouring areas so shared borders stay shared. Hold Alt to place freely.</p>') + '</div>' + noteBox(key);
     $('#f-zone').value = a.zone; $('#f-tdn').value = a.tdn;
     $('#f-zone').onchange = (e) => { a.zone = +e.target.value; save(); draw(); }; $('#f-tdn').onchange = (e) => { a.tdn = +e.target.value; save(); };
     $('#f-va').onchange = (e) => { a.vp.allied = +e.target.value; save(); }; $('#f-vg').onchange = (e) => { a.vp.german = +e.target.value; save(); }; $('#f-vm').onchange = (e) => { a.vp.mutual = e.target.checked; save(); };
     $('#b-add').onclick = () => { addFrom = a.id; setTool('add', true); draw(); }; $('#b-center').onclick = () => focus(a.id);
+    const bi = (id, fn) => { const e = $('#' + id); if (e) e.onclick = fn; };
+    bi('b-shape', () => { setTool('shape'); selV = null; draw(); render(); }); bi('b-redraw', () => startRedraw(a.id)); bi('b-undo', undo);
+    bi('b-sreset', () => { pushHist(a.id); polys[a.id] = clone(orig.polys[a.id]); a.seed = clone(od.seed); updateMids(a.id); save(); draw(); render(); });
+    bi('b-finish', finishDraw); bi('b-cancel', cancelDraw);
   } else {
     const e = eget(sel.key); if (!e) { sel = null; renderSel(); return; }
     const army = isArmy(e), key = 'e' + sel.key;
@@ -284,7 +354,8 @@ function renderSel() {
 }
 function renderLayers() {
   const cb = (k, label, sw) => '<label><input type="checkbox" data-l="' + k + '" ' + (L[k] ? 'checked' : '') + '> ' + label + '</label>';
-  pane.innerHTML = '<div><h2>Show</h2><div class="layers">' + cb('image', 'Printed map') + cb('zones', 'Zone tint') + cb('outlines', 'Area outlines') + cb('nums', 'Area numbers') + cb('names', 'Area names') + cb('tdn', 'TDN and VP') + cb('roads', 'Road links') + cb('fields', 'Field links') + cb('ticks', 'Boundary types') + cb('entry', 'Entry areas') + '</div></div>' +
+  pane.innerHTML = '<div><h2>Connections</h2><div class="seg" id="s-conn2"><button data-v="focus" aria-pressed="' + (L.conn === 'focus') + '">Selected area only</button><button data-v="all" aria-pressed="' + (L.conn === 'all') + '">All</button><button data-v="off" aria-pressed="' + (L.conn === 'off') + '">Hidden</button></div><p class="hint">With no area selected, "Selected area only" shows every connection faintly. Select an area to see just its own.</p></div>' +
+    '<div><h2>Show</h2><div class="layers">' + cb('image', 'Printed map') + cb('dim', 'Dim areas away from selection') + cb('zones', 'Zone tint') + cb('outlines', 'Area outlines') + cb('nums', 'Area numbers') + cb('names', 'Area names') + cb('tdn', 'TDN and VP') + cb('roads', 'Road links') + cb('fields', 'Field links') + cb('ticks', 'Boundary types') + cb('entry', 'Entry areas') + '</div></div>' +
     '<div><h2>Map opacity</h2><input type="range" id="op" min="0" max="100" value="' + L.imgop + '" style="width:100%"></div>' +
     '<div><h2>Legend</h2><div class="legend">' +
     '<div><svg width="44" height="14"><line x1="2" y1="7" x2="42" y2="7" stroke="#fff" stroke-width="7" stroke-opacity=".75"/><line x1="2" y1="7" x2="42" y2="7" stroke="#141414" stroke-width="3.6"/></svg>Road connection, 1 MP</div>' +
@@ -296,6 +367,7 @@ function renderLayers() {
     '<div><svg width="44" height="14"><circle cx="22" cy="7" r="6" fill="none" stroke="#ffd400" stroke-width="2"/></svg>Connection added by hand</div>' +
     '<div><span style="width:44px;display:flex;gap:4px"><i style="background:' + ZC[5] + ';width:12px;height:12px;display:block"></i><i style="background:' + ZC[6] + ';width:12px;height:12px;display:block"></i><i style="background:' + ZC[7] + ';width:12px;height:12px;display:block"></i></span>Zone 5 / 6 / 7</div>' +
     '</div></div>';
+  pane.querySelectorAll('#s-conn2 button').forEach((b) => (b.onclick = () => { L.conn = b.dataset.v; draw(); renderLayers(); }));
   pane.querySelectorAll('[data-l]').forEach((c) => (c.onchange = () => { L[c.dataset.l] = c.checked; draw(); }));
   $('#op').oninput = (e) => { L.imgop = +e.target.value; g.img.style.opacity = L.imgop / 100; };
 }
@@ -313,6 +385,8 @@ function checks() {
   const r = E(4, 11); out.push({ k: '4-11', t: 'Restricted 4 | 11 (Schnee Eifel)', ok: !!r && r.restricted, src: 'rule 14.1' });
   return out;
 }
+let contacts = null;
+function computeContacts() { const out = {}; for (let a = 1; a <= 98; a++) for (let b = a + 1; b <= 98; b++) { const c = contact(a, b); if (c) out[ek(a, b)] = c; } contacts = out; }
 function renderChecks() {
   const res = checks(), bad = res.filter((c) => !c.ok);
   const low = areas.filter((a) => nbrs(a.id).length < 3), man = edges.filter((e) => e.manual), noZoneChange = [];
@@ -320,6 +394,13 @@ function renderChecks() {
   pane.innerHTML = '<div><h2>Rule examples &middot; ' + (res.length - bad.length) + ' of ' + res.length + ' match</h2><p class="hint">The play book names these connections, boundaries and zones. They are the only parts of the map I can verify without you.</p><div class="list">' + res.map(item).join('') + '</div></div>' +
     '<div><h2>Hand-added connections &middot; ' + man.length + '</h2><div class="list">' + (man.map((e) => '<button class="item" data-ck="' + ek(e.a, e.b) + '"><span class="tag flag">ADDED</span><span>' + nm(e.a) + ' – ' + nm(e.b) + '</span></button>').join('') || '<span class="hint">None.</span>') + '</div></div>' +
     '<div><h2>Areas with fewer than 3 neighbours &middot; ' + low.length + '</h2><div class="list">' + (low.map((a) => '<button class="item" data-ci="' + a.id + '"><span class="tag flag">' + nbrs(a.id).length + ' links</span><span>' + nm(a.id) + '</span></button>').join('') || '<span class="hint">None.</span>') + '</div><p class="hint">Edge areas can legitimately have few neighbours.</p></div>';
+  const cmp = document.createElement('div'); cmp.innerHTML = '<h2>Shapes vs connections</h2><p class="hint">Compares which area shapes touch with the connection list. It only means something once the shapes are right.</p><div class="row"><button class="btn" id="b-cmp">' + (contacts ? 'Recompute' : 'Compare now') + '</button></div><div id="cmp-out"></div>'; pane.appendChild(cmp);
+  $('#b-cmp').onclick = () => { computeContacts(); renderChecks(); };
+  if (contacts) { const have = new Set(edges.map((e) => ek(e.a, e.b))), add = Object.entries(contacts).filter(([k, c]) => !have.has(k) && c.len >= 40), lost = edges.filter((e) => { const c = contacts[ek(e.a, e.b)]; return !c || c.len < 20; });
+    $('#cmp-out').innerHTML = '<h2 style="margin-top:10px">Touch, but no connection &middot; ' + add.length + '</h2><div class="list">' + (add.map(([k, c]) => '<div class="row"><button class="item" style="flex:1" data-jump="' + k + '"><span class="tag flag">' + c.len + 'px</span><span>' + k.split('-').map((i) => nm(+i)).join(' \u2013 ') + '</span></button><button class="btn" data-addc="' + k + '">Add</button></div>').join('') || '<span class="hint">None.</span>') + '</div>' +
+      '<h2 style="margin-top:10px">Connected, but shapes do not touch &middot; ' + lost.length + '</h2><div class="list">' + (lost.map((e) => '<button class="item" data-ck="' + ek(e.a, e.b) + '"><span class="tag fail">GAP</span><span>' + nm(e.a) + ' \u2013 ' + nm(e.b) + '</span></button>').join('') || '<span class="hint">None.</span>') + '</div>';
+    pane.querySelectorAll('[data-addc]').forEach((b) => (b.onclick = () => { const k = b.dataset.addc, [x, y] = k.split('-').map(Number); edges.push({ a: x, b: y, connection: 'field', river: false, restricted: false, manual: true, mid: contacts[k].mid }); save(); draw(); renderChecks(); }));
+    pane.querySelectorAll('[data-jump]').forEach((b) => (b.onclick = () => { const [x, y] = b.dataset.jump.split('-').map(Number), m = contacts[b.dataset.jump].mid; view.w = 420; view.x = m[0] - 210; view.y = m[1] - 210 * H / W; draw(); })); }
   pane.querySelectorAll('[data-ck],[data-ci]').forEach((b) => (b.onclick = () => { const k = b.dataset.ck, i = b.dataset.ci;
     if (k) { sel = { type: 'edge', key: k }; const e = eget(k); if (e) { const m = e.mid; view.w = 420; view.x = m[0] - 210; view.y = m[1] - 210 * H / W; } tab = 'sel'; }
     else if (i) { sel = { type: 'area', id: +i }; focus(+i, 420); tab = 'sel'; }
@@ -336,13 +417,15 @@ function diff() {
     const f = []; if (o.connection !== e.connection) f.push(o.connection + '→' + e.connection); if (!!o.river !== !!e.river) f.push('river ' + !!o.river + '→' + !!e.river); if (!!o.restricted !== !!e.restricted) f.push('restricted ' + !!o.restricted + '→' + !!e.restricted);
     if (f.length) ch.push({ what: 'connection ' + k, change: f.join(', ') }); }
   for (const k of om.keys()) if (!cm.has(k)) ch.push({ what: 'connection ' + k, change: 'removed' });
+  for (const a of areas) { const o = orig.areas.find((x) => x.id === a.id); if (JSON.stringify(polys[a.id]) !== JSON.stringify(orig.polys[a.id])) ch.push({ what: 'shape ' + a.id + ' ' + a.name, change: 'redrawn, ' + polys[a.id].length + ' corners' }); if (JSON.stringify(a.seed) !== JSON.stringify(o.seed)) ch.push({ what: 'number ' + a.id + ' ' + a.name, change: 'moved to ' + a.seed.join(',') }); }
   return ch;
 }
 function exportJson() {
   const nlist = Object.entries(notes).map(([k, v]) => ({ target: k[0] === 'a' ? 'area ' + k.slice(1) : 'connection ' + k.slice(1), note: v }));
   return JSON.stringify({ map: 'FAB The Bulge', changes: diff(), notes: nlist,
     edges: edges.map((e) => ({ a: e.a, b: e.b, connection: e.connection, river: !!e.river, restricted: !!e.restricted })),
-    areas: areas.map((a) => ({ id: a.id, name: a.name, zone: a.zone, tdn: a.tdn, vp: a.vp })) });
+    areas: areas.map((a) => ({ id: a.id, name: a.name, zone: a.zone, tdn: a.tdn, vp: a.vp, seed: a.seed })),
+    polygons_changed: Object.fromEntries(areas.filter((a) => JSON.stringify(polys[a.id]) !== JSON.stringify(orig.polys[a.id])).map((a) => [a.id, polys[a.id]])) });
 }
 function renderExport() {
   const ch = diff(), nn = Object.keys(notes).length;
@@ -356,10 +439,18 @@ function renderExport() {
 }
 
 /* ---------- chrome ---------- */
-function setTool(t, keepFrom) { tool = t; if (!keepFrom) addFrom = null; $('#t-sel').setAttribute('aria-pressed', t === 'sel'); $('#t-add').setAttribute('aria-pressed', t === 'add'); svg.classList.toggle('adding', t === 'add');
-  const h = $('#mode-hint'); h.hidden = t !== 'add'; h.textContent = 'Click the two areas to connect' + (addFrom ? ' (first: ' + addFrom + ')' : ''); }
-$('#t-sel').onclick = () => { setTool('sel'); draw(); }; $('#t-add').onclick = () => { setTool('add'); draw(); };
-svg.addEventListener('click', () => { if (tool === 'add') { const h = $('#mode-hint'); h.textContent = 'Click the two areas to connect' + (addFrom ? ' (first: ' + addFrom + ')' : ''); } });
+function toolHint() { if (tool === 'add') return 'Click the two areas to connect' + (addFrom ? ' (first: ' + addFrom + ')' : '');
+  if (tool === 'shape') return shape.drawing ? 'Click each corner in turn (' + shape.drawing.pts.length + ' placed). Click the yellow first point or press Enter to close. Esc cancels, Alt turns snapping off.' : (sel && sel.type === 'area' ? 'Drag a corner, click an edge to add one, select a corner and press Delete to remove it. Drag the number to move it.' : 'Click an area to edit its shape.'); return ''; }
+function setTool(t, keepFrom) { tool = t; if (!keepFrom) addFrom = null; if (t !== 'shape') shape.drawing = null; ['sel', 'add', 'shape'].forEach((n) => $('#t-' + n).setAttribute('aria-pressed', t === n));
+  svg.classList.toggle('adding', t === 'add' || (t === 'shape' && !!shape.drawing)); const h = $('#mode-hint'); h.hidden = t === 'sel'; h.textContent = toolHint(); }
+$('#t-sel').onclick = () => { setTool('sel'); draw(); }; $('#t-add').onclick = () => { setTool('add'); draw(); }; $('#t-shape').onclick = () => { setTool('shape'); selV = null; draw(); render(); };
+svg.addEventListener('click', () => { if (tool !== 'sel') $('#mode-hint').textContent = toolHint(); });
+svg.addEventListener('contextmenu', (ev) => { if (tool === 'shape') { ev.preventDefault(); const t = target(ev); if (t.vi != null && sel && sel.type === 'area' && polys[sel.id].length > 3) { pushHist(sel.id); polys[sel.id].splice(+t.vi, 1); selV = null; updateMids(sel.id); save(); draw(); render(); } } });
+window.addEventListener('keydown', (ev) => { const tg = ev.target && ev.target.tagName; if (tg === 'INPUT' || tg === 'TEXTAREA' || tg === 'SELECT') return; if (tool !== 'shape') return;
+  if (ev.key === 'Escape' && shape.drawing) cancelDraw(); else if (ev.key === 'Enter' && shape.drawing) finishDraw();
+  else if ((ev.key === 'Backspace' || ev.key === 'Delete') && shape.drawing) { shape.drawing.pts.pop(); draw(); render(); ev.preventDefault(); }
+  else if ((ev.key === 'Delete' || ev.key === 'Backspace') && selV != null && sel && sel.type === 'area' && polys[sel.id].length > 3) { pushHist(sel.id); polys[sel.id].splice(selV, 1); selV = null; updateMids(sel.id); save(); draw(); render(); ev.preventDefault(); }
+  else if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z') { undo(); ev.preventDefault(); } });
 ['sel', 'layers', 'checks', 'export'].forEach((t) => ($('#tab-' + t).onclick = () => { tab = t; render(); }));
 $('#zin').onclick = () => { const r = svg.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 0.7); };
 $('#zout').onclick = () => { const r = svg.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.4); };
