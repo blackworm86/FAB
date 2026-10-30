@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { newGame, endPhase, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, closeBattle, moveOptions, move, resolveBlow, boxOf, chit, playGreifBridge, playInterdict,
+import { newGame, endPhase, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, moveOptions, move, resolveBlow, boxOf, chit, playGreifBridge, playInterdict,
   playBodenplatte, heydteDrop, heydteWindow, buildFieldWorks, unitsIn, setReserve, canReserve, type Game } from '../src';
 
 function toAdmin(seed: number, turn = 2, campaign = false): Game {
   const g = newGame(seed, campaign ? { scenario: 'campaign' } : {});
-  for (const a of mustFight(g)) { const b = startBattle(g, a); beginCombat(g, b); for (let i = 0; i < 30 && b.stage !== 'done'; i++) { if (b.stage === 'attChoice') attackerChoice(g, b, false); else if (b.stage === 'defChoice') defenderChoice(g, b, true); else roll_step(g, b); } closeBattle(g); }
+  for (const a of mustFight(g)) { const b = startBattle(g, a); beginCombat(g, b); for (let i = 0; i < 30 && b.stage !== 'done'; i++) { if (b.stage === 'attChoice') attackerChoice(g, b, false); else if (b.stage === 'defChoice') defenderChoice(g, b, true); else if (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]); else roll_step(g, b); } closeBattle(g); }
   while (!(g.turn === turn && g.phase === 'admin')) endPhase(g);
   return g;
 }

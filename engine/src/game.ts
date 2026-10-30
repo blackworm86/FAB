@@ -25,7 +25,8 @@ export interface Unit {
 export interface Roll { who: string; sn: number; dice: number[]; hits: number; kind: 'arty' | 'ground' }
 export interface Battle {
   area: number; attacker: Side; attPoint: string; defPoint: string; bt: boolean; riverAssault: boolean;
-  stage: 'setup' | 'attArty' | 'defArty' | 'defFire' | 'offFire' | 'attChoice' | 'defChoice' | 'done';
+  stage: 'setup' | 'attArty' | 'defArty' | 'defFire' | 'offFire' | 'attChoice' | 'defChoice' | 'retreat' | 'done';
+  retreat?: { side: Side; queue: string[]; moved: boolean; after: 'ground' | 'arty' | 'sa'; h: number; excess: number };
   queue: ('attArty' | 'defArty' | 'defFire' | 'offFire')[]; assets: Record<Side, string[]>; air: Partial<Record<Side, { id: string; mode: 'arty' | 'support'; unit?: string }>>;
   pending: number; pendingKind?: 'arty' | 'ground'; engFw: boolean; rolls: Roll[]; result?: string; exploit: boolean; unitHit: Record<Side, boolean>; mark: number;
 }
@@ -35,7 +36,7 @@ export interface Game {
   fieldWorks: number[]; riverAssault: number[]; blown: string[]; contestedAtMoveStart: number[]; fought: number[];
   markers: { german: Record<string, number>; allied: Record<string, number> }; stratMoves: number; riverCross: string[]; blowTried: number[]; entered: Record<number, { id: string; river: boolean; blown: boolean }[]>;
   pendingBlow: { unit: string; path: number[] } | null; greif: Record<string, string>; greifTried: string[]; fwBuilt: string[]; tfNew: string[]; elimLarge: string[]; captured: number[]; fuelAdded: boolean; opts: Opts;
-  roadblocks: Record<number, Side>; interdicted: Record<number, string>; pooled: number | null; airSupply: { area: number; side: Side; id: string; stamp: number } | null; revealed: string | null; arrived: string[];
+  roadblocks: Record<number, Side>; interdicted: Record<number, string>; pooled: number | null; airSupply: { area: number; side: Side; id: string; stamp: number } | null; revealed: string | null; arrived: string[]; pendingArrivals: string[];
   battle: Battle | null; seed: number; rolls: number; log: string[]; over?: string;
 }
 type RawUnit = { id: string; name: string; side: string; echelon?: string; symbol?: string; cls?: string; steps?: number; quality_by_step?: Quality[]; start_area?: number; arrival_turn?: number; entry?: string[]; kind?: string };
@@ -71,7 +72,7 @@ export function newGame(seed = Date.now() % 1e9, opts: Partial<Opts> = {}): Game
   for (const a of sc.garrisons) units.push({ id: `G${a}`, name: `Garrison ${areas.get(a)!.name}`, side: 'allied', cls: 'infantry', q: ['green'], max: 1, str: 1, area: a, garrison: true, disorder: 0, unsupplied: false, moved: true, reserve: null, exploit: false });
   const g: Game = { turn: 1, lastTurn: last, phasing: 'german', phase: 'combat', units, chits: buildChits(last), control: {}, fieldWorks: [...sc.fieldWorks], riverAssault: [...sc.riverAssault], blown: [...sc.blownBridges],
     contestedAtMoveStart: [], fought: [], markers: { german: { z5: 2, z6: 2, z7: 1 }, allied: { z56: 3, z7: 2 } }, stratMoves: 0, riverCross: [], blowTried: [], entered: {}, pendingBlow: null, greif: {}, greifTried: [], fwBuilt: [], tfNew: [],
-    elimLarge: [], captured: [], fuelAdded: false, opts: o, roadblocks: {}, interdicted: {}, pooled: null, airSupply: null, revealed: null, arrived: [], battle: null, seed, rolls: 0, log: [] };
+    elimLarge: [], captured: [], fuelAdded: false, opts: o, roadblocks: {}, interdicted: {}, pooled: null, airSupply: null, revealed: null, arrived: [], pendingArrivals: [], battle: null, seed, rolls: 0, log: [] };
   const peiper = units.find((u) => u.name === 'Peiper')!; peiper.reserve = 'z6'; g.markers.german.z6--;
   const ger = new Set(units.filter((u) => u.side === 'german' && u.area).map((u) => u.area!));
   const todo = units.filter((u) => u.side === 'allied' && u.area).map((u) => u.area!), seen = new Set(todo);
@@ -144,12 +145,7 @@ function reinforcementPhase(g: Game) {
     if (side === 'german') { const art = boxOf(g, side, 'used').find((c) => c.kind === 'artillery'); if (art) { art.box = 'eliminated'; say(g, `German artillery attrition: ${art.name} eliminated (16.12)`); } }
     boxOf(g, side, 'used').forEach((c) => (c.box = c.kind === 'sa_block' ? 'available' : 'cup'));
   }
-  for (const u of g.units.filter((x) => x.arrival === g.turn && x.area == null && x.str > 0)) {
-    const opts = (u.entry ?? []).map((l) => ENTRY[l]?.area).filter(Boolean) as number[];
-    const to = opts.find((a) => g.control[a] === u.side && blocks(g, a, u.side).length < 2) ?? opts.find((a) => !unitsIn(g, a).length);
-    if (to == null) { u.arrival = g.turn + 1; say(g, `${u.name} delayed one turn (entry blocked)`); continue; }
-    u.area = to; g.arrived.push(u.id); g.control[to] = u.side; say(g, `${u.name} arrives in ${areas.get(to)!.name}`);
-  }
+  g.pendingArrivals = g.units.filter((x) => x.arrival === g.turn && x.area == null && x.str > 0).map((x) => x.id);
   g.tfNew = [];
   for (const c of g.chits.filter((x) => x.turn === g.turn && x.box === 'future')) {
     if (c.kind === 'task_force') { c.box = 'available'; g.tfNew.push(c.id); } else c.box = 'cup';
@@ -594,19 +590,45 @@ function applyDef(g: Game, b: Battle, h: number, kind: 'arty' | 'ground', retrea
   const def = other(b.attacker);
   if (retreat) h--;
   const excess = allocate(g, b, def, h);
-  let retreated = false;
-  if (retreat) for (const u of unitsIn(g, b.area, def).filter((x) => !x.garrison)) {
-    const to = neighbors(b.area).find((n) => g.control[n] === def && !unitsIn(g, n, b.attacker).length && blocks(g, n, def).length < 2);
-    if (to == null) { stepLoss(g, b, def, u.id); continue; }
-    u.area = to; u.disorder = 1; retreated = true; say(g, `${u.name} retreats to ${areas.get(to)!.name}`);
-  }
   b.pending = 0;
+  if (retreat) { b.retreat = { side: def, queue: unitsIn(g, b.area, def).filter((x) => !x.garrison).map((x) => x.id), moved: false, after: kind, h, excess }; return advanceRetreat(g, b); }
+  finishDef(g, b, kind, false, excess);
+}
+function finishDef(g: Game, b: Battle, kind: 'arty' | 'ground', retreated: boolean, excess: number) {
+  const def = other(b.attacker);
   if (allGone(g, b, def)) {
     b.result = retreated ? 'Defender retreated' : 'Defender eliminated';
     b.exploit = !retreated && (kind === 'arty' || excess > 0);
     b.queue = b.queue.filter((s) => s === 'defArty');
   }
   next(g, b);
+}
+/** Where a retreating block may go: adjacent, friendly-controlled, free of enemies, room for one more block (6.5). */
+export function retreatOptions(g: Game, b: Battle, unitId?: string): number[] {
+  const r = b.retreat; if (!r) return [];
+  const u = g.units.find((x) => x.id === (unitId ?? r.queue[0]))!;
+  return neighbors(b.area).filter((n) => g.control[n] === r.side && !unitsIn(g, n, other(r.side)).length && blocks(g, n, r.side).length < 2 && !(g.blown.includes(keyOf(b.area, n)) && false) && u != null);
+}
+function advanceRetreat(g: Game, b: Battle) {
+  const r = b.retreat!;
+  while (r.queue.length) {
+    const u = g.units.find((x) => x.id === r.queue[0])!, opts = retreatOptions(g, b);
+    if (!opts.length) { stepLoss(g, b, r.side, u.id); r.queue.shift(); continue; }
+    if (opts.length === 1) { moveRetreat(g, b, u, opts[0]); r.queue.shift(); continue; }
+    b.stage = 'retreat'; return;
+  }
+  b.retreat = undefined;
+  if (r.after === 'sa') { b.exploit = true; b.queue = []; return end(g, b, 'Defender retreated (Special Action): exploitation opportunity'); }
+  finishDef(g, b, r.after, r.moved, r.excess);
+}
+function moveRetreat(g: Game, b: Battle, u: Unit, to: number) {
+  if (u.area == null) return;
+  const from = u.area; u.area = to; u.disorder = 1; b.retreat!.moved = true; updateControl(g, from); updateControl(g, to); say(g, `${u.name} retreats to ${areas.get(to)!.name}`);
+}
+export function chooseRetreat(g: Game, b: Battle, to: number) {
+  if (b.stage !== 'retreat' || !b.retreat) throw new Error('no retreat pending');
+  if (!retreatOptions(g, b).includes(to)) throw new Error('cannot retreat there');
+  moveRetreat(g, b, g.units.find((x) => x.id === b.retreat!.queue[0])!, to); b.retreat.queue.shift(); advanceRetreat(g, b);
 }
 function end(g: Game, b: Battle, result: string) {
   b.result = result; b.stage = 'done';
@@ -625,8 +647,7 @@ export function defenderRetreatSA(g: Game, b: Battle) {
   if (b.assets[def].length || b.air[def]) throw new Error('defender has assets assigned');
   const us = unitsIn(g, b.area, def).filter((u) => !u.garrison); if (!us.length || unitsIn(g, b.area, def).some((u) => u.garrison)) throw new Error('garrisons cannot retreat');
   spendSA(g, def, us[0].ech, 'retreat before combat'); us.forEach((x) => clearInterdict(g, x));
-  for (const u of us) { const to = neighbors(b.area).find((n) => g.control[n] === def && !unitsIn(g, n, b.attacker).length && blocks(g, n, def).length < 2); if (to == null) { stepLoss(g, b, def, u.id); continue; } u.area = to; say(g, `${u.name} retreats to ${areas.get(to)!.name}`); }
-  b.exploit = true; b.queue = []; end(g, b, 'Defender retreated (Special Action): exploitation opportunity');
+  b.retreat = { side: def, queue: us.map((u) => u.id), moved: false, after: 'sa', h: 0, excess: 0 }; advanceRetreat(g, b);
 }
 export function defenderReinforceSA(g: Game, b: Battle, unitId: string) {
   if (b.stage !== 'setup') throw new Error('only before the first roll'); const def = other(b.attacker), u = g.units.find((x) => x.id === unitId)!;
@@ -687,6 +708,7 @@ export function endPhase(g: Game) {
   if (g.pendingBlow) throw new Error('resolve the bridge-blowing attempt first');
   if (mustFight(g).length) throw new Error('newly contested areas must be fought first');
   const ph = g.phase;
+  if (ph === 'reinforcement') for (const id of [...g.pendingArrivals]) autoArrive(g, id);
   if (ph === 'admin') g.revealed = null;                                                      // 8.32 revealed only until the end of the Admin Phase
   if (ph === 'movement' || ph === 'btMove') placeRiverAssaults(g);
   if (ph === 'movement' || ph === 'strategic' || ph === 'combat' || ph === 'reaction' || ph === 'btMove' || ph === 'btCombat') retreatExcess(g);
@@ -778,4 +800,26 @@ export function reroute(g: Game, unitId: string, area: number) {
   if (!rerouteOptions(g, unitId).includes(area)) throw new Error('not a legal entry area');
   const u = g.units.find((x) => x.id === unitId)!, from = u.area!; spendSA(g, u.side, u.ech, 'reroute a reinforcement');
   u.area = area; g.control[area] = u.side; updateControl(g, from); say(g, `${u.name} rerouted to ${areas.get(area)!.name}`);
+}
+
+/* ================= arrivals (4.1c) ================= */
+const listedEntries = (u: Unit) => (u.entry ?? []).map((l) => ENTRY[l]?.area).filter(Boolean) as number[];
+const entryOpen = (g: Game, u: Unit, a: number) => (g.control[a] === u.side || !unitsIn(g, a).length) && blocks(g, a, u.side).length < 2 && !unitsIn(g, a, other(u.side)).length;
+/** Entry areas a block that has not arrived yet may be placed in. Areas outside its listed ones cost a Special Action (8.27). */
+export function arrivalOptions(g: Game, id: string): { area: number; sa: boolean }[] {
+  const u = g.units.find((x) => x.id === id); if (!u || !g.pendingArrivals.includes(id)) return [];
+  const own = listedEntries(u).filter((a) => entryOpen(g, u, a)), sa = saAvailable(g, u.side, u.ech).length > 0;
+  const rest = sa ? [...new Set(Object.values(ENTRY).filter((e) => sideOf(e.side) === u.side).map((e) => e.area))].filter((a) => !own.includes(a) && entryOpen(g, u, a)) : [];
+  return [...own.map((area) => ({ area, sa: false })), ...rest.map((area) => ({ area, sa: true }))];
+}
+export function placeArrival(g: Game, id: string, area: number) {
+  const opt = arrivalOptions(g, id).find((o) => o.area === area); if (!opt) throw new Error('not a legal entry area');
+  const u = g.units.find((x) => x.id === id)!; if (opt.sa) spendSA(g, u.side, u.ech, 'reroute a reinforcement');
+  u.area = area; g.control[area] = u.side; g.arrived.push(id); g.pendingArrivals = g.pendingArrivals.filter((x) => x !== id); say(g, `${u.name} arrives in ${areas.get(area)!.name}`);
+}
+function autoArrive(g: Game, id: string) {
+  const u = g.units.find((x) => x.id === id)!, opts = listedEntries(u), to = opts.find((a) => g.control[a] === u.side && blocks(g, a, u.side).length < 2) ?? opts.find((a) => !unitsIn(g, a).length);
+  g.pendingArrivals = g.pendingArrivals.filter((x) => x !== id);
+  if (to == null) { u.arrival = g.turn + 1; say(g, `${u.name} delayed one turn (entry blocked)`); return; }
+  u.area = to; g.control[to] = u.side; g.arrived.push(id); say(g, `${u.name} arrives in ${areas.get(to)!.name}`);
 }

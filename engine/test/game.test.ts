@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { newGame, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, closeBattle, assign, canAssign, endPhase, moveOptions, move, resolveBlow, setReserve, canReserve,
+import { arrivalOptions, placeArrival, newGame, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, assign, canAssign, endPhase, moveOptions, move, resolveBlow, setReserve, canReserve,
   stratOptions, stratMove, contestedAreas, unitsIn, boxOf, victory, assetLimits, chit, type Game } from '../src';
 
 function runBattle(g: Game, a: number, flip: boolean) {
@@ -7,7 +7,7 @@ function runBattle(g: Game, a: number, flip: boolean) {
   for (const side of ['german', 'allied'] as const) for (const c of boxOf(g, side, 'available')) { try { assign(g, b, c.id); } catch { /* not assignable */ } }
   beginCombat(g, b);
   for (let i = 0; i < 40 && b.stage !== 'done'; i++) {
-    if (b.stage === 'attChoice') attackerChoice(g, b, flip); else if (b.stage === 'defChoice') defenderChoice(g, b, !flip); else roll_step(g, b);
+    if (b.stage === 'attChoice') attackerChoice(g, b, flip); else if (b.stage === 'defChoice') defenderChoice(g, b, !flip); else if (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]); else roll_step(g, b);
   }
   expect(b.stage).toBe('done'); closeBattle(g);
 }
@@ -46,7 +46,8 @@ describe('M2 game flow', () => {
     expect(g.turn).toBe(2); expect(g.phase).toBe('reinforcement');
     expect(boxOf(g, 'german', 'available').some((c) => c.kind === 'sa_block')).toBe(true);
     const cupGe = boxOf(g, 'german', 'cup').length, cupAl = boxOf(g, 'allied', 'cup').length;
-    expect(g.units.find((u) => u.name === '7 Arm')!.area).not.toBeNull();       // turn-2 reinforcement placed
+    expect(g.pendingArrivals.length).toBeGreaterThan(0); const arm = g.units.find((u) => u.name === '7 Arm')!; expect(g.pendingArrivals).toContain(arm.id);
+    const opt = arrivalOptions(g, arm.id)[0]; placeArrival(g, arm.id, opt.area); expect(arm.area).toBe(opt.area);       // the player places turn-2 reinforcements
     expect(g.units.find((u) => u.name === '1 Inf')!.str).toBe(1);               // arrives at one step (24.25)
     const avGe = boxOf(g, 'german', 'available').length, avAl = boxOf(g, 'allied', 'available').length;
     endPhase(g);

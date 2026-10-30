@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { newGame, endPhase, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, closeBattle, moveOptions, boxOf, roadblock, roadblockAreas, playInterdiction, staffBoundary, staffPool, staffIntel,
+import { arrivalOptions, placeArrival, chooseRetreat, retreatOptions, newGame, endPhase, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, moveOptions, boxOf, roadblock, roadblockAreas, playInterdiction, staffBoundary, staffPool, staffIntel,
   playAirSupply, airSupplyAreas, rerouteOptions, reroute, stratOptions, unitsIn, inSupply, assetLimits, areas, type Game } from '../src';
 
 function toAdmin(seed: number, turn = 2, campaign = false): Game {
   const g = newGame(seed, campaign ? { scenario: 'campaign' } : {});
-  for (const a of mustFight(g)) { const b = startBattle(g, a); beginCombat(g, b); for (let i = 0; i < 30 && b.stage !== 'done'; i++) { if (b.stage === 'attChoice') attackerChoice(g, b, false); else if (b.stage === 'defChoice') defenderChoice(g, b, false); else roll_step(g, b); } closeBattle(g); }
+  for (const a of mustFight(g)) { const b = startBattle(g, a); beginCombat(g, b); for (let i = 0; i < 30 && b.stage !== 'done'; i++) { if (b.stage === 'attChoice') attackerChoice(g, b, false); else if (b.stage === 'defChoice') defenderChoice(g, b, false); else if (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]); else roll_step(g, b); } closeBattle(g); }
   while (!(g.turn === turn && g.phase === 'admin')) endPhase(g);
   return g;
 }
@@ -63,9 +63,30 @@ describe('M3 rules', () => {
   });
   it('Reroute (8.27): a reinforcement may move to another entry area for a Special Action', () => {
     const g = newGame(9, { scenario: 'campaign' });
-    while (!(g.turn === 2 && g.phase === 'reinforcement')) { for (const a of mustFight(g)) { const b = startBattle(g, a); beginCombat(g, b); for (let i = 0; i < 30 && b.stage !== 'done'; i++) { if (b.stage === 'attChoice') attackerChoice(g, b, false); else if (b.stage === 'defChoice') defenderChoice(g, b, false); else roll_step(g, b); } closeBattle(g); } endPhase(g); }
+    while (!(g.turn === 2 && g.phase === 'reinforcement')) { for (const a of mustFight(g)) { const b = startBattle(g, a); beginCombat(g, b); for (let i = 0; i < 30 && b.stage !== 'done'; i++) { if (b.stage === 'attChoice') attackerChoice(g, b, false); else if (b.stage === 'defChoice') defenderChoice(g, b, false); else if (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]); else roll_step(g, b); } closeBattle(g); } endPhase(g); }
+    for (const id of [...g.pendingArrivals]) { const o = arrivalOptions(g, id).find((x) => !x.sa); if (o) placeArrival(g, id, o.area); }
     const u = g.units.find((x) => g.arrived.includes(x.id) && rerouteOptions(g, x.id).length);
     if (u) { const to = rerouteOptions(g, u.id)[0], before = boxOf(g, u.side, 'available').length; reroute(g, u.id, to); expect(u.area).toBe(to); expect(boxOf(g, u.side, 'available').length).toBeLessThanOrEqual(before); }
     expect(stratOptions(g, g.units[0].id)).toBeDefined(); expect(assetLimits).toBeDefined();
+  });
+});
+
+describe('retreat choice (6.5)', () => {
+  it('a retreating defender stops at a retreat stage when several areas are legal, and chooseRetreat moves it disordered', () => {
+    let seen = 0;
+    for (let seed = 1; seed <= 80 && !seen; seed++) {
+      const g = newGame(seed);
+      for (const a of mustFight(g)) {
+        const b = startBattle(g, a); beginCombat(g, b);
+        for (let i = 0; i < 30 && b.stage !== 'done'; i++) {
+          if (b.stage === 'attChoice') attackerChoice(g, b, false);
+          else if (b.stage === 'defChoice') defenderChoice(g, b, true);
+          else if (b.stage === 'retreat') { const opts = retreatOptions(g, b); expect(opts.length).toBeGreaterThan(1); const u = g.units.find((x) => x.id === b.retreat!.queue[0])!; chooseRetreat(g, b, opts[opts.length - 1]); expect(u.area).toBe(opts[opts.length - 1]); expect(u.disorder).toBe(1); seen++; }
+          else roll_step(g, b);
+        }
+        if (b.stage === 'done') closeBattle(g);
+      }
+    }
+    expect(seen).toBeGreaterThan(0);
   });
 });
