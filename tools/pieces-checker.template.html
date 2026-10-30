@@ -1,0 +1,302 @@
+<title>FAB Piece Checker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+/* Layout: 3D table on the left, piece list / details / export panel on the right (stacks under the table on phones). */
+:root {
+  --bg: #eef0ee; --panel: #fbfbf9; --panel-2: #f1f2ef; --line: #cfd3cc; --fg: #1d2420; --muted: #5d675f;
+  --accent: #c2410c; --accent-fg: #ffffff; --ok: #1a7f4b; --bad: #c0262d; --warn: #9a6700; --sel: #0a84ff;
+  --ui: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #131714; --panel: #1b201c; --panel-2: #232924; --line: #343b35; --fg: #e8ece6; --muted: #9aa59c;
+  --accent: #ff9248; --accent-fg: #1b1006; --ok: #4cc38a; --bad: #ff6b72; --warn: #e5b53b; --sel: #4aa3ff; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #131714; --panel: #1b201c; --panel-2: #232924; --line: #343b35; --fg: #e8ece6; --muted: #9aa59c;
+  --accent: #ff9248; --accent-fg: #1b1006; --ok: #4cc38a; --bad: #ff6b72; --warn: #e5b53b; --sel: #4aa3ff; color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--ui); font-size: 15px; margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.app { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 380px; padding-left: max(0px, env(safe-area-inset-left, 0px)); padding-right: max(0px, env(safe-area-inset-right, 0px)); }
+.stage { position: relative; min-width: 0; min-height: 0; background: #0c0f0d; overflow: hidden; }
+#gl { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+.bar { position: absolute; left: 10px; right: 10px; top: 10px; display: flex; gap: 8px; flex-wrap: wrap; pointer-events: none; }
+.bar > * { pointer-events: auto; }
+.chip { background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 8px; backdrop-filter: blur(6px); }
+.chip[hidden] { display: none; }
+.readout { position: absolute; left: 10px; bottom: 10px; right: 10px; font-family: var(--mono); font-size: 12px; background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
+.nogl { position: absolute; inset: 0; display: grid; place-items: center; color: #cfd; text-align: center; padding: 20px; }
+.panel { background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.tabs { display: flex; border-bottom: 1px solid var(--line); }
+.tabs button { flex: 1; padding: 11px 6px; background: none; border: 0; border-bottom: 3px solid transparent; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; font-size: 12.5px; color: var(--muted); cursor: pointer; }
+.tabs button[aria-selected=true] { color: var(--fg); border-bottom-color: var(--accent); }
+.pane { padding: 12px 14px 20px; overflow: auto; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+h2 { font-size: 12px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; font-weight: 600; }
+h3 { margin: 0; font-size: 20px; font-weight: 600; line-height: 1.15; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.btn { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; font-weight: 500; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: transparent; font-weight: 600; }
+.btn.danger { color: var(--bad); }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--sel); outline-offset: 1px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: var(--panel-2); padding: 6px 12px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed=true] { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.muted { color: var(--muted); } .mono { font-family: var(--mono); }
+.kv { display: grid; grid-template-columns: 96px 1fr; gap: 6px 10px; align-items: center; }
+.kv label { color: var(--muted); font-size: 13px; }
+input[type=number], input[type=text], input[type=search], select, textarea { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; }
+textarea { min-height: 64px; resize: vertical; }
+.filters { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.filters .wide { grid-column: 1 / -1; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
+.cell { position: relative; background: var(--panel-2); border: 2px solid transparent; border-radius: 6px; padding: 4px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; align-items: center; min-width: 0; }
+.cell img { width: 100%; height: 64px; object-fit: contain; display: block; }
+.cell span { font-size: 11.5px; line-height: 1.15; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); }
+.cell[aria-selected=true] { border-color: var(--sel); }
+.cell .st { position: absolute; top: 3px; right: 3px; width: 11px; height: 11px; border-radius: 50%; }
+.st.ok { background: var(--ok); } .st.bad { background: var(--bad); }
+.pq { display: inline-flex; align-items: center; gap: 4px; }
+.dotq { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #fff; box-shadow: 0 0 0 1px #0007; display: inline-block; }
+.dotq.elite { background: #e5383b; } .dotq.veteran { background: #111; } .dotq.green { background: #fff; border-color: #333; box-shadow: none; }
+.hint { font-size: 13px; color: var(--muted); line-height: 1.4; }
+#out { font-family: var(--mono); font-size: 11.5px; min-height: 160px; white-space: pre; }
+.list { display: flex; flex-direction: column; gap: 2px; }
+.item { display: flex; gap: 8px; align-items: baseline; padding: 5px 7px; border-radius: 6px; background: none; border: 0; text-align: left; width: 100%; cursor: pointer; }
+.item:hover { background: var(--panel-2); }
+.tag { font-family: var(--mono); font-size: 11.5px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); flex: none; }
+.pass { color: var(--ok); border-color: var(--ok); } .fail { color: var(--bad); border-color: var(--bad); }
+@media (max-width: 860px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: minmax(0, 52%) minmax(0, 48%); padding-left: 0; padding-right: 0; }
+  .panel { border-left: 0; border-top: 1px solid var(--line); }
+  .pane { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .bar { left: max(10px, env(safe-area-inset-left, 0px)); }
+}
+</style>
+
+<div class="app">
+  <div class="stage" id="stage">
+    <canvas id="gl" aria-label="3D table with game pieces"></canvas>
+    <div class="bar">
+      <div class="chip seg" style="padding:0" role="group" aria-label="View">
+        <button id="v-one" aria-pressed="true">Single piece</button><button id="v-tab" aria-pressed="false">Table</button>
+      </div>
+      <div class="chip" id="stepchip" hidden></div>
+    </div>
+    <div class="readout" id="readout">Drag to orbit, scroll or pinch to zoom, right-drag or Shift-drag to pan.</div>
+  </div>
+  <aside class="panel">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-list" aria-selected="true">Pieces</button>
+      <button role="tab" id="tab-det" aria-selected="false">Details</button>
+      <button role="tab" id="tab-exp" aria-selected="false">Export</button>
+    </div>
+    <div class="pane" id="pane"></div>
+  </aside>
+</div>
+
+<script>
+const PIECES = __DATA__;
+const IMGS = __IMGS__;
+(function () {
+'use strict';
+const $ = (s) => document.querySelector(s);
+const pane = $('#pane');
+const clone = (o) => JSON.parse(JSON.stringify(o));
+const ORIG = clone(PIECES);
+let pieces = clone(PIECES), flags = {}, notes = {};
+const STORE = 'fab-pieces-checker-v1';
+try { const s = JSON.parse(localStorage.getItem(STORE) || 'null'); if (s && s.pieces) { pieces = s.pieces; flags = s.flags || {}; notes = s.notes || {}; } } catch (e) {}
+const save = () => { try { localStorage.setItem(STORE, JSON.stringify({ pieces, flags, notes })); } catch (e) {} };
+const byId = (id) => pieces.find((p) => p.id === id);
+const ECH = { de_5pz: '5th Panzer Army (grey)', de_6pz: '6th Panzer Army (purple)', de_7a: '7th Army (blue)', de_sr: 'German Strategic Reserve (orange)', us_1a: 'US 1st Army (light green)', us_3a: 'US 3rd Army (dark green)', us_sr: 'US Strategic Reserve (light blue)', br_xxx: 'British XXX Corps (red-orange)', german: 'German (no army)', allied: 'Allied (no army)', none: 'Neutral marker' };
+const WOOD = { german: 0x8d9195, british: 0x3f6fb8, us: 0x55803c, allied: 0x55803c };
+let mode = 'one', tab = 'list', selId = pieces[0].id, step = 0;
+const F = { side: 'all', type: 'all', ech: 'all', q: '' };
+
+/* ---------- three.js ---------- */
+const canvas = $('#gl'); let renderer = null;
+try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true }); } catch (e) { renderer = null; }
+if (!renderer) { const d = document.createElement('div'); d.className = 'nogl'; d.textContent = 'This browser could not start WebGL, so the 3D view is unavailable. The Pieces and Details tabs still work.'; $('#stage').appendChild(d); }
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0c0f0d);
+const cam = new THREE.PerspectiveCamera(35, 1, 0.1, 200);
+let target = new THREE.Vector3(0, 0.6, 0), yaw = 0.35, pitch = 0.42, dist = 4.2;
+if (renderer) { renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); renderer.outputEncoding = THREE.sRGBEncoding; renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; }
+scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x2a2f2a, 0.85));
+const sun = new THREE.DirectionalLight(0xffffff, 0.9); sun.position.set(3, 6, 4); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -14, right: 14, top: 14, bottom: -14, near: 0.5, far: 30 }); scene.add(sun);
+const table = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), new THREE.MeshStandardMaterial({ color: 0x1d3a2a, roughness: 0.95 })); table.rotation.x = -Math.PI / 2; table.receiveShadow = true; scene.add(table);
+const stage = new THREE.Group(); scene.add(stage);
+const texCache = {}, meshCache = {};
+const loader = new THREE.TextureLoader();
+function tex(i) { if (!texCache[i]) { const t = loader.load(IMGS[i], () => requestRender()); t.encoding = THREE.sRGBEncoding; t.anisotropy = renderer ? renderer.capabilities.getMaxAnisotropy() : 1; texCache[i] = t; } return texCache[i]; }
+function pieceMesh(p) {
+  if (meshCache[p.id]) return meshCache[p.id];
+  let m;
+  if (p.t === 'block') {
+    const w = 1, h = p.ar, d = 0.3, wood = new THREE.MeshStandardMaterial({ color: WOOD[p.side] || 0x888888, roughness: 0.7 });
+    const face = new THREE.MeshStandardMaterial({ map: tex(p.img), roughness: 0.55 });
+    m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [wood, wood, wood, wood, face, wood]);
+    m.userData.dims = [w, h, d];
+  } else {
+    const s = 1, d = 0.12, edge = new THREE.MeshStandardMaterial({ color: 0xd8d4c8, roughness: 0.8 });
+    const front = new THREE.MeshStandardMaterial({ map: tex(p.img), roughness: 0.5 }), back = new THREE.MeshStandardMaterial({ color: 0xb9b4a6, roughness: 0.8 });
+    m = new THREE.Mesh(new THREE.BoxGeometry(s, s, d), [edge, edge, edge, edge, front, back]);
+    m.userData.dims = [s, s, d];
+  }
+  m.castShadow = true; m.receiveShadow = true; m.userData.id = p.id; meshCache[p.id] = m; return m;
+}
+const outline = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: 0xffd400 }));
+function visiblePieces() {
+  const q = F.q.trim().toLowerCase();
+  return pieces.filter((p) => (F.side === 'all' || p.side === F.side) && (F.type === 'all' || p.t === F.type || p.kind === F.type) && (F.ech === 'all' || p.ech === F.ech) &&
+    (!q || (p.name + ' ' + p.id + ' ' + (p.kind || '')).toLowerCase().includes(q)));
+}
+let anim = null, rotCur = 0, rotGoal = 0, dirty = true;
+function requestRender() { dirty = true; }
+function blockAngle(p, st) { return Math.PI / 2 * (p.steps - st); }
+function standY(m, ang) { const [w, h] = m.userData.dims; return Math.abs(Math.cos(ang)) * h / 2 + Math.abs(Math.sin(ang)) * w / 2; }
+function layout() {
+  while (stage.children.length) stage.remove(stage.children[0]);
+  outline.parent && outline.parent.remove(outline);
+  const sel = byId(selId);
+  if (mode === 'one') {
+    const m = pieceMesh(sel); stage.add(m);
+    m.position.set(0, 0, 0); m.rotation.set(sel.t === 'block' ? 0 : -Math.PI / 2 + 0.0, 0, 0);
+    if (sel.t === 'block') { rotCur = rotGoal = blockAngle(sel, step); m.rotation.z = rotCur; m.position.y = standY(m, rotCur); }
+    else { m.rotation.x = -Math.PI / 2; m.position.y = 0.06; }
+    target.set(0, sel.t === 'block' ? sel.ar / 2 : 0.2, 0); if (!anim) dist = sel.t === 'block' ? 4.2 : 3.6;
+  } else {
+    const list = visiblePieces(), n = list.length, cols = Math.max(1, Math.ceil(Math.sqrt(n * 1.5))), sp = 1.55;
+    list.forEach((p, i) => { const m = pieceMesh(p); stage.add(m); const c = i % cols, r = Math.floor(i / cols);
+      m.position.x = (c - (cols - 1) / 2) * sp; m.position.z = r * sp * 1.12 - (Math.ceil(n / cols) - 1) * sp * 0.56;
+      if (p.t === 'block') { m.rotation.set(0, 0, 0); m.position.y = standY(m, 0); } else { m.rotation.set(-Math.PI / 2, 0, 0); m.position.y = 0.06; } });
+    const rows = Math.ceil(n / cols); target.set(0, 0.4, 0); dist = Math.max(6, Math.max(cols * sp * 1.45, rows * sp * 1.9));
+  }
+  const m = meshCache[selId]; if (m && m.parent) { const [w, h, d] = m.userData.dims; outline.scale.set(w * 1.04, h * 1.04, d * 1.04); m.add(outline); }
+  requestRender();
+}
+function setStep(k) { const p = byId(selId); if (p.t !== 'block') return; step = k; rotGoal = blockAngle(p, k); anim = true; requestRender(); updateStepChip(); renderDetailsLive(); }
+function frame() {
+  requestAnimationFrame(frame); if (!renderer) return;
+  if (anim && mode === 'one') { const p = byId(selId), m = meshCache[selId]; if (p.t === 'block') { const d = rotGoal - rotCur; if (Math.abs(d) < 0.002) { rotCur = rotGoal; anim = null; } else rotCur += d * 0.18; m.rotation.z = rotCur; m.position.y = standY(m, rotCur); dirty = true; } else anim = null; }
+  if (!dirty) return; dirty = false;
+  const r = canvas.getBoundingClientRect(); if (canvas.width !== Math.round(r.width * renderer.getPixelRatio()) || canvas.height !== Math.round(r.height * renderer.getPixelRatio())) { renderer.setSize(r.width, r.height, false); cam.aspect = r.width / Math.max(1, r.height); cam.updateProjectionMatrix(); }
+  cam.position.set(target.x + dist * Math.sin(yaw) * Math.cos(pitch), target.y + dist * Math.sin(pitch), target.z + dist * Math.cos(yaw) * Math.cos(pitch)); cam.lookAt(target);
+  renderer.render(scene, cam);
+}
+/* camera input */
+const ptrs = new Map(); let moved = 0, lastPinch = 0, panning = false;
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+canvas.addEventListener('pointerdown', (e) => { canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; panning = e.button === 2 || e.shiftKey; if (ptrs.size === 2) lastPinch = 0; });
+canvas.addEventListener('pointermove', (e) => { const prev = ptrs.get(e.pointerId); if (!prev) return; ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (lastPinch) dist = Math.min(60, Math.max(1.5, dist * lastPinch / d)); lastPinch = d; moved = 99; requestRender(); return; }
+  const dx = e.clientX - prev[0], dy = e.clientY - prev[1]; moved += Math.abs(dx) + Math.abs(dy);
+  if (panning) { const k = dist * 0.0016; const rx = Math.cos(yaw), rz = -Math.sin(yaw); target.x -= (dx * rx) * k; target.z -= (dx * rz) * k; target.y = Math.max(0, target.y + dy * k); }
+  else { yaw -= dx * 0.008; pitch = Math.min(1.5, Math.max(0.03, pitch + dy * 0.008)); }
+  requestRender(); });
+const ray = new THREE.Raycaster();
+function endp(e) { const wasClick = moved < 6 && ptrs.size === 1; ptrs.delete(e.pointerId); lastPinch = 0;
+  if (wasClick && e.type === 'pointerup' && mode === 'tab') { const r = canvas.getBoundingClientRect(); ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), cam);
+    const hit = ray.intersectObjects(stage.children, false)[0]; if (hit) { select(hit.object.userData.id, false); } } }
+canvas.addEventListener('pointerup', endp); canvas.addEventListener('pointercancel', endp);
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); dist = Math.min(60, Math.max(1.5, dist * Math.exp(e.deltaY * 0.0012))); requestRender(); }, { passive: false });
+canvas.addEventListener('pointermove', (e) => { if (ptrs.size || mode !== 'tab') return; const r = canvas.getBoundingClientRect(); ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), cam);
+  const hit = ray.intersectObjects(stage.children, false)[0]; if (hit) { const p = byId(hit.object.userData.id); $('#readout').textContent = p.id + ' · ' + p.name + ' · ' + sub(p); } });
+window.addEventListener('resize', requestRender);
+
+/* ---------- UI ---------- */
+function sub(p) { return p.t === 'block' ? (p.cls + ' · ' + p.steps + ' step' + (p.steps > 1 ? 's' : '') + ' · ' + (ECH[p.ech] || p.ech)) : (p.kind + ' · turn ' + (p.turn == null ? '-' : p.turn) + ' · ' + (ECH[p.ech] || p.ech)); }
+function qdots(list) { return '<span class="pq">' + list.map((q) => '<i class="dotq ' + q + '" title="' + q + '"></i>').join('') + '</span>'; }
+function select(id, jump) { selId = id; step = byId(id).t === 'block' ? byId(id).steps : 0; anim = null; layout(); updateStepChip(); if (jump !== false) { tab = 'det'; } render(); }
+function updateStepChip() { const c = $('#stepchip'), p = byId(selId); if (mode !== 'one' || p.t !== 'block' || p.steps < 2) { c.hidden = true; return; } c.hidden = false;
+  c.innerHTML = '<span class="muted">Strength</span><span class="seg">' + Array.from({ length: p.steps }, (_, i) => p.steps - i).map((k) => '<button data-k="' + k + '" aria-pressed="' + (k === step) + '">' + k + '</button>').join('') + '</span>';
+  c.querySelectorAll('button').forEach((b) => (b.onclick = () => setStep(+b.dataset.k))); }
+function render() { document.querySelectorAll('.tabs [role=tab]').forEach((b) => b.setAttribute('aria-selected', b.id === 'tab-' + tab)); if (tab === 'list') renderList(); else if (tab === 'det') renderDet(); else renderExp(); }
+function renderList() {
+  const list = visiblePieces();
+  const opt = (v, t, cur) => '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + t + '</option>';
+  const kinds = [...new Set(pieces.filter((p) => p.t === 'counter').map((p) => p.kind))].sort();
+  pane.innerHTML = '<div class="filters"><select id="f-side" aria-label="Side">' + opt('all', 'All sides', F.side) + opt('german', 'German', F.side) + opt('us', 'US', F.side) + opt('british', 'British', F.side) + opt('allied', 'Allied (generic)', F.side) + opt('neutral', 'Neutral markers', F.side) + '</select>' +
+    '<select id="f-type" aria-label="Type">' + opt('all', 'Blocks and counters', F.type) + opt('block', 'Blocks only', F.type) + opt('counter', 'Counters only', F.type) + kinds.map((k) => opt(k, 'Counter: ' + k.replace(/_/g, ' '), F.type)).join('') + '</select>' +
+    '<select id="f-ech" class="wide" aria-label="Army">' + opt('all', 'All armies', F.ech) + Object.keys(ECH).map((k) => opt(k, ECH[k], F.ech)).join('') + '</select>' +
+    '<input id="f-q" class="wide" type="search" placeholder="Search name or id" value="' + F.q.replace(/"/g, '&quot;') + '"></div>' +
+    '<div class="hint">' + list.length + ' of ' + pieces.length + ' pieces. ' + Object.values(flags).filter((f) => f === 'ok').length + ' marked OK, ' + Object.values(flags).filter((f) => f === 'bad').length + ' marked wrong.</div>' +
+    '<div class="grid">' + list.map((p) => '<button class="cell" data-id="' + p.id + '" aria-selected="' + (p.id === selId) + '" title="' + p.name + '"><img src="' + IMGS[p.img] + '" alt="">' + (flags[p.id] ? '<i class="st ' + flags[p.id] + '"></i>' : '') + '<span>' + p.name + '</span></button>').join('') + '</div>';
+  ['side', 'type', 'ech'].forEach((k) => ($('#f-' + k).onchange = (e) => { F[k] = e.target.value; if (mode === 'tab') layout(); renderList(); }));
+  $('#f-q').oninput = (e) => { F.q = e.target.value; const pos = e.target.selectionStart; if (mode === 'tab') layout(); renderList(); const q = $('#f-q'); q.focus(); q.setSelectionRange(pos, pos); };
+  pane.querySelectorAll('.cell').forEach((c) => (c.onclick = () => select(c.dataset.id, true)));
+}
+function field(label, html) { return '<label>' + label + '</label><div>' + html + '</div>'; }
+const QS = ['elite', 'veteran', 'green'];
+const qsel = (id, cur, none) => '<select id="' + id + '">' + (none ? '<option value="">none</option>' : '') + QS.map((q) => '<option' + (q === cur ? ' selected' : '') + '>' + q + '</option>').join('') + '</select>';
+function renderDet() {
+  const p = byId(selId), o = ORIG.find((x) => x.id === p.id), key = p.id;
+  let rows = '';
+  if (p.t === 'block') {
+    rows = field('Name', '<input type="text" id="e-name" value="' + p.name.replace(/"/g, '&quot;') + '">') + field('Class', '<select id="e-cls"><option' + (p.cls === 'armor' ? ' selected' : '') + '>armor</option><option' + (p.cls === 'infantry' ? ' selected' : '') + '>infantry</option></select>') +
+      field('Symbol', '<span class="mono">' + p.symbol + '</span>') + field('Army', '<select id="e-ech">' + Object.keys(ECH).filter((k) => /^(de_|us_|br_)/.test(k)).map((k) => '<option value="' + k + '"' + (k === p.ech ? ' selected' : '') + '>' + ECH[k] + '</option>').join('') + '</select>') +
+      field('Steps', '<span class="mono">' + p.steps + '</span> <span class="muted">(pips on the top edge)</span>') +
+      p.q.map((q, i) => field('Step ' + (p.steps - i) + (i === 0 ? ' (full)' : ''), '<span class="row">' + qsel('e-q' + i, q) + '</span>')).join('') +
+      field('Start area', '<input type="text" id="e-area" placeholder="area number" value="' + (p.start_area == null ? '' : p.start_area) + '">') +
+      field('Arrives turn', '<input type="text" id="e-turn" placeholder="turn" value="' + (p.arrival_turn == null ? '' : p.arrival_turn) + '">') +
+      field('Entry letters', '<input type="text" id="e-entry" placeholder="e.g. H,J" value="' + (p.entry || []).join(',') + '">');
+  } else {
+    rows = field('Name', '<input type="text" id="e-name" value="' + p.name.replace(/"/g, '&quot;') + '">') + field('Kind', '<input type="text" id="e-kind" value="' + p.kind + '">') +
+      field('Army', '<select id="e-ech">' + Object.keys(ECH).map((k) => '<option value="' + k + '"' + (k === p.ech ? ' selected' : '') + '>' + ECH[k] + '</option>').join('') + '</select>') +
+      field('Turn', '<input type="text" id="e-turn" placeholder="2, S, none" value="' + (p.turn == null ? '' : p.turn) + '">') +
+      field('Quality', qsel('e-quality', p.quality, true)) + field('Extra', '<span class="mono muted">' + (p.extra || '-') + '</span>');
+  }
+  pane.innerHTML = '<div><div class="muted mono">' + (p.t === 'block' ? 'BLOCK ' : 'COUNTER ') + p.id + '</div><h3>' + p.name + '</h3><div class="hint">' + sub(p) + '</div></div>' +
+    '<div class="row"><div class="seg" id="s-flag"><button data-v="ok" aria-pressed="' + (flags[key] === 'ok') + '">Looks right</button><button data-v="bad" aria-pressed="' + (flags[key] === 'bad') + '">Wrong</button><button data-v="" aria-pressed="' + (!flags[key]) + '">Unchecked</button></div></div>' +
+    (p.t === 'block' ? '<div id="live" class="hint"></div>' : '') +
+    '<div class="kv">' + rows + '</div><div><h2>Your note</h2><textarea id="note" placeholder="What is wrong with this piece?">' + (notes[key] || '').replace(/</g, '&lt;') + '</textarea></div>' +
+    '<div class="row"><button class="btn" id="b-prev">Previous</button><button class="btn" id="b-next">Next</button></div>';
+  pane.querySelectorAll('#s-flag button').forEach((b) => (b.onclick = () => { if (b.dataset.v) flags[key] = b.dataset.v; else delete flags[key]; save(); renderDet(); }));
+  const on = (id, fn) => { const e = $('#' + id); if (e) e.onchange = fn; };
+  on('e-name', (e) => { p.name = e.target.value; save(); }); on('e-cls', (e) => { p.cls = e.target.value; save(); }); on('e-ech', (e) => { p.ech = e.target.value; if (p.t === 'block') p.side = e.target.value.startsWith('de_') ? 'german' : e.target.value.startsWith('br_') ? 'british' : 'us'; save(); });
+  on('e-kind', (e) => { p.kind = e.target.value; save(); }); on('e-quality', (e) => { p.quality = e.target.value || null; save(); });
+  if (p.t === 'block') { p.q.forEach((q, i) => on('e-q' + i, (e) => { p.q[i] = e.target.value; save(); renderDetailsLive(); }));
+    on('e-area', (e) => { p.start_area = e.target.value === '' ? null : +e.target.value; save(); }); on('e-turn', (e) => { p.arrival_turn = e.target.value === '' ? null : +e.target.value; save(); }); on('e-entry', (e) => { p.entry = e.target.value.split(/[ ,]+/).filter(Boolean).map((s) => s.toUpperCase()); save(); }); }
+  else on('e-turn', (e) => { const v = e.target.value.trim(); p.turn = v === '' ? null : /^\d+$/.test(v) ? +v : v; save(); });
+  $('#note').oninput = (e) => { const v = e.target.value.trim(); if (v) notes[key] = v; else delete notes[key]; save(); };
+  const list = visiblePieces(), i = list.findIndex((x) => x.id === p.id);
+  $('#b-prev').onclick = () => { if (list.length) select(list[(i - 1 + list.length) % list.length].id, false), render(); }; $('#b-next').onclick = () => { if (list.length) select(list[(i + 1) % list.length].id, false), render(); };
+  renderDetailsLive();
+}
+function renderDetailsLive() { const p = byId(selId), el = $('#live'); if (!el || p.t !== 'block') return; const k = step || p.steps, q = p.q[k - 1];
+  el.innerHTML = 'With the block at <b>' + k + '</b> step' + (k > 1 ? 's' : '') + ', the top edge of the label should show <b>' + k + '</b> ' + (q ? qdots(Array(k).fill(q)) + ' <b>' + q + '</b>' : '') + ' pip' + (k > 1 ? 's' : '') + '. Use the Strength buttons above the table to turn the block.'; }
+function diff() {
+  const out = [];
+  for (const p of pieces) { const o = ORIG.find((x) => x.id === p.id), ch = [];
+    const cmp = (n, a, b) => { if (JSON.stringify(a) !== JSON.stringify(b)) ch.push(n + ': ' + JSON.stringify(b) + ' → ' + JSON.stringify(a)); };
+    cmp('name', p.name, o.name); cmp('army', p.ech, o.ech);
+    if (p.t === 'block') { cmp('class', p.cls, o.cls); cmp('quality by step', p.q, o.q); cmp('start area', p.start_area, o.start_area); cmp('arrival turn', p.arrival_turn, o.arrival_turn); cmp('entry', p.entry, o.entry); }
+    else { cmp('kind', p.kind, o.kind); cmp('turn', p.turn, o.turn); cmp('quality', p.quality, o.quality); }
+    if (ch.length) out.push({ piece: p.id + ' ' + o.name, changes: ch }); }
+  return out;
+}
+function renderExp() {
+  const ch = diff(), bad = Object.entries(flags).filter(([, v]) => v === 'bad').map(([k]) => k), nn = Object.keys(notes).length, ok = Object.values(flags).filter((v) => v === 'ok').length;
+  const data = JSON.stringify({ pieces: 'FAB The Bulge', checked_ok: ok, marked_wrong: bad, changes: ch, notes: Object.entries(notes).map(([k, v]) => ({ piece: k + ' ' + (byId(k) || {}).name, note: v })) });
+  pane.innerHTML = '<div><h2>Your feedback</h2><p class="hint"><b>' + ok + '</b> pieces marked right, <b>' + bad.length + '</b> marked wrong, <b>' + ch.length + '</b> with edits, <b>' + nn + '</b> notes. Copy the text and paste it back to me in the chat.</p>' +
+    '<div class="row"><button class="btn primary" id="copy">Copy feedback</button><button class="btn danger" id="reset">Discard all changes</button><span id="msg" class="hint"></span></div></div>' +
+    '<div><h2>Wrong pieces</h2><div class="list">' + (bad.map((k) => '<button class="item" data-id="' + k + '"><span class="tag fail">WRONG</span><span>' + k + ' ' + byId(k).name + '</span></button>').join('') || '<span class="hint">None.</span>') + '</div></div>' +
+    '<div><h2>Edits</h2><div class="list">' + (ch.map((c) => '<div class="item" style="cursor:default"><span class="tag">' + c.piece + '</span><span>' + c.changes.join('; ') + '</span></div>').join('') || '<span class="hint">No edits yet.</span>') + '</div></div>' +
+    '<div><h2>Text to copy</h2><textarea id="out" readonly aria-label="Feedback JSON"></textarea></div>';
+  const out = $('#out'); out.value = data;
+  $('#copy').onclick = async () => { const msg = $('#msg'); try { await navigator.clipboard.writeText(out.value); msg.textContent = 'Copied.'; } catch (e) { out.select(); msg.textContent = 'Select and copy the text below.'; } };
+  let armed = false; $('#reset').onclick = (ev) => { if (!armed) { armed = true; ev.target.textContent = 'Click again to confirm'; return; } pieces = clone(ORIG); flags = {}; notes = {}; save(); layout(); renderExp(); };
+  pane.querySelectorAll('[data-id]').forEach((b) => (b.onclick = () => select(b.dataset.id, true)));
+}
+function setMode(m) { mode = m; if (m === 'tab') { yaw = 0.0; pitch = 0.75; } $('#v-one').setAttribute('aria-pressed', m === 'one'); $('#v-tab').setAttribute('aria-pressed', m === 'tab'); if (m === 'one' && byId(selId).t === 'block') step = byId(selId).steps; if (m === 'one') { yaw = 0.35; pitch = 0.42; } layout(); updateStepChip(); }
+$('#v-one').onclick = () => setMode('one'); $('#v-tab').onclick = () => setMode('tab');
+['list', 'det', 'exp'].forEach((t) => ($('#tab-' + t).onclick = () => { tab = t; render(); }));
+if (byId(selId).t === 'block') step = byId(selId).steps;
+layout(); updateStepChip(); render(); frame();
+})();
+</script>

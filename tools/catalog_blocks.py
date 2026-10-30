@@ -97,7 +97,7 @@ for r in res:
     if r['id'] in FIX: q[1] = FIX[r['id']]['right']
     units.append(dict(id=r['id'], name=r['name'], side=SIDE(e), echelon=e, symbol=r['symbol'], cls=r['cls'], steps=r['steps'],
                       quality_by_step=list(reversed(q)),      # index 0 = 1-step strength ... last = full strength
-                      **parse(r['code'], SIDE(e)), image=r['image']))
+                      **parse(r['code'], SIDE(e)), box=r['box'], image=r['image']))
 for k, (x0, y0, x1, y1, nm) in enumerate([(627, 718, 955, 1018, 'German Special Action'), (964, 718, 1248, 1018, 'Allied Special Action')]):
     cv2.imwrite(f'{OUT}/SA{k + 1}.png', im[y0:y1, x0:x1])
     units.append(dict(id=f'SA{k + 1}', name=nm, side='german' if k == 0 else 'allied', kind='special_action_block', arrival_turn=2, image=f'assets/blocks/SA{k + 1}.png'))

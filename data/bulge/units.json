@@ -12,6 +12,12 @@
    "elite"
   ],
   "start_area": 5,
+  "box": [
+   84,
+   67,
+   85,
+   83
+  ],
   "image": "assets/blocks/B01.png"
  },
  {
@@ -28,6 +34,12 @@
    "elite"
   ],
   "start_area": 6,
+  "box": [
+   251,
+   67,
+   85,
+   83
+  ],
   "image": "assets/blocks/B02.png"
  },
  {
@@ -45,6 +57,12 @@
    "veteran"
   ],
   "start_area": 7,
+  "box": [
+   418,
+   67,
+   84,
+   83
+  ],
   "image": "assets/blocks/B03.png"
  },
  {
@@ -59,6 +77,12 @@
    "veteran"
   ],
   "start_area": 6,
+  "box": [
+   585,
+   68,
+   84,
+   82
+  ],
   "image": "assets/blocks/B04.png"
  },
  {
@@ -75,6 +99,12 @@
    "veteran"
   ],
   "start_area": 9,
+  "box": [
+   752,
+   68,
+   83,
+   82
+  ],
   "image": "assets/blocks/B05.png"
  },
  {
@@ -90,6 +120,12 @@
    "green"
   ],
   "start_area": 9,
+  "box": [
+   918,
+   68,
+   84,
+   82
+  ],
   "image": "assets/blocks/B06.png"
  },
  {
@@ -106,6 +142,12 @@
    "green"
   ],
   "start_area": 10,
+  "box": [
+   1084,
+   68,
+   84,
+   83
+  ],
   "image": "assets/blocks/B07.png"
  },
  {
@@ -125,6 +167,12 @@
   "arrival_turn": 4,
   "entry": [
    "Z"
+  ],
+  "box": [
+   84,
+   232,
+   84,
+   83
   ],
   "image": "assets/blocks/B08.png"
  },
@@ -146,6 +194,12 @@
   "entry": [
    "Z"
   ],
+  "box": [
+   250,
+   232,
+   85,
+   83
+  ],
   "image": "assets/blocks/B09.png"
  },
  {
@@ -161,6 +215,12 @@
    "green"
   ],
   "start_area": 8,
+  "box": [
+   418,
+   232,
+   84,
+   83
+  ],
   "image": "assets/blocks/B10.png"
  },
  {
@@ -180,6 +240,12 @@
   "entry": [
    "Z"
   ],
+  "box": [
+   585,
+   232,
+   83,
+   83
+  ],
   "image": "assets/blocks/B11.png"
  },
  {
@@ -197,6 +263,12 @@
   "arrival_turn": 8,
   "entry": [
    "Z"
+  ],
+  "box": [
+   752,
+   232,
+   84,
+   83
   ],
   "image": "assets/blocks/B12.png"
  },
@@ -217,6 +289,12 @@
   "entry": [
    "Y"
   ],
+  "box": [
+   919,
+   233,
+   83,
+   82
+  ],
   "image": "assets/blocks/B13.png"
  },
  {
@@ -236,6 +314,12 @@
   "entry": [
    "Y"
   ],
+  "box": [
+   1085,
+   233,
+   84,
+   82
+  ],
   "image": "assets/blocks/B14.png"
  },
  {
@@ -253,6 +337,12 @@
    "elite"
   ],
   "start_area": 13,
+  "box": [
+   84,
+   439,
+   83,
+   82
+  ],
   "image": "assets/blocks/B15.png"
  },
  {
@@ -270,6 +360,12 @@
    "elite"
   ],
   "start_area": 21,
+  "box": [
+   250,
+   439,
+   84,
+   82
+  ],
   "image": "assets/blocks/B16.png"
  },
  {
@@ -289,6 +385,12 @@
   "entry": [
    "Y"
   ],
+  "box": [
+   417,
+   439,
+   84,
+   82
+  ],
   "image": "assets/blocks/B17.png"
  },
  {
@@ -305,6 +407,12 @@
    "elite"
   ],
   "start_area": 12,
+  "box": [
+   584,
+   439,
+   84,
+   83
+  ],
   "image": "assets/blocks/B18.png"
  },
  {
@@ -321,6 +429,12 @@
    "veteran"
   ],
   "start_area": 11,
+  "box": [
+   751,
+   439,
+   84,
+   83
+  ],
   "image": "assets/blocks/B19.png"
  },
  {
@@ -337,6 +451,12 @@
    "elite"
   ],
   "start_area": 20,
+  "box": [
+   918,
+   439,
+   84,
+   83
+  ],
   "image": "assets/blocks/B20.png"
  },
  {
@@ -352,6 +472,12 @@
    "green"
   ],
   "start_area": 11,
+  "box": [
+   1085,
+   439,
+   84,
+   83
+  ],
   "image": "assets/blocks/B21.png"
  },
  {
@@ -367,6 +493,12 @@
    "green"
   ],
   "start_area": 12,
+  "box": [
+   83,
+   604,
+   84,
+   83
+  ],
   "image": "assets/blocks/B22.png"
  },
  {
@@ -384,6 +516,12 @@
   "arrival_turn": 3,
   "entry": [
    "Y"
+  ],
+  "box": [
+   250,
+   604,
+   84,
+   83
   ],
   "image": "assets/blocks/B23.png"
  },
@@ -403,6 +541,12 @@
   "entry": [
    "X"
   ],
+  "box": [
+   416,
+   604,
+   84,
+   83
+  ],
   "image": "assets/blocks/B24.png"
  },
  {
@@ -419,6 +563,12 @@
    "veteran"
   ],
   "start_area": 16,
+  "box": [
+   583,
+   604,
+   84,
+   83
+  ],
   "image": "assets/blocks/B25.png"
  },
  {
@@ -434,6 +584,12 @@
    "green"
   ],
   "start_area": 15,
+  "box": [
+   750,
+   604,
+   84,
+   83
+  ],
   "image": "assets/blocks/B26.png"
  },
  {
@@ -449,6 +605,12 @@
    "green"
   ],
   "start_area": 18,
+  "box": [
+   917,
+   604,
+   84,
+   83
+  ],
   "image": "assets/blocks/B27.png"
  },
  {
@@ -465,6 +627,12 @@
    "veteran"
   ],
   "start_area": 19,
+  "box": [
+   1084,
+   604,
+   84,
+   83
+  ],
   "image": "assets/blocks/B28.png"
  },
  {
@@ -483,6 +651,12 @@
   "entry": [
    "X"
   ],
+  "box": [
+   82,
+   811,
+   84,
+   82
+  ],
   "image": "assets/blocks/B29.png"
  },
  {
@@ -500,6 +674,12 @@
   "arrival_turn": 5,
   "entry": [
    "X"
+  ],
+  "box": [
+   249,
+   811,
+   84,
+   82
   ],
   "image": "assets/blocks/B30.png"
  },
@@ -521,6 +701,12 @@
    "Y",
    "Z"
   ],
+  "box": [
+   416,
+   811,
+   83,
+   82
+  ],
   "image": "assets/blocks/B31.png"
  },
  {
@@ -540,6 +726,12 @@
   "entry": [
    "Y",
    "Z"
+  ],
+  "box": [
+   81,
+   975,
+   84,
+   84
   ],
   "image": "assets/blocks/B32.png"
  },
@@ -561,6 +753,12 @@
    "Y",
    "Z"
   ],
+  "box": [
+   248,
+   975,
+   84,
+   84
+  ],
   "image": "assets/blocks/B33.png"
  },
  {
@@ -580,6 +778,12 @@
    "Y",
    "Z"
   ],
+  "box": [
+   415,
+   976,
+   84,
+   83
+  ],
   "image": "assets/blocks/B34.png"
  },
  {
@@ -596,6 +800,12 @@
    "veteran"
   ],
   "start_area": 16,
+  "box": [
+   81,
+   1182,
+   84,
+   83
+  ],
   "image": "assets/blocks/B35.png"
  },
  {
@@ -610,6 +820,12 @@
    "veteran"
   ],
   "start_area": 19,
+  "box": [
+   247,
+   1182,
+   85,
+   83
+  ],
   "image": "assets/blocks/B36.png"
  },
  {
@@ -624,6 +840,12 @@
    "veteran"
   ],
   "start_area": 21,
+  "box": [
+   414,
+   1182,
+   84,
+   83
+  ],
   "image": "assets/blocks/B37.png"
  },
  {
@@ -638,6 +860,12 @@
    "veteran"
   ],
   "start_area": 12,
+  "box": [
+   581,
+   1182,
+   84,
+   83
+  ],
   "image": "assets/blocks/B38.png"
  },
  {
@@ -654,6 +882,12 @@
    "green"
   ],
   "start_area": 11,
+  "box": [
+   748,
+   1183,
+   84,
+   82
+  ],
   "image": "assets/blocks/B39.png"
  },
  {
@@ -670,6 +904,12 @@
    "green"
   ],
   "start_area": 9,
+  "box": [
+   915,
+   1182,
+   84,
+   83
+  ],
   "image": "assets/blocks/B40.png"
  },
  {
@@ -687,6 +927,12 @@
    "elite"
   ],
   "start_area": 27,
+  "box": [
+   1081,
+   1182,
+   84,
+   83
+  ],
   "image": "assets/blocks/B41.png"
  },
  {
@@ -701,6 +947,12 @@
    "veteran"
   ],
   "start_area": 10,
+  "box": [
+   80,
+   1347,
+   84,
+   83
+  ],
   "image": "assets/blocks/B42.png"
  },
  {
@@ -715,6 +967,12 @@
    "veteran"
   ],
   "start_area": 27,
+  "box": [
+   247,
+   1347,
+   84,
+   83
+  ],
   "image": "assets/blocks/B43.png"
  },
  {
@@ -729,6 +987,12 @@
    "veteran"
   ],
   "start_area": 18,
+  "box": [
+   414,
+   1347,
+   84,
+   84
+  ],
   "image": "assets/blocks/B44.png"
  },
  {
@@ -743,6 +1007,12 @@
    "veteran"
   ],
   "start_area": 25,
+  "box": [
+   581,
+   1347,
+   84,
+   84
+  ],
   "image": "assets/blocks/B45.png"
  },
  {
@@ -757,6 +1027,12 @@
    "veteran"
   ],
   "start_area": 37,
+  "box": [
+   748,
+   1348,
+   84,
+   83
+  ],
   "image": "assets/blocks/B46.png"
  },
  {
@@ -777,6 +1053,12 @@
    "A",
    "B",
    "C"
+  ],
+  "box": [
+   915,
+   1347,
+   84,
+   84
   ],
   "image": "assets/blocks/B47.png"
  },
@@ -800,6 +1082,12 @@
    "B",
    "C"
   ],
+  "box": [
+   1082,
+   1347,
+   84,
+   83
+  ],
   "image": "assets/blocks/B48.png"
  },
  {
@@ -818,6 +1106,12 @@
   "entry": [
    "A",
    "B"
+  ],
+  "box": [
+   80,
+   1554,
+   84,
+   83
   ],
   "image": "assets/blocks/B49.png"
  },
@@ -840,6 +1134,12 @@
    "A",
    "B"
   ],
+  "box": [
+   246,
+   1554,
+   85,
+   83
+  ],
   "image": "assets/blocks/B50.png"
  },
  {
@@ -860,6 +1160,12 @@
   "entry": [
    "H",
    "J"
+  ],
+  "box": [
+   413,
+   1554,
+   85,
+   83
   ],
   "image": "assets/blocks/B51.png"
  },
@@ -882,6 +1188,12 @@
    "H",
    "J"
   ],
+  "box": [
+   580,
+   1554,
+   84,
+   83
+  ],
   "image": "assets/blocks/B52.png"
  },
  {
@@ -902,6 +1214,12 @@
   "entry": [
    "B"
   ],
+  "box": [
+   747,
+   1554,
+   84,
+   83
+  ],
   "image": "assets/blocks/B53.png"
  },
  {
@@ -919,6 +1237,12 @@
   "entry": [
    "H",
    "J"
+  ],
+  "box": [
+   914,
+   1554,
+   85,
+   83
   ],
   "image": "assets/blocks/B54.png"
  },
@@ -942,6 +1266,12 @@
    "D",
    "E"
   ],
+  "box": [
+   1081,
+   1554,
+   84,
+   83
+  ],
   "image": "assets/blocks/B55.png"
  },
  {
@@ -964,6 +1294,12 @@
    "D",
    "E"
   ],
+  "box": [
+   79,
+   1719,
+   84,
+   83
+  ],
   "image": "assets/blocks/B56.png"
  },
  {
@@ -982,6 +1318,12 @@
    "C",
    "D",
    "E"
+  ],
+  "box": [
+   245,
+   1719,
+   84,
+   83
   ],
   "image": "assets/blocks/B57.png"
  },
@@ -1002,6 +1344,12 @@
    "C",
    "D",
    "E"
+  ],
+  "box": [
+   412,
+   1719,
+   84,
+   83
   ],
   "image": "assets/blocks/B58.png"
  },
@@ -1025,6 +1373,12 @@
    "D",
    "E"
   ],
+  "box": [
+   579,
+   1719,
+   84,
+   83
+  ],
   "image": "assets/blocks/B59.png"
  },
  {
@@ -1045,6 +1399,12 @@
    "N",
    "P",
    "Q"
+  ],
+  "box": [
+   747,
+   1719,
+   84,
+   83
   ],
   "image": "assets/blocks/B60.png"
  },
@@ -1069,6 +1429,12 @@
    "M",
    "N"
   ],
+  "box": [
+   914,
+   1719,
+   84,
+   83
+  ],
   "image": "assets/blocks/B61.png"
  },
  {
@@ -1092,6 +1458,12 @@
    "M",
    "N"
   ],
+  "box": [
+   1080,
+   1719,
+   85,
+   83
+  ],
   "image": "assets/blocks/B62.png"
  },
  {
@@ -1114,6 +1486,12 @@
    "M",
    "N"
   ],
+  "box": [
+   79,
+   1925,
+   84,
+   84
+  ],
   "image": "assets/blocks/B63.png"
  },
  {
@@ -1133,6 +1511,12 @@
    "L",
    "M",
    "N"
+  ],
+  "box": [
+   246,
+   1926,
+   84,
+   83
   ],
   "image": "assets/blocks/B64.png"
  },
@@ -1156,6 +1540,12 @@
    "L",
    "M",
    "N"
+  ],
+  "box": [
+   412,
+   1926,
+   84,
+   83
   ],
   "image": "assets/blocks/B65.png"
  },
@@ -1181,6 +1571,12 @@
    "P",
    "Q"
   ],
+  "box": [
+   579,
+   1926,
+   84,
+   83
+  ],
   "image": "assets/blocks/B66.png"
  },
  {
@@ -1204,6 +1600,12 @@
    "G",
    "H"
   ],
+  "box": [
+   913,
+   1926,
+   84,
+   83
+  ],
   "image": "assets/blocks/B67.png"
  },
  {
@@ -1226,6 +1628,12 @@
    "F",
    "G",
    "H"
+  ],
+  "box": [
+   1080,
+   1926,
+   84,
+   83
   ],
   "image": "assets/blocks/B68.png"
  },
@@ -1251,6 +1659,12 @@
    "P",
    "Q"
   ],
+  "box": [
+   78,
+   2091,
+   84,
+   83
+  ],
   "image": "assets/blocks/B69.png"
  },
  {
@@ -1274,6 +1688,12 @@
    "N",
    "P",
    "Q"
+  ],
+  "box": [
+   245,
+   2091,
+   84,
+   83
   ],
   "image": "assets/blocks/B70.png"
  },
@@ -1300,6 +1720,12 @@
    "P",
    "Q"
   ],
+  "box": [
+   412,
+   2091,
+   84,
+   83
+  ],
   "image": "assets/blocks/B71.png"
  },
  {
@@ -1322,6 +1748,12 @@
    "G",
    "H"
   ],
+  "box": [
+   913,
+   2091,
+   84,
+   83
+  ],
   "image": "assets/blocks/B72.png"
  },
  {
@@ -1341,6 +1773,12 @@
   "entry": [
    "D",
    "E"
+  ],
+  "box": [
+   1080,
+   2091,
+   84,
+   83
   ],
   "image": "assets/blocks/B73.png"
  },
