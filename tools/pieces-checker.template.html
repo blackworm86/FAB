@@ -60,6 +60,8 @@ textarea { min-height: 64px; resize: vertical; }
 .cell[aria-selected=true] { border-color: var(--sel); }
 .cell .st { position: absolute; top: 3px; right: 3px; width: 11px; height: 11px; border-radius: 50%; }
 .st.ok { background: var(--ok); } .st.bad { background: var(--bad); }
+.cp { position: absolute; left: 3px; top: 3px; font-family: var(--mono); font-size: 11px; font-weight: 600; background: var(--accent); color: var(--accent-fg); border-radius: 4px; padding: 0 5px; }
+.chip[hidden] { display: none; }
 .pq { display: inline-flex; align-items: center; gap: 4px; }
 .dotq { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #fff; box-shadow: 0 0 0 1px #0007; display: inline-block; }
 .dotq.elite { background: #e5383b; } .dotq.veteran { background: #111; } .dotq.green { background: #fff; border-color: #333; box-shadow: none; }
@@ -86,6 +88,7 @@ textarea { min-height: 64px; resize: vertical; }
         <button id="v-one" aria-pressed="true">Single piece</button><button id="v-tab" aria-pressed="false">Table</button>
       </div>
       <div class="chip" id="stepchip" hidden></div>
+      <div class="chip" id="facechip" hidden></div>
     </div>
     <div class="readout" id="readout">Drag to orbit, scroll or pinch to zoom, right-drag or Shift-drag to pan.</div>
   </div>
@@ -109,14 +112,22 @@ const pane = $('#pane');
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const ORIG = clone(PIECES);
 let pieces = clone(PIECES), flags = {}, notes = {};
-const STORE = 'fab-pieces-checker-v1';
-try { const s = JSON.parse(localStorage.getItem(STORE) || 'null'); if (s && s.pieces) { pieces = s.pieces; flags = s.flags || {}; notes = s.notes || {}; } } catch (e) {}
+const STORE = 'fab-pieces-checker-v2', OLD = 'fab-pieces-checker-v1';
+try {
+  const s2 = JSON.parse(localStorage.getItem(STORE) || 'null');
+  if (s2 && s2.pieces) { pieces = s2.pieces; flags = s2.flags || {}; notes = s2.notes || {}; }
+  else { const o = JSON.parse(localStorage.getItem(OLD) || 'null');   // carry over what was checked/edited in the first version
+    if (o && o.pieces) { flags = o.flags || {}; notes = o.notes || {};
+      for (const op of o.pieces) { const np = pieces.find((x) => x.id === op.id); if (!np || np.t !== op.t) continue;
+        const keys = op.t === 'block' ? ['name', 'side', 'ech', 'cls', 'q', 'start_area', 'arrival_turn', 'entry'] : ['name', 'kind', 'ech', 'turn', 'quality'];
+        keys.forEach((k) => { if (op[k] !== undefined) np[k] = op[k]; }); } } }
+} catch (e) {}
 const save = () => { try { localStorage.setItem(STORE, JSON.stringify({ pieces, flags, notes })); } catch (e) {} };
 const byId = (id) => pieces.find((p) => p.id === id);
 const ECH = { de_5pz: '5th Panzer Army (grey)', de_6pz: '6th Panzer Army (purple)', de_7a: '7th Army (blue)', de_sr: 'German Strategic Reserve (orange)', us_1a: 'US 1st Army (light green)', us_3a: 'US 3rd Army (dark green)', us_sr: 'US Strategic Reserve (light blue)', br_xxx: 'British XXX Corps (red-orange)', german: 'German (no army)', allied: 'Allied (no army)', none: 'Neutral marker' };
 const WOOD = { german: 0x8d9195, british: 0x3f6fb8, us: 0x55803c, allied: 0x55803c };
-let mode = 'one', tab = 'list', selId = pieces[0].id, step = 0;
-const F = { side: 'all', type: 'all', ech: 'all', q: '' };
+let mode = 'one', tab = 'list', selId = pieces[0].id, step = 0, faceBack = false;
+const F = { side: 'all', type: 'all', ech: 'all', limit: 'all', q: '' };
 
 /* ---------- three.js ---------- */
 const canvas = $('#gl'); let renderer = null;
@@ -134,6 +145,8 @@ const stage = new THREE.Group(); scene.add(stage);
 const texCache = {}, meshCache = {};
 const loader = new THREE.TextureLoader();
 function tex(i) { if (!texCache[i]) { const t = loader.load(IMGS[i], () => requestRender()); t.encoding = THREE.sRGBEncoding; t.anisotropy = renderer ? renderer.capabilities.getMaxAnisotropy() : 1; texCache[i] = t; } return texCache[i]; }
+const btCache = {};
+function backTex(i) { if (!btCache[i]) { const t = loader.load(IMGS[i], () => requestRender()); t.center.set(0.5, 0.5); t.rotation = Math.PI; t.encoding = THREE.sRGBEncoding; btCache[i] = t; } return btCache[i]; }
 function pieceMesh(p) {
   if (meshCache[p.id]) return meshCache[p.id];
   let m;
@@ -144,7 +157,8 @@ function pieceMesh(p) {
     m.userData.dims = [w, h, d];
   } else {
     const s = 1, d = 0.12, edge = new THREE.MeshStandardMaterial({ color: 0xd8d4c8, roughness: 0.8 });
-    const front = new THREE.MeshStandardMaterial({ map: tex(p.img), roughness: 0.5 }), back = new THREE.MeshStandardMaterial({ color: 0xb9b4a6, roughness: 0.8 });
+    const bp = p.back ? pieces.find((x) => x.id === p.back) : null;
+    const front = new THREE.MeshStandardMaterial({ map: tex(p.img), roughness: 0.5 }), back = bp ? new THREE.MeshStandardMaterial({ map: backTex(bp.img), roughness: 0.5 }) : (p.t === 'back' ? front : new THREE.MeshStandardMaterial({ color: 0xb9b4a6, roughness: 0.8 }));
     m = new THREE.Mesh(new THREE.BoxGeometry(s, s, d), [edge, edge, edge, edge, front, back]);
     m.userData.dims = [s, s, d];
   }
@@ -153,10 +167,11 @@ function pieceMesh(p) {
 const outline = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: 0xffd400 }));
 function visiblePieces() {
   const q = F.q.trim().toLowerCase();
-  return pieces.filter((p) => (F.side === 'all' || p.side === F.side) && (F.type === 'all' || p.t === F.type || p.kind === F.type) && (F.ech === 'all' || p.ech === F.ech) &&
+  return pieces.filter((p) => (F.side === 'all' || p.side === F.side) && (F.type === 'all' || p.t === F.type || p.kind === F.type) && (F.ech === 'all' || p.ech === F.ech) && (F.limit === 'all' || p.limit === F.limit) &&
     (!q || (p.name + ' ' + p.id + ' ' + (p.kind || '')).toLowerCase().includes(q)));
 }
-let anim = null, rotCur = 0, rotGoal = 0, dirty = true;
+let anim = null, rotCur = 0, rotGoal = 0, dirty = true, rotX = 0, rotXGoal = 0;
+const flatX = () => (faceBack ? Math.PI / 2 : -Math.PI / 2);
 function requestRender() { dirty = true; }
 function blockAngle(p, st) { return Math.PI / 2 * (p.steps - st); }
 function standY(m, ang) { const [w, h] = m.userData.dims; return Math.abs(Math.cos(ang)) * h / 2 + Math.abs(Math.sin(ang)) * w / 2; }
@@ -166,15 +181,15 @@ function layout() {
   const sel = byId(selId);
   if (mode === 'one') {
     const m = pieceMesh(sel); stage.add(m);
-    m.position.set(0, 0, 0); m.rotation.set(sel.t === 'block' ? 0 : -Math.PI / 2 + 0.0, 0, 0);
+    m.position.set(0, 0, 0); m.rotation.set(sel.t === 'block' ? 0 : flatX(), 0, 0);
     if (sel.t === 'block') { rotCur = rotGoal = blockAngle(sel, step); m.rotation.z = rotCur; m.position.y = standY(m, rotCur); }
-    else { m.rotation.x = -Math.PI / 2; m.position.y = 0.06; }
+    else { m.rotation.x = flatX(); rotX = rotXGoal = flatX(); m.position.y = 0.06; }
     target.set(0, sel.t === 'block' ? sel.ar / 2 : 0.2, 0); if (!anim) dist = sel.t === 'block' ? 4.2 : 3.6;
   } else {
     const list = visiblePieces(), n = list.length, cols = Math.max(1, Math.ceil(Math.sqrt(n * 1.5))), sp = 1.55;
     list.forEach((p, i) => { const m = pieceMesh(p); stage.add(m); const c = i % cols, r = Math.floor(i / cols);
       m.position.x = (c - (cols - 1) / 2) * sp; m.position.z = r * sp * 1.12 - (Math.ceil(n / cols) - 1) * sp * 0.56;
-      if (p.t === 'block') { m.rotation.set(0, 0, 0); m.position.y = standY(m, 0); } else { m.rotation.set(-Math.PI / 2, 0, 0); m.position.y = 0.06; } });
+      if (p.t === 'block') { m.rotation.set(0, 0, 0); m.position.y = standY(m, 0); } else { m.rotation.set(flatX(), 0, 0); m.position.y = 0.06; } });
     const rows = Math.ceil(n / cols); target.set(0, 0.4, 0); dist = Math.max(6, Math.max(cols * sp * 1.45, rows * sp * 1.9));
   }
   const m = meshCache[selId]; if (m && m.parent) { const [w, h, d] = m.userData.dims; outline.scale.set(w * 1.04, h * 1.04, d * 1.04); m.add(outline); }
@@ -183,7 +198,7 @@ function layout() {
 function setStep(k) { const p = byId(selId); if (p.t !== 'block') return; step = k; rotGoal = blockAngle(p, k); anim = true; requestRender(); updateStepChip(); renderDetailsLive(); }
 function frame() {
   requestAnimationFrame(frame); if (!renderer) return;
-  if (anim && mode === 'one') { const p = byId(selId), m = meshCache[selId]; if (p.t === 'block') { const d = rotGoal - rotCur; if (Math.abs(d) < 0.002) { rotCur = rotGoal; anim = null; } else rotCur += d * 0.18; m.rotation.z = rotCur; m.position.y = standY(m, rotCur); dirty = true; } else anim = null; }
+  if (anim && mode === 'one') { const p = byId(selId), m = meshCache[selId]; if (p.t === 'block') { const d = rotGoal - rotCur; if (Math.abs(d) < 0.002) { rotCur = rotGoal; anim = null; } else rotCur += d * 0.18; m.rotation.z = rotCur; m.position.y = standY(m, rotCur); dirty = true; } else { const d = rotXGoal - rotX; if (Math.abs(d) < 0.003) { rotX = rotXGoal; anim = null; } else rotX += d * 0.16; m.rotation.x = rotX; m.position.y = 0.06 + 0.5 * Math.abs(Math.sin(Math.min(Math.PI, Math.abs(d)))); dirty = true; } }
   if (!dirty) return; dirty = false;
   const r = canvas.getBoundingClientRect(); if (canvas.width !== Math.round(r.width * renderer.getPixelRatio()) || canvas.height !== Math.round(r.height * renderer.getPixelRatio())) { renderer.setSize(r.width, r.height, false); cam.aspect = r.width / Math.max(1, r.height); cam.updateProjectionMatrix(); }
   cam.position.set(target.x + dist * Math.sin(yaw) * Math.cos(pitch), target.y + dist * Math.sin(pitch), target.z + dist * Math.cos(yaw) * Math.cos(pitch)); cam.lookAt(target);
@@ -210,10 +225,14 @@ canvas.addEventListener('pointermove', (e) => { if (ptrs.size || mode !== 'tab')
 window.addEventListener('resize', requestRender);
 
 /* ---------- UI ---------- */
-function sub(p) { return p.t === 'block' ? (p.cls + ' · ' + p.steps + ' step' + (p.steps > 1 ? 's' : '') + ' · ' + (ECH[p.ech] || p.ech)) : (p.kind + ' · turn ' + (p.turn == null ? '-' : p.turn) + ' · ' + (ECH[p.ech] || p.ech)); }
+function sub(p) { return p.t === 'block' ? (p.cls + ' · ' + p.steps + ' step' + (p.steps > 1 ? 's' : '') + ' · ' + (ECH[p.ech] || p.ech)) : (p.t === 'back' ? (p.kind.replace(/_/g, ' ') + ' · ' + p.copies + ' copies · ' + p.limit) : (p.kind + ' · turn ' + (p.turn == null ? '-' : p.turn) + ' · ' + (ECH[p.ech] || p.ech) + (p.copies > 1 || p.limit === 'unlimited' ? ' · ' + p.copies + ' cop' + (p.copies > 1 ? 'ies' : 'y') + ', ' + p.limit : ''))); }
 function qdots(list) { return '<span class="pq">' + list.map((q) => '<i class="dotq ' + q + '" title="' + q + '"></i>').join('') + '</span>'; }
-function select(id, jump) { selId = id; step = byId(id).t === 'block' ? byId(id).steps : 0; anim = null; layout(); updateStepChip(); if (jump !== false) { tab = 'det'; } render(); }
-function updateStepChip() { const c = $('#stepchip'), p = byId(selId); if (mode !== 'one' || p.t !== 'block' || p.steps < 2) { c.hidden = true; return; } c.hidden = false;
+function select(id, jump) { selId = id; step = byId(id).t === 'block' ? byId(id).steps : 0; anim = null; if (byId(id).t === 'back') faceBack = false; layout(); updateStepChip(); if (jump !== false) { tab = 'det'; } render(); }
+function setFace(back) { faceBack = back; const p = byId(selId); if (mode === 'one' && p.t !== 'block') { rotXGoal = flatX(); anim = true; } else layout(); updateStepChip(); requestRender(); }
+function updateFaceChip() { const c = $('#facechip'), p = byId(selId); if (mode === 'one' && p.t === 'block') { c.hidden = true; return; } c.hidden = false;
+  c.innerHTML = '<span class="muted">Face up</span><span class="seg"><button data-f="front" aria-pressed="' + !faceBack + '">Front</button><button data-f="back" aria-pressed="' + faceBack + '">Back</button></span>';
+  c.querySelectorAll('button').forEach((b) => (b.onclick = () => setFace(b.dataset.f === 'back'))); }
+function updateStepChip() { updateFaceChip(); const c = $('#stepchip'), p = byId(selId); if (mode !== 'one' || p.t !== 'block' || p.steps < 2) { c.hidden = true; return; } c.hidden = false;
   c.innerHTML = '<span class="muted">Strength</span><span class="seg">' + Array.from({ length: p.steps }, (_, i) => p.steps - i).map((k) => '<button data-k="' + k + '" aria-pressed="' + (k === step) + '">' + k + '</button>').join('') + '</span>';
   c.querySelectorAll('button').forEach((b) => (b.onclick = () => setStep(+b.dataset.k))); }
 function render() { document.querySelectorAll('.tabs [role=tab]').forEach((b) => b.setAttribute('aria-selected', b.id === 'tab-' + tab)); if (tab === 'list') renderList(); else if (tab === 'det') renderDet(); else renderExp(); }
@@ -222,18 +241,19 @@ function renderList() {
   const opt = (v, t, cur) => '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + t + '</option>';
   const kinds = [...new Set(pieces.filter((p) => p.t === 'counter').map((p) => p.kind))].sort();
   pane.innerHTML = '<div class="filters"><select id="f-side" aria-label="Side">' + opt('all', 'All sides', F.side) + opt('german', 'German', F.side) + opt('us', 'US', F.side) + opt('british', 'British', F.side) + opt('allied', 'Allied (generic)', F.side) + opt('neutral', 'Neutral markers', F.side) + '</select>' +
-    '<select id="f-type" aria-label="Type">' + opt('all', 'Blocks and counters', F.type) + opt('block', 'Blocks only', F.type) + opt('counter', 'Counters only', F.type) + kinds.map((k) => opt(k, 'Counter: ' + k.replace(/_/g, ' '), F.type)).join('') + '</select>' +
-    '<select id="f-ech" class="wide" aria-label="Army">' + opt('all', 'All armies', F.ech) + Object.keys(ECH).map((k) => opt(k, ECH[k], F.ech)).join('') + '</select>' +
+    '<select id="f-type" aria-label="Type">' + opt('all', 'Blocks and counters', F.type) + opt('block', 'Blocks only', F.type) + opt('counter', 'Counter fronts only', F.type) + opt('back', 'Counter backs only', F.type) + kinds.map((k) => opt(k, 'Counter: ' + k.replace(/_/g, ' '), F.type)).join('') + '</select>' +
+    '<select id="f-limit" aria-label="Limit">' + opt('all', 'Limited and unlimited', F.limit) + opt('limited', 'Limited only', F.limit) + opt('unlimited', 'Unlimited only', F.limit) + '</select><select id="f-ech" aria-label="Army">' + opt('all', 'All armies', F.ech) + Object.keys(ECH).map((k) => opt(k, ECH[k], F.ech)).join('') + '</select>' +
     '<input id="f-q" class="wide" type="search" placeholder="Search name or id" value="' + F.q.replace(/"/g, '&quot;') + '"></div>' +
     '<div class="hint">' + list.length + ' of ' + pieces.length + ' pieces. ' + Object.values(flags).filter((f) => f === 'ok').length + ' marked OK, ' + Object.values(flags).filter((f) => f === 'bad').length + ' marked wrong.</div>' +
-    '<div class="grid">' + list.map((p) => '<button class="cell" data-id="' + p.id + '" aria-selected="' + (p.id === selId) + '" title="' + p.name + '"><img src="' + IMGS[p.img] + '" alt="">' + (flags[p.id] ? '<i class="st ' + flags[p.id] + '"></i>' : '') + '<span>' + p.name + '</span></button>').join('') + '</div>';
-  ['side', 'type', 'ech'].forEach((k) => ($('#f-' + k).onchange = (e) => { F[k] = e.target.value; if (mode === 'tab') layout(); renderList(); }));
+    '<div class="grid">' + list.map((p) => '<button class="cell" data-id="' + p.id + '" aria-selected="' + (p.id === selId) + '" title="' + p.name + '"><img src="' + IMGS[p.img] + '" alt="">' + (p.copies > 1 || p.limit === 'unlimited' ? '<b class="cp">' + (p.limit === 'unlimited' ? '\u221e' : '\u00d7' + p.copies) + '</b>' : '') + (flags[p.id] ? '<i class="st ' + flags[p.id] + '"></i>' : '') + '<span>' + p.name + '</span></button>').join('') + '</div>';
+  ['side', 'type', 'limit', 'ech'].forEach((k) => ($('#f-' + k).onchange = (e) => { F[k] = e.target.value; if (mode === 'tab') layout(); renderList(); }));
   $('#f-q').oninput = (e) => { F.q = e.target.value; const pos = e.target.selectionStart; if (mode === 'tab') layout(); renderList(); const q = $('#f-q'); q.focus(); q.setSelectionRange(pos, pos); };
   pane.querySelectorAll('.cell').forEach((c) => (c.onclick = () => select(c.dataset.id, true)));
 }
 function field(label, html) { return '<label>' + label + '</label><div>' + html + '</div>'; }
 const QS = ['elite', 'veteran', 'green'];
 const qsel = (id, cur, none) => '<select id="' + id + '">' + (none ? '<option value="">none</option>' : '') + QS.map((q) => '<option' + (q === cur ? ' selected' : '') + '>' + q + '</option>').join('') + '</select>';
+const limSel = (cur) => '<select id="e-limit"><option' + (cur === 'limited' ? ' selected' : '') + '>limited</option><option' + (cur === 'unlimited' ? ' selected' : '') + '>unlimited</option></select>';
 function renderDet() {
   const p = byId(selId), o = ORIG.find((x) => x.id === p.id), key = p.id;
   let rows = '';
@@ -245,13 +265,18 @@ function renderDet() {
       field('Start area', '<input type="text" id="e-area" placeholder="area number" value="' + (p.start_area == null ? '' : p.start_area) + '">') +
       field('Arrives turn', '<input type="text" id="e-turn" placeholder="turn" value="' + (p.arrival_turn == null ? '' : p.arrival_turn) + '">') +
       field('Entry letters', '<input type="text" id="e-entry" placeholder="e.g. H,J" value="' + (p.entry || []).join(',') + '">');
+  } else if (p.t === 'back') {
+    rows = field('Name', '<input type="text" id="e-name" value="' + p.name.replace(/"/g, '&quot;') + '">') + field('Kind', '<span class="mono">' + p.kind.replace(/_/g, ' ') + '</span>') +
+      field('Copies', '<input type="number" min="0" id="e-copies" value="' + p.copies + '">') + field('Limit', limSel(p.limit)) + field('Back of', '<span class="muted">' + (p.used_by || '-') + '</span>');
   } else {
+    const bp = p.back ? pieces.find((x) => x.id === p.back) : null;
     rows = field('Name', '<input type="text" id="e-name" value="' + p.name.replace(/"/g, '&quot;') + '">') + field('Kind', '<input type="text" id="e-kind" value="' + p.kind + '">') +
       field('Army', '<select id="e-ech">' + Object.keys(ECH).map((k) => '<option value="' + k + '"' + (k === p.ech ? ' selected' : '') + '>' + ECH[k] + '</option>').join('') + '</select>') +
       field('Turn', '<input type="text" id="e-turn" placeholder="2, S, none" value="' + (p.turn == null ? '' : p.turn) + '">') +
-      field('Quality', qsel('e-quality', p.quality, true)) + field('Extra', '<span class="mono muted">' + (p.extra || '-') + '</span>');
+      field('Quality', qsel('e-quality', p.quality, true)) + field('Copies', '<input type="number" min="1" id="e-copies" value="' + (p.copies || 1) + '">') + field('Limit', limSel(p.limit || 'limited')) +
+      field('Back face', bp ? '<button class="btn" id="b-back">' + bp.name + '</button>' : '<span class="muted">-</span>') + field('Extra', '<span class="mono muted">' + (p.extra || '-') + '</span>');
   }
-  pane.innerHTML = '<div><div class="muted mono">' + (p.t === 'block' ? 'BLOCK ' : 'COUNTER ') + p.id + '</div><h3>' + p.name + '</h3><div class="hint">' + sub(p) + '</div></div>' +
+  pane.innerHTML = '<div><div class="muted mono">' + (p.t === 'block' ? 'BLOCK ' : p.t === 'back' ? 'COUNTER BACK ' : 'COUNTER ') + p.id + '</div><h3>' + p.name + '</h3><div class="hint">' + sub(p) + '</div></div>' +
     '<div class="row"><div class="seg" id="s-flag"><button data-v="ok" aria-pressed="' + (flags[key] === 'ok') + '">Looks right</button><button data-v="bad" aria-pressed="' + (flags[key] === 'bad') + '">Wrong</button><button data-v="" aria-pressed="' + (!flags[key]) + '">Unchecked</button></div></div>' +
     (p.t === 'block' ? '<div id="live" class="hint"></div>' : '') +
     '<div class="kv">' + rows + '</div><div><h2>Your note</h2><textarea id="note" placeholder="What is wrong with this piece?">' + (notes[key] || '').replace(/</g, '&lt;') + '</textarea></div>' +
@@ -259,10 +284,12 @@ function renderDet() {
   pane.querySelectorAll('#s-flag button').forEach((b) => (b.onclick = () => { if (b.dataset.v) flags[key] = b.dataset.v; else delete flags[key]; save(); renderDet(); }));
   const on = (id, fn) => { const e = $('#' + id); if (e) e.onchange = fn; };
   on('e-name', (e) => { p.name = e.target.value; save(); }); on('e-cls', (e) => { p.cls = e.target.value; save(); }); on('e-ech', (e) => { p.ech = e.target.value; if (p.t === 'block') p.side = e.target.value.startsWith('de_') ? 'german' : e.target.value.startsWith('br_') ? 'british' : 'us'; save(); });
+  on('e-copies', (e) => { p.copies = Math.max(0, +e.target.value || 0); save(); }); on('e-limit', (e) => { p.limit = e.target.value; save(); });
+  const bb = $('#b-back'); if (bb) bb.onclick = () => { select(p.back, true); setFace(false); };
   on('e-kind', (e) => { p.kind = e.target.value; save(); }); on('e-quality', (e) => { p.quality = e.target.value || null; save(); });
   if (p.t === 'block') { p.q.forEach((q, i) => on('e-q' + i, (e) => { p.q[i] = e.target.value; save(); renderDetailsLive(); }));
     on('e-area', (e) => { p.start_area = e.target.value === '' ? null : +e.target.value; save(); }); on('e-turn', (e) => { p.arrival_turn = e.target.value === '' ? null : +e.target.value; save(); }); on('e-entry', (e) => { p.entry = e.target.value.split(/[ ,]+/).filter(Boolean).map((s) => s.toUpperCase()); save(); }); }
-  else on('e-turn', (e) => { const v = e.target.value.trim(); p.turn = v === '' ? null : /^\d+$/.test(v) ? +v : v; save(); });
+  else if (p.t === 'counter') on('e-turn', (e) => { const v = e.target.value.trim(); p.turn = v === '' ? null : /^\d+$/.test(v) ? +v : v; save(); });
   $('#note').oninput = (e) => { const v = e.target.value.trim(); if (v) notes[key] = v; else delete notes[key]; save(); };
   const list = visiblePieces(), i = list.findIndex((x) => x.id === p.id);
   $('#b-prev').onclick = () => { if (list.length) select(list[(i - 1 + list.length) % list.length].id, false), render(); }; $('#b-next').onclick = () => { if (list.length) select(list[(i + 1) % list.length].id, false), render(); };
@@ -276,7 +303,8 @@ function diff() {
     const cmp = (n, a, b) => { if (JSON.stringify(a) !== JSON.stringify(b)) ch.push(n + ': ' + JSON.stringify(b) + ' → ' + JSON.stringify(a)); };
     cmp('name', p.name, o.name); cmp('army', p.ech, o.ech);
     if (p.t === 'block') { cmp('class', p.cls, o.cls); cmp('quality by step', p.q, o.q); cmp('start area', p.start_area, o.start_area); cmp('arrival turn', p.arrival_turn, o.arrival_turn); cmp('entry', p.entry, o.entry); }
-    else { cmp('kind', p.kind, o.kind); cmp('turn', p.turn, o.turn); cmp('quality', p.quality, o.quality); }
+    else if (p.t === 'back') { cmp('copies', p.copies, o.copies); cmp('limit', p.limit, o.limit); }
+    else { cmp('kind', p.kind, o.kind); cmp('turn', p.turn, o.turn); cmp('quality', p.quality, o.quality); cmp('copies', p.copies, o.copies); cmp('limit', p.limit, o.limit); }
     if (ch.length) out.push({ piece: p.id + ' ' + o.name, changes: ch }); }
   return out;
 }

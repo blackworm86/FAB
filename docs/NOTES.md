@@ -68,3 +68,11 @@ All 98 areas were marked checked. Applied with `tools/apply_pass2.py`: Monschau 
 Final graph: 98 areas, 240 connections (incl. 54–59 and 91–95 added in a short pass 3), planar and connected. All play-book example checks pass (roads 3–4, 12–23, 4–5, 5–10, 10–11, 11–23, 21–22, 22–24, 22–23, 3–12; fields 12–13, 13–21, 11–12; rivers 15/16, 15/18, 13/20, 13/21; restricted 4–11; zones of 5, 6, 10, 11, 23, 34).
 Victory symbols: 19 Allied VP (black crosses), 14 German VP (blue stars), 6 mutual yellow-star areas.
 The engine loads `data/bulge/map.json` (built by `tools/build_map_json.py`); the map checker stays available for later corrections.
+
+## Counters: duplicates collapsed, backs catalogued
+
+- `tools/dedupe_counters.py --apply` was run: 190 counter fronts became 136 entries with `copies`, `ids` and `limit` (limited / unlimited).
+- `tools/catalog_backs.py`: the back sheet is catalogued in `data/bulge/counter_backs.json` (19 back faces, images in `assets/counters/backs/`) and every counter entry has a `back` field.
+  The totals reconcile exactly: 228 counters = 190 fronts + 38 gear fronts (Blown Bridge), and 228 backs. The generic "Asset or Event" backs match the number of chits: 57 German (grey) and 73 Allied (green).
+- Face pairs: Disordered / Recovering (12), River Assault / Road Block (4), Exploitation / No Fuel (8), German VP cross / Allied VP star (11), VPs (1), Boundary Crossing / Pooled Assets (1), Game Turn (1), Remaining German Bridge Repairs / Optional Rule 18.1 (1), gear / Blown Bridge (38), Bid Fuel / Bid (2). Reserve markers, Task Forces and Garrisons have matching backs.
+- Limits: unlimited = Disordered / Recovering, Road Block, River Assault, Exploitation, No Fuel, VP cross and star, Blown Bridge (the box has 38 but rivers have 93 borders and the rules cap bridges only by engineers). Everything else is limited by the box.

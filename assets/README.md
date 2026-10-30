@@ -7,3 +7,5 @@ Generated from `docs/game-pieces/` by the scripts in `tools/` (see `tools/slice_
 - Data: `data/bulge/counters.json` (190), `data/bulge/units.json` (73 units + 2 Special Action blocks), `data/bulge/reinforcements.json` (schedule per turn).
 
 Block step reading: `steps` = pips on the top edge; `quality_by_step[i]` is the troop quality when the block has `i+1` steps (index 0 = 1 step, last = full strength). Rotating the block 90° counter-clockwise on a step loss brings the next edge to the top.
+
+- `counters/backs/*.png` – the 19 distinct back faces (low resolution, upscaled 2x from the back sheet) plus `gear_front.png` (the gear side of the 38 Blown Bridge counters). Catalogue: `data/bulge/counter_backs.json`; each counter in `counters.json` has `back`, `copies`, `ids`, `limit`.

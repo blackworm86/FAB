@@ -1,0 +1,154 @@
+[
+ {
+  "id": "back_grey_asset",
+  "name": "Asset or Event (German)",
+  "kind": "back_generic",
+  "copies": 57,
+  "image": "assets/counters/backs/grey_asset.png",
+  "limit": "limited"
+ },
+ {
+  "id": "back_green_asset",
+  "name": "Asset or Event (Allied)",
+  "kind": "back_generic",
+  "copies": 73,
+  "image": "assets/counters/backs/green_asset.png",
+  "limit": "limited"
+ },
+ {
+  "id": "back_task_force",
+  "name": "Task Force (back)",
+  "kind": "back_generic",
+  "copies": 5,
+  "image": "assets/counters/backs/task_force.png",
+  "limit": "limited"
+ },
+ {
+  "id": "back_garrison",
+  "name": "Garrison (back)",
+  "kind": "back_generic",
+  "copies": 4,
+  "image": "assets/counters/backs/garrison.png",
+  "limit": "limited"
+ },
+ {
+  "id": "back_bid",
+  "name": "Bid (back)",
+  "kind": "back_generic",
+  "copies": 2,
+  "image": "assets/counters/backs/bid.png",
+  "limit": "limited"
+ },
+ {
+  "id": "back_zone5_de",
+  "name": "Zone 5 Reserve Unit",
+  "kind": "reserve_marker",
+  "copies": 2,
+  "image": "assets/counters/backs/zone5_de.png",
+  "limit": "limited"
+ },
+ {
+  "id": "back_zone6_de",
+  "name": "Zone 6 Reserve Unit",
+  "kind": "reserve_marker",
+  "copies": 2,
+  "image": "assets/counters/backs/zone6_de.png",
+  "limit": "limited"
+ },
+ {
+  "id": "back_zone7_de",
+  "name": "Zone 7 Reserve Unit",
+  "kind": "reserve_marker",
+  "copies": 1,
+  "image": "assets/counters/backs/zone7_de.png",
+  "limit": "limited"
+ },
+ {
+  "id": "back_zone7_al",
+  "name": "Zone 7 Reserve Unit (Allied)",
+  "kind": "reserve_marker",
+  "copies": 2,
+  "image": "assets/counters/backs/zone7_al.png",
+  "limit": "limited"
+ },
+ {
+  "id": "back_zones56_al",
+  "name": "Zones 5/6 Reserve Unit (Allied)",
+  "kind": "reserve_marker",
+  "copies": 3,
+  "image": "assets/counters/backs/zones56_al.png",
+  "limit": "limited"
+ },
+ {
+  "id": "back_recovering",
+  "name": "Recovering",
+  "kind": "marker",
+  "copies": 12,
+  "image": "assets/counters/backs/recovering.png",
+  "limit": "unlimited"
+ },
+ {
+  "id": "back_roadblock",
+  "name": "Road Block",
+  "kind": "marker",
+  "copies": 4,
+  "image": "assets/counters/backs/roadblock.png",
+  "limit": "unlimited"
+ },
+ {
+  "id": "back_no_fuel",
+  "name": "No Fuel",
+  "kind": "marker",
+  "copies": 8,
+  "image": "assets/counters/backs/no_fuel.png",
+  "limit": "unlimited"
+ },
+ {
+  "id": "back_star",
+  "name": "Allied VP (star)",
+  "kind": "marker",
+  "copies": 11,
+  "image": "assets/counters/backs/star.png",
+  "limit": "unlimited"
+ },
+ {
+  "id": "back_vps",
+  "name": "VPs (Allied side)",
+  "kind": "marker",
+  "copies": 1,
+  "image": "assets/counters/backs/vps.png",
+  "limit": "limited"
+ },
+ {
+  "id": "back_pooled",
+  "name": "Pooled Assets",
+  "kind": "marker",
+  "copies": 1,
+  "image": "assets/counters/backs/pooled.png",
+  "limit": "limited"
+ },
+ {
+  "id": "back_game_turn",
+  "name": "Game Turn (Allied side)",
+  "kind": "marker",
+  "copies": 1,
+  "image": "assets/counters/backs/game_turn.png",
+  "limit": "limited"
+ },
+ {
+  "id": "back_optional",
+  "name": "Optional Rule 18.1 (bridges remaining)",
+  "kind": "marker",
+  "copies": 1,
+  "image": "assets/counters/backs/optional.png",
+  "limit": "limited"
+ },
+ {
+  "id": "back_blown",
+  "name": "Blown Bridge",
+  "kind": "marker",
+  "copies": 38,
+  "image": "assets/counters/backs/blown.png",
+  "limit": "unlimited"
+ }
+]
