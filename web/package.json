@@ -1,0 +1,12 @@
+{
+  "name": "fab-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "assets": "node scripts/assets.mjs",
+    "dev": "npm run assets && vite",
+    "build": "npm run assets && vite build"
+  },
+  "dependencies": { "three": "0.169.0" },
+  "devDependencies": { "@types/three": "0.169.0", "typescript": "5.6.3", "vite": "5.4.11" }
+}

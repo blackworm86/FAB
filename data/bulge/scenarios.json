@@ -1,0 +1,13 @@
+{
+  "tournament": {
+    "name": "Tournament (24.2)", "turns": 5, "startPhase": "combat",
+    "units": "start_area", "reduced": { "4 Inf": 2 },
+    "fieldWorks": [9, 10, 11, 12, 16, 18, 19, 21, 27],
+    "riverAssault": [16, 18, 21],
+    "garrisons": [23, 32, 38, 47],
+    "reserve": ["Peiper"],
+    "blownBridges": ["15-16", "15-18", "13-20", "13-21"],
+    "alliedControlled": "front",
+    "reinforcementsReduced": { "1 Inf": 1 }
+  }
+}
