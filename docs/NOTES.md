@@ -21,7 +21,7 @@ Source review of `docs/` (series rules, play book, map, counters, sticker sheet,
 2. **Turn Track numbers** (chit draws per Admin phase, sudden-death VP thresholds): I read them from the map, e.g. T2 German 9/5, Allied 7/0; T4 sudden death 5. The image is small; a clearer crop of the track would help.
 3. **Intro scenario map sheet** (areas in play, draw counts) is not in the files. Needed only for the intro scenario.
 4. **Contradictions in the rules:**
-   - 14.82 says US strat-moves are unlimited; example 23.4 says the US limit is 3 per turn. Which one do we use?
+   - ~~14.82 vs example 23.4~~ **Resolved (user):** the US strat-move limit is the number of reserve markers in the counter mix (3× zone 5/6, 2× zone 7), so the example is right.
    - 17.14 Bodenplatte: "2-5 return to cup" and "5-10 unaffected" overlap on a 5. I'd read it as 6-10.
 5. **Some rules text is garbled in the PDF extraction:** 13.3 (unit types by class), 14.62b, 18.4 and 18.5. I'll recover them from the page images. Flagging this in case you have a cleaner copy.
 6. **Map digitising:** adjacency, road/field connections and rivers have to be traced by hand from the map JPG (2448×1584). A higher-resolution scan would reduce errors. I'll produce `data/bulge/map.json` and a visual overlay for you to check.
