@@ -65,6 +65,6 @@ With a 12 px gap tolerance your shapes agree with the connection list almost eve
 ## Map review pass 2 (applied) – map v2 accepted
 
 All 98 areas were marked checked. Applied with `tools/apply_pass2.py`: Monschau TDN 3, 17 connection type changes, 5 river flags, 2 new connections (61–76, 95–97). The shapes were not changed.
-Final graph: 98 areas, 238 connections (118 road, 93 river, 35 on army boundaries), planar and connected. All play-book example checks pass (roads 3–4, 12–23, 4–5, 5–10, 10–11, 11–23, 21–22, 22–24, 22–23, 3–12; fields 12–13, 13–21, 11–12; rivers 15/16, 15/18, 13/20, 13/21; restricted 4–11; zones of 5, 6, 10, 11, 23, 34).
+Final graph: 98 areas, 240 connections (incl. 54–59 and 91–95 added in a short pass 3), planar and connected. All play-book example checks pass (roads 3–4, 12–23, 4–5, 5–10, 10–11, 11–23, 21–22, 22–24, 22–23, 3–12; fields 12–13, 13–21, 11–12; rivers 15/16, 15/18, 13/20, 13/21; restricted 4–11; zones of 5, 6, 10, 11, 23, 34).
 Victory symbols: 19 Allied VP (black crosses), 14 German VP (blue stars), 6 mutual yellow-star areas.
 The engine loads `data/bulge/map.json` (built by `tools/build_map_json.py`); the map checker stays available for later corrections.
