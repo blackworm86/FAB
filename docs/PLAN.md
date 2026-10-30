@@ -27,6 +27,11 @@ Bulge exclusive rules (fuel, German artillery attrition, von der Heydte, Greif t
 **M4 – Online & AI**
 Server-authoritative online play with hidden blocks, then a simple AI opponent built on the legal-move generator.
 
+## Status
+- **M1 done** (hot-seat 3D demo: setup, movement, combat, supply).
+- **M2 built** (engine + UI): chit boxes and selection cup, Turn Track draws, all 9 phases, assets in combat (artillery limits, echelon/zone rules), engineers (blow/repair bridges, field works), replacement/rebuild/regiment events, release events, Special Actions (rally, quality replacement, reinforce/retreat in battle, breakthrough activation), command staff, reserves, strategic/reaction/breakthrough movement, bridge-blow attempts, river assaults, fuel rule and captured fuel, task forces, German artillery attrition, VP and sudden death, Tournament and Campaign lengths.
+- **Not yet in M2** (planned for M3): Greif Team Bridge/Interdict, Operation Bodenplatte, von der Heydte drop (plays as a plain battle asset), roadblocks and defended roadblocks, Intelligence staff function, Boundary Crossing pre-authorized, Pooled Assets, Reroute reinforcement, Interdiction/Air Supply missions, the introductory scenario, optional rules, player-chosen retreat/entry areas, hidden blocks.
+
 ## Still missing from the sources
 - Getting Started Card (starting Available Box / cup contents) – demo will start from the scenario tables only.
 - Turn track numbers (chit draws, sudden-death levels) – read from the map; confirm.
