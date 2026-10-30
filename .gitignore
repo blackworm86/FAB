@@ -5,3 +5,4 @@ node_modules/
 .agents/
 .codex/
 skills-lock.json
+__pycache__/

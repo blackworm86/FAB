@@ -1,0 +1,160 @@
+{
+ "A": {
+  "side": "allied",
+  "area": 29,
+  "nearby_detected": [
+   28,
+   29,
+   56
+  ]
+ },
+ "B": {
+  "side": "allied",
+  "area": 56,
+  "nearby_detected": [
+   29,
+   56,
+   57
+  ]
+ },
+ "C": {
+  "side": "allied",
+  "area": 57,
+  "nearby_detected": [
+   56,
+   57,
+   58
+  ]
+ },
+ "D": {
+  "side": "allied",
+  "area": 58,
+  "nearby_detected": [
+   57,
+   58,
+   78
+  ]
+ },
+ "E": {
+  "side": "allied",
+  "area": 79,
+  "nearby_detected": [
+   78,
+   79,
+   92
+  ]
+ },
+ "F": {
+  "side": "allied",
+  "area": 93,
+  "nearby_detected": [
+   92,
+   93,
+   94
+  ]
+ },
+ "G": {
+  "side": "allied",
+  "area": 95,
+  "nearby_detected": [
+   94,
+   95,
+   96
+  ]
+ },
+ "H": {
+  "side": "allied",
+  "area": 96,
+  "nearby_detected": [
+   95,
+   96
+  ]
+ },
+ "J": {
+  "side": "allied",
+  "area": 87,
+  "nearby_detected": [
+   87
+  ]
+ },
+ "K": {
+  "side": "allied",
+  "area": 68,
+  "nearby_detected": [
+   67,
+   68,
+   86
+  ]
+ },
+ "L": {
+  "side": "allied",
+  "area": 67,
+  "nearby_detected": [
+   66,
+   67,
+   68
+  ]
+ },
+ "M": {
+  "side": "allied",
+  "area": 66,
+  "nearby_detected": [
+   43,
+   66,
+   67
+  ]
+ },
+ "N": {
+  "side": "allied",
+  "area": 43,
+  "nearby_detected": [
+   42,
+   43,
+   66
+  ]
+ },
+ "P": {
+  "side": "allied",
+  "area": 42,
+  "nearby_detected": [
+   41,
+   42,
+   43
+  ]
+ },
+ "Q": {
+  "side": "allied",
+  "area": 41,
+  "nearby_detected": [
+   17,
+   41,
+   42
+  ]
+ },
+ "X": {
+  "side": "german",
+  "area": 1,
+  "nearby_detected": [
+   1,
+   2
+  ]
+ },
+ "Y": {
+  "side": "german",
+  "area": 4,
+  "nearby_detected": [
+   3,
+   4,
+   5
+  ]
+ },
+ "Z": {
+  "side": "german",
+  "area": 6,
+  "nearby_detected": [
+   5,
+   6,
+   7
+  ]
+ }
+}

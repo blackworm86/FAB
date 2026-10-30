@@ -1,0 +1,1864 @@
+[
+ {
+  "id": 1,
+  "name": "Bitburg",
+  "seed": [
+   1608,
+   1110
+  ],
+  "centroid": [
+   1639,
+   1129
+  ],
+  "tdn": 0,
+  "vp": {
+   "allied": 2,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 2,
+  "name": "Ehlenz",
+  "seed": [
+   1656,
+   983
+  ],
+  "centroid": [
+   1631,
+   964
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 1,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 3,
+  "name": "Pronsfeld",
+  "seed": [
+   1650,
+   873
+  ],
+  "centroid": [
+   1609,
+   854
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 1,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 4,
+  "name": "Prüm",
+  "seed": [
+   1608,
+   752
+  ],
+  "centroid": [
+   1620,
+   738
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 2,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 5,
+  "name": "Losheim",
+  "seed": [
+   1663,
+   634
+  ],
+  "centroid": [
+   1627,
+   612
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 1,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 6,
+  "name": "Blankenheim",
+  "seed": [
+   1626,
+   516
+  ],
+  "centroid": [
+   1638,
+   479
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 2,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 7,
+  "name": "Schleiden",
+  "seed": [
+   1675,
+   378
+  ],
+  "centroid": [
+   1638,
+   349
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 1,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 8,
+  "name": "Kesternich",
+  "seed": [
+   1527,
+   285
+  ],
+  "centroid": [
+   1513,
+   302
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 1,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 9,
+  "name": "Udenbreth",
+  "seed": [
+   1441,
+   441
+  ],
+  "centroid": [
+   1488,
+   422
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 1,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 10,
+  "name": "Bucholz",
+  "seed": [
+   1391,
+   553
+  ],
+  "centroid": [
+   1463,
+   537
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 1,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 11,
+  "name": "Bleialf",
+  "seed": [
+   1484,
+   741
+  ],
+  "centroid": [
+   1465,
+   690
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 1,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 12,
+  "name": "Lutzkampen",
+  "seed": [
+   1440,
+   856
+  ],
+  "centroid": [
+   1416,
+   810
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 1,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 13,
+  "name": "Dasburg",
+  "seed": [
+   1385,
+   939
+  ],
+  "centroid": [
+   1411,
+   955
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 1,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 14,
+  "name": "Sinspelt",
+  "seed": [
+   1455,
+   1090
+  ],
+  "centroid": [
+   1485,
+   1072
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 1,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 15,
+  "name": "Irrel",
+  "seed": [
+   1547,
+   1227
+  ],
+  "centroid": [
+   1518,
+   1202
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 1,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 16,
+  "name": "Echternach",
+  "seed": [
+   1576,
+   1320
+  ],
+  "centroid": [
+   1529,
+   1317
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 17,
+  "name": "Junglinster",
+  "seed": [
+   1458,
+   1422
+  ],
+  "centroid": [
+   1432,
+   1441
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 18,
+  "name": "Beaufort",
+  "seed": [
+   1348,
+   1244
+  ],
+  "centroid": [
+   1390,
+   1268
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 19,
+  "name": "Diekirch",
+  "seed": [
+   1337,
+   1117
+  ],
+  "centroid": [
+   1346,
+   1151
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 20,
+  "name": "Holzthum",
+  "seed": [
+   1254,
+   1037
+  ],
+  "centroid": [
+   1277,
+   1055
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 21,
+  "name": "Marnach",
+  "seed": [
+   1275,
+   961
+  ],
+  "centroid": [
+   1271,
+   933
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 22,
+  "name": "Weiswampach",
+  "seed": [
+   1183,
+   778
+  ],
+  "centroid": [
+   1225,
+   780
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 23,
+  "name": "St. Vith",
+  "seed": [
+   1325,
+   612
+  ],
+  "centroid": [
+   1323,
+   637
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 24,
+  "name": "Vielsalm",
+  "seed": [
+   1176,
+   596
+  ],
+  "centroid": [
+   1179,
+   606
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 25,
+  "name": "Ligneuville",
+  "seed": [
+   1307,
+   516
+  ],
+  "centroid": [
+   1300,
+   495
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 26,
+  "name": "Elsenborn",
+  "seed": [
+   1346,
+   377
+  ],
+  "centroid": [
+   1343,
+   381
+  ],
+  "tdn": 3,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 27,
+  "name": "Monschau",
+  "seed": [
+   1370,
+   260
+  ],
+  "centroid": [
+   1396,
+   264
+  ],
+  "tdn": 2,
+  "vp": {
+   "allied": 1,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 28,
+  "name": "Walheim",
+  "seed": [
+   1316,
+   98
+  ],
+  "centroid": [
+   1341,
+   109
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 29,
+  "name": "Aachen",
+  "seed": [
+   1148,
+   83
+  ],
+  "centroid": [
+   1170,
+   90
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 30,
+  "name": "Eupen",
+  "seed": [
+   1204,
+   183
+  ],
+  "centroid": [
+   1244,
+   214
+  ],
+  "tdn": 0,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 31,
+  "name": "Hohes Venn",
+  "seed": [
+   1202,
+   293
+  ],
+  "centroid": [
+   1210,
+   315
+  ],
+  "tdn": 3,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 32,
+  "name": "Spa",
+  "seed": [
+   1097,
+   320
+  ],
+  "centroid": [
+   1102,
+   346
+  ],
+  "tdn": 3,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 33,
+  "name": "Malmedy",
+  "seed": [
+   1141,
+   486
+  ],
+  "centroid": [
+   1174,
+   445
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": true
+  },
+  "zone": 6
+ },
+ {
+  "id": 34,
+  "name": "Trois Ponts",
+  "seed": [
+   1026,
+   538
+  ],
+  "centroid": [
+   1042,
+   558
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 35,
+  "name": "Baraque de Fraiture",
+  "seed": [
+   1011,
+   641
+  ],
+  "centroid": [
+   1034,
+   684
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 36,
+  "name": "Houffalize",
+  "seed": [
+   986,
+   803
+  ],
+  "centroid": [
+   1029,
+   807
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 37,
+  "name": "Lullange",
+  "seed": [
+   1095,
+   919
+  ],
+  "centroid": [
+   1124,
+   934
+  ],
+  "tdn": 0,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 38,
+  "name": "Wiltz",
+  "seed": [
+   1174,
+   1063
+  ],
+  "centroid": [
+   1121,
+   1097
+  ],
+  "tdn": 3,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 39,
+  "name": "Ettelbruck",
+  "seed": [
+   1233,
+   1295
+  ],
+  "centroid": [
+   1213,
+   1241
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 40,
+  "name": "Mersch",
+  "seed": [
+   1279,
+   1417
+  ],
+  "centroid": [
+   1297,
+   1375
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 41,
+  "name": "Luxembourg City",
+  "seed": [
+   1268,
+   1521
+  ],
+  "centroid": [
+   1312,
+   1507
+  ],
+  "tdn": 2,
+  "vp": {
+   "allied": 0,
+   "german": 1,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 42,
+  "name": "Capellen",
+  "seed": [
+   1138,
+   1399
+  ],
+  "centroid": [
+   1144,
+   1451
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 43,
+  "name": "Arlon",
+  "seed": [
+   989,
+   1445
+  ],
+  "centroid": [
+   968,
+   1472
+  ],
+  "tdn": 2,
+  "vp": {
+   "allied": 0,
+   "german": 1,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 44,
+  "name": "Sure",
+  "seed": [
+   911,
+   1273
+  ],
+  "centroid": [
+   954,
+   1312
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 45,
+  "name": "Rambrouch",
+  "seed": [
+   1072,
+   1259
+  ],
+  "centroid": [
+   1084,
+   1264
+  ],
+  "tdn": 3,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 46,
+  "name": "Martelange",
+  "seed": [
+   975,
+   1197
+  ],
+  "centroid": [
+   970,
+   1176
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 47,
+  "name": "Bastogne",
+  "seed": [
+   941,
+   1010
+  ],
+  "centroid": [
+   960,
+   1033
+  ],
+  "tdn": 2,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": true
+  },
+  "zone": 5
+ },
+ {
+  "id": 48,
+  "name": "Noville",
+  "seed": [
+   958,
+   901
+  ],
+  "centroid": [
+   974,
+   910
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 49,
+  "name": "Samrée",
+  "seed": [
+   843,
+   722
+  ],
+  "centroid": [
+   883,
+   741
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 50,
+  "name": "Manhay",
+  "seed": [
+   879,
+   580
+  ],
+  "centroid": [
+   886,
+   589
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 51,
+  "name": "Werbomont",
+  "seed": [
+   884,
+   488
+  ],
+  "centroid": [
+   907,
+   470
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": true
+  },
+  "zone": 6
+ },
+ {
+  "id": 52,
+  "name": "Stoumont",
+  "seed": [
+   1034,
+   424
+  ],
+  "centroid": [
+   1031,
+   423
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 53,
+  "name": "Aywaille",
+  "seed": [
+   892,
+   358
+  ],
+  "centroid": [
+   937,
+   327
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 54,
+  "name": "Fléron",
+  "seed": [
+   945,
+   190
+  ],
+  "centroid": [
+   960,
+   208
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 55,
+  "name": "Verviers",
+  "seed": [
+   1053,
+   232
+  ],
+  "centroid": [
+   1092,
+   217
+  ],
+  "tdn": 2,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": true
+  },
+  "zone": 6
+ },
+ {
+  "id": 56,
+  "name": "Herve",
+  "seed": [
+   1008,
+   85
+  ],
+  "centroid": [
+   1019,
+   92
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 57,
+  "name": "Oupeye",
+  "seed": [
+   883,
+   72
+  ],
+  "centroid": [
+   843,
+   164
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 58,
+  "name": "Liège",
+  "seed": [
+   741,
+   198
+  ],
+  "centroid": [
+   747,
+   134
+  ],
+  "tdn": 2,
+  "vp": {
+   "allied": 0,
+   "german": 3,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 59,
+  "name": "Esneux",
+  "seed": [
+   787,
+   348
+  ],
+  "centroid": [
+   775,
+   322
+  ],
+  "tdn": 0,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 60,
+  "name": "Ouffet",
+  "seed": [
+   751,
+   433
+  ],
+  "centroid": [
+   750,
+   476
+  ],
+  "tdn": 0,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 61,
+  "name": "Hotton",
+  "seed": [
+   766,
+   628
+  ],
+  "centroid": [
+   779,
+   634
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 62,
+  "name": "La Roche",
+  "seed": [
+   845,
+   828
+  ],
+  "centroid": [
+   830,
+   834
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 63,
+  "name": "Sprimont",
+  "seed": [
+   862,
+   940
+  ],
+  "centroid": [
+   842,
+   991
+  ],
+  "tdn": 0,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 64,
+  "name": "Sibret",
+  "seed": [
+   828,
+   1096
+  ],
+  "centroid": [
+   830,
+   1133
+  ],
+  "tdn": 0,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 65,
+  "name": "Habay",
+  "seed": [
+   782,
+   1366
+  ],
+  "centroid": [
+   794,
+   1365
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 66,
+  "name": "Étalle",
+  "seed": [
+   832,
+   1498
+  ],
+  "centroid": [
+   869,
+   1525
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 67,
+  "name": "Tintigny",
+  "seed": [
+   750,
+   1496
+  ],
+  "centroid": [
+   748,
+   1505
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 68,
+  "name": "Florenville",
+  "seed": [
+   585,
+   1451
+  ],
+  "centroid": [
+   617,
+   1484
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 69,
+  "name": "Straimont",
+  "seed": [
+   610,
+   1311
+  ],
+  "centroid": [
+   621,
+   1348
+  ],
+  "tdn": 3,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 70,
+  "name": "Neufchâteau",
+  "seed": [
+   664,
+   1230
+  ],
+  "centroid": [
+   717,
+   1243
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 71,
+  "name": "Bertrix",
+  "seed": [
+   547,
+   1176
+  ],
+  "centroid": [
+   552,
+   1233
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 72,
+  "name": "Libramont",
+  "seed": [
+   704,
+   1081
+  ],
+  "centroid": [
+   650,
+   1116
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 73,
+  "name": "St. Hubert",
+  "seed": [
+   637,
+   933
+  ],
+  "centroid": [
+   671,
+   979
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 74,
+  "name": "Champlon",
+  "seed": [
+   668,
+   851
+  ],
+  "centroid": [
+   713,
+   884
+  ],
+  "tdn": 3,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 75,
+  "name": "Marche",
+  "seed": [
+   689,
+   741
+  ],
+  "centroid": [
+   675,
+   724
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": true
+  },
+  "zone": 5
+ },
+ {
+  "id": 76,
+  "name": "Mean",
+  "seed": [
+   630,
+   552
+  ],
+  "centroid": [
+   630,
+   565
+  ],
+  "tdn": 0,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 77,
+  "name": "Huy",
+  "seed": [
+   617,
+   387
+  ],
+  "centroid": [
+   651,
+   397
+  ],
+  "tdn": 0,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": true
+  },
+  "zone": 6
+ },
+ {
+  "id": 78,
+  "name": "Amay",
+  "seed": [
+   610,
+   208
+  ],
+  "centroid": [
+   618,
+   201
+  ],
+  "tdn": 0,
+  "vp": {
+   "allied": 0,
+   "german": 2,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 79,
+  "name": "Wanze",
+  "seed": [
+   490,
+   265
+  ],
+  "centroid": [
+   504,
+   251
+  ],
+  "tdn": 0,
+  "vp": {
+   "allied": 0,
+   "german": 2,
+   "mutual": false
+  },
+  "zone": 6
+ },
+ {
+  "id": 80,
+  "name": "Andenne",
+  "seed": [
+   498,
+   439
+  ],
+  "centroid": [
+   504,
+   449
+  ],
+  "tdn": 0,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 81,
+  "name": "Ciney",
+  "seed": [
+   514,
+   607
+  ],
+  "centroid": [
+   505,
+   624
+  ],
+  "tdn": 0,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 82,
+  "name": "Rochefort",
+  "seed": [
+   518,
+   769
+  ],
+  "centroid": [
+   513,
+   766
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 83,
+  "name": "Grupont",
+  "seed": [
+   577,
+   875
+  ],
+  "centroid": [
+   558,
+   890
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 84,
+  "name": "Libin",
+  "seed": [
+   530,
+   1087
+  ],
+  "centroid": [
+   532,
+   1026
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 85,
+  "name": "Paliseul",
+  "seed": [
+   397,
+   1204
+  ],
+  "centroid": [
+   439,
+   1203
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 86,
+  "name": "Ste. Cécile",
+  "seed": [
+   490,
+   1358
+  ],
+  "centroid": [
+   479,
+   1436
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 87,
+  "name": "La Chapelle",
+  "seed": [
+   293,
+   1277
+  ],
+  "centroid": [
+   273,
+   1321
+  ],
+  "tdn": 3,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 88,
+  "name": "Bièvre",
+  "seed": [
+   356,
+   1104
+  ],
+  "centroid": [
+   358,
+   1112
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ },
+ {
+  "id": 89,
+  "name": "Wellin",
+  "seed": [
+   407,
+   853
+  ],
+  "centroid": [
+   431,
+   896
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 90,
+  "name": "Celles",
+  "seed": [
+   323,
+   634
+  ],
+  "centroid": [
+   360,
+   689
+  ],
+  "tdn": 0,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 91,
+  "name": "Spontin",
+  "seed": [
+   324,
+   535
+  ],
+  "centroid": [
+   348,
+   508
+  ],
+  "tdn": 0,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 92,
+  "name": "Nameche",
+  "seed": [
+   365,
+   253
+  ],
+  "centroid": [
+   375,
+   265
+  ],
+  "tdn": 0,
+  "vp": {
+   "allied": 0,
+   "german": 2,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 93,
+  "name": "Namur",
+  "seed": [
+   195,
+   300
+  ],
+  "centroid": [
+   213,
+   294
+  ],
+  "tdn": 0,
+  "vp": {
+   "allied": 0,
+   "german": 3,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 94,
+  "name": "Profondeville",
+  "seed": [
+   186,
+   468
+  ],
+  "centroid": [
+   137,
+   504
+  ],
+  "tdn": 0,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 95,
+  "name": "Dinant",
+  "seed": [
+   212,
+   654
+  ],
+  "centroid": [
+   131,
+   659
+  ],
+  "tdn": 0,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 96,
+  "name": "Givet",
+  "seed": [
+   153,
+   811
+  ],
+  "centroid": [
+   98,
+   830
+  ],
+  "tdn": 0,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 97,
+  "name": "Beauraing",
+  "seed": [
+   271,
+   786
+  ],
+  "centroid": [
+   269,
+   874
+  ],
+  "tdn": 1,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 5
+ },
+ {
+  "id": 98,
+  "name": "Forêt des Ardennes",
+  "seed": [
+   264,
+   1016
+  ],
+  "centroid": [
+   209,
+   1061
+  ],
+  "tdn": 3,
+  "vp": {
+   "allied": 0,
+   "german": 0,
+   "mutual": false
+  },
+  "zone": 7
+ }
+]

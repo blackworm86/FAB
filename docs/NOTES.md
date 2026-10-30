@@ -29,3 +29,20 @@ Source review of `docs/` (series rules, play book, map, counters, sticker sheet,
 8. **Multiplayer scope**: online 2-player, hot-seat, vs AI? Which ones and in what order?
 9. **Hidden information**: online play needs an authoritative server so a client never receives the hidden blocks. Is that OK, or is a trusted/casual mode fine at first?
 10. **Art**: are we allowed to use GMT's map/counter art in the app (private use), or should we redraw everything?
+
+## Map digitisation status (v1, auto-generated – needs human review)
+
+Files in `data/bulge/`: `areas.json` (98 areas: name, TDN, VP, army zone), `edges.json` (235 adjacencies: road/field, river, restricted, army boundary),
+`entry_areas.json` (A–Q Allied, X–Z German), plus the tool inputs (`area_seeds.json`, `outside_seeds.json`, `edge_overrides.json`).
+Regenerate with `tools/segment.py` → `tools/edges.py` → `tools/build_map_data.py`; draw the review overlay with `tools/review_overlay.py`.
+Overlay for checking: `docs/maps/review/graph_overlay_v1.png` (black = road, grey = field, blue dot = river, magenta ring = army boundary, brown = restricted, area colour = zone).
+
+How it was made: area numbers/positions were read by hand; areas were segmented with a seeded watershed on the white boundary lines + rivers; adjacency from touching region cores;
+road/river/dashed-army-boundary detected by colour. Zones are derived from the dashed lines (zone 6 north-east, 5 centre, 7 south).
+
+Known weak spots to verify against the physical map:
+- **Adjacency in the NW (Meuse valley: areas 57–59, 77–80, 91–95)**: the river valleys are wide, so I added 11 edges by hand (`edge_overrides.json`) and removed 4 false ones.
+- **Road vs field** was detected from road lines crossing the border; roads that run over a river (e.g. 3–12, expected road per the play-book examples) are sometimes missed. Rivers + road on the same edge are the likely errors.
+- **River edges** are any border whose length is mostly blue; a river that only touches the border will be wrong. Known-good checks: 15/16, 15/18, 13/20, 13/21 are rivers (scenario setup).
+- Edge cases from play-book examples used as tests: 3–4, 12–23, 4–5, 5–10, 10–11, 11–23, 21–22, 22–24, 22–23 are roads; 12–13, 13–21 are field.
+- TDN and VP symbols were read by eye from the tiles.
