@@ -35,8 +35,8 @@ export function labelSvg(u: Unit) {
 const BRIT: Record<string, 1> = { '43 Inf': 1, '53 Inf': 1, Guards: 1, '51 Inf': 1 };
 
 /** Garrison chit (light-blue US Strategic Reserve infantry). */
-export function garrisonSvg(name: string) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100"><rect width="100" height="100" fill="#8fa83f"/><circle cx="50" cy="16" r="5" fill="#fff" stroke="#111" stroke-width="1.5"/>
-    <rect x="28" y="28" width="44" height="34" fill="#a6d6f3" stroke="#111" stroke-width="2.4"/><path d="M28 28 L72 62 M72 28 L28 62" stroke="#111" stroke-width="2.2"/>
+export function garrisonSvg(name: string, german = false) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100"><rect width="100" height="100" fill="${german ? '#b7bbc1' : '#8fa83f'}"/><circle cx="50" cy="16" r="5" fill="#fff" stroke="#111" stroke-width="1.5"/>
+    <rect x="28" y="28" width="44" height="34" fill="${german ? '#f07f1e' : '#a6d6f3'}" stroke="#111" stroke-width="2.4"/><path d="M28 28 L72 62 M72 28 L28 62" stroke="#111" stroke-width="2.2"/>
     <text x="50" y="84" font-size="13" text-anchor="middle" font-family="Arial Narrow, Arial">${esc(name.replace('Garrison ', ''))}</text></svg>`;
 }

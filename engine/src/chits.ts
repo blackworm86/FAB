@@ -6,7 +6,7 @@ export type Box = 'future' | 'cup' | 'available' | 'used' | 'eliminated' | 'map'
 export type ChitKind = 'artillery' | 'rocket_artillery' | 'engineer' | 'armor_asset' | 'infantry_asset' | 'task_force' | 'fuel' | 'command_staff' | 'sa_block'
   | 'replacement_inf' | 'replacement_arm' | 'rebuild_or_replace_inf' | 'rebuild_or_replace_arm' | 'event_arriving_regiment' | 'special_action_event' | 'air_mission'
   | 'event_release' | 'event_greif_bridge' | 'event_greif_interdict' | 'event_bodenplatte' | 'event_delayed_response';
-export interface Chit { id: string; name: string; kind: ChitKind; side: Side; ech: string; q?: Quality; turn: number | 'S'; box: Box; division?: string }
+export interface Chit { id: string; name: string; kind: ChitKind; side: Side; ech: string; q?: Quality; turn: number | 'S'; box: Box; division?: string; drawn?: number }
 
 /** German Higher Echelon -> army zone (14.31). Strategic Reserve (de_sr) belongs to no zone. */
 export const ZONE: Record<string, number> = { de_5pz: 5, de_6pz: 6, de_7a: 7 };

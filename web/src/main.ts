@@ -14,7 +14,7 @@ const areaName = (a: number) => E.areas.get(a)!.name;
 
 /* ---------- state ---------- */
 const KEY = 'fab-demo2';
-function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers ? x : null; } catch { return null; } }
+function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif ? x : null; } catch { return null; } }
 let g: E.Game = load() ?? E.newGame();
 let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, msg = '', lastRolls = 0, newOpts: E.Opts = { scenario: 'tournament', fuel: true };
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(g)); } catch { /* storage off: the game still runs */ } };
@@ -53,7 +53,7 @@ function block(u: E.Unit) {
   const w = 1.6, h = 1.6, d = 0.8;                                    // 16 x 16 x 8 mm block
   const wood = new THREE.MeshStandardMaterial({ color: BRIT.has(u.name) ? 0x3f6fb8 : WOOD[u.side], roughness: 0.75 });
   if (u.garrison) {
-    const chit = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new THREE.BoxGeometry(1.43, 0.18, 1.43), [chit, chit, new THREE.MeshStandardMaterial({ map: svgTex(u.id, garrisonSvg(u.name)) }), chit, chit, chit]); // 9/16 in chit
+    const chit = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new THREE.BoxGeometry(1.43, 0.18, 1.43), [chit, chit, new THREE.MeshStandardMaterial({ map: svgTex(u.id, garrisonSvg(u.name, u.side === 'german')) }), chit, chit, chit]); // 9/16 in chit
     m.position.y = 0.09; m.castShadow = true; return m;
   }
   const face = new THREE.MeshStandardMaterial({ map: svgTex(`${u.id}-${u.str}`, labelSvg(u)), roughness: 0.6 });
@@ -81,13 +81,14 @@ function drawPieces() {
       m.userData.unit = u.id; if (u.id === selUnit) { const o = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xffb347 })); m.add(o); }
       pieces.add(m);
       const tags: [string, string][] = [];
-      if (u.reserve) tags.push(['R', '#2d6cb0']); if (u.exploit) tags.push(['E', '#d9741c']); if (u.unsupplied && !u.garrison) tags.push(['S', '#b8312f']);
+      if (u.reserve) tags.push(['R', '#2d6cb0']); if (u.exploit) tags.push(['E', '#d9741c']); if (u.unsupplied && !u.garrison) tags.push(['S', '#b8312f']); if (u.interdict) tags.push(['I', '#8a2f9c']);
       tags.forEach(([t, c], i) => { const k = tag(t, c, 0.6); k.position.set(m.position.x - 0.55 + i * 0.7, (u.garrison ? 0.3 : 1.75), m.position.z); markers.add(k); });
     });
     const area: [string, string][] = [];
     if (g.fieldWorks.includes(a.id)) area.push(['FW', '#7a5a2b']); if (g.riverAssault.includes(a.id)) area.push(['RA', '#2a7fb8']);
     area.forEach(([t, c], i) => { const k = tag(t, c, 1.0); k.position.set(base.x - 3.4 + i * 1.2, 0.07, base.z - 0.1); markers.add(k); });
   }
+  for (const k of Object.keys(g.greif)) { const [x, y] = k.split('-').map(Number), c = MAP.connections.find((q) => q.a === x && q.b === y); if (!c?.marker) continue; const p = toWorld(c.marker[0], c.marker[1]), t = tag('G', '#8a2f9c', 1.0); t.position.set(p.x, 0.07, p.z - 1.1); markers.add(t); }
   for (const k of g.blown) { const [x, y] = k.split('-').map(Number), c = MAP.connections.find((q) => q.a === x && q.b === y); if (!c?.marker) continue; const p = toWorld(c.marker[0], c.marker[1]), t = tag('X', '#d9421f', 1.0); t.position.set(p.x, 0.07, p.z); markers.add(t); }
 }
 function paintAreas() {
@@ -156,7 +157,7 @@ const ABBR: Record<string, string> = { artillery: 'Arty', rocket_artillery: 'Rkt
 const chitLabel = (c: E.Chit) => `${ABBR[c.kind] ?? c.kind}${['fuel', 'sa_block', 'special_action_event', 'air_mission', 'replacement_inf', 'replacement_arm', 'event_delayed_response'].includes(c.kind) || c.name.length > 14 ? '' : ' ' + c.name}${c.turn !== 'S' && E.isEvent(c) ? ' T' + c.turn : ''}`;
 const chitChip = (c: E.Chit, extra = '') => `<button class="chit ${c.side} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" title="${esc(c.name + ' · ' + c.ech)}">${esc(chitLabel(c))}${extra}</button>`;
 function unitRow(u: E.Unit) {
-  const tags = [u.garrison ? 'asset' : u.cls, u.disorder === 1 ? '<span class="tag bad">disordered</span>' : u.disorder === 2 ? '<span class="tag warn">recovering</span>' : '', u.unsupplied ? '<span class="tag bad">unsupplied</span>' : '', u.reserve ? '<span class="tag">reserve</span>' : '', u.exploit ? '<span class="tag warn">exploit</span>' : '', u.moved && ['movement', 'reaction', 'btMove'].includes(g.phase) ? '<span class="tag">moved</span>' : ''].filter(Boolean).join(' ');
+  const tags = [u.garrison ? 'asset' : u.cls, u.disorder === 1 ? '<span class="tag bad">disordered</span>' : u.disorder === 2 ? '<span class="tag warn">recovering</span>' : '', u.unsupplied ? '<span class="tag bad">unsupplied</span>' : '', u.reserve ? '<span class="tag">reserve</span>' : '', u.exploit ? '<span class="tag warn">exploit</span>' : '', u.interdict ? '<span class="tag bad">interdict</span>' : '', u.paradrop ? `<span class="tag warn">${u.paradrop === 'pending' ? 'paradrop' : u.paradrop === 'partial' ? 'scattered' : 'landed'}</span>` : '', u.moved && ['movement', 'reaction', 'btMove'].includes(g.phase) ? '<span class="tag">moved</span>' : ''].filter(Boolean).join(' ');
   return `<button class="unit ${u.id === selUnit ? 'sel' : ''}" data-u="${u.id}"><b class="side-${u.side}">${esc(u.name)}</b> <span class="why">${tags}</span><span class="pips">${pips(u)}</span></button>`;
 }
 function oddsHtml(list: E.Fire[]) {
@@ -203,10 +204,17 @@ function chitPanel(c: E.Chit): string {
   } else if (c.kind === 'command_staff') {
     g.units.filter((x) => x.side === c.side && x.cls === 'infantry' && x.area != null && !x.garrison && x.str < x.max).forEach((x) => out.push(btn(`Replacements found: ${esc(x.name)}`, () => E.staffReplacement(g, c.id, x.id))));
     if (u && u.side === c.side) out.push(btn(`Reserves: mark ${esc(u.name)}`, () => E.staffReserve(g, c.id, u.id), '', !E.canReserve(g, u)));
+  } else if (c.kind === 'event_greif_bridge') {
+    if (a == null) out.push('<p class="hint">Select an area: the bridges on its river boundaries are offered.</p>');
+    else E.neighbors(a).filter((t) => E.connection(a, t)!.river && !g.blown.includes(a < t ? `${a}-${t}` : `${t}-${a}`)).forEach((t) => out.push(btn(`Place on bridge ${esc(areaName(a))} – ${esc(areaName(t))}`, () => E.playGreifBridge(g, c.id, a, t))));
+  } else if (c.kind === 'event_greif_interdict') {
+    out.push(u && u.side === 'allied' ? btn(`Interdict ${esc(u.name)}`, () => E.playInterdict(g, c.id, u.id)) : '<p class="hint">Select an Allied block on the map.</p>');
+  } else if (c.kind === 'event_bodenplatte') { out.push(btn(`Strike Allied air missions (${E.boxOf(g, 'allied', 'available').filter((x) => x.kind === 'air_mission').length} in the Available Box)`, () => E.playBodenplatte(g, c.id), 'primary')); }
+  else if (c.name === 'v.d. Heydte' && E.heydteWindow(g, c)) {
+    out.push('<p class="hint">Just drawn: it may parachute into a vacant Allied-controlled Hohes Venn or Stoumont, otherwise it stays a battle asset.</p>', btn('Drop at Hohes Venn', () => E.heydteDrop(g, c.id, 31)), btn('Drop at Stoumont', () => E.heydteDrop(g, c.id, 52)));
   } else if (c.kind === 'event_release') { [4, 6].forEach((ar) => out.push(btn(`Enter at ${esc(areaName(ar))}`, () => E.releaseUnit(g, c.id, ar as 4 | 6)))); }
   else if (c.kind === 'fuel') out.push('<p class="hint">Fuel is spent automatically when a German unit moves more than 3 MP or strategic-moves.</p>');
   else if (E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission') out.push('<p class="hint">Assigned to a battle in the Combat Phase.</p>');
-  else out.push(`<p class="hint">${c.kind.startsWith('event_greif') || c.kind === 'event_bodenplatte' ? 'This event is not implemented in the demo yet.' : ''}</p>`);
   if (E.isEvent(c) && c.kind !== 'sa_block') out.push(btn('Use as alternate event (2 assets back to the cup)', () => E.alternateUse(g, c.id), '', false, '4.21'));
   return head + `<div class="row">${out.join('')}</div>`;
 }
@@ -279,7 +287,7 @@ function render() {
     const u = selUnit ? g.units.find((x) => x.id === selUnit) : null;
     if (u) {
       const o = g.phase === 'strategic' ? [] : E.moveOptions(g, u.id);
-      body += `<div><h2>Block</h2>${unitRow(u)}<div class="row">${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve marker', () => E.setReserve(g, u.id, false)) : btn('Place in reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u))) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn(`Activate (Special Action, ${E.saAvailable(g, u.side, u.ech).length} left)`, () => E.activateBreakthrough(g, u.id), '', !E.saAvailable(g, u.side, u.ech).length) : ''}</div>
+      body += `<div><h2>Block</h2>${unitRow(u)}<div class="row">${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve marker', () => E.setReserve(g, u.id, false)) : btn('Place in reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u))) : ''}${['movement', 'reaction', 'btMove'].includes(g.phase) && !u.garrison && !u.moved ? btn('Build field works', () => E.buildFieldWorks(g, u.id), '', !(u.area != null && !u.unsupplied && !u.disorder && !E.contested(g, u.area) && !g.fieldWorks.includes(u.area) && ((g.phase === 'movement' && u.side === g.phasing) || (g.phase === 'reaction' && u.side !== g.phasing && !!u.reserve) || (g.phase === 'btMove' && u.side === g.phasing && (!!u.reserve || u.exploit))))) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn(`Activate (Special Action, ${E.saAvailable(g, u.side, u.ech).length} left)`, () => E.activateBreakthrough(g, u.id), '', !E.saAvailable(g, u.side, u.ech).length) : ''}</div>
         ${o.length ? `<p class="hint">${o.length} reachable area(s): ${o.slice(0, 7).map((x) => `${esc(areaName(x.area))} ${x.cost}${x.fuel ? '⛽' : ''}`).join(', ')}${o.length > 7 ? '…' : ''}</p>` : ''}</div>`;
     }
     if (selArea != null) {
