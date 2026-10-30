@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import mapJson from '../../data/bulge/map.json';
 import * as E from '../../engine/src';
 import { labelSvg, garrisonSvg } from './art';
+import { throwDice, clearDice, isHit, type DiceGroup } from './dice3d';
 
 type MapArea = { id: number; label: [number, number]; polygon: [number, number][] };
 type MapConn = { a: number; b: number; marker: [number, number] | null };
@@ -16,7 +17,7 @@ const areaName = (a: number) => E.areas.get(a)!.name;
 const KEY = 'fab-demo2';
 function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif ? x : null; } catch { return null; } }
 let g: E.Game = load() ?? E.newGame();
-let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, msg = '', lastRolls = 0, newOpts: E.Opts = { scenario: 'tournament', fuel: true };
+let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, previewArea: number | null = null, hoverArea: number | null = null, msg = '', newOpts: E.Opts = { scenario: 'tournament', fuel: true };
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(g)); } catch { /* storage off: the game still runs */ } };
 
 /* ---------- three.js scene ---------- */
@@ -97,17 +98,18 @@ function paintAreas() {
   for (const [id, m] of overlays) {
     const mat = m.material as THREE.MeshBasicMaterial; let c = 0xffffff, o = 0; const r = opts.find((x) => x.area === id);
     if (r) { c = r.mustStop ? 0xff8a3d : 0x37d67a; o = 0.32; } else if (fight.includes(id)) { c = must.has(id) ? 0xff4d4d : 0xffc542; o = 0.28; }
-    if (id === selArea) { c = 0x4aa3ff; o = Math.max(o, 0.3); }
+    if (id === (previewArea ?? hoverArea) && r) { c = 0xffe08a; o = 0.5; }
+    if (id === selArea && !selUnit) { c = 0x4aa3ff; o = Math.max(o, 0.3); }
     mat.color.setHex(c); mat.opacity = o;
   }
 }
 
 /* ---------- camera ---------- */
-let target = new THREE.Vector3(10, 0, -3.5), yaw = 0, pitch = 1.0, dist = 32;
+let target = new THREE.Vector3(17, 0, -3), yaw = 0, pitch = 1.0, dist = 36;
 function placeCam() { cam.position.set(target.x + dist * Math.sin(yaw) * Math.cos(pitch), dist * Math.sin(pitch), target.z + dist * Math.cos(yaw) * Math.cos(pitch)); cam.lookAt(target); }
 const ptrs = new Map<number, [number, number]>(); let moved = 0, pinch = 0;
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-canvas.addEventListener('pointerdown', (e) => { canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; pinch = 0; });
+canvas.addEventListener('pointerdown', (e) => { goal = null; canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; pinch = 0; });
 canvas.addEventListener('pointermove', (e) => {
   const p = ptrs.get(e.pointerId); if (!p) return; ptrs.set(e.pointerId, [e.clientX, e.clientY]);
   if (ptrs.size === 2) { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch) dist = Math.min(110, Math.max(7, dist * pinch / d)); pinch = d; moved = 99; return; }
@@ -117,7 +119,7 @@ canvas.addEventListener('pointermove', (e) => {
 });
 canvas.addEventListener('pointerup', (e) => { ptrs.delete(e.pointerId); if (moved < 6) click(e); });
 canvas.addEventListener('pointercancel', (e) => ptrs.delete(e.pointerId));
-canvas.addEventListener('wheel', (e) => { e.preventDefault(); dist = Math.min(110, Math.max(7, dist * Math.exp(e.deltaY * 0.0012))); }, { passive: false });
+canvas.addEventListener('wheel', (e) => { goal = null; e.preventDefault(); dist = Math.min(110, Math.max(7, dist * Math.exp(e.deltaY * 0.0012))); }, { passive: false });
 
 const ray = new THREE.Raycaster();
 function pick(e: PointerEvent) {
@@ -130,20 +132,7 @@ function pick(e: PointerEvent) {
 }
 function inside(x: number, y: number, poly: [number, number][]) { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; }
 
-/* ---------- interaction ---------- */
-function act(f: () => void) { try { f(); msg = ''; } catch (e) { msg = (e as Error).message; } save(); refresh(); }
-function click(e: PointerEvent) {
-  const { unit, area } = pick(e);
-  if (g.pendingBlow) return;
-  if (selUnit && area != null) {
-    if (g.phase === 'strategic' && E.stratOptions(g, selUnit).includes(area)) { const id = selUnit; selUnit = null; selArea = area; return act(() => E.stratMove(g, id, area)); }
-    if (g.phase !== 'strategic' && E.moveOptions(g, selUnit).some((o) => o.area === area)) { const id = selUnit; selUnit = null; selArea = area; return act(() => { E.move(g, id, area); }); }
-  }
-  if (unit) { selUnit = unit; selArea = g.units.find((x) => x.id === unit)!.area; } else { selArea = area; selUnit = null; }
-  refresh();
-}
-
-/* ---------- panel ---------- */
+/* ---------- ui helpers ---------- */
 let acts: Record<string, () => void> = {}, actv: Record<string, (v: string) => void> = {}, n = 0;
 const reg = (f: () => void) => { const k = 'a' + n++; acts[k] = f; return k; };
 const regv = (f: (v: string) => void) => { const k = 'v' + n++; actv[k] = f; return k; };
@@ -156,27 +145,6 @@ const ABBR: Record<string, string> = { artillery: 'Arty', rocket_artillery: 'Rkt
   rebuild_or_replace_inf: 'Rebuild inf', rebuild_or_replace_arm: 'Rebuild arm', event_arriving_regiment: 'Regt', special_action_event: 'SA event', air_mission: 'Air', event_release: 'Release', event_greif_bridge: 'Greif bridge', event_greif_interdict: 'Greif interdict', event_bodenplatte: 'Bodenplatte', event_delayed_response: 'Delayed' };
 const chitLabel = (c: E.Chit) => `${ABBR[c.kind] ?? c.kind}${['fuel', 'sa_block', 'special_action_event', 'air_mission', 'replacement_inf', 'replacement_arm', 'event_delayed_response'].includes(c.kind) || c.name.length > 14 ? '' : ' ' + c.name}${c.turn !== 'S' && E.isEvent(c) ? ' T' + c.turn : ''}`;
 const chitChip = (c: E.Chit, extra = '') => `<button class="chit ${c.side} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" title="${esc(c.name + ' · ' + c.ech)}">${esc(chitLabel(c))}${extra}</button>`;
-function unitRow(u: E.Unit) {
-  const tags = [u.garrison ? 'asset' : u.cls, u.disorder === 1 ? '<span class="tag bad">disordered</span>' : u.disorder === 2 ? '<span class="tag warn">recovering</span>' : '', u.unsupplied ? '<span class="tag bad">unsupplied</span>' : '', u.reserve ? '<span class="tag">reserve</span>' : '', u.exploit ? '<span class="tag warn">exploit</span>' : '', u.interdict ? '<span class="tag bad">interdict</span>' : '', u.paradrop ? `<span class="tag warn">${u.paradrop === 'pending' ? 'paradrop' : u.paradrop === 'partial' ? 'scattered' : 'landed'}</span>` : '', u.moved && ['movement', 'reaction', 'btMove'].includes(g.phase) ? '<span class="tag">moved</span>' : ''].filter(Boolean).join(' ');
-  return `<button class="unit ${u.id === selUnit ? 'sel' : ''}" data-u="${u.id}"><b class="side-${u.side}">${esc(u.name)}</b> <span class="why">${tags}</span><span class="pips">${pips(u)}</span></button>`;
-}
-function oddsHtml(list: E.Fire[]) {
-  if (!list.length) return '<p class="hint">Nobody can fire.</p>';
-  const pmf = E.hitPmf(list.map((f) => ({ dice: f.dice, sn: f.sn })));
-  return `<div class="odds"><span class="h">Firer</span><span class="h">dice</span><span class="h">SN</span>${list.map((f) => `<span title="${esc(f.parts.map(([w, v]) => `${w} ${v > 0 ? '+' : ''}${v}`).join('\n'))}">${esc(f.who)}</span><span>${f.dice}</span><span>${f.sn}</span>`).join('')}</div>
-    <p class="hint">Expected hits <b>${E.meanHits(pmf).toFixed(2)}</b> · ≥1 <b>${Math.round(E.probAtLeast(pmf, 1) * 100)}%</b> · ≥2 <b>${Math.round(E.probAtLeast(pmf, 2) * 100)}%</b> · ≥3 <b>${Math.round(E.probAtLeast(pmf, 3) * 100)}%</b></p>`;
-}
-const dice = (rs: E.Roll[]) => rs.map((r) => `<div><b>${esc(r.who)}</b> <span class="why">SN ${r.sn}</span><div class="dice">${r.dice.map((d) => `<span class="die ${d === 1 || (d !== 10 && d <= r.sn) ? 'hit' : ''}">${d}</span>`).join('')}</div></div>`).join('');
-
-function boxesHtml() {
-  return (['german', 'allied'] as E.Side[]).map((s) => {
-    const av = E.boxOf(g, s, 'available'), cnt = (b: E.Chit['box']) => E.boxOf(g, s, b).length;
-    const list = (b: E.Chit['box']) => E.boxOf(g, s, b).map((c) => chitChip(c)).join('') || '<span class="why">empty</span>';
-    return `<div class="box"><b class="side-${s}">${sideName(s)}</b> <span class="why">cup ${cnt('cup')} · used ${cnt('used')} · eliminated ${cnt('eliminated')}</span>
-      <div class="chips">${av.map((c) => chitChip(c)).join('') || '<span class="why">Available Box empty</span>'}</div>
-      <details><summary class="why">Used / Eliminated boxes</summary><div class="chips">${list('used')}</div><div class="chips">${list('eliminated')}</div></details></div>`;
-  }).join('');
-}
 function chitPanel(c: E.Chit): string {
   const a = selArea, out: string[] = [], u = selUnit ? g.units.find((x) => x.id === selUnit)! : null;
   const head = `<div><h2>${c.side === 'german' ? 'German' : 'Allied'} ${esc(ABBR[c.kind] ?? c.kind)}</h2><h3>${esc(c.name)}</h3><p class="hint">${esc(c.ech)} · in the ${c.box} box</p></div>`;
@@ -219,101 +187,264 @@ function chitPanel(c: E.Chit): string {
   return head + `<div class="row">${out.join('')}</div>`;
 }
 
-function battlePanel(b: E.Battle): string {
-  const att = b.attacker, def = E.other(att), L = E.areas.get(b.area)!;
-  const head = `<div><h2>${b.bt ? 'Breakthrough battle' : 'Battle'}</h2><h3>${esc(L.name)}</h3><p class="hint">TDN ${L.tdn}${g.fieldWorks.includes(b.area) ? ' · field works' : ''}${b.riverAssault ? ' · river assault' : ''} · ${sideName(att)} attacks</p></div>`;
-  const attU = E.unitsIn(g, b.area, att).filter((u) => !u.garrison && !u.disorder), defU = E.unitsIn(g, b.area, def);
-  const sel = (cur: string, us: E.Unit[], f: (v: string) => void) => `<select data-sel="${regv(f)}">${us.map((u) => `<option value="${u.id}" ${u.id === cur ? 'selected' : ''}>${esc(u.name)}</option>`).join('')}</select>`;
-  const units = `<div><h2>Units</h2><div class="row"><span class="why">Attacker point</span>${sel(b.attPoint, attU, (v) => { b.attPoint = v; })}<span class="why">Defender point</span>${sel(b.defPoint, defU, (v) => { b.defPoint = v; })}</div>
-     <div class="list">${[...attU, ...E.unitsIn(g, b.area, att).filter((u) => u.disorder), ...defU].map(unitRow).join('')}</div></div>`;
-  if (b.stage === 'setup') {
-    const sa = E.saAvailable(g, def).length, canRet = !b.assets[def].length && defU.some((u) => !u.garrison) && !defU.some((u) => u.garrison);
-    const reinf = g.units.filter((u) => u.side === def && u.area != null && E.neighbors(b.area).includes(u.area) && !E.contested(g, u.area) && !u.disorder && !u.garrison && E.blocks(g, b.area, def).length < 2);
-    const saHtml = sa ? `<div><h2>${sideName(def)} Special Action (${sa} available)</h2><div class="row">${btn('Retreat before combat', () => E.defenderRetreatSA(g, b), '', !canRet)}${reinf.map((u) => btn(`Reinforce: ${esc(u.name)} from ${esc(areaName(u.area!))}`, () => E.defenderReinforceSA(g, b, u.id))).join('')}</div></div>` : '';
-    const assets = [att, def].map((s) => {
-      const asg = [...b.assets[s].map((id) => E.chit(g, id)), ...(b.air[s] ? [E.chit(g, b.air[s]!.id)] : [])];
-      const avail = E.boxOf(g, s, 'available').filter((c) => E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission');
-      const lim = E.assetLimits(g, b, s);
-      return `<div><h2>${sideName(s)} assets <span class="why">(artillery up to ${lim.arty}${lim.mixed ? ', mixed echelons: artillery only' : ''})</span></h2>
-        <div class="chips">${asg.map((c) => `<span class="chit ${c.side} sel">${esc(chitLabel(c))} ${btn('×', () => E.unassign(g, b, c.id), 'x')}</span>`).join('') || '<span class="why">none assigned</span>'}</div>
-        <div class="chips">${avail.map((c) => {
-          const why = E.canAssign(g, b, s, c);
-          if (c.kind === 'air_mission') return why ? `<button class="chit ${s}" disabled title="${esc(why)}">${esc(chitLabel(c))}</button>` : `<span class="chit ${s}">${esc(chitLabel(c))} ${btn('as artillery', () => E.assign(g, b, c.id, 'arty'))} ${btn('+2 for point unit', () => E.assign(g, b, c.id, 'support', s === att ? b.attPoint : b.defPoint))}</span>`;
-          return `<button class="chit ${s}" data-do="${reg(() => E.assign(g, b, c.id))}" ${why ? 'disabled' : ''} title="${esc(why ?? 'assign to this battle')}">${esc(chitLabel(c))}</button>`;
-        }).join('') || '<span class="why">nothing available</span>'}</div></div>`;
-    }).join('');
-    const preview = (['arty', 'ground'] as const).map((k) => [att, def].map((s) => { const l = E.fireList(g, b, s, k); return l.length ? `<div><h2>${sideName(s)} ${k === 'arty' ? 'artillery' : 'ground fire'}</h2>${oddsHtml(l)}</div>` : ''; }).join('')).join('');
-    return head + saHtml + units + assets + preview + `<div class="row">${btn('Begin combat', () => E.beginCombat(g, b), 'primary')}</div>`;
+/* ---------- flow ---------- */
+const STEPS = ['Prepare', 'Move', 'Fight', 'Breakthrough', 'Supply'], STEP_OF: Record<E.Phase, number> = { reinforcement: 0, admin: 0, movement: 1, strategic: 1, combat: 2, reaction: 2, btMove: 3, btCombat: 3, supply: 4 };
+const other = E.other;
+const fightable = () => E.contestedAreas(g).filter((a) => !g.fought.includes(a));
+function idle(): boolean {                                                // phases with nothing to do are skipped for the player
+  const p = g.phasing, o = other(p), us = (s: E.Side) => g.units.filter((u) => u.side === s && u.area != null && !u.garrison);
+  switch (g.phase) {
+    case 'reinforcement': return !g.tfNew.length;
+    case 'strategic': return !us(p).some((u) => u.reserve);
+    case 'combat': case 'btCombat': return !fightable().length;
+    case 'reaction': return !us(o).some((u) => u.reserve);
+    case 'btMove': return !us(p).some((u) => (u.reserve || u.exploit) && !u.moved) && !(us(p).some((u) => u.cls === 'armor' && !u.moved) && E.saAvailable(g, p).length);
+    case 'supply': return true;
+    default: return false;
   }
-  const label: Record<string, string> = { attArty: `${sideName(att)} artillery`, defArty: `${sideName(def)} artillery`, defFire: `${sideName(def)} ground fire (defensive)`, offFire: `${sideName(att)} ground fire (offensive)` };
-  const fresh = b.rolls.slice(lastRolls), rolls = fresh.length ? `<div class="list">${dice(fresh)}</div>` : '';
-  if (b.stage === 'done') return head + units + rolls + `<p class="hint"><b>${esc(b.result ?? '')}</b></p>` + btn('Close battle', () => { E.closeBattle(g); lastRolls = 0; }, 'primary');
-  if (b.stage === 'attChoice') return head + units + rolls + `<p class="hint">${b.pending} more hit(s) on the attacker. Abort the attack (all attackers disordered, no more losses) or continue (take them as step losses)?</p><div class="row">${btn('Abort attack', () => E.attackerChoice(g, b, true))}${btn('Continue', () => { lastRolls = b.rolls.length; E.attackerChoice(g, b, false); }, 'primary')}</div>`;
-  if (b.stage === 'defChoice') return head + units + rolls + (b.pendingKind === 'arty'
-    ? `<p class="hint">${b.pending} artillery hit(s) on the defender. Disorder all defenders to absorb 1 hit, or take them all as step losses?</p><div class="row">${btn('Take losses', () => E.defenderChoice(g, b, false))}${btn('Disorder (absorb 1)', () => E.defenderChoice(g, b, true), 'primary')}</div>`
-    : `<p class="hint">${b.pending} ground-fire hit(s) on the defender. Retreat all units (absorbs 1 hit; they become disordered) or stand and take step losses?</p><div class="row">${btn('Stand', () => E.defenderChoice(g, b, false))}${btn('Retreat', () => E.defenderChoice(g, b, true), 'primary')}</div>`);
-  const side = b.stage === 'attArty' || b.stage === 'offFire' ? att : def, kind = b.stage.endsWith('Arty') ? 'arty' : 'ground';
-  const hasEng = b.stage === 'offFire' && b.assets[att].some((id) => E.chit(g, id).kind === 'engineer') && g.fieldWorks.includes(b.area);
-  return head + units + rolls + `<div><h2>${label[b.stage]}</h2>${oddsHtml(E.fireList(g, b, side, kind))}</div>
-    ${hasEng ? `<label class="why"><input type="checkbox" ${b.engFw ? 'checked' : ''} data-sel="${regv((v) => { b.engFw = v === 'on'; })}"> Engineer removes the field works instead of firing (6.33)</label>` : ''}
-    <div class="row">${btn(`Roll ${label[b.stage].toLowerCase()}`, () => { lastRolls = b.rolls.length; E.roll_step(g, b); }, 'primary')}</div>`;
+}
+function auto() { for (let i = 0; i < 12 && !g.over && !g.battle && !g.pendingBlow && idle(); i++) { try { E.endPhase(g); } catch { break; } } }
+let toast = '', toastT = 0;
+const say = (t: string) => { toast = t; clearTimeout(toastT); toastT = window.setTimeout(() => { toast = ''; render(); }, 2800); };
+function act(f: () => void) { try { f(); msg = ''; auto(); } catch (e) { say((e as Error).message); } save(); refresh(); }
+
+/* ---------- camera focus ---------- */
+type Goal = { t: THREE.Vector3; dist: number; pitch: number } | null; let goal: Goal = null, saved: Goal = null, inBattle = false;
+function syncBattleCam() {
+  if (g.battle && !inBattle) { saved = { t: target.clone(), dist, pitch }; const a = E.areas.get(g.battle.area)!, p = toWorld(...(MAP.areas.find((x) => x.id === a.id)!.label)); goal = { t: new THREE.Vector3(p.x, 0, p.z + 3.2), dist: 17, pitch: 1.0 }; }
+  if (!g.battle && inBattle && saved) goal = saved;
+  inBattle = !!g.battle;
 }
 
+/* ---------- map interaction ---------- */
+const optsFor = (id: string): E.Opt[] => g.phase === 'strategic' ? E.stratOptions(g, id).map((a) => ({ area: a, cost: 0, fuel: g.units.find((x) => x.id === id)!.side === 'german', mustStop: false, path: [] })) : E.moveOptions(g, id);
+const fuelLeft = () => E.boxOf(g, 'german', 'available').filter((c) => c.kind === 'fuel').length;
+const center = (a: number) => toWorld(...MAP.areas.find((x) => x.id === a)!.label);
+function confirmMove() {
+  const id = selUnit!, to = previewArea!; selUnit = null; previewArea = null; selArea = to;
+  act(() => { if (g.phase === 'strategic') E.stratMove(g, id, to); else E.move(g, id, to); });
+}
+function click(e: PointerEvent) {
+  const { unit, area } = pick(e);
+  if (g.pendingBlow || g.battle) return;
+  if (selUnit && area != null && optsFor(selUnit).some((o) => o.area === area)) { if (previewArea === area) return confirmMove(); previewArea = area; refresh(); return; }
+  if ((g.phase === 'combat' || g.phase === 'btCombat') && area != null && fightable().includes(area)) { selArea = area; selUnit = null; return act(() => { E.startBattle(g, area, g.phase === 'btCombat'); lastFire = []; }); }
+  if (unit) { selUnit = unit; selArea = g.units.find((x) => x.id === unit)!.area; } else { selArea = area; selUnit = null; }
+  previewArea = null; hoverArea = null; refresh();
+}
+canvas.addEventListener('pointermove', (e) => {
+  if (e.buttons || !selUnit || g.battle) return;
+  const a = pick(e).area, h = a != null && optsFor(selUnit).some((o) => o.area === a) ? a : null;
+  if (h !== hoverArea) { hoverArea = h; if (previewArea == null) refresh(); }
+});
+
+const route = new THREE.Group(); scene.add(route);
+function drawRoute() {
+  route.clear(); const to = previewArea ?? hoverArea; if (!selUnit || to == null) return;
+  const o = optsFor(selUnit).find((x) => x.area === to); if (!o) return;
+  const u = g.units.find((x) => x.id === selUnit)!, path = o.path.length ? o.path : [u.area!, to], pts = path.map((a) => { const p = center(a); return new THREE.Vector3(p.x, 0.25, p.z); });
+  const mat = new THREE.MeshBasicMaterial({ color: o.fuel ? 0xe7b04a : 0x9fe870 });
+  route.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0), 64, 0.13, 6), mat));
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.9, 12), mat); tip.position.copy(pts[pts.length - 1]).setY(0.9); tip.rotation.x = Math.PI; route.add(tip);
+}
+type Badge = { area: number; text: string; cls: string };
+let badges: Badge[] = [];
+function badgeList(): Badge[] {
+  const out: Badge[] = [];
+  if (selUnit && !g.battle) { const u = g.units.find((x) => x.id === selUnit)!; for (const o of optsFor(selUnit)) out.push({ area: o.area, text: g.phase === 'strategic' ? '' : `${o.cost}`, cls: o.mustStop ? 'stop' : o.fuel && u.side === 'german' ? 'fuel' : 'ok' }); }
+  if (!selUnit && (g.phase === 'combat' || g.phase === 'btCombat') && !g.battle) { const must = E.mustFight(g); for (const a of fightable()) out.push({ area: a, text: must.includes(a) ? 'FIGHT' : 'fight?', cls: must.includes(a) ? 'war' : 'opt' }); }
+  return out;
+}
+const badgeEls = new Map<string, HTMLElement>();
+function syncBadges() {
+  const layer = $('#badges'); layer.innerHTML = ''; badgeEls.clear();
+  for (const b of badges) { const d = document.createElement('div'); d.className = 'bdg ' + b.cls; d.textContent = b.text; layer.appendChild(d); badgeEls.set(String(b.area), d); }
+}
+function placeBadges() {
+  const r = canvas.getBoundingClientRect(), v = new THREE.Vector3();
+  for (const [k, d] of badgeEls) { const p = center(+k); v.set(p.x, 0.5, p.z + 1.6).project(cam); d.style.display = v.z < 1 ? '' : 'none'; d.style.transform = `translate(${(v.x * 0.5 + 0.5) * r.width}px, ${(-v.y * 0.5 + 0.5) * r.height}px) translate(-50%, -50%)`; }
+}
+
+/* ---------- battle state shared with the view ---------- */
+interface RollView { title: string; groups: (DiceGroup & { parts: [string, number][]; hits: number })[]; pos: { x: number; y: number; group: number; v: number }[] | null }
+let rollView: RollView | null = null, lastFire: E.Fire[] = [], modal: 'menu' | 'boxes' | null = null, handSide: E.Side | null = null;
+const STAGE_NAME: Record<string, string> = { attArty: 'artillery', defArty: 'artillery', defFire: 'Defensive fire', offFire: 'Offensive fire' };
+function rollStage(b: E.Battle) {
+  const side = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker), kind = b.stage.endsWith('Arty') ? 'arty' : 'ground', fl = E.fireList(g, b, side, kind), n0 = b.rolls.length, stage = b.stage;
+  E.roll_step(g, b); save();
+  const fresh = b.rolls.slice(n0);
+  rollView = { title: `${side === 'german' ? 'German' : 'Allied'} ${STAGE_NAME[stage]}`, pos: null, groups: fresh.map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: fl.find((f) => f.who === r.who)?.parts ?? [] })) };
+  if (!rollView.groups.length) { rollView = null; return refresh(); }
+  refresh();
+  const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block';
+  throwDice(cv, rollView.groups, (p) => { if (rollView) { rollView.pos = p; render(); } });
+}
+function endRoll() { rollView = null; clearDice(); ($('#dice') as HTMLElement).style.display = 'none'; refresh(); }
+
+/* ---------- cards and drag and drop ---------- */
+const GLYPH: Record<string, string> = { artillery: '●', rocket_artillery: '➤', engineer: '▟', armor_asset: '▣', infantry_asset: '▤', task_force: '⚑', fuel: '⛽', command_staff: '★', air_mission: '✈', sa_block: '✦' };
+const card = (c: E.Chit, r = 0, why: string | null = null) => `<div class="card2 ${c.side} ${why ? 'bad' : ''} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" style="--r:${r}deg" title="${esc(why ?? c.name + ' · ' + c.ech)}"><i>${esc(c.ech.replace(/_/g, ' ').slice(0, 9))}</i><span class="gl">${GLYPH[c.kind] ?? '■'}</span><b>${esc(chitLabel(c))}</b><small>${esc(c.ech)}</small></div>`;
+const fan = (cs: string[]) => cs.map((h, i) => h.replace('--r:0deg', `--r:${((i - (cs.length - 1) / 2) * Math.min(5, 40 / cs.length)).toFixed(1)}deg`)).join('');
+function drag(ev: PointerEvent, el: HTMLElement) {
+  const id = el.dataset.chit!, c = E.chit(g, id), x0 = ev.clientX, y0 = ev.clientY; let ghost: HTMLElement | null = null, over: Element | null = null;
+  const at = (e: PointerEvent) => document.elementsFromPoint(e.clientX, e.clientY).find((n) => (n as HTMLElement).dataset?.side && (n as HTMLElement).dataset?.zone || (n as HTMLElement).dataset?.unit);
+  const mv = (e: PointerEvent) => {
+    if (!ghost && Math.hypot(e.clientX - x0, e.clientY - y0) > 6) { ghost = el.cloneNode(true) as HTMLElement; ghost.classList.add('ghost'); document.body.appendChild(ghost); }
+    if (!ghost) return; ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px';
+    const z = at(e) ?? null; if (z !== over) { over?.classList.remove('over'); over = z; over?.classList.add('over'); }
+  };
+  const up = (e: PointerEvent) => {
+    window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); ghost?.remove(); over?.classList.remove('over');
+    const b = g.battle; if (!b || b.stage !== 'setup') { if (!ghost) { selChit = selChit === id ? null : id; refresh(); } return; }
+    const z = ghost ? at(e) as HTMLElement | undefined : undefined, s = c.side;
+    let zone = z?.dataset.zone, unit = z?.dataset.unit;
+    if (!ghost) zone = E.isArty(c) || c.kind === 'air_mission' ? 'arty' : 'asset';               // a plain click files the card where it belongs
+    if (!zone && !unit) return;
+    const why = E.canAssign(g, b, s, c) ?? (z?.dataset.side && z.dataset.side !== s ? 'That slot belongs to the other side' : null) ?? (zone === 'arty' && c.kind === 'engineer' ? 'Engineers go in the Assets slot' : zone === 'asset' && (E.isArty(c)) ? 'Artillery goes in the Artillery slot' : null);
+    if (why) return say(why);
+    act(() => { if (c.kind === 'air_mission') { if (unit) E.assign(g, b, id, 'support', unit); else E.assign(g, b, id, 'arty'); } else E.assign(g, b, id); });
+  };
+  window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
+}
+
+/* ---------- views ---------- */
+const nm = (s: E.Side) => (s === 'german' ? 'German' : 'Allied');
+function topBar() {
+  const v = E.victory(g), tr = E.TRACK[g.turn - 1], i = g.phasing === 'german' ? 0 : 1, at = STEP_OF[g.phase];
+  return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game">☰</button><div class="c-crumbs">${STEPS.map((s, k) => `<span class="${k === at ? 'on' : k < at ? 'done' : ''}">${s}</span>`).join('')}</div>
+    <div class="c-stat"><span>TURN<b>${g.turn}</b></span><span>SIDE<b class="${g.phasing}">${nm(g.phasing).slice(0, 3).toUpperCase()}</b></span><span>NET VP<b>${v.net > 0 ? 'GE +' + v.net : v.net < 0 ? 'AL +' + -v.net : '0'}</b></span><span title="Draws this phase (German / Allied)">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span><button class="ico" data-modal="boxes" title="Chit boxes">▤</button></div></div>`;
+}
+function prompt() {
+  const b = g.battle;
+  if (g.over) return `<b>${esc(g.over)}</b>`;
+  if (g.pendingBlow) return `<b>${nm(other(g.units.find((x) => x.id === g.pendingBlow!.unit)!.side))}</b>: attempt to blow the bridge?`;
+  if (b) return b.stage === 'setup' ? '<b>Drag cards onto the slots.</b> Only assets that can join are in your hand. Click a block to make it the point unit.' : b.stage === 'done' ? `<b>${esc(b.result ?? '')}</b>` : rollView ? 'Dice are cast automatically. <b>1 always hits, 10 always misses.</b>' : b.stage.endsWith('Choice') ? 'Choose how to take the hits.' : `Next: <b>${STAGE_NAME[b.stage]}</b>`;
+  const m = E.mustFight(g).length;
+  switch (g.phase) {
+    case 'reinforcement': return `<b>Place the new Task Force:</b> pick a supplied friendly area on the map.`;
+    case 'admin': return 'Chits were drawn. <b>Click a card</b> to use engineers, events, staff or Special Actions, or end the step.';
+    case 'movement': return selUnit ? 'Click a <b>green</b> area to preview the route, click it again to move. <b>Orange</b>: must stop there.' : '<b>Select one of your blocks</b> to move it. Moves over 3 MP cost the Germans a fuel asset.';
+    case 'strategic': return '<b>Select a reserve block</b>, then a green area to strategic-move.';
+    case 'combat': case 'btCombat': return m ? `<b>${m} battle(s) must be fought.</b> Click a red area.` : fightable().length ? '<b>Click a contested area</b> to start a battle, or end the step.' : 'No battles left.';
+    case 'reaction': return `<b>${nm(other(g.phasing))} reserves</b> may react: select a reserve block.`;
+    case 'btMove': return '<b>Reserve and exploitation blocks</b> may move. Select one.';
+    default: return 'Supply is checked automatically.';
+  }
+}
+function primary(): { label: string; fn: () => void; dis?: boolean } | null {
+  const b = g.battle;
+  if (g.over || g.pendingBlow || rollView) return null;
+  if (b) {
+    if (b.stage === 'setup') return { label: 'Begin combat ▸', fn: () => act(() => E.beginCombat(g, b)) };
+    if (b.stage === 'done') return { label: 'Close battle ▸', fn: () => act(() => E.closeBattle(g)) };
+    if (b.stage.endsWith('Choice')) return null;
+    return { label: `Roll ${STAGE_NAME[b.stage].toLowerCase()} ▸`, fn: () => rollStage(b) };
+  }
+  return { label: `End ${STEPS[STEP_OF[g.phase]].toLowerCase()} ▸`, fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; }), dis: !!E.mustFight(g).length };
+}
+function dispatch() {
+  if (g.battle || g.over) return '';
+  const row = (k: string, v: string, c = '') => `<div class="r"><span>${k}</span><b class="${c}">${v}</b></div>`;
+  const c = selChit ? g.chits.find((x) => x.id === selChit) : null;
+  if (c && g.phase === 'admin') return `<div class="c-dispatch">${chitPanel(c)}</div>`;
+  if (g.phase === 'reinforcement' && g.tfNew.length) return `<div class="c-dispatch"><h3>New Task Force</h3>${g.tfNew.map((id) => btn(`Place in ${selArea != null ? esc(areaName(selArea)) : '(select an area)'}`, () => E.placeTaskForce(g, id, selArea!), 'primary', selArea == null)).join('')}</div>`;
+  const u = selUnit ? g.units.find((x) => x.id === selUnit) : null;
+  if (u) {
+    const to = previewArea ?? hoverArea, o = to != null ? optsFor(u.id).find((x) => x.area === to) : null, n = fuelLeft(), strat = g.phase === 'strategic';
+    const tags = [u.disorder === 1 ? 'disordered' : u.disorder === 2 ? 'recovering' : '', u.unsupplied ? 'unsupplied' : '', u.reserve ? 'reserve' : '', u.exploit ? 'exploit' : '', u.interdict ? 'interdicted' : ''].filter(Boolean);
+    let route = '';
+    if (o) route = `<div class="route"><h4>→ ${esc(areaName(o.area))}</h4>${strat ? row('Strategic move', 'any distance') : row('Movement', `${o.cost} MP`)}${u.side === 'german' && g.opts.fuel ? row('Fuel', o.fuel ? `−1 &nbsp;(${n} → ${n - 1})` : 'not needed', o.fuel ? 'bad' : '') : ''}${o.mustStop ? row('Stops here', 'enemy present, battle follows', 'bad') : ''}${btn(previewArea === o.area ? 'Move here' : 'Preview', () => { previewArea = o.area; confirmMoveNow(); }, 'primary')}</div>`;
+    else if (optsFor(u.id).length) route = `<p class="hint">${optsFor(u.id).length} destination(s). Hover or click a highlighted area.</p>`;
+    const can = ['movement', 'reaction', 'btMove'].includes(g.phase) && !u.garrison && !u.moved;
+    const fw = can && u.area != null && !u.unsupplied && !u.disorder && !E.contested(g, u.area) && !g.fieldWorks.includes(u.area) && ((g.phase === 'movement' && u.side === g.phasing) || (g.phase === 'reaction' && u.side !== g.phasing && !!u.reserve) || (g.phase === 'btMove' && u.side === g.phasing && (!!u.reserve || u.exploit)));
+    return `<div class="c-dispatch"><h3 class="${u.side}">${esc(u.name)}</h3><div class="pipsrow">${pips(u)} <small>${u.garrison ? 'asset' : u.cls} · ${tags.join(' · ') || 'in order'}</small></div>${route}
+      <div class="row">${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve', () => E.setReserve(g, u.id, false)) : btn('Reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u))) : ''}${fw ? btn('Fortify', () => E.buildFieldWorks(g, u.id)) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn('Activate (SA)', () => E.activateBreakthrough(g, u.id), '', !E.saAvailable(g, u.side, u.ech).length) : ''}</div></div>`;
+  }
+  if (selArea != null) {
+    const a = E.areas.get(selArea)!, us = E.unitsIn(g, selArea);
+    return `<div class="c-dispatch"><h3>${esc(a.name)}</h3>${row('Terrain TDN', `${a.tdn}`)}${row('Control', nm(g.control[a.id]))}${g.fieldWorks.includes(a.id) ? row('Field works', 'yes') : ''}${(a.vp.allied || a.vp.german || a.vp.mutual) ? row('Victory area', a.vp.mutual ? 'both' : a.vp.german ? 'German ' + a.vp.german : 'Allied ' + a.vp.allied) : ''}
+      ${us.map((u) => `<button class="unit" data-u="${u.id}"><b class="${u.side}">${esc(u.name)}</b><span class="pipsrow">${pips(u)}</span></button>`).join('') || '<p class="hint">Empty.</p>'}</div>`;
+  }
+  return '';
+}
+function confirmMoveNow() { confirmMove(); }
+function handCards() {
+  const b = g.battle;
+  if (b) {
+    if (b.stage !== 'setup') return '';
+    const cs = ([b.attacker, other(b.attacker)] as E.Side[]).sort().flatMap((s) => E.boxOf(g, s, 'available').filter((c) => E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission'));
+    const ok = cs.filter((c) => !E.canAssign(g, b, c.side, c));
+    return `<div class="c-hand">${fan(ok.map((c) => card(c)))}</div>${cs.length > ok.length ? `<div class="handtab"><span class="why">${cs.length - ok.length} more assets cannot join this battle</span></div>` : ''}`;
+  }
+  if (g.phase !== 'admin') return '';
+  const s = handSide ?? g.phasing, cs = E.boxOf(g, s, 'available');
+  return `<div class="handtab"><button data-do="${reg(() => { handSide = other(s); })}" class="${s}">${nm(s)} hand · ${cs.length} ⇄</button></div><div class="c-hand">${fan(cs.map((c) => card(c)))}</div>`;
+}
+function stats(b: E.Battle, s: E.Side) {
+  const ls = (['arty', 'ground'] as const).flatMap((k) => E.fireList(g, b, s, k)), pmf = E.hitPmf(ls.map((f) => ({ dice: f.dice, sn: f.sn })));
+  return { mean: E.meanHits(pmf), p: (n: number) => Math.round(E.probAtLeast(pmf, n) * 100) };
+}
+function battleTable() {
+  const b = g.battle; if (!b) return '';
+  const L = E.areas.get(b.area)!, att = b.attacker, setup = b.stage === 'setup';
+  const side = (s: E.Side) => {
+    const us = E.unitsIn(g, b.area, s), pt = s === att ? b.attPoint : b.defPoint, lim = E.assetLimits(g, b, s), ids = b.assets[s].map((id) => E.chit(g, id)), air = b.air[s] ? E.chit(g, b.air[s]!.id) : null;
+    const arty = [...ids.filter((c) => E.isArty(c)), ...(air && b.air[s]!.mode === 'arty' ? [air] : [])], rest = ids.filter((c) => !E.isArty(c));
+    const mini = (c: E.Chit) => `<span class="mini ${c.side}">${GLYPH[c.kind] ?? '■'} ${esc(chitLabel(c))}${setup ? ` <button class="x" data-do="${reg(() => E.unassign(g, b, c.id))}">×</button>` : ''}</span>`;
+    const sa = setup && s !== att ? E.saAvailable(g, s).length : 0;
+    return `<div class="c-side ${s}"><h4>${nm(s)} <small>${s === att ? 'attacking' : 'defending'}</small></h4>
+      <div class="c-row">${us.map((u) => `<div class="blk ${s} ${u.id === pt ? 'pt' : ''} ${air && b.air[s]!.mode === 'support' && b.air[s]!.unit === u.id ? 'air' : ''}" data-unit="${u.id}" data-side="${s}" title="${esc(u.name)}${u.id === pt ? ' (point unit)' : ''}"><em>${pips(u)}</em><b>${esc(u.name)}</b></div>`).join('')}</div>
+      <div class="c-slots"><div class="slot" data-side="${s}" data-zone="arty"><span class="lab">ARTY ${arty.length}/${lim.arty}</span>${arty.map(mini).join('') || '<small>drop</small>'}</div><div class="slot" data-side="${s}" data-zone="asset"><span class="lab">ASSETS</span>${rest.map(mini).join('') || '<small>drop</small>'}</div></div>
+      ${sa ? `<div class="row">${btn('Retreat (SA)', () => E.defenderRetreatSA(g, b), '', !!b.assets[s].length || us.some((u) => u.garrison) || !us.length)}</div>` : ''}</div>`;
+  };
+  const al = stats(b, 'allied'), ge = stats(b, 'german'), tot = al.mean + ge.mean || 1, side2 = att === 'german' ? ge : al;
+  return `<div class="c-table" style="${rollView ? 'opacity:.3' : ''}"><div class="c-title">${b.bt ? 'BREAKTHROUGH · ' : ''}${esc(L.name)} <small>TDN ${L.tdn}${g.fieldWorks.includes(b.area) ? ' · field works' : ''}${b.riverAssault ? ' · river assault' : ''}</small></div>${side('allied')}
+    <div class="c-vs"><small>EXPECTED HITS</small><div class="big">${al.mean.toFixed(1)}<span>:</span>${ge.mean.toFixed(1)}</div><div class="gauge"><i style="width:${(al.mean / tot) * 100}%"></i></div><small>${nm(att)} ≥2 hits ${side2.p(2)}% · ≥3 ${side2.p(3)}%</small></div>${side('german')}</div>`;
+}
+function ledger() {
+  const b = g.battle; if (!b || g.pendingBlow) return '';
+  if (rollView) {
+    const rv = rollView, hits = rv.groups.reduce((s, x) => s + x.hits, 0), labels = (rv.pos ?? []).map((p) => { const gr = rv.groups[p.group], hit = isHit(p.v, gr.sn); return `<div class="lbl ${hit ? 'hit' : 'miss'}" style="left:${p.x}px;top:${p.y}px">${p.v}<em>${hit ? 'hit' : 'miss'}${p.v === 1 || p.v === 10 ? ' · always' : ''}</em></div>`; }).join('');
+    return `<div class="labels">${labels}</div><div class="c-ledger"><h3>${esc(rv.title)} · ${rv.pos ? `${hits} hit${hits === 1 ? '' : 's'}` : 'rolling…'}</h3>${rv.groups.map((x) => `<div class="ln"><span class="who">${esc(x.label)}</span><span class="mods">${x.parts.map(([w, v]) => `<span class="m ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}">${esc(w)}${v ? ` ${v > 0 ? '+' : '−'}${Math.abs(v)}` : ''}</span>`).join('')}</span><span class="sn">SN ${x.sn}</span><span class="res">${x.dice.map((d) => `<b class="${isHit(d, x.sn) ? 'hit' : 'miss'}">${d}</b>`).join(' ')}</span><span class="cnt">${x.hits}</span></div>`).join('')}
+      <div class="row end"><button class="primary" data-do="${reg(() => endRoll())}" ${rv.pos ? '' : 'disabled'}>Continue ▸</button></div></div>`;
+  }
+  if (b.stage === 'attChoice') return `<div class="c-ledger"><h3>${b.pending} hit(s) on the attackers</h3><p class="hint">Abort the attack (all attackers disordered, no more losses) or continue and take them as step losses?</p><div class="row end">${btn('Abort attack', () => E.attackerChoice(g, b, true))}${btn('Take losses', () => E.attackerChoice(g, b, false), 'primary')}</div></div>`;
+  if (b.stage === 'defChoice') return `<div class="c-ledger"><h3>${b.pending} hit(s) on the defenders</h3><p class="hint">${b.pendingKind === 'arty' ? 'Disorder all defenders to absorb 1 hit, or take every hit as a step loss?' : 'Retreat all units (absorbs 1 hit, they become disordered) or stand and take step losses?'}</p><div class="row end">${btn('Take losses', () => E.defenderChoice(g, b, false))}${btn(b.pendingKind === 'arty' ? 'Disorder (absorb 1)' : 'Retreat', () => E.defenderChoice(g, b, true), 'primary')}</div></div>`;
+  if (b.stage === 'offFire' && b.assets[b.attacker].some((id) => E.chit(g, id).kind === 'engineer') && g.fieldWorks.includes(b.area)) return `<div class="c-ledger slim"><label><input type="checkbox" ${b.engFw ? 'checked' : ''} data-sel="${regv((v) => { b.engFw = v === 'on'; })}"> Engineer removes the field works instead of firing (6.33)</label></div>`;
+  return '';
+}
+function modalHtml() {
+  if (modal === 'boxes') return `<div class="modal"><div class="sheet"><h3>Chit boxes <button class="ico" data-modal="">✕</button></h3>${(['allied', 'german'] as E.Side[]).map((s) => {
+    const l = (bx: E.Chit['box']) => E.boxOf(g, s, bx).map((c) => `<span class="mini ${s}">${esc(chitLabel(c))}</span>`).join('') || '<small>empty</small>';
+    return `<h4 class="${s}">${nm(s)} · cup ${E.boxOf(g, s, 'cup').length}</h4><div class="chips"><b>Available</b> ${l('available')}</div><div class="chips"><b>Used</b> ${l('used')}</div><div class="chips"><b>Eliminated</b> ${l('eliminated')}</div>`; }).join('')}</div></div>`;
+  if (modal === 'menu') return `<div class="modal"><div class="sheet"><h3>Menu <button class="ico" data-modal="">✕</button></h3><h4>New game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as 'tournament' | 'campaign'; })}"><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
+    <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label>${btn('Start', () => { g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; }, 'primary')}</div>
+    <h4>Log</h4><div class="log">${[...g.log].reverse().slice(0, 120).map((l) => `<div>${esc(l)}</div>`).join('')}</div></div></div>`;
+  return '';
+}
 function render() {
   acts = {}; actv = {}; n = 0;
-  const v = E.victory(g), tr = E.TRACK[g.turn - 1], i = g.phasing === 'german' ? 0 : 1, sd = tr.sd, b = g.battle;
-  const ph = (['reinforcement', ...E.PHASES] as E.Phase[]).map((p) => `<span class="${p === g.phase ? 'on' : ''}">${PHASE_NAME[p]}</span>`).join('');
-  const head = `<div><h2>Turn ${g.turn} of ${g.lastTurn} · <span class="side-${g.phasing}">${sideName(g.phasing)}</span> player</h2><div class="phase">${ph}</div>
-    <p class="hint">VP: German ${v.german} · Allied ${v.allied} · net <b>${v.net > 0 ? 'German +' + v.net : v.net < 0 ? 'Allied +' + -v.net : '0'}</b>${sd ? ` · sudden death at German ${sd[0]} / Allied ${sd[1]}` : ' · no sudden death before turn 4'} · draws this phase: German ${tr.ge[i]}, Allied ${tr.al[i]}</p></div>`;
-  let body = '';
-  if (g.over) body += `<p class="hint"><b>${esc(g.over)}</b></p>`;
-  if (g.pendingBlow) {
-    const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!, p = g.pendingBlow.path, def = E.other(u.side);
-    body += `<div class="alert"><h2>${sideName(def)}: bridge?</h2><p class="hint">${esc(u.name)} tries to cross into ${esc(areaName(p[p.length - 1]))} from ${esc(areaName(p[p.length - 2]))}. Attempt to blow the bridge? It works on a roll of 1–5.</p><div class="row">${btn('Attempt to blow it', () => E.resolveBlow(g, true), 'primary')}${btn('Let them cross', () => E.resolveBlow(g, false))}</div></div>`;
-  } else if (b) body += battlePanel(b);
-  else {
-    const un = (id: string) => g.units.find((x) => x.id === id)!;
-    if (g.phase === 'reinforcement') body += `<p class="hint">Reinforcements were placed and the Used Box recycled into the cup. ${g.tfNew.length ? 'Place new Task Forces: select a supplied friendly area on the map, then choose.' : ''}</p>` + g.tfNew.map((id) => btn(`Place Task Force in ${selArea != null ? esc(areaName(selArea)) : '(select an area)'}`, () => E.placeTaskForce(g, id, selArea!), '', selArea == null)).join('');
-    if (g.phase === 'admin') body += `<p class="hint">Chits were drawn. Both players may now use engineers, events, staff and Special Actions: select a chit below.</p>`;
-    if (g.phase === 'movement') body += `<p class="hint">Select one of your blocks, then click a green area to move (orange: it must stop there). A unit may instead be placed in reserve. Moves over 3 MP cost the Germans a fuel asset.</p>`;
-    if (g.phase === 'strategic') body += `<p class="hint">Select a block with a reserve marker; green areas show where it can strat-move (Germans: one unit, one fuel asset).</p><div class="list">${g.units.filter((x) => x.side === g.phasing && x.reserve && x.area != null).map(unitRow).join('') || '<span class="why">No reserves.</span>'}</div>`;
-    if (g.phase === 'combat' || g.phase === 'btCombat') {
-      const avail = E.contestedAreas(g).filter((a) => !g.fought.includes(a)), must = E.mustFight(g);
-      body += `<div><h2>Battles</h2>${avail.length ? `<div class="list">${avail.map((a) => `<button class="unit" data-do="${reg(() => { E.startBattle(g, a, g.phase === 'btCombat'); lastRolls = 0; selArea = a; })}"><b>${esc(areaName(a))}</b><span class="why">${must.includes(a) ? '<span class="tag bad">mandatory</span>' : g.phase === 'btCombat' && !E.newlyContested(g).includes(a) ? 'costs a Special Action' : 'optional'}</span></button>`).join('')}</div>` : '<p class="hint">No contested areas left.</p>'}</div>`;
-    }
-    if (g.phase === 'reaction') body += `<p class="hint">${sideName(E.other(g.phasing))} reserves may move (full allowance) to uncontested areas or into contested ones to reinforce. Select a reserve block.</p><div class="list">${g.units.filter((x) => x.side !== g.phasing && x.reserve && x.area != null).map(unitRow).join('') || '<span class="why">No reserves.</span>'}</div>`;
-    if (g.phase === 'btMove') body += `<p class="hint">Reserve and exploitation-marked blocks may move. Other armor units can be activated with a Special Action (one area).</p><div class="list">${g.units.filter((x) => x.side === g.phasing && (x.reserve || x.exploit) && x.area != null && !x.moved).map(unitRow).join('') || '<span class="why">No eligible blocks.</span>'}</div>`;
-    if (g.phase === 'supply') body += '<p class="hint">Supply was checked, disorder adjusted, unsupplied morale rolled and markers removed.</p>';
-    const u = selUnit ? g.units.find((x) => x.id === selUnit) : null;
-    if (u) {
-      const o = g.phase === 'strategic' ? [] : E.moveOptions(g, u.id);
-      body += `<div><h2>Block</h2>${unitRow(u)}<div class="row">${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve marker', () => E.setReserve(g, u.id, false)) : btn('Place in reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u))) : ''}${['movement', 'reaction', 'btMove'].includes(g.phase) && !u.garrison && !u.moved ? btn('Build field works', () => E.buildFieldWorks(g, u.id), '', !(u.area != null && !u.unsupplied && !u.disorder && !E.contested(g, u.area) && !g.fieldWorks.includes(u.area) && ((g.phase === 'movement' && u.side === g.phasing) || (g.phase === 'reaction' && u.side !== g.phasing && !!u.reserve) || (g.phase === 'btMove' && u.side === g.phasing && (!!u.reserve || u.exploit))))) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn(`Activate (Special Action, ${E.saAvailable(g, u.side, u.ech).length} left)`, () => E.activateBreakthrough(g, u.id), '', !E.saAvailable(g, u.side, u.ech).length) : ''}</div>
-        ${o.length ? `<p class="hint">${o.length} reachable area(s): ${o.slice(0, 7).map((x) => `${esc(areaName(x.area))} ${x.cost}${x.fuel ? '⛽' : ''}`).join(', ')}${o.length > 7 ? '…' : ''}</p>` : ''}</div>`;
-    }
-    if (selArea != null) {
-      const us = E.unitsIn(g, selArea), a = E.areas.get(selArea)!;
-      body += `<div><h2>Area ${a.id}</h2><h3>${esc(a.name)}</h3><p class="hint">TDN ${a.tdn} · zone ${a.zone} · ${sideName(g.control[a.id])}-controlled${g.fieldWorks.includes(a.id) ? ' · field works' : ''}${g.riverAssault.includes(a.id) ? ' · river assault' : ''}${(a.vp.allied || a.vp.german || a.vp.mutual) ? ` · VP area (${a.vp.mutual ? 'both' : a.vp.german ? 'German ' + a.vp.german : 'Allied ' + a.vp.allied})` : ''}</p>${us.length ? `<div class="list">${us.map(unitRow).join('')}</div>` : '<p class="hint">Empty.</p>'}</div>`;
-    }
-    void un;
-    const must = E.mustFight(g);
-    body += `<div class="row">${btn(`End ${PHASE_NAME[g.phase].toLowerCase()} phase`, () => E.endPhase(g), 'primary', !!must.length || !!g.over)}</div>${must.length ? `<p class="why">${must.length} mandatory battle(s) left.</p>` : ''}`;
-  }
-  const c = selChit ? g.chits.find((x) => x.id === selChit) : null;
-  const chitHtml = c && !b ? chitPanel(c) : '';
-  const settings = `<details><summary class="why">New game</summary><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as 'tournament' | 'campaign'; })}"><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
-    <label class="why"><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label>${btn('Start', () => { g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; lastRolls = 0; }, 'primary')}</div></details>`;
-  $('#panel').innerHTML = head + (msg ? `<p class="hint" style="color:var(--bad)">${esc(msg)}</p>` : '') + body + (b || g.pendingBlow ? '' : `<div><h2>Assets and events</h2>${boxesHtml()}</div>` + chitHtml) + settings + `<div><h2>Log</h2><div class="log">${[...g.log].reverse().slice(0, 80).map((l) => `<div>${esc(l)}</div>`).join('')}</div></div>`;
-  $('#hud').textContent = `Left-drag pan · right-drag / Shift rotate · wheel zoom   |   T${g.turn} ${sideName(g.phasing)} ${PHASE_NAME[g.phase]}`;
-  document.querySelectorAll<HTMLElement>('[data-do]').forEach((e) => (e.onclick = () => act(acts[e.dataset.do!])));
-  document.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-sel]').forEach((e) => (e.onchange = () => { const f = actv[e.dataset.sel!]; if (f) { f(e instanceof HTMLInputElement && e.type === 'checkbox' ? (e.checked ? 'on' : 'off') : e.value); save(); } }));
-  document.querySelectorAll<HTMLElement>('[data-u]').forEach((e) => (e.onclick = () => { selUnit = e.dataset.u!; selArea = g.units.find((x) => x.id === selUnit)!.area ?? selArea; refresh(); }));
-  document.querySelectorAll<HTMLElement>('[data-chit]').forEach((e) => (e.onclick = () => { selChit = selChit === e.dataset.chit ? null : e.dataset.chit!; refresh(); }));
+  const p = primary(), b = g.battle;
+  const alert = g.pendingBlow ? (() => { const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!, path = g.pendingBlow!.path; return `<div class="c-ledger"><h3>${nm(other(u.side))}: bridge?</h3><p class="hint">${esc(u.name)} tries to cross into ${esc(areaName(path[path.length - 1]))}. Attempt to blow the bridge? It works on a roll of 1–5.</p><div class="row end">${btn('Let them cross', () => E.resolveBlow(g, false))}${btn('Attempt to blow it', () => E.resolveBlow(g, true), 'primary')}</div></div>`; })() : '';
+  $('#ui').innerHTML = topBar() + (b ? battleTable() : dispatch()) + handCards() + alert + ledger() + `<div class="c-bar b"><div class="c-prompt">${prompt()}</div>${p ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis ? 'disabled' : ''}>${p.label}</button>` : ''}</div>` + (toast ? `<div class="toast">${esc(toast)}</div>` : '') + modalHtml();
+  const ui = $('#ui');
+  ui.querySelectorAll<HTMLElement>('[data-do]').forEach((e) => (e.onclick = () => act(acts[e.dataset.do!])));
+  ui.querySelectorAll<HTMLElement>('[data-modal]').forEach((e) => (e.onclick = () => { modal = (e.dataset.modal || null) as typeof modal; render(); }));
+  ui.querySelectorAll<HTMLElement>('[data-sel]').forEach((e) => (e.onchange = () => { const f = actv[e.dataset.sel!]; if (f) { f(e instanceof HTMLInputElement && e.type === 'checkbox' ? (e.checked ? 'on' : 'off') : (e as HTMLSelectElement).value); save(); } }));
+  ui.querySelectorAll<HTMLElement>('[data-u]').forEach((e) => (e.onclick = () => { selUnit = e.dataset.u!; selArea = g.units.find((x) => x.id === selUnit)!.area ?? selArea; previewArea = null; refresh(); }));
+  ui.querySelectorAll<HTMLElement>('.card2').forEach((e) => (e.onpointerdown = (ev) => { ev.preventDefault(); if (g.battle) drag(ev, e); else { selChit = selChit === e.dataset.chit ? null : e.dataset.chit!; refresh(); } }));
+  ui.querySelectorAll<HTMLElement>('.blk[data-unit]').forEach((e) => (e.onclick = () => { const b2 = g.battle; if (!b2 || b2.stage !== 'setup') return; const s = e.dataset.side as E.Side, u = g.units.find((x) => x.id === e.dataset.unit)!; if (u.garrison || (s === b2.attacker && u.disorder)) return; if (s === b2.attacker) b2.attPoint = u.id; else b2.defPoint = u.id; save(); render(); }));
 }
-function refresh() { drawPieces(); paintAreas(); render(); }
+function refresh() {
+  syncBattleCam(); drawPieces(); paintAreas(); drawRoute(); badges = badgeList(); syncBadges(); render();
+  if (!rollView) { const cv = $('#dice'); if (cv && cv.style.display !== 'none') { clearDice(); cv.style.display = 'none'; } }
+}
 function frame() {
   requestAnimationFrame(frame);
   const r = canvas.getBoundingClientRect();
   if (canvas.width !== Math.round(r.width * renderer.getPixelRatio())) { renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; cam.updateProjectionMatrix(); }
-  placeCam(); renderer.render(scene, cam);
+  if (goal) { target.lerp(goal.t, 0.1); dist += (goal.dist - dist) * 0.1; pitch += (goal.pitch - pitch) * 0.1; if (target.distanceTo(goal.t) < 0.05 && Math.abs(dist - goal.dist) < 0.1) goal = null; }
+  placeCam(); renderer.render(scene, cam); placeBadges();
 }
-refresh(); frame();
+auto(); refresh(); frame();
+Object.assign(window, { __fab: { E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });

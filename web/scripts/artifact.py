@@ -4,7 +4,7 @@ h = open('dist/index.html').read()
 js = re.search(r'src="\./assets/([^"]+\.js)"', h).group(1); css = re.search(r'href="\./assets/([^"]+\.css)"', h).group(1)
 body = re.search(r'<body>(.*?)</body>', h, re.S).group(1)
 open('dist/page.html', 'w').write(f'''<title>FAB: The Bulge</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <link rel="stylesheet" href="assets/{css}">
 {body}<script type="module" src="assets/{js}"></script>
 ''')

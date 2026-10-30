@@ -1,0 +1,590 @@
+<title>FAB Interface Options</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Narrow:wght@500;700&family=Big+Shoulders+Display:wght@600;800&family=Source+Sans+3:wght@400;600;700&family=Saira+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+/* Page chrome: a neutral workbench around three game-screen mockups. Each mockup stage carries its own fixed palette. */
+:root { --bg: #eceeed; --panel: #ffffff; --fg: #1b2220; --muted: #5d6764; --line: #cdd3d0; --accent: #b4521b; --ui: "Archivo", system-ui, sans-serif; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #14181a; --panel: #1c2225; --fg: #e8ece9; --muted: #98a39f; --line: #333c3f; --accent: #f0903e; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #14181a; --panel: #1c2225; --fg: #e8ece9; --muted: #98a39f; --line: #333c3f; --accent: #f0903e; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--ui); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1320px; margin: 0 auto; padding-block: 28px 56px; display: flex; flex-direction: column; gap: 22px; }
+h1 { font-size: clamp(26px, 4vw, 40px); margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+h2 { font-size: 13px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+p { line-height: 1.5; margin: 0; }
+.lead { color: var(--muted); max-width: 70ch; }
+.opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.opt { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; cursor: pointer; color: inherit; font: inherit; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.opt b { font-size: 17px; } .opt span { color: var(--muted); font-size: 13.5px; line-height: 1.35; }
+.opt[aria-pressed=true] { outline: 2px solid var(--accent); border-color: transparent; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); flex-wrap: wrap; }
+.seg button { border: 0; background: none; color: inherit; font: inherit; padding: 8px 14px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed=true] { background: var(--accent); color: #fff; font-weight: 600; }
+button:focus-visible { outline: 2px solid #4aa3ff; outline-offset: 2px; }
+.bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.hint { color: var(--muted); font-size: 13.5px; }
+.fit { width: 100%; position: relative; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 40px #0004; background: #000; }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.card ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; line-height: 1.4; font-size: 14.5px; }
+.flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; counter-reset: s; }
+.flow div { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 14px; line-height: 1.4; }
+.flow b { display: block; font-size: 15px; margin-bottom: 3px; }
+
+/* ===== stage (fixed 1280x800 design canvas, scaled to fit) ===== */
+.stage { position: absolute; left: 0; top: 0; width: 1280px; height: 800px; transform-origin: 0 0; overflow: hidden; user-select: none; color: var(--sfg); font-family: var(--sf); }
+.stage * { box-sizing: border-box; }
+.plane { position: absolute; left: 50%; top: 50%; width: 1180px; height: 793px; transform-style: preserve-3d; transition: transform .8s cubic-bezier(.2,.7,.2,1); }
+.board { position: absolute; inset: 0; width: 100%; height: 100%; }
+.board .a { stroke: var(--bd); stroke-width: 2; fill: var(--z5); cursor: pointer; transition: fill .2s; }
+.board .a.z6 { fill: var(--z6); } .board .a.z7 { fill: var(--z7); }
+.board .a.ok { fill: var(--ok); } .board .a.stop { fill: var(--stop); } .board .a.no { fill: var(--no); } .board .a.sel { stroke: var(--sel); stroke-width: 5; } .board .a.war { fill: var(--war); }
+.board .road { stroke: var(--road); stroke-width: 7; stroke-linecap: round; opacity: .85; } .board .field { stroke: var(--road); stroke-width: 3; stroke-dasharray: 2 9; stroke-linecap: round; opacity: .7; }
+.board .river { fill: var(--river); stroke: #fff; stroke-width: 2; } .board .restr { fill: var(--no); stroke: #fff; stroke-width: 3; }
+.board .an circle { fill: var(--an); stroke: var(--anl); stroke-width: 2; } .board .num { fill: var(--ant); font: 700 12px var(--sf); } .board .nm { fill: var(--nm); font: 700 15px var(--sfd); letter-spacing: .04em; paint-order: stroke; stroke: var(--nms); stroke-width: 4px; text-transform: uppercase; }
+.board .ov { pointer-events: none; }
+.u { position: absolute; width: 0; height: 0; transform-style: preserve-3d; }
+.blk { position: absolute; width: var(--s, 66px); height: var(--s, 66px); left: calc(var(--s, 66px) / -2); bottom: 0; transform-origin: 50% 100%; transform: rotateX(calc(-1 * var(--tilt, 50deg))); border-radius: 3px; background: #888; box-shadow: 3px 0 0 #565a5e, 6px 7px 10px #0007; transition: transform .25s, filter .25s; cursor: pointer; }
+.blk svg { width: 100%; height: 100%; display: block; border-radius: 3px; }
+.blk.sel { filter: drop-shadow(0 0 7px var(--sel)); transform: rotateX(calc(-1 * var(--tilt, 50deg))) translateY(-8px); }
+.blk.a { box-shadow: 3px 0 0 #4b6a33, 6px 7px 10px #0007; }
+.garr { position: absolute; width: 38px; height: 38px; left: -19px; bottom: 0; transform-origin: 50% 100%; transform: rotateX(calc(-1 * var(--tilt, 50deg))); border-radius: 3px; box-shadow: 3px 0 0 #6d6f5a, 4px 5px 7px #0007; }
+.stage .tip { position: absolute; z-index: 9; transform: translate(-50%, -100%); }
+.chit { width: 54px; flex: none; text-align: center; cursor: grab; touch-action: none; position: relative; }
+.chit .t { width: 54px; height: 54px; border-radius: 6px; border: 2px solid #1d1f1c; display: grid; place-items: center; position: relative; box-shadow: 0 3px 0 #0006; transition: transform .15s; }
+.chit:hover .t { transform: translateY(-3px); }
+.chit.bad .t { opacity: .38; filter: grayscale(.6); }
+.chit .t svg { width: 34px; height: 34px; }
+.chit i { position: absolute; right: -6px; top: -6px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: #1d1f1c; color: #fff; font: 700 11px var(--sf); display: grid; place-items: center; font-style: normal; border: 2px solid var(--chip, #fff); }
+.chit small { display: block; margin-top: 4px; font: 600 10.5px/1.1 var(--sf); letter-spacing: .02em; opacity: .85; white-space: nowrap; }
+.ghost { position: fixed; z-index: 99; pointer-events: none; transform: translate(-50%, -60%) rotate(-4deg) scale(1.12); filter: drop-shadow(0 14px 14px #0009); }
+.slot { border: 2px dashed var(--slotb); border-radius: 12px; display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; padding: 8px; min-height: 84px; position: relative; transition: background .15s, border-color .15s, transform .15s; }
+.slot.over { background: var(--slotbg); border-style: solid; border-color: var(--acc); transform: scale(1.02); }
+.slot.deny { animation: deny .35s; border-color: #e5484d; }
+@keyframes deny { 25% { transform: translateX(-7px); } 75% { transform: translateX(7px); } }
+.slot .lab { position: absolute; left: 10px; top: -10px; padding: 0 8px; font: 700 11px var(--sfd); letter-spacing: .1em; text-transform: uppercase; background: var(--lb); color: var(--lbt); border-radius: 3px; }
+.slot .empty { opacity: .55; font-size: 12.5px; text-align: center; padding: 0 8px; }
+.toast { position: absolute; z-index: 20; left: 50%; top: 96px; transform: translateX(-50%); background: #e5484d; color: #fff; padding: 8px 14px; border-radius: 8px; font: 600 14px var(--sf); box-shadow: 0 8px 20px #0007; animation: tin .25s; }
+@keyframes tin { from { opacity: 0; transform: translate(-50%, -8px); } }
+.btn { font: 700 16px var(--sfd); letter-spacing: .08em; text-transform: uppercase; border: 0; cursor: pointer; padding: 12px 22px; border-radius: 8px; color: var(--btnt); background: var(--btn); box-shadow: 0 4px 0 var(--btnsh), 0 10px 18px #0005; }
+.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--btnsh); }
+.btn.ghosty { background: transparent; color: var(--sfg); box-shadow: inset 0 0 0 2px var(--line2); }
+.pill { padding: 6px 12px; border-radius: 99px; font: 700 13px var(--sfd); letter-spacing: .1em; text-transform: uppercase; color: var(--pt); background: var(--pb); white-space: nowrap; }
+.pill.on { background: var(--pon); color: var(--pont); box-shadow: 0 0 0 2px var(--pring); }
+.pill.done { opacity: .5; }
+.pip { display: inline-block; width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid #fff; margin-right: 3px; vertical-align: -1px; }
+.pip.e { background: #d7262b; } .pip.v { background: #151515; } .pip.g { background: #fff; border-color: #222; }
+.lbl { position: absolute; z-index: 8; transform: translate(-50%, 0); font: 700 17px var(--sfd); text-align: center; white-space: nowrap; }
+.lbl em { font-style: normal; display: block; font-size: 11px; letter-spacing: .08em; opacity: .75; text-transform: uppercase; }
+.dicecv { position: absolute; inset: 0; z-index: 7; width: 1280px; height: 800px; }
+.mods { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.mods span { padding: 4px 9px; border-radius: 6px; font: 600 13px var(--sf); background: var(--modb); }
+.mods span.neg { color: var(--negc); } .mods span.pos { color: var(--posc); } .mods span.sn { background: var(--acc); color: var(--accfg); font: 800 17px var(--sfd); letter-spacing: .04em; }
+.gauge { height: 10px; border-radius: 6px; background: var(--gaugeb); overflow: hidden; display: flex; }
+.gauge div { height: 100%; transition: width .4s; }
+
+/* ===== Option A: Tabletop Dock ===== */
+.opt-a { --sf: "Source Sans 3", sans-serif; --sfd: "Big Shoulders Display", sans-serif; --sfg: #efe6d2; --bd: #1c2a21; --z5: #52684f; --z6: #6a5a73; --z7: #57705e; --ok: #3d9a5c; --stop: #cf7c2a; --no: #b23a3a; --sel: #f5c969; --war: #b8412f; --road: #14100c; --river: #3a8fd0; --an: #17231b; --anl: #d9a441; --ant: #efe6d2; --nm: #f2ead8; --nms: #1c2a21; --line2: #8d7a4c;
+  --slotb: #8d7a4c; --slotbg: #d9a44133; --acc: #d9a441; --accfg: #1a140a; --lb: #d9a441; --lbt: #1a140a; --btn: #d9a441; --btnt: #1a140a; --btnsh: #8a6620; --pt: #bfae84; --pb: #2a2118; --pon: #d9a441; --pont: #1a140a; --pring: #f5d68a55; --modb: #ffffff14; --negc: #ff9c8a; --posc: #9fe0a8; --gaugeb: #ffffff18; --chip: #2a2118;
+  background: radial-gradient(120% 90% at 50% 40%, #1f3a2c 0%, #14271e 55%, #0b1510 100%); }
+.opt-a .plane { margin-left: -590px; margin-top: -440px; transform: perspective(1700px) rotateX(var(--tilt)); }
+.a-top { position: absolute; left: 0; right: 0; top: 0; height: 74px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; background: linear-gradient(#0b1510ee, #0b151000); z-index: 5; }
+.a-top .turn { font: 800 30px var(--sfd); letter-spacing: .06em; } .a-top .turn small { display: block; font: 600 12px var(--sf); letter-spacing: .12em; color: #bfae84; text-transform: uppercase; }
+.a-top .steps { display: flex; gap: 6px; padding: 6px; border-radius: 99px; background: #0e1914cc; border: 1px solid #3b3220; }
+.a-top .vp { text-align: right; font: 800 24px var(--sfd); letter-spacing: .05em; } .a-top .vp small { display: block; font: 600 12px var(--sf); color: #bfae84; letter-spacing: .1em; text-transform: uppercase; }
+.a-dock { position: absolute; left: 20px; right: 20px; bottom: 16px; height: 128px; z-index: 6; border-radius: 14px; padding: 10px 14px 10px; display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; background: linear-gradient(#2e251b, #1b150f); border: 1px solid #8d7a4c; box-shadow: 0 -6px 30px #0008, inset 0 1px 0 #fff2; }
+.a-dock .tabs { display: flex; gap: 6px; margin-bottom: 6px; align-items: center; } .a-dock .tabs b { font: 700 14px var(--sfd); letter-spacing: .12em; padding: 3px 10px; border-radius: 4px; text-transform: uppercase; color: #bfae84; background: #0006; }
+.a-dock .tabs b.on { background: #d9a441; color: #1a140a; } .a-dock .tabs span { margin-left: auto; font-size: 12px; color: #bfae84; }
+.a-dock .tray { display: flex; gap: 12px; overflow: hidden; padding: 6px 4px; } .a-dock .chit { --chip: #2a2118; }
+.a-card { position: absolute; left: 24px; bottom: 164px; z-index: 6; width: 300px; padding: 12px 14px; border-radius: 12px; background: #17231bee; border: 1px solid #8d7a4c; box-shadow: 0 12px 30px #0008; display: grid; grid-template-columns: 62px 1fr; gap: 12px; }
+.a-card h3 { margin: 0; font: 800 26px var(--sfd); letter-spacing: .04em; } .a-card p { font-size: 13px; color: #cfc4a8; margin-top: 2px; }
+.a-card .row { display: flex; gap: 6px; margin-top: 8px; } .a-card .row button { font: 700 12px var(--sfd); letter-spacing: .1em; text-transform: uppercase; background: #ffffff12; color: #efe6d2; border: 1px solid #8d7a4c; border-radius: 5px; padding: 5px 9px; cursor: pointer; }
+.a-ticket { padding: 8px 12px; border-radius: 10px; background: #f5ecd6; color: #1a140a; font: 700 15px var(--sf); box-shadow: 0 10px 22px #0009; min-width: 190px; text-align: left; position: relative; }
+.a-ticket::after { content: ""; position: absolute; left: 50%; bottom: -7px; width: 14px; height: 14px; background: #f5ecd6; transform: translateX(-50%) rotate(45deg); }
+.a-ticket b { font: 800 22px var(--sfd); letter-spacing: .04em; display: block; } .a-ticket .f { color: #a44a12; } .a-ticket .bad { color: #b23a3a; } .a-ticket small { display: block; font-weight: 600; color: #5b513b; margin-top: 2px; }
+.a-banner { position: absolute; left: 0; right: 0; top: 0; z-index: 5; height: 84px; display: flex; align-items: center; justify-content: center; gap: 22px; background: linear-gradient(#0b1510f2, #0b151000); font: 800 34px var(--sfd); letter-spacing: .1em; text-transform: uppercase; }
+.a-banner small { font: 600 14px var(--sf); letter-spacing: .06em; color: #bfae84; text-transform: none; }
+.a-sheet { position: absolute; left: 20px; right: 20px; bottom: 16px; height: 392px; z-index: 6; border-radius: 16px; background: linear-gradient(#2e251b, #1b150f); border: 1px solid #8d7a4c; box-shadow: 0 -10px 40px #000a; padding: 18px 20px 12px; display: grid; grid-template-columns: 1fr 250px 1fr; grid-template-rows: 1fr auto; gap: 14px 18px; }
+.a-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; } .a-side .hd { display: flex; align-items: center; gap: 10px; font: 800 22px var(--sfd); letter-spacing: .08em; text-transform: uppercase; } .a-side .hd small { font: 600 12px var(--sf); color: #bfae84; letter-spacing: .06em; text-transform: none; }
+.a-units { display: flex; gap: 10px; } .a-units .mini { display: flex; gap: 8px; align-items: center; padding: 6px 10px 6px 6px; background: #0004; border-radius: 8px; font: 700 15px var(--sfd); letter-spacing: .05em; } .a-units .mini .blk { position: static; --s: 44px; box-shadow: 2px 0 0 #565a5e; transform: none; }
+.a-mid { display: flex; flex-direction: column; gap: 10px; align-items: stretch; justify-content: center; text-align: center; } .a-mid .big { font: 800 56px/1 var(--sfd); } .a-mid small { font-size: 12px; color: #bfae84; letter-spacing: .08em; text-transform: uppercase; }
+.a-tray { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; padding-top: 10px; border-top: 1px solid #8d7a4c66; } .a-tray .lab2 { font: 700 13px var(--sfd); letter-spacing: .1em; text-transform: uppercase; color: #bfae84; width: 74px; }
+.a-diceinfo { position: absolute; left: 20px; right: 20px; bottom: 16px; z-index: 8; border-radius: 16px; background: linear-gradient(#2e251bf2, #1b150ff2); border: 1px solid #8d7a4c; padding: 14px 20px; display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; box-shadow: 0 -10px 40px #000a; }
+.a-diceinfo h3 { margin: 0 0 6px; font: 800 26px var(--sfd); letter-spacing: .07em; text-transform: uppercase; }
+
+/* ===== Option B: Map Room (radial menu, floating glass) ===== */
+.opt-b { --sf: "Archivo", sans-serif; --sfd: "Archivo Narrow", sans-serif; --sfg: #14202b; --bd: #f4f7f8; --z5: #c9d3d6; --z6: #cfc7d6; --z7: #c4d6cc; --ok: #8fd9a8; --stop: #ffc17a; --no: #f1a1a1; --sel: #ff6a1a; --war: #ff9d8a; --road: #3c4a55; --river: #3a8fd0; --an: #ffffff; --anl: #5a6c78; --ant: #14202b; --nm: #1f2d38; --nms: #ffffffcc; --line2: #14202b55;
+  --slotb: #5a6c78aa; --slotbg: #ff6a1a22; --acc: #ff6a1a; --accfg: #fff; --lb: #14202b; --lbt: #fff; --btn: #ff6a1a; --btnt: #fff; --btnsh: #b8470d; --pt: #3f505c; --pb: #ffffffb0; --pon: #14202b; --pont: #fff; --pring: #ff6a1a; --modb: #14202b12; --negc: #b3261e; --posc: #0f7a3a; --gaugeb: #14202b1a; --chip: #fff;
+  background: linear-gradient(160deg, #d8e0e3, #b9c6cc); }
+.opt-b .plane { margin-left: -590px; margin-top: -400px; transform: perspective(1900px) rotateX(var(--tilt)); }
+.glass { background: #ffffffc4; backdrop-filter: blur(14px); border: 1px solid #ffffffd0; box-shadow: 0 10px 30px #1f334433; border-radius: 16px; }
+.b-chip { position: absolute; z-index: 6; padding: 10px 14px; display: flex; gap: 12px; align-items: center; font: 700 18px var(--sfd); letter-spacing: .02em; }
+.b-chip small { display: block; font: 500 11.5px var(--sf); color: #4b5c68; letter-spacing: .08em; text-transform: uppercase; }
+.b-chip .dot { width: 10px; height: 10px; border-radius: 50%; background: #8d9195; box-shadow: 0 0 0 3px #8d919544; }
+.b-pills { display: flex; gap: 4px; margin-left: 6px; } .b-pills .pill { padding: 4px 10px; font-size: 12px; background: transparent; box-shadow: none; } .b-pills .pill.on { background: #14202b; }
+.b-boxes { position: absolute; z-index: 6; left: 50%; transform: translateX(-50%); bottom: 18px; display: flex; gap: 10px; align-items: center; padding: 8px 10px; }
+.b-boxes .btn { padding: 11px 20px; }
+.b-pop { position: absolute; z-index: 7; left: 50%; transform: translateX(-50%); bottom: 82px; padding: 14px 16px 12px; width: 640px; } .b-pop h4 { margin: 0 0 8px; font: 700 12px var(--sfd); letter-spacing: .1em; text-transform: uppercase; color: #4b5c68; display: flex; justify-content: space-between; } .b-pop .tray { display: flex; gap: 12px; flex-wrap: wrap; }
+.radial { position: absolute; z-index: 9; width: 0; height: 0; } .radial button { position: absolute; width: 78px; height: 78px; margin: -39px 0 0 -39px; border-radius: 50%; border: 0; cursor: pointer; background: #ffffffee; color: #14202b; font: 700 11.5px var(--sfd); letter-spacing: .06em; text-transform: uppercase; box-shadow: 0 8px 20px #1f334455; display: grid; place-items: center; gap: 0; padding-top: 10px; }
+.radial button svg { width: 26px; height: 26px; } .radial button.on { background: #ff6a1a; color: #fff; } .radial button.off { opacity: .45; }
+.b-ticket { padding: 8px 12px; border-radius: 12px; background: #14202bf0; color: #fff; font: 600 14px var(--sf); box-shadow: 0 10px 24px #14202b66; white-space: nowrap; } .b-ticket b { font: 700 20px var(--sfd); } .b-ticket .f { color: #ffb178; font-weight: 700; } .b-ticket .bad { color: #ff9d9d; }
+.b-stage { position: absolute; inset: 0; z-index: 5; background: radial-gradient(70% 60% at 50% 50%, #ffffff00, #14202bcc); }
+.b-arena { position: absolute; left: 50%; top: 46%; width: 1080px; height: 520px; transform: translate(-50%, -50%); }
+.b-lane { position: absolute; top: 0; bottom: 0; width: 330px; display: flex; flex-direction: column; justify-content: center; gap: 22px; padding: 14px; } .b-lane h4 { margin: 0; font: 700 20px var(--sfd); letter-spacing: .08em; text-transform: uppercase; } .b-lane h4 small { font: 500 12px var(--sf); color: #4b5c68; letter-spacing: .04em; text-transform: none; margin-left: 6px; }
+.b-lane.l { left: 0; } .b-lane.r { right: 0; }
+.b-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 380px; text-align: center; } .b-center .big { font: 700 64px/1 var(--sfd); } .b-roll { width: 150px; height: 150px; border-radius: 50%; border: 0; cursor: pointer; background: radial-gradient(circle at 35% 30%, #ff9457, #ff6a1a 55%, #d8500c); color: #fff; font: 700 24px var(--sfd); letter-spacing: .1em; box-shadow: 0 14px 30px #ff6a1a77, inset 0 -6px 0 #0002; margin: 8px auto; display: grid; place-items: center; }
+.b-tray { position: absolute; left: 50%; transform: translateX(-50%); bottom: 20px; padding: 10px 18px; display: flex; gap: 12px; align-items: center; z-index: 8; }
+.b-units { display: flex; gap: 10px; flex-wrap: wrap; } .b-units .blk { position: static; --s: 78px; transform: none; box-shadow: 3px 0 0 #565a5e, 5px 6px 8px #0005; } .b-units .blk.a { box-shadow: 3px 0 0 #4b6a33, 5px 6px 8px #0005; }
+.b-dicebar { position: absolute; left: 50%; transform: translateX(-50%); bottom: 22px; z-index: 8; padding: 14px 20px; min-width: 760px; text-align: center; } .b-dicebar h3 { margin: 0 0 8px; font: 700 22px var(--sfd); letter-spacing: .06em; text-transform: uppercase; }
+
+/* ===== Option C: War Room Stage (cinematic, card hand) ===== */
+.opt-c { --sf: "JetBrains Mono", monospace; --sfd: "Saira Condensed", sans-serif; --sfg: #ddd7b5; --bd: #11140e; --z5: #4c5238; --z6: #5b4a45; --z7: #46563f; --ok: #5d8b3a; --stop: #b78a2a; --no: #8e3a2f; --sel: #e7b04a; --war: #a7392b; --road: #c8c19b; --river: #4c8ec2; --an: #11140e; --anl: #8d9065; --ant: #ddd7b5; --nm: #cfc9a4; --nms: #11140e; --line2: #8d9065;
+  --slotb: #8d9065; --slotbg: #e7b04a22; --acc: #e7b04a; --accfg: #1a1608; --lb: #11140e; --lbt: #e7b04a; --btn: #d1432f; --btnt: #fff4e8; --btnsh: #7d2417; --pt: #8d9065; --pb: transparent; --pon: #e7b04a; --pont: #1a1608; --pring: transparent; --modb: #ffffff12; --negc: #ff9c8a; --posc: #a9e08a; --gaugeb: #ffffff18; --chip: #11140e;
+  background: #0b0d08; }
+.opt-c .plane { margin-left: -590px; margin-top: -420px; transform: perspective(1400px) rotateX(var(--tilt)); }
+.opt-c::before { content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none; background: radial-gradient(80% 70% at 50% 45%, #0000 40%, #000c 100%); }
+.c-bar { position: absolute; left: 0; right: 0; z-index: 6; height: 64px; display: flex; align-items: center; padding: 0 28px; background: #0b0d08; } .c-bar.t { top: 0; border-bottom: 1px solid #8d906555; } .c-bar.b { bottom: 0; height: 74px; border-top: 1px solid #8d906555; }
+.c-crumbs { display: flex; align-items: center; gap: 0; font: 600 15px var(--sfd); letter-spacing: .14em; text-transform: uppercase; } .c-crumbs span { padding: 6px 16px; color: #8d9065; position: relative; } .c-crumbs span.on { color: #1a1608; background: #e7b04a; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 12px 50%); padding-inline: 24px; } .c-crumbs span.done { color: #ddd7b588; }
+.c-stat { margin-left: auto; display: flex; gap: 26px; font: 500 13px var(--sf); color: #b3ad8b; } .c-stat b { color: #ddd7b5; font: 700 22px var(--sfd); letter-spacing: .06em; margin-left: 6px; }
+.c-prompt { font: 500 15px var(--sf); color: #ddd7b5; } .c-prompt b { color: #e7b04a; }
+.c-dispatch { position: absolute; left: 28px; bottom: 96px; z-index: 6; width: 352px; border: 1px solid #8d9065; background: #0b0d08ee; padding: 12px 14px; } .c-dispatch h3 { margin: 0; font: 700 30px var(--sfd); letter-spacing: .08em; text-transform: uppercase; } .c-dispatch .r { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; border-bottom: 1px dotted #8d906577; } .c-dispatch .r b { color: #e7b04a; } .c-dispatch .r b.bad { color: #ff9c8a; }
+.c-hand { position: absolute; left: 50%; bottom: 74px; transform: translateX(-50%); z-index: 8; display: flex; height: 170px; align-items: flex-end; padding-bottom: 2px; } .c-hand .card2 { width: 112px; height: 160px; margin: 0 -12px; border-radius: 9px; background: var(--cc, #ccc); border: 2px solid #11140e; box-shadow: 0 10px 20px #000a; transform-origin: 50% 140%; transform: rotate(var(--r)) translateY(var(--y, 28px)); transition: transform .2s; cursor: grab; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 10px 6px; color: #11140e; touch-action: none; position: relative; }
+.c-hand .card2:hover { transform: rotate(var(--r)) translateY(-26px); z-index: 3; } .c-hand .card2 svg { width: 62px; height: 62px; } .c-hand .card2 b { font: 700 17px var(--sfd); letter-spacing: .05em; text-transform: uppercase; text-align: center; line-height: 1.05; } .c-hand .card2 small { font: 500 10px var(--sf); opacity: .8; } .c-hand .card2.bad { opacity: .4; filter: grayscale(.7); } .c-hand .card2 i { position: absolute; top: 5px; right: 6px; font: 700 11px var(--sf); font-style: normal; }
+.c-table { position: absolute; left: 50%; top: 53%; transform: translate(-50%, -50%); width: 1100px; height: 330px; z-index: 5; display: grid; grid-template-columns: 1fr 190px 1fr; gap: 12px; align-items: center; }
+.c-side { display: flex; flex-direction: column; gap: 12px; align-items: center; } .c-side h4 { margin: 0; font: 700 22px var(--sfd); letter-spacing: .14em; text-transform: uppercase; } .c-side h4 small { font: 500 11px var(--sf); letter-spacing: .04em; color: #8d9065; text-transform: none; margin-left: 8px; }
+.c-row { display: flex; gap: 14px; } .c-row .blk { position: static; --s: 96px; transform: none; box-shadow: 4px 0 0 #565a5e, 8px 10px 14px #000a; } .c-row .blk.a { box-shadow: 4px 0 0 #4b6a33, 8px 10px 14px #000a; }
+.c-slots { display: flex; gap: 12px; } .c-slots .slot { width: 96px; min-height: 96px; border-radius: 50%; padding: 4px; } .c-slots .slot .lab { left: 50%; transform: translateX(-50%); top: -12px; white-space: nowrap; }
+.c-vs { text-align: center; } .c-vs .big { font: 700 70px/1 var(--sfd); } .c-vs small { font: 500 11px var(--sf); letter-spacing: .1em; color: #8d9065; text-transform: uppercase; }
+.c-ledger { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: 8; width: 880px; background: #0b0d08f0; border: 1px solid #8d9065; padding: 12px 18px; font: 500 14px var(--sf); } .c-ledger h3 { margin: 0 0 8px; font: 700 24px var(--sfd); letter-spacing: .1em; text-transform: uppercase; color: #e7b04a; } .c-ledger .ln { display: flex; gap: 14px; align-items: center; padding: 4px 0; border-bottom: 1px dotted #8d906577; } .c-ledger .ln:last-child { border: 0; }
+
+@media (prefers-reduced-motion: reduce) { .plane { transition: none; } .toast, .slot.deny { animation: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>FAB: The Bulge, interface options</h1>
+    <p class="lead">Three ways to drop the sidebar and play from the board itself. Try each one on the same three moments: moving a block, setting up a battle by dragging assets onto it, and the dice roll. Everything on the stage is clickable or draggable.</p>
+  </header>
+  <div class="opts" id="opts"></div>
+  <div class="bar"><div class="seg" id="screens"></div><span class="hint" id="hint"></span></div>
+  <div class="fit" id="fit"><div class="stage" id="stage"></div></div>
+  <div class="notes" id="notes"></div>
+  <section>
+    <h2>The same flow in every option</h2>
+    <div class="flow">
+      <div><b>1 Prepare</b>Reinforcements arrive and chits are drawn on their own. You only get a prompt if there is a choice: place a Task Force, play an event, use an engineer.</div>
+      <div><b>2 Move</b>Pick a block, see every legal destination, hover one for the exact route, MP cost and fuel. Click to commit. Strategic and reserve moves are the same gesture.</div>
+      <div><b>3 Fight</b>Pick a contested area. The camera jumps in. Drag assets onto the sides, read the odds, roll.</div>
+      <div><b>4 Breakthrough</b>Appears only when someone has reserves, exploitation markers or Special Actions to use. Otherwise it is skipped.</div>
+      <div><b>5 Supply</b>Automatic. A summary slides in: control changes, unsupplied blocks, morale checks. One click to continue.</div>
+    </div>
+  </section>
+</div>
+
+<script>
+const BOARD = `<svg class="board" viewBox="1150 520 640 430" preserveAspectRatio="none">
+<defs><pattern id="wood" width="14" height="14" patternUnits="userSpaceOnUse"><path d="M0 7h14" stroke="#0002"/></pattern></defs>
+<polygon class="a z5" data-id="2" points="1522,918 1526,925 1534,928 1538,936 1546,932 1555,937 1560,961 1569,972 1567,983 1567,994 1567,1003 1569,1010 1576,1010 1582,1011 1586,1016 1715,1017 1715,919"/>
+<polygon class="a z5" data-id="3" points="1715,796 1715,915 1520,914 1518,911 1516,910 1513,908 1511,904 1511,898 1511,893 1509,886 1510,883 1513,878 1513,873 1513,870 1513,864 1513,857 1512,849 1510,842 1507,836 1506,831 1508,827 1512,819 1512,814 1512,811 1515,807 1518,803 1518,797"/>
+<polygon class="a z5" data-id="4" points="1715,685 1715,792 1521,791 1536,684"/>
+<polygon class="a z6" data-id="5" points="1715,544 1715,681 1537,680 1549,541"/>
+<polygon class="a z6" data-id="6" points="1715,541 1715,420 1573,418 1550,537"/>
+<polygon class="a z6" data-id="10" points="1391,456 1554,491 1545,538 1537,635 1457,590 1355,570"/>
+<polygon class="a z5" data-id="11" points="1457,597 1536,641 1532,683 1517,791 1378,713 1382,707 1386,698 1387,689 1384,676 1389,665 1398,663 1410,663 1424,660 1433,653 1441,643 1444,637 1444,629 1443,623 1448,615 1449,609"/>
+<polygon class="a z5" data-id="12" points="1377,716 1512,792 1511,798 1509,804 1506,807 1503,814 1503,819 1495,829 1496,838 1503,847 1506,860 1507,870 1507,875 1503,880 1500,884 1329,862 1327,856 1329,849 1332,843 1331,829 1334,822 1334,814 1339,805 1340,795 1346,785 1349,772 1354,761 1353,742 1355,733"/>
+<polygon class="a z5" data-id="13" points="1315,953 1310,957 1316,967 1322,974 1325,988 1324,995 1327,1000 1334,1006 1332,1015 1330,1017 1323,1017 1327,1020 1335,1026 1341,1041 1352,1045 1357,1052 1358,1061 1357,1070 1554,965 1550,957 1548,943 1544,942 1534,943 1529,936 1519,929 1516,919 1507,914 1502,889 1330,866 1330,875 1325,880 1330,897 1322,919 1318,923 1320,938"/>
+<polygon class="a z5" data-id="21" points="1222,867 1228,882 1229,900 1238,918 1233,937 1227,944 1227,973 1219,980 1213,996 1214,1005 1234,1008 1312,995 1317,988 1316,976 1303,955 1312,933 1312,921 1322,900 1324,865"/>
+<polygon class="a z5" data-id="22" points="1134,701 1131,708 1128,725 1126,743 1123,753 1120,763 1124,785 1126,808 1126,817 1216,861 1322,861 1321,855 1327,844 1325,837 1325,827 1327,818 1329,810 1330,801 1332,795 1333,786 1339,781 1342,776 1343,760 1239,700"/>
+<polygon class="a z5" data-id="23" points="1453,594 1444,604 1438,614 1436,621 1436,628 1436,634 1429,644 1421,651 1414,654 1403,654 1391,655 1383,658 1379,663 1376,673 1378,683 1381,690 1379,700 1374,707 1370,715 1365,719 1357,725 1350,730 1348,740 1347,748 1345,755 1241,697 1242,548 1255,543 1261,542 1270,544 1284,543 1299,538 1305,540 1309,545 1309,552 1311,558 1314,561 1322,565 1327,570 1330,573 1337,574 1343,572 1353,573"/>
+<polygon class="a z5" data-id="24" points="1237,547 1239,695 1134,696 1129,688 1128,682 1129,675 1131,672 1133,663 1131,659 1134,655 1134,647 1132,643 1128,641 1128,635 1130,633 1131,618 1133,614 1132,608 1131,603 1128,598 1127,593 1125,581 1122,576 1119,570 1116,563 1115,556 1113,549 1108,548 1103,547 1102,543 1100,537 1102,536 1107,537 1113,536 1117,533 1121,532 1126,530 1128,532 1132,533 1137,531 1139,526 1145,520 1151,517 1160,516 1166,518 1173,520 1189,524 1199,523 1205,521 1211,521 1213,527 1213,531 1214,536 1216,541 1225,545"/>
+<polygon class="a z6" data-id="25" points="1386,457 1352,567 1345,566 1336,567 1332,565 1328,560 1322,557 1317,554 1314,542 1310,536 1304,530 1296,531 1286,534 1279,538 1265,534 1252,537 1242,540 1237,541 1232,539 1226,537 1222,536 1221,531 1222,524 1219,519 1215,517 1212,513 1208,513 1208,509 1211,505 1213,502 1214,494 1215,487 1220,481 1226,477 1234,472 1241,466 1249,456 1255,450 1260,446 1265,447 1269,447 1276,445 1283,440 1289,438 1295,435 1301,436 1311,439 1315,441 1320,447 1331,450 1335,448 1342,447 1347,447 1353,446 1355,449 1359,452 1364,452 1368,452 1370,452 1375,454 1381,456"/>
+<polygon class="a z6" data-id="33" points="1270,346 1288,434 1285,436 1274,440 1270,442 1266,440 1257,439 1252,442 1248,446 1245,451 1238,459 1232,465 1228,470 1221,473 1216,476 1212,480 1209,485 1209,490 1210,499 1205,503 1202,510 1201,514 1185,515 1178,512 1163,509 1154,509 1140,512 1135,518 1132,522 1128,524 1123,525 1117,528 1112,530 1105,531 1106,527 1107,522 1107,517 1103,512 1099,514 1095,515 1091,514 1093,512 1098,509 1095,500 1091,494 1086,491 1081,492 1078,494 1077,496 1074,498 1068,495 1086,406 1198,405"/>
+<polygon class="a z5" data-id="37" points="1125,820 1117,825 1111,828 1101,833 1087,837 1080,840 1072,844 1065,847 1057,853 1068,893 1006,975 1015,982 1024,994 1029,1003 1034,1019 1035,1029 1036,1037 1212,1010 1214,1005 1216,1002 1218,998 1219,995 1221,987 1223,979 1224,975 1224,968 1224,960 1227,948 1229,942 1231,933 1230,923 1232,914 1228,905 1224,897 1224,886 1223,878 1214,870 1212,865"/>
+<line class="road" x1="1656" y1="983" x2="1650" y2="873"/>
+<line class="field" x1="1656" y1="983" x2="1385" y2="939"/>
+<line class="road" x1="1650" y1="873" x2="1608" y2="752"/>
+<line class="road" x1="1650" y1="873" x2="1440" y2="856"/>
+<line class="field" x1="1650" y1="873" x2="1385" y2="939"/>
+<line class="road" x1="1608" y1="752" x2="1663" y2="634"/>
+<line class="field" x1="1608" y1="752" x2="1484" y2="741"/>
+<line class="road" x1="1663" y1="634" x2="1626" y2="516"/>
+<line class="road" x1="1663" y1="634" x2="1391" y2="553"/>
+<line class="field" x1="1663" y1="634" x2="1484" y2="741"/>
+<line class="field" x1="1626" y1="516" x2="1391" y2="553"/>
+<line class="road" x1="1391" y1="553" x2="1484" y2="741"/>
+<line class="field" x1="1391" y1="553" x2="1325" y2="612"/>
+<line class="road" x1="1391" y1="553" x2="1307" y2="516"/>
+<line class="field" x1="1484" y1="741" x2="1440" y2="856"/>
+<line class="road" x1="1484" y1="741" x2="1325" y2="612"/>
+<line class="field" x1="1440" y1="856" x2="1385" y2="939"/>
+<line class="field" x1="1440" y1="856" x2="1183" y2="778"/>
+<line class="road" x1="1440" y1="856" x2="1325" y2="612"/>
+<line class="field" x1="1385" y1="939" x2="1275" y2="961"/>
+<line class="road" x1="1275" y1="961" x2="1183" y2="778"/>
+<line class="road" x1="1275" y1="961" x2="1095" y2="919"/>
+<line class="road" x1="1183" y1="778" x2="1325" y2="612"/>
+<line class="road" x1="1183" y1="778" x2="1176" y2="596"/>
+<line class="field" x1="1183" y1="778" x2="1095" y2="919"/>
+<line class="field" x1="1325" y1="612" x2="1176" y2="596"/>
+<line class="road" x1="1325" y1="612" x2="1307" y2="516"/>
+<line class="field" x1="1176" y1="596" x2="1307" y2="516"/>
+<line class="field" x1="1176" y1="596" x2="1141" y2="486"/>
+<line class="road" x1="1307" y1="516" x2="1141" y2="486"/>
+<g class="an" transform="translate(1656,983)"><circle r="11"/><text y="4" text-anchor="middle" class="num">2</text><text y="-17" text-anchor="middle" class="nm">Ehlenz</text></g>
+<g class="an" transform="translate(1650,873)"><circle r="11"/><text y="4" text-anchor="middle" class="num">3</text><text y="-17" text-anchor="middle" class="nm">Pronsfeld</text></g>
+<g class="an" transform="translate(1608,752)"><circle r="11"/><text y="4" text-anchor="middle" class="num">4</text><text y="-17" text-anchor="middle" class="nm">Prüm</text></g>
+<g class="an" transform="translate(1663,634)"><circle r="11"/><text y="4" text-anchor="middle" class="num">5</text><text y="-17" text-anchor="middle" class="nm">Losheim</text></g>
+<g class="an" transform="translate(1626,516)"><circle r="11"/><text y="4" text-anchor="middle" class="num">6</text><text y="-17" text-anchor="middle" class="nm">Blankenheim</text></g>
+<g class="an" transform="translate(1391,553)"><circle r="11"/><text y="4" text-anchor="middle" class="num">10</text><text y="-17" text-anchor="middle" class="nm">Bucholz</text></g>
+<g class="an" transform="translate(1484,741)"><circle r="11"/><text y="4" text-anchor="middle" class="num">11</text><text y="-17" text-anchor="middle" class="nm">Bleialf</text></g>
+<g class="an" transform="translate(1440,856)"><circle r="11"/><text y="4" text-anchor="middle" class="num">12</text><text y="-17" text-anchor="middle" class="nm">Lutzkampen</text></g>
+<g class="an" transform="translate(1385,939)"><circle r="11"/><text y="4" text-anchor="middle" class="num">13</text><text y="-17" text-anchor="middle" class="nm">Dasburg</text></g>
+<g class="an" transform="translate(1275,961)"><circle r="11"/><text y="4" text-anchor="middle" class="num">21</text><text y="-17" text-anchor="middle" class="nm">Marnach</text></g>
+<g class="an" transform="translate(1183,778)"><circle r="11"/><text y="4" text-anchor="middle" class="num">22</text><text y="-17" text-anchor="middle" class="nm">Weiswampach</text></g>
+<g class="an" transform="translate(1325,612)"><circle r="11"/><text y="4" text-anchor="middle" class="num">23</text><text y="-17" text-anchor="middle" class="nm">St. Vith</text></g>
+<g class="an" transform="translate(1176,596)"><circle r="11"/><text y="4" text-anchor="middle" class="num">24</text><text y="-17" text-anchor="middle" class="nm">Vielsalm</text></g>
+<g class="an" transform="translate(1307,516)"><circle r="11"/><text y="4" text-anchor="middle" class="num">25</text><text y="-17" text-anchor="middle" class="nm">Ligneuville</text></g>
+<g class="an" transform="translate(1141,486)"><circle r="11"/><text y="4" text-anchor="middle" class="num">33</text><text y="-17" text-anchor="middle" class="nm">Malmedy</text></g>
+<g class="an" transform="translate(1095,919)"><circle r="11"/><text y="4" text-anchor="middle" class="num">37</text><text y="-17" text-anchor="middle" class="nm">Lullange</text></g>
+</svg>`;
+(function () {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const X0 = 1150, Y0 = 520, MW = 640, MH = 430, PW = 1180, PH = 793;
+const L = { 3: [1650, 873], 4: [1608, 752], 5: [1663, 634], 10: [1391, 553], 11: [1484, 741], 12: [1440, 856], 13: [1385, 939], 21: [1275, 961], 22: [1183, 778], 23: [1325, 612] };
+const px = (id, dx = 0, dy = 0) => { const [x, y] = L[id]; return [((x - X0) / MW) * PW + dx, ((y - Y0) / MH) * PH + dy]; };
+const OPTS = [
+  { id: 'a', name: 'A · Tabletop Dock', tag: 'A tilted tabletop, a brass dock at the bottom holding your Available Box, a slim phase bar on top. The most board-game-like.', tilt: 50 },
+  { id: 'b', name: 'B · Map Room', tag: 'Nothing on screen but the map. Floating glass chips, a radial menu on the selected block, and a full-screen battle arena.', tilt: 44 },
+  { id: 'c', name: 'C · War Room Stage', tag: 'Cinematic letterbox, assets as a hand of cards, battles on a table between two lines of blocks, results as a typed ledger.', tilt: 54 },
+];
+const SCREENS = [['move', '1 · Move preview'], ['battle', '2 · Battle setup'], ['dice', '3 · Dice roll']];
+const NOTES = {
+  a: [['How it plays', ['Tray at the bottom is your Available Box: drag a chit up onto a block or an area.', 'Select a block: a small card pops up next to it with Reserve and Fortify. Click a green area to go there.', 'Starting a battle raises a bottom sheet. Allied left, German right, as on the map.', 'Dice tumble over the dimmed board; the sheet turns into a result strip.']], ['Trade-offs', ['Always-visible box means no hunting for chits.', 'Takes about 130 px of the screen away at all times.', 'Warmest, most physical look; least minimal.']]],
+  b: [['How it plays', ['Maximum map. Phase, turn and VP shrink to two glass chips; click the phase chip to see the whole turn.', 'Select a block and a ring of four actions opens around it.', 'The Boxes button opens a tray only when you need it.', 'A battle takes over the whole screen as an arena; assets are dragged from a bottom drawer into circular slots.']], ['Trade-offs', ['Cleanest board, best on a laptop or tablet.', 'Boxes are one click away, not always visible.', 'Light theme: reads like a staff map, less like a game table.']]],
+  c: [['How it plays', ['Top breadcrumb shows where you are in the turn; the bottom bar tells you what to do next.', 'Selecting a block opens a dispatch note with the route, MP and fuel.', 'Assets are a hand of cards; drag one up onto a slot on the battle table.', 'Dice results print as a ledger line: SN, each die, hits.']], ['Trade-offs', ['Strongest drama and the most obvious next step.', 'Cards take a moment to read; monospace data is dense.', 'Letterbox bars cost a little vertical space.']]],
+};
+
+/* ---------- art ---------- */
+const SYM = {
+  inf: '<path d="M27 27 L73 61 M73 27 L27 61" stroke="#111" stroke-width="2.4"/>', armor: '<rect x="36" y="35" width="28" height="18" rx="9" fill="none" stroke="#111" stroke-width="2.4"/>',
+};
+const ARMY = { pz5: '#d6d8db', pz6: '#8e2d82', va7: '#3fa0dc', us1: '#b9dc8c', ussr: '#a6d6f3' };
+const PIPC = { e: ['#d7262b', '#fff'], v: ['#151515', '#151515'], g: ['#fff', '#151515'] };
+function blockSvg(u) {
+  const bg = u.side === 'g' ? '#b7bbc1' : '#8fa83f', pips = Array.from({ length: u.steps }, (_, i) => `<circle cx="${50 + (i - (u.steps - 1) / 2) * 10}" cy="11" r="4.2" fill="${PIPC[u.q][0]}" stroke="${PIPC[u.q][1]}" stroke-width="1.4"/>`).join('');
+  return `<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="${bg}"/><rect x="27" y="27" width="46" height="34" fill="${ARMY[u.army]}" stroke="#111" stroke-width="2.4"/>${u.armor ? SYM.armor : SYM.inf}${pips}<text x="90" y="82" font-size="14" font-weight="700" text-anchor="end" font-family="Arial Narrow, Arial">${u.name}</text></svg>`;
+}
+const U = {
+  lehr: { name: 'Lehr', side: 'g', army: 'pz5', armor: 1, steps: 4, q: 'e' }, g116: { name: '116 Pz', side: 'g', army: 'pz5', armor: 1, steps: 3, q: 'e' }, v560: { name: '560 VG', side: 'g', army: 'pz5', steps: 2, q: 'g' },
+  v18: { name: '18 VG', side: 'g', army: 'pz5', steps: 3, q: 'v' }, v62: { name: '62 VG', side: 'g', army: 'pz5', steps: 2, q: 'g' }, i106: { name: '106 Inf', side: 'a', army: 'us1', steps: 3, q: 'g' }, ccb: { name: 'CCB/9', side: 'a', army: 'us1', armor: 1, steps: 1, q: 'v' },
+};
+const blk = (u, cls = '', extra = '') => `<div class="blk ${u.side === 'a' ? 'a' : ''} ${cls}" ${extra}>${blockSvg(u)}</div>`;
+const GL = {
+  arty: '<circle cx="20" cy="20" r="6.5" fill="#111"/>', rkt: '<path d="M7 20h22M22 12l9 8-9 8" stroke="#111" stroke-width="3.4" fill="none" stroke-linejoin="round"/>',
+  eng: '<path d="M7 29V16h6v4h4v-4h6v4h4v-4h6v13z" fill="#111"/>', fuel: '<path d="M11 12h13l5 5v17H11z" fill="#e8913a" stroke="#111" stroke-width="2"/><rect x="14" y="6" width="7" height="6" fill="#111"/>',
+};
+const CHITS = [
+  { id: 'r15', kind: 'rkt', name: 'Rkt 15th', army: 'pz5', col: ARMY.pz5, q: null }, { id: 'a401', kind: 'arty', name: 'Arty 401st', army: 'pz5', col: ARMY.pz5, q: null }, { id: 'e207', kind: 'eng', name: 'Eng 207+600', army: 'pz5', col: ARMY.pz5, q: 'v' },
+  { id: 'r9', kind: 'rkt', name: 'Rkt 9th', army: 'pz6', col: ARMY.pz6, q: null }, { id: 'a405', kind: 'arty', name: 'Arty 405th', army: 'pz6', col: ARMY.pz6, q: null }, { id: 'e62', kind: 'eng', name: 'Eng 62+73', army: 'pz6', col: ARMY.pz6, q: 'v' },
+  { id: 'r8', kind: 'rkt', name: 'Rkt 8th', army: 'va7', col: ARMY.va7, q: null }, { id: 'fuel', kind: 'fuel', name: 'Fuel', army: 'x', col: '#f07f1e', q: null, n: 5 },
+];
+const chitHtml = (c, state = {}) => `<div class="chit ${state.bad ? 'bad' : ''}" data-id="${c.id}" title="${state.why ?? c.name}"><div class="t" style="background:${c.col}"><svg viewBox="0 0 40 40">${GL[c.kind]}</svg>${c.n ? `<i>${c.n}</i>` : ''}</div><small>${c.name}</small></div>`;
+
+/* ---------- state ---------- */
+let opt = 'a', screen = 'move', dest = 23, selected = true, boxOpen = false, toast = '';
+let asg = { aArty: [], aBat: [] };           // German assets placed on the battle
+let dice = null;                              // active 3D dice stage
+let rollStep = 'def';
+const free = () => CHITS.filter((c) => c.id !== 'fuel' && !asg.aArty.includes(c.id) && !asg.aBat.includes(c.id));
+const ruleFor = (c) => {
+  if (c.kind === 'fuel') return 'Fuel is spent automatically by moves over 3 MP';
+  if (c.army !== 'pz5') return `${c.army === 'pz6' ? '6th Panzer' : '7th Army'} asset: Bleialf is in the 5th Panzer Army sector`;
+  if (c.kind !== 'eng' && asg.aArty.length >= 2) return 'Two artillery assets already assigned';
+  if (c.kind !== 'eng') { const k = asg.aArty.map((i) => CHITS.find((x) => x.id === i).kind); if (k.length && k[0] === c.kind) return 'Two German artillery assets need one regular and one rocket'; }
+  return null;
+};
+
+/* ---------- odds ---------- */
+const hitP = (sn) => Math.min(9, Math.max(1, sn)) / 10;
+function pmf(groups) { let p = [1]; for (const [n, sn] of groups) for (let i = 0; i < n; i++) { const q = hitP(sn), o = new Array(p.length + 1).fill(0); p.forEach((v, k) => { o[k] += v * (1 - q); o[k + 1] += v * q; }); p = o; } return p; }
+const mean = (p) => p.reduce((a, v, k) => a + v * k, 0), atLeast = (p, k) => p.slice(k).reduce((a, v) => a + v, 0);
+function odds() {
+  const att = [[3, 4], [2, 3]]; asg.aArty.forEach(() => att.push([1, 4])); asg.aBat.forEach(() => att.push([1, 4]));
+  return { a: pmf(att), d: pmf([[3, 4]]) };
+}
+const pc = (x) => Math.round(x * 100) + '%';
+
+/* ---------- board ---------- */
+const DEST = {
+  3: { name: 'Pronsfeld', path: [4, 3], steps: [1], total: 1, fuel: false, note: 'Road' },
+  5: { name: 'Losheim', path: [4, 5], steps: [3], total: 3, fuel: false, note: 'Road 1 + 2 for leaving the 5th Panzer Army zone' },
+  23: { name: 'St. Vith', path: [4, 3, 12, 23], steps: [1, 1, 2], total: 4, fuel: true, stop: true, note: 'Occupied by the enemy: stop and fight' },
+  11: { name: 'Bleialf', blocked: true, reason: 'Armor cannot cross the Schnee Eifel' },
+};
+function overlay() {
+  const d = DEST[dest]; if (!d || d.blocked || screen !== 'move') return '';
+  const pts = d.path.map((a) => L[a]); const poly = pts.map((p) => p.join(',')).join(' ');
+  const badges = d.steps.map((s, i) => { const a = pts[i], b = pts[i + 1]; return `<g transform="translate(${(a[0] + b[0]) / 2},${(a[1] + b[1]) / 2})"><circle r="15" fill="${d.fuel && i === d.steps.length - 1 ? '#cf7c2a' : '#1d1f1c'}" stroke="#fff" stroke-width="3"/><text y="6" text-anchor="middle" fill="#fff" font-size="17" font-weight="800">${s}</text></g>`; }).join('');
+  return `<g class="ov"><polyline points="${poly}" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${poly}" fill="none" stroke="var(--sel)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1 16"/><polyline points="${poly}" fill="none" stroke="var(--sel)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>${badges}</g>`;
+}
+function unitsHtml(tilt, focus) {
+  const put = (id, dx, dy, html) => { const [x, y] = px(id, dx, dy); return `<div class="u" style="left:${x}px;top:${y}px">${html}</div>`; };
+  let h = '';
+  const showMoving = screen === 'move';
+  if (showMoving) h += put(4, 0, 6, blk(U.lehr, selected ? 'sel' : '', 'data-pick="lehr"'));
+  h += put(12, -42, 18, blk(U.g116)) + put(12, 42, 18, blk(U.v560));
+  h += put(10, 0, 4, blk({ ...U.v62, name: '3 FJ', steps: 3, q: 'v' }));
+  h += put(23, 36, 14, blk(U.ccb)) + put(23, -34, 14, `<div class="garr" style="background:#8fa83f"><svg viewBox="0 0 100 100" style="width:100%"><rect x="26" y="26" width="48" height="36" fill="#a6d6f3" stroke="#111" stroke-width="3"/><path d="M26 26L74 62M74 26L26 62" stroke="#111" stroke-width="3"/></svg></div>`);
+  if (screen === 'move') h += put(11, 0, 12, blk(U.i106)) + put(11, 82, 38, blk(U.v18)) + put(11, 148, 30, blk(U.v62));
+  else h += put(11, -78, 20, blk(U.i106)) + put(11, 62, 26, blk(U.v18)) + put(11, 140, 18, blk(U.v62));
+  return h;
+}
+function planeHtml(tilt, mode) {
+  const board = BOARD.replace('</svg>', overlay() + '</svg>');
+  let tr = `perspective(${opt === 'b' ? 1900 : opt === 'c' ? 1400 : 1700}px) rotateX(${tilt}deg)`;
+  if (mode === 'battle') { const [x, y] = [(L[11][0] - X0) / MW, (L[11][1] - Y0) / MH]; tr = `perspective(1700px) rotateX(${tilt - 6}deg) scale(${opt === 'c' ? 2.3 : 2.5}) translate(${-(x - 0.5) * PW + 40}px, ${-(y - 0.5) * PH + (opt === 'b' ? 10 : opt === 'c' ? -30 : -60)}px)`; }
+  return `<div class="plane" id="plane" style="--tilt:${tilt}deg;transform:${tr};filter:${mode === 'dim' ? 'brightness(.5) saturate(.8)' : 'none'}">${board}${unitsHtml(tilt)}</div>`;
+}
+function paint() {
+  const st = $('#stage'); st.querySelectorAll('.a').forEach((p) => p.classList.remove('ok', 'stop', 'no', 'sel', 'war'));
+  const set = (id, c) => { const p = st.querySelector(`.a[data-id="${id}"]`); if (p) p.classList.add(c); };
+  if (screen === 'move') { Object.entries(DEST).forEach(([id, d]) => set(id, d.blocked ? 'no' : d.stop ? 'stop' : 'ok')); set(dest, 'sel'); }
+  else set(11, 'war');
+}
+
+/* ---------- pieces of chrome ---------- */
+const STEPS = ['Prepare', 'Move', 'Fight', 'Breakthrough', 'Supply'];
+const pills = (on) => STEPS.map((s, i) => `<span class="pill ${i === on ? 'on' : i < on ? 'done' : ''}">${s}</span>`).join('');
+const pipsHtml = (n, q) => Array.from({ length: n }, () => `<span class="pip ${q}"></span>`).join('');
+const tray = (extraBad = true) => CHITS.map((c) => { const why = ruleFor(c); const used = c.id !== 'fuel' && !free().includes(c); return used ? '' : chitHtml(c, { bad: extraBad && screen === 'battle' && !!why, why: why ?? c.name }); }).join('');
+function ticket(cls) {
+  const d = DEST[dest];
+  if (d.blocked) return `<div class="${cls}"><b class="bad">Not allowed</b>${d.reason}</div>`;
+  return `<div class="${cls}"><b>${d.name} · ${d.total} MP</b>${d.fuel ? '<span class="f">Fuel asset −1 (5 → 4 left)</span>' : 'No fuel needed'}<small>${d.total} of 6 MP${d.stop ? ' · ' : ''}${d.stop ? d.note : ' · ' + d.note}</small></div>`;
+}
+const tipPos = () => { const t = DEST[dest]; const id = t.blocked ? 11 : dest; const [x, y] = px(id, 0, 0); return { id, x, y }; };
+
+/* ---------- Option A ---------- */
+function A() {
+  const t = OPTS[0].tilt;
+  if (screen === 'move') {
+    const d = DEST[dest];
+    return planeHtml(t) + `<div class="a-top"><div class="turn">TURN 2<small>German · Admin done</small></div><div class="steps">${pills(1)}</div><div class="vp">NET ALLIED +10<small>Sudden death from turn 4</small></div></div>
+    <div id="tip" class="tip" style="left:${50}%;top:${50}%"></div>
+    <div class="a-card"><div>${blk(U.lehr, '', 'style="position:static;--s:62px;transform:none"')}</div><div><h3>Pz Lehr</h3><p>${pipsHtml(4, 'e')} Armor · 6 MP · supplied</p><div class="row"><button>Reserve</button><button>Fortify</button><button>Info</button></div></div></div>
+    <div class="a-dock"><div><div class="tabs"><b class="on">German</b><b>Allied</b><span>Available 18 · Cup 14 · Used 0</span></div><div class="tray">${tray(false)}</div></div><button class="btn" id="end">End move ▸</button></div>` + (d ? '' : '');
+  }
+  if (screen === 'battle') {
+    const o = odds();
+    return planeHtml(t, 'battle') + `<div class="a-banner">Battle · Bleialf<small>TDN 1 · field works · German attacks</small></div>
+    <div class="a-sheet">
+      <div class="a-side"><div class="hd">Allied<small>defending</small></div><div class="a-units"><div class="mini">${blk(U.i106)}<span>106 Inf<br>${pipsHtml(3, 'g')}</span></div></div>
+        <div class="slot" data-zone="dArty" style="flex:1"><span class="lab">Artillery 0/1</span><span class="empty">No artillery in the Allied Available Box</span></div></div>
+      <div class="a-mid"><small>Expected hits</small><div class="big">${mean(o.d).toFixed(1)} <span style="opacity:.4">·</span> ${mean(o.a).toFixed(1)}</div><small>Allied · German</small>
+        <div class="gauge"><div style="width:${(mean(o.d) / (mean(o.d) + mean(o.a))) * 100}%;background:#9fc47a"></div><div style="flex:1;background:#b8bcc2"></div></div><small>German ≥2 hits: ${pc(atLeast(o.a, 2))} · ≥3: ${pc(atLeast(o.a, 3))}</small><button class="btn" id="roll">Roll ▸</button></div>
+      <div class="a-side"><div class="hd">German<small>attacking</small></div><div class="a-units"><div class="mini">${blk(U.v18)}<span>18 VG<br>${pipsHtml(3, 'v')}</span></div><div class="mini">${blk(U.v62)}<span>62 VG<br>${pipsHtml(2, 'g')}</span></div></div>
+        <div style="display:flex;gap:12px;flex:1"><div class="slot" data-zone="aArty" style="flex:1"><span class="lab">Artillery ${asg.aArty.length}/2</span>${asg.aArty.map((i) => chitHtml(CHITS.find((c) => c.id === i))).join('') || '<span class="empty">Drag here</span>'}</div>
+        <div class="slot" data-zone="aBat" style="flex:1"><span class="lab">Battle assets</span>${asg.aBat.map((i) => chitHtml(CHITS.find((c) => c.id === i))).join('') || '<span class="empty">Engineers, armor</span>'}</div></div></div>
+      <div class="a-tray"><span class="lab2">Available</span>${tray()}</div></div>`;
+  }
+  return planeHtml(t, 'dim') + `<div class="a-banner">Defensive fire · Bleialf<small>Allied 106 Inf fires first</small></div><canvas class="dicecv" id="cv" width="1280" height="800"></canvas><div id="dl"></div>
+    <div class="a-diceinfo"><div><h3 id="dh">106 Inf · 3 dice</h3><div class="mods" id="dm"></div></div><div style="display:flex;gap:10px"><button class="btn ghosty" id="again">Re-roll (demo)</button><button class="btn" id="next">Offensive fire ▸</button></div></div>`;
+}
+/* ---------- Option B ---------- */
+function B() {
+  const t = OPTS[1].tilt;
+  if (screen === 'move') {
+    return planeHtml(t) + `<div class="glass b-chip" style="left:20px;top:18px"><span class="dot"></span><div>Turn 2 · German<small>Move phase</small></div><div class="b-pills">${pills(1)}</div></div>
+    <div class="glass b-chip" style="right:20px;top:18px"><div>−10<small>Net VP · Allied</small></div><div>T4<small>Sudden death</small></div></div>
+    <div id="tip" class="tip"></div><div class="radial" id="radial"></div>
+    ${boxOpen ? `<div class="glass b-pop"><h4><span>German · Available Box</span><span>18 available · 14 in the cup</span></h4><div class="tray">${tray(false)}</div></div>` : ''}
+    <div class="glass b-boxes"><button class="btn ghosty" id="boxes" style="color:#14202b;--line2:#14202b55">Boxes ${boxOpen ? '▾' : '▴'}</button><button class="btn" id="end">End move</button></div>`;
+  }
+  if (screen === 'battle') {
+    const o = odds();
+    return planeHtml(t, 'dim') + `<div class="b-stage"></div><div class="glass b-chip" style="left:20px;top:18px"><div>Battle · Bleialf<small>TDN 1 · field works · German attacks</small></div></div>
+    <div class="b-arena">
+      <div class="glass b-lane l"><h4>Allied <small>defending</small></h4><div class="b-units">${blk(U.i106)}</div><div class="slot" data-zone="dArty"><span class="lab">Artillery 0/1</span><span class="empty">None available</span></div></div>
+      <div class="b-center"><div class="big">${mean(o.d).toFixed(1)} : ${mean(o.a).toFixed(1)}</div><small style="letter-spacing:.1em;text-transform:uppercase;color:#4b5c68">expected hits · Allied : German</small><button class="b-roll" id="roll">ROLL</button><div class="gauge"><div style="width:${(mean(o.d) / (mean(o.d) + mean(o.a))) * 100}%;background:#6fae4a"></div><div style="flex:1;background:#8d9195"></div></div><small style="color:#4b5c68">German ≥2 hits ${pc(atLeast(o.a, 2))} · ≥3 ${pc(atLeast(o.a, 3))}</small></div>
+      <div class="glass b-lane r"><h4>German <small>attacking</small></h4><div class="b-units">${blk(U.v18)}${blk(U.v62)}</div>
+        <div class="slot" data-zone="aArty"><span class="lab">Artillery ${asg.aArty.length}/2</span>${asg.aArty.map((i) => chitHtml(CHITS.find((c) => c.id === i))).join('') || '<span class="empty">Drop here</span>'}</div>
+        <div class="slot" data-zone="aBat"><span class="lab">Battle assets</span>${asg.aBat.map((i) => chitHtml(CHITS.find((c) => c.id === i))).join('') || '<span class="empty">Engineers, armor</span>'}</div></div></div>
+    <div class="glass b-tray"><span class="hint" style="color:#4b5c68;font-weight:600">Drawer</span>${tray()}</div>`;
+  }
+  return planeHtml(t, 'dim') + `<div class="b-stage"></div><canvas class="dicecv" id="cv" width="1280" height="800"></canvas><div id="dl"></div>
+    <div class="glass b-chip" style="left:20px;top:18px"><div>Defensive fire · Bleialf<small>Allied 106 Inf</small></div></div>
+    <div class="glass b-dicebar"><h3 id="dh">106 Inf · 3 dice</h3><div class="mods" id="dm" style="justify-content:center"></div><div style="display:flex;gap:10px;justify-content:center;margin-top:12px"><button class="btn ghosty" id="again" style="color:#14202b;--line2:#14202b55">Re-roll (demo)</button><button class="btn" id="next">Offensive fire</button></div></div>`;
+}
+/* ---------- Option C ---------- */
+function C() {
+  const t = OPTS[2].tilt, d = DEST[dest];
+  const bar = (i) => `<div class="c-bar t"><div class="c-crumbs">${STEPS.map((s, k) => `<span class="${k === i ? 'on' : k < i ? 'done' : ''}">${s}</span>`).join('')}</div><div class="c-stat"><span>TURN<b>2</b></span><span>SIDE<b>GER</b></span><span>NET VP<b>AL +10</b></span><span>DRAW<b>9/7</b></span></div></div>`;
+  if (screen === 'move') {
+    return planeHtml(t) + bar(1) + `<div id="tip" class="tip"></div>
+    <div class="c-dispatch"><h3>Pz Lehr</h3><div class="r"><span>Class</span><b>Armor · elite ${pipsHtml(4, 'e')}</b></div><div class="r"><span>Route</span><b>${d.blocked ? '—' : d.path.map((a) => L[a] && (a === 4 ? 'Prüm' : a === 3 ? 'Pronsf.' : a === 12 ? 'Lutzk.' : a === 5 ? 'Losheim' : 'St. Vith')).join(' › ')}</b></div><div class="r"><span>Cost</span><b class="${d.blocked ? 'bad' : ''}">${d.blocked ? 'blocked' : d.total + ' of 6 MP'}</b></div><div class="r"><span>Fuel</span><b class="${d.fuel ? '' : ''}">${d.blocked ? '—' : d.fuel ? '1 asset (5 → 4)' : 'none'}</b></div></div>
+    <div class="c-hand">${CHITS.slice(0, 8).map((c, i) => `<div class="card2" style="--cc:${c.col};--r:${(i - 3.5) * 4.2}deg;--y:${Math.abs(i - 3.5) * 4 + 30}px" data-id="${c.id}"><i>${c.n ?? ''}</i><svg viewBox="0 0 40 40">${GL[c.kind]}</svg><b>${c.name}</b><small>${c.army === 'x' ? 'Strategic' : c.army === 'pz5' ? '5th Pz Army' : c.army === 'pz6' ? '6th Pz Army' : '7th Army'}</small></div>`).join('')}</div>
+    <div class="c-bar b"><div class="c-prompt">${d.blocked ? `<b>✕</b> ${d.reason}` : `<b>Click to move</b> to ${d.name}, or choose another green area`}</div><div style="margin-left:auto"><button class="btn" id="end">End move</button></div></div>`;
+  }
+  if (screen === 'battle') {
+    const o = odds();
+    return planeHtml(t, 'dim') + bar(2) + `<div class="c-table">
+      <div class="c-side"><h4>Allied<small>defending</small></h4><div class="c-row">${blk(U.i106)}</div><div class="c-slots"><div class="slot" data-zone="dArty"><span class="lab">Arty 0/1</span><span class="empty">—</span></div></div></div>
+      <div class="c-vs"><small>Bleialf · TDN 1 · FW</small><div class="big">${mean(o.d).toFixed(1)}<span style="opacity:.4"> : </span>${mean(o.a).toFixed(1)}</div><small>exp. hits</small><div class="gauge" style="margin:8px 0"><div style="width:${(mean(o.d) / (mean(o.d) + mean(o.a))) * 100}%;background:#8fa83f"></div><div style="flex:1;background:#b7bbc1"></div></div><small>≥2 ger ${pc(atLeast(o.a, 2))}</small></div>
+      <div class="c-side"><h4>German<small>attacking</small></h4><div class="c-row">${blk(U.v18)}${blk(U.v62)}</div><div class="c-slots"><div class="slot" data-zone="aArty"><span class="lab">Arty ${asg.aArty.length}/2</span>${asg.aArty.map((i) => chitHtml(CHITS.find((c) => c.id === i))).join('') || '<span class="empty">drop</span>'}</div><div class="slot" data-zone="aBat"><span class="lab">Assets</span>${asg.aBat.map((i) => chitHtml(CHITS.find((c) => c.id === i))).join('') || '<span class="empty">drop</span>'}</div></div></div></div>
+    <div class="c-hand">${free().map((c, i, a) => { const why = ruleFor(c); return `<div class="card2 ${why ? 'bad' : ''}" title="${why ?? ''}" style="--cc:${c.col};--r:${(i - (a.length - 1) / 2) * 4.2}deg;--y:${Math.abs(i - (a.length - 1) / 2) * 4 + 30}px" data-id="${c.id}"><i>${c.n ?? ''}</i><svg viewBox="0 0 40 40">${GL[c.kind]}</svg><b>${c.name}</b><small>${c.army === 'pz5' ? '5th Pz Army' : c.army === 'pz6' ? '6th Pz Army' : '7th Army'}</small></div>`; }).join('')}</div>
+    <div class="c-bar b"><div class="c-prompt"><b>Drag cards onto the slots.</b> Greyed cards cannot join this battle (hover for the reason).</div><div style="margin-left:auto"><button class="btn" id="roll">Roll defensive fire</button></div></div>`;
+  }
+  return planeHtml(t, 'dim') + bar(2) + `<canvas class="dicecv" id="cv" width="1280" height="800"></canvas><div id="dl"></div>
+    <div class="c-ledger"><h3 id="dh">Defensive fire · 106 Inf</h3><div id="dm" class="mods"></div><div id="ln"></div><div style="display:flex;gap:10px;margin-top:10px"><button class="btn ghosty" id="again">Re-roll (demo)</button><button class="btn" id="next" style="margin-left:auto">Offensive fire</button></div></div>
+    <div class="c-bar b"><div class="c-prompt">Dice are cast automatically. <b>1 always hits, 10 always misses.</b></div></div>`;
+}
+
+/* ---------- render + interactions ---------- */
+function render() {
+  if (dice) { dice.dispose(); dice = null; }
+  const st = $('#stage'); st.className = `stage opt-${opt}`; st.innerHTML = { a: A, b: B, c: C }[opt]() + (toast ? `<div class="toast">${toast}</div>` : '');
+  paint(); bind(); tip(); radial(); fit();
+  if (screen === 'dice') startDice();
+}
+function tip() {
+  const el = $('#tip'); if (!el || screen !== 'move') return; const p = tipPos(), plane = $('#plane');
+  const r = $('#stage').getBoundingClientRect(), k = r.width / 1280;
+  const poly = $(`.a[data-id="${p.id}"]`); if (!poly) return; const b = poly.getBoundingClientRect();
+  el.style.left = ((b.left + b.width / 2 - r.left) / k) + 'px'; el.style.top = ((b.top + b.height * 0.28 - r.top) / k) + 'px';
+  el.innerHTML = opt === 'c' ? '' : ticket(opt === 'a' ? 'a-ticket' : 'b-ticket');
+  void plane;
+}
+function radial() {
+  const el = $('#radial'); if (!el) return; const u = $('.blk[data-pick="lehr"]'); if (!u) return; const r = $('#stage').getBoundingClientRect(), k = r.width / 1280, b = u.getBoundingClientRect();
+  el.style.left = ((b.left + b.width / 2 - r.left) / k) + 'px'; el.style.top = ((b.top + b.height / 2 - r.top) / k) + 'px';
+  const I = { mv: '<svg viewBox="0 0 24 24"><path d="M4 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" fill="none"/></svg>', rs: '<svg viewBox="0 0 24 24"><path d="M5 5h14v14H5z M9 9h6v6H9z" stroke="currentColor" stroke-width="2" fill="none"/></svg>', fw: '<svg viewBox="0 0 24 24"><path d="M3 18l4-8 5 4 4-8 5 12z" stroke="currentColor" stroke-width="2" fill="none"/></svg>', i: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 11v6M12 7.5v.5" stroke="currentColor" stroke-width="2.4"/></svg>' };
+  el.innerHTML = [['Move', 'mv', -150, -90, 'on'], ['Reserve', 'rs', 150, -90, ''], ['Fortify', 'fw', -150, 100, ''], ['Info', 'i', 150, 100, '']].map(([n, i, x, y, c]) => `<button class="${c}" style="left:${x * 0.78}px;top:${y * 0.78}px">${I[i]}${n}</button>`).join('');
+}
+function bind() {
+  const st = $('#stage');
+  document.querySelectorAll('[data-pick]').forEach((e) => (e.onclick = (ev) => { ev.stopPropagation(); selected = true; render(); }));
+  st.querySelectorAll('.a').forEach((p) => (p.onclick = () => { const id = +p.dataset.id; if (screen === 'move' && DEST[id]) { dest = id; render(); } }));
+  const b = (id, f) => { const e = $(id); if (e) e.onclick = f; };
+  b('#boxes', () => { boxOpen = !boxOpen; render(); });
+  b('#end', () => { screen = 'battle'; syncScreens(); render(); });
+  b('#roll', () => { screen = 'dice'; rollStep = 'def'; syncScreens(); render(); });
+  b('#again', () => startDice());
+  b('#next', () => { rollStep = rollStep === 'def' ? 'off' : 'def'; startDice(); });
+  st.querySelectorAll('.chit, .card2').forEach((c) => (c.onpointerdown = (ev) => dragStart(ev, c)));
+}
+function dragStart(ev, el) {
+  if (screen !== 'battle' && screen !== 'move') return; ev.preventDefault();
+  const id = el.dataset.id, ch = CHITS.find((c) => c.id === id); if (!ch) return;
+  const g = el.cloneNode(true); g.classList.add('ghost'); g.style.left = ev.clientX + 'px'; g.style.top = ev.clientY + 'px'; g.style.setProperty('--r', '0deg'); g.style.setProperty('--y', '0px'); document.body.appendChild(g);
+  let over = null;
+  const mv = (e) => { g.style.left = e.clientX + 'px'; g.style.top = e.clientY + 'px'; const z = document.elementsFromPoint(e.clientX, e.clientY).find((n) => n.classList?.contains('slot')); if (over !== z) { over?.classList.remove('over'); over = z ?? null; over?.classList.add('over'); } };
+  const up = (e) => {
+    window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); g.remove(); over?.classList.remove('over');
+    const z = document.elementsFromPoint(e.clientX, e.clientY).find((n) => n.classList?.contains('slot')); if (!z || screen !== 'battle') return;
+    const zone = z.dataset.zone, why = zone === 'dArty' ? 'The Allies have no artillery in their Available Box' : zone === 'aArty' && ch.kind === 'eng' ? 'Engineers go in Battle assets' : zone === 'aBat' && ch.kind !== 'eng' ? 'Artillery goes in the Artillery slot' : ruleFor(ch);
+    if (why) { z.classList.add('deny'); toast = why; render(); setTimeout(() => { toast = ''; render(); }, 2200); return; }
+    asg[zone].push(id); render();
+  };
+  window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
+}
+
+/* ---------- 3D dice ---------- */
+function d10() {
+  const R = 1, h = 0.1, ring = Array.from({ length: 10 }, (_, k) => new THREE.Vector3(R * Math.cos(k * Math.PI / 5), k % 2 ? h : -h, R * Math.sin(k * Math.PI / 5)));
+  const A = ring[1], C = ring[3], M = ring[2], n = new THREE.Vector3().subVectors(C, A).cross(new THREE.Vector3().subVectors(M, A)), H = n.dot(A) / n.y;
+  const T = new THREE.Vector3(0, H, 0), B = new THREE.Vector3(0, -H, 0), faces = [];
+  for (let i = 0; i < 5; i++) faces.push({ num: 2 * i + 1, apex: T, v: [T, ring[2 * i + 1], ring[(2 * i + 2) % 10], ring[(2 * i + 3) % 10]] });
+  for (let j = 0; j < 5; j++) { const i = (j + 2) % 5; faces.push({ num: 10 - 2 * i, apex: B, v: [B, ring[2 * j], ring[2 * j + 1], ring[(2 * j + 2) % 10]] }); }
+  return faces;
+}
+const DIE = { w: ['#f2efe6', '#161616'], k: ['#1d1d20', '#f3f3f3'], r: ['#c4232a', '#ffffff'], s: ['#6c7782', '#ffffff'] };
+function faceTex(num, col) {
+  const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'); x.fillStyle = DIE[col][0]; x.fillRect(0, 0, 256, 256);
+  const g = x.createRadialGradient(100, 90, 20, 128, 128, 200); g.addColorStop(0, '#ffffff22'); g.addColorStop(1, '#00000033'); x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+  x.fillStyle = DIE[col][1]; x.font = '700 104px "Big Shoulders Display", Archivo, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(num), 128, 134);
+  if (num === 6 || num === 9) { x.fillRect(150, 188, 22, 8); }
+  const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t;
+}
+function makeDie(col) {
+  const group = new THREE.Group(), faces = d10(), normals = {};
+  for (const f of faces) {
+    const [a, b, c, d] = f.v, cen = new THREE.Vector3().add(a).add(b).add(c).add(d).multiplyScalar(0.25);
+    const nrm = new THREE.Vector3().subVectors(c, b).cross(new THREE.Vector3().subVectors(a, b)); if (nrm.dot(cen) < 0) nrm.negate(); nrm.normalize();
+    const up = new THREE.Vector3().subVectors(f.apex, cen).projectOnPlane(nrm).normalize(), right = new THREE.Vector3().crossVectors(up, nrm).normalize().negate();
+    const pos = [], uv = []; for (const p of [a, b, c, d]) { const r = new THREE.Vector3().subVectors(p, cen); pos.push(p.x, p.y, p.z); uv.push(0.5 + r.dot(right) * 0.4, 0.5 + r.dot(up) * 0.4); }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(nrm.dot(new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(c, a))) >= 0 ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2]); geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: faceTex(f.num, col), roughness: 0.32, metalness: 0.08, side: THREE.DoubleSide })); m.castShadow = true; group.add(m); normals[f.num] = nrm;
+    const edge = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: col === 'w' ? 0x8d8a80 : 0x000000, transparent: true, opacity: 0.5 })); group.add(edge);
+  }
+  group.scale.setScalar(0.6);
+  return { group, normals, rest: Math.max(...Object.values(normals).map((nv, i) => faces[i].v.reduce((s, v) => Math.max(s, 0), 0) || 0), 0) };
+}
+function groupsFor(step) {
+  if (step === 'def') return [{ label: '106 Inf', n: 3, col: 'w', sn: 4, mods: [['Base', 5, ''], ['Green fires on veteran point unit (18 VG)', -1, 'neg']] }];
+  const g = [{ label: '18 VG', n: 3, col: 'k', sn: 4, mods: [['Base', 5, ''], ['Veteran on green', 1, 'pos'], ['Terrain TDN 1', -1, 'neg'], ['Infantry in field works', -1, 'neg']] }, { label: '62 VG', n: 2, col: 'w', sn: 3, mods: [['Base', 5, ''], ['Green on green', 0, ''], ['Terrain TDN 1', -1, 'neg'], ['Field works', -1, 'neg']] }];
+  asg.aArty.forEach((i) => g.push({ label: CHITS.find((c) => c.id === i).name, n: 1, col: 's', sn: 4, mods: [['Base', 5, ''], ['Infantry in field works', -1, 'neg']] }));
+  asg.aBat.forEach((i) => g.push({ label: CHITS.find((c) => c.id === i).name, n: 1, col: 'k', sn: 4, mods: [['Base', 5, ''], ['Veteran on green', 1, 'pos'], ['Terrain TDN 1', -1, 'neg'], ['Field works', -1, 'neg']] }));
+  return g;
+}
+function startDice() {
+  if (dice) { dice.dispose(); dice = null; }
+  const cv = $('#cv'); if (!cv) return;
+  const groups = groupsFor(rollStep), r = new THREE.WebGLRenderer({ canvas: cv, alpha: true, antialias: true }); r.setSize(1280, 800, false); r.setPixelRatio(Math.min(2, devicePixelRatio)); r.shadowMap.enabled = true;
+  const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(28, 1280 / 800, 0.1, 100); cam.position.set(0, 12, 8.6); cam.lookAt(0, 0, 0.6);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x445544, 0.9)); const sun = new THREE.DirectionalLight(0xffffff, 1.2); sun.position.set(-4, 9, 5); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9 }); scene.add(sun);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: 0.4 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+  const all = []; groups.forEach((g) => { for (let i = 0; i < g.n; i++) all.push({ g, i }); });
+  const per = all.length > 5 ? Math.ceil(all.length / 2) : all.length, sp = 1.75, dice3 = [];
+  all.forEach((d, k) => {
+    const die = makeDie(d.g.col), row = k < per ? 0 : 1, col = row ? k - per : k, inRow = row ? all.length - per : per;
+    const x = (col - (inRow - 1) / 2) * sp, z = all.length > 5 ? (row ? 1.25 : -1.25) : 0.2, result = 1 + Math.floor(Math.random() * 10), nrm = die.normals[result];
+    const q0 = new THREE.Quaternion().setFromUnitVectors(nrm.clone(), new THREE.Vector3(0, 1, 0)), yaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.random() * 6.28), qEnd = yaw.multiply(q0);
+    const axis = new THREE.Vector3(Math.random() - .5, Math.random() - .5, Math.random() - .5).normalize(), spin = 9 + Math.random() * 6, rest = 0.4;
+    die.group.position.set(x - 6 + Math.random(), 5, z - 5); scene.add(die.group); dice3.push({ die, x, z, qEnd, axis, spin, rest, result, delay: k * 0.07, dur: 1.5 + Math.random() * 0.4, sn: d.g.sn, g: d.g });
+  });
+  const t0 = performance.now(); let raf = 0, done = false;
+  const ease = (t) => 1 - Math.pow(1 - t, 3);
+  function frame() {
+    const t = (performance.now() - t0) / 1000; let fin = true;
+    dice3.forEach((d) => {
+      const u = Math.min(1, Math.max(0, (t - d.delay) / d.dur)); if (u < 1) fin = false; const e = ease(u), sx = d.die.group.userData.sx ?? (d.die.group.userData.sx = d.die.group.position.x), sz = d.die.group.userData.sz ?? (d.die.group.userData.sz = d.die.group.position.z);
+      d.die.group.position.x = sx + (d.x - sx) * e; d.die.group.position.z = sz + (d.z - sz) * e; d.die.group.position.y = d.rest + Math.abs(Math.sin(u * Math.PI * 3.2)) * (1 - u) * 2.4 + (1 - e) * 1.2;
+      d.die.group.quaternion.copy(new THREE.Quaternion().setFromAxisAngle(d.axis, (1 - e) * d.spin)).multiply(d.qEnd);
+    });
+    r.render(scene, cam);
+    if (fin && !done) { done = true; labels(); }
+    if (!stopped) raf = requestAnimationFrame(frame);
+  }
+  let stopped = false;
+  function labels() {
+    const out = [], hits = []; dice3.forEach((d) => { const v = new THREE.Vector3(d.x, 0.2, d.z + 1.0).project(cam), hit = d.result === 1 || (d.result !== 10 && d.result <= d.sn); out.push(`<div class="lbl" style="left:${(v.x * 0.5 + 0.5) * 1280}px;top:${(-v.y * 0.5 + 0.5) * 800}px;color:${hit ? '#7ee08d' : '#ff8d7e'};text-shadow:0 2px 6px #000a">${d.result}<em>${hit ? 'hit' : 'miss'}${d.result === 1 ? ' · always' : d.result === 10 ? ' · always' : ''}</em></div>`); hits.push(hit); });
+    $('#dl').innerHTML = out.join(''); const n = hits.filter(Boolean).length, dm = $('#dm'), dh = $('#dh');
+    if (dh) dh.textContent = `${rollStep === 'def' ? 'Defensive fire' : 'Offensive fire'} · ${n} hit${n === 1 ? '' : 's'}`;
+    if (opt === 'c') { const ln = $('#ln'); if (ln) ln.innerHTML = groups.map((g) => { const ds = dice3.filter((d) => d.g === g); return `<div class="ln"><span style="width:92px">${g.label}</span><span>SN ${g.sn}</span><span>${ds.map((d) => `<b style="color:${d.result === 1 || (d.result !== 10 && d.result <= d.sn) ? '#a9e08a' : '#ff9c8a'}">${d.result}</b>`).join(' ')}</span><span style="margin-left:auto">${ds.filter((d) => d.result === 1 || (d.result !== 10 && d.result <= d.sn)).length} hit(s)</span></div>`; }).join(''); }
+  }
+  const g0 = groups[0]; if (dm) dm.innerHTML = modsHtml(groups);
+  const dh = $('#dh'); if (dh) dh.textContent = (rollStep === 'def' ? 'Defensive fire' : 'Offensive fire') + ' · rolling…';
+  raf = requestAnimationFrame(frame); void g0;
+  dice = { dispose() { stopped = true; cancelAnimationFrame(raf); r.dispose(); const l = $('#dl'); if (l) l.innerHTML = ''; } };
+}
+function modsHtml(groups) {
+  if (groups.length === 1) { const g = groups[0]; return `<b style="margin-right:6px">${g.label}</b>${g.mods.map(([n, v, c]) => `<span class="${c}">${n}${v ? ` ${v > 0 ? '+' : '−'}${Math.abs(v)}` : ''}</span>`).join('')}<span class="sn">SN ${g.sn}</span><span>hits on ${g.sn} or less</span>`; }
+  return groups.map((g) => `<span style="display:inline-flex;gap:6px;align-items:center"><b>${g.label}</b><span class="sn">SN ${g.sn}</span><span>${g.mods.filter((m) => m[1]).map(([n, v]) => `${v > 0 ? '+' : '−'}${Math.abs(v)}`).join(' ')}</span></span>`).join('');
+}
+
+/* ---------- page controls ---------- */
+function syncScreens() { document.querySelectorAll('#screens button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.s === screen)); $('#hint').textContent = { move: 'Click a green or orange area, or the red one, to change the preview. Drag nothing yet: use End move to go to the battle.', battle: 'Drag the chits from the tray onto the German slots. Try a purple or blue one, or a second rocket.', dice: 'Dice are rolled for real each time. Re-roll to see the hits change; Offensive fire shows the second group.' }[screen]; }
+function fit() { const f = $('#fit'), st = $('#stage'), k = f.clientWidth / 1280; st.style.transform = `scale(${k})`; f.style.height = 800 * k + 'px'; }
+$('#opts').innerHTML = OPTS.map((o) => `<button class="opt" data-o="${o.id}" aria-pressed="${o.id === opt}"><b>${o.name}</b><span>${o.tag}</span></button>`).join('');
+$('#screens').innerHTML = SCREENS.map(([s, n]) => `<button data-s="${s}" aria-pressed="${s === screen}">${n}</button>`).join('');
+function notes() { $('#notes').innerHTML = NOTES[opt].map(([h, l]) => `<div class="card"><h2>${h}</h2><ul>${l.map((x) => `<li>${x}</li>`).join('')}</ul></div>`).join(''); document.querySelectorAll('.opt').forEach((b) => b.setAttribute('aria-pressed', b.dataset.o === opt)); }
+document.querySelectorAll('.opt').forEach((b) => (b.onclick = () => { opt = b.dataset.o; notes(); render(); }));
+document.querySelectorAll('#screens button').forEach((b) => (b.onclick = () => { screen = b.dataset.s; if (screen === 'dice') rollStep = 'def'; syncScreens(); render(); }));
+addEventListener('resize', fit); if (window.ResizeObserver) new ResizeObserver(fit).observe($('#fit'));
+notes(); syncScreens(); render();
+if (document.fonts?.ready) document.fonts.ready.then(() => render());
+})();
+</script>
