@@ -11,14 +11,14 @@ export type Phase = 'movement' | 'combat' | 'supply';
 export interface Unit {
   id: string; name: string; side: Side; cls: 'armor' | 'infantry'; q: Quality[]; max: number; str: number;
   area: number | null; garrison?: boolean; disorder: 0 | 1 | 2; unsupplied: boolean; moved: boolean; reserve: boolean;
-  arrival?: number; entry?: string[];
+  arrival?: number; entry?: string[]; ech?: string; symbol?: string; code?: string;
 }
 export interface Game {
   turn: number; lastTurn: number; phasing: Side; phase: Phase; units: Unit[];
   control: Record<number, Side>; fieldWorks: number[]; riverAssault: number[]; blown: string[];
   contestedAtMoveStart: number[]; fought: number[]; seed: number; rolls: number; log: string[]; over?: string;
 }
-type RawUnit = { id: string; name: string; side: string; cls?: string; steps?: number; quality_by_step?: Quality[]; start_area?: number; arrival_turn?: number; entry?: string[]; kind?: string };
+type RawUnit = { id: string; name: string; side: string; echelon?: string; symbol?: string; cls?: string; steps?: number; quality_by_step?: Quality[]; start_area?: number; arrival_turn?: number; entry?: string[]; kind?: string };
 const other = (s: Side): Side => (s === 'german' ? 'allied' : 'german');
 const sideOf = (s: string): Side => (s === 'german' ? 'german' : 'allied');
 const ENTRY = entryJson as Record<string, { side: string; area: number; nearby_detected: number[] }>;
@@ -40,7 +40,8 @@ export function newGame(seed = Date.now() % 1e9): Game {
     if (r.kind) continue;                                   // Special Action blocks: not in the demo
     const max = r.steps!, red = (sc.reduced as Record<string, number>)[r.name] ?? (sc.reinforcementsReduced as Record<string, number>)[r.name];
     units.push({ id: r.id, name: r.name, side: sideOf(r.side), cls: r.cls as 'armor' | 'infantry', q: r.quality_by_step!, max, str: red ?? max,
-      area: r.start_area ?? null, disorder: 0, unsupplied: false, moved: false, reserve: sc.reserve.includes(r.name), arrival: r.arrival_turn, entry: r.entry });
+      area: r.start_area ?? null, disorder: 0, unsupplied: false, moved: false, reserve: sc.reserve.includes(r.name), arrival: r.arrival_turn, entry: r.entry, ech: r.echelon, symbol: r.symbol,
+      code: r.start_area ? String(r.start_area) : r.arrival_turn ? `${r.arrival_turn}-${r.entry!.length > 1 ? r.entry![0] + r.entry![r.entry!.length - 1] : r.entry![0]}` : 'Res' });
   }
   for (const a of sc.garrisons) units.push({ id: `G${a}`, name: `Garrison ${areas.get(a)!.name}`, side: 'allied', cls: 'infantry', q: ['green'], max: 1, str: 1, area: a, garrison: true, disorder: 0, unsupplied: false, moved: true, reserve: false });
   const g: Game = { turn: 1, lastTurn: sc.turns, phasing: 'german', phase: 'combat', units, control: {}, fieldWorks: [...sc.fieldWorks], riverAssault: [...sc.riverAssault],

@@ -4,10 +4,12 @@ import {
   newGame, areas, unitsIn, quality, moveOptions, move, endPhase, mustFight, contestedAreas, newlyContested, startBattle, fireOdds,
   defensiveFire, attackerChoice, offensiveFire, defenderChoice, hitPmf, probAtLeast, meanHits, type Game, type Battle, type Unit,
 } from '../../engine/src';
+import { labelSvg, garrisonSvg } from './art';
 
 type MapArea = { id: number; label: [number, number]; polygon: [number, number][] };
 const MAP = mapJson as unknown as { size: [number, number]; areas: MapArea[] };
-const [MW, MH] = MAP.size, S = 100;                                  // map pixels per world unit
+// World unit = 1 cm. The scan is the full 34 x 22 in map (86.36 x 55.88 cm) at 2448 x 1584 px.
+const [MW, MH] = MAP.size, S = 2448 / 86.36;                                  // map pixels per cm
 const toWorld = (x: number, y: number) => new THREE.Vector3(x / S - MW / (2 * S), 0, y / S - MH / (2 * S));
 const $ = (s: string) => document.querySelector(s) as HTMLElement;
 
@@ -22,16 +24,16 @@ const canvas = $('#gl') as HTMLCanvasElement;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.shadowMap.enabled = true;
 const scene = new THREE.Scene(); scene.background = new THREE.Color(0x101314);
-const cam = new THREE.PerspectiveCamera(38, 1, 0.1, 200);
+const cam = new THREE.PerspectiveCamera(38, 1, 0.5, 600);
 scene.add(new THREE.HemisphereLight(0xeef3ff, 0x2a2622, 1.0));
-const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(-6, 14, 9); sun.castShadow = true;
-sun.shadow.mapSize.set(4096, 4096); Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10 }); scene.add(sun);
+const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(-20, 50, 32); sun.castShadow = true;
+sun.shadow.mapSize.set(4096, 4096); Object.assign(sun.shadow.camera, { left: -35, right: 35, top: 35, bottom: -35, far: 200 }); scene.add(sun);
 
 const mapTex = new THREE.TextureLoader().load('./map.jpg'); mapTex.colorSpace = THREE.SRGBColorSpace;
 mapTex.repeat.set(MW / 2448, 1); mapTex.anisotropy = 8;              // the scan is 2448 wide; the playing area is the left 1740 px
 const board = new THREE.Mesh(new THREE.PlaneGeometry(MW / S, MH / S), new THREE.MeshStandardMaterial({ map: mapTex, roughness: 0.9 }));
 board.rotation.x = -Math.PI / 2; board.receiveShadow = true; scene.add(board);
-const table = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshStandardMaterial({ color: 0x3b2a1d, roughness: 1 }));
+const table = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({ color: 0x3b2a1d, roughness: 1 }));
 table.rotation.x = -Math.PI / 2; table.position.y = -0.02; scene.add(table);
 
 // area overlays (highlights)
@@ -43,19 +45,18 @@ for (const a of MAP.areas) {
 }
 const pieces = new THREE.Group(); scene.add(pieces);
 const labelTex = new Map<string, THREE.Texture>();
-const tex = (id: string) => { if (!labelTex.has(id)) { const t = new THREE.TextureLoader().load(`./blocks/${id}.png`); t.colorSpace = THREE.SRGBColorSpace; t.center.set(0.5, 0.5); labelTex.set(id, t); } return labelTex.get(id)!; };
+const svgTex = (key: string, svg: string) => { if (!labelTex.has(key)) { const t = new THREE.TextureLoader().load('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; labelTex.set(key, t); } return labelTex.get(key)!; };
 const WOOD = { german: 0x8e9296, allied: 0x5d8a45 };
 const BRIT = new Set(['43 Inf', '53 Inf', 'Guards', '51 Inf']);
 
 function block(u: Unit) {
-  const w = 0.42, h = 0.42, d = 0.13;
+  const w = 1.6, h = 1.6, d = 0.8;                                    // 16 x 16 x 8 mm block
   const wood = new THREE.MeshStandardMaterial({ color: BRIT.has(u.name) ? 0x3f6fb8 : WOOD[u.side], roughness: 0.75 });
   if (u.garrison) {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.04, 0.3), [wood, wood, new THREE.MeshStandardMaterial({ color: 0x9cc6e8 }), wood, wood, wood]);
-    m.position.y = 0.02; return m;
+    const chit = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new THREE.BoxGeometry(1.43, 0.18, 1.43), [chit, chit, new THREE.MeshStandardMaterial({ map: svgTex(u.id, garrisonSvg(u.name)) }), chit, chit, chit]); // 9/16 in chit
+    m.position.y = 0.09; m.castShadow = true; return m;
   }
-  const t = tex(u.id).clone(); t.needsUpdate = true; t.rotation = ((u.max - u.str) * Math.PI) / 2;   // a step loss turns the block 90° (2.3)
-  const face = new THREE.MeshStandardMaterial({ map: t, roughness: 0.6 });
+  const face = new THREE.MeshStandardMaterial({ map: svgTex(`${u.id}-${u.str}`, labelSvg(u)), roughness: 0.6 });
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [wood, wood, wood, wood, face, wood]);
   m.position.y = h / 2; m.castShadow = true;
   if (u.disorder) m.rotation.z = u.disorder === 1 ? 0.25 : 0.12;                                      // tilt = disordered / recovering
@@ -67,9 +68,9 @@ function drawPieces() {
     const us = unitsIn(g, a.id); if (!us.length) continue;
     const base = toWorld(a.label[0], a.label[1]);
     us.forEach((u, i) => {
-      const m = block(u); const row = u.side === 'german' ? 0.32 : -0.32;
-      m.position.x = base.x + (us.filter((x) => x.side === u.side).indexOf(u) - (us.filter((x) => x.side === u.side).length - 1) / 2) * 0.48;
-      m.position.z = base.z + (contestedAreas(g).includes(a.id) ? row : 0.1) + 0.0;
+      const m = block(u); const row = u.side === 'german' ? 1.1 : -1.1;
+      m.position.x = base.x + (us.filter((x) => x.side === u.side).indexOf(u) - (us.filter((x) => x.side === u.side).length - 1) / 2) * 1.75;
+      m.position.z = base.z + (contestedAreas(g).includes(a.id) ? row : 0.4);
       m.userData.unit = u.id; if (u.id === selUnit) { const o = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xffb347 })); m.add(o); }
       pieces.add(m);
     });
@@ -91,21 +92,21 @@ function paintAreas() {
 }
 
 /* ---------- camera ---------- */
-let target = new THREE.Vector3(3, 0, -1), yaw = 0, pitch = 1.0, dist = 9;
+let target = new THREE.Vector3(10, 0, -3.5), yaw = 0, pitch = 1.0, dist = 32;
 function placeCam() { cam.position.set(target.x + dist * Math.sin(yaw) * Math.cos(pitch), dist * Math.sin(pitch), target.z + dist * Math.cos(yaw) * Math.cos(pitch)); cam.lookAt(target); }
 const ptrs = new Map<number, [number, number]>(); let moved = 0, pinch = 0;
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('pointerdown', (e) => { canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; pinch = 0; });
 canvas.addEventListener('pointermove', (e) => {
   const p = ptrs.get(e.pointerId); if (!p) return; ptrs.set(e.pointerId, [e.clientX, e.clientY]);
-  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch) dist = Math.min(30, Math.max(2, dist * pinch / d)); pinch = d; moved = 99; return; }
+  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch) dist = Math.min(110, Math.max(7, dist * pinch / d)); pinch = d; moved = 99; return; }
   const dx = e.clientX - p[0], dy = e.clientY - p[1]; moved += Math.abs(dx) + Math.abs(dy);
   if (e.buttons === 2 || e.shiftKey) { yaw -= dx * 0.006; pitch = Math.min(1.5, Math.max(0.35, pitch + dy * 0.006)); }
   else { const k = dist * 0.0018, c = Math.cos(yaw), s = Math.sin(yaw); target.x -= (dx * c + dy * s) * k; target.z -= (-dx * s + dy * c) * k; }
 });
 canvas.addEventListener('pointerup', (e) => { ptrs.delete(e.pointerId); if (moved < 6) click(e); });
 canvas.addEventListener('pointercancel', (e) => ptrs.delete(e.pointerId));
-canvas.addEventListener('wheel', (e) => { e.preventDefault(); dist = Math.min(30, Math.max(2, dist * Math.exp(e.deltaY * 0.0012))); }, { passive: false });
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); dist = Math.min(110, Math.max(7, dist * Math.exp(e.deltaY * 0.0012))); }, { passive: false });
 
 const ray = new THREE.Raycaster();
 function pick(e: PointerEvent) {
