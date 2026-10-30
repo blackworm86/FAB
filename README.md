@@ -10,6 +10,7 @@ Planned entries: 1) *The Bulge* (first), 2) TBD, 3) TBD.
 | `docs/rules/` | Rulebooks, scenario books, errata (PDF) |
 | `docs/player-aids/` | Player aids, charts, tables, counter sheets |
 | `docs/maps/` | Map scans / images |
+| `docs/game-pieces/` | Counters, tokens, cards, dice, unit art |
 
 Claude reads these to learn the rules. Prefer one folder per game (e.g. `docs/rules/the-bulge/`) once more than one game is present.
 
