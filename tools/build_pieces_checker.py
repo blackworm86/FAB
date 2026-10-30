@@ -19,6 +19,7 @@ for u in units:
 for c in ctr:
     im = cv2.imread('../' + c['image'])[7:-7, 7:-7]
     extra = ', '.join(f'{k} {v}' for k, v in c.items() if k in ('area', 'drop_areas', 'zones', 'division', 'airborne'))
+    if 'copies' in c: extra = (extra + ', ' if extra else '') + f"{c['copies']} copies, {c['limit']}"
     pieces.append(dict(t='counter', id=c['id'], name=c['name'], side=side_of(c['echelon']), ech=c['echelon'], kind=c['kind'], turn=c['turn'], quality=c.get('quality'), extra=extra, img=add(im, 86)))
 t = open('pieces-checker.template.html').read().replace('__DATA__', json.dumps(pieces, ensure_ascii=False, separators=(',', ':'))).replace('__IMGS__', json.dumps(imgs))
 open('pieces-checker.fragment.html', 'w').write(t)
