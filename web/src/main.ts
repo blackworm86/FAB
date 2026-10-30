@@ -289,8 +289,21 @@ function rollStage(b: E.Battle) {
 function endRoll() { rollView = null; clearDice(); ($('#dice') as HTMLElement).style.display = 'none'; refresh(); }
 
 /* ---------- cards and drag and drop ---------- */
-const GLYPH: Record<string, string> = { artillery: '●', rocket_artillery: '➤', engineer: '▟', armor_asset: '▣', infantry_asset: '▤', task_force: '⚑', fuel: '⛽', command_staff: '★', air_mission: '✈', sa_block: '✦' };
-const card = (c: E.Chit, r = 0, why: string | null = null) => `<div class="card2 ${c.side} ${why ? 'bad' : ''} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" style="--r:${r}deg" title="${esc(why ?? c.name + ' · ' + c.ech)}"><i>${esc(c.ech.replace(/_/g, ' ').slice(0, 9))}</i><span class="gl">${GLYPH[c.kind] ?? '■'}</span><b>${esc(chitLabel(c))}</b><small>${esc(c.ech)}</small></div>`;
+const ICONS: Record<string, string> = {
+  artillery: '<circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="9"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>',
+  rocket_artillery: '<path d="M5 19l5-5M14 4c4 0 6 2 6 6-2 3-4 5-8 7l-5-5c2-4 4-6 7-8z"/><circle cx="15" cy="9" r="1.5"/><path d="M5 14l-2 4 4-2M10 19l-2 3 4-2"/>',
+  engineer: '<path d="M3 20V9h3V6h3v3h6V6h3v3h3v11zM3 20h18M9 20v-5h6v5"/>',
+  armor_asset: '<rect x="3" y="12" width="18" height="6" rx="3"/><path d="M7 12V8h8l2 4M15 9h7"/>',
+  infantry_asset: '<rect x="3" y="6" width="18" height="12"/><path d="M3 6l18 12M21 6L3 18"/>',
+  task_force: '<path d="M6 21V4M6 5h12l-3 4 3 4H6"/>',
+  fuel: '<path d="M7 5h8l2 3v13H7zM9 5V3h4v2M10 12h4M17 11h3v6"/>',
+  command_staff: '<path d="M12 3l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-3-5.4 3 1.1-6L3.2 9.4l6.1-.8z"/>',
+  air_mission: '<path d="M2 14l9-2 3-9h2l-1 9 6 2v2l-6-1-1 5 2 1v1l-4-1-4 1v-1l2-1-1-5-7 1z"/>',
+  sa_block: '<path d="M5 17l7-7 7 7M5 11l7-7 7 7"/>',
+  menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', boxes: '<rect x="3" y="4" width="18" height="5"/><path d="M5 9v10h14V9M10 13h4"/>', close: '<path d="M6 6l12 12M18 6L6 18"/>', swap: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>', plus: '<path d="M12 5v14M5 12h14"/>',
+};
+const ico = (k: string, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k] ?? '<rect x="5" y="5" width="14" height="14"/>'}</svg>`;
+const card = (c: E.Chit, r = 0, why: string | null = null) => `<div tabindex="0" role="button" class="card2 ${c.side} ${why ? 'bad' : ''} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" style="--r:${r}deg" title="${esc(why ?? c.name + ' · ' + c.ech)}"><i>${esc(c.ech.replace(/_/g, ' ').slice(0, 9))}</i><span class="gl">${ico(c.kind)}</span><b>${esc(chitLabel(c))}</b><small>${esc(c.ech)}</small></div>`;
 const fan = (cs: string[]) => cs.map((h, i) => h.replace('--r:0deg', `--r:${((i - (cs.length - 1) / 2) * Math.min(5, 40 / cs.length)).toFixed(1)}deg`)).join('');
 function drag(ev: PointerEvent, el: HTMLElement) {
   const id = el.dataset.chit!, c = E.chit(g, id), x0 = ev.clientX, y0 = ev.clientY; let ghost: HTMLElement | null = null, over: Element | null = null;
@@ -318,8 +331,8 @@ function drag(ev: PointerEvent, el: HTMLElement) {
 const nm = (s: E.Side) => (s === 'german' ? 'German' : 'Allied');
 function topBar() {
   const v = E.victory(g), tr = E.TRACK[g.turn - 1], i = g.phasing === 'german' ? 0 : 1, at = STEP_OF[g.phase];
-  return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game">☰</button><div class="c-crumbs">${STEPS.map((s, k) => `<span class="${k === at ? 'on' : k < at ? 'done' : ''}">${s}</span>`).join('')}</div>
-    <div class="c-stat"><span>TURN<b>${g.turn}</b></span><span>SIDE<b class="${g.phasing}">${nm(g.phasing).slice(0, 3).toUpperCase()}</b></span><span>NET VP<b>${v.net > 0 ? 'GE +' + v.net : v.net < 0 ? 'AL +' + -v.net : '0'}</b></span><span title="Draws this phase (German / Allied)">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span><button class="ico" data-modal="boxes" title="Chit boxes">▤</button></div></div>`;
+  return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game" aria-label="Menu, log and new game">${ico('menu')}</button><div class="c-crumbs">${STEPS.map((s, k) => `<span class="${k === at ? 'on' : k < at ? 'done' : ''}">${s}</span>`).join('')}</div>
+    <div class="c-stat"><span>TURN<b>${g.turn}</b></span><span>SIDE<b class="${g.phasing}">${nm(g.phasing).slice(0, 3).toUpperCase()}</b></span><span>NET VP<b>${v.net > 0 ? 'GE +' + v.net : v.net < 0 ? 'AL +' + -v.net : '0'}</b></span><span title="Draws this phase (German / Allied)">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span><button class="ico" data-modal="boxes" title="Chit boxes" aria-label="Chit boxes">${ico('boxes')}</button></div></div>`;
 }
 function prompt() {
   const b = g.battle;
@@ -387,7 +400,7 @@ function handCards() {
   }
   if (g.phase !== 'admin') return '';
   const s = handSide ?? g.phasing, cs = E.boxOf(g, s, 'available');
-  return `<div class="handtab"><button data-do="${reg(() => { handSide = other(s); })}" class="${s}">${nm(s)} hand · ${cs.length} ⇄</button></div><div class="c-hand">${fan(cs.map((c) => card(c)))}</div>`;
+  return `<div class="handtab"><button data-do="${reg(() => { handSide = other(s); })}" class="${s}">${nm(s)} hand · ${cs.length} ${ico('swap')}</button></div><div class="c-hand">${fan(cs.map((c) => card(c)))}</div>`;
 }
 function stats(b: E.Battle, s: E.Side) {
   const ls = (['arty', 'ground'] as const).flatMap((k) => E.fireList(g, b, s, k)), pmf = E.hitPmf(ls.map((f) => ({ dice: f.dice, sn: f.sn })));
@@ -399,10 +412,10 @@ function battleTable() {
   const side = (s: E.Side) => {
     const us = E.unitsIn(g, b.area, s), pt = s === att ? b.attPoint : b.defPoint, lim = E.assetLimits(g, b, s), ids = b.assets[s].map((id) => E.chit(g, id)), air = b.air[s] ? E.chit(g, b.air[s]!.id) : null;
     const arty = [...ids.filter((c) => E.isArty(c)), ...(air && b.air[s]!.mode === 'arty' ? [air] : [])], rest = ids.filter((c) => !E.isArty(c));
-    const mini = (c: E.Chit) => `<span class="mini ${c.side}">${GLYPH[c.kind] ?? '■'} ${esc(chitLabel(c))}${setup ? ` <button class="x" data-do="${reg(() => E.unassign(g, b, c.id))}">×</button>` : ''}</span>`;
+    const mini = (c: E.Chit) => `<span class="mini ${c.side}">${ico(c.kind)} ${esc(chitLabel(c))}${setup ? ` <button class="x" aria-label="Remove ${esc(c.name)}" data-do="${reg(() => E.unassign(g, b, c.id))}">${ico('close')}</button>` : ''}</span>`;
     const sa = setup && s !== att ? E.saAvailable(g, s).length : 0;
     return `<div class="c-side ${s}"><h4>${nm(s)} <small>${s === att ? 'attacking' : 'defending'}</small></h4>
-      <div class="c-row">${us.map((u) => `<div class="blk ${s} ${u.id === pt ? 'pt' : ''} ${air && b.air[s]!.mode === 'support' && b.air[s]!.unit === u.id ? 'air' : ''}" data-unit="${u.id}" data-side="${s}" title="${esc(u.name)}${u.id === pt ? ' (point unit)' : ''}"><em>${pips(u)}</em><b>${esc(u.name)}</b></div>`).join('')}</div>
+      <div class="c-row">${us.map((u) => `<div tabindex="0" role="button" class="blk ${s} ${u.id === pt ? 'pt' : ''} ${air && b.air[s]!.mode === 'support' && b.air[s]!.unit === u.id ? 'air' : ''}" data-unit="${u.id}" data-side="${s}" title="${esc(u.name)}${u.id === pt ? ' (point unit)' : ''}"><em>${pips(u)}</em><b>${esc(u.name)}</b></div>`).join('')}</div>
       <div class="c-slots"><div class="slot" data-side="${s}" data-zone="arty"><span class="lab">ARTY ${arty.length}/${lim.arty}</span>${arty.map(mini).join('') || '<small>drop</small>'}</div><div class="slot" data-side="${s}" data-zone="asset"><span class="lab">ASSETS</span>${rest.map(mini).join('') || '<small>drop</small>'}</div></div>
       ${sa ? `<div class="row">${btn('Retreat (SA)', () => E.defenderRetreatSA(g, b), '', !!b.assets[s].length || us.some((u) => u.garrison) || !us.length)}</div>` : ''}</div>`;
   };
@@ -423,10 +436,10 @@ function ledger() {
   return '';
 }
 function modalHtml() {
-  if (modal === 'boxes') return `<div class="modal"><div class="sheet"><h3>Chit boxes <button class="ico" data-modal="">✕</button></h3>${(['allied', 'german'] as E.Side[]).map((s) => {
+  if (modal === 'boxes') return `<div class="modal"><div class="sheet"><h3>Chit boxes <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>${(['allied', 'german'] as E.Side[]).map((s) => {
     const l = (bx: E.Chit['box']) => E.boxOf(g, s, bx).map((c) => `<span class="mini ${s}">${esc(chitLabel(c))}</span>`).join('') || '<small>empty</small>';
     return `<h4 class="${s}">${nm(s)} · cup ${E.boxOf(g, s, 'cup').length}</h4><div class="chips"><b>Available</b> ${l('available')}</div><div class="chips"><b>Used</b> ${l('used')}</div><div class="chips"><b>Eliminated</b> ${l('eliminated')}</div>`; }).join('')}</div></div>`;
-  if (modal === 'menu') return `<div class="modal"><div class="sheet"><h3>Menu <button class="ico" data-modal="">✕</button></h3><h4>New game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as 'tournament' | 'campaign'; })}"><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
+  if (modal === 'menu') return `<div class="modal"><div class="sheet"><h3>Menu <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3><h4>New game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as 'tournament' | 'campaign'; })}"><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
     <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Start', () => { g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; }, 'primary')}</div>
     <h4>Log</h4><div class="log">${[...g.log].reverse().slice(0, 120).map((l) => `<div>${esc(l)}</div>`).join('')}</div></div></div>`;
   return '';
@@ -435,12 +448,13 @@ function render() {
   acts = {}; actv = {}; n = 0;
   const p = primary(), b = g.battle;
   const alert = g.pendingBlow ? (() => { const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!, path = g.pendingBlow!.path; return `<div class="c-ledger"><h3>${nm(other(u.side))}: bridge?</h3><p class="hint">${esc(u.name)} tries to cross into ${esc(areaName(path[path.length - 1]))}. Attempt to blow the bridge? It works on a roll of 1–5.</p><div class="row end">${btn('Let them cross', () => E.resolveBlow(g, false))}${btn('Attempt to blow it', () => E.resolveBlow(g, true), 'primary')}</div></div>`; })() : '';
-  $('#ui').innerHTML = topBar() + (b ? battleTable() : dispatch()) + handCards() + alert + ledger() + `<div class="c-bar b"><div class="c-prompt">${prompt()}</div>${p ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis ? 'disabled' : ''}>${p.label}</button>` : ''}</div>` + (toast ? `<div class="toast">${esc(toast)}</div>` : '') + modalHtml();
+  $('#ui').innerHTML = topBar() + (b ? battleTable() : dispatch()) + handCards() + alert + ledger() + `<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis ? 'disabled' : ''}>${p.label}</button>` : ''}</div>` + (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '') + modalHtml();
   const ui = $('#ui');
   ui.querySelectorAll<HTMLElement>('[data-do]').forEach((e) => (e.onclick = () => act(acts[e.dataset.do!])));
   ui.querySelectorAll<HTMLElement>('[data-modal]').forEach((e) => (e.onclick = () => { modal = (e.dataset.modal || null) as typeof modal; render(); }));
   ui.querySelectorAll<HTMLElement>('[data-sel]').forEach((e) => (e.onchange = () => { const f = actv[e.dataset.sel!]; if (f) { f(e instanceof HTMLInputElement && e.type === 'checkbox' ? (e.checked ? 'on' : 'off') : (e as HTMLSelectElement).value); save(); } }));
   ui.querySelectorAll<HTMLElement>('[data-u]').forEach((e) => (e.onclick = () => { selUnit = e.dataset.u!; selArea = g.units.find((x) => x.id === selUnit)!.area ?? selArea; previewArea = null; refresh(); }));
+  ui.querySelectorAll<HTMLElement>('.card2, .blk').forEach((e) => (e.onkeydown = (ev) => { if (ev.key !== 'Enter' && ev.key !== ' ') return; ev.preventDefault(); const id = e.dataset.chit, b2 = g.battle; if (e.classList.contains('card2') && id) { if (b2?.stage === 'setup') { const c = E.chit(g, id), why = E.canAssign(g, b2, c.side, c); if (why) say(why); else act(() => E.assign(g, b2, id, c.kind === 'air_mission' ? 'arty' : undefined)); } else if (!b2) { selChit = selChit === id ? null : id; refresh(); } } else e.click(); }));
   ui.querySelectorAll<HTMLElement>('.card2').forEach((e) => (e.onpointerdown = (ev) => { ev.preventDefault(); if (g.battle) drag(ev, e); else { selChit = selChit === e.dataset.chit ? null : e.dataset.chit!; refresh(); } }));
   ui.querySelectorAll<HTMLElement>('.blk[data-unit]').forEach((e) => (e.onclick = () => { const b2 = g.battle; if (!b2 || b2.stage !== 'setup') return; const s = e.dataset.side as E.Side, u = g.units.find((x) => x.id === e.dataset.unit)!; if (u.garrison || (s === b2.attacker && u.disorder)) return; if (s === b2.attacker) b2.attPoint = u.id; else b2.defPoint = u.id; save(); render(); }));
 }
