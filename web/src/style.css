@@ -90,3 +90,8 @@ button.go:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 2px 
 .blk3d { width: 72px; height: 72px; display: block; background: var(--ge); border-radius: 3px; box-shadow: 7px 0 0 #565a5e, 10px 12px 14px #000a; transform: perspective(260px) rotateY(-14deg) rotateX(4deg); } .blk3d.allied { background: var(--al); box-shadow: 7px 0 0 #4b6a33, 10px 12px 14px #000a; } .blk3d img { width: 100%; height: 100%; display: block; }
 .chit3d { width: 64px; height: 64px; display: block; background: #d9d4c4; box-shadow: 0 5px 0 #8a8472, 5px 12px 14px #000a; } .chit3d img { width: 100%; height: 100%; display: block; }
 .c-prompt button { margin-left: 10px; padding: 3px 10px; }
+
+.bdg.tint { background: #0b0d08cc; border: 1px solid #fff8; min-width: 0; padding: 1px 6px; font-size: 12px; letter-spacing: .04em; box-shadow: none; }
+button.ico.on { border-color: var(--gold); color: var(--gold); }
+.legend { position: absolute; right: 16px; top: 68px; display: grid; gap: 4px; padding: 10px 12px; background: #0b0d08e6; border: 1px solid var(--line); z-index: 6; font-size: 12px; }
+.legend b { font: 700 15px var(--sfd); letter-spacing: .1em; text-transform: uppercase; color: var(--gold); } .legend span { display: flex; gap: 8px; align-items: center; } .legend i { width: 14px; height: 14px; border: 1px solid #fff8; } .legend small { color: #8d9065; }

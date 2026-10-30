@@ -125,6 +125,11 @@ function drawPieces() {
   for (const k of Object.keys(g.greif)) { const [x, y] = k.split('-').map(Number), p = toWorld(...borderMid(x, y)), t = tag('G', '#8a2f9c', 1.2); t.position.set(p.x, 0.07, p.z - 1.3); markers.add(t); }
   for (const k of g.blown) { const [x, y] = k.split('-').map(Number), p = toWorld(...borderMid(x, y)), t = tag('X', '#d9421f', 1.5); t.position.set(p.x, 0.07, p.z); t.rotation.y = 0.4; markers.add(t); }
 }
+/** Map overlays: terrain defence numbers (TDN) or the army zones, tinted over the board. */
+let tint: 'off' | 'tdn' | 'zones' = (() => { try { const t = localStorage.getItem('fab-tint'); return t === 'tdn' || t === 'zones' ? t : 'off'; } catch { return 'off'; } })();
+const TDN_COL = [0xd9d26a, 0xe8a33d, 0xd9622b, 0x9c2a2a], ZONE_COL: Record<number, number> = { 5: 0x4c8ed9, 6: 0xc2429a, 7: 0x4fb06a };
+const tintOf = (id: number) => (tint === 'tdn' ? TDN_COL[E.areas.get(id)!.tdn] : ZONE_COL[E.areas.get(id)!.zone]);
+const cycleTint = () => { tint = tint === 'off' ? 'tdn' : tint === 'tdn' ? 'zones' : 'off'; try { localStorage.setItem('fab-tint', tint); } catch { /* private mode */ } refresh(); };
 function paintAreas() {
   const strat = g.phase === 'strategic' && selUnit, opts = selUnit ? (strat ? E.stratOptions(g, selUnit).map((a) => ({ area: a, mustStop: false })) : E.moveOptions(g, selUnit)) : [];
   const fight = g.phase === 'combat' || g.phase === 'btCombat' ? E.contestedAreas(g).filter((a) => !g.fought.includes(a)) : [], must = new Set(E.mustFight(g));
@@ -135,6 +140,7 @@ function paintAreas() {
     if (id === selArea && !selUnit) { c = 0x4aa3ff; o = Math.max(o, 0.3); }
     const ar = arrOpts().find((x) => x.area === id); if (ar) { c = ar.sa ? 0xff8a3d : 0x37d67a; o = 0.45; }
     if (g.battle?.stage === 'retreat' && E.retreatOptions(g, g.battle).includes(id)) { c = 0x37d67a; o = 0.5; }
+    if (o === 0 && tint !== 'off') { c = tintOf(id); o = 0.38; }
     mat.color.setHex(c); mat.opacity = o;
   }
 }
@@ -311,6 +317,7 @@ function badgeList(): Badge[] {
   const out: Badge[] = [];
   if (selUnit && !g.battle) { const u = g.units.find((x) => x.id === selUnit)!; for (const o of optsFor(selUnit)) out.push({ area: o.area, text: g.phase === 'strategic' ? '' : `${o.cost}`, cls: o.mustStop ? 'stop' : o.fuel && u.side === 'german' ? 'fuel' : 'ok' }); }
   if (!selUnit && (g.phase === 'combat' || g.phase === 'btCombat') && !g.battle) { const must = E.mustFight(g); for (const a of fightable()) out.push({ area: a, text: must.includes(a) ? 'FIGHT' : 'fight?', cls: must.includes(a) ? 'war' : 'opt' }); }
+  if (tint !== 'off') for (const a of E.areas.values()) out.push({ area: a.id, text: tint === 'tdn' ? `TDN ${a.tdn}` : `Z${a.zone}`, cls: 'tint' });
   for (const o of arrOpts()) out.push({ area: o.area, text: o.sa ? 'SA' : 'Enter', cls: o.sa ? 'stop' : 'ok' });
   if (g.battle?.stage === 'retreat') for (const a of E.retreatOptions(g, g.battle)) out.push({ area: a, text: 'Retreat', cls: 'ok' });
   return out;
@@ -322,7 +329,7 @@ function syncBadges() {
 }
 function placeBadges() {
   const r = canvas.getBoundingClientRect(), v = new THREE.Vector3();
-  for (const [k, d] of badgeEls) { const p = center(+k); v.set(p.x, 0.5, p.z + 1.6).project(cam); d.style.display = v.z < 1 ? '' : 'none'; d.style.transform = `translate(${(v.x * 0.5 + 0.5) * r.width}px, ${(-v.y * 0.5 + 0.5) * r.height}px) translate(-50%, -50%)`; }
+  for (const [k, d] of badgeEls) { const p = d.classList.contains('tint') ? toWorld(...(MAP.areas.find((x) => x.id === +k)!.label)).add(new THREE.Vector3(0, 0, 2.3)) : center(+k); v.set(p.x, 0.5, p.z + 1.6).project(cam); d.style.display = v.z < 1 ? '' : 'none'; d.style.transform = `translate(${(v.x * 0.5 + 0.5) * r.width}px, ${(-v.y * 0.5 + 0.5) * r.height}px) translate(-50%, -50%)`; }
 }
 
 /* ---------- battle state shared with the view ---------- */
@@ -353,7 +360,7 @@ const ICONS: Record<string, string> = {
   command_staff: '<path d="M12 3l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-3-5.4 3 1.1-6L3.2 9.4l6.1-.8z"/>',
   air_mission: '<path d="M2 14l9-2 3-9h2l-1 9 6 2v2l-6-1-1 5 2 1v1l-4-1-4 1v-1l2-1-1-5-7 1z"/>',
   sa_block: '<path d="M5 17l7-7 7 7M5 11l7-7 7 7"/>',
-  undo: '<path d="M9 7L4 12l5 5M4 12h10a5 5 0 010 10h-2"/>', menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', boxes: '<rect x="3" y="4" width="18" height="5"/><path d="M5 9v10h14V9M10 13h4"/>', close: '<path d="M6 6l12 12M18 6L6 18"/>', swap: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>', plus: '<path d="M12 5v14M5 12h14"/>',
+  layers: '<path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5"/>', undo: '<path d="M9 7L4 12l5 5M4 12h10a5 5 0 010 10h-2"/>', menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', boxes: '<rect x="3" y="4" width="18" height="5"/><path d="M5 9v10h14V9M10 13h4"/>', close: '<path d="M6 6l12 12M18 6L6 18"/>', swap: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>', plus: '<path d="M12 5v14M5 12h14"/>',
 };
 const ico = (k: string, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k] ?? '<rect x="5" y="5" width="14" height="14"/>'}</svg>`;
 const card = (c: E.Chit, r = 0, why: string | null = null) => `<div tabindex="0" role="button" class="card2 ${c.side} ${why ? 'bad' : ''} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" style="--r:${r}deg" title="${esc(why ?? c.name + ' · ' + c.ech)}"><i>${esc(c.ech.replace(/_/g, ' ').slice(0, 9))}</i><span class="gl">${ico(c.kind)}</span><b>${esc(chitLabel(c))}</b><small>${esc(c.ech)}</small></div>`;
@@ -385,7 +392,7 @@ const nm = (s: E.Side) => (s === 'german' ? 'German' : 'Allied');
 function topBar() {
   const v = E.victory(g), tr = E.TRACK[g.turn - 1], i = g.phasing === 'german' ? 0 : 1, at = STEP_OF[g.phase];
   return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game" aria-label="Menu, log and new game">${ico('menu')}</button><div class="c-crumbs">${STEPS.map((s, k) => `<span class="${k === at ? 'on' : k < at ? 'done' : ''}">${s}</span>`).join('')}</div>
-    <button class="ico" data-undo title="Undo (Ctrl+Z)" aria-label="Undo" ${hist.length ? '' : 'disabled'}>${ico('undo')}</button><div class="c-stat"><span>TURN<b>${g.turn}</b></span><span>SIDE<b class="${g.phasing}">${nm(g.phasing).slice(0, 3).toUpperCase()}</b></span><span>NET VP<b>${v.net > 0 ? 'GE +' + v.net : v.net < 0 ? 'AL +' + -v.net : '0'}</b></span><span title="Draws this phase (German / Allied)">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span><button class="ico" data-modal="boxes" title="Chit boxes" aria-label="Chit boxes">${ico('boxes')}</button></div></div>`;
+    <button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="Map overlay: terrain defence / army zones / off" aria-label="Map overlay">${ico('layers')}</button><button class="ico" data-undo title="Undo (Ctrl+Z)" aria-label="Undo" ${hist.length ? '' : 'disabled'}>${ico('undo')}</button><div class="c-stat"><span>TURN<b>${g.turn}</b></span><span>SIDE<b class="${g.phasing}">${nm(g.phasing).slice(0, 3).toUpperCase()}</b></span><span>NET VP<b>${v.net > 0 ? 'GE +' + v.net : v.net < 0 ? 'AL +' + -v.net : '0'}</b></span><span title="Draws this phase (German / Allied)">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span><button class="ico" data-modal="boxes" title="Chit boxes" aria-label="Chit boxes">${ico('boxes')}</button></div></div>`;
 }
 function prompt() {
   const b = g.battle;
@@ -497,6 +504,12 @@ function ledger() {
   if (b.stage === 'offFire' && b.assets[b.attacker].some((id) => E.chit(g, id).kind === 'engineer') && g.fieldWorks.includes(b.area)) return `<div class="c-ledger slim"><label><input type="checkbox" ${b.engFw ? 'checked' : ''} data-sel="${regv((v) => { b.engFw = v === 'on'; })}"> Engineer removes the field works instead of firing (6.33)</label></div>`;
   return '';
 }
+function legend() {
+  if (tint === 'off') return '';
+  const hex = (n: number) => '#' + n.toString(16).padStart(6, '0');
+  const items = tint === 'tdn' ? TDN_COL.map((c, i) => [c, `TDN ${i}`, (i ? `attackers −${i} to hit` : 'no modifier')]) : [[ZONE_COL[5], 'Zone 5', '5th Panzer Army'], [ZONE_COL[6], 'Zone 6', '6th Panzer Army'], [ZONE_COL[7], 'Zone 7', '7th Army']];
+  return `<div class="legend" aria-label="Overlay legend"><b>${tint === 'tdn' ? 'Terrain defence' : 'Army zones'}</b>${items.map(([c, a, b]) => `<span><i style="background:${hex(c as number)}"></i>${a} <small>${b}</small></span>`).join('')}</div>`;
+}
 function modalHtml() {
   if (modal === 'boxes') return `<div class="modal"><div class="sheet"><h3>Chit boxes <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>${(['allied', 'german'] as E.Side[]).map((s) => {
     const l = (bx: E.Chit['box']) => E.boxOf(g, s, bx).map((c) => `<span class="mini ${s}">${esc(chitLabel(c))}</span>`).join('') || '<small>empty</small>';
@@ -511,12 +524,13 @@ function render() {
   acts = {}; actv = {}; n = 0;
   const p = primary(), b = g.battle;
   const alert = g.pendingBlow ? (() => { const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!, path = g.pendingBlow!.path; return `<div class="c-ledger"><h3>${nm(other(u.side))}: bridge?</h3><p class="hint">${esc(u.name)} tries to cross into ${esc(areaName(path[path.length - 1]))}. Attempt to blow the bridge? It works on a roll of 1–5.</p><div class="row end">${btn('Let them cross', () => E.resolveBlow(g, false))}${btn('Attempt to blow it', () => E.resolveBlow(g, true), 'primary')}</div></div>`; })() : '';
-  $('#ui').innerHTML = topBar() + (b ? battleTable() : dispatch()) + handCards() + alert + ledger() + `<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis ? 'disabled' : ''}>${p.label}</button>` : ''}</div>` + (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '') + modalHtml();
+  $('#ui').innerHTML = topBar() + (b ? battleTable() : dispatch()) + handCards() + alert + ledger() + `<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis ? 'disabled' : ''}>${p.label}</button>` : ''}</div>` + legend() + (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '') + modalHtml();
   const ui = $('#ui');
   ui.querySelectorAll<HTMLElement>('[data-do]').forEach((e) => (e.onclick = () => act(acts[e.dataset.do!])));
   ui.querySelectorAll<HTMLElement>('[data-modal]').forEach((e) => (e.onclick = () => { modal = (e.dataset.modal || null) as typeof modal; render(); }));
   ui.querySelectorAll<HTMLElement>('[data-sel]').forEach((e) => (e.onchange = () => { const f = actv[e.dataset.sel!]; if (f) { f(e instanceof HTMLInputElement && e.type === 'checkbox' ? (e.checked ? 'on' : 'off') : (e as HTMLSelectElement).value); save(); } }));
   ui.querySelectorAll<HTMLElement>('[data-arr]').forEach((e) => (e.onclick = () => { selArr = selArr === e.dataset.arr ? null : e.dataset.arr!; refresh(); const all = arrOpts(), o = all.some((x) => !x.sa) ? all.filter((x) => !x.sa) : all; if (selArr && o.length) { const pts = o.map((x) => center(x.area)), cx = pts.reduce((a, p) => a + p.x, 0) / pts.length, cz = pts.reduce((a, p) => a + p.z, 0) / pts.length, r = Math.max(...pts.map((p) => Math.hypot(p.x - cx, p.z - cz))); goal = { t: new THREE.Vector3(cx, 0, cz), dist: Math.min(70, Math.max(24, r * 2.3 + 10)), pitch: 1.15 }; } }));
+  ui.querySelectorAll<HTMLElement>('[data-tint]').forEach((e) => (e.onclick = cycleTint));
   ui.querySelectorAll<HTMLElement>('[data-undo]').forEach((e) => (e.onclick = () => undo()));
   ui.querySelectorAll<HTMLElement>('[data-u]').forEach((e) => (e.onclick = () => { selUnit = e.dataset.u!; selArea = g.units.find((x) => x.id === selUnit)!.area ?? selArea; previewArea = null; refresh(); }));
   ui.querySelectorAll<HTMLElement>('.card2, .blk').forEach((e) => (e.onkeydown = (ev) => { if (ev.key !== 'Enter' && ev.key !== ' ') return; ev.preventDefault(); const id = e.dataset.chit, b2 = g.battle; if (e.classList.contains('card2') && id) { if (b2?.stage === 'setup') { const c = E.chit(g, id), why = E.canAssign(g, b2, c.side, c); if (why) say(why); else act(() => E.assign(g, b2, id, c.kind === 'air_mission' ? 'arty' : undefined)); } else if (!b2) { selChit = selChit === id ? null : id; refresh(); } } else e.click(); }));
