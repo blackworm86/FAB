@@ -166,3 +166,32 @@ svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{
 <g id="labels" font-family="Arial Narrow, Arial, sans-serif" font-size="16" font-style="italic" fill="#2c3a22" stroke="{ground}" stroke-width="3.2" paint-order="stroke">{labels}</g>
 </svg>'''
 open('web/public/map-vector.svg', 'w').write(svg); print(len(svg) // 1024, 'KB', len(rivers), 'rivers', len(roads), 'roads', len(towns), 'towns')
+
+# ---------------- editable Illustrator-ready file: one top-level group (= layer) per feature type, areas named area-N ----------------
+def poly_d(pts): return 'M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in pts) + 'Z'
+def line_d(a): return 'M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in a)
+def stroked(lines, color, wmin, cls):
+    return ''.join(f'<path id="{cls}-{i + 1}" d="{line_d(a)}" fill="none" stroke="{color}" stroke-width="{max(wmin, w * 1.15):.1f}" stroke-linecap="round" stroke-linejoin="round"/>' for i, (w, a) in enumerate(lines))
+area_paths = ''.join(f'<path id="area-{a["id"]}" d="{poly_d(a["polygon"])}" fill="#ffffff" fill-opacity="0.01" stroke="#e2574c" stroke-width="1"/>' for a in m['areas'])
+entry_paths = ''.join(f'<path id="entry-{e}" d="{fill_paths(cv2.dilate(np.zeros((H, W), np.uint8), np.ones((1, 1), np.uint8)))}" />' for e in []) 
+labels_t = ''.join(f'<text id="label-{a["id"]}" x="{a["label"][0]}" y="{a["label"][1] + 26}" text-anchor="middle" font-family="ArialNarrow-Italic, Arial" font-style="italic" font-size="16" fill="#2c3a22">{areas[a["id"]]["name"]}</text>' for a in m['areas'] if a['id'] in areas)
+nums_t = ''.join(f'<text id="number-{a["id"]}" x="{a["label"][0]}" y="{a["label"][1] + 5}" text-anchor="middle" font-family="Arial-BoldMT, Arial" font-weight="700" font-size="16" fill="#1a1608">{a["id"]}</text>' for a in m['areas'] if a['id'] in areas)
+ed = f'''<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 {W} {H}" width="{W}" height="{H}">
+<!-- FAB The Bulge: editable map. Each top-level group is a layer. Keep layer names. Rivers, roads and borders are plain strokes (stroke-width = line width). Areas are closed paths named area-N. -->
+<g id="_scan" style="isolation:isolate"><image id="scan" width="2448" height="{H}" xlink:href="map-scan.jpg" opacity="0.55"/></g>
+<g id="terrain"><path id="terrain-fill" d="{terrain}" fill="{ground}" fill-rule="evenodd"/></g>
+<g id="woods"></g>
+<g id="entry-zones"><path id="entry-allied-green" d="{green}" fill="#58a05a"/><path id="entry-german-grey" d="{strip}" fill="#9fb0b8"/></g>
+<g id="borders" fill="none" stroke="#fbfbf6" stroke-width="4.2" stroke-linecap="round"><path id="borders-solid" d="{''.join(solid)}"/></g>
+<g id="borders-restricted" fill="none" stroke="#fbfbf6" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="11 7"><path id="borders-restricted-path" d="{''.join(dashed)}"/></g>
+<g id="army-boundary">{stroked(pink, '#c23a86', 5.0, 'army')}<path id="army-internal" d="{''.join(army)}" fill="none" stroke="#6d736f" stroke-width="2.4" stroke-dasharray="9 6"/></g>
+<g id="rivers">{stroked(rivers, '#2f8fd0', 4.6, 'river')}</g>
+<g id="roads">{stroked(roads, '#5d6360', 4.4, 'road')}</g>
+<g id="cities"><path id="cities-shape" d="{cities}" fill="#6b706d" stroke="#3a3f3d" stroke-width="1.5" fill-rule="evenodd"/></g>
+<g id="towns">{''.join(f'<circle id="town-{i + 1}" cx="{x:.1f}" cy="{y:.1f}" r="{r - 0.5:.1f}" fill="#fff" stroke="#3b403d" stroke-width="2.4"/>' for i, (x, y, r) in enumerate(towns))}</g>
+<g id="labels">{labels_t}{nums_t}</g>
+<g id="areas">{area_paths}</g>
+</svg>'''
+import os; os.makedirs('docs/maps/vector', exist_ok=True)
+open('docs/maps/vector/bulge-map-editable.svg', 'w').write(ed); print('editable', len(ed) // 1024, 'KB')
