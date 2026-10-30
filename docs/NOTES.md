@@ -81,3 +81,6 @@ Counters are now catalogued as two-sided pieces: each entry has `faces.front` / 
 
 ## Player Aids
 Added A (sequence, movement table), B (extended sequence), C (combat, morale, hit priorities), D (action matrix, events). Bodenplatte on Aid D (1-5 unaffected, 6-9 delayed, 10 eliminated) contradicts play book 17.14; Aid D followed. App plan: `docs/PLAN.md`.
+
+## Vector map (web/public/map-vector.svg)
+`python3 web/scripts/vectorize_map.py` traces the scan (`web/public/map.jpg`, kept untouched) into layers: terrain, woods (reserved, empty), borders, rivers, roads, labels. The game uses the vector layers by default; the menu can switch back to the scan. Woods, towns and other scenery for a later 3D pass should be traced into the reserved `woods` group or added as meshes from the scan.

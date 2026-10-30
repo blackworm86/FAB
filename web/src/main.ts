@@ -50,6 +50,21 @@ const mapTex = new THREE.TextureLoader().load('./map.jpg'); mapTex.colorSpace = 
 mapTex.repeat.set(MW / 2448, 1); mapTex.anisotropy = 8;              // the scan is 2448 wide; the playing area is the left 1740 px
 const board = new THREE.Mesh(new THREE.PlaneGeometry(MW / S, MH / S), new THREE.MeshStandardMaterial({ map: mapTex, roughness: 0.9 }));
 board.rotation.x = -Math.PI / 2; board.receiveShadow = true; scene.add(board);
+/** Map art: the traced vector layers (default) or the original scan, which stays in the repo for the later 3D scenery pass. */
+let art: 'vector' | 'scan' = (() => { try { return localStorage.getItem('fab-art') === 'scan' ? 'scan' : 'vector'; } catch { return 'vector'; } })();
+let vecTex: THREE.CanvasTexture | null = null;
+function applyArt() {
+  const mat = board.material as THREE.MeshStandardMaterial;
+  if (art === 'scan') { mat.map = mapTex; mat.needsUpdate = true; return; }
+  if (vecTex) { mat.map = vecTex; mat.needsUpdate = true; return; }
+  const img = new Image(); img.onload = () => {
+    const c = document.createElement('canvas'); c.width = MW * 2; c.height = MH * 2; c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
+    vecTex = new THREE.CanvasTexture(c); vecTex.colorSpace = THREE.SRGBColorSpace; vecTex.anisotropy = 8; if (art === 'vector') applyArt();
+  };
+  img.src = './map-vector.svg';
+}
+const setArt = (a: 'vector' | 'scan') => { art = a; try { localStorage.setItem('fab-art', a); } catch { /* private mode */ } applyArt(); };
+applyArt();
 const table = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({ color: 0x3b2a1d, roughness: 1 }));
 table.rotation.x = -Math.PI / 2; table.position.y = -0.02; scene.add(table);
 
@@ -488,6 +503,7 @@ function modalHtml() {
     return `<h4 class="${s}">${nm(s)} · cup ${E.boxOf(g, s, 'cup').length}</h4><div class="chips"><b>Available</b> ${l('available')}</div><div class="chips"><b>Used</b> ${l('used')}</div><div class="chips"><b>Eliminated</b> ${l('eliminated')}</div>`; }).join('')}</div></div>`;
   if (modal === 'menu') return `<div class="modal"><div class="sheet"><h3>Menu <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3><h4>New game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as 'tournament' | 'campaign'; })}"><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
     <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Start', () => { g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist = []; note = ''; selArr = null; }, 'primary')}</div>
+    <h4>Map art</h4><div class="row"><select data-sel="${regv((x) => setArt(x as 'vector' | 'scan'))}"><option value="vector" ${art === 'vector' ? 'selected' : ''}>Vector layers (traced)</option><option value="scan" ${art === 'scan' ? 'selected' : ''}>Original scan</option></select></div>
     <h4>Log</h4><div class="log">${[...g.log].reverse().slice(0, 120).map((l) => `<div>${esc(l)}</div>`).join('')}</div></div></div>`;
   return '';
 }
