@@ -69,10 +69,14 @@ def strokes(lines, color, wmin, grow=1.3, casing=None):
 m = json.load(open('data/bulge/map.json')); areas = {a['id']: a for a in json.load(open('data/bulge/areas.json'))}; entries = json.load(open('data/bulge/entry_areas.json'))
 conns = {(min(c['a'], c['b']), max(c['a'], c['b'])): c for c in m['connections']}
 ground = '#%02x%02x%02x' % tuple(int(x) for x in np.median(im[:, :].reshape(-1, 3), axis=0)[::-1])
+# --- playing area = union of the verified polygons; the printed title, tank and legend lie outside it and are never traced
+play = np.zeros((H, W), np.uint8)
+for a in json.load(open('data/bulge/map.json'))['areas']: cv2.fillPoly(play, [np.array(a['polygon'], np.int32)], 255)
+play = cv2.morphologyEx(play, cv2.MORPH_CLOSE, np.ones((15, 15), np.uint8)); play_in = cv2.dilate(play, np.ones((9, 9), np.uint8)) > 0
 # --- frame and terrain
 bgc = (188, 202, 211); is_bg = near(bgc, 14)
 bg_big = cv2.morphologyEx(is_bg.astype(np.uint8), cv2.MORPH_OPEN, np.ones((9, 9), np.uint8))
-terrain = fill_paths(1 - bg_big, 5000, 1.0, 2.0)
+terrain = fill_paths(play_in, 5000, 1.0, 2.0)
 # --- entry zones
 green = fill_paths(cv2.morphologyEx(((h >= 50) & (h <= 70) & (s > 90) & (v > 110)).astype(np.uint8), cv2.MORPH_OPEN, np.ones((5, 5), np.uint8)), 400)
 strip = fill_paths(cv2.morphologyEx(near((159, 172, 180), 22).astype(np.uint8), cv2.MORPH_OPEN, np.ones((7, 7), np.uint8)), 600)
@@ -102,11 +106,11 @@ for (u, w), ids in edges.items():
     (dashed if c and c['restricted'] else solid).append(seg)
     if c and c['army_boundary']: army.append(seg)
 # --- rivers and roads (centre lines)
-river_mask = ((h >= 95) & (h <= 115) & (s > 110) & (v > 120)).astype(np.uint8); river_mask = cv2.morphologyEx(river_mask, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
-road_mask = ((s < 48) & (v < 128)).astype(np.uint8); road_mask = cv2.morphologyEx(road_mask, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
+river_mask = ((h >= 95) & (h <= 115) & (s > 110) & (v > 120)).astype(np.uint8); river_mask = cv2.morphologyEx(river_mask, cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8)) * play_in.astype(np.uint8)
+road_mask = ((s < 48) & (v < 128)).astype(np.uint8); road_mask = cv2.morphologyEx(road_mask, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8)) * play_in.astype(np.uint8)
 for a in m['areas']:                                               # the printed VP crosses and area boxes are not roads
     x, y = a['label']; road_mask[max(0, int(y) - 68):int(y) - 12, max(0, int(x) - 28):int(x) + 28] = 0; road_mask[max(0, int(y) - 12):int(y) + 10, max(0, int(x) - 16):int(x) + 16] = 0
-pink_mask = cv2.morphologyEx(((h >= 148) & (h <= 172) & (s > 55) & (v > 110) & (v < 215)).astype(np.uint8), cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8)); pink = trace(pink_mask, 120)
+pink_mask = cv2.dilate(play, np.ones((25, 25), np.uint8)).astype(bool) * cv2.morphologyEx(((h >= 148) & (h <= 172) & (s > 55) & (v > 110) & (v < 215)).astype(np.uint8), cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8)); pink = trace(pink_mask, 120)
 rivers = trace(river_mask, 30); roads = [(w, a) for w, a in trace(road_mask, 70) if w < 9]
 # --- towns: white discs with a dark ring; cities: the large dark junction blobs
 gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
