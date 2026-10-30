@@ -76,3 +76,5 @@ The engine loads `data/bulge/map.json` (built by `tools/build_map_json.py`); the
   The totals reconcile exactly: 228 counters = 190 fronts + 38 gear fronts (Blown Bridge), and 228 backs. The generic "Asset or Event" backs match the number of chits: 57 German (grey) and 73 Allied (green).
 - Face pairs: Disordered / Recovering (12), River Assault / Road Block (4), Exploitation / No Fuel (8), German VP cross / Allied VP star (11), VPs (1), Boundary Crossing / Pooled Assets (1), Game Turn (1), Remaining German Bridge Repairs / Optional Rule 18.1 (1), gear / Blown Bridge (38), Bid Fuel / Bid (2). Reserve markers, Task Forces and Garrisons have matching backs.
 - Limits: unlimited = Disordered / Recovering, Road Block, River Assault, Exploitation, No Fuel, VP cross and star, Blown Bridge (the box has 38 but rivers have 93 borders and the rules cap bridges only by engineers). Everything else is limited by the box.
+
+Counters are now catalogued as two-sided pieces: each entry has `faces.front` / `faces.back` and a combined front|back image (`tools/combine_counters.py`). The piece checker no longer lists backs separately.

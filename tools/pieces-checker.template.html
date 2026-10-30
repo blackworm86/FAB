@@ -53,7 +53,7 @@ input[type=number], input[type=text], input[type=search], select, textarea { bac
 textarea { min-height: 64px; resize: vertical; }
 .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .filters .wide { grid-column: 1 / -1; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
 .cell { position: relative; background: var(--panel-2); border: 2px solid transparent; border-radius: 6px; padding: 4px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; align-items: center; min-width: 0; }
 .cell img { width: 100%; height: 64px; object-fit: contain; display: block; }
 .cell span { font-size: 11.5px; line-height: 1.15; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); }
@@ -112,14 +112,14 @@ const pane = $('#pane');
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const ORIG = clone(PIECES);
 let pieces = clone(PIECES), flags = {}, notes = {};
-const STORE = 'fab-pieces-checker-v2', OLD = 'fab-pieces-checker-v1';
+const STORE = 'fab-pieces-checker-v3', OLDS = ['fab-pieces-checker-v2', 'fab-pieces-checker-v1'];
 try {
   const s2 = JSON.parse(localStorage.getItem(STORE) || 'null');
   if (s2 && s2.pieces) { pieces = s2.pieces; flags = s2.flags || {}; notes = s2.notes || {}; }
-  else { const o = JSON.parse(localStorage.getItem(OLD) || 'null');   // carry over what was checked/edited in the first version
+  else { let o = null; for (const k of OLDS) { o = JSON.parse(localStorage.getItem(k) || 'null'); if (o && o.pieces) break; }   // carry over what was checked/edited in earlier versions
     if (o && o.pieces) { flags = o.flags || {}; notes = o.notes || {};
       for (const op of o.pieces) { const np = pieces.find((x) => x.id === op.id); if (!np || np.t !== op.t) continue;
-        const keys = op.t === 'block' ? ['name', 'side', 'ech', 'cls', 'q', 'start_area', 'arrival_turn', 'entry'] : ['name', 'kind', 'ech', 'turn', 'quality'];
+        const keys = op.t === 'block' ? ['name', 'side', 'ech', 'cls', 'q', 'start_area', 'arrival_turn', 'entry'] : ['name', 'kind', 'ech', 'turn', 'quality', 'copies', 'limit'];
         keys.forEach((k) => { if (op[k] !== undefined) np[k] = op[k]; }); } } }
 } catch (e) {}
 const save = () => { try { localStorage.setItem(STORE, JSON.stringify({ pieces, flags, notes })); } catch (e) {} };
@@ -157,8 +157,7 @@ function pieceMesh(p) {
     m.userData.dims = [w, h, d];
   } else {
     const s = 1, d = 0.12, edge = new THREE.MeshStandardMaterial({ color: 0xd8d4c8, roughness: 0.8 });
-    const bp = p.back ? pieces.find((x) => x.id === p.back) : null;
-    const front = new THREE.MeshStandardMaterial({ map: tex(p.img), roughness: 0.5 }), back = bp ? new THREE.MeshStandardMaterial({ map: backTex(bp.img), roughness: 0.5 }) : (p.t === 'back' ? front : new THREE.MeshStandardMaterial({ color: 0xb9b4a6, roughness: 0.8 }));
+    const front = new THREE.MeshStandardMaterial({ map: tex(p.img), roughness: 0.5 }), back = p.back_img != null ? new THREE.MeshStandardMaterial({ map: backTex(p.back_img), roughness: 0.5 }) : new THREE.MeshStandardMaterial({ color: 0xb9b4a6, roughness: 0.8 });
     m = new THREE.Mesh(new THREE.BoxGeometry(s, s, d), [edge, edge, edge, edge, front, back]);
     m.userData.dims = [s, s, d];
   }
@@ -225,9 +224,9 @@ canvas.addEventListener('pointermove', (e) => { if (ptrs.size || mode !== 'tab')
 window.addEventListener('resize', requestRender);
 
 /* ---------- UI ---------- */
-function sub(p) { return p.t === 'block' ? (p.cls + ' · ' + p.steps + ' step' + (p.steps > 1 ? 's' : '') + ' · ' + (ECH[p.ech] || p.ech)) : (p.t === 'back' ? (p.kind.replace(/_/g, ' ') + ' · ' + p.copies + ' copies · ' + p.limit) : (p.kind + ' · turn ' + (p.turn == null ? '-' : p.turn) + ' · ' + (ECH[p.ech] || p.ech) + (p.copies > 1 || p.limit === 'unlimited' ? ' · ' + p.copies + ' cop' + (p.copies > 1 ? 'ies' : 'y') + ', ' + p.limit : ''))); }
+function sub(p) { return p.t === 'block' ? (p.cls + ' · ' + p.steps + ' step' + (p.steps > 1 ? 's' : '') + ' · ' + (ECH[p.ech] || p.ech)) : (p.kind + ' · turn ' + (p.turn == null ? '-' : p.turn) + ' · ' + (ECH[p.ech] || p.ech) + (p.copies > 1 || p.limit === 'unlimited' ? ' · ' + p.copies + ' cop' + (p.copies > 1 ? 'ies' : 'y') + ', ' + p.limit : '')); }
 function qdots(list) { return '<span class="pq">' + list.map((q) => '<i class="dotq ' + q + '" title="' + q + '"></i>').join('') + '</span>'; }
-function select(id, jump) { selId = id; step = byId(id).t === 'block' ? byId(id).steps : 0; anim = null; if (byId(id).t === 'back') faceBack = false; layout(); updateStepChip(); if (jump !== false) { tab = 'det'; } render(); }
+function select(id, jump) { selId = id; step = byId(id).t === 'block' ? byId(id).steps : 0; anim = null; layout(); updateStepChip(); if (jump !== false) { tab = 'det'; } render(); }
 function setFace(back) { faceBack = back; const p = byId(selId); if (mode === 'one' && p.t !== 'block') { rotXGoal = flatX(); anim = true; } else layout(); updateStepChip(); requestRender(); }
 function updateFaceChip() { const c = $('#facechip'), p = byId(selId); if (mode === 'one' && p.t === 'block') { c.hidden = true; return; } c.hidden = false;
   c.innerHTML = '<span class="muted">Face up</span><span class="seg"><button data-f="front" aria-pressed="' + !faceBack + '">Front</button><button data-f="back" aria-pressed="' + faceBack + '">Back</button></span>';
@@ -241,11 +240,11 @@ function renderList() {
   const opt = (v, t, cur) => '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + t + '</option>';
   const kinds = [...new Set(pieces.filter((p) => p.t === 'counter').map((p) => p.kind))].sort();
   pane.innerHTML = '<div class="filters"><select id="f-side" aria-label="Side">' + opt('all', 'All sides', F.side) + opt('german', 'German', F.side) + opt('us', 'US', F.side) + opt('british', 'British', F.side) + opt('allied', 'Allied (generic)', F.side) + opt('neutral', 'Neutral markers', F.side) + '</select>' +
-    '<select id="f-type" aria-label="Type">' + opt('all', 'Blocks and counters', F.type) + opt('block', 'Blocks only', F.type) + opt('counter', 'Counter fronts only', F.type) + opt('back', 'Counter backs only', F.type) + kinds.map((k) => opt(k, 'Counter: ' + k.replace(/_/g, ' '), F.type)).join('') + '</select>' +
+    '<select id="f-type" aria-label="Type">' + opt('all', 'Blocks and counters', F.type) + opt('block', 'Blocks only', F.type) + opt('counter', 'Counters only', F.type) + kinds.map((k) => opt(k, 'Counter: ' + k.replace(/_/g, ' '), F.type)).join('') + '</select>' +
     '<select id="f-limit" aria-label="Limit">' + opt('all', 'Limited and unlimited', F.limit) + opt('limited', 'Limited only', F.limit) + opt('unlimited', 'Unlimited only', F.limit) + '</select><select id="f-ech" aria-label="Army">' + opt('all', 'All armies', F.ech) + Object.keys(ECH).map((k) => opt(k, ECH[k], F.ech)).join('') + '</select>' +
     '<input id="f-q" class="wide" type="search" placeholder="Search name or id" value="' + F.q.replace(/"/g, '&quot;') + '"></div>' +
     '<div class="hint">' + list.length + ' of ' + pieces.length + ' pieces. ' + Object.values(flags).filter((f) => f === 'ok').length + ' marked OK, ' + Object.values(flags).filter((f) => f === 'bad').length + ' marked wrong.</div>' +
-    '<div class="grid">' + list.map((p) => '<button class="cell" data-id="' + p.id + '" aria-selected="' + (p.id === selId) + '" title="' + p.name + '"><img src="' + IMGS[p.img] + '" alt="">' + (p.copies > 1 || p.limit === 'unlimited' ? '<b class="cp">' + (p.limit === 'unlimited' ? '\u221e' : '\u00d7' + p.copies) + '</b>' : '') + (flags[p.id] ? '<i class="st ' + flags[p.id] + '"></i>' : '') + '<span>' + p.name + '</span></button>').join('') + '</div>';
+    '<div class="grid">' + list.map((p) => '<button class="cell" data-id="' + p.id + '" aria-selected="' + (p.id === selId) + '" title="' + p.name + '"><img src="' + IMGS[p.thumb != null ? p.thumb : p.img] + '" alt="">' + (p.copies > 1 || p.limit === 'unlimited' ? '<b class="cp">' + (p.limit === 'unlimited' ? '\u221e' : '\u00d7' + p.copies) + '</b>' : '') + (flags[p.id] ? '<i class="st ' + flags[p.id] + '"></i>' : '') + '<span>' + p.name + '</span></button>').join('') + '</div>';
   ['side', 'type', 'limit', 'ech'].forEach((k) => ($('#f-' + k).onchange = (e) => { F[k] = e.target.value; if (mode === 'tab') layout(); renderList(); }));
   $('#f-q').oninput = (e) => { F.q = e.target.value; const pos = e.target.selectionStart; if (mode === 'tab') layout(); renderList(); const q = $('#f-q'); q.focus(); q.setSelectionRange(pos, pos); };
   pane.querySelectorAll('.cell').forEach((c) => (c.onclick = () => select(c.dataset.id, true)));
@@ -265,18 +264,14 @@ function renderDet() {
       field('Start area', '<input type="text" id="e-area" placeholder="area number" value="' + (p.start_area == null ? '' : p.start_area) + '">') +
       field('Arrives turn', '<input type="text" id="e-turn" placeholder="turn" value="' + (p.arrival_turn == null ? '' : p.arrival_turn) + '">') +
       field('Entry letters', '<input type="text" id="e-entry" placeholder="e.g. H,J" value="' + (p.entry || []).join(',') + '">');
-  } else if (p.t === 'back') {
-    rows = field('Name', '<input type="text" id="e-name" value="' + p.name.replace(/"/g, '&quot;') + '">') + field('Kind', '<span class="mono">' + p.kind.replace(/_/g, ' ') + '</span>') +
-      field('Copies', '<input type="number" min="0" id="e-copies" value="' + p.copies + '">') + field('Limit', limSel(p.limit)) + field('Back of', '<span class="muted">' + (p.used_by || '-') + '</span>');
   } else {
-    const bp = p.back ? pieces.find((x) => x.id === p.back) : null;
     rows = field('Name', '<input type="text" id="e-name" value="' + p.name.replace(/"/g, '&quot;') + '">') + field('Kind', '<input type="text" id="e-kind" value="' + p.kind + '">') +
       field('Army', '<select id="e-ech">' + Object.keys(ECH).map((k) => '<option value="' + k + '"' + (k === p.ech ? ' selected' : '') + '>' + ECH[k] + '</option>').join('') + '</select>') +
       field('Turn', '<input type="text" id="e-turn" placeholder="2, S, none" value="' + (p.turn == null ? '' : p.turn) + '">') +
       field('Quality', qsel('e-quality', p.quality, true)) + field('Copies', '<input type="number" min="1" id="e-copies" value="' + (p.copies || 1) + '">') + field('Limit', limSel(p.limit || 'limited')) +
-      field('Back face', bp ? '<button class="btn" id="b-back">' + bp.name + '</button>' : '<span class="muted">-</span>') + field('Extra', '<span class="mono muted">' + (p.extra || '-') + '</span>');
+      field('Back face', '<span class="row"><img src="' + IMGS[p.back_img] + '" alt="" style="width:44px;height:44px;border-radius:4px"><span>' + p.back_name + '</span><button class="btn" id="b-back">Show back</button></span>') + field('Extra', '<span class="mono muted">' + (p.extra || '-') + '</span>');
   }
-  pane.innerHTML = '<div><div class="muted mono">' + (p.t === 'block' ? 'BLOCK ' : p.t === 'back' ? 'COUNTER BACK ' : 'COUNTER ') + p.id + '</div><h3>' + p.name + '</h3><div class="hint">' + sub(p) + '</div></div>' +
+  pane.innerHTML = '<div><div class="muted mono">' + (p.t === 'block' ? 'BLOCK ' : 'COUNTER ') + p.id + '</div><h3>' + p.name + '</h3><div class="hint">' + sub(p) + '</div></div>' +
     '<div class="row"><div class="seg" id="s-flag"><button data-v="ok" aria-pressed="' + (flags[key] === 'ok') + '">Looks right</button><button data-v="bad" aria-pressed="' + (flags[key] === 'bad') + '">Wrong</button><button data-v="" aria-pressed="' + (!flags[key]) + '">Unchecked</button></div></div>' +
     (p.t === 'block' ? '<div id="live" class="hint"></div>' : '') +
     '<div class="kv">' + rows + '</div><div><h2>Your note</h2><textarea id="note" placeholder="What is wrong with this piece?">' + (notes[key] || '').replace(/</g, '&lt;') + '</textarea></div>' +
@@ -285,7 +280,7 @@ function renderDet() {
   const on = (id, fn) => { const e = $('#' + id); if (e) e.onchange = fn; };
   on('e-name', (e) => { p.name = e.target.value; save(); }); on('e-cls', (e) => { p.cls = e.target.value; save(); }); on('e-ech', (e) => { p.ech = e.target.value; if (p.t === 'block') p.side = e.target.value.startsWith('de_') ? 'german' : e.target.value.startsWith('br_') ? 'british' : 'us'; save(); });
   on('e-copies', (e) => { p.copies = Math.max(0, +e.target.value || 0); save(); }); on('e-limit', (e) => { p.limit = e.target.value; save(); });
-  const bb = $('#b-back'); if (bb) bb.onclick = () => { select(p.back, true); setFace(false); };
+  const bb = $('#b-back'); if (bb) bb.onclick = () => { setFace(true); };
   on('e-kind', (e) => { p.kind = e.target.value; save(); }); on('e-quality', (e) => { p.quality = e.target.value || null; save(); });
   if (p.t === 'block') { p.q.forEach((q, i) => on('e-q' + i, (e) => { p.q[i] = e.target.value; save(); renderDetailsLive(); }));
     on('e-area', (e) => { p.start_area = e.target.value === '' ? null : +e.target.value; save(); }); on('e-turn', (e) => { p.arrival_turn = e.target.value === '' ? null : +e.target.value; save(); }); on('e-entry', (e) => { p.entry = e.target.value.split(/[ ,]+/).filter(Boolean).map((s) => s.toUpperCase()); save(); }); }
@@ -303,7 +298,6 @@ function diff() {
     const cmp = (n, a, b) => { if (JSON.stringify(a) !== JSON.stringify(b)) ch.push(n + ': ' + JSON.stringify(b) + ' → ' + JSON.stringify(a)); };
     cmp('name', p.name, o.name); cmp('army', p.ech, o.ech);
     if (p.t === 'block') { cmp('class', p.cls, o.cls); cmp('quality by step', p.q, o.q); cmp('start area', p.start_area, o.start_area); cmp('arrival turn', p.arrival_turn, o.arrival_turn); cmp('entry', p.entry, o.entry); }
-    else if (p.t === 'back') { cmp('copies', p.copies, o.copies); cmp('limit', p.limit, o.limit); }
     else { cmp('kind', p.kind, o.kind); cmp('turn', p.turn, o.turn); cmp('quality', p.quality, o.quality); cmp('copies', p.copies, o.copies); cmp('limit', p.limit, o.limit); }
     if (ch.length) out.push({ piece: p.id + ' ' + o.name, changes: ch }); }
   return out;

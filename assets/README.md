@@ -9,3 +9,4 @@ Generated from `docs/game-pieces/` by the scripts in `tools/` (see `tools/slice_
 Block step reading: `steps` = pips on the top edge; `quality_by_step[i]` is the troop quality when the block has `i+1` steps (index 0 = 1 step, last = full strength). Rotating the block 90° counter-clockwise on a step loss brings the next edge to the top.
 
 - `counters/backs/*.png` – the 19 distinct back faces (low resolution, upscaled 2x from the back sheet) plus `gear_front.png` (the gear side of the 38 Blown Bridge counters). Catalogue: `data/bulge/counter_backs.json`; each counter in `counters.json` has `back`, `copies`, `ids`, `limit`.
+- `counters/combined/<id>.png` – one image per physical counter with both faces (front left, back right); `counters.json` has `faces.front`, `faces.back` and `combined` for each of the 137 counter entries (228 physical counters in all).

@@ -19,7 +19,18 @@
    "L11"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "v.d. Heydte",
+    "image": "assets/counters/raw/L11.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L11.png"
  },
  {
   "id": "L12",
@@ -34,7 +45,18 @@
    "L12"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "9th",
+    "image": "assets/counters/raw/L12.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L12.png"
  },
  {
   "id": "L13",
@@ -49,7 +71,18 @@
    "L13"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "17th",
+    "image": "assets/counters/raw/L13.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L13.png"
  },
  {
   "id": "L14",
@@ -64,7 +97,18 @@
    "L14"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "402nd",
+    "image": "assets/counters/raw/L14.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L14.png"
  },
  {
   "id": "L15",
@@ -79,7 +123,18 @@
    "L15"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "405th",
+    "image": "assets/counters/raw/L15.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L15.png"
  },
  {
   "id": "L16",
@@ -94,7 +149,18 @@
    "L16"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "388th",
+    "image": "assets/counters/raw/L16.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L16.png"
  },
  {
   "id": "L17",
@@ -108,7 +174,18 @@
    "L17"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Inf Repl",
+    "image": "assets/counters/raw/L17.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L17.png"
  },
  {
   "id": "L18",
@@ -122,7 +199,18 @@
    "L18"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Inf Repl",
+    "image": "assets/counters/raw/L18.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L18.png"
  },
  {
   "id": "L19",
@@ -136,7 +224,18 @@
    "L19"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Arm Repl",
+    "image": "assets/counters/raw/L19.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L19.png"
  },
  {
   "id": "L21",
@@ -152,7 +251,18 @@
    "L21"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "301 + 506",
+    "image": "assets/counters/raw/L21.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L21.png"
  },
  {
   "id": "L22",
@@ -168,7 +278,18 @@
    "L22"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "394 + 653 + 667",
+    "image": "assets/counters/raw/L22.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L22.png"
  },
  {
   "id": "L23",
@@ -184,7 +305,18 @@
    "L23"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "519 + 521",
+    "image": "assets/counters/raw/L23.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L23.png"
  },
  {
   "id": "L24",
@@ -200,7 +332,18 @@
    "L24"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "217 + 1000 + 1001",
+    "image": "assets/counters/raw/L24.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L24.png"
  },
  {
   "id": "L25",
@@ -215,7 +358,18 @@
    "L25"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "4th",
+    "image": "assets/counters/raw/L25.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L25.png"
  },
  {
   "id": "L26",
@@ -231,7 +385,18 @@
    "L26"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "62 + 73",
+    "image": "assets/counters/raw/L26.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L26.png"
  },
  {
   "id": "L27",
@@ -245,7 +410,18 @@
    "L27"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Inf Repl",
+    "image": "assets/counters/raw/L27.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L27.png"
  },
  {
   "id": "L28",
@@ -259,7 +435,18 @@
    "L28"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Inf Repl",
+    "image": "assets/counters/raw/L28.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L28.png"
  },
  {
   "id": "L29",
@@ -273,7 +460,18 @@
    "L29"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Arm Repl",
+    "image": "assets/counters/raw/L29.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L29.png"
  },
  {
   "id": "L31",
@@ -288,7 +486,18 @@
    "L31"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "15th",
+    "image": "assets/counters/raw/L31.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L31.png"
  },
  {
   "id": "L32",
@@ -303,7 +512,18 @@
    "L32"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "16th",
+    "image": "assets/counters/raw/L32.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L32.png"
  },
  {
   "id": "L33",
@@ -318,7 +538,18 @@
    "L33"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "401st",
+    "image": "assets/counters/raw/L33.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L33.png"
  },
  {
   "id": "L34",
@@ -333,7 +564,18 @@
    "L34"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "766th",
+    "image": "assets/counters/raw/L34.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L34.png"
  },
  {
   "id": "L35",
@@ -349,7 +591,18 @@
    "L35"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "741 + 902",
+    "image": "assets/counters/raw/L35.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L35.png"
  },
  {
   "id": "L36",
@@ -364,7 +617,18 @@
    "L36"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "7th",
+    "image": "assets/counters/raw/L36.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L36.png"
  },
  {
   "id": "L37",
@@ -378,7 +642,18 @@
    "L37"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Inf Repl",
+    "image": "assets/counters/raw/L37.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L37.png"
  },
  {
   "id": "L38",
@@ -392,7 +667,18 @@
    "L38"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Inf Repl",
+    "image": "assets/counters/raw/L38.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L38.png"
  },
  {
   "id": "L39",
@@ -406,7 +692,18 @@
    "L39"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Inf Repl",
+    "image": "assets/counters/raw/L39.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L39.png"
  },
  {
   "id": "L41",
@@ -422,7 +719,18 @@
    "L41"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "207 + 600",
+    "image": "assets/counters/raw/L41.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L41.png"
  },
  {
   "id": "L42",
@@ -438,7 +746,18 @@
    "L42"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "44 + 669",
+    "image": "assets/counters/raw/L42.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L42.png"
  },
  {
   "id": "L43",
@@ -453,7 +772,18 @@
    "L43"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "8th",
+    "image": "assets/counters/raw/L43.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L43.png"
  },
  {
   "id": "L44",
@@ -468,7 +798,18 @@
    "L44"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "18th",
+    "image": "assets/counters/raw/L44.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L44.png"
  },
  {
   "id": "L45",
@@ -483,7 +824,18 @@
    "L45"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "406th",
+    "image": "assets/counters/raw/L45.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L45.png"
  },
  {
   "id": "L46",
@@ -498,7 +850,18 @@
    "L46"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "408th",
+    "image": "assets/counters/raw/L46.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L46.png"
  },
  {
   "id": "L47",
@@ -514,7 +877,18 @@
    "L47"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "47 + 605",
+    "image": "assets/counters/raw/L47.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L47.png"
  },
  {
   "id": "L48",
@@ -528,7 +902,18 @@
    "L48"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Inf Repl",
+    "image": "assets/counters/raw/L48.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L48.png"
  },
  {
   "id": "L49",
@@ -542,7 +927,18 @@
    "L49"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Command HQ Staff Asset",
+    "image": "assets/counters/raw/L49.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L49.png"
  },
  {
   "id": "L51",
@@ -557,7 +953,18 @@
    "L51"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "5 AGRA",
+    "image": "assets/counters/raw/L51.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L51.png"
  },
  {
   "id": "L52",
@@ -572,7 +979,18 @@
    "L52"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "4 AGRA",
+    "image": "assets/counters/raw/L52.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L52.png"
  },
  {
   "id": "L53",
@@ -588,7 +1006,18 @@
    "L53"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "29th",
+    "image": "assets/counters/raw/L53.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L53.png"
  },
  {
   "id": "L54",
@@ -604,7 +1033,18 @@
    "L54"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "34th",
+    "image": "assets/counters/raw/L54.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L54.png"
  },
  {
   "id": "L55",
@@ -620,7 +1060,18 @@
    "L55"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "33rd",
+    "image": "assets/counters/raw/L55.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L55.png"
  },
  {
   "id": "L56",
@@ -634,7 +1085,18 @@
    "L56"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Rebuild or Repl",
+    "image": "assets/counters/raw/L56.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L56.png"
  },
  {
   "id": "L57",
@@ -648,7 +1110,18 @@
    "L57"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Inf Repl",
+    "image": "assets/counters/raw/L57.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L57.png"
  },
  {
   "id": "L58",
@@ -662,7 +1135,18 @@
    "L58"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Inf Repl",
+    "image": "assets/counters/raw/L58.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L58.png"
  },
  {
   "id": "L59",
@@ -676,7 +1160,18 @@
    "L59"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Inf Repl",
+    "image": "assets/counters/raw/L59.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L59.png"
  },
  {
   "id": "L61",
@@ -691,7 +1186,18 @@
    "L61"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "187th",
+    "image": "assets/counters/raw/L61.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L61.png"
  },
  {
   "id": "L62",
@@ -706,7 +1212,18 @@
    "L62"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "333rd",
+    "image": "assets/counters/raw/L62.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L62.png"
  },
  {
   "id": "L63",
@@ -722,7 +1239,18 @@
    "L63"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "35th",
+    "image": "assets/counters/raw/L63.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L63.png"
  },
  {
   "id": "L64",
@@ -737,7 +1265,18 @@
    "L64"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "402nd",
+    "image": "assets/counters/raw/L64.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L64.png"
  },
  {
   "id": "L65",
@@ -753,7 +1292,18 @@
    "L65"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "159th",
+    "image": "assets/counters/raw/L65.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L65.png"
  },
  {
   "id": "L66",
@@ -767,7 +1317,18 @@
    "L66"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Rebuild or Repl",
+    "image": "assets/counters/raw/L66.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L66.png"
  },
  {
   "id": "L67",
@@ -781,7 +1342,18 @@
    "L67"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Arm Repl",
+    "image": "assets/counters/raw/L67.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L67.png"
  },
  {
   "id": "L68",
@@ -795,7 +1367,18 @@
    "L68"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Arm Repl",
+    "image": "assets/counters/raw/L68.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L68.png"
  },
  {
   "id": "L69",
@@ -809,7 +1392,18 @@
    "L69"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Arm Repl",
+    "image": "assets/counters/raw/L69.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L69.png"
  },
  {
   "id": "L71",
@@ -824,7 +1418,18 @@
    "L71"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "406th",
+    "image": "assets/counters/raw/L71.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L71.png"
  },
  {
   "id": "L72",
@@ -841,7 +1446,18 @@
    "L72"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "509 + 551",
+    "image": "assets/counters/raw/L72.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L72.png"
  },
  {
   "id": "L73",
@@ -856,7 +1472,18 @@
    "L73"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "174th",
+    "image": "assets/counters/raw/L73.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L73.png"
  },
  {
   "id": "L74",
@@ -871,7 +1498,18 @@
    "L74"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "190th",
+    "image": "assets/counters/raw/L74.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L74.png"
  },
  {
   "id": "L75",
@@ -886,7 +1524,18 @@
    "L75"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "18th",
+    "image": "assets/counters/raw/L75.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L75.png"
  },
  {
   "id": "L76",
@@ -901,7 +1550,18 @@
    "L76"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "188th",
+    "image": "assets/counters/raw/L76.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L76.png"
  },
  {
   "id": "L77",
@@ -915,7 +1575,18 @@
    "L77"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Arm Repl",
+    "image": "assets/counters/raw/L77.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L77.png"
  },
  {
   "id": "L78",
@@ -930,7 +1601,18 @@
    "L78"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "179th",
+    "image": "assets/counters/raw/L78.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L78.png"
  },
  {
   "id": "L79",
@@ -946,7 +1628,18 @@
    "L79"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "146th",
+    "image": "assets/counters/raw/L79.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L79.png"
  },
  {
   "id": "L81",
@@ -962,7 +1655,18 @@
    "L81"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "705 + 740",
+    "image": "assets/counters/raw/L81.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L81.png"
  },
  {
   "id": "L82",
@@ -978,7 +1682,18 @@
    "L82"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "29 + 118",
+    "image": "assets/counters/raw/L82.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L82.png"
  },
  {
   "id": "L83",
@@ -994,7 +1709,18 @@
    "L83"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "158th",
+    "image": "assets/counters/raw/L83.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L83.png"
  },
  {
   "id": "L84",
@@ -1010,7 +1736,18 @@
    "L84"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Thrasher",
+    "image": "assets/counters/raw/L84.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L84.png"
  },
  {
   "id": "L85",
@@ -1025,7 +1762,18 @@
    "L85"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "142nd",
+    "image": "assets/counters/raw/L85.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L85.png"
  },
  {
   "id": "L86",
@@ -1041,7 +1789,18 @@
    "L86"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "628th",
+    "image": "assets/counters/raw/L86.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L86.png"
  },
  {
   "id": "L87",
@@ -1057,7 +1816,18 @@
    "L87"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "299th",
+    "image": "assets/counters/raw/L87.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L87.png"
  },
  {
   "id": "L88",
@@ -1073,7 +1843,18 @@
    "L88"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "168th",
+    "image": "assets/counters/raw/L88.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L88.png"
  },
  {
   "id": "L89",
@@ -1089,7 +1870,18 @@
    "L89"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "44th",
+    "image": "assets/counters/raw/L89.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L89.png"
  },
  {
   "id": "L91",
@@ -1103,7 +1895,18 @@
    "L91"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Inf Repl",
+    "image": "assets/counters/raw/L91.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L91.png"
  },
  {
   "id": "L92",
@@ -1117,7 +1920,18 @@
    "L92"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Inf Repl",
+    "image": "assets/counters/raw/L92.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L92.png"
  },
  {
   "id": "L93",
@@ -1131,7 +1945,18 @@
    "L93"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Inf Repl",
+    "image": "assets/counters/raw/L93.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L93.png"
  },
  {
   "id": "L94",
@@ -1145,7 +1970,18 @@
    "L94"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Arm Repl",
+    "image": "assets/counters/raw/L94.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L94.png"
  },
  {
   "id": "L95",
@@ -1159,7 +1995,18 @@
    "L95"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Non-Elite Arm Repl",
+    "image": "assets/counters/raw/L95.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L95.png"
  },
  {
   "id": "L96",
@@ -1176,7 +2023,18 @@
    "L96"
   ],
   "limit": "limited",
-  "back": "back_garrison"
+  "back": "back_garrison",
+  "faces": {
+   "front": {
+    "name": "Wiltz",
+    "image": "assets/counters/raw/L96.png"
+   },
+   "back": {
+    "name": "Garrison (back)",
+    "image": "assets/counters/backs/garrison.png"
+   }
+  },
+  "combined": "assets/counters/combined/L96.png"
  },
  {
   "id": "L97",
@@ -1193,7 +2051,18 @@
    "L97"
   ],
   "limit": "limited",
-  "back": "back_garrison"
+  "back": "back_garrison",
+  "faces": {
+   "front": {
+    "name": "St. Vith",
+    "image": "assets/counters/raw/L97.png"
+   },
+   "back": {
+    "name": "Garrison (back)",
+    "image": "assets/counters/backs/garrison.png"
+   }
+  },
+  "combined": "assets/counters/combined/L97.png"
  },
  {
   "id": "L98",
@@ -1207,7 +2076,18 @@
    "L98"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Command HQ Staff Asset",
+    "image": "assets/counters/raw/L98.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L98.png"
  },
  {
   "id": "L99",
@@ -1225,7 +2105,18 @@
    "L108"
   ],
   "limit": "limited",
-  "back": "back_zone7_al"
+  "back": "back_zone7_al",
+  "faces": {
+   "front": {
+    "name": "Zone 7 Reserve Unit",
+    "image": "assets/counters/raw/L99.png"
+   },
+   "back": {
+    "name": "Zone 7 Reserve Unit (Allied)",
+    "image": "assets/counters/backs/zone7_al.png"
+   }
+  },
+  "combined": "assets/counters/combined/L99.png"
  },
  {
   "id": "L101",
@@ -1241,7 +2132,18 @@
    "L101"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "602 + 654",
+    "image": "assets/counters/raw/L101.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L101.png"
  },
  {
   "id": "L102",
@@ -1256,7 +2158,18 @@
    "L102"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "177th",
+    "image": "assets/counters/raw/L102.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L102.png"
  },
  {
   "id": "L103",
@@ -1271,7 +2184,18 @@
    "L103"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "182nd",
+    "image": "assets/counters/raw/L103.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L103.png"
  },
  {
   "id": "L104",
@@ -1286,7 +2210,18 @@
    "L104"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "193rd",
+    "image": "assets/counters/raw/L104.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L104.png"
  },
  {
   "id": "L105",
@@ -1301,7 +2236,18 @@
    "L105"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "203rd",
+    "image": "assets/counters/raw/L105.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/L105.png"
  },
  {
   "id": "L106",
@@ -1318,7 +2264,18 @@
    "L106"
   ],
   "limit": "limited",
-  "back": "back_garrison"
+  "back": "back_garrison",
+  "faces": {
+   "front": {
+    "name": "Spa",
+    "image": "assets/counters/raw/L106.png"
+   },
+   "back": {
+    "name": "Garrison (back)",
+    "image": "assets/counters/backs/garrison.png"
+   }
+  },
+  "combined": "assets/counters/combined/L106.png"
  },
  {
   "id": "L107",
@@ -1335,7 +2292,18 @@
    "L107"
   ],
   "limit": "limited",
-  "back": "back_garrison"
+  "back": "back_garrison",
+  "faces": {
+   "front": {
+    "name": "Bastogne",
+    "image": "assets/counters/raw/L107.png"
+   },
+   "back": {
+    "name": "Garrison (back)",
+    "image": "assets/counters/backs/garrison.png"
+   }
+  },
+  "combined": "assets/counters/combined/L107.png"
  },
  {
   "id": "L109",
@@ -1355,7 +2323,18 @@
    "R101"
   ],
   "limit": "limited",
-  "back": "back_zones56_al"
+  "back": "back_zones56_al",
+  "faces": {
+   "front": {
+    "name": "Zones 5/6 Reserve Unit",
+    "image": "assets/counters/raw/L109.png"
+   },
+   "back": {
+    "name": "Zones 5/6 Reserve Unit (Allied)",
+    "image": "assets/counters/backs/zones56_al.png"
+   }
+  },
+  "combined": "assets/counters/combined/L109.png"
  },
  {
   "id": "R11",
@@ -1369,7 +2348,18 @@
    "R11"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "11th Pz Div Released",
+    "image": "assets/counters/raw/R11.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R11.png"
  },
  {
   "id": "R12",
@@ -1383,7 +2373,18 @@
    "R12"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "10th SS Pz Div Released",
+    "image": "assets/counters/raw/R12.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R12.png"
  },
  {
   "id": "R13",
@@ -1397,7 +2398,18 @@
    "R13"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "17th SS Pz Gr Div Released",
+    "image": "assets/counters/raw/R13.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R13.png"
  },
  {
   "id": "R14",
@@ -1411,7 +2423,18 @@
    "R14"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "6th SS Mtn Div Released",
+    "image": "assets/counters/raw/R14.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R14.png"
  },
  {
   "id": "R15",
@@ -1425,7 +2448,18 @@
    "R15"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Greif Team Bridge",
+    "image": "assets/counters/raw/R15.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R15.png"
  },
  {
   "id": "R16",
@@ -1439,7 +2473,18 @@
    "R16"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Greif Team Bridge",
+    "image": "assets/counters/raw/R16.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R16.png"
  },
  {
   "id": "R17",
@@ -1457,7 +2502,18 @@
    "R28"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Fuel Asset",
+    "image": "assets/counters/raw/R17.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R17.png"
  },
  {
   "id": "R21",
@@ -1471,7 +2527,18 @@
    "R21"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Operation Bodenplatte",
+    "image": "assets/counters/raw/R21.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R21.png"
  },
  {
   "id": "R22",
@@ -1485,7 +2552,18 @@
    "R22"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Delayed Response",
+    "image": "assets/counters/raw/R22.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R22.png"
  },
  {
   "id": "R23",
@@ -1499,7 +2577,18 @@
    "R23"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Delayed Response",
+    "image": "assets/counters/raw/R23.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R23.png"
  },
  {
   "id": "R24",
@@ -1513,7 +2602,18 @@
    "R24"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Delayed Response",
+    "image": "assets/counters/raw/R24.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R24.png"
  },
  {
   "id": "R25",
@@ -1527,7 +2627,18 @@
    "R25"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Greif Team Interdict",
+    "image": "assets/counters/raw/R25.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R25.png"
  },
  {
   "id": "R26",
@@ -1541,7 +2652,18 @@
    "R26"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Greif Team Interdict",
+    "image": "assets/counters/raw/R26.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R26.png"
  },
  {
   "id": "R29",
@@ -1555,7 +2677,18 @@
    "R29"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Captured Fuel Asset",
+    "image": "assets/counters/raw/R29.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R29.png"
  },
  {
   "id": "R31",
@@ -1570,7 +2703,18 @@
    "R31"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Regt only for 4th Inf Div",
+    "image": "assets/counters/raw/R31.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R31.png"
  },
  {
   "id": "R32",
@@ -1584,7 +2728,18 @@
    "R32"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Delayed Response",
+    "image": "assets/counters/raw/R32.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R32.png"
  },
  {
   "id": "R33",
@@ -1598,7 +2753,18 @@
    "R33"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Delayed Response",
+    "image": "assets/counters/raw/R33.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R33.png"
  },
  {
   "id": "R34",
@@ -1612,7 +2778,18 @@
    "R34"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Delayed Response",
+    "image": "assets/counters/raw/R34.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R34.png"
  },
  {
   "id": "R35",
@@ -1627,7 +2804,18 @@
    "R35"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Regt only for 1st Inf Div",
+    "image": "assets/counters/raw/R35.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R35.png"
  },
  {
   "id": "R36",
@@ -1642,7 +2830,18 @@
    "R36"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Regt only for 1st Inf Div",
+    "image": "assets/counters/raw/R36.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R36.png"
  },
  {
   "id": "R37",
@@ -1657,7 +2856,18 @@
    "R37"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Regt only for 1st Inf Div",
+    "image": "assets/counters/raw/R37.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R37.png"
  },
  {
   "id": "R38",
@@ -1671,7 +2881,18 @@
    "R38"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Special Action",
+    "image": "assets/counters/raw/R38.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R38.png"
  },
  {
   "id": "R39",
@@ -1685,7 +2906,18 @@
    "R39"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Special Action",
+    "image": "assets/counters/raw/R39.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R39.png"
  },
  {
   "id": "R41",
@@ -1700,7 +2932,18 @@
    "R53"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Air Mission",
+    "image": "assets/counters/raw/R41.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R41.png"
  },
  {
   "id": "R42",
@@ -1719,7 +2962,18 @@
    "R56"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Air Mission",
+    "image": "assets/counters/raw/R42.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R42.png"
  },
  {
   "id": "R44",
@@ -1734,7 +2988,18 @@
    "R45"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Special Action",
+    "image": "assets/counters/raw/R44.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R44.png"
  },
  {
   "id": "R46",
@@ -1748,7 +3013,18 @@
    "R46"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Special Action",
+    "image": "assets/counters/raw/R46.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R46.png"
  },
  {
   "id": "R47",
@@ -1762,7 +3038,18 @@
    "R47"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Special Action",
+    "image": "assets/counters/raw/R47.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R47.png"
  },
  {
   "id": "R48",
@@ -1777,7 +3064,18 @@
    "R49"
   ],
   "limit": "limited",
-  "back": "back_grey_asset"
+  "back": "back_grey_asset",
+  "faces": {
+   "front": {
+    "name": "Special Action",
+    "image": "assets/counters/raw/R48.png"
+   },
+   "back": {
+    "name": "Asset or Event (German)",
+    "image": "assets/counters/backs/grey_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R48.png"
  },
  {
   "id": "R52",
@@ -1794,7 +3092,18 @@
    "R64"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Air Mission",
+    "image": "assets/counters/raw/R52.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R52.png"
  },
  {
   "id": "R57",
@@ -1812,7 +3121,18 @@
    "R68"
   ],
   "limit": "limited",
-  "back": "back_zone5_de"
+  "back": "back_zone5_de",
+  "faces": {
+   "front": {
+    "name": "Zone 5 Reserve Unit",
+    "image": "assets/counters/raw/R57.png"
+   },
+   "back": {
+    "name": "Zone 5 Reserve Unit",
+    "image": "assets/counters/backs/zone5_de.png"
+   }
+  },
+  "combined": "assets/counters/combined/R57.png"
  },
  {
   "id": "R58",
@@ -1830,7 +3150,18 @@
    "R59"
   ],
   "limit": "limited",
-  "back": "back_zone6_de"
+  "back": "back_zone6_de",
+  "faces": {
+   "front": {
+    "name": "Zone 6 Reserve Unit",
+    "image": "assets/counters/raw/R58.png"
+   },
+   "back": {
+    "name": "Zone 6 Reserve Unit",
+    "image": "assets/counters/backs/zone6_de.png"
+   }
+  },
+  "combined": "assets/counters/combined/R58.png"
  },
  {
   "id": "R62",
@@ -1845,7 +3176,18 @@
    "R65"
   ],
   "limit": "limited",
-  "back": "back_green_asset"
+  "back": "back_green_asset",
+  "faces": {
+   "front": {
+    "name": "Air Mission",
+    "image": "assets/counters/raw/R62.png"
+   },
+   "back": {
+    "name": "Asset or Event (Allied)",
+    "image": "assets/counters/backs/green_asset.png"
+   }
+  },
+  "combined": "assets/counters/combined/R62.png"
  },
  {
   "id": "R66",
@@ -1859,7 +3201,18 @@
    "R66"
   ],
   "limit": "limited",
-  "back": "back_game_turn"
+  "back": "back_game_turn",
+  "faces": {
+   "front": {
+    "name": "Game Turn",
+    "image": "assets/counters/raw/R66.png"
+   },
+   "back": {
+    "name": "Game Turn (Allied side)",
+    "image": "assets/counters/backs/game_turn.png"
+   }
+  },
+  "combined": "assets/counters/combined/R66.png"
  },
  {
   "id": "R67",
@@ -1873,7 +3226,18 @@
    "R67"
   ],
   "limit": "limited",
-  "back": "back_pooled"
+  "back": "back_pooled",
+  "faces": {
+   "front": {
+    "name": "Boundary Crossing",
+    "image": "assets/counters/raw/R67.png"
+   },
+   "back": {
+    "name": "Pooled Assets",
+    "image": "assets/counters/backs/pooled.png"
+   }
+  },
+  "combined": "assets/counters/combined/R67.png"
  },
  {
   "id": "R69",
@@ -1890,7 +3254,18 @@
    "R69"
   ],
   "limit": "limited",
-  "back": "back_zone7_de"
+  "back": "back_zone7_de",
+  "faces": {
+   "front": {
+    "name": "Zone 7 Reserve Unit",
+    "image": "assets/counters/raw/R69.png"
+   },
+   "back": {
+    "name": "Zone 7 Reserve Unit",
+    "image": "assets/counters/backs/zone7_de.png"
+   }
+  },
+  "combined": "assets/counters/combined/R69.png"
  },
  {
   "id": "R71",
@@ -1907,7 +3282,18 @@
    "R72"
   ],
   "limit": "limited",
-  "back": "back_task_force"
+  "back": "back_task_force",
+  "faces": {
+   "front": {
+    "name": "Task Force",
+    "image": "assets/counters/raw/R71.png"
+   },
+   "back": {
+    "name": "Task Force (back)",
+    "image": "assets/counters/backs/task_force.png"
+   }
+  },
+  "combined": "assets/counters/combined/R71.png"
  },
  {
   "id": "R73",
@@ -1931,7 +3317,18 @@
    "R88"
   ],
   "limit": "unlimited",
-  "back": "back_star"
+  "back": "back_star",
+  "faces": {
+   "front": {
+    "name": "German VP",
+    "image": "assets/counters/raw/R73.png"
+   },
+   "back": {
+    "name": "Allied VP (star)",
+    "image": "assets/counters/backs/star.png"
+   }
+  },
+  "combined": "assets/counters/combined/R73.png"
  },
  {
   "id": "R79",
@@ -1945,7 +3342,18 @@
    "R79"
   ],
   "limit": "limited",
-  "back": "back_vps"
+  "back": "back_vps",
+  "faces": {
+   "front": {
+    "name": "VPs",
+    "image": "assets/counters/raw/R79.png"
+   },
+   "back": {
+    "name": "VPs (Allied side)",
+    "image": "assets/counters/backs/vps.png"
+   }
+  },
+  "combined": "assets/counters/combined/R79.png"
  },
  {
   "id": "R81",
@@ -1961,7 +3369,18 @@
    "R81"
   ],
   "limit": "limited",
-  "back": "back_task_force"
+  "back": "back_task_force",
+  "faces": {
+   "front": {
+    "name": "Task Force",
+    "image": "assets/counters/raw/R81.png"
+   },
+   "back": {
+    "name": "Task Force (back)",
+    "image": "assets/counters/backs/task_force.png"
+   }
+  },
+  "combined": "assets/counters/combined/R81.png"
  },
  {
   "id": "R82",
@@ -1977,7 +3396,18 @@
    "R82"
   ],
   "limit": "limited",
-  "back": "back_task_force"
+  "back": "back_task_force",
+  "faces": {
+   "front": {
+    "name": "Task Force",
+    "image": "assets/counters/raw/R82.png"
+   },
+   "back": {
+    "name": "Task Force (back)",
+    "image": "assets/counters/backs/task_force.png"
+   }
+  },
+  "combined": "assets/counters/combined/R82.png"
  },
  {
   "id": "R83",
@@ -1993,7 +3423,18 @@
    "R83"
   ],
   "limit": "limited",
-  "back": "back_task_force"
+  "back": "back_task_force",
+  "faces": {
+   "front": {
+    "name": "Task Force",
+    "image": "assets/counters/raw/R83.png"
+   },
+   "back": {
+    "name": "Task Force (back)",
+    "image": "assets/counters/backs/task_force.png"
+   }
+  },
+  "combined": "assets/counters/combined/R83.png"
  },
  {
   "id": "R89",
@@ -2007,7 +3448,18 @@
    "R89"
   ],
   "limit": "limited",
-  "back": "back_optional"
+  "back": "back_optional",
+  "faces": {
+   "front": {
+    "name": "Remaining German Bridge Repairs",
+    "image": "assets/counters/raw/R89.png"
+   },
+   "back": {
+    "name": "Optional Rule 18.1 (bridges remaining)",
+    "image": "assets/counters/backs/optional.png"
+   }
+  },
+  "combined": "assets/counters/combined/R89.png"
  },
  {
   "id": "R92",
@@ -2024,7 +3476,18 @@
    "R103"
   ],
   "limit": "unlimited",
-  "back": "back_roadblock"
+  "back": "back_roadblock",
+  "faces": {
+   "front": {
+    "name": "River Assault",
+    "image": "assets/counters/raw/R92.png"
+   },
+   "back": {
+    "name": "Road Block",
+    "image": "assets/counters/backs/roadblock.png"
+   }
+  },
+  "combined": "assets/counters/combined/R92.png"
  },
  {
   "id": "R94",
@@ -2049,7 +3512,18 @@
    "R109"
   ],
   "limit": "unlimited",
-  "back": "back_recovering"
+  "back": "back_recovering",
+  "faces": {
+   "front": {
+    "name": "Disordered / Recovering",
+    "image": "assets/counters/raw/R94.png"
+   },
+   "back": {
+    "name": "Recovering",
+    "image": "assets/counters/backs/recovering.png"
+   }
+  },
+  "combined": "assets/counters/combined/R94.png"
  },
  {
   "id": "Rx1",
@@ -2070,7 +3544,18 @@
    "Rx8"
   ],
   "limit": "unlimited",
-  "back": "back_no_fuel"
+  "back": "back_no_fuel",
+  "faces": {
+   "front": {
+    "name": "Exploitation",
+    "image": "assets/counters/raw/Rx1.png"
+   },
+   "back": {
+    "name": "No Fuel",
+    "image": "assets/counters/backs/no_fuel.png"
+   }
+  },
+  "combined": "assets/counters/combined/Rx1.png"
  },
  {
   "id": "Rb1",
@@ -2085,7 +3570,18 @@
    "Rb2"
   ],
   "limit": "limited",
-  "back": "back_bid"
+  "back": "back_bid",
+  "faces": {
+   "front": {
+    "name": "Bid Fuel Asset",
+    "image": "assets/counters/raw/Rb1.png"
+   },
+   "back": {
+    "name": "Bid",
+    "image": "assets/counters/backs/bid.png"
+   }
+  },
+  "combined": "assets/counters/combined/Rb1.png"
  },
  {
   "id": "GEAR",
@@ -2136,6 +3632,17 @@
    "gear38"
   ],
   "limit": "unlimited",
-  "back": "back_blown"
+  "back": "back_blown",
+  "faces": {
+   "front": {
+    "name": "Blown Bridge (gear side)",
+    "image": "assets/counters/backs/gear_front.png"
+   },
+   "back": {
+    "name": "Blown Bridge",
+    "image": "assets/counters/backs/blown.png"
+   }
+  },
+  "combined": "assets/counters/combined/GEAR.png"
  }
 ]
