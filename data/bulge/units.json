@@ -1,0 +1,1363 @@
+[
+ {
+  "id": "B01",
+  "name": "Peiper",
+  "side": "german",
+  "echelon": "de_6pz",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 2,
+  "quality_by_step": [
+   "veteran",
+   "elite"
+  ],
+  "start_area": 5,
+  "image": "assets/blocks/B01.png"
+ },
+ {
+  "id": "B02",
+  "name": "1SS(-)",
+  "side": "german",
+  "echelon": "de_6pz",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "elite"
+  ],
+  "start_area": 6,
+  "image": "assets/blocks/B02.png"
+ },
+ {
+  "id": "B03",
+  "name": "12SS",
+  "side": "german",
+  "echelon": "de_6pz",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "start_area": 7,
+  "image": "assets/blocks/B03.png"
+ },
+ {
+  "id": "B04",
+  "name": "150 Pz",
+  "side": "german",
+  "echelon": "de_6pz",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 1,
+  "quality_by_step": [
+   "veteran"
+  ],
+  "start_area": 6,
+  "image": "assets/blocks/B04.png"
+ },
+ {
+  "id": "B05",
+  "name": "12 VG",
+  "side": "german",
+  "echelon": "de_6pz",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "start_area": 9,
+  "image": "assets/blocks/B05.png"
+ },
+ {
+  "id": "B06",
+  "name": "277 VG",
+  "side": "german",
+  "echelon": "de_6pz",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "green",
+   "green"
+  ],
+  "start_area": 9,
+  "image": "assets/blocks/B06.png"
+ },
+ {
+  "id": "B07",
+  "name": "3 FJ",
+  "side": "german",
+  "echelon": "de_6pz",
+  "symbol": "airborne",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "green",
+   "green"
+  ],
+  "start_area": 10,
+  "image": "assets/blocks/B07.png"
+ },
+ {
+  "id": "B08",
+  "name": "2SS",
+  "side": "german",
+  "echelon": "de_6pz",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "elite"
+  ],
+  "arrival_turn": 4,
+  "entry": [
+   "Z"
+  ],
+  "image": "assets/blocks/B08.png"
+ },
+ {
+  "id": "B09",
+  "name": "9SS",
+  "side": "german",
+  "echelon": "de_6pz",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "elite"
+  ],
+  "arrival_turn": 4,
+  "entry": [
+   "Z"
+  ],
+  "image": "assets/blocks/B09.png"
+ },
+ {
+  "id": "B10",
+  "name": "326 VG",
+  "side": "german",
+  "echelon": "de_6pz",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "green",
+   "green"
+  ],
+  "start_area": 8,
+  "image": "assets/blocks/B10.png"
+ },
+ {
+  "id": "B11",
+  "name": "3 PG",
+  "side": "german",
+  "echelon": "de_6pz",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "elite"
+  ],
+  "arrival_turn": 4,
+  "entry": [
+   "Z"
+  ],
+  "image": "assets/blocks/B11.png"
+ },
+ {
+  "id": "B12",
+  "name": "246 VG",
+  "side": "german",
+  "echelon": "de_6pz",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "green",
+   "green"
+  ],
+  "arrival_turn": 8,
+  "entry": [
+   "Z"
+  ],
+  "image": "assets/blocks/B12.png"
+ },
+ {
+  "id": "B13",
+  "name": "15 PG",
+  "side": "german",
+  "echelon": "de_5pz",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "arrival_turn": 7,
+  "entry": [
+   "Y"
+  ],
+  "image": "assets/blocks/B13.png"
+ },
+ {
+  "id": "B14",
+  "name": "167 VG",
+  "side": "german",
+  "echelon": "de_5pz",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "green",
+   "green",
+   "veteran"
+  ],
+  "arrival_turn": 8,
+  "entry": [
+   "Y"
+  ],
+  "image": "assets/blocks/B14.png"
+ },
+ {
+  "id": "B15",
+  "name": "Lehr",
+  "side": "german",
+  "echelon": "de_5pz",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "elite",
+   "elite"
+  ],
+  "start_area": 13,
+  "image": "assets/blocks/B15.png"
+ },
+ {
+  "id": "B16",
+  "name": "2 Pz",
+  "side": "german",
+  "echelon": "de_5pz",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "elite"
+  ],
+  "start_area": 21,
+  "image": "assets/blocks/B16.png"
+ },
+ {
+  "id": "B17",
+  "name": "9 Pz",
+  "side": "german",
+  "echelon": "de_5pz",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "elite"
+  ],
+  "arrival_turn": 7,
+  "entry": [
+   "Y"
+  ],
+  "image": "assets/blocks/B17.png"
+ },
+ {
+  "id": "B18",
+  "name": "116 Pz",
+  "side": "german",
+  "echelon": "de_5pz",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "elite"
+  ],
+  "start_area": 12,
+  "image": "assets/blocks/B18.png"
+ },
+ {
+  "id": "B19",
+  "name": "18 VG",
+  "side": "german",
+  "echelon": "de_5pz",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "start_area": 11,
+  "image": "assets/blocks/B19.png"
+ },
+ {
+  "id": "B20",
+  "name": "26 VG",
+  "side": "german",
+  "echelon": "de_5pz",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "elite"
+  ],
+  "start_area": 20,
+  "image": "assets/blocks/B20.png"
+ },
+ {
+  "id": "B21",
+  "name": "62 VG",
+  "side": "german",
+  "echelon": "de_5pz",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "green",
+   "green"
+  ],
+  "start_area": 11,
+  "image": "assets/blocks/B21.png"
+ },
+ {
+  "id": "B22",
+  "name": "560 VG",
+  "side": "german",
+  "echelon": "de_5pz",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "veteran",
+   "green"
+  ],
+  "start_area": 12,
+  "image": "assets/blocks/B22.png"
+ },
+ {
+  "id": "B23",
+  "name": "Fuh Es",
+  "side": "german",
+  "echelon": "de_5pz",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 2,
+  "quality_by_step": [
+   "veteran",
+   "elite"
+  ],
+  "arrival_turn": 3,
+  "entry": [
+   "Y"
+  ],
+  "image": "assets/blocks/B23.png"
+ },
+ {
+  "id": "B24",
+  "name": "9 VG",
+  "side": "german",
+  "echelon": "de_7a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "veteran",
+   "veteran"
+  ],
+  "arrival_turn": 8,
+  "entry": [
+   "X"
+  ],
+  "image": "assets/blocks/B24.png"
+ },
+ {
+  "id": "B25",
+  "name": "212 VG",
+  "side": "german",
+  "echelon": "de_7a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "start_area": 16,
+  "image": "assets/blocks/B25.png"
+ },
+ {
+  "id": "B26",
+  "name": "276 VG",
+  "side": "german",
+  "echelon": "de_7a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "green",
+   "green"
+  ],
+  "start_area": 15,
+  "image": "assets/blocks/B26.png"
+ },
+ {
+  "id": "B27",
+  "name": "352 VG",
+  "side": "german",
+  "echelon": "de_7a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "green",
+   "green"
+  ],
+  "start_area": 18,
+  "image": "assets/blocks/B27.png"
+ },
+ {
+  "id": "B28",
+  "name": "5 FJ",
+  "side": "german",
+  "echelon": "de_7a",
+  "symbol": "airborne",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "start_area": 19,
+  "image": "assets/blocks/B28.png"
+ },
+ {
+  "id": "B29",
+  "name": "79 VG",
+  "side": "german",
+  "echelon": "de_7a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "green",
+   "green"
+  ],
+  "arrival_turn": 6,
+  "entry": [
+   "X"
+  ],
+  "image": "assets/blocks/B29.png"
+ },
+ {
+  "id": "B30",
+  "name": "Fuh Gr",
+  "side": "german",
+  "echelon": "de_7a",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 2,
+  "quality_by_step": [
+   "veteran",
+   "veteran"
+  ],
+  "arrival_turn": 5,
+  "entry": [
+   "X"
+  ],
+  "image": "assets/blocks/B30.png"
+ },
+ {
+  "id": "B31",
+  "name": "11 Pz",
+  "side": "german",
+  "echelon": "de_sr",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "elite"
+  ],
+  "arrival": "strategic_reserve_event",
+  "entry": [
+   "Y",
+   "Z"
+  ],
+  "image": "assets/blocks/B31.png"
+ },
+ {
+  "id": "B32",
+  "name": "10SS",
+  "side": "german",
+  "echelon": "de_sr",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "elite"
+  ],
+  "arrival": "strategic_reserve_event",
+  "entry": [
+   "Y",
+   "Z"
+  ],
+  "image": "assets/blocks/B32.png"
+ },
+ {
+  "id": "B33",
+  "name": "17SS",
+  "side": "german",
+  "echelon": "de_sr",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "arrival": "strategic_reserve_event",
+  "entry": [
+   "Y",
+   "Z"
+  ],
+  "image": "assets/blocks/B33.png"
+ },
+ {
+  "id": "B34",
+  "name": "6SS",
+  "side": "german",
+  "echelon": "de_sr",
+  "symbol": "mountain",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "veteran",
+   "veteran"
+  ],
+  "arrival": "strategic_reserve_event",
+  "entry": [
+   "Y",
+   "Z"
+  ],
+  "image": "assets/blocks/B34.png"
+ },
+ {
+  "id": "B35",
+  "name": "4 Inf",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "start_area": 16,
+  "image": "assets/blocks/B35.png"
+ },
+ {
+  "id": "B36",
+  "name": "109/28",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "veteran"
+  ],
+  "start_area": 19,
+  "image": "assets/blocks/B36.png"
+ },
+ {
+  "id": "B37",
+  "name": "110/28",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "veteran"
+  ],
+  "start_area": 21,
+  "image": "assets/blocks/B37.png"
+ },
+ {
+  "id": "B38",
+  "name": "112/28",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "veteran"
+  ],
+  "start_area": 12,
+  "image": "assets/blocks/B38.png"
+ },
+ {
+  "id": "B39",
+  "name": "106 Inf",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "green",
+   "green",
+   "green"
+  ],
+  "start_area": 11,
+  "image": "assets/blocks/B39.png"
+ },
+ {
+  "id": "B40",
+  "name": "99 Inf",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "green",
+   "green",
+   "green"
+  ],
+  "start_area": 9,
+  "image": "assets/blocks/B40.png"
+ },
+ {
+  "id": "B41",
+  "name": "2 Inf",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "elite"
+  ],
+  "start_area": 27,
+  "image": "assets/blocks/B41.png"
+ },
+ {
+  "id": "B42",
+  "name": "14 Cav",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "cavalry",
+  "cls": "armor",
+  "steps": 1,
+  "quality_by_step": [
+   "veteran"
+  ],
+  "start_area": 10,
+  "image": "assets/blocks/B42.png"
+ },
+ {
+  "id": "B43",
+  "name": "102 Cav",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "cavalry",
+  "cls": "armor",
+  "steps": 1,
+  "quality_by_step": [
+   "veteran"
+  ],
+  "start_area": 27,
+  "image": "assets/blocks/B43.png"
+ },
+ {
+  "id": "B44",
+  "name": "CCA/9",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 1,
+  "quality_by_step": [
+   "veteran"
+  ],
+  "start_area": 18,
+  "image": "assets/blocks/B44.png"
+ },
+ {
+  "id": "B45",
+  "name": "CCB/9",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 1,
+  "quality_by_step": [
+   "veteran"
+  ],
+  "start_area": 25,
+  "image": "assets/blocks/B45.png"
+ },
+ {
+  "id": "B46",
+  "name": "CCR/9",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 1,
+  "quality_by_step": [
+   "veteran"
+  ],
+  "start_area": 37,
+  "image": "assets/blocks/B46.png"
+ },
+ {
+  "id": "B47",
+  "name": "7 Arm",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "arrival_turn": 2,
+  "entry": [
+   "A",
+   "B",
+   "C"
+  ],
+  "image": "assets/blocks/B47.png"
+ },
+ {
+  "id": "B48",
+  "name": "1 Inf",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "elite"
+  ],
+  "arrival_turn": 2,
+  "entry": [
+   "A",
+   "B",
+   "C"
+  ],
+  "image": "assets/blocks/B48.png"
+ },
+ {
+  "id": "B49",
+  "name": "9 Inf",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "veteran",
+   "veteran"
+  ],
+  "arrival_turn": 3,
+  "entry": [
+   "A",
+   "B"
+  ],
+  "image": "assets/blocks/B49.png"
+ },
+ {
+  "id": "B50",
+  "name": "30 Inf",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "elite"
+  ],
+  "arrival_turn": 3,
+  "entry": [
+   "A",
+   "B"
+  ],
+  "image": "assets/blocks/B50.png"
+ },
+ {
+  "id": "B51",
+  "name": "82",
+  "side": "us",
+  "echelon": "us_sr",
+  "symbol": "airborne",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "elite",
+   "elite"
+  ],
+  "arrival_turn": 3,
+  "entry": [
+   "H",
+   "J"
+  ],
+  "image": "assets/blocks/B51.png"
+ },
+ {
+  "id": "B52",
+  "name": "101",
+  "side": "us",
+  "echelon": "us_sr",
+  "symbol": "airborne",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "elite",
+   "elite"
+  ],
+  "arrival_turn": 3,
+  "entry": [
+   "H",
+   "J"
+  ],
+  "image": "assets/blocks/B52.png"
+ },
+ {
+  "id": "B53",
+  "name": "3 Arm",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "arrival_turn": 5,
+  "entry": [
+   "B"
+  ],
+  "image": "assets/blocks/B53.png"
+ },
+ {
+  "id": "B54",
+  "name": "517",
+  "side": "us",
+  "echelon": "us_sr",
+  "symbol": "airborne",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "elite"
+  ],
+  "arrival_turn": 6,
+  "entry": [
+   "H",
+   "J"
+  ],
+  "image": "assets/blocks/B54.png"
+ },
+ {
+  "id": "B55",
+  "name": "75 Inf",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "green",
+   "green"
+  ],
+  "arrival_turn": 6,
+  "entry": [
+   "C",
+   "D",
+   "E"
+  ],
+  "image": "assets/blocks/B55.png"
+ },
+ {
+  "id": "B56",
+  "name": "84 Inf",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "arrival_turn": 6,
+  "entry": [
+   "C",
+   "D",
+   "E"
+  ],
+  "image": "assets/blocks/B56.png"
+ },
+ {
+  "id": "B57",
+  "name": "4 Cav",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "cavalry",
+  "cls": "armor",
+  "steps": 1,
+  "quality_by_step": [
+   "veteran"
+  ],
+  "arrival_turn": 7,
+  "entry": [
+   "C",
+   "D",
+   "E"
+  ],
+  "image": "assets/blocks/B57.png"
+ },
+ {
+  "id": "B58",
+  "name": "5 Arm",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 2,
+  "quality_by_step": [
+   "veteran",
+   "veteran"
+  ],
+  "arrival_turn": 7,
+  "entry": [
+   "C",
+   "D",
+   "E"
+  ],
+  "image": "assets/blocks/B58.png"
+ },
+ {
+  "id": "B59",
+  "name": "2 Arm",
+  "side": "us",
+  "echelon": "us_1a",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "elite"
+  ],
+  "arrival_turn": 7,
+  "entry": [
+   "C",
+   "D",
+   "E"
+  ],
+  "image": "assets/blocks/B59.png"
+ },
+ {
+  "id": "B60",
+  "name": "10 Arm",
+  "side": "us",
+  "echelon": "us_3a",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "arrival_turn": 2,
+  "entry": [
+   "N",
+   "P",
+   "Q"
+  ],
+  "image": "assets/blocks/B60.png"
+ },
+ {
+  "id": "B61",
+  "name": "26 Inf",
+  "side": "us",
+  "echelon": "us_3a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "arrival_turn": 6,
+  "entry": [
+   "K",
+   "L",
+   "M",
+   "N"
+  ],
+  "image": "assets/blocks/B61.png"
+ },
+ {
+  "id": "B62",
+  "name": "80 Inf",
+  "side": "us",
+  "echelon": "us_3a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "arrival_turn": 6,
+  "entry": [
+   "K",
+   "L",
+   "M",
+   "N"
+  ],
+  "image": "assets/blocks/B62.png"
+ },
+ {
+  "id": "B63",
+  "name": "4 Arm",
+  "side": "us",
+  "echelon": "us_3a",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "elite"
+  ],
+  "arrival_turn": 6,
+  "entry": [
+   "K",
+   "L",
+   "M",
+   "N"
+  ],
+  "image": "assets/blocks/B63.png"
+ },
+ {
+  "id": "B64",
+  "name": "6 Cav",
+  "side": "us",
+  "echelon": "us_3a",
+  "symbol": "cavalry",
+  "cls": "armor",
+  "steps": 1,
+  "quality_by_step": [
+   "veteran"
+  ],
+  "arrival_turn": 7,
+  "entry": [
+   "K",
+   "L",
+   "M",
+   "N"
+  ],
+  "image": "assets/blocks/B64.png"
+ },
+ {
+  "id": "B65",
+  "name": "5 Inf",
+  "side": "us",
+  "echelon": "us_3a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "arrival_turn": 7,
+  "entry": [
+   "K",
+   "L",
+   "M",
+   "N"
+  ],
+  "image": "assets/blocks/B65.png"
+ },
+ {
+  "id": "B66",
+  "name": "6 Arm",
+  "side": "us",
+  "echelon": "us_3a",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "arrival_turn": 8,
+  "entry": [
+   "K",
+   "L",
+   "M",
+   "N",
+   "P",
+   "Q"
+  ],
+  "image": "assets/blocks/B66.png"
+ },
+ {
+  "id": "B67",
+  "name": "43 Inf",
+  "side": "british",
+  "echelon": "br_xxx",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "arrival_turn": 6,
+  "entry": [
+   "D",
+   "E",
+   "F",
+   "G",
+   "H"
+  ],
+  "image": "assets/blocks/B67.png"
+ },
+ {
+  "id": "B68",
+  "name": "53 Inf",
+  "side": "british",
+  "echelon": "br_xxx",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "arrival_turn": 6,
+  "entry": [
+   "D",
+   "E",
+   "F",
+   "G",
+   "H"
+  ],
+  "image": "assets/blocks/B68.png"
+ },
+ {
+  "id": "B69",
+  "name": "11 Arm",
+  "side": "us",
+  "echelon": "us_3a",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "green",
+   "green"
+  ],
+  "arrival_turn": 8,
+  "entry": [
+   "K",
+   "L",
+   "M",
+   "N",
+   "P",
+   "Q"
+  ],
+  "image": "assets/blocks/B69.png"
+ },
+ {
+  "id": "B70",
+  "name": "35 Inf",
+  "side": "us",
+  "echelon": "us_3a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "arrival_turn": 8,
+  "entry": [
+   "K",
+   "L",
+   "M",
+   "N",
+   "P",
+   "Q"
+  ],
+  "image": "assets/blocks/B70.png"
+ },
+ {
+  "id": "B71",
+  "name": "90 Inf",
+  "side": "us",
+  "echelon": "us_3a",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "arrival_turn": 8,
+  "entry": [
+   "K",
+   "L",
+   "M",
+   "N",
+   "P",
+   "Q"
+  ],
+  "image": "assets/blocks/B71.png"
+ },
+ {
+  "id": "B72",
+  "name": "Guards",
+  "side": "british",
+  "echelon": "br_xxx",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 2,
+  "quality_by_step": [
+   "elite",
+   "elite"
+  ],
+  "arrival_turn": 7,
+  "entry": [
+   "D",
+   "E",
+   "F",
+   "G",
+   "H"
+  ],
+  "image": "assets/blocks/B72.png"
+ },
+ {
+  "id": "B73",
+  "name": "51 Inf",
+  "side": "british",
+  "echelon": "br_xxx",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "arrival_turn": 8,
+  "entry": [
+   "D",
+   "E"
+  ],
+  "image": "assets/blocks/B73.png"
+ },
+ {
+  "id": "SA1",
+  "name": "German Special Action",
+  "side": "german",
+  "kind": "special_action_block",
+  "arrival_turn": 2,
+  "image": "assets/blocks/SA1.png"
+ },
+ {
+  "id": "SA2",
+  "name": "Allied Special Action",
+  "side": "allied",
+  "kind": "special_action_block",
+  "arrival_turn": 2,
+  "image": "assets/blocks/SA2.png"
+ }
+]

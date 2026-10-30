@@ -1,0 +1,1671 @@
+[
+ {
+  "id": "L11",
+  "kind": "infantry_asset",
+  "echelon": "de_sr",
+  "turn": 2,
+  "name": "v.d. Heydte",
+  "cls": "infantry",
+  "airborne": true,
+  "drop_areas": [
+   31,
+   52
+  ],
+  "quality": "veteran",
+  "class": "infantry",
+  "image": "assets/counters/raw/L11.png"
+ },
+ {
+  "id": "L12",
+  "kind": "rocket_artillery",
+  "echelon": "de_6pz",
+  "turn": "S",
+  "name": "9th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L12.png"
+ },
+ {
+  "id": "L13",
+  "kind": "rocket_artillery",
+  "echelon": "de_6pz",
+  "turn": "S",
+  "name": "17th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L13.png"
+ },
+ {
+  "id": "L14",
+  "kind": "artillery",
+  "echelon": "de_6pz",
+  "turn": "S",
+  "name": "402nd",
+  "class": "infantry",
+  "image": "assets/counters/raw/L14.png"
+ },
+ {
+  "id": "L15",
+  "kind": "artillery",
+  "echelon": "de_6pz",
+  "turn": "S",
+  "name": "405th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L15.png"
+ },
+ {
+  "id": "L16",
+  "kind": "artillery",
+  "echelon": "de_6pz",
+  "turn": "S",
+  "name": "388th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L16.png"
+ },
+ {
+  "id": "L17",
+  "kind": "replacement_inf",
+  "echelon": "de_6pz",
+  "turn": 2,
+  "name": "Non-Elite Inf Repl",
+  "image": "assets/counters/raw/L17.png"
+ },
+ {
+  "id": "L18",
+  "kind": "replacement_inf",
+  "echelon": "de_6pz",
+  "turn": 6,
+  "name": "Non-Elite Inf Repl",
+  "image": "assets/counters/raw/L18.png"
+ },
+ {
+  "id": "L19",
+  "kind": "replacement_arm",
+  "echelon": "de_6pz",
+  "turn": 5,
+  "name": "Non-Elite Arm Repl",
+  "image": "assets/counters/raw/L19.png"
+ },
+ {
+  "id": "L21",
+  "kind": "armor_asset",
+  "echelon": "de_6pz",
+  "turn": 6,
+  "name": "301 + 506",
+  "quality": "elite",
+  "class": "armor",
+  "image": "assets/counters/raw/L21.png"
+ },
+ {
+  "id": "L22",
+  "kind": "armor_asset",
+  "echelon": "de_6pz",
+  "turn": 2,
+  "name": "394 + 653 + 667",
+  "quality": "veteran",
+  "class": "armor",
+  "image": "assets/counters/raw/L22.png"
+ },
+ {
+  "id": "L23",
+  "kind": "armor_asset",
+  "echelon": "de_6pz",
+  "turn": 5,
+  "name": "519 + 521",
+  "quality": "veteran",
+  "class": "armor",
+  "image": "assets/counters/raw/L23.png"
+ },
+ {
+  "id": "L24",
+  "kind": "armor_asset",
+  "echelon": "de_6pz",
+  "turn": 2,
+  "name": "217 + 1000 + 1001",
+  "quality": "veteran",
+  "class": "armor",
+  "image": "assets/counters/raw/L24.png"
+ },
+ {
+  "id": "L25",
+  "kind": "rocket_artillery",
+  "echelon": "de_6pz",
+  "turn": "S",
+  "name": "4th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L25.png"
+ },
+ {
+  "id": "L26",
+  "kind": "engineer",
+  "echelon": "de_6pz",
+  "turn": "S",
+  "name": "62 + 73",
+  "quality": "veteran",
+  "class": "infantry",
+  "image": "assets/counters/raw/L26.png"
+ },
+ {
+  "id": "L27",
+  "kind": "replacement_inf",
+  "echelon": "de_5pz",
+  "turn": 3,
+  "name": "Non-Elite Inf Repl",
+  "image": "assets/counters/raw/L27.png"
+ },
+ {
+  "id": "L28",
+  "kind": "replacement_inf",
+  "echelon": "de_5pz",
+  "turn": 6,
+  "name": "Non-Elite Inf Repl",
+  "image": "assets/counters/raw/L28.png"
+ },
+ {
+  "id": "L29",
+  "kind": "replacement_arm",
+  "echelon": "de_5pz",
+  "turn": 5,
+  "name": "Non-Elite Arm Repl",
+  "image": "assets/counters/raw/L29.png"
+ },
+ {
+  "id": "L31",
+  "kind": "rocket_artillery",
+  "echelon": "de_5pz",
+  "turn": "S",
+  "name": "15th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L31.png"
+ },
+ {
+  "id": "L32",
+  "kind": "rocket_artillery",
+  "echelon": "de_5pz",
+  "turn": "S",
+  "name": "16th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L32.png"
+ },
+ {
+  "id": "L33",
+  "kind": "artillery",
+  "echelon": "de_5pz",
+  "turn": "S",
+  "name": "401st",
+  "class": "infantry",
+  "image": "assets/counters/raw/L33.png"
+ },
+ {
+  "id": "L34",
+  "kind": "artillery",
+  "echelon": "de_5pz",
+  "turn": "S",
+  "name": "766th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L34.png"
+ },
+ {
+  "id": "L35",
+  "kind": "armor_asset",
+  "echelon": "de_5pz",
+  "turn": 3,
+  "name": "741 + 902",
+  "quality": "veteran",
+  "class": "armor",
+  "image": "assets/counters/raw/L35.png"
+ },
+ {
+  "id": "L36",
+  "kind": "rocket_artillery",
+  "echelon": "de_5pz",
+  "turn": "S",
+  "name": "7th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L36.png"
+ },
+ {
+  "id": "L37",
+  "kind": "replacement_inf",
+  "echelon": "de_7a",
+  "turn": 4,
+  "name": "Non-Elite Inf Repl",
+  "image": "assets/counters/raw/L37.png"
+ },
+ {
+  "id": "L38",
+  "kind": "replacement_inf",
+  "echelon": "de_7a",
+  "turn": 7,
+  "name": "Non-Elite Inf Repl",
+  "image": "assets/counters/raw/L38.png"
+ },
+ {
+  "id": "L39",
+  "kind": "replacement_inf",
+  "echelon": "de_sr",
+  "turn": 8,
+  "name": "Non-Elite Inf Repl",
+  "image": "assets/counters/raw/L39.png"
+ },
+ {
+  "id": "L41",
+  "kind": "engineer",
+  "echelon": "de_5pz",
+  "turn": "S",
+  "name": "207 + 600",
+  "quality": "veteran",
+  "class": "infantry",
+  "image": "assets/counters/raw/L41.png"
+ },
+ {
+  "id": "L42",
+  "kind": "infantry_asset",
+  "echelon": "de_7a",
+  "turn": 2,
+  "name": "44 + 669",
+  "quality": "green",
+  "class": "infantry",
+  "image": "assets/counters/raw/L42.png"
+ },
+ {
+  "id": "L43",
+  "kind": "rocket_artillery",
+  "echelon": "de_7a",
+  "turn": "S",
+  "name": "8th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L43.png"
+ },
+ {
+  "id": "L44",
+  "kind": "rocket_artillery",
+  "echelon": "de_7a",
+  "turn": "S",
+  "name": "18th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L44.png"
+ },
+ {
+  "id": "L45",
+  "kind": "artillery",
+  "echelon": "de_7a",
+  "turn": "S",
+  "name": "406th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L45.png"
+ },
+ {
+  "id": "L46",
+  "kind": "artillery",
+  "echelon": "de_7a",
+  "turn": "S",
+  "name": "408th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L46.png"
+ },
+ {
+  "id": "L47",
+  "kind": "engineer",
+  "echelon": "de_7a",
+  "turn": "S",
+  "name": "47 + 605",
+  "quality": "veteran",
+  "class": "infantry",
+  "image": "assets/counters/raw/L47.png"
+ },
+ {
+  "id": "L48",
+  "kind": "replacement_inf",
+  "echelon": "us_1a",
+  "turn": 3,
+  "name": "Non-Elite Inf Repl",
+  "image": "assets/counters/raw/L48.png"
+ },
+ {
+  "id": "L49",
+  "kind": "command_staff",
+  "echelon": "de_sr",
+  "turn": 3,
+  "name": "Command HQ Staff Asset",
+  "image": "assets/counters/raw/L49.png"
+ },
+ {
+  "id": "L51",
+  "kind": "artillery",
+  "echelon": "br_xxx",
+  "turn": 7,
+  "name": "5 AGRA",
+  "class": "infantry",
+  "image": "assets/counters/raw/L51.png"
+ },
+ {
+  "id": "L52",
+  "kind": "artillery",
+  "echelon": "br_xxx",
+  "turn": 7,
+  "name": "4 AGRA",
+  "class": "infantry",
+  "image": "assets/counters/raw/L52.png"
+ },
+ {
+  "id": "L53",
+  "kind": "armor_asset",
+  "echelon": "br_xxx",
+  "turn": 6,
+  "name": "29th",
+  "quality": "veteran",
+  "class": "armor",
+  "image": "assets/counters/raw/L53.png"
+ },
+ {
+  "id": "L54",
+  "kind": "armor_asset",
+  "echelon": "br_xxx",
+  "turn": 6,
+  "name": "34th",
+  "quality": "veteran",
+  "class": "armor",
+  "image": "assets/counters/raw/L54.png"
+ },
+ {
+  "id": "L55",
+  "kind": "armor_asset",
+  "echelon": "br_xxx",
+  "turn": 8,
+  "name": "33rd",
+  "quality": "veteran",
+  "class": "armor",
+  "image": "assets/counters/raw/L55.png"
+ },
+ {
+  "id": "L56",
+  "kind": "rebuild_or_replace_inf",
+  "echelon": "us_1a",
+  "turn": 3,
+  "name": "Non-Elite Rebuild or Repl",
+  "image": "assets/counters/raw/L56.png"
+ },
+ {
+  "id": "L57",
+  "kind": "replacement_inf",
+  "echelon": "us_1a",
+  "turn": 6,
+  "name": "Non-Elite Inf Repl",
+  "image": "assets/counters/raw/L57.png"
+ },
+ {
+  "id": "L58",
+  "kind": "replacement_inf",
+  "echelon": "us_1a",
+  "turn": 7,
+  "name": "Non-Elite Inf Repl",
+  "image": "assets/counters/raw/L58.png"
+ },
+ {
+  "id": "L59",
+  "kind": "replacement_inf",
+  "echelon": "us_1a",
+  "turn": 8,
+  "name": "Non-Elite Inf Repl",
+  "image": "assets/counters/raw/L59.png"
+ },
+ {
+  "id": "L61",
+  "kind": "artillery",
+  "echelon": "us_1a",
+  "turn": 2,
+  "name": "187th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L61.png"
+ },
+ {
+  "id": "L62",
+  "kind": "artillery",
+  "echelon": "us_1a",
+  "turn": 2,
+  "name": "333rd",
+  "class": "infantry",
+  "image": "assets/counters/raw/L62.png"
+ },
+ {
+  "id": "L63",
+  "kind": "engineer",
+  "echelon": "us_sr",
+  "turn": 2,
+  "name": "35th",
+  "quality": "veteran",
+  "class": "infantry",
+  "image": "assets/counters/raw/L63.png"
+ },
+ {
+  "id": "L64",
+  "kind": "artillery",
+  "echelon": "us_1a",
+  "turn": 2,
+  "name": "402nd",
+  "class": "infantry",
+  "image": "assets/counters/raw/L64.png"
+ },
+ {
+  "id": "L65",
+  "kind": "engineer",
+  "echelon": "us_sr",
+  "turn": 2,
+  "name": "159th",
+  "quality": "veteran",
+  "class": "infantry",
+  "image": "assets/counters/raw/L65.png"
+ },
+ {
+  "id": "L66",
+  "kind": "rebuild_or_replace_arm",
+  "echelon": "us_1a",
+  "turn": 4,
+  "name": "Non-Elite Rebuild or Repl",
+  "image": "assets/counters/raw/L66.png"
+ },
+ {
+  "id": "L67",
+  "kind": "replacement_arm",
+  "echelon": "us_1a",
+  "turn": 6,
+  "name": "Non-Elite Arm Repl",
+  "image": "assets/counters/raw/L67.png"
+ },
+ {
+  "id": "L68",
+  "kind": "replacement_arm",
+  "echelon": "us_1a",
+  "turn": 7,
+  "name": "Non-Elite Arm Repl",
+  "image": "assets/counters/raw/L68.png"
+ },
+ {
+  "id": "L69",
+  "kind": "replacement_arm",
+  "echelon": "us_1a",
+  "turn": 8,
+  "name": "Non-Elite Arm Repl",
+  "image": "assets/counters/raw/L69.png"
+ },
+ {
+  "id": "L71",
+  "kind": "artillery",
+  "echelon": "us_1a",
+  "turn": 2,
+  "name": "406th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L71.png"
+ },
+ {
+  "id": "L72",
+  "kind": "infantry_asset",
+  "echelon": "us_sr",
+  "turn": 4,
+  "name": "509 + 551",
+  "airborne": true,
+  "quality": "elite",
+  "class": "infantry",
+  "image": "assets/counters/raw/L72.png"
+ },
+ {
+  "id": "L73",
+  "kind": "artillery",
+  "echelon": "us_1a",
+  "turn": 2,
+  "name": "174th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L73.png"
+ },
+ {
+  "id": "L74",
+  "kind": "artillery",
+  "echelon": "us_1a",
+  "turn": 4,
+  "name": "190th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L74.png"
+ },
+ {
+  "id": "L75",
+  "kind": "artillery",
+  "echelon": "us_1a",
+  "turn": 7,
+  "name": "18th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L75.png"
+ },
+ {
+  "id": "L76",
+  "kind": "artillery",
+  "echelon": "us_1a",
+  "turn": 7,
+  "name": "188th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L76.png"
+ },
+ {
+  "id": "L77",
+  "kind": "replacement_arm",
+  "echelon": "us_1a",
+  "turn": 9,
+  "name": "Non-Elite Arm Repl",
+  "image": "assets/counters/raw/L77.png"
+ },
+ {
+  "id": "L78",
+  "kind": "artillery",
+  "echelon": "us_1a",
+  "turn": 8,
+  "name": "179th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L78.png"
+ },
+ {
+  "id": "L79",
+  "kind": "engineer",
+  "echelon": "us_sr",
+  "turn": 2,
+  "name": "146th",
+  "quality": "veteran",
+  "class": "infantry",
+  "image": "assets/counters/raw/L79.png"
+ },
+ {
+  "id": "L81",
+  "kind": "armor_asset",
+  "echelon": "us_1a",
+  "turn": 4,
+  "name": "705 + 740",
+  "quality": "green",
+  "class": "armor",
+  "image": "assets/counters/raw/L81.png"
+ },
+ {
+  "id": "L82",
+  "kind": "infantry_asset",
+  "echelon": "us_1a",
+  "turn": 6,
+  "name": "29 + 118",
+  "quality": "green",
+  "class": "infantry",
+  "image": "assets/counters/raw/L82.png"
+ },
+ {
+  "id": "L83",
+  "kind": "engineer",
+  "echelon": "us_sr",
+  "turn": 3,
+  "name": "158th",
+  "quality": "veteran",
+  "class": "infantry",
+  "image": "assets/counters/raw/L83.png"
+ },
+ {
+  "id": "L84",
+  "kind": "engineer",
+  "echelon": "us_sr",
+  "turn": 6,
+  "name": "Thrasher",
+  "quality": "veteran",
+  "class": "infantry",
+  "image": "assets/counters/raw/L84.png"
+ },
+ {
+  "id": "L85",
+  "kind": "artillery",
+  "echelon": "us_1a",
+  "turn": 7,
+  "name": "142nd",
+  "class": "infantry",
+  "image": "assets/counters/raw/L85.png"
+ },
+ {
+  "id": "L86",
+  "kind": "armor_asset",
+  "echelon": "us_1a",
+  "turn": 7,
+  "name": "628th",
+  "quality": "green",
+  "class": "armor",
+  "image": "assets/counters/raw/L86.png"
+ },
+ {
+  "id": "L87",
+  "kind": "engineer",
+  "echelon": "us_sr",
+  "turn": 3,
+  "name": "299th",
+  "quality": "veteran",
+  "class": "infantry",
+  "image": "assets/counters/raw/L87.png"
+ },
+ {
+  "id": "L88",
+  "kind": "engineer",
+  "echelon": "us_sr",
+  "turn": 2,
+  "name": "168th",
+  "quality": "veteran",
+  "class": "infantry",
+  "image": "assets/counters/raw/L88.png"
+ },
+ {
+  "id": "L89",
+  "kind": "engineer",
+  "echelon": "us_sr",
+  "turn": 2,
+  "name": "44th",
+  "quality": "veteran",
+  "class": "infantry",
+  "image": "assets/counters/raw/L89.png"
+ },
+ {
+  "id": "L91",
+  "kind": "replacement_inf",
+  "echelon": "us_3a",
+  "turn": 7,
+  "name": "Non-Elite Inf Repl",
+  "image": "assets/counters/raw/L91.png"
+ },
+ {
+  "id": "L92",
+  "kind": "replacement_inf",
+  "echelon": "us_3a",
+  "turn": 8,
+  "name": "Non-Elite Inf Repl",
+  "image": "assets/counters/raw/L92.png"
+ },
+ {
+  "id": "L93",
+  "kind": "replacement_inf",
+  "echelon": "us_3a",
+  "turn": 9,
+  "name": "Non-Elite Inf Repl",
+  "image": "assets/counters/raw/L93.png"
+ },
+ {
+  "id": "L94",
+  "kind": "replacement_arm",
+  "echelon": "us_3a",
+  "turn": 7,
+  "name": "Non-Elite Arm Repl",
+  "image": "assets/counters/raw/L94.png"
+ },
+ {
+  "id": "L95",
+  "kind": "replacement_arm",
+  "echelon": "us_3a",
+  "turn": 8,
+  "name": "Non-Elite Arm Repl",
+  "image": "assets/counters/raw/L95.png"
+ },
+ {
+  "id": "L96",
+  "kind": "garrison",
+  "echelon": "us_sr",
+  "turn": "scenario",
+  "name": "Wiltz",
+  "area": 38,
+  "quality": "green",
+  "class": "infantry",
+  "image": "assets/counters/raw/L96.png"
+ },
+ {
+  "id": "L97",
+  "kind": "garrison",
+  "echelon": "us_sr",
+  "turn": "scenario",
+  "name": "St. Vith",
+  "area": 23,
+  "quality": "green",
+  "class": "infantry",
+  "image": "assets/counters/raw/L97.png"
+ },
+ {
+  "id": "L98",
+  "kind": "command_staff",
+  "echelon": "allied",
+  "turn": 3,
+  "name": "Command HQ Staff Asset",
+  "image": "assets/counters/raw/L98.png"
+ },
+ {
+  "id": "L99",
+  "kind": "reserve_marker",
+  "echelon": "allied",
+  "turn": null,
+  "name": "Zone 7 Reserve Unit",
+  "zones": [
+   7
+  ],
+  "image": "assets/counters/raw/L99.png"
+ },
+ {
+  "id": "L101",
+  "kind": "armor_asset",
+  "echelon": "us_3a",
+  "turn": 7,
+  "name": "602 + 654",
+  "quality": "veteran",
+  "class": "armor",
+  "image": "assets/counters/raw/L101.png"
+ },
+ {
+  "id": "L102",
+  "kind": "artillery",
+  "echelon": "us_3a",
+  "turn": 7,
+  "name": "177th",
+  "class": "infantry",
+  "image": "assets/counters/raw/L102.png"
+ },
+ {
+  "id": "L103",
+  "kind": "artillery",
+  "echelon": "us_3a",
+  "turn": 6,
+  "name": "182nd",
+  "class": "infantry",
+  "image": "assets/counters/raw/L103.png"
+ },
+ {
+  "id": "L104",
+  "kind": "artillery",
+  "echelon": "us_3a",
+  "turn": 7,
+  "name": "193rd",
+  "class": "infantry",
+  "image": "assets/counters/raw/L104.png"
+ },
+ {
+  "id": "L105",
+  "kind": "artillery",
+  "echelon": "us_3a",
+  "turn": 7,
+  "name": "203rd",
+  "class": "infantry",
+  "image": "assets/counters/raw/L105.png"
+ },
+ {
+  "id": "L106",
+  "kind": "garrison",
+  "echelon": "us_sr",
+  "turn": "scenario",
+  "name": "Spa",
+  "area": 32,
+  "quality": "green",
+  "class": "infantry",
+  "image": "assets/counters/raw/L106.png"
+ },
+ {
+  "id": "L107",
+  "kind": "garrison",
+  "echelon": "us_sr",
+  "turn": "scenario",
+  "name": "Bastogne",
+  "area": 47,
+  "quality": "green",
+  "class": "infantry",
+  "image": "assets/counters/raw/L107.png"
+ },
+ {
+  "id": "L108",
+  "kind": "reserve_marker",
+  "echelon": "allied",
+  "turn": null,
+  "name": "Zone 7 Reserve Unit",
+  "zones": [
+   7
+  ],
+  "image": "assets/counters/raw/L108.png"
+ },
+ {
+  "id": "L109",
+  "kind": "reserve_marker",
+  "echelon": "allied",
+  "turn": null,
+  "name": "Zones 5/6 Reserve Unit",
+  "zones": [
+   5,
+   6
+  ],
+  "image": "assets/counters/raw/L109.png"
+ },
+ {
+  "id": "R11",
+  "kind": "event_release",
+  "echelon": "de_sr",
+  "turn": 5,
+  "name": "11th Pz Div Released",
+  "image": "assets/counters/raw/R11.png"
+ },
+ {
+  "id": "R12",
+  "kind": "event_release",
+  "echelon": "de_sr",
+  "turn": 5,
+  "name": "10th SS Pz Div Released",
+  "image": "assets/counters/raw/R12.png"
+ },
+ {
+  "id": "R13",
+  "kind": "event_release",
+  "echelon": "de_sr",
+  "turn": 8,
+  "name": "17th SS Pz Gr Div Released",
+  "image": "assets/counters/raw/R13.png"
+ },
+ {
+  "id": "R14",
+  "kind": "event_release",
+  "echelon": "de_sr",
+  "turn": 8,
+  "name": "6th SS Mtn Div Released",
+  "image": "assets/counters/raw/R14.png"
+ },
+ {
+  "id": "R15",
+  "kind": "event_greif_bridge",
+  "echelon": "german",
+  "turn": 2,
+  "name": "Greif Team Bridge",
+  "image": "assets/counters/raw/R15.png"
+ },
+ {
+  "id": "R16",
+  "kind": "event_greif_bridge",
+  "echelon": "german",
+  "turn": 3,
+  "name": "Greif Team Bridge",
+  "image": "assets/counters/raw/R16.png"
+ },
+ {
+  "id": "R17",
+  "kind": "fuel",
+  "echelon": "german",
+  "turn": "S",
+  "name": "Fuel Asset",
+  "image": "assets/counters/raw/R17.png"
+ },
+ {
+  "id": "R18",
+  "kind": "fuel",
+  "echelon": "german",
+  "turn": "S",
+  "name": "Fuel Asset",
+  "image": "assets/counters/raw/R18.png"
+ },
+ {
+  "id": "R19",
+  "kind": "fuel",
+  "echelon": "german",
+  "turn": "S",
+  "name": "Fuel Asset",
+  "image": "assets/counters/raw/R19.png"
+ },
+ {
+  "id": "R21",
+  "kind": "event_bodenplatte",
+  "echelon": "german",
+  "turn": 7,
+  "name": "Operation Bodenplatte",
+  "image": "assets/counters/raw/R21.png"
+ },
+ {
+  "id": "R22",
+  "kind": "event_delayed_response",
+  "echelon": "german",
+  "turn": 7,
+  "name": "Delayed Response",
+  "image": "assets/counters/raw/R22.png"
+ },
+ {
+  "id": "R23",
+  "kind": "event_delayed_response",
+  "echelon": "german",
+  "turn": 8,
+  "name": "Delayed Response",
+  "image": "assets/counters/raw/R23.png"
+ },
+ {
+  "id": "R24",
+  "kind": "event_delayed_response",
+  "echelon": "german",
+  "turn": 9,
+  "name": "Delayed Response",
+  "image": "assets/counters/raw/R24.png"
+ },
+ {
+  "id": "R25",
+  "kind": "event_greif_interdict",
+  "echelon": "german",
+  "turn": 2,
+  "name": "Greif Team Interdict",
+  "image": "assets/counters/raw/R25.png"
+ },
+ {
+  "id": "R26",
+  "kind": "event_greif_interdict",
+  "echelon": "german",
+  "turn": 3,
+  "name": "Greif Team Interdict",
+  "image": "assets/counters/raw/R26.png"
+ },
+ {
+  "id": "R27",
+  "kind": "fuel",
+  "echelon": "german",
+  "turn": "S",
+  "name": "Fuel Asset",
+  "image": "assets/counters/raw/R27.png"
+ },
+ {
+  "id": "R28",
+  "kind": "fuel",
+  "echelon": "german",
+  "turn": "S",
+  "name": "Fuel Asset",
+  "image": "assets/counters/raw/R28.png"
+ },
+ {
+  "id": "R29",
+  "kind": "fuel",
+  "echelon": "german",
+  "turn": null,
+  "name": "Captured Fuel Asset",
+  "image": "assets/counters/raw/R29.png"
+ },
+ {
+  "id": "R31",
+  "kind": "event_arriving_regiment",
+  "echelon": "us_1a",
+  "turn": 2,
+  "name": "Regt only for 4th Inf Div",
+  "division": "4th Inf",
+  "image": "assets/counters/raw/R31.png"
+ },
+ {
+  "id": "R32",
+  "kind": "event_delayed_response",
+  "echelon": "allied",
+  "turn": 2,
+  "name": "Delayed Response",
+  "image": "assets/counters/raw/R32.png"
+ },
+ {
+  "id": "R33",
+  "kind": "event_delayed_response",
+  "echelon": "allied",
+  "turn": 3,
+  "name": "Delayed Response",
+  "image": "assets/counters/raw/R33.png"
+ },
+ {
+  "id": "R34",
+  "kind": "event_delayed_response",
+  "echelon": "allied",
+  "turn": 4,
+  "name": "Delayed Response",
+  "image": "assets/counters/raw/R34.png"
+ },
+ {
+  "id": "R35",
+  "kind": "event_arriving_regiment",
+  "echelon": "us_1a",
+  "turn": 3,
+  "name": "Regt only for 1st Inf Div",
+  "division": "1st Inf",
+  "image": "assets/counters/raw/R35.png"
+ },
+ {
+  "id": "R36",
+  "kind": "event_arriving_regiment",
+  "echelon": "us_1a",
+  "turn": 4,
+  "name": "Regt only for 1st Inf Div",
+  "division": "1st Inf",
+  "image": "assets/counters/raw/R36.png"
+ },
+ {
+  "id": "R37",
+  "kind": "event_arriving_regiment",
+  "echelon": "us_1a",
+  "turn": 5,
+  "name": "Regt only for 1st Inf Div",
+  "division": "1st Inf",
+  "image": "assets/counters/raw/R37.png"
+ },
+ {
+  "id": "R38",
+  "kind": "special_action_event",
+  "echelon": "de_6pz",
+  "turn": 4,
+  "name": "Special Action",
+  "image": "assets/counters/raw/R38.png"
+ },
+ {
+  "id": "R39",
+  "kind": "special_action_event",
+  "echelon": "de_6pz",
+  "turn": 6,
+  "name": "Special Action",
+  "image": "assets/counters/raw/R39.png"
+ },
+ {
+  "id": "R41",
+  "kind": "air_mission",
+  "echelon": "allied",
+  "turn": 6,
+  "name": "Air Mission",
+  "image": "assets/counters/raw/R41.png"
+ },
+ {
+  "id": "R42",
+  "kind": "air_mission",
+  "echelon": "allied",
+  "turn": 7,
+  "name": "Air Mission",
+  "image": "assets/counters/raw/R42.png"
+ },
+ {
+  "id": "R43",
+  "kind": "air_mission",
+  "echelon": "allied",
+  "turn": 7,
+  "name": "Air Mission",
+  "image": "assets/counters/raw/R43.png"
+ },
+ {
+  "id": "R44",
+  "kind": "special_action_event",
+  "echelon": "us_3a",
+  "turn": 7,
+  "name": "Special Action",
+  "image": "assets/counters/raw/R44.png"
+ },
+ {
+  "id": "R45",
+  "kind": "special_action_event",
+  "echelon": "us_3a",
+  "turn": 7,
+  "name": "Special Action",
+  "image": "assets/counters/raw/R45.png"
+ },
+ {
+  "id": "R46",
+  "kind": "special_action_event",
+  "echelon": "us_1a",
+  "turn": 5,
+  "name": "Special Action",
+  "image": "assets/counters/raw/R46.png"
+ },
+ {
+  "id": "R47",
+  "kind": "special_action_event",
+  "echelon": "us_1a",
+  "turn": 6,
+  "name": "Special Action",
+  "image": "assets/counters/raw/R47.png"
+ },
+ {
+  "id": "R48",
+  "kind": "special_action_event",
+  "echelon": "de_5pz",
+  "turn": 3,
+  "name": "Special Action",
+  "image": "assets/counters/raw/R48.png"
+ },
+ {
+  "id": "R49",
+  "kind": "special_action_event",
+  "echelon": "de_5pz",
+  "turn": 3,
+  "name": "Special Action",
+  "image": "assets/counters/raw/R49.png"
+ },
+ {
+  "id": "R51",
+  "kind": "air_mission",
+  "echelon": "allied",
+  "turn": 7,
+  "name": "Air Mission",
+  "image": "assets/counters/raw/R51.png"
+ },
+ {
+  "id": "R52",
+  "kind": "air_mission",
+  "echelon": "allied",
+  "turn": 8,
+  "name": "Air Mission",
+  "image": "assets/counters/raw/R52.png"
+ },
+ {
+  "id": "R53",
+  "kind": "air_mission",
+  "echelon": "allied",
+  "turn": 6,
+  "name": "Air Mission",
+  "image": "assets/counters/raw/R53.png"
+ },
+ {
+  "id": "R54",
+  "kind": "air_mission",
+  "echelon": "allied",
+  "turn": 7,
+  "name": "Air Mission",
+  "image": "assets/counters/raw/R54.png"
+ },
+ {
+  "id": "R55",
+  "kind": "air_mission",
+  "echelon": "allied",
+  "turn": 7,
+  "name": "Air Mission",
+  "image": "assets/counters/raw/R55.png"
+ },
+ {
+  "id": "R56",
+  "kind": "air_mission",
+  "echelon": "allied",
+  "turn": 7,
+  "name": "Air Mission",
+  "image": "assets/counters/raw/R56.png"
+ },
+ {
+  "id": "R57",
+  "kind": "reserve_marker",
+  "echelon": "german",
+  "turn": null,
+  "name": "Zone 5 Reserve Unit",
+  "zones": [
+   5
+  ],
+  "image": "assets/counters/raw/R57.png"
+ },
+ {
+  "id": "R58",
+  "kind": "reserve_marker",
+  "echelon": "german",
+  "turn": null,
+  "name": "Zone 6 Reserve Unit",
+  "zones": [
+   6
+  ],
+  "image": "assets/counters/raw/R58.png"
+ },
+ {
+  "id": "R59",
+  "kind": "reserve_marker",
+  "echelon": "german",
+  "turn": null,
+  "name": "Zone 6 Reserve Unit",
+  "zones": [
+   6
+  ],
+  "image": "assets/counters/raw/R59.png"
+ },
+ {
+  "id": "R61",
+  "kind": "air_mission",
+  "echelon": "allied",
+  "turn": 8,
+  "name": "Air Mission",
+  "image": "assets/counters/raw/R61.png"
+ },
+ {
+  "id": "R62",
+  "kind": "air_mission",
+  "echelon": "allied",
+  "turn": 9,
+  "name": "Air Mission",
+  "image": "assets/counters/raw/R62.png"
+ },
+ {
+  "id": "R63",
+  "kind": "air_mission",
+  "echelon": "allied",
+  "turn": 8,
+  "name": "Air Mission",
+  "image": "assets/counters/raw/R63.png"
+ },
+ {
+  "id": "R64",
+  "kind": "air_mission",
+  "echelon": "allied",
+  "turn": 8,
+  "name": "Air Mission",
+  "image": "assets/counters/raw/R64.png"
+ },
+ {
+  "id": "R65",
+  "kind": "air_mission",
+  "echelon": "allied",
+  "turn": 9,
+  "name": "Air Mission",
+  "image": "assets/counters/raw/R65.png"
+ },
+ {
+  "id": "R66",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Game Turn",
+  "image": "assets/counters/raw/R66.png"
+ },
+ {
+  "id": "R67",
+  "kind": "marker",
+  "echelon": "german",
+  "turn": null,
+  "name": "Boundary Crossing",
+  "image": "assets/counters/raw/R67.png"
+ },
+ {
+  "id": "R68",
+  "kind": "reserve_marker",
+  "echelon": "german",
+  "turn": null,
+  "name": "Zone 5 Reserve Unit",
+  "zones": [
+   5
+  ],
+  "image": "assets/counters/raw/R68.png"
+ },
+ {
+  "id": "R69",
+  "kind": "reserve_marker",
+  "echelon": "german",
+  "turn": null,
+  "name": "Zone 7 Reserve Unit",
+  "zones": [
+   7
+  ],
+  "image": "assets/counters/raw/R69.png"
+ },
+ {
+  "id": "R71",
+  "kind": "task_force",
+  "echelon": "us_sr",
+  "turn": 2,
+  "name": "Task Force",
+  "quality": "green",
+  "class": "infantry",
+  "image": "assets/counters/raw/R71.png"
+ },
+ {
+  "id": "R72",
+  "kind": "task_force",
+  "echelon": "us_sr",
+  "turn": 2,
+  "name": "Task Force",
+  "quality": "green",
+  "class": "infantry",
+  "image": "assets/counters/raw/R72.png"
+ },
+ {
+  "id": "R73",
+  "kind": "marker_vp",
+  "echelon": "german",
+  "turn": null,
+  "name": "German VP",
+  "image": "assets/counters/raw/R73.png"
+ },
+ {
+  "id": "R74",
+  "kind": "marker_vp",
+  "echelon": "german",
+  "turn": null,
+  "name": "German VP",
+  "image": "assets/counters/raw/R74.png"
+ },
+ {
+  "id": "R75",
+  "kind": "marker_vp",
+  "echelon": "german",
+  "turn": null,
+  "name": "German VP",
+  "image": "assets/counters/raw/R75.png"
+ },
+ {
+  "id": "R76",
+  "kind": "marker_vp",
+  "echelon": "german",
+  "turn": null,
+  "name": "German VP",
+  "image": "assets/counters/raw/R76.png"
+ },
+ {
+  "id": "R77",
+  "kind": "marker_vp",
+  "echelon": "german",
+  "turn": null,
+  "name": "German VP",
+  "image": "assets/counters/raw/R77.png"
+ },
+ {
+  "id": "R78",
+  "kind": "marker_vp",
+  "echelon": "german",
+  "turn": null,
+  "name": "German VP",
+  "image": "assets/counters/raw/R78.png"
+ },
+ {
+  "id": "R79",
+  "kind": "marker",
+  "echelon": "german",
+  "turn": null,
+  "name": "VPs",
+  "image": "assets/counters/raw/R79.png"
+ },
+ {
+  "id": "R81",
+  "kind": "task_force",
+  "echelon": "us_sr",
+  "turn": 3,
+  "name": "Task Force",
+  "quality": "green",
+  "class": "infantry",
+  "image": "assets/counters/raw/R81.png"
+ },
+ {
+  "id": "R82",
+  "kind": "task_force",
+  "echelon": "us_sr",
+  "turn": 4,
+  "name": "Task Force",
+  "quality": "green",
+  "class": "infantry",
+  "image": "assets/counters/raw/R82.png"
+ },
+ {
+  "id": "R83",
+  "kind": "task_force",
+  "echelon": "us_sr",
+  "turn": 5,
+  "name": "Task Force",
+  "quality": "green",
+  "class": "infantry",
+  "image": "assets/counters/raw/R83.png"
+ },
+ {
+  "id": "R84",
+  "kind": "marker_vp",
+  "echelon": "german",
+  "turn": null,
+  "name": "German VP",
+  "image": "assets/counters/raw/R84.png"
+ },
+ {
+  "id": "R85",
+  "kind": "marker_vp",
+  "echelon": "german",
+  "turn": null,
+  "name": "German VP",
+  "image": "assets/counters/raw/R85.png"
+ },
+ {
+  "id": "R86",
+  "kind": "marker_vp",
+  "echelon": "german",
+  "turn": null,
+  "name": "German VP",
+  "image": "assets/counters/raw/R86.png"
+ },
+ {
+  "id": "R87",
+  "kind": "marker_vp",
+  "echelon": "german",
+  "turn": null,
+  "name": "German VP",
+  "image": "assets/counters/raw/R87.png"
+ },
+ {
+  "id": "R88",
+  "kind": "marker_vp",
+  "echelon": "german",
+  "turn": null,
+  "name": "German VP",
+  "image": "assets/counters/raw/R88.png"
+ },
+ {
+  "id": "R89",
+  "kind": "marker",
+  "echelon": "german",
+  "turn": null,
+  "name": "Remaining German Bridge Repairs",
+  "image": "assets/counters/raw/R89.png"
+ },
+ {
+  "id": "R91",
+  "kind": "reserve_marker",
+  "echelon": "allied",
+  "turn": null,
+  "name": "Zones 5/6 Reserve Unit",
+  "zones": [
+   5,
+   6
+  ],
+  "image": "assets/counters/raw/R91.png"
+ },
+ {
+  "id": "R92",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "River Assault",
+  "image": "assets/counters/raw/R92.png"
+ },
+ {
+  "id": "R93",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "River Assault",
+  "image": "assets/counters/raw/R93.png"
+ },
+ {
+  "id": "R94",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Disordered / Recovering",
+  "image": "assets/counters/raw/R94.png"
+ },
+ {
+  "id": "R95",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Disordered / Recovering",
+  "image": "assets/counters/raw/R95.png"
+ },
+ {
+  "id": "R96",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Disordered / Recovering",
+  "image": "assets/counters/raw/R96.png"
+ },
+ {
+  "id": "R97",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Disordered / Recovering",
+  "image": "assets/counters/raw/R97.png"
+ },
+ {
+  "id": "R98",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Disordered / Recovering",
+  "image": "assets/counters/raw/R98.png"
+ },
+ {
+  "id": "R99",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Disordered / Recovering",
+  "image": "assets/counters/raw/R99.png"
+ },
+ {
+  "id": "R101",
+  "kind": "reserve_marker",
+  "echelon": "allied",
+  "turn": null,
+  "name": "Zones 5/6 Reserve Unit",
+  "zones": [
+   5,
+   6
+  ],
+  "image": "assets/counters/raw/R101.png"
+ },
+ {
+  "id": "R102",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "River Assault",
+  "image": "assets/counters/raw/R102.png"
+ },
+ {
+  "id": "R103",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "River Assault",
+  "image": "assets/counters/raw/R103.png"
+ },
+ {
+  "id": "R104",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Disordered / Recovering",
+  "image": "assets/counters/raw/R104.png"
+ },
+ {
+  "id": "R105",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Disordered / Recovering",
+  "image": "assets/counters/raw/R105.png"
+ },
+ {
+  "id": "R106",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Disordered / Recovering",
+  "image": "assets/counters/raw/R106.png"
+ },
+ {
+  "id": "R107",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Disordered / Recovering",
+  "image": "assets/counters/raw/R107.png"
+ },
+ {
+  "id": "R108",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Disordered / Recovering",
+  "image": "assets/counters/raw/R108.png"
+ },
+ {
+  "id": "R109",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Disordered / Recovering",
+  "image": "assets/counters/raw/R109.png"
+ },
+ {
+  "id": "Rx1",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Exploitation",
+  "image": "assets/counters/raw/Rx1.png"
+ },
+ {
+  "id": "Rx2",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Exploitation",
+  "image": "assets/counters/raw/Rx2.png"
+ },
+ {
+  "id": "Rx3",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Exploitation",
+  "image": "assets/counters/raw/Rx3.png"
+ },
+ {
+  "id": "Rx4",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Exploitation",
+  "image": "assets/counters/raw/Rx4.png"
+ },
+ {
+  "id": "Rx5",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Exploitation",
+  "image": "assets/counters/raw/Rx5.png"
+ },
+ {
+  "id": "Rx6",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Exploitation",
+  "image": "assets/counters/raw/Rx6.png"
+ },
+ {
+  "id": "Rx7",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Exploitation",
+  "image": "assets/counters/raw/Rx7.png"
+ },
+ {
+  "id": "Rx8",
+  "kind": "marker",
+  "echelon": "none",
+  "turn": null,
+  "name": "Exploitation",
+  "image": "assets/counters/raw/Rx8.png"
+ },
+ {
+  "id": "Rb1",
+  "kind": "fuel_bid",
+  "echelon": "german",
+  "turn": null,
+  "name": "Bid Fuel Asset",
+  "image": "assets/counters/raw/Rb1.png"
+ },
+ {
+  "id": "Rb2",
+  "kind": "fuel_bid",
+  "echelon": "german",
+  "turn": null,
+  "name": "Bid Fuel Asset",
+  "image": "assets/counters/raw/Rb2.png"
+ }
+]

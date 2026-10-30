@@ -1,0 +1,1441 @@
+{
+ "source": "derived from units.json + counters.json; matches the printed Reinforcement Cards (units per turn and chit totals)",
+ "start_assets": {
+  "german": [
+   {
+    "id": "B01",
+    "name": "Peiper",
+    "area": 5
+   },
+   {
+    "id": "B02",
+    "name": "1SS(-)",
+    "area": 6
+   },
+   {
+    "id": "B03",
+    "name": "12SS",
+    "area": 7
+   },
+   {
+    "id": "B04",
+    "name": "150 Pz",
+    "area": 6
+   },
+   {
+    "id": "B05",
+    "name": "12 VG",
+    "area": 9
+   },
+   {
+    "id": "B06",
+    "name": "277 VG",
+    "area": 9
+   },
+   {
+    "id": "B07",
+    "name": "3 FJ",
+    "area": 10
+   },
+   {
+    "id": "B10",
+    "name": "326 VG",
+    "area": 8
+   },
+   {
+    "id": "B15",
+    "name": "Lehr",
+    "area": 13
+   },
+   {
+    "id": "B16",
+    "name": "2 Pz",
+    "area": 21
+   },
+   {
+    "id": "B18",
+    "name": "116 Pz",
+    "area": 12
+   },
+   {
+    "id": "B19",
+    "name": "18 VG",
+    "area": 11
+   },
+   {
+    "id": "B20",
+    "name": "26 VG",
+    "area": 20
+   },
+   {
+    "id": "B21",
+    "name": "62 VG",
+    "area": 11
+   },
+   {
+    "id": "B22",
+    "name": "560 VG",
+    "area": 12
+   },
+   {
+    "id": "B25",
+    "name": "212 VG",
+    "area": 16
+   },
+   {
+    "id": "B26",
+    "name": "276 VG",
+    "area": 15
+   },
+   {
+    "id": "B27",
+    "name": "352 VG",
+    "area": 18
+   },
+   {
+    "id": "B28",
+    "name": "5 FJ",
+    "area": 19
+   },
+   {
+    "id": "L12",
+    "kind": "rocket_artillery",
+    "name": "9th",
+    "echelon": "de_6pz"
+   },
+   {
+    "id": "L13",
+    "kind": "rocket_artillery",
+    "name": "17th",
+    "echelon": "de_6pz"
+   },
+   {
+    "id": "L14",
+    "kind": "artillery",
+    "name": "402nd",
+    "echelon": "de_6pz"
+   },
+   {
+    "id": "L15",
+    "kind": "artillery",
+    "name": "405th",
+    "echelon": "de_6pz"
+   },
+   {
+    "id": "L16",
+    "kind": "artillery",
+    "name": "388th",
+    "echelon": "de_6pz"
+   },
+   {
+    "id": "L25",
+    "kind": "rocket_artillery",
+    "name": "4th",
+    "echelon": "de_6pz"
+   },
+   {
+    "id": "L26",
+    "kind": "engineer",
+    "name": "62 + 73",
+    "echelon": "de_6pz"
+   },
+   {
+    "id": "L31",
+    "kind": "rocket_artillery",
+    "name": "15th",
+    "echelon": "de_5pz"
+   },
+   {
+    "id": "L32",
+    "kind": "rocket_artillery",
+    "name": "16th",
+    "echelon": "de_5pz"
+   },
+   {
+    "id": "L33",
+    "kind": "artillery",
+    "name": "401st",
+    "echelon": "de_5pz"
+   },
+   {
+    "id": "L34",
+    "kind": "artillery",
+    "name": "766th",
+    "echelon": "de_5pz"
+   },
+   {
+    "id": "L36",
+    "kind": "rocket_artillery",
+    "name": "7th",
+    "echelon": "de_5pz"
+   },
+   {
+    "id": "L41",
+    "kind": "engineer",
+    "name": "207 + 600",
+    "echelon": "de_5pz"
+   },
+   {
+    "id": "L43",
+    "kind": "rocket_artillery",
+    "name": "8th",
+    "echelon": "de_7a"
+   },
+   {
+    "id": "L44",
+    "kind": "rocket_artillery",
+    "name": "18th",
+    "echelon": "de_7a"
+   },
+   {
+    "id": "L45",
+    "kind": "artillery",
+    "name": "406th",
+    "echelon": "de_7a"
+   },
+   {
+    "id": "L46",
+    "kind": "artillery",
+    "name": "408th",
+    "echelon": "de_7a"
+   },
+   {
+    "id": "L47",
+    "kind": "engineer",
+    "name": "47 + 605",
+    "echelon": "de_7a"
+   },
+   {
+    "id": "R17",
+    "kind": "fuel",
+    "name": "Fuel Asset",
+    "echelon": "german"
+   },
+   {
+    "id": "R18",
+    "kind": "fuel",
+    "name": "Fuel Asset",
+    "echelon": "german"
+   },
+   {
+    "id": "R19",
+    "kind": "fuel",
+    "name": "Fuel Asset",
+    "echelon": "german"
+   },
+   {
+    "id": "R27",
+    "kind": "fuel",
+    "name": "Fuel Asset",
+    "echelon": "german"
+   },
+   {
+    "id": "R28",
+    "kind": "fuel",
+    "name": "Fuel Asset",
+    "echelon": "german"
+   }
+  ],
+  "allied": [
+   {
+    "id": "B35",
+    "name": "4 Inf",
+    "area": 16
+   },
+   {
+    "id": "B36",
+    "name": "109/28",
+    "area": 19
+   },
+   {
+    "id": "B37",
+    "name": "110/28",
+    "area": 21
+   },
+   {
+    "id": "B38",
+    "name": "112/28",
+    "area": 12
+   },
+   {
+    "id": "B39",
+    "name": "106 Inf",
+    "area": 11
+   },
+   {
+    "id": "B40",
+    "name": "99 Inf",
+    "area": 9
+   },
+   {
+    "id": "B41",
+    "name": "2 Inf",
+    "area": 27
+   },
+   {
+    "id": "B42",
+    "name": "14 Cav",
+    "area": 10
+   },
+   {
+    "id": "B43",
+    "name": "102 Cav",
+    "area": 27
+   },
+   {
+    "id": "B44",
+    "name": "CCA/9",
+    "area": 18
+   },
+   {
+    "id": "B45",
+    "name": "CCB/9",
+    "area": 25
+   },
+   {
+    "id": "B46",
+    "name": "CCR/9",
+    "area": 37
+   }
+  ]
+ },
+ "turns": {
+  "2": {
+   "german": {
+    "units": [],
+    "chits": [
+     {
+      "id": "SA1",
+      "name": "German Special Action",
+      "reusable": true
+     },
+     {
+      "id": "L11",
+      "kind": "infantry_asset",
+      "name": "v.d. Heydte",
+      "echelon": "de_sr"
+     },
+     {
+      "id": "L17",
+      "kind": "replacement_inf",
+      "name": "Non-Elite Inf Repl",
+      "echelon": "de_6pz"
+     },
+     {
+      "id": "L22",
+      "kind": "armor_asset",
+      "name": "394 + 653 + 667",
+      "echelon": "de_6pz"
+     },
+     {
+      "id": "L24",
+      "kind": "armor_asset",
+      "name": "217 + 1000 + 1001",
+      "echelon": "de_6pz"
+     },
+     {
+      "id": "L42",
+      "kind": "infantry_asset",
+      "name": "44 + 669",
+      "echelon": "de_7a"
+     },
+     {
+      "id": "R15",
+      "kind": "event_greif_bridge",
+      "name": "Greif Team Bridge",
+      "echelon": "german"
+     },
+     {
+      "id": "R25",
+      "kind": "event_greif_interdict",
+      "name": "Greif Team Interdict",
+      "echelon": "german"
+     }
+    ]
+   },
+   "allied": {
+    "units": [
+     {
+      "id": "B47",
+      "name": "7 Arm",
+      "entry": [
+       "A",
+       "B",
+       "C"
+      ]
+     },
+     {
+      "id": "B48",
+      "name": "1 Inf",
+      "entry": [
+       "A",
+       "B",
+       "C"
+      ]
+     },
+     {
+      "id": "B60",
+      "name": "10 Arm",
+      "entry": [
+       "N",
+       "P",
+       "Q"
+      ]
+     }
+    ],
+    "chits": [
+     {
+      "id": "SA2",
+      "name": "Allied Special Action",
+      "reusable": true
+     },
+     {
+      "id": "L61",
+      "kind": "artillery",
+      "name": "187th",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L62",
+      "kind": "artillery",
+      "name": "333rd",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L63",
+      "kind": "engineer",
+      "name": "35th",
+      "echelon": "us_sr"
+     },
+     {
+      "id": "L64",
+      "kind": "artillery",
+      "name": "402nd",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L65",
+      "kind": "engineer",
+      "name": "159th",
+      "echelon": "us_sr"
+     },
+     {
+      "id": "L71",
+      "kind": "artillery",
+      "name": "406th",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L73",
+      "kind": "artillery",
+      "name": "174th",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L79",
+      "kind": "engineer",
+      "name": "146th",
+      "echelon": "us_sr"
+     },
+     {
+      "id": "L88",
+      "kind": "engineer",
+      "name": "168th",
+      "echelon": "us_sr"
+     },
+     {
+      "id": "L89",
+      "kind": "engineer",
+      "name": "44th",
+      "echelon": "us_sr"
+     },
+     {
+      "id": "R31",
+      "kind": "event_arriving_regiment",
+      "name": "Regt only for 4th Inf Div",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "R32",
+      "kind": "event_delayed_response",
+      "name": "Delayed Response",
+      "echelon": "allied"
+     },
+     {
+      "id": "R71",
+      "kind": "task_force",
+      "name": "Task Force",
+      "echelon": "us_sr"
+     },
+     {
+      "id": "R72",
+      "kind": "task_force",
+      "name": "Task Force",
+      "echelon": "us_sr"
+     }
+    ]
+   }
+  },
+  "3": {
+   "german": {
+    "units": [
+     {
+      "id": "B23",
+      "name": "Fuh Es",
+      "entry": [
+       "Y"
+      ]
+     }
+    ],
+    "chits": [
+     {
+      "id": "L27",
+      "kind": "replacement_inf",
+      "name": "Non-Elite Inf Repl",
+      "echelon": "de_5pz"
+     },
+     {
+      "id": "L35",
+      "kind": "armor_asset",
+      "name": "741 + 902",
+      "echelon": "de_5pz"
+     },
+     {
+      "id": "L49",
+      "kind": "command_staff",
+      "name": "Command HQ Staff Asset",
+      "echelon": "de_sr"
+     },
+     {
+      "id": "R16",
+      "kind": "event_greif_bridge",
+      "name": "Greif Team Bridge",
+      "echelon": "german"
+     },
+     {
+      "id": "R26",
+      "kind": "event_greif_interdict",
+      "name": "Greif Team Interdict",
+      "echelon": "german"
+     },
+     {
+      "id": "R48",
+      "kind": "special_action_event",
+      "name": "Special Action",
+      "echelon": "de_5pz"
+     },
+     {
+      "id": "R49",
+      "kind": "special_action_event",
+      "name": "Special Action",
+      "echelon": "de_5pz"
+     }
+    ]
+   },
+   "allied": {
+    "units": [
+     {
+      "id": "B49",
+      "name": "9 Inf",
+      "entry": [
+       "A",
+       "B"
+      ]
+     },
+     {
+      "id": "B50",
+      "name": "30 Inf",
+      "entry": [
+       "A",
+       "B"
+      ]
+     },
+     {
+      "id": "B51",
+      "name": "82",
+      "entry": [
+       "H",
+       "J"
+      ]
+     },
+     {
+      "id": "B52",
+      "name": "101",
+      "entry": [
+       "H",
+       "J"
+      ]
+     }
+    ],
+    "chits": [
+     {
+      "id": "L48",
+      "kind": "replacement_inf",
+      "name": "Non-Elite Inf Repl",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L56",
+      "kind": "rebuild_or_replace_inf",
+      "name": "Non-Elite Rebuild or Repl",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L83",
+      "kind": "engineer",
+      "name": "158th",
+      "echelon": "us_sr"
+     },
+     {
+      "id": "L87",
+      "kind": "engineer",
+      "name": "299th",
+      "echelon": "us_sr"
+     },
+     {
+      "id": "L98",
+      "kind": "command_staff",
+      "name": "Command HQ Staff Asset",
+      "echelon": "allied"
+     },
+     {
+      "id": "R33",
+      "kind": "event_delayed_response",
+      "name": "Delayed Response",
+      "echelon": "allied"
+     },
+     {
+      "id": "R35",
+      "kind": "event_arriving_regiment",
+      "name": "Regt only for 1st Inf Div",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "R81",
+      "kind": "task_force",
+      "name": "Task Force",
+      "echelon": "us_sr"
+     }
+    ]
+   }
+  },
+  "4": {
+   "german": {
+    "units": [
+     {
+      "id": "B08",
+      "name": "2SS",
+      "entry": [
+       "Z"
+      ]
+     },
+     {
+      "id": "B09",
+      "name": "9SS",
+      "entry": [
+       "Z"
+      ]
+     },
+     {
+      "id": "B11",
+      "name": "3 PG",
+      "entry": [
+       "Z"
+      ]
+     }
+    ],
+    "chits": [
+     {
+      "id": "L37",
+      "kind": "replacement_inf",
+      "name": "Non-Elite Inf Repl",
+      "echelon": "de_7a"
+     },
+     {
+      "id": "R38",
+      "kind": "special_action_event",
+      "name": "Special Action",
+      "echelon": "de_6pz"
+     }
+    ]
+   },
+   "allied": {
+    "units": [],
+    "chits": [
+     {
+      "id": "L66",
+      "kind": "rebuild_or_replace_arm",
+      "name": "Non-Elite Rebuild or Repl",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L72",
+      "kind": "infantry_asset",
+      "name": "509 + 551",
+      "echelon": "us_sr"
+     },
+     {
+      "id": "L74",
+      "kind": "artillery",
+      "name": "190th",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L81",
+      "kind": "armor_asset",
+      "name": "705 + 740",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "R34",
+      "kind": "event_delayed_response",
+      "name": "Delayed Response",
+      "echelon": "allied"
+     },
+     {
+      "id": "R36",
+      "kind": "event_arriving_regiment",
+      "name": "Regt only for 1st Inf Div",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "R82",
+      "kind": "task_force",
+      "name": "Task Force",
+      "echelon": "us_sr"
+     }
+    ]
+   }
+  },
+  "5": {
+   "german": {
+    "units": [
+     {
+      "id": "B30",
+      "name": "Fuh Gr",
+      "entry": [
+       "X"
+      ]
+     }
+    ],
+    "chits": [
+     {
+      "id": "L19",
+      "kind": "replacement_arm",
+      "name": "Non-Elite Arm Repl",
+      "echelon": "de_6pz"
+     },
+     {
+      "id": "L23",
+      "kind": "armor_asset",
+      "name": "519 + 521",
+      "echelon": "de_6pz"
+     },
+     {
+      "id": "L29",
+      "kind": "replacement_arm",
+      "name": "Non-Elite Arm Repl",
+      "echelon": "de_5pz"
+     },
+     {
+      "id": "R11",
+      "kind": "event_release",
+      "name": "11th Pz Div Released",
+      "echelon": "de_sr"
+     },
+     {
+      "id": "R12",
+      "kind": "event_release",
+      "name": "10th SS Pz Div Released",
+      "echelon": "de_sr"
+     }
+    ]
+   },
+   "allied": {
+    "units": [
+     {
+      "id": "B53",
+      "name": "3 Arm",
+      "entry": [
+       "B"
+      ]
+     }
+    ],
+    "chits": [
+     {
+      "id": "R37",
+      "kind": "event_arriving_regiment",
+      "name": "Regt only for 1st Inf Div",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "R46",
+      "kind": "special_action_event",
+      "name": "Special Action",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "R83",
+      "kind": "task_force",
+      "name": "Task Force",
+      "echelon": "us_sr"
+     }
+    ]
+   }
+  },
+  "6": {
+   "german": {
+    "units": [
+     {
+      "id": "B29",
+      "name": "79 VG",
+      "entry": [
+       "X"
+      ]
+     }
+    ],
+    "chits": [
+     {
+      "id": "L18",
+      "kind": "replacement_inf",
+      "name": "Non-Elite Inf Repl",
+      "echelon": "de_6pz"
+     },
+     {
+      "id": "L21",
+      "kind": "armor_asset",
+      "name": "301 + 506",
+      "echelon": "de_6pz"
+     },
+     {
+      "id": "L28",
+      "kind": "replacement_inf",
+      "name": "Non-Elite Inf Repl",
+      "echelon": "de_5pz"
+     },
+     {
+      "id": "R39",
+      "kind": "special_action_event",
+      "name": "Special Action",
+      "echelon": "de_6pz"
+     }
+    ]
+   },
+   "allied": {
+    "units": [
+     {
+      "id": "B54",
+      "name": "517",
+      "entry": [
+       "H",
+       "J"
+      ]
+     },
+     {
+      "id": "B55",
+      "name": "75 Inf",
+      "entry": [
+       "C",
+       "D",
+       "E"
+      ]
+     },
+     {
+      "id": "B56",
+      "name": "84 Inf",
+      "entry": [
+       "C",
+       "D",
+       "E"
+      ]
+     },
+     {
+      "id": "B61",
+      "name": "26 Inf",
+      "entry": [
+       "K",
+       "L",
+       "M",
+       "N"
+      ]
+     },
+     {
+      "id": "B62",
+      "name": "80 Inf",
+      "entry": [
+       "K",
+       "L",
+       "M",
+       "N"
+      ]
+     },
+     {
+      "id": "B63",
+      "name": "4 Arm",
+      "entry": [
+       "K",
+       "L",
+       "M",
+       "N"
+      ]
+     },
+     {
+      "id": "B67",
+      "name": "43 Inf",
+      "entry": [
+       "D",
+       "E",
+       "F",
+       "G",
+       "H"
+      ]
+     },
+     {
+      "id": "B68",
+      "name": "53 Inf",
+      "entry": [
+       "D",
+       "E",
+       "F",
+       "G",
+       "H"
+      ]
+     }
+    ],
+    "chits": [
+     {
+      "id": "L53",
+      "kind": "armor_asset",
+      "name": "29th",
+      "echelon": "br_xxx"
+     },
+     {
+      "id": "L54",
+      "kind": "armor_asset",
+      "name": "34th",
+      "echelon": "br_xxx"
+     },
+     {
+      "id": "L57",
+      "kind": "replacement_inf",
+      "name": "Non-Elite Inf Repl",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L67",
+      "kind": "replacement_arm",
+      "name": "Non-Elite Arm Repl",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L82",
+      "kind": "infantry_asset",
+      "name": "29 + 118",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L84",
+      "kind": "engineer",
+      "name": "Thrasher",
+      "echelon": "us_sr"
+     },
+     {
+      "id": "L103",
+      "kind": "artillery",
+      "name": "182nd",
+      "echelon": "us_3a"
+     },
+     {
+      "id": "R41",
+      "kind": "air_mission",
+      "name": "Air Mission",
+      "echelon": "allied"
+     },
+     {
+      "id": "R47",
+      "kind": "special_action_event",
+      "name": "Special Action",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "R53",
+      "kind": "air_mission",
+      "name": "Air Mission",
+      "echelon": "allied"
+     }
+    ]
+   }
+  },
+  "7": {
+   "german": {
+    "units": [
+     {
+      "id": "B13",
+      "name": "15 PG",
+      "entry": [
+       "Y"
+      ]
+     },
+     {
+      "id": "B17",
+      "name": "9 Pz",
+      "entry": [
+       "Y"
+      ]
+     }
+    ],
+    "chits": [
+     {
+      "id": "L38",
+      "kind": "replacement_inf",
+      "name": "Non-Elite Inf Repl",
+      "echelon": "de_7a"
+     },
+     {
+      "id": "R21",
+      "kind": "event_bodenplatte",
+      "name": "Operation Bodenplatte",
+      "echelon": "german"
+     },
+     {
+      "id": "R22",
+      "kind": "event_delayed_response",
+      "name": "Delayed Response",
+      "echelon": "german"
+     }
+    ]
+   },
+   "allied": {
+    "units": [
+     {
+      "id": "B57",
+      "name": "4 Cav",
+      "entry": [
+       "C",
+       "D",
+       "E"
+      ]
+     },
+     {
+      "id": "B58",
+      "name": "5 Arm",
+      "entry": [
+       "C",
+       "D",
+       "E"
+      ]
+     },
+     {
+      "id": "B59",
+      "name": "2 Arm",
+      "entry": [
+       "C",
+       "D",
+       "E"
+      ]
+     },
+     {
+      "id": "B64",
+      "name": "6 Cav",
+      "entry": [
+       "K",
+       "L",
+       "M",
+       "N"
+      ]
+     },
+     {
+      "id": "B65",
+      "name": "5 Inf",
+      "entry": [
+       "K",
+       "L",
+       "M",
+       "N"
+      ]
+     },
+     {
+      "id": "B72",
+      "name": "Guards",
+      "entry": [
+       "D",
+       "E",
+       "F",
+       "G",
+       "H"
+      ]
+     }
+    ],
+    "chits": [
+     {
+      "id": "L51",
+      "kind": "artillery",
+      "name": "5 AGRA",
+      "echelon": "br_xxx"
+     },
+     {
+      "id": "L52",
+      "kind": "artillery",
+      "name": "4 AGRA",
+      "echelon": "br_xxx"
+     },
+     {
+      "id": "L58",
+      "kind": "replacement_inf",
+      "name": "Non-Elite Inf Repl",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L68",
+      "kind": "replacement_arm",
+      "name": "Non-Elite Arm Repl",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L75",
+      "kind": "artillery",
+      "name": "18th",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L76",
+      "kind": "artillery",
+      "name": "188th",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L85",
+      "kind": "artillery",
+      "name": "142nd",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L86",
+      "kind": "armor_asset",
+      "name": "628th",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L91",
+      "kind": "replacement_inf",
+      "name": "Non-Elite Inf Repl",
+      "echelon": "us_3a"
+     },
+     {
+      "id": "L94",
+      "kind": "replacement_arm",
+      "name": "Non-Elite Arm Repl",
+      "echelon": "us_3a"
+     },
+     {
+      "id": "L101",
+      "kind": "armor_asset",
+      "name": "602 + 654",
+      "echelon": "us_3a"
+     },
+     {
+      "id": "L102",
+      "kind": "artillery",
+      "name": "177th",
+      "echelon": "us_3a"
+     },
+     {
+      "id": "L104",
+      "kind": "artillery",
+      "name": "193rd",
+      "echelon": "us_3a"
+     },
+     {
+      "id": "L105",
+      "kind": "artillery",
+      "name": "203rd",
+      "echelon": "us_3a"
+     },
+     {
+      "id": "R42",
+      "kind": "air_mission",
+      "name": "Air Mission",
+      "echelon": "allied"
+     },
+     {
+      "id": "R43",
+      "kind": "air_mission",
+      "name": "Air Mission",
+      "echelon": "allied"
+     },
+     {
+      "id": "R44",
+      "kind": "special_action_event",
+      "name": "Special Action",
+      "echelon": "us_3a"
+     },
+     {
+      "id": "R45",
+      "kind": "special_action_event",
+      "name": "Special Action",
+      "echelon": "us_3a"
+     },
+     {
+      "id": "R51",
+      "kind": "air_mission",
+      "name": "Air Mission",
+      "echelon": "allied"
+     },
+     {
+      "id": "R54",
+      "kind": "air_mission",
+      "name": "Air Mission",
+      "echelon": "allied"
+     },
+     {
+      "id": "R55",
+      "kind": "air_mission",
+      "name": "Air Mission",
+      "echelon": "allied"
+     },
+     {
+      "id": "R56",
+      "kind": "air_mission",
+      "name": "Air Mission",
+      "echelon": "allied"
+     }
+    ]
+   }
+  },
+  "8": {
+   "german": {
+    "units": [
+     {
+      "id": "B12",
+      "name": "246 VG",
+      "entry": [
+       "Z"
+      ]
+     },
+     {
+      "id": "B14",
+      "name": "167 VG",
+      "entry": [
+       "Y"
+      ]
+     },
+     {
+      "id": "B24",
+      "name": "9 VG",
+      "entry": [
+       "X"
+      ]
+     }
+    ],
+    "chits": [
+     {
+      "id": "L39",
+      "kind": "replacement_inf",
+      "name": "Non-Elite Inf Repl",
+      "echelon": "de_sr"
+     },
+     {
+      "id": "R13",
+      "kind": "event_release",
+      "name": "17th SS Pz Gr Div Released",
+      "echelon": "de_sr"
+     },
+     {
+      "id": "R14",
+      "kind": "event_release",
+      "name": "6th SS Mtn Div Released",
+      "echelon": "de_sr"
+     },
+     {
+      "id": "R23",
+      "kind": "event_delayed_response",
+      "name": "Delayed Response",
+      "echelon": "german"
+     }
+    ]
+   },
+   "allied": {
+    "units": [
+     {
+      "id": "B66",
+      "name": "6 Arm",
+      "entry": [
+       "K",
+       "L",
+       "M",
+       "N",
+       "P",
+       "Q"
+      ]
+     },
+     {
+      "id": "B69",
+      "name": "11 Arm",
+      "entry": [
+       "K",
+       "L",
+       "M",
+       "N",
+       "P",
+       "Q"
+      ]
+     },
+     {
+      "id": "B70",
+      "name": "35 Inf",
+      "entry": [
+       "K",
+       "L",
+       "M",
+       "N",
+       "P",
+       "Q"
+      ]
+     },
+     {
+      "id": "B71",
+      "name": "90 Inf",
+      "entry": [
+       "K",
+       "L",
+       "M",
+       "N",
+       "P",
+       "Q"
+      ]
+     },
+     {
+      "id": "B73",
+      "name": "51 Inf",
+      "entry": [
+       "D",
+       "E"
+      ]
+     }
+    ],
+    "chits": [
+     {
+      "id": "L55",
+      "kind": "armor_asset",
+      "name": "33rd",
+      "echelon": "br_xxx"
+     },
+     {
+      "id": "L59",
+      "kind": "replacement_inf",
+      "name": "Non-Elite Inf Repl",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L69",
+      "kind": "replacement_arm",
+      "name": "Non-Elite Arm Repl",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L78",
+      "kind": "artillery",
+      "name": "179th",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L92",
+      "kind": "replacement_inf",
+      "name": "Non-Elite Inf Repl",
+      "echelon": "us_3a"
+     },
+     {
+      "id": "L95",
+      "kind": "replacement_arm",
+      "name": "Non-Elite Arm Repl",
+      "echelon": "us_3a"
+     },
+     {
+      "id": "R52",
+      "kind": "air_mission",
+      "name": "Air Mission",
+      "echelon": "allied"
+     },
+     {
+      "id": "R61",
+      "kind": "air_mission",
+      "name": "Air Mission",
+      "echelon": "allied"
+     },
+     {
+      "id": "R63",
+      "kind": "air_mission",
+      "name": "Air Mission",
+      "echelon": "allied"
+     },
+     {
+      "id": "R64",
+      "kind": "air_mission",
+      "name": "Air Mission",
+      "echelon": "allied"
+     }
+    ]
+   }
+  },
+  "9": {
+   "german": {
+    "units": [],
+    "chits": [
+     {
+      "id": "R24",
+      "kind": "event_delayed_response",
+      "name": "Delayed Response",
+      "echelon": "german"
+     }
+    ]
+   },
+   "allied": {
+    "units": [],
+    "chits": [
+     {
+      "id": "L77",
+      "kind": "replacement_arm",
+      "name": "Non-Elite Arm Repl",
+      "echelon": "us_1a"
+     },
+     {
+      "id": "L93",
+      "kind": "replacement_inf",
+      "name": "Non-Elite Inf Repl",
+      "echelon": "us_3a"
+     },
+     {
+      "id": "R62",
+      "kind": "air_mission",
+      "name": "Air Mission",
+      "echelon": "allied"
+     },
+     {
+      "id": "R65",
+      "kind": "air_mission",
+      "name": "Air Mission",
+      "echelon": "allied"
+     }
+    ]
+   }
+  },
+  "strategic_reserve": [
+   {
+    "id": "B31",
+    "name": "11 Pz"
+   },
+   {
+    "id": "B32",
+    "name": "10SS"
+   },
+   {
+    "id": "B33",
+    "name": "17SS"
+   },
+   {
+    "id": "B34",
+    "name": "6SS"
+   }
+  ]
+ }
+}

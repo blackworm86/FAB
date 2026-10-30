@@ -23,7 +23,7 @@ Source review of `docs/` (series rules, play book, map, counters, sticker sheet,
 4. **Contradictions in the rules:**
    - ~~14.82 vs example 23.4~~ **Resolved (user):** the US strat-move limit is the number of reserve markers in the counter mix (3× zone 5/6, 2× zone 7), so the example is right.
    - 17.14 Bodenplatte: "2-5 return to cup" and "5-10 unaffected" overlap on a 5. I'd read it as 6-10.
-5. **Some rules text is garbled in the PDF extraction:** 13.3 (unit types by class), 14.62b, 18.4 and 18.5. I'll recover them from the page images. Flagging this in case you have a cleaner copy.
+5. **Some rules text is garbled in the PDF extraction:** ~~13.3~~ (recovered from the page image: armor class = armor, armored cavalry, mechanized infantry; infantry class = infantry, mountain, airborne, engineer, artillery, rocket artillery), 14.62b, 18.4 and 18.5 (the text was readable in the extracted PDF after all). I'll recover them from the page images. Flagging this in case you have a cleaner copy.
 6. **Map digitising:** adjacency, road/field connections and rivers have to be traced by hand from the map JPG (2448×1584). A higher-resolution scan would reduce errors. I'll produce `data/bulge/map.json` and a visual overlay for you to check.
 7. **Optional rules (18.x)**: include all of them as toggles?
 8. **Multiplayer scope**: online 2-player, hot-seat, vs AI? Which ones and in what order?
@@ -46,3 +46,12 @@ Known weak spots to verify against the physical map:
 - **River edges** are any border whose length is mostly blue; a river that only touches the border will be wrong. Known-good checks: 15/16, 15/18, 13/20, 13/21 are rivers (scenario setup).
 - Edge cases from play-book examples used as tests: 3–4, 12–23, 4–5, 5–10, 10–11, 11–23, 21–22, 22–24, 22–23 are roads; 12–13, 13–21 are field.
 - TDN and VP symbols were read by eye from the tiles.
+
+## Pieces status (v1)
+
+- 190 counters and 75 block labels sliced and catalogued (`assets/README.md`). The reinforcement schedule derived from them matches both printed Reinforcement Cards turn by turn (units and number of chits).
+- Reserve markers match your note: 3× Zones 5/6 and 2× Zone 7 for the Allies; the Germans have 2× Zone 5, 2× Zone 6, 1× Zone 7.
+- Review sheets: `docs/pieces-review/` (blocks with parsed steps/quality: e = elite, v = veteran, g = green, listed full strength first).
+- **Missing: the Getting Started Card.** It holds the setup that the map bottom-right only hints at ("In the Available Box at Start"): which assets start in the Available Box and the cup, the label sticker orientation and the starting step of each block. The Player-Aid cards (combat table, turn track details) are also still missing.
+- Not yet extracted: the counter backs (`countersheet_back.webp` is low resolution), the Intro scenario sheet, and gear/back tiles (not needed for play).
+- Units that start reduced: 4th Infantry (2 steps, yellow triangle on the label) and 1st Infantry (arrives with 1 step) per the scenario rules; the label triangle marks the starting orientation.
