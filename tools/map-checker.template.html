@@ -1,0 +1,372 @@
+<title>FAB Map Checker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: full-height workbench. Map viewport left, review panel right (stacks under the map on phones). */
+:root {
+  --bg: #eef0ee; --panel: #fbfbf9; --panel-2: #f1f2ef; --line: #cfd3cc; --fg: #1d2420; --muted: #5d675f;
+  --accent: #c2410c; --accent-fg: #ffffff; --ok: #1a7f4b; --bad: #c0262d; --warn: #9a6700;
+  --z5: #d99a00; --z6: #d6363d; --z7: #2a9d63; --sel: #0a84ff;
+  --ui: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #131714; --panel: #1b201c; --panel-2: #232924; --line: #343b35; --fg: #e8ece6; --muted: #9aa59c;
+  --accent: #ff9248; --accent-fg: #1b1006; --ok: #4cc38a; --bad: #ff6b72; --warn: #e5b53b;
+  --z5: #f0b429; --z6: #ff5a60; --z7: #3ecf8e; --sel: #4aa3ff; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #131714; --panel: #1b201c; --panel-2: #232924; --line: #343b35; --fg: #e8ece6; --muted: #9aa59c;
+  --accent: #ff9248; --accent-fg: #1b1006; --ok: #4cc38a; --bad: #ff6b72; --warn: #e5b53b;
+  --z5: #f0b429; --z6: #ff5a60; --z7: #3ecf8e; --sel: #4aa3ff; color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--ui); font-size: 15px; margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.app { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 360px; padding-left: max(0px, env(safe-area-inset-left, 0px)); padding-right: max(0px, env(safe-area-inset-right, 0px)); }
+.stage { position: relative; min-width: 0; min-height: 0; background: #0c0f0d; overflow: hidden; }
+#svg { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; user-select: none; }
+#svg.dragging { cursor: grabbing; }
+#svg.adding { cursor: crosshair; }
+.bar { position: absolute; left: 10px; right: 10px; top: 10px; display: flex; gap: 8px; flex-wrap: wrap; pointer-events: none; }
+.bar > * { pointer-events: auto; }
+.chip { background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 8px; backdrop-filter: blur(6px); }
+.chip[hidden] { display: none; }
+.chip input[type=search] { width: 150px; background: transparent; border: 0; outline: 0; }
+.zoom { position: absolute; right: 10px; bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
+.zoom button { width: 36px; height: 36px; }
+.readout { position: absolute; left: 10px; bottom: 10px; font-family: var(--mono); font-size: 12px; background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; max-width: calc(100% - 70px); }
+.panel { background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.tabs { display: flex; border-bottom: 1px solid var(--line); }
+.tabs button { flex: 1; padding: 11px 6px; background: none; border: 0; border-bottom: 3px solid transparent; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; font-size: 12.5px; color: var(--muted); cursor: pointer; }
+.tabs button[aria-selected=true] { color: var(--fg); border-bottom-color: var(--accent); }
+.pane { padding: 14px 16px 20px; overflow: auto; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 14px; }
+h2 { font-size: 12px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; font-weight: 600; }
+h3 { margin: 0; font-size: 20px; font-weight: 600; line-height: 1.15; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.btn { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; font-weight: 500; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: transparent; font-weight: 600; }
+.btn.on { outline: 2px solid var(--accent); outline-offset: -2px; }
+.btn.danger { color: var(--bad); }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--sel); outline-offset: 1px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: var(--panel-2); padding: 6px 14px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed=true] { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.mono { font-family: var(--mono); }
+.muted { color: var(--muted); }
+.kv { display: grid; grid-template-columns: 92px 1fr; gap: 6px 10px; align-items: center; }
+.kv label { color: var(--muted); font-size: 13px; }
+input[type=number], select, textarea, input[type=text] { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; }
+textarea { min-height: 70px; resize: vertical; }
+.layers { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+.layers label { display: flex; gap: 8px; align-items: center; cursor: pointer; font-size: 14px; }
+.sw { width: 22px; height: 0; display: inline-block; flex: none; }
+.legend { display: grid; gap: 7px; font-size: 13.5px; }
+.legend div { display: flex; align-items: center; gap: 10px; }
+.legend svg { flex: none; }
+.list { display: flex; flex-direction: column; gap: 2px; }
+.item { display: flex; gap: 8px; align-items: baseline; padding: 6px 8px; border-radius: 6px; cursor: pointer; background: none; border: 0; text-align: left; width: 100%; }
+.item:hover { background: var(--panel-2); }
+.tag { font-family: var(--mono); font-size: 11.5px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); flex: none; }
+.pass { color: var(--ok); border-color: var(--ok); } .fail { color: var(--bad); border-color: var(--bad); } .flag { color: var(--warn); border-color: var(--warn); }
+.nb { display: flex; gap: 6px; flex-wrap: wrap; }
+.nb button { font-family: var(--mono); font-size: 12.5px; padding: 3px 8px; border-radius: 4px; border: 1px solid var(--line); background: var(--panel-2); cursor: pointer; }
+.hint { font-size: 13px; color: var(--muted); line-height: 1.4; }
+#out { font-family: var(--mono); font-size: 11.5px; min-height: 160px; white-space: pre; }
+@media (max-width: 860px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: minmax(0, 56%) minmax(0, 44%); padding-left: 0; padding-right: 0; }
+  .panel { border-left: 0; border-top: 1px solid var(--line); }
+  .pane { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .bar { left: max(10px, env(safe-area-inset-left, 0px)); }
+  .chip input[type=search] { width: 110px; }
+}
+</style>
+
+<div class="app">
+  <div class="stage" id="stage">
+    <svg id="svg" xmlns="http://www.w3.org/2000/svg" aria-label="Interactive FAB The Bulge map"></svg>
+    <div class="bar">
+      <div class="chip"><input id="find" type="search" placeholder="Area number or name" aria-label="Find area" list="areas-dl"><datalist id="areas-dl"></datalist></div>
+      <div class="chip seg" style="padding:0" role="group" aria-label="Tool">
+        <button id="t-sel" aria-pressed="true">Inspect</button><button id="t-add" aria-pressed="false">Add connection</button>
+      </div>
+      <div class="chip" id="mode-hint" hidden></div>
+    </div>
+    <div class="readout" id="readout">Scroll to zoom, drag to pan.</div>
+    <div class="zoom"><button class="btn" id="zin" aria-label="Zoom in">+</button><button class="btn" id="zout" aria-label="Zoom out">&minus;</button><button class="btn" id="zfit" aria-label="Fit map" title="Fit">&#9635;</button></div>
+  </div>
+  <aside class="panel">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-sel" aria-selected="true">Selection</button>
+      <button role="tab" id="tab-layers" aria-selected="false">Layers</button>
+      <button role="tab" id="tab-checks" aria-selected="false">Checks</button>
+      <button role="tab" id="tab-export" aria-selected="false">Export</button>
+    </div>
+    <div class="pane" id="pane"></div>
+  </aside>
+</div>
+
+<script>
+const DATA = __DATA__;
+const IMG = "__IMG__";
+(function () {
+'use strict';
+const W = DATA.width, H = DATA.height, NS = 'http://www.w3.org/2000/svg';
+const $ = (s) => document.querySelector(s);
+const svg = $('#svg'), pane = $('#pane');
+const ZC = { 5: '#f0a500', 6: '#e5383b', 7: '#25a26a' };
+const ZN = { 5: '5th Panzer Army', 6: '6th Panzer Army', 7: '7th Army' };
+const clone = (o) => JSON.parse(JSON.stringify(o));
+const ek = (a, b) => (a < b ? a + '-' + b : b + '-' + a);
+const orig = { areas: clone(DATA.areas), edges: clone(DATA.edges) };
+let areas = clone(DATA.areas), edges = clone(DATA.edges), notes = {};
+const STORE = 'fab-map-checker-v1';
+try { const s = JSON.parse(localStorage.getItem(STORE) || 'null'); if (s && s.areas) { areas = s.areas; edges = s.edges; notes = s.notes || {}; } } catch (e) {}
+function save() { try { localStorage.setItem(STORE, JSON.stringify({ areas, edges, notes })); } catch (e) {} }
+const byId = () => Object.fromEntries(areas.map((a) => [a.id, a]));
+let A = byId();
+const L = { image: true, imgop: 100, zones: true, outlines: true, roads: true, fields: true, ticks: true, nums: true, names: false, tdn: false, entry: true };
+let tab = 'sel', tool = 'sel', sel = null, addFrom = null, view = { x: 0, y: 0, w: W };
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+const zone = (id) => A[id].zone;
+const isArmy = (e) => zone(e.a) !== zone(e.b);
+const nbrs = (id) => edges.filter((e) => e.a === id || e.b === id).map((e) => (e.a === id ? e.b : e.a)).sort((x, y) => x - y);
+function pos(id) { return A[id].seed; }
+
+/* ---------- map drawing ---------- */
+const g = {};
+function build() {
+  svg.innerHTML = '';
+  const defs = el('defs', {}, svg);
+  const pat = el('pattern', { id: 'hatch', width: 6, height: 6, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, defs);
+  el('rect', { width: 6, height: 6, fill: '#7b3f12' }, pat); el('line', { x1: 0, y1: 0, x2: 0, y2: 6, stroke: '#f3d9b8', 'stroke-width': 2 }, pat);
+  ['img', 'zones', 'outl', 'entry', 'edges', 'ticks', 'badges', 'sel'].forEach((k) => { g[k] = el('g', { id: 'g-' + k }, svg); });
+  el('image', { href: IMG, x: 0, y: 0, width: W, height: H, preserveAspectRatio: 'none' }, g.img);
+  draw();
+}
+function draw() {
+  A = byId();
+  g.img.style.display = L.image ? '' : 'none'; g.img.style.opacity = L.imgop / 100;
+  ['zones', 'outl', 'entry', 'edges', 'ticks', 'badges', 'sel'].forEach((k) => (g[k].innerHTML = ''));
+  const sc = view.w / W; // size compensation so symbols keep a readable size when zoomed
+  const k = Math.min(1.6, Math.max(0.55, sc * 1.1));
+  if (L.zones || L.outlines) for (const a of areas) {
+    const p = el('polygon', { points: DATA.polys[a.id], 'data-area': a.id, fill: L.zones ? ZC[a.zone] : 'transparent', 'fill-opacity': L.zones ? 0.28 : 0, stroke: L.outlines ? ZC[a.zone] : 'none', 'stroke-width': 2.2 * k, 'stroke-linejoin': 'round' }, g.zones);
+    p.style.cursor = 'pointer';
+  }
+  if (L.entry) for (const [letter, en] of Object.entries(DATA.entry)) {
+    const r = en.rects[0], cx = r[0] + (r[2] - r[0]) / 2, cy = r[1] + (r[3] - r[1]) / 2, p = pos(en.area);
+    el('line', { x1: cx, y1: cy, x2: p[0], y2: p[1], stroke: en.side === 'german' ? '#9fb4c8' : '#5bd18b', 'stroke-width': 2 * k, 'stroke-dasharray': '2 5' }, g.entry);
+    el('circle', { cx, cy, r: 15 * k, fill: en.side === 'german' ? '#5f7f9c' : '#2f8f57', stroke: '#fff', 'stroke-width': 2 * k }, g.entry);
+    const t = el('text', { x: cx, y: cy + 7 * k, 'text-anchor': 'middle', 'font-size': 19 * k, 'font-weight': 700, fill: '#fff', 'font-family': 'IBM Plex Mono, monospace' }, g.entry);
+    t.textContent = letter;
+  }
+  for (const e of edges) {
+    const pa = pos(e.a), pb = pos(e.b), m = e.mid || [(pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2];
+    const road = e.connection === 'road';
+    if ((road && !L.roads) || (!road && !L.fields)) continue;
+    const pts = pa[0] + ',' + pa[1] + ' ' + m[0] + ',' + m[1] + ' ' + pb[0] + ',' + pb[1];
+    const key = ek(e.a, e.b), isSel = sel && sel.type === 'edge' && sel.key === key;
+    el('polyline', { points: pts, fill: 'none', stroke: '#fff', 'stroke-opacity': 0.75, 'stroke-width': (road ? 7 : 5) * k, 'stroke-linejoin': 'round' }, g.edges);
+    el('polyline', { points: pts, fill: 'none', stroke: road ? '#141414' : '#46505a', 'stroke-width': (road ? 3.6 : 2) * k, 'stroke-dasharray': road ? '' : (7 * k) + ' ' + (5 * k), 'stroke-linejoin': 'round' }, g.edges);
+    if (isSel) el('polyline', { points: pts, fill: 'none', stroke: '#0a84ff', 'stroke-opacity': 0.55, 'stroke-width': 14 * k, 'stroke-linejoin': 'round' }, g.sel);
+    const hit = el('polyline', { points: pts, fill: 'none', stroke: 'transparent', 'stroke-width': 18 * k, 'data-edge': key, 'stroke-linejoin': 'round' }, g.edges); hit.style.cursor = 'pointer';
+    if (L.ticks) {
+      const dx = pb[0] - pa[0], dy = pb[1] - pa[1], n = Math.hypot(dx, dy) || 1, px = -dy / n, py = dx / n, hl = 24 * k;
+      const x1 = m[0] + px * hl, y1 = m[1] + py * hl, x2 = m[0] - px * hl, y2 = m[1] - py * hl;
+      const army = isArmy(e);
+      const tick = (col, w, dash, halo) => { if (halo) el('line', { x1, y1, x2, y2, stroke: '#fff', 'stroke-width': (w + 3) * k, 'stroke-opacity': .85, 'stroke-linecap': 'butt' }, g.ticks); el('line', { x1, y1, x2, y2, stroke: col, 'stroke-width': w * k, 'stroke-dasharray': dash, 'stroke-linecap': 'butt' }, g.ticks); };
+      if (e.restricted) tick('url(#hatch)', 9, '', true);
+      else if (e.river) tick('#1479ff', 6, '', true);
+      else tick('#ffffff', 3, '', false);
+      if (army) { const o = 7 * k; el('line', { x1: x1 + px * 0, y1, x2, y2, stroke: '#ff2bd6', 'stroke-width': 3.2 * k, 'stroke-dasharray': (6 * k) + ' ' + (4 * k), transform: 'translate(' + (dx / n * o) + ',' + (dy / n * o) + ')' }, g.ticks); }
+    }
+    el('circle', { cx: m[0], cy: m[1], r: 5 * k, fill: road ? '#141414' : '#9aa5b1', stroke: '#fff', 'stroke-width': 1.5 * k, 'pointer-events': 'none' }, g.ticks);
+    if (e.manual) el('circle', { cx: m[0], cy: m[1], r: 11 * k, fill: 'none', stroke: '#ffd400', 'stroke-width': 2 * k, 'pointer-events': 'none' }, g.ticks);
+    if (notes['e' + key]) el('circle', { cx: m[0] + 10 * k, cy: m[1] - 10 * k, r: 4 * k, fill: '#ff3b30', stroke: '#fff', 'stroke-width': 1 * k, 'pointer-events': 'none' }, g.ticks);
+  }
+  for (const a of areas) {
+    const p = a.seed, isSel = sel && sel.type === 'area' && sel.id === a.id, r = 13 * k;
+    const bg = el('g', { 'data-area': a.id, transform: 'translate(' + p[0] + ',' + p[1] + ')' }, g.badges); bg.style.cursor = 'pointer';
+    if (addFrom === a.id) el('circle', { r: r + 9 * k, fill: 'none', stroke: '#ffd400', 'stroke-width': 3 * k }, bg);
+    if (isSel) el('circle', { r: r + 7 * k, fill: 'none', stroke: '#0a84ff', 'stroke-width': 3.5 * k }, bg);
+    if (L.nums) {
+      el('circle', { r, fill: ZC[a.zone], stroke: '#fff', 'stroke-width': 2 * k }, bg);
+      const t = el('text', { 'text-anchor': 'middle', y: 4.6 * k, 'font-size': 13.5 * k, 'font-weight': 700, fill: '#fff', stroke: 'rgba(0,0,0,.55)', 'stroke-width': 2.6 * k, 'paint-order': 'stroke', 'font-family': 'IBM Plex Mono, monospace' }, bg); t.textContent = a.id;
+      if (notes['a' + a.id]) el('circle', { cx: r * .8, cy: -r * .8, r: 4.5 * k, fill: '#ff3b30', stroke: '#fff', 'stroke-width': 1 * k }, bg);
+    }
+    const lines = [];
+    if (L.names) lines.push(a.name);
+    if (L.tdn) lines.push('TDN ' + a.tdn + (a.vp.allied ? '  A' + a.vp.allied : '') + (a.vp.german ? '  G' + a.vp.german : '') + (a.vp.mutual ? '  ★' : ''));
+    lines.forEach((s, i) => {
+      const t = el('text', { 'text-anchor': 'middle', y: r + (14 + i * 14) * k, 'font-size': 12.5 * k, 'font-weight': 600, fill: '#fff', stroke: '#000', 'stroke-width': 3.4 * k, 'paint-order': 'stroke', 'font-family': 'Barlow Semi Condensed, sans-serif' }, bg); t.textContent = s;
+    });
+  }
+  applyView();
+}
+function applyView() { const h = view.w * H / W; svg.setAttribute('viewBox', view.x + ' ' + view.y + ' ' + view.w + ' ' + h); }
+function fit() { const r = svg.getBoundingClientRect(); const ar = r.width / Math.max(1, r.height); view.w = Math.max(W, H * ar); view.x = (W - view.w) / 2; const vh = view.w * H / W; view.y = 0; draw(); fixAspect(); }
+function fixAspect() { const r = svg.getBoundingClientRect(); svg.setAttribute('preserveAspectRatio', 'xMidYMid meet'); }
+function svgPt(cx, cy) { const p = svg.createSVGPoint(); p.x = cx; p.y = cy; return p.matrixTransform(svg.getScreenCTM().inverse()); }
+function zoomAt(cx, cy, f) {
+  const before = svgPt(cx, cy), nw = Math.min(W * 1.3, Math.max(180, view.w * f)), ratio = nw / view.w;
+  view.x = before.x - (before.x - view.x) * ratio; view.y = before.y - (before.y - view.y) * ratio; view.w = nw; draw(); }
+function focus(id, zoom) { const p = pos(id); const nw = zoom || Math.min(view.w, 520); view.w = nw; const h = nw * H / W; view.x = p[0] - nw / 2; view.y = p[1] - h / 2; draw(); }
+
+/* ---------- pointer handling ---------- */
+const ptrs = new Map(); let drag = null, pinch = null, moved = 0;
+svg.addEventListener('pointerdown', (ev) => { svg.setPointerCapture(ev.pointerId); ptrs.set(ev.pointerId, [ev.clientX, ev.clientY]); moved = 0;
+  if (ptrs.size === 1) { drag = { x: ev.clientX, y: ev.clientY, vx: view.x, vy: view.y }; }
+  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), w: view.w }; drag = null; } });
+svg.addEventListener('pointermove', (ev) => { if (!ptrs.has(ev.pointerId)) { hover(ev); return; } ptrs.set(ev.pointerId, [ev.clientX, ev.clientY]);
+  if (pinch && ptrs.size === 2) { const [a, b] = [...ptrs.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]); const nw = pinch.w * pinch.d / Math.max(10, d); const f = nw / view.w; zoomAt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, f); moved = 99; return; }
+  if (drag) { const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y; moved = Math.max(moved, Math.abs(dx) + Math.abs(dy)); if (moved > 5) { svg.classList.add('dragging'); const r = svg.getScreenCTM(); view.x = drag.vx - dx / r.a; view.y = drag.vy - dy / r.d; applyView(); } } });
+function endPtr(ev) { const wasClick = moved <= 5 && ptrs.size === 1; ptrs.delete(ev.pointerId); if (ptrs.size < 2) pinch = null; if (ptrs.size === 0) { drag = null; svg.classList.remove('dragging'); }
+  if (wasClick && ev.type === 'pointerup') clickAt(ev); }
+svg.addEventListener('pointerup', endPtr); svg.addEventListener('pointercancel', endPtr);
+svg.addEventListener('wheel', (ev) => { ev.preventDefault(); zoomAt(ev.clientX, ev.clientY, Math.exp(ev.deltaY * 0.0015)); }, { passive: false });
+function target(ev) { const t = document.elementFromPoint(ev.clientX, ev.clientY); if (!t) return {}; const n = t.closest('[data-area]'), e = t.closest('[data-edge]'); return { area: n && n.getAttribute('data-area'), edge: e && e.getAttribute('data-edge'), badge: n && n.tagName === 'g' }; }
+function clickAt(ev) {
+  const t = target(ev);
+  if (tool === 'add') {
+    if (t.area) { const id = +t.area;
+      if (addFrom == null) addFrom = id;
+      else if (addFrom !== id) { const key = ek(addFrom, id); if (!edges.some((e) => ek(e.a, e.b) === key)) { const a = Math.min(addFrom, id), b = Math.max(addFrom, id), pa = pos(a), pb = pos(b);
+          edges.push({ a, b, connection: 'field', river: false, restricted: false, manual: true, mid: [(pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2] }); save(); }
+        sel = { type: 'edge', key }; addFrom = null; setTool('sel'); tab = 'sel'; }
+      draw(); render(); }
+    return; }
+  if (t.edge && !(t.badge)) sel = { type: 'edge', key: t.edge };
+  else if (t.area) sel = { type: 'area', id: +t.area };
+  else sel = null;
+  tab = 'sel'; draw(); render(); }
+function hover(ev) { const t = target(ev); const ro = $('#readout'); if (t.edge) { const [a, b] = t.edge.split('-').map(Number); ro.textContent = a + ' ' + A[a].name + '  ↔  ' + b + ' ' + A[b].name; } else if (t.area) { const a = A[+t.area]; ro.textContent = a.id + ' ' + a.name + ' · zone ' + a.zone + ' · TDN ' + a.tdn; } else ro.textContent = 'Scroll to zoom, drag to pan.'; }
+
+/* ---------- panel ---------- */
+const eget = (key) => edges.find((e) => ek(e.a, e.b) === key);
+const nm = (id) => id + ' ' + A[id].name;
+function noteBox(key) { return '<div><h2>Your note</h2><textarea id="note" placeholder="What is wrong here? Anything I should know." data-k="' + key + '">' + (notes[key] || '').replace(/</g, '&lt;') + '</textarea></div>'; }
+function render() {
+  document.querySelectorAll('.tabs [role=tab]').forEach((b) => b.setAttribute('aria-selected', b.id === 'tab-' + tab));
+  if (tab === 'sel') renderSel(); else if (tab === 'layers') renderLayers(); else if (tab === 'checks') renderChecks(); else renderExport();
+}
+function renderSel() {
+  if (!sel) { pane.innerHTML = '<div><h3>Nothing selected</h3><p class="hint">Click an area badge, a connection line or its marker on the map. Connections show the road or field link in the middle, and the boundary type where it crosses: blue is a river, white is open ground, magenta dashes mark an army boundary, brown hatch is the restricted boundary. Yellow rings are connections I added by hand.</p></div><div class="hint">Edit anything that does not match the printed map, or just leave a note. Everything you change is saved in this browser and listed under Export.</div>'; return; }
+  if (sel.type === 'area') {
+    const a = A[sel.id], ns = nbrs(a.id), key = 'a' + a.id, od = orig.areas.find((x) => x.id === a.id);
+    pane.innerHTML = '<div><div class="muted mono">AREA ' + a.id + '</div><h3>' + a.name + '</h3></div>' +
+      '<div class="kv"><label>Zone</label><select id="f-zone"><option value="5">5 · 5th Panzer Army</option><option value="6">6 · 6th Panzer Army</option><option value="7">7 · 7th Army</option></select>' +
+      '<label>TDN</label><select id="f-tdn"><option>0</option><option>1</option><option>2</option><option>3</option></select>' +
+      '<label>Allied VP</label><input type="number" min="0" max="5" id="f-va" value="' + a.vp.allied + '"><label>German VP</label><input type="number" min="0" max="5" id="f-vg" value="' + a.vp.german + '">' +
+      '<label>Mutual star</label><label style="color:var(--fg)"><input type="checkbox" id="f-vm" ' + (a.vp.mutual ? 'checked' : '') + '> yellow star</label></div>' +
+      '<div><h2>Connected to ' + ns.length + ' areas</h2><div class="nb">' + ns.map((n) => '<button data-go="' + n + '" title="' + A[n].name + '">' + n + '</button>').join('') + '</div></div>' +
+      '<div class="row"><button class="btn" id="b-add">Add connection from here</button><button class="btn" id="b-center">Center on map</button></div>' + noteBox(key);
+    $('#f-zone').value = a.zone; $('#f-tdn').value = a.tdn;
+    $('#f-zone').onchange = (e) => { a.zone = +e.target.value; save(); draw(); }; $('#f-tdn').onchange = (e) => { a.tdn = +e.target.value; save(); };
+    $('#f-va').onchange = (e) => { a.vp.allied = +e.target.value; save(); }; $('#f-vg').onchange = (e) => { a.vp.german = +e.target.value; save(); }; $('#f-vm').onchange = (e) => { a.vp.mutual = e.target.checked; save(); };
+    $('#b-add').onclick = () => { addFrom = a.id; setTool('add', true); draw(); }; $('#b-center').onclick = () => focus(a.id);
+  } else {
+    const e = eget(sel.key); if (!e) { sel = null; renderSel(); return; }
+    const army = isArmy(e), key = 'e' + sel.key;
+    pane.innerHTML = '<div><div class="muted mono">CONNECTION</div><h3>' + nm(e.a) + '<br>' + nm(e.b) + '</h3>' + (e.manual ? '<div class="hint">Added by hand, please confirm these two areas really touch.</div>' : '') + '</div>' +
+      '<div><h2>Movement connection</h2><div class="seg" id="s-conn"><button data-v="road" aria-pressed="' + (e.connection === 'road') + '">Road (1 MP)</button><button data-v="field" aria-pressed="' + (e.connection === 'field') + '">Field (2 MP)</button></div></div>' +
+      '<div><h2>Boundary</h2><div class="seg" id="s-bnd"><button data-v="open" aria-pressed="' + (!e.river && !e.restricted) + '">Open</button><button data-v="river" aria-pressed="' + (!!e.river && !e.restricted) + '">River</button><button data-v="restricted" aria-pressed="' + (!!e.restricted) + '">Restricted</button></div>' +
+      '<p class="hint">Army boundary: <b style="color:' + (army ? 'var(--bad)' : 'var(--muted)') + '">' + (army ? 'yes, zone ' + zone(e.a) + ' | zone ' + zone(e.b) : 'no') + '</b>. This follows the zones of the two areas. Change a zone on the area to change it.</p></div>' +
+      '<div class="row"><button class="btn" id="b-ca">Select ' + e.a + '</button><button class="btn" id="b-cb">Select ' + e.b + '</button><button class="btn danger" id="b-del">Remove connection</button></div>' + noteBox(key);
+    pane.querySelectorAll('#s-conn button').forEach((b) => (b.onclick = () => { e.connection = b.dataset.v; save(); draw(); render(); }));
+    pane.querySelectorAll('#s-bnd button').forEach((b) => (b.onclick = () => { e.river = b.dataset.v === 'river'; e.restricted = b.dataset.v === 'restricted'; save(); draw(); render(); }));
+    $('#b-ca').onclick = () => { sel = { type: 'area', id: e.a }; draw(); render(); }; $('#b-cb').onclick = () => { sel = { type: 'area', id: e.b }; draw(); render(); };
+    $('#b-del').onclick = () => { edges = edges.filter((x) => x !== e); sel = null; save(); draw(); render(); };
+  }
+  pane.querySelectorAll('[data-go]').forEach((b) => (b.onclick = () => { sel = { type: 'area', id: +b.dataset.go }; focus(sel.id); render(); }));
+  const nt = $('#note'); if (nt) nt.oninput = () => { const v = nt.value.trim(); if (v) notes[nt.dataset.k] = v; else delete notes[nt.dataset.k]; save(); };
+}
+function renderLayers() {
+  const cb = (k, label, sw) => '<label><input type="checkbox" data-l="' + k + '" ' + (L[k] ? 'checked' : '') + '> ' + label + '</label>';
+  pane.innerHTML = '<div><h2>Show</h2><div class="layers">' + cb('image', 'Printed map') + cb('zones', 'Zone tint') + cb('outlines', 'Area outlines') + cb('nums', 'Area numbers') + cb('names', 'Area names') + cb('tdn', 'TDN and VP') + cb('roads', 'Road links') + cb('fields', 'Field links') + cb('ticks', 'Boundary types') + cb('entry', 'Entry areas') + '</div></div>' +
+    '<div><h2>Map opacity</h2><input type="range" id="op" min="0" max="100" value="' + L.imgop + '" style="width:100%"></div>' +
+    '<div><h2>Legend</h2><div class="legend">' +
+    '<div><svg width="44" height="14"><line x1="2" y1="7" x2="42" y2="7" stroke="#fff" stroke-width="7" stroke-opacity=".75"/><line x1="2" y1="7" x2="42" y2="7" stroke="#141414" stroke-width="3.6"/></svg>Road connection, 1 MP</div>' +
+    '<div><svg width="44" height="14"><line x1="2" y1="7" x2="42" y2="7" stroke="#46505a" stroke-width="2" stroke-dasharray="7 5"/></svg>Field connection, 2 MP</div>' +
+    '<div><svg width="44" height="14"><line x1="22" y1="0" x2="22" y2="14" stroke="#fff" stroke-width="9"/><line x1="22" y1="0" x2="22" y2="14" stroke="#1479ff" stroke-width="6"/></svg>River boundary (bridge unless blown)</div>' +
+    '<div><svg width="44" height="14"><line x1="22" y1="0" x2="22" y2="14" stroke="#fff" stroke-width="3"/></svg>Open boundary</div>' +
+    '<div><svg width="44" height="14"><line x1="22" y1="0" x2="22" y2="14" stroke="#ff2bd6" stroke-width="3.2" stroke-dasharray="4 3"/></svg>Army boundary (zones differ)</div>' +
+    '<div><svg width="44" height="14"><rect x="17" y="0" width="10" height="14" fill="#7b3f12"/></svg>Restricted boundary (Schnee Eifel)</div>' +
+    '<div><svg width="44" height="14"><circle cx="22" cy="7" r="6" fill="none" stroke="#ffd400" stroke-width="2"/></svg>Connection added by hand</div>' +
+    '<div><span style="width:44px;display:flex;gap:4px"><i style="background:' + ZC[5] + ';width:12px;height:12px;display:block"></i><i style="background:' + ZC[6] + ';width:12px;height:12px;display:block"></i><i style="background:' + ZC[7] + ';width:12px;height:12px;display:block"></i></span>Zone 5 / 6 / 7</div>' +
+    '</div></div>';
+  pane.querySelectorAll('[data-l]').forEach((c) => (c.onchange = () => { L[c.dataset.l] = c.checked; draw(); }));
+  $('#op').oninput = (e) => { L.imgop = +e.target.value; g.img.style.opacity = L.imgop / 100; };
+}
+const TESTS = {
+  road: [[3,4],[12,23],[4,5],[5,10],[10,11],[11,23],[21,22],[22,24],[22,23],[3,12]], field: [[12,13],[13,21],[11,12]],
+  river: [[15,16],[15,18],[13,20],[13,21]] };
+function checks() {
+  const out = [];
+  const E = (a, b) => eget(ek(a, b));
+  TESTS.road.forEach(([a, b]) => { const e = E(a, b); out.push({ k: ek(a, b), t: 'Road ' + a + ' – ' + b, ok: !!e && e.connection === 'road', src: 'play-book example' }); });
+  TESTS.field.forEach(([a, b]) => { const e = E(a, b); out.push({ k: ek(a, b), t: 'Field ' + a + ' – ' + b, ok: !!e && e.connection === 'field', src: 'play-book example' }); });
+  TESTS.river.forEach(([a, b]) => { const e = E(a, b); out.push({ k: ek(a, b), t: 'River ' + a + ' | ' + b, ok: !!e && !!e.river, src: 'scenario setup (blown bridge)' }); });
+  const z = (id, v) => out.push({ k: null, id, t: 'Zone of ' + nm(id) + ' = ' + v, ok: A[id].zone === v, src: 'play-book movement example' });
+  z(5, 6); z(10, 6); z(11, 5); z(23, 5); z(34, 6); z(13, 5); z(4, 5); z(6, 6);
+  const r = E(4, 11); out.push({ k: '4-11', t: 'Restricted 4 | 11 (Schnee Eifel)', ok: !!r && r.restricted, src: 'rule 14.1' });
+  return out;
+}
+function renderChecks() {
+  const res = checks(), bad = res.filter((c) => !c.ok);
+  const low = areas.filter((a) => nbrs(a.id).length < 3), man = edges.filter((e) => e.manual), noZoneChange = [];
+  const item = (c) => '<button class="item" data-ck="' + (c.k || '') + '" data-ci="' + (c.id || '') + '"><span class="tag ' + (c.ok ? 'pass' : 'fail') + '">' + (c.ok ? 'OK' : 'CHECK') + '</span><span>' + c.t + '<br><span class="muted" style="font-size:12.5px">' + c.src + '</span></span></button>';
+  pane.innerHTML = '<div><h2>Rule examples &middot; ' + (res.length - bad.length) + ' of ' + res.length + ' match</h2><p class="hint">The play book names these connections, boundaries and zones. They are the only parts of the map I can verify without you.</p><div class="list">' + res.map(item).join('') + '</div></div>' +
+    '<div><h2>Hand-added connections &middot; ' + man.length + '</h2><div class="list">' + (man.map((e) => '<button class="item" data-ck="' + ek(e.a, e.b) + '"><span class="tag flag">ADDED</span><span>' + nm(e.a) + ' – ' + nm(e.b) + '</span></button>').join('') || '<span class="hint">None.</span>') + '</div></div>' +
+    '<div><h2>Areas with fewer than 3 neighbours &middot; ' + low.length + '</h2><div class="list">' + (low.map((a) => '<button class="item" data-ci="' + a.id + '"><span class="tag flag">' + nbrs(a.id).length + ' links</span><span>' + nm(a.id) + '</span></button>').join('') || '<span class="hint">None.</span>') + '</div><p class="hint">Edge areas can legitimately have few neighbours.</p></div>';
+  pane.querySelectorAll('[data-ck],[data-ci]').forEach((b) => (b.onclick = () => { const k = b.dataset.ck, i = b.dataset.ci;
+    if (k) { sel = { type: 'edge', key: k }; const e = eget(k); if (e) { const m = e.mid; view.w = 420; view.x = m[0] - 210; view.y = m[1] - 210 * H / W; } tab = 'sel'; }
+    else if (i) { sel = { type: 'area', id: +i }; focus(+i, 420); tab = 'sel'; }
+    draw(); render(); }));
+}
+function diff() {
+  const ch = [];
+  for (const a of areas) { const o = orig.areas.find((x) => x.id === a.id); const f = [];
+    if (o.zone !== a.zone) f.push('zone ' + o.zone + '→' + a.zone); if (o.tdn !== a.tdn) f.push('TDN ' + o.tdn + '→' + a.tdn);
+    if (o.vp.allied !== a.vp.allied) f.push('allied VP ' + o.vp.allied + '→' + a.vp.allied); if (o.vp.german !== a.vp.german) f.push('german VP ' + o.vp.german + '→' + a.vp.german); if (o.vp.mutual !== a.vp.mutual) f.push('mutual star ' + o.vp.mutual + '→' + a.vp.mutual);
+    if (f.length) ch.push({ what: 'area ' + a.id + ' ' + a.name, change: f.join(', ') }); }
+  const om = new Map(orig.edges.map((e) => [ek(e.a, e.b), e])), cm = new Map(edges.map((e) => [ek(e.a, e.b), e]));
+  for (const [k, e] of cm) { const o = om.get(k); if (!o) { ch.push({ what: 'connection ' + k, change: 'added as ' + e.connection + (e.river ? ' + river' : '') + (e.restricted ? ' + restricted' : '') }); continue; }
+    const f = []; if (o.connection !== e.connection) f.push(o.connection + '→' + e.connection); if (!!o.river !== !!e.river) f.push('river ' + !!o.river + '→' + !!e.river); if (!!o.restricted !== !!e.restricted) f.push('restricted ' + !!o.restricted + '→' + !!e.restricted);
+    if (f.length) ch.push({ what: 'connection ' + k, change: f.join(', ') }); }
+  for (const k of om.keys()) if (!cm.has(k)) ch.push({ what: 'connection ' + k, change: 'removed' });
+  return ch;
+}
+function exportJson() {
+  const nlist = Object.entries(notes).map(([k, v]) => ({ target: k[0] === 'a' ? 'area ' + k.slice(1) : 'connection ' + k.slice(1), note: v }));
+  return JSON.stringify({ map: 'FAB The Bulge', changes: diff(), notes: nlist,
+    edges: edges.map((e) => ({ a: e.a, b: e.b, connection: e.connection, river: !!e.river, restricted: !!e.restricted })),
+    areas: areas.map((a) => ({ id: a.id, name: a.name, zone: a.zone, tdn: a.tdn, vp: a.vp })) });
+}
+function renderExport() {
+  const ch = diff(), nn = Object.keys(notes).length;
+  pane.innerHTML = '<div><h2>Your feedback</h2><p class="hint"><b>' + ch.length + '</b> changes and <b>' + nn + '</b> notes so far. Copy the text below and paste it back to me in the chat.</p>' +
+    '<div class="row"><button class="btn primary" id="copy">Copy feedback</button><button class="btn danger" id="reset">Discard all changes</button><span id="msg" class="hint"></span></div></div>' +
+    '<div><h2>Changes</h2><div class="list">' + (ch.map((c) => '<div class="item" style="cursor:default"><span class="tag">' + c.what + '</span><span>' + c.change + '</span></div>').join('') || '<span class="hint">No changes yet.</span>') + '</div></div>' +
+    '<div><h2>Full data</h2><textarea id="out" readonly aria-label="Exported JSON"></textarea></div>';
+  const out = $('#out'); out.value = exportJson();
+  $('#copy').onclick = async () => { const msg = $('#msg'); try { await navigator.clipboard.writeText(out.value); msg.textContent = 'Copied.'; } catch (e) { out.select(); msg.textContent = 'Select and copy the text below.'; } };
+  let armed = false; $('#reset').onclick = (ev) => { if (!armed) { armed = true; ev.target.textContent = 'Click again to confirm'; return; } areas = clone(orig.areas); edges = clone(orig.edges); notes = {}; sel = null; save(); draw(); render(); };
+}
+
+/* ---------- chrome ---------- */
+function setTool(t, keepFrom) { tool = t; if (!keepFrom) addFrom = null; $('#t-sel').setAttribute('aria-pressed', t === 'sel'); $('#t-add').setAttribute('aria-pressed', t === 'add'); svg.classList.toggle('adding', t === 'add');
+  const h = $('#mode-hint'); h.hidden = t !== 'add'; h.textContent = 'Click the two areas to connect' + (addFrom ? ' (first: ' + addFrom + ')' : ''); }
+$('#t-sel').onclick = () => { setTool('sel'); draw(); }; $('#t-add').onclick = () => { setTool('add'); draw(); };
+svg.addEventListener('click', () => { if (tool === 'add') { const h = $('#mode-hint'); h.textContent = 'Click the two areas to connect' + (addFrom ? ' (first: ' + addFrom + ')' : ''); } });
+['sel', 'layers', 'checks', 'export'].forEach((t) => ($('#tab-' + t).onclick = () => { tab = t; render(); }));
+$('#zin').onclick = () => { const r = svg.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 0.7); };
+$('#zout').onclick = () => { const r = svg.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.4); };
+$('#zfit').onclick = () => { view = { x: 0, y: 0, w: W }; draw(); };
+const dl = $('#areas-dl'); dl.innerHTML = areas.map((a) => '<option value="' + a.id + ' ' + a.name + '">').join('');
+$('#find').addEventListener('change', (ev) => { const q = ev.target.value.trim().toLowerCase(); const a = areas.find((x) => String(x.id) === q.split(' ')[0] || x.name.toLowerCase() === q) || areas.find((x) => x.name.toLowerCase().includes(q)); if (a) { sel = { type: 'area', id: a.id }; focus(a.id, 480); tab = 'sel'; render(); } });
+window.addEventListener('resize', () => draw());
+build(); render();
+})();
+</script>
