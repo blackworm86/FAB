@@ -11,6 +11,7 @@ export interface MoveCtx {
   blownBridges?: Set<string>;          // edgeKey(a, b)
   roadblocks?: Set<number>;
   controller?: (area: number) => 'german' | 'allied' | undefined;
+  extraCost?: (from: number, to: number) => number;   // roadblock markers (4.34), interdiction (17.2)
 }
 export interface Reach { area: number; cost: number; fuel: boolean; mustStop: boolean; path: number[] }
 
@@ -38,6 +39,7 @@ export function reachable(u: MoveUnit, ctx: MoveCtx): Reach[] {
       if (occ(to).german + occ(to).allied > 0) step += 1;     // 5.32 entering an occupied area
       if (first && startContested) step += 1;                 // 5.32 leaving a contested area
       if (u.ownZone && !u.boundaryPreauthorized && zoneOf(from) === u.ownZone && zoneOf(to) !== u.ownZone) step += 2; // 14.41
+      step += ctx.extraCost?.(from, to) ?? 0;
       const blown = c.river && ctx.blownBridges?.has(edgeKey(from, to));
       if (blown && !first) continue;                           // whole allowance: only from the starting area
       let cost = blown ? allowance : cur.cost + step;            // 5.32 blown bridge costs the whole allowance

@@ -15,7 +15,7 @@ const areaName = (a: number) => E.areas.get(a)!.name;
 
 /* ---------- state ---------- */
 const KEY = 'fab-demo2';
-function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif ? x : null; } catch { return null; } }
+function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif && x.roadblocks ? x : null; } catch { return null; } }
 let g: E.Game = load() ?? E.newGame();
 let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, previewArea: number | null = null, hoverArea: number | null = null, msg = '', newOpts: E.Opts = { scenario: 'tournament', fuel: true };
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(g)); } catch { /* storage off: the game still runs */ } };
@@ -82,10 +82,11 @@ function drawPieces() {
       m.userData.unit = u.id; if (u.id === selUnit) { const o = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xffb347 })); m.add(o); }
       pieces.add(m);
       const tags: [string, string][] = [];
-      if (u.reserve) tags.push(['R', '#2d6cb0']); if (u.exploit) tags.push(['E', '#d9741c']); if (u.unsupplied && !u.garrison) tags.push(['S', '#b8312f']); if (u.interdict) tags.push(['I', '#8a2f9c']);
+      if (u.reserve) tags.push(['R', '#2d6cb0']); if (u.exploit) tags.push(['E', '#d9741c']); if (u.unsupplied && !u.garrison) tags.push(['S', '#b8312f']); if (u.interdict) tags.push(['I', '#8a2f9c']); if (u.bcross) tags.push(['B', '#8a6a1c']);
       tags.forEach(([t, c], i) => { const k = tag(t, c, 0.6); k.position.set(m.position.x - 0.55 + i * 0.7, (u.garrison ? 0.3 : 1.75), m.position.z); markers.add(k); });
     });
     const area: [string, string][] = [];
+    if (g.roadblocks[a.id]) area.push(['RB', '#6b4a8a']); if (g.interdicted[a.id]) area.push(['I', '#2f6fb0']); if (g.pooled === a.id) area.push(['P', '#3f8a5a']); if (g.airSupply?.area === a.id) area.push(['AS', '#2f6fb0']);
     if (g.fieldWorks.includes(a.id)) area.push(['FW', '#7a5a2b']); if (g.riverAssault.includes(a.id)) area.push(['RA', '#2a7fb8']);
     area.forEach(([t, c], i) => { const k = tag(t, c, 1.0); k.position.set(base.x - 3.4 + i * 1.2, 0.07, base.z - 0.1); markers.add(k); });
   }
@@ -159,6 +160,7 @@ function chitPanel(c: E.Chit): string {
       if (bt.length > 1) out.push(btn('Blow both bridges', () => E.blowBridges(g, c.id, a, bt.slice(0, 2))));
       rt.forEach((t) => out.push(btn(`Repair bridge → ${esc(areaName(t))}`, () => E.repairBridge(g, c.id, a, t))));
       out.push(btn('Build field works here', () => E.fieldWorksFor(g, c.id, a)));
+      if (E.roadblockAreas(g, c.side).includes(a)) out.push(btn('Roadblock here', () => E.roadblock(g, c.id, a, false), '', false, '4.34'), btn('Defended roadblock (engineer stays)', () => E.roadblock(g, c.id, a, true), '', false, '4.35'));
     }
   } else if (c.kind.startsWith('replacement') || c.kind === 'event_arriving_regiment' || c.kind.startsWith('rebuild')) {
     const el = g.units.filter((x) => E.eligibleForStep(g, c, x));
@@ -169,7 +171,12 @@ function chitPanel(c: E.Chit): string {
     if (a != null) out.push(btn(`Rally the troops around ${esc(areaName(a))}`, () => E.rally(g, g.control[a], a)));
     if (u) out.push(btn(`Quality replacement: ${esc(u.name)}`, () => E.qualityReplacement(g, u.id)));
     if (a == null && !u) out.push('<p class="hint">Select an area (rally) or a block (quality replacement).</p>');
+  } else if (c.kind === 'air_mission') {
+    out.push(a == null ? '<p class="hint">Select an area to interdict (Germans pay +1 MP to enter and leave it). In battles it works as artillery or +2 support; at the end of the turn it can air-supply an area.</p>' : btn(`Interdict ${esc(areaName(a))}`, () => E.playInterdiction(g, c.id, a)));
   } else if (c.kind === 'command_staff') {
+    if (c.side === 'german') out.push(u && u.side === 'german' ? btn(`Boundary crossing: ${esc(u.name)}`, () => E.staffBoundary(g, c.id, u.id), '', false, '14.62a') : '<p class="hint">Select a German block for Boundary Crossing Pre-authorized.</p>');
+    else out.push(a != null ? btn(`Pool assets in ${esc(areaName(a))}`, () => E.staffPool(g, c.id, a), '', false, '14.62b') : '<p class="hint">Select an area to pool assets there.</p>');
+    if (u && u.side !== c.side) out.push(btn(`Intelligence: reveal ${esc(u.name)}`, () => E.staffIntel(g, c.id, u.id), '', false, '8.32'));
     g.units.filter((x) => x.side === c.side && x.cls === 'infantry' && x.area != null && !x.garrison && x.str < x.max).forEach((x) => out.push(btn(`Replacements found: ${esc(x.name)}`, () => E.staffReplacement(g, c.id, x.id))));
     if (u && u.side === c.side) out.push(btn(`Reserves: mark ${esc(u.name)}`, () => E.staffReserve(g, c.id, u.id), '', !E.canReserve(g, u)));
   } else if (c.kind === 'event_greif_bridge') {
@@ -182,7 +189,7 @@ function chitPanel(c: E.Chit): string {
     out.push('<p class="hint">Just drawn: it may parachute into a vacant Allied-controlled Hohes Venn or Stoumont, otherwise it stays a battle asset.</p>', btn('Drop at Hohes Venn', () => E.heydteDrop(g, c.id, 31)), btn('Drop at Stoumont', () => E.heydteDrop(g, c.id, 52)));
   } else if (c.kind === 'event_release') { [4, 6].forEach((ar) => out.push(btn(`Enter at ${esc(areaName(ar))}`, () => E.releaseUnit(g, c.id, ar as 4 | 6)))); }
   else if (c.kind === 'fuel') out.push('<p class="hint">Fuel is spent automatically when a German unit moves more than 3 MP or strategic-moves.</p>');
-  else if (E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission') out.push('<p class="hint">Assigned to a battle in the Combat Phase.</p>');
+  else if (E.isArty(c) || E.isBattleAsset(c) || (c.kind as string) === 'air_mission') out.push('<p class="hint">Assigned to a battle in the Combat Phase.</p>');
   if (E.isEvent(c) && c.kind !== 'sa_block') out.push(btn('Use as alternate event (2 assets back to the cup)', () => E.alternateUse(g, c.id), '', false, '4.21'));
   return head + `<div class="row">${out.join('')}</div>`;
 }
@@ -194,7 +201,7 @@ const fightable = () => E.contestedAreas(g).filter((a) => !g.fought.includes(a))
 function idle(): boolean {                                                // phases with nothing to do are skipped for the player
   const p = g.phasing, o = other(p), us = (s: E.Side) => g.units.filter((u) => u.side === s && u.area != null && !u.garrison);
   switch (g.phase) {
-    case 'reinforcement': return !g.tfNew.length;
+    case 'reinforcement': return !g.tfNew.length && !g.arrived.some((id) => E.rerouteOptions(g, id).length);
     case 'strategic': return !us(p).some((u) => u.reserve);
     case 'combat': case 'btCombat': return !fightable().length;
     case 'reaction': return !us(o).some((u) => u.reserve);
@@ -347,6 +354,8 @@ function dispatch() {
   const row = (k: string, v: string, c = '') => `<div class="r"><span>${k}</span><b class="${c}">${v}</b></div>`;
   const c = selChit ? g.chits.find((x) => x.id === selChit) : null;
   if (c && g.phase === 'admin') return `<div class="c-dispatch">${chitPanel(c)}</div>`;
+  if (g.phase === 'reinforcement' && !g.tfNew.length) return `<div class="c-dispatch"><h3>Reinforcements</h3><p class="hint">A Special Action reroutes one arriving block to another entry area (8.27).</p>${g.arrived.filter((id) => E.rerouteOptions(g, id).length).map((id) => { const x = g.units.find((y) => y.id === id)!; return `<div class="r"><span>${esc(x.name)} in ${esc(areaName(x.area!))}</span></div><div class="row">${E.rerouteOptions(g, id).map((to) => btn(esc(areaName(to)), () => E.reroute(g, id, to))).join('')}</div>`; }).join('')}</div>`;
+  if (g.phase === 'btCombat' && !selUnit && selArea == null) { const air = E.boxOf(g, g.phasing, 'available').filter((x) => x.kind === 'air_mission'), as = E.airSupplyAreas(g, g.phasing); if (air.length && as.length && !g.airSupply) return `<div class="c-dispatch"><h3>Air supply</h3><p class="hint">Before the Supply Phase an Air Mission can supply one cut-off area (17.2).</p><div class="row">${as.map((ar) => btn(esc(areaName(ar)), () => E.playAirSupply(g, air[0].id, ar))).join('')}</div></div>`; }
   if (g.phase === 'reinforcement' && g.tfNew.length) return `<div class="c-dispatch"><h3>New Task Force</h3>${g.tfNew.map((id) => btn(`Place in ${selArea != null ? esc(areaName(selArea)) : '(select an area)'}`, () => E.placeTaskForce(g, id, selArea!), 'primary', selArea == null)).join('')}</div>`;
   const u = selUnit ? g.units.find((x) => x.id === selUnit) : null;
   if (u) {
@@ -418,7 +427,7 @@ function modalHtml() {
     const l = (bx: E.Chit['box']) => E.boxOf(g, s, bx).map((c) => `<span class="mini ${s}">${esc(chitLabel(c))}</span>`).join('') || '<small>empty</small>';
     return `<h4 class="${s}">${nm(s)} · cup ${E.boxOf(g, s, 'cup').length}</h4><div class="chips"><b>Available</b> ${l('available')}</div><div class="chips"><b>Used</b> ${l('used')}</div><div class="chips"><b>Eliminated</b> ${l('eliminated')}</div>`; }).join('')}</div></div>`;
   if (modal === 'menu') return `<div class="modal"><div class="sheet"><h3>Menu <button class="ico" data-modal="">✕</button></h3><h4>New game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as 'tournament' | 'campaign'; })}"><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
-    <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label>${btn('Start', () => { g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; }, 'primary')}</div>
+    <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Start', () => { g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; }, 'primary')}</div>
     <h4>Log</h4><div class="log">${[...g.log].reverse().slice(0, 120).map((l) => `<div>${esc(l)}</div>`).join('')}</div></div></div>`;
   return '';
 }

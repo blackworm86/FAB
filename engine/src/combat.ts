@@ -14,7 +14,7 @@ export interface Shooter {
 }
 /** What the shooter is shooting at: the opposing point unit and its status. */
 export interface Target { pointCls: 'armor' | 'infantry'; pointQuality: Quality; fieldWorks?: boolean; riverAssaultMarker?: boolean }
-export interface Setting { attacker: boolean; tdn: number; riverAssault?: boolean }
+export interface Setting { attacker: boolean; tdn: number; riverAssault?: boolean; advArty?: boolean }
 
 /** Success Number with every modifier listed, so the UI can explain it (Player Aid C, artillery and ground fire tables). */
 export function successNumber(s: Shooter, t: Target, c: Setting) {
@@ -22,6 +22,10 @@ export function successNumber(s: Shooter, t: Target, c: Setting) {
   const add = (why: string, v: number) => { if (v) parts.push([why, v]); };
   if (t.pointCls === 'armor') add("target's point unit is armor", -1);                 // "armor, or infantry in field works": never both
   else if (t.fieldWorks) add("target's point unit is in field works", -1);
+  if (s.kind === 'artillery' && c.advArty) {                                           // 18.6 optional advanced artillery modifiers
+    if (c.attacker) add('target is the defender (18.6)', -1);
+    if (t.pointCls === 'infantry' && !t.fieldWorks) add('infantry point unit not in field works (18.6)', 1);
+  }
   if (s.kind !== 'artillery') {                                                        // the artillery table has only the row above
     if (s.cls === 'armor') add('firing unit is armor', 1);
     if (s.quality) add(`${s.quality} firing on ${t.pointQuality} point unit`, LEVEL[s.quality] - LEVEL[t.pointQuality]);
