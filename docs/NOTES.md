@@ -61,3 +61,10 @@ Known weak spots to verify against the physical map:
 Your export was applied with `tools/apply_pass1.py`: 18 connection edits (roads, rivers), 1 new connection (80–92), and 93 hand-drawn area shapes (`data/bulge/polygons.json`, your raw export in `polygons_user_pass1.json`; areas 21, 34, 44, 82, 84 keep my shapes).
 `data/bulge/edges.json` is now the reviewed source of truth (it is no longer regenerated from the image pipeline). The map checker was rebuilt on top of it.
 With a 12 px gap tolerance your shapes agree with the connection list almost everywhere. Left for pass 2: touching but unconnected 95–97, 61–76, 54–59, 91–95; connected but not touching 72–85.
+
+## Map review pass 2 (applied) – map v2 accepted
+
+All 98 areas were marked checked. Applied with `tools/apply_pass2.py`: Monschau TDN 3, 17 connection type changes, 5 river flags, 2 new connections (61–76, 95–97). The shapes were not changed.
+Final graph: 98 areas, 238 connections (118 road, 93 river, 35 on army boundaries), planar and connected. All play-book example checks pass (roads 3–4, 12–23, 4–5, 5–10, 10–11, 11–23, 21–22, 22–24, 22–23, 3–12; fields 12–13, 13–21, 11–12; rivers 15/16, 15/18, 13/20, 13/21; restricted 4–11; zones of 5, 6, 10, 11, 23, 34).
+Victory symbols: 19 Allied VP (black crosses), 14 German VP (blue stars), 6 mutual yellow-star areas.
+The engine loads `data/bulge/map.json` (built by `tools/build_map_json.py`); the map checker stays available for later corrections.
