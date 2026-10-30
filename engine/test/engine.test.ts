@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { areas, neighbors, connection, d10, rng, succeeds, hitProb, successNumber, hitPmf, probAtLeast, meanHits, reachable, type MoveCtx } from '../src';
+import { areas, neighbors, connection, d10, rng, succeeds, hitProb, successNumber, moraleSn, hitPmf, probAtLeast, meanHits, reachable, type MoveCtx } from '../src';
 
 const empty: MoveCtx = { occupants: () => ({ german: 0, allied: 0 }) };
 const withAllied = (...ids: number[]): MoveCtx => ({ occupants: (a) => ({ german: 0, allied: ids.includes(a) ? 1 : 0 }) });
@@ -11,6 +11,15 @@ describe('map', () => {
     for (const a of areas.keys()) for (const b of neighbors(a)) expect(neighbors(b)).toContain(a);
     expect(connection(4, 11)?.restricted).toBe(true);
   });
+});
+
+describe('Player Aid C rules', () => {
+  it('armor point unit in field works is still only -1; artillery ignores TQ and TDN', () => {
+    const g = successNumber({ kind: 'unit', cls: 'infantry', quality: 'veteran', dice: 1 }, { pointCls: 'armor', pointQuality: 'veteran', fieldWorks: true }, { attacker: true, tdn: 0 });
+    expect(g.sn).toBe(4);
+    expect(successNumber({ kind: 'artillery', cls: 'infantry', quality: 'green', dice: 1 }, { pointCls: 'infantry', pointQuality: 'elite', fieldWorks: true }, { attacker: true, tdn: 3 }).sn).toBe(4);
+  });
+  it('morale', () => { expect(moraleSn('elite')).toBe(7); expect(moraleSn('green', true, true)).toBe(1); });
 });
 
 describe('dice (2.1)', () => {

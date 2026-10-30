@@ -16,22 +16,27 @@ export interface Shooter {
 export interface Target { pointCls: 'armor' | 'infantry'; pointQuality: Quality; fieldWorks?: boolean; riverAssaultMarker?: boolean }
 export interface Setting { attacker: boolean; tdn: number; riverAssault?: boolean }
 
-/** Success Number with every modifier listed, so the UI can explain it. Modifiers were rebuilt from the play-book examples (no Player-Aid card yet). */
+/** Success Number with every modifier listed, so the UI can explain it (Player Aid C, artillery and ground fire tables). */
 export function successNumber(s: Shooter, t: Target, c: Setting) {
   const parts: [string, number][] = [['base', 5]];
   const add = (why: string, v: number) => { if (v) parts.push([why, v]); };
-  if (s.cls === 'armor' && s.kind !== 'artillery') add('firing unit is armor', 1);
-  if (s.quality) add(`${s.quality} firing on ${t.pointQuality} point unit`, LEVEL[s.quality] - LEVEL[t.pointQuality]);
-  if (t.pointCls === 'armor') add("target's point unit is armor", -1);
-  if (t.fieldWorks) add('target in field works', -1);
-  if (c.attacker && s.kind !== 'artillery') add('terrain (TDN)', -c.tdn);          // TDN only hits the attacker's ground fire (2.4)
-  if (c.attacker && c.riverAssault && s.kind !== 'artillery') add('conducting a river assault', -1);
-  if (t.riverAssaultMarker) add('target has river assault marker', 1);
-  if (s.disordered) add('disordered', -1);
-  if (s.unsupplied) add('unsupplied', -1);
-  if (s.airSupport) add('air mission support', 2);
+  if (t.pointCls === 'armor') add("target's point unit is armor", -1);                 // "armor, or infantry in field works": never both
+  else if (t.fieldWorks) add("target's point unit is in field works", -1);
+  if (s.kind !== 'artillery') {                                                        // the artillery table has only the row above
+    if (s.cls === 'armor') add('firing unit is armor', 1);
+    if (s.quality) add(`${s.quality} firing on ${t.pointQuality} point unit`, LEVEL[s.quality] - LEVEL[t.pointQuality]);
+    if (c.attacker) add('terrain (TDN)', -c.tdn);
+    if (c.attacker && c.riverAssault) add('conducting a river assault', -1);
+    if (t.riverAssaultMarker) add('target has river assault marker', 1);
+    if (s.disordered) add('disordered', -1);
+    if (s.unsupplied) add('unsupplied', -1);
+    if (s.airSupport) add('air combat support mission', 2);
+  }
   return { sn: parts.reduce((n, [, v]) => n + v, 0), parts };
 }
+
+/** Morale check SN (Player Aid C morale table). */
+export const moraleSn = (q: Quality, disordered = false, unsupplied = false) => 5 + { elite: 2, veteran: 0, green: -2 }[q] - +disordered - +unsupplied;
 
 /** Distribution of the total hits from several dice groups: pmf[k] = P(exactly k hits). */
 export function hitPmf(groups: { dice: number; sn: number }[]): number[] {

@@ -14,7 +14,7 @@ Source review of `docs/` (series rules, play book, map, counters, sticker sheet,
 
 ## Open questions
 
-1. **Combat Table / Player-Aid Card is missing.** I can rebuild most of it from the worked examples:
+1. ~~Combat Table missing~~ **Resolved:** Player Aids A–D added in `docs/player-aids/`; engine updated (armor point unit OR infantry in field works = −1, not both; artillery fire has only that modifier). Original note: I can rebuild most of it from the worked examples:
    firer is armor +1; TQ firer vs target point unit (elite→vet +1, elite→green +2, vet→elite −1, green→vet −1, …);
    target point unit armor −1; TDN −N; field works −1; disordered −1; unsupplied −1; attacking in river assault −1; firing at a river-assaulting unit +1.
    Are there more rows (e.g. artillery-specific)? A photo of the card would settle it.
@@ -78,3 +78,6 @@ The engine loads `data/bulge/map.json` (built by `tools/build_map_json.py`); the
 - Limits: unlimited = Disordered / Recovering, Road Block, River Assault, Exploitation, No Fuel, VP cross and star, Blown Bridge (the box has 38 but rivers have 93 borders and the rules cap bridges only by engineers). Everything else is limited by the box.
 
 Counters are now catalogued as two-sided pieces: each entry has `faces.front` / `faces.back` and a combined front|back image (`tools/combine_counters.py`). The piece checker no longer lists backs separately.
+
+## Player Aids
+Added A (sequence, movement table), B (extended sequence), C (combat, morale, hit priorities), D (action matrix, events). Bodenplatte on Aid D (1-5 unaffected, 6-9 delayed, 10 eliminated) contradicts play book 17.14; Aid D followed. App plan: `docs/PLAN.md`.
