@@ -241,7 +241,7 @@ function renderDet() {
     rows = field('Name', '<input type="text" id="e-name" value="' + p.name.replace(/"/g, '&quot;') + '">') + field('Class', '<select id="e-cls"><option' + (p.cls === 'armor' ? ' selected' : '') + '>armor</option><option' + (p.cls === 'infantry' ? ' selected' : '') + '>infantry</option></select>') +
       field('Symbol', '<span class="mono">' + p.symbol + '</span>') + field('Army', '<select id="e-ech">' + Object.keys(ECH).filter((k) => /^(de_|us_|br_)/.test(k)).map((k) => '<option value="' + k + '"' + (k === p.ech ? ' selected' : '') + '>' + ECH[k] + '</option>').join('') + '</select>') +
       field('Steps', '<span class="mono">' + p.steps + '</span> <span class="muted">(pips on the top edge)</span>') +
-      p.q.map((q, i) => field('Step ' + (p.steps - i) + (i === 0 ? ' (full)' : ''), '<span class="row">' + qsel('e-q' + i, q) + '</span>')).join('') +
+      p.q.map((q, i) => i).reverse().map((i) => field('Strength ' + (i + 1) + (i === p.q.length - 1 ? ' (full)' : ''), '<span class="row">' + qsel('e-q' + i, p.q[i]) + '</span>')).join('') +
       field('Start area', '<input type="text" id="e-area" placeholder="area number" value="' + (p.start_area == null ? '' : p.start_area) + '">') +
       field('Arrives turn', '<input type="text" id="e-turn" placeholder="turn" value="' + (p.arrival_turn == null ? '' : p.arrival_turn) + '">') +
       field('Entry letters', '<input type="text" id="e-entry" placeholder="e.g. H,J" value="' + (p.entry || []).join(',') + '">');
