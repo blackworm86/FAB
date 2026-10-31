@@ -121,11 +121,11 @@ function drawPieces() {
       pieces.add(m);
       const tags: [string, string][] = [];
       if (u.disorder && !u.garrison) { const k = tag(u.disorder === 1 ? 'DIS' : 'REC', u.disorder === 1 ? '#8a1f1f' : '#a8741a', 1.1); k.position.set(m.position.x, 1.66, m.position.z); markers.add(k); }
-      if (u.reserve) tags.push(['R', '#2d6cb0']); if (u.exploit) tags.push(['E', '#d9741c']); if (u.unsupplied && !u.garrison) tags.push(['S', '#b8312f']); if (u.interdict) tags.push(['I', '#8a2f9c']); if (u.bcross) tags.push(['B', '#8a6a1c']);
-      tags.forEach(([t, c], i) => { const k = tag(t, c, 0.6); k.position.set(m.position.x - 0.55 + i * 0.7, (u.garrison ? 0.3 : 1.75), m.position.z); markers.add(k); });
+      if (u.reserve) tags.push([u.side === 'german' ? ({ z5: 'R5', z6: 'R6', z7: 'R7' } as Record<string, string>)[u.reserve] ?? 'R5' : u.reserve === 'z7' ? 'A7' : 'A56', '#2d6cb0']); if (u.exploit) tags.push(['E', '#d9741c']); if (u.unsupplied && !u.garrison) tags.push(['S', '#b8312f']); if (u.interdict) tags.push(['GI', '#8a2f9c']); if (u.bcross) tags.push(['B', '#8a6a1c']);
+      tags.forEach(([t, c], i) => { const k = tag(t, c, 0.85); k.position.set(m.position.x - 0.5 + i * 0.95, (u.garrison ? 0.3 : 1.75), m.position.z); markers.add(k); });
     });
     const area: [string, string][] = [];
-    if (g.roadblocks[a.id]) area.push(['RB', '#6b4a8a']); if (g.interdicted[a.id]) area.push(['I', '#2f6fb0']); if (g.pooled === a.id) area.push(['P', '#3f8a5a']); if (g.airSupply?.area === a.id) area.push(['AS', '#2f6fb0']);
+    if (g.roadblocks[a.id]) area.push(['RB', '#6b4a8a']); if (g.interdicted[a.id]) area.push(['AIR', '#2f6fb0']); if (g.pooled === a.id) area.push(['P', '#3f8a5a']); if (g.airSupply?.area === a.id) area.push(['AS', '#2f6fb0']);
     if (g.fieldWorks.includes(a.id)) area.push(['FW', '#7a5a2b']); if (g.riverAssault.includes(a.id)) area.push(['RA', '#2a7fb8']);
     const owner = us.some((u) => u.side === g.control[a.id]) ? g.control[a.id] : us[0]?.side ?? g.control[a.id], grp = us.filter((u) => u.side === owner), gx = grp.length ? Math.max(...grp.map((u) => base.x + (grp.indexOf(u) - (grp.length - 1) / 2) * 1.75)) + 1.7 : base.x + 1.7, gz = base.z + (cont ? (owner === 'german' ? 1.1 : -1.1) : 0.4);
     area.forEach(([t, c], i) => { const k = tag(t, c, 1.1); k.position.set(gx + i * 1.3, 0.07, gz); markers.add(k); });

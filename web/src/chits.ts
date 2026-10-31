@@ -63,7 +63,19 @@ function marker(name: string): string | null {
 }
 
 /** The printed marker art by short code used on the map: X blown bridge, FW field works, RA river assault, RB road block, DIS disordered, REC recovering. */
-export const mapMarkerSvg = (code: string): string | null => ({ X: 'Blown Bridge', FW: 'Field Works', RA: 'River Assault', RB: 'Road Block', DIS: 'Disordered / Recovering' } as Record<string, string>)[code] ? (code === 'DIS' ? chitSvg({ kind: 'marker', name: 'Disordered / Recovering', side: 'none', ech: 'none' }) : marker(({ X: 'Blown Bridge', FW: 'Field Works', RA: 'River Assault', RB: 'Road Block' } as Record<string, string>)[code])) : code === 'REC' ? chitSvg({ id: 'back_recovering', kind: 'back', name: 'Recovering', side: 'none', ech: 'none' }) : null;
+export const mapMarkerSvg = (code: string): string | null => {
+  const m: Record<string, string> = { X: 'Blown Bridge', FW: 'Field Works', RA: 'River Assault', RB: 'Road Block' };
+  if (m[code]) return marker(m[code]);
+  const counters: Record<string, Counter> = {
+    DIS: { kind: 'marker', name: 'Disordered / Recovering', side: 'none', ech: 'none' }, REC: { id: 'back_recovering', kind: 'back', name: 'Recovering', side: 'none', ech: 'none' },
+    E: { kind: 'marker', name: 'Exploitation', side: 'none', ech: 'none' }, B: { kind: 'marker', name: 'Boundary Crossing', side: 'german', ech: 'german' }, P: { id: 'back_pooled', kind: 'back', name: 'Pooled Assets', side: 'none', ech: 'none' },
+    R5: { kind: 'reserve_marker', name: 'Zone 5 Reserve Unit', side: 'german', ech: 'german' }, R6: { kind: 'reserve_marker', name: 'Zone 6 Reserve Unit', side: 'german', ech: 'german' }, R7: { kind: 'reserve_marker', name: 'Zone 7 Reserve Unit', side: 'german', ech: 'german' },
+    A7: { kind: 'reserve_marker', name: 'Zone 7 Reserve Unit', side: 'allied', ech: 'allied' }, A56: { kind: 'reserve_marker', name: 'Zones 5/6 Reserve Unit', side: 'allied', ech: 'allied' },
+    GI: { kind: 'event_greif_interdict', name: 'Greif Team Interdict', side: 'german', ech: 'german', turn: 2 }, G: { kind: 'event_greif_bridge', name: 'Greif Team Bridge', side: 'german', ech: 'german', turn: 2 },
+    AIR: { kind: 'air_mission', name: 'Air Mission', side: 'allied', ech: 'allied', turn: 6 }, AS: { kind: 'air_mission', name: 'Air Mission', side: 'allied', ech: 'allied', turn: 6 },
+  };
+  return counters[code] ? chitSvg(counters[code]) : null;
+};
 
 export type Counter = { id?: string; kind: string; name: string; side: 'german' | 'allied' | 'none'; ech: string; turn?: number | 'S' | null; q?: string | null };
 export function chitSvg(c: Chit | Counter): string {
