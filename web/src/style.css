@@ -234,3 +234,5 @@ button.go .ic, button.plain .ic, .row button .ic { width: 18px; height: 18px; ve
 }
 @media (max-width: 700px) { .c-body, .c-side.german .c-body { flex-wrap: wrap; row-gap: 6px; } .c-slots { margin-left: 0; } }
 .modes { display: flex; gap: 6px; margin-top: 6px; } .modes .ico { min-width: 44px; height: 44px; } .modes .ico.on { background: var(--gold); color: #1a1608; }
+.cardtip { display: flex; gap: 10px; align-items: flex-start; margin: 0 8px; padding: 6px 10px; background: #0b0d08f2; border: 1px solid var(--line); font-size: 12px; line-height: 1.35; max-height: 128px; overflow: auto; } .cardtip img { width: 44px; height: 44px; border-radius: 3px; flex: none; } .cardtip b { display: block; font: 700 14px var(--sfd); letter-spacing: .06em; text-transform: uppercase; color: var(--gold); } .cardtip small { color: #b3ad8b; font: 500 11px var(--sf); text-transform: none; letter-spacing: 0; } .cardtip span { display: block; } .cardtip em { display: block; font-style: normal; color: var(--bad); } .cardtip em.ok { color: var(--good); }
+.handtab .ico.on { background: var(--gold); color: #1a1608; }

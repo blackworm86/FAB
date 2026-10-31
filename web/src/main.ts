@@ -637,10 +637,12 @@ function chitTargets(c: E.Chit): number[] {
 /** The chit was dropped on an area: play it there, or open its panel when there is a choice to make. */
 let lastPointer = 'mouse', armed: string | null = null;
 /** Touch: a card is tapped, never dragged (so the hand can scroll). In a battle it files itself; an event or asset with map targets lights them and waits for a tap on one. */
+let handInfo = false, handInspect: string | null = null;
 function tapCard(id: string) {
   const c = E.chit(g, id), b = g.battle;
   if (b) {
     if (b.stage !== 'setup') return;
+    if (handInfo) { handInspect = handInspect === id ? null : id; return render(); }
     if (!mine(c.side)) return say('Those are the other player\'s assets.');
     const why = E.canAssign(g, b, c.side, c); if (why) return say(why);
     return act(() => { if (c.kind === 'air_mission') E.assign(g, b, id, 'arty'); else E.assign(g, b, id); });
@@ -675,6 +677,7 @@ function drag(ev: PointerEvent, el: HTMLElement) {
       if (ghost && document.elementFromPoint(e.clientX, e.clientY) === canvas) { const area = pick(e).area; if (area != null && cands.includes(area)) return playChitOn(c, area); say('That chit cannot be played there'); }
       refresh(); return;
     }
+    if (b?.stage === 'setup' && handInfo && !ghost) { handInspect = handInspect === id ? null : id; render(); return; }
     if (!b || b.stage !== 'setup') { if (!ghost) { selChit = selChit === id ? null : id; refresh(); } return; }
     const z = ghost ? at(e) as HTMLElement | undefined : undefined, s = c.side;
     let zone = z?.dataset.zone, unit = z?.dataset.unit;
@@ -850,6 +853,13 @@ function tray() {
   if (!us.length && !tf.length) return '';
   return `<div class="arrtray" role="group" aria-label="Arriving reinforcements"><span class="why">Drag a block to a highlighted entry area, or click it to see them.</span>${us.map((u) => `<button class="arr ${u.id === selArr ? 'sel' : ''}" data-arr="${u.id}" title="${esc(u.name)}">${b3(unitFace(u), sideOfUnit(u), !!u.garrison)}<small>${esc(u.name)}</small></button>`).join('')}${tf.map((c) => `<button class="arr ${c.id === selArr ? 'sel' : ''}" data-arr="${c.id}" title="Task Force">${b3(svgUri(garrisonChit('Task Force', `${c.turn}-*`, false)), 'allied', true)}<small>Task Force</small></button>`).join('')}</div>`;
 }
+/** One slim line above the hand: what the chosen card does and whether it can join, without covering the map. */
+function cardTip() {
+  const c = handInspect ? g.chits.find((x) => x.id === handInspect) : null, b = g.battle;
+  if (!c || !b) return '<div class="cardtip"><span>Tap a card to read its rule.</span></div>';
+  const [t, d] = RULE[c.kind] ?? [c.kind, ''], why = E.canAssign(g, b, c.side, c);
+  return `<div class="cardtip"><img alt="" src="${chitImg(c)}"><div><b>${esc(c.name)} <small>${esc(t)}</small></b><span>${esc(d)}</span>${why ? `<em>Cannot join: ${esc(why)}</em>` : '<em class="ok">Can join this battle</em>'}</div></div>`;
+}
 function handCards() {
   const b = g.battle;
   if (!b && g.phase === 'reinforcement') return tray();
@@ -858,7 +868,7 @@ function handCards() {
     const cs = ([b.attacker, other(b.attacker)] as E.Side[]).filter(mine).sort().flatMap((s) => E.boxOf(g, s, 'available').filter((c) => E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission'));
     const ok = cs.filter((c) => !E.canAssign(g, b, c.side, c));
     const bad = cs.filter((c) => E.canAssign(g, b, c.side, c)), seen = new Set<string>(), why = bad.filter((c) => { const k = c.name + c.ech; if (seen.has(k)) return false; seen.add(k); return true; }).map((c) => `<li><b>${esc(c.name)}</b> ${esc(E.canAssign(g, b, c.side, c)!)}</li>`).join('');
-    return `<div class="handtab">${mine(b.attacker) ? btn(`${ico('close')}<span class="bl">Cancel</span>`, () => { E.cancelBattle(g); }, 'ico danger', !!b.locked, b.locked ? 'A Special Action was spent, so the battle must be fought' : 'Withdraw the attack and return every assigned asset') : ''}${ok.length ? btn(`${ico('wand')}<span class="bl">Auto-fill</span>`, () => autoFill(b), 'ico', false, 'Auto-fill: place every asset that can legally join, artillery first') : ''}</div><div class="c-hand" ${handStyle(ok.length + bad.length)}>${fan([...ok.map((c) => card(c)), ...bad.map((c) => card(c, 0, E.canAssign(g, b, c.side, c)))])}</div>`;
+    return `<div class="handtab">${mine(b.attacker) ? btn(`${ico('close')}<span class="bl">Cancel</span>`, () => { E.cancelBattle(g); }, 'ico danger', !!b.locked, b.locked ? 'A Special Action was spent, so the battle must be fought' : 'Withdraw the attack and return every assigned asset') : ''}<button class="ico ${handInfo ? 'on' : ''}" data-ui="${reg(() => { handInfo = !handInfo; if (!handInfo) handInspect = null; })}" aria-pressed="${handInfo}" title="Rules: tap a card to read what it does instead of adding it" aria-label="Rules">${ico('info')}</button>${ok.length ? btn(`${ico('wand')}<span class="bl">Auto-fill</span>`, () => autoFill(b), 'ico', false, 'Auto-fill: place every asset that can legally join, artillery first') : ''}</div>${handInfo ? cardTip() : ''}<div class="c-hand" ${handStyle(ok.length + bad.length)}>${fan([...ok.map((c) => card(c)), ...bad.map((c) => card(c, 0, E.canAssign(g, b, c.side, c)))])}</div>`;
   }
   if (g.phase !== 'admin') return '';
   const s = handSide ?? g.phasing, cs = [...E.boxOf(g, s, 'available')].sort((x, y) => x.kind.localeCompare(y.kind) || x.name.localeCompare(y.name));
