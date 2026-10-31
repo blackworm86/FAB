@@ -463,6 +463,7 @@ const ICONS: Record<string, string> = {
   command_staff: '<path d="M12 3l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-3-5.4 3 1.1-6L3.2 9.4l6.1-.8z"/>',
   air_mission: '<path d="M2 14l9-2 3-9h2l-1 9 6 2v2l-6-1-1 5 2 1v1l-4-1-4 1v-1l2-1-1-5-7 1z"/>',
   sa_block: '<path d="M5 17l7-7 7 7M5 11l7-7 7 7"/>',
+  next: '<path d="M5 12h13M13 6l6 6-6 6"/>', back: '<path d="M19 12H6M11 6l-6 6 6 6"/>', check: '<path d="M4 12.5l5 5L20 6.5"/>', wand: '<path d="M4 20L15 9M13 5l1-2 1 2 2 1-2 1-1 2-1-2-2-1zM18 12l.7-1.4L20 10l-1.3-.6L18 8l-.6 1.4L16 10l1.4.6z"/>', info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>', share: '<path d="M12 15V3M7 8l5-5 5 5M5 13v7h14v-7"/>', dice: '<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="15" r="1"/><circle cx="15" cy="9" r="1"/><circle cx="9" cy="15" r="1"/>',
   home: '<path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/>', layers: '<path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5"/>', undo: '<path d="M9 7L4 12l5 5M4 12h10a5 5 0 010 10h-2"/>', menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', boxes: '<rect x="3" y="4" width="18" height="5"/><path d="M5 9v10h14V9M10 13h4"/>', close: '<path d="M6 6l12 12M18 6L6 18"/>', swap: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>', plus: '<path d="M12 5v14M5 12h14"/>',
 };
 const ico = (k: string, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k] ?? '<rect x="5" y="5" width="14" height="14"/>'}</svg>`;
@@ -546,19 +547,19 @@ function prompt() {
 }
 function promptText() {
   const b = g.battle;
-  if (online.active && !allowed() && !g.over) return online.mySide() == null ? '<b>Watching.</b> Take a seat in the menu to play.' : `<b>Waiting for the ${nm(actorNow() as E.Side)} player…</b>`;
+  if (online.active && !allowed() && !g.over) return online.mySide() == null ? '<b>Watching.</b> Take a seat in the menu.' : `<b>Waiting for the ${nm(actorNow() as E.Side)} player…</b>`;
   if (note && !b && hist.length) return `${esc(note)} <button data-do="${reg(() => undo())}">Undo</button>`;
   if (g.over) return `<b>${esc(g.over)}</b>`;
   if (g.pendingBlow) return `<b>${nm(other(g.units.find((x) => x.id === g.pendingBlow!.unit)!.side))}</b>: attempt to blow the bridge?`;
-  if (b?.stage === 'retreat') return '<b>Choose where the unit retreats.</b> Click a green area or a button.';
-  if (b) return b.stage === 'setup' ? (() => { const me = online.mySide(), rd = (sd: E.Side) => b.ready?.includes(sd); return online.active && !online.both() && me ? `<b>${rd(me) ? 'You are ready.' : 'Tap an asset to add it, then press Ready.'}</b> Opponent: ${rd(other(me)) ? 'ready' : 'preparing'}.` : '<b>Tap a card to add it</b> (or drag it onto a slot). Tap a block to make it the point unit.'; })() : b.stage === 'done' ? `<b>${esc(b.result ?? '')}</b>` : rollView ? 'Dice are cast automatically. <b>1 always hits, 10 always misses.</b>' : b.stage.endsWith('Choice') ? 'Choose how to take the hits.' : `Next: <b>${STAGE_NAME[b.stage]}</b>`;
+  if (b?.stage === 'retreat') return '<b>Choose the retreat area.</b>';
+  if (b) return b.stage === 'setup' ? (() => { const me = online.mySide(), rd = (sd: E.Side) => b.ready?.includes(sd); return online.active && !online.both() && me ? `<b>${rd(me) ? 'You are ready.' : 'Tap an asset to add it, then press Ready.'}</b> Opponent: ${rd(other(me)) ? 'ready' : 'preparing'}.` : '<b>Tap a card to add it.</b> Tap a block to make it the point unit.'; })() : b.stage === 'done' ? `<b>${esc(b.result ?? '')}</b>` : rollView ? 'Dice are cast automatically. <b>1 always hits, 10 always misses.</b>' : b.stage.endsWith('Choice') ? 'Choose how to take the hits.' : `Next: <b>${STAGE_NAME[b.stage]}</b>`;
   const m = E.mustFight(g).length;
   switch (g.phase) {
-    case 'reinforcement': return '<b>Select a new block or chit</b> in the tray; its legal entry areas light up. Unplaced blocks enter automatically when you end the step.';
-    case 'admin': return 'Chits were drawn. <b>Click a card</b> to use engineers, events, staff or Special Actions, or end the step.';
-    case 'movement': return selUnit ? 'Click a <b>green</b> area to preview the route, then press <b>Move here</b>. <b>Orange</b>: must stop there.' : '<b>Select one of your blocks</b> to move it. Moves over 3 MP cost the Germans a fuel asset.';
-    case 'strategic': return '<b>Select a reserve block</b>, then a green area to strategic-move.';
-    case 'combat': case 'btCombat': return m ? `<b>${m} battle(s) must be fought.</b> Click a red area.` : fightable().length ? '<b>Click a contested area</b> to start a battle, or end the step.' : 'No battles left.';
+    case 'reinforcement': return '<b>Pick a new block</b>, then a lit entry area.';
+    case 'admin': return '<b>Tap a card</b> to play it, or end the step.';
+    case 'movement': return selUnit ? 'Tap a <b>green</b> area, then <b>Move here</b>. <b>Orange</b>: must stop.' : '<b>Tap one of your blocks</b> to move it.';
+    case 'strategic': return '<b>Tap a reserve block</b>, then a green area.';
+    case 'combat': case 'btCombat': return m ? `<b>${m} battle${m > 1 ? 's' : ''} to fight.</b> Tap a red area.` : fightable().length ? '<b>Tap a contested area</b> to fight, or end the step.' : 'No battles left.';
     case 'reaction': return `<b>${nm(other(g.phasing))} reserves</b> may react: select a reserve block.`;
     case 'btMove': return '<b>Reserve and exploitation blocks</b> may move. Select one.';
     default: return 'Supply is checked automatically.';
@@ -570,18 +571,18 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
   if (b) {
     if (b.stage === 'setup') {
       const solo = !online.active || online.both(), me = online.mySide();
-      if (solo) return { label: 'Begin combat ▸', fn: () => act(() => E.beginCombat(g, b)) };
+      if (solo) return { label: 'Begin combat', fn: () => act(() => E.beginCombat(g, b)) };
       if (!me) return null;
       const on = b.ready?.includes(me);
-      return { label: on ? 'Waiting for the other player… (tap to take back)' : 'Ready ▸', fn: () => act(() => E.setReady(g, b, me, !on)) };
+      return { label: on ? 'Waiting… tap to undo' : 'Ready', fn: () => act(() => E.setReady(g, b, me, !on)) };
     }
-    if (b.stage === 'done') return { label: 'Close battle ▸', fn: () => act(() => { E.closeBattle(g); const m = E.mustFight(g); if (m.length) { selArea = m[0]; E.startBattle(g, m[0], g.phase === 'btCombat'); } }) };
+    if (b.stage === 'done') return { label: 'Close battle', fn: () => act(() => { E.closeBattle(g); const m = E.mustFight(g); if (m.length) { selArea = m[0]; E.startBattle(g, m[0], g.phase === 'btCombat'); } }) };
     if (b.stage.endsWith('Choice') || b.stage === 'retreat' || b.stage === 'attFirst') return null;
-    return { label: `Roll ${STAGE_NAME[b.stage].toLowerCase()} ▸`, fn: () => rollStage(b) };
+    return { label: `Roll ${STAGE_NAME[b.stage].toLowerCase()}`, fn: () => rollStage(b) };
   }
   const must = E.mustFight(g);
-  if (must.length && (g.phase === 'combat' || g.phase === 'btCombat')) return { label: `Fight ${areaName(must[0])} ▸`, fn: () => { selUnit = null; selArea = must[0]; E.startBattle(g, must[0], g.phase === 'btCombat'); } };
-  return { label: `End ${STEPS[STEP_OF[g.phase]].toLowerCase()} ▸`, fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; }), dis: !!E.mustFight(g).length || !!g.recover.length };
+  if (must.length && (g.phase === 'combat' || g.phase === 'btCombat')) return { label: `Fight ${areaName(must[0])}`, fn: () => { selUnit = null; selArea = must[0]; E.startBattle(g, must[0], g.phase === 'btCombat'); } };
+  return { label: `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`, fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; }), dis: !!E.mustFight(g).length || !!g.recover.length };
 }
 function dispatch() {
   if (g.battle || g.over) return '';
@@ -649,7 +650,7 @@ function handCards() {
     const cs = ([b.attacker, other(b.attacker)] as E.Side[]).filter(mine).sort().flatMap((s) => E.boxOf(g, s, 'available').filter((c) => E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission'));
     const ok = cs.filter((c) => !E.canAssign(g, b, c.side, c));
     const bad = cs.filter((c) => E.canAssign(g, b, c.side, c)), seen = new Set<string>(), why = bad.filter((c) => { const k = c.name + c.ech; if (seen.has(k)) return false; seen.add(k); return true; }).map((c) => `<li><b>${esc(c.name)}</b> ${esc(E.canAssign(g, b, c.side, c)!)}</li>`).join('');
-    return `<div class="handtab">${mine(b.attacker) ? btn('Cancel battle', () => { E.cancelBattle(g); }, 'danger', !!b.locked, b.locked ? 'A Special Action was spent, so the battle must be fought' : 'Withdraw the attack and return every assigned asset') : ''}${ok.length ? btn('Auto-fill assets', () => autoFill(b), '', false, 'Place every asset that can legally join, artillery first') : ''}${bad.length ? `<details class="why"><summary>${bad.length} assets cannot join</summary><ul>${why}</ul></details>` : ''}</div><div class="c-hand" ${handStyle(ok.length)}>${fan(ok.map((c) => card(c)))}</div>`;
+    return `<div class="handtab">${mine(b.attacker) ? btn(`${ico('close')}<span class="bl">Cancel</span>`, () => { E.cancelBattle(g); }, 'ico danger', !!b.locked, b.locked ? 'A Special Action was spent, so the battle must be fought' : 'Withdraw the attack and return every assigned asset') : ''}${ok.length ? btn(`${ico('wand')}<span class="bl">Auto-fill</span>`, () => autoFill(b), 'ico', false, 'Auto-fill: place every asset that can legally join, artillery first') : ''}${bad.length ? `<details class="why"><summary title="Assets that cannot join, and why">${ico('info')} ${bad.length}</summary><ul>${why}</ul></details>` : ''}</div><div class="c-hand" ${handStyle(ok.length)}>${fan(ok.map((c) => card(c)))}</div>`;
   }
   if (g.phase !== 'admin') return '';
   const s = handSide ?? g.phasing, cs = E.boxOf(g, s, 'available');
@@ -673,8 +674,8 @@ function battleTable() {
       ${sa ? `<div class="row">${btn('Retreat (SA)', () => E.defenderRetreatSA(g, b), '', !mine(s) || !!b.assets[s].length || us.some((u) => u.garrison) || !us.length)}</div>` : ''}</div>`;
   };
   const al = stats(b, 'allied'), ge = stats(b, 'german'), tot = al.mean + ge.mean || 1, side2 = att === 'german' ? ge : al;
-  return `<div class="c-table ${rollView ? 'rolling' : ''}"><div class="c-title">${b.bt ? 'BREAKTHROUGH · ' : ''}${g.fought.length + fightable().length > 1 ? `<small class="cnt">Battle ${Math.min(g.fought.length + 1, g.fought.length + fightable().length)} of ${g.fought.length + fightable().length}</small> ` : ''}${esc(L.name)} <small>TDN ${L.tdn}${g.fieldWorks.includes(b.area) ? ' · field works' : ''}${b.riverAssault ? ' · river assault' : ''}</small></div>${side('allied')}
-    <div class="c-vs"><small>EXPECTED HITS</small><div class="big">${al.mean.toFixed(1)}<span>:</span>${ge.mean.toFixed(1)}</div><div class="gauge"><i style="width:${(al.mean / tot) * 100}%"></i></div><small>${nm(att)} ≥2 hits ${side2.p(2)}% · ≥3 ${side2.p(3)}%</small></div>${side('german')}</div>`;
+  return `<div class="c-table ${rollView ? 'rolling' : ''}"><div class="c-title">${b.bt ? 'BREAKTHROUGH · ' : ''}${g.fought.length + fightable().length > 1 ? `<small class="cnt">Battle ${Math.min(g.fought.length + 1, g.fought.length + fightable().length)} of ${g.fought.length + fightable().length}</small> ` : ''}${esc(L.name)} <small>TDN ${L.tdn}${g.fieldWorks.includes(b.area) ? ' · <abbr title="Field works">FW</abbr>' : ''}${b.riverAssault ? ' · <abbr title="River assault">RA</abbr>' : ''}</small></div>${side('allied')}
+    <div class="c-vs"><small class="evh">EXPECTED HITS</small><div class="big">${al.mean.toFixed(1)}<span>:</span>${ge.mean.toFixed(1)}</div><div class="gauge"><i style="width:${(al.mean / tot) * 100}%"></i></div><small>${nm(att)} ≥2 hits ${side2.p(2)}% · ≥3 ${side2.p(3)}%</small></div>${side('german')}</div>`;
 }
 function ledger() {
   const b = g.battle; if (!b || g.pendingBlow) return '';
@@ -724,9 +725,9 @@ function joinByCode(v: string) {
 function lobbyHtml() {
   const a = online.account, signed = !!a && !a.guest, info = gameInfo(form.game);
   const games = GAMES.map((x) => `<button class="gamecard ${x.id === form.game ? 'sel' : ''}" ${x.ready ? '' : 'disabled'} data-do="${reg(() => { if (x.ready) form.game = x.id; })}"><b>${esc(x.name)}</b><small>${esc(x.vol)}${x.ready ? '' : ' · coming soon'}</small><span>${esc(x.blurb)}</span></button>`).join('');
-  const mine = matches.map((m) => `<div class="matchrow"><div><b>${esc(m.title)}</b><small>${esc(gameInfo(m.game)?.name ?? m.game)} · German ${esc(m.germanName || 'open seat')} · Allied ${esc(m.alliedName || 'open seat')}</small></div><div class="row">${btn('Open', () => { location.search = `?table=${m.id}`; }, 'primary')}${btn('Invite', () => { void share(m.id, m.title); })}</div></div>`).join('') || '<p class="hint">You have no games yet. Create one below.</p>';
+  const mine = matches.map((m) => `<div class="matchrow"><div><b>${esc(m.title)}</b><small>${esc(gameInfo(m.game)?.name ?? m.game)} · German ${esc(m.germanName || 'open seat')} · Allied ${esc(m.alliedName || 'open seat')}</small></div><div class="row">${btn('Open', () => { location.search = `?table=${m.id}`; }, 'primary')}${btn(`${ico('share')} Invite`, () => { void share(m.id, m.title); })}</div></div>`).join('') || '<p class="hint">You have no games yet. Create one below.</p>';
   return `<div class="homepage"><div class="homein">
-    <header><h1>Fast Action Battles</h1><p>Series-rules tabletop wargames, played online.</p>${HAS_TABLE ? btn('← Back to the game', () => { modal = null; }, 'plain') : ''}</header>
+    <header><h1>Fast Action Battles</h1><p>Series-rules tabletop wargames, played online.</p>${HAS_TABLE ? btn(`${ico('back')} Back to the game`, () => { modal = null; }, 'plain') : ''}</header>
     <section class="card"><h2>Account</h2>${accountHtml()}${signed ? '' : '<p class="hint">Guests can watch a game from its link. Sign in to create or play.</p>'}</section>
     ${signed ? `<section class="card"><h2>My games</h2>${mine}</section>
     <section class="card"><h2>New game</h2><h4>1 · Choose a game</h4><div class="gamegrid">${games}</div>
@@ -770,17 +771,17 @@ function modalHtml() {
     const tabs = ['Game', 'Log', 'Settings', ...(online.admin ? ['Admin'] : [])];
     if (!tabs.includes(menuTab)) menuTab = 'Game';
     const body = menuTab === 'Log' ? `<div class="log">${[...g.log].reverse().slice(0, 120).map((l) => `<div>${esc(l)}</div>`).join('')}</div>`
-      : menuTab === 'Settings' ? `<h4>Map art</h4><div class="row"><select data-sel="${regv((x) => setArt(x as 'vector' | 'scan'))}"><option value="vector" ${art === 'vector' ? 'selected' : ''}>Vector layers (traced)</option><option value="scan" ${art === 'scan' ? 'selected' : ''}>Original scan</option></select></div>
+      : menuTab === 'Settings' ? `<h4>Map</h4><div class="row">${btn(`${ico('layers')} Overlay: ${tint}`, () => { document.querySelector<HTMLElement>('[data-tint]')?.click(); })}${btn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Map art</h4><div class="row"><select data-sel="${regv((x) => setArt(x as 'vector' | 'scan'))}"><option value="vector" ${art === 'vector' ? 'selected' : ''}>Vector layers (traced)</option><option value="scan" ${art === 'scan' ? 'selected' : ''}>Original scan</option></select></div>
         ${online.active && !online.admin && !online.both() ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as 'tournament' | 'campaign'; })}"><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
         <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Restart', () => { if (!confirm('Restart and lose the current game?')) return; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'danger')}</div>`}`
       : menuTab === 'Admin' ? `<div class="row">${btn('Update rules', () => { modal = 'rules'; })}${btn('Free German seat', () => { void auth.freeSeat('german'); })}${btn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div>`
       : online.mode === 'remote' ? `<h4>Players</h4><p class="hint">German: <b>${seat('german')}</b> · Allied: <b>${seat('allied')}</b>${online.canWrite ? '' : ' · you can only watch'}</p>${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}
           <div class="row">${btn('Sit as German', () => { void sit('german'); }, '', !online.canWrite || !!online.account?.guest)}${btn('Sit as Allied', () => { void sit('allied'); }, '', !online.canWrite || !!online.account?.guest)}${btn('Leave my seat', () => { void sit(null); })}</div>
-          ${TABLE !== 'main' ? `<h4>Invite</h4><div class="row">${btn('Share invite link', () => { void share(TABLE, TABLE); }, 'primary')}</div>` : ''}${online.account?.guest ? '<p class="hint">Sign in from the lobby to take a seat.</p>' : ''}`
+          ${TABLE !== 'main' ? `<h4>Invite</h4><div class="row">${btn(`${ico('share')} Share invite link`, () => { void share(TABLE, TABLE); }, 'primary')}</div>` : ''}${online.account?.guest ? '<p class="hint">Sign in from the lobby to take a seat.</p>' : ''}`
       : online.mode === 'local' ? '<p class="hint">Developer table. The Seat button in the top bar switches between German, Allied, both and watching; turn rules are enforced for the seat you hold.</p>' : '<p class="hint">Hot-seat game on this device.</p>';
     return `<div class="modal"><div class="sheet"><h3>Game <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
       <div class="tabs">${tabs.map((t) => `<button class="${t === menuTab ? 'on' : ''}" data-do="${reg(() => { menuTab = t; })}">${t}</button>`).join('')}</div>${body}
-      <div class="row sheetfoot">${online.mode === 'remote' ? btn('← Lobby', () => { modal = 'lobby'; }) : ''}${btn('Chit boxes', () => { modal = 'boxes'; })}</div></div></div>`;
+      <div class="row sheetfoot">${online.mode === 'remote' ? btn(`${ico('back')} Lobby`, () => { modal = 'lobby'; }) : ''}${btn('Chit boxes', () => { modal = 'boxes'; })}</div></div></div>`;
   }
   return '';
 }
@@ -790,7 +791,7 @@ function render() {
   const p = primary(), b = g.battle;
   const alert = g.pendingBlow ? (() => { const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!, path = g.pendingBlow!.path; return `<div class="c-ledger"><h3>${nm(other(u.side))}: bridge?</h3><p class="hint">${esc(u.name)} tries to cross into ${esc(areaName(path[path.length - 1]))}. Attempt to blow the bridge? It works on a roll of 1–5.</p><div class="row end">${btn('Let them cross', () => E.resolveBlow(g, false))}${btn('Attempt to blow it', () => E.resolveBlow(g, true), 'primary')}</div></div>`; })() : '';
   const dockMain = alert || ledger() || handCards();
-  $('#ui').innerHTML = topBar() + `<div class="stage">${b ? battleTable() : dispatch()}${legend()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}</button>` : ''}</div></div>` + modalHtml();
+  $('#ui').innerHTML = topBar() + `<div class="stage">${b ? battleTable() : dispatch()}${legend()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
   const ui = $('#ui');
   ui.querySelectorAll<HTMLElement>('[data-do]').forEach((e) => (e.onclick = () => act(acts[e.dataset.do!])));
   ui.querySelectorAll<HTMLElement>('[data-modal]').forEach((e) => (e.onclick = () => { modal = (e.dataset.modal || null) as typeof modal; render(); }));
@@ -837,4 +838,4 @@ void startOnline((rg) => { const was = g.battle, n0 = was?.rolls.length ?? 0, st
     rollView = { title: `${nm(side)} ${STAGE_NAME[st0]}`, pos: null, groups: nb.rolls.slice(n0).map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: [] })) };
     if (rollView.groups.length) { const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block'; throwDice(cv, rollView.groups, (p) => { if (rollView) { rollView.pos = p; render(); } }); } else rollView = null;
   } selUnit = selChit = selArr = null; previewArea = hoverArea = null; hist.clear(); try { save(); } finally { applyingRemote = false; } refresh(); }, () => { onNet(); render(); }, () => g);
-Object.assign(window, { __fab: { info: () => renderer.info.memory, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
+Object.assign(window, { __fab: { setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
