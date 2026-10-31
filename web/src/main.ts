@@ -85,6 +85,7 @@ const BRIT = new Set(['43 Inf', '53 Inf', 'Guards', '51 Inf']);
 
 /** Garrison and Task Force counters, drawn like the printed ones (area number, or turn and star). */
 function garrisonArt(u: E.Unit) {
+  if (u.heydte) return chitSvg({ kind: 'infantry_asset', name: 'v.d. Heydte', side: 'german', ech: 'de_sr', q: 'veteran', turn: null });
   const tf = u.id.startsWith('TF-') ? E.chit(g, u.chitId!).turn : null;
   return garrisonChit(tf != null ? 'Task Force' : u.name.replace('Garrison ', ''), tf != null ? `${tf}-*` : u.id.replace(/^G/, ''), tf == null);
 }
@@ -157,6 +158,7 @@ function paintAreas() {
     if (r) { c = r.mustStop ? 0xff8a3d : 0x37d67a; o = 0.32; } else if (fight.includes(id)) { c = must.has(id) ? 0xff4d4d : 0xffc542; o = 0.28; }
     if (id === (previewArea ?? hoverArea) && r) { c = 0xffe08a; o = 0.5; }
     if (id === selArea && !selUnit) { c = 0x4aa3ff; o = Math.max(o, 0.3); }
+    if (dragTargets.includes(id)) { c = 0x37d67a; o = 0.5; }
     const ar = arrOpts().find((x) => x.area === id); if (ar) { c = ar.sa ? 0xff8a3d : 0x37d67a; o = 0.45; }
     if (g.battle?.stage === 'retreat' && E.retreatOptions(g, g.battle).includes(id)) { c = 0x37d67a; o = 0.5; }
     if (o === 0 && tint !== 'off') { c = tintOf(id); o = 0.45; }
@@ -269,6 +271,7 @@ function idle(): boolean {                                                // pha
 function auto() { for (let i = 0; i < 12 && !g.over && !g.battle && !g.pendingBlow && idle(); i++) { try { E.endPhase(g); } catch { break; } } }
 let toast = '', toastT = 0;
 const say = (t: string) => { toast = t; clearTimeout(toastT); toastT = window.setTimeout(() => { toast = ''; render(); }, 2800); };
+let dragTargets: number[] = [];
 const hist = new History<E.Game>(); let note = '', selArr: string | null = null;
 function act(f: () => void, after = '') {
   const r = hist.run(g, () => { f(); auto(); });
@@ -335,6 +338,7 @@ function badgeList(): Badge[] {
   const out: Badge[] = [];
   if (selUnit && !g.battle) { const u = g.units.find((x) => x.id === selUnit)!; for (const o of optsFor(selUnit)) out.push({ area: o.area, text: g.phase === 'strategic' ? '' : `${o.cost}`, cls: o.mustStop ? 'stop' : o.fuel && u.side === 'german' ? 'fuel' : 'ok' }); }
   if (!selUnit && (g.phase === 'combat' || g.phase === 'btCombat') && !g.battle) { const must = E.mustFight(g); fightable().forEach((a, i) => out.push({ area: a, text: must.includes(a) ? String(i + 1) : '?', cls: must.includes(a) ? 'war' : 'opt' })); }
+  for (const a of dragTargets) out.push({ area: a, text: 'Drop', cls: 'ok' });
   for (const o of arrOpts()) out.push({ area: o.area, text: o.sa ? 'SA' : 'Enter', cls: o.sa ? 'stop' : 'ok' });
   if (g.battle?.stage === 'retreat') for (const a of E.retreatOptions(g, g.battle)) out.push({ area: a, text: 'Retreat', cls: 'ok' });
   return out;
@@ -391,17 +395,49 @@ function autoFill(b: E.Battle) {
   const order = (c: E.Chit) => (E.isArty(c) ? 0 : c.kind === 'engineer' ? 2 : 1);
   for (const c of g.chits.filter((x) => x.box === 'available' && (E.isArty(x) || E.isBattleAsset(x))).sort((x, y) => order(x) - order(y))) { if (!E.canAssign(g, b, c.side, c)) E.assign(g, b, c.id); }
 }
+/** Where an event or asset chit can be played on the map (Admin Phase): the areas to light while it is dragged. */
+function chitTargets(c: E.Chit): number[] {
+  if (g.phase !== 'admin' || c.box !== 'available') return [];
+  const all = [...E.areas.keys()];
+  switch (c.kind) {
+    case 'event_greif_bridge': return all.filter((a) => E.neighbors(a).some((t) => E.connection(a, t)!.river && !g.blown.includes(a < t ? `${a}-${t}` : `${t}-${a}`) && !g.greif[a < t ? `${a}-${t}` : `${t}-${a}`]));
+    case 'event_greif_interdict': return all.filter((a) => E.blocks(g, a, 'allied').length);
+    case 'event_release': return [4, 6];
+    case 'air_mission': return all;
+    case 'engineer': return all.filter((a) => E.bridgeTargets(g, c.side, a).length || E.repairTargets(g, c.side, a).length || E.roadblockAreas(g, c.side).includes(a));
+    default: return c.name === 'v.d. Heydte' && E.heydteWindow(g, c) ? [31, 52] : [];
+  }
+}
+/** The chit was dropped on an area: play it there, or open its panel when there is a choice to make. */
+function playChitOn(c: E.Chit, area: number) {
+  selArea = area;
+  const panel = () => { selChit = c.id; refresh(); };
+  switch (c.kind) {
+    case 'event_release': return act(() => E.releaseUnit(g, c.id, area as 4 | 6));
+    case 'air_mission': return act(() => E.playInterdiction(g, c.id, area));
+    case 'event_greif_bridge': { const t = E.neighbors(area).filter((n) => E.connection(area, n)!.river && !g.blown.includes(area < n ? `${area}-${n}` : `${n}-${area}`)); return t.length === 1 ? act(() => E.playGreifBridge(g, c.id, area, t[0])) : panel(); }
+    case 'event_greif_interdict': { const u = E.blocks(g, area, 'allied'); return u.length === 1 ? act(() => E.playInterdict(g, c.id, u[0].id)) : panel(); }
+    case 'engineer': return panel();
+    default: if (c.name === 'v.d. Heydte') return act(() => E.heydteDrop(g, c.id, area as 31 | 52)); return panel();
+  }
+}
 function drag(ev: PointerEvent, el: HTMLElement) {
   const id = el.dataset.chit!, c = E.chit(g, id), x0 = ev.clientX, y0 = ev.clientY; let ghost: HTMLElement | null = null, over: Element | null = null;
   const at = (e: PointerEvent) => document.elementsFromPoint(e.clientX, e.clientY).find((n) => (n as HTMLElement).dataset?.side && (n as HTMLElement).dataset?.zone || (n as HTMLElement).dataset?.unit);
   const mv = (e: PointerEvent) => {
-    if (!ghost && Math.hypot(e.clientX - x0, e.clientY - y0) > 6) { ghost = el.cloneNode(true) as HTMLElement; ghost.classList.add('ghost'); document.body.appendChild(ghost); document.querySelectorAll<HTMLElement>('.slot').forEach((sl) => { const arty = E.isArty(c) || c.kind === 'air_mission'; if (sl.dataset.side === c.side && (sl.dataset.zone === 'arty') === arty) sl.classList.add('legal'); }); }
+    if (!ghost && Math.hypot(e.clientX - x0, e.clientY - y0) > 6) { ghost = el.cloneNode(true) as HTMLElement; ghost.classList.add('ghost'); document.body.appendChild(ghost); if (!g.battle) { dragTargets = chitTargets(c); if (dragTargets.length) { paintAreas(); badges = badgeList(); syncBadges(); } } document.querySelectorAll<HTMLElement>('.slot').forEach((sl) => { const arty = E.isArty(c) || c.kind === 'air_mission'; if (sl.dataset.side === c.side && (sl.dataset.zone === 'arty') === arty) sl.classList.add('legal'); }); }
     if (!ghost) return; ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px';
     const z = at(e) ?? null; if (z !== over) { over?.classList.remove('over'); over = z; over?.classList.add('over'); }
   };
   const up = (e: PointerEvent) => {
     window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); ghost?.remove(); over?.classList.remove('over'); document.querySelectorAll('.slot.legal').forEach((sl) => sl.classList.remove('legal'));
-    const b = g.battle; if (!b || b.stage !== 'setup') { if (!ghost) { selChit = selChit === id ? null : id; refresh(); } return; }
+    const b = g.battle;
+    if (!b && dragTargets.length) {                                                                    // an event or asset dropped on the map
+      const cands = dragTargets; dragTargets = [];
+      if (ghost && document.elementFromPoint(e.clientX, e.clientY) === canvas) { const area = pick(e).area; if (area != null && cands.includes(area)) return playChitOn(c, area); say('That chit cannot be played there'); }
+      refresh(); return;
+    }
+    if (!b || b.stage !== 'setup') { if (!ghost) { selChit = selChit === id ? null : id; refresh(); } return; }
     const z = ghost ? at(e) as HTMLElement | undefined : undefined, s = c.side;
     let zone = z?.dataset.zone, unit = z?.dataset.unit;
     if (!ghost) zone = E.isArty(c) || c.kind === 'air_mission' ? 'arty' : 'asset';               // a plain click files the card where it belongs
@@ -411,6 +447,7 @@ function drag(ev: PointerEvent, el: HTMLElement) {
     act(() => { if (c.kind === 'air_mission') { if (unit) E.assign(g, b, id, 'support', unit); else E.assign(g, b, id, 'arty'); } else E.assign(g, b, id); });
   };
   window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
+  window.addEventListener('pointercancel', () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); ghost?.remove(); dragTargets = []; refresh(); }, { once: true });
 }
 
 /* ---------- views ---------- */
@@ -486,17 +523,19 @@ function dragArrival(ev: PointerEvent, el: HTMLElement) {
   if (ev.button !== 0) return;
   const id = el.dataset.arr!, x0 = ev.clientX, y0 = ev.clientY; let ghost: HTMLElement | null = null;
   const mv = (e: PointerEvent) => {
-    if (!ghost && Math.hypot(e.clientX - x0, e.clientY - y0) > 8) { ghost = el.querySelector('.b3')!.cloneNode(true) as HTMLElement; ghost.classList.add('ghost'); document.body.appendChild(ghost); if (selArr !== id) { selArr = id; refresh(); frameArrival(); } }
+    if (!ghost && Math.hypot(e.clientX - x0, e.clientY - y0) > 8) { ghost = el.querySelector('.b3')!.cloneNode(true) as HTMLElement; ghost.classList.add('ghost'); document.body.appendChild(ghost); if (selArr !== id) { selArr = id; paintAreas(); badges = badgeList(); syncBadges(); frameArrival(); } }                 // no re-render here: replacing the dragged element would cut a touch drag short
     if (ghost) { ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px'; }
   };
   const up = (e: PointerEvent) => {
     window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
-    if (!ghost) return; ghost.remove(); e.preventDefault();
-    if (document.elementFromPoint(e.clientX, e.clientY) !== canvas) return say('Drop it on a highlighted entry area of the map');
-    const area = pick(e).area; if (area == null || !arrOpts().some((o) => o.area === area)) return say('That is not a legal entry area for this block');
+    if (!ghost) return; ghost.remove(); e.preventDefault(); const clean = () => { if (selArr === id) { selArr = null; refresh(); } };
+    const top = document.elementFromPoint(e.clientX, e.clientY);
+    if (top !== canvas && top?.closest('.dock, .c-bar, .c-dispatch, .modal, .legend')) { say('Drop it on a highlighted entry area of the map'); return clean(); }
+    const area = pick(e).area; if (area == null || !arrOpts().some((o) => o.area === area)) { say('That is not a legal entry area for this block'); return clean(); }
     selArr = null; act(() => { if (g.pendingArrivals.includes(id)) E.placeArrival(g, id, area); else E.placeTaskForce(g, id, area); });
   };
   window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
+  window.addEventListener('pointercancel', () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); ghost?.remove(); }, { once: true });
 }
 /** A block drawn as a real 3D object (front label, right and top faces), for the tray and the battle view. */
 const unitFace = (u: E.Unit) => svgUri(u.garrison ? garrisonArt(u) : labelSvg(u));
@@ -588,7 +627,8 @@ function render() {
   ui.querySelectorAll<HTMLElement>('[data-undo]').forEach((e) => (e.onclick = () => undo()));
   ui.querySelectorAll<HTMLElement>('[data-u]').forEach((e) => (e.onclick = () => { selUnit = e.dataset.u!; selArea = g.units.find((x) => x.id === selUnit)!.area ?? selArea; previewArea = null; refresh(); }));
   ui.querySelectorAll<HTMLElement>('.card2, .blk').forEach((e) => (e.onkeydown = (ev) => { if (ev.key !== 'Enter' && ev.key !== ' ') return; ev.preventDefault(); const id = e.dataset.chit, b2 = g.battle; if (e.classList.contains('card2') && id) { if (b2?.stage === 'setup') { const c = E.chit(g, id), why = E.canAssign(g, b2, c.side, c); if (why) say(why); else act(() => E.assign(g, b2, id, c.kind === 'air_mission' ? 'arty' : undefined)); } else if (!b2) { selChit = selChit === id ? null : id; refresh(); } } else e.click(); }));
-  ui.querySelectorAll<HTMLElement>('.card2').forEach((e) => (e.onpointerdown = (ev) => { ev.preventDefault(); if (g.battle) drag(ev, e); else { selChit = selChit === e.dataset.chit ? null : e.dataset.chit!; refresh(); } }));
+  ui.querySelectorAll<HTMLElement>('.card2').forEach((e) => (e.onpointerdown = (ev) => { if (ev.pointerType === 'mouse') ev.preventDefault(); if (g.battle || chitTargets(E.chit(g, e.dataset.chit!)).length) drag(ev, e); }));
+  ui.querySelectorAll<HTMLElement>('.card2').forEach((e) => (e.onclick = () => { if (!g.battle && !chitTargets(E.chit(g, e.dataset.chit!)).length) { selChit = selChit === e.dataset.chit ? null : e.dataset.chit!; refresh(); } }));
   ui.querySelectorAll<HTMLElement>('.blk[data-unit]').forEach((e) => (e.onclick = () => { const b2 = g.battle; if (!b2 || b2.stage !== 'setup') return; const s = e.dataset.side as E.Side, u = g.units.find((x) => x.id === e.dataset.unit)!; if (u.garrison || (s === b2.attacker && u.disorder)) return; if (s === b2.attacker) b2.attPoint = u.id; else b2.defPoint = u.id; save(); render(); }));
 }
 function refresh() {

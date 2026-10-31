@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canReserve, setReserve, blocks, updateControlForTest, allocateForTest, defenderRetreatSA, arrivalOptions, placeArrival, newGame, endPhase, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, moveOptions, boxOf, roadblock, roadblockAreas, playInterdiction, staffBoundary, staffPool, staffIntel,
+import { bridgeTargets, blowBridges, canReserve, setReserve, blocks, updateControlForTest, allocateForTest, defenderRetreatSA, arrivalOptions, placeArrival, newGame, endPhase, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, moveOptions, boxOf, roadblock, roadblockAreas, playInterdiction, staffBoundary, staffPool, staffIntel,
   playAirSupply, airSupplyAreas, rerouteOptions, reroute, stratOptions, move, resolveBlow, connection, neighbors, unitsIn, inSupply, assetLimits, areas, type Game } from '../src';
 
 function toAdmin(seed: number, turn = 2, campaign = false): Game {
@@ -158,5 +158,20 @@ describe('rule fixes from the conformance review', () => {
     g.phasing = 'allied'; const a = roadblockAreas(g, 'allied')[0]; roadblock(g, eng.id, a, true);
     g.phasing = 'german'; g.phase = 'btCombat'; endPhase(g);
     expect(g.units.some((u) => u.id.startsWith('DR-') && u.area != null)).toBe(false); expect(eng.box).toBe('used');
+  });
+});
+
+describe('entry areas and engineers (14.2, 14.52, 16.11)', () => {
+  it('a unit delayed one turn may enter any appropriate entry area for its army without a Special Action', () => {
+    const g = newGame(5, { scenario: 'campaign' });
+    const u = g.units.find((x) => x.side === 'german' && x.arrival === 2 && x.ech === 'de_6pz') ?? g.units.find((x) => x.side === 'german' && x.arrival != null && x.area == null)!;
+    u.delayed = true; g.pendingArrivals = [u.id]; g.phase = 'reinforcement';
+    const o = arrivalOptions(g, u.id); expect(o.length).toBeGreaterThan(0); expect(o.every((x) => !x.sa)).toBe(true);
+  });
+  it('an army that lost its engineer may use another German engineer for bridging in its zone', () => {
+    const g = toAdmin(4, 2); const sixth = g.chits.filter((c) => c.kind === 'engineer' && c.ech === 'de_6pz'); sixth.forEach((c) => (c.box = 'eliminated'));
+    const other = g.chits.find((c) => c.kind === 'engineer' && c.ech === 'de_5pz')!; other.box = 'available';
+    const a = [...areas.keys()].find((x) => areas.get(x)!.zone === 6 && bridgeTargets(g, 'german', x).length);
+    if (a != null) { blowBridges(g, other.id, a, [bridgeTargets(g, 'german', a)[0]]); expect(other.box).toBe('used'); }
   });
 });

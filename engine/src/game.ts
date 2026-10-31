@@ -20,7 +20,7 @@ export interface Unit {
   id: string; name: string; side: Side; cls: 'armor' | 'infantry'; q: Quality[]; max: number; str: number; area: number | null; garrison?: boolean;
   disorder: 0 | 1 | 2; unsupplied: boolean; moved: boolean; reserve: string | null; exploit: boolean; from?: number;
   arrival?: number; entry?: string[]; ech?: string; symbol?: string; code?: string;
-  chitId?: string; interdict?: string; adjOnly?: boolean; spent?: number; paradrop?: 'pending' | 'intact' | 'partial'; heydte?: boolean; bcross?: boolean;
+  chitId?: string; interdict?: string; adjOnly?: boolean; spent?: number; delayed?: boolean; paradrop?: 'pending' | 'intact' | 'partial'; heydte?: boolean; bcross?: boolean;
 }
 export interface Roll { who: string; sn: number; dice: number[]; hits: number; kind: 'arty' | 'ground' }
 export interface Battle {
@@ -41,6 +41,9 @@ export interface Game {
 }
 type RawUnit = { id: string; name: string; side: string; echelon?: string; symbol?: string; cls?: string; steps?: number; quality_by_step?: Quality[]; start_area?: number; arrival_turn?: number; entry?: string[]; kind?: string };
 const ENTRY = entryJson as Record<string, { side: string; area: number }>;
+/** 14.21-14.23: the entry areas a Higher Echelon may use when its own are blocked or a Special Action reroutes it. */
+const APPROPRIATE: Record<string, string> = { de_5pz: 'XYZ', de_6pz: 'YZ', de_7a: 'XY', de_sr: 'YZ', us_1a: 'ABCDEFGHJ', us_3a: 'KLM', us_sr: 'FGHJ', br_xxx: 'CDEFGH' };
+const appropriateAreas = (u: Unit) => [...(APPROPRIATE[u.ech ?? ''] ?? '')].map((l) => ENTRY[l]?.area).filter((a): a is number => a != null);
 export const other = (s: Side): Side => (s === 'german' ? 'allied' : 'german');
 const sideOf = (s: string): Side => (s === 'german' ? 'german' : 'allied');
 const keyOf = edgeKey;
@@ -190,7 +193,7 @@ export function moveOptions(g: Game, id: string): Opt[] {
   const one = exploit && !reserveBt;
   let r = reachable({ side: u.side, cls: u.cls, area: u.area, supplied: !u.unsupplied, disordered: u.disorder > 0, adjacentOnly: one || !!u.adjOnly, spent: u.spent, ownZone: one ? undefined : (ARMY(u) as 5 | 6 | 7 | undefined), boundaryPreauthorized: u.bcross },
     { occupants: occ, blownBridges: new Set(g.blown), roadblocks: new Set([...garr, ...markerAreas(g, enemy)]), controller: (a) => g.control[a],
-      extraCost: (f, t) => (markerAreas(g, enemy).includes(t) ? 1 : 0) + (u.side === 'german' && (g.interdicted[f] || g.interdicted[t]) ? 1 : 0) });
+      extraCost: (f, t) => (markerAreas(g, enemy).includes(t) ? 1 : 0) + (u.side === 'allied' && unitsIn(g, t, 'german').some((x) => x.heydte) ? 1 : 0) + (u.side === 'german' && (g.interdicted[f] || g.interdicted[t]) ? 1 : 0) });
   if (one) r = r.filter((x) => !g.blown.includes(keyOf(x.path[0], x.path[1])));                        // 7.31 no crossing of a blown bridge
   return r.filter((x) => {
     if (blocks(g, x.area, u.side).length >= 2) return false;                                           // 5.1
@@ -286,14 +289,16 @@ export function spendSA(g: Game, side: Side, ech?: string, why = 'Special Action
 const needAdmin = (g: Game) => { if (g.phase !== 'admin') throw new Error('only in the Admin Phase'); };
 export const suppliedArea = (g: Game, side: Side, a: number) => g.control[a] === side && inSupply(g, side, a) && !contested(g, a);
 const supplied = (g: Game, side: Side, a: number) => g.control[a] === side && inSupply(g, side, a) && !contested(g, a);
-const echOk = (c: Chit, a: number) => c.side === 'allied' || c.ech === 'de_sr' || c.ech === 'german' || ZONE[c.ech] === zoneOf(a);   // 16.1 German assets/events act only in their own army's zone
+const ARMY_ECH: Record<number, string> = { 5: 'de_5pz', 6: 'de_6pz', 7: 'de_7a' };
+const echOk = (g: Game, c: Chit, a: number) => c.side === 'allied' || c.ech === 'de_sr' || c.ech === 'german' || ZONE[c.ech] === zoneOf(a) ||
+  (c.kind === 'engineer' && !g.chits.some((x) => x.kind === 'engineer' && x.ech === ARMY_ECH[zoneOf(a)] && x.box !== 'eliminated'));   // 14.52 an army that lost its engineer may borrow another   // 16.1 German assets/events act only in their own army's zone
 export function bridgeTargets(g: Game, side: Side, area: number) {
   return neighbors(area).filter((n) => connection(area, n)!.river && !g.blown.includes(keyOf(area, n)) && supplied(g, side, area));
 }
 export function blowBridges(g: Game, id: string, area: number, targets: number[]) {
   needAdmin(g); const c = chit(g, id);
   if (c.kind !== 'engineer' || c.box !== 'available') throw new Error('engineer not available');
-  if (!echOk(c, area) || !bridgeTargets(g, c.side, area).length || targets.length < 1 || targets.length > 2 || !targets.every((t) => bridgeTargets(g, c.side, area).includes(t))) throw new Error('not a legal bridge-blowing');
+  if (!echOk(g, c, area) || !bridgeTargets(g, c.side, area).length || targets.length < 1 || targets.length > 2 || !targets.every((t) => bridgeTargets(g, c.side, area).includes(t))) throw new Error('not a legal bridge-blowing');
   c.box = 'used';
   for (const t of targets) {
     const k = keyOf(area, t);
@@ -308,13 +313,13 @@ export function repairTargets(g: Game, side: Side, area: number) {
 }
 export function repairBridge(g: Game, id: string, area: number, to: number) {
   needAdmin(g); const c = chit(g, id);
-  if (c.kind !== 'engineer' || c.box !== 'available' || !echOk(c, area) || !repairTargets(g, c.side, area).includes(to)) throw new Error('not a legal repair');
+  if (c.kind !== 'engineer' || c.box !== 'available' || !echOk(g, c, area) || !repairTargets(g, c.side, area).includes(to)) throw new Error('not a legal repair');
   g.blown = g.blown.filter((k) => k !== keyOf(area, to)); c.box = 'used'; say(g, `${c.name} repairs the bridge ${areas.get(area)!.name}–${areas.get(to)!.name}`);
 }
 export function fieldWorksFor(g: Game, id: string, area: number) {
   needAdmin(g); const c = chit(g, id);
   const same = blocks(g, area, c.side).some((u) => u.ech === c.ech || c.ech === 'us_sr' || u.ech === 'us_sr');
-  if (c.kind !== 'engineer' || c.box !== 'available' || !supplied(g, c.side, area) || !same || g.fieldWorks.includes(area) || !echOk(c, area)) throw new Error('needs a supplied, uncontested area holding a unit of the engineer\'s echelon');
+  if (c.kind !== 'engineer' || c.box !== 'available' || !supplied(g, c.side, area) || !same || g.fieldWorks.includes(area) || !echOk(g, c, area)) throw new Error('needs a supplied, uncontested area holding a unit of the engineer\'s echelon');
   g.fieldWorks.push(area); g.fwOwner[area] = c.side; c.box = 'used'; say(g, `${c.name} builds field works in ${areas.get(area)!.name}`);
 }
 function addStep(u: Unit, elite: boolean) {
@@ -757,7 +762,7 @@ const vacantSupplied = (g: Game, side: Side, a: number) => supplied(g, side, a) 
 /** 4.34 / 4.35: a roadblock marker, or the engineer itself as a defended roadblock. */
 export function roadblock(g: Game, id: string, area: number, defended: boolean) {
   needAdmin(g); const c = chit(g, id);
-  if (c.kind !== 'engineer' || c.box !== 'available' || !echOk(c, area) || !vacantSupplied(g, c.side, area) || g.roadblocks[area]) throw new Error('needs a supplied, friendly, vacant area with a Terrain Difficulty Number of 1 or more');
+  if (c.kind !== 'engineer' || c.box !== 'available' || !echOk(g, c, area) || !vacantSupplied(g, c.side, area) || g.roadblocks[area]) throw new Error('needs a supplied, friendly, vacant area with a Terrain Difficulty Number of 1 or more');
   if (defended) {
     g.units.push({ id: `DR-${id}`, name: `Defended roadblock (${areas.get(area)!.name})`, side: c.side, cls: 'infantry', q: ['green'], max: 1, str: 1, area, garrison: true, disorder: 0, unsupplied: false, moved: true, reserve: null, exploit: false, ech: c.ech, chitId: id });
     c.box = 'map';
@@ -800,7 +805,7 @@ export function playAirSupply(g: Game, id: string, area: number) {
 /** 8.27 Reroute a reinforcing unit (Reinforcement Phase, one Special Action). */
 export function rerouteOptions(g: Game, unitId: string): number[] {
   const u = g.units.find((x) => x.id === unitId); if (!u || g.phase !== 'reinforcement' || !g.arrived.includes(u.id) || u.area == null || !saAvailable(g, u.side, u.ech).length) return [];
-  return [...new Set(Object.values(ENTRY).filter((e) => sideOf(e.side) === u.side).map((e) => e.area))].filter((a) => a !== u.area && (g.control[a] === u.side || !unitsIn(g, a).length) && blocks(g, a, u.side).length < 2 && !unitsIn(g, a, other(u.side)).length);
+  return [...new Set(appropriateAreas(u))].filter((a) => a !== u.area && (g.control[a] === u.side || !unitsIn(g, a).length) && blocks(g, a, u.side).length < 2 && !unitsIn(g, a, other(u.side)).length);
 }
 export function reroute(g: Game, unitId: string, area: number) {
   if (!rerouteOptions(g, unitId).includes(area)) throw new Error('not a legal entry area');
@@ -816,8 +821,8 @@ const entryOpen = (g: Game, u: Unit, a: number) => (g.control[a] === u.side || !
 export function arrivalOptions(g: Game, id: string): { area: number; sa: boolean }[] {
   const u = g.units.find((x) => x.id === id); if (!u || !g.pendingArrivals.includes(id)) return [];
   const own = listedEntries(u).filter((a) => entryOpen(g, u, a)), sa = saAvailable(g, u.side, u.ech).length > 0;
-  const rest = sa ? [...new Set(Object.values(ENTRY).filter((e) => sideOf(e.side) === u.side).map((e) => e.area))].filter((a) => !own.includes(a) && entryOpen(g, u, a)) : [];
-  return [...own.map((area) => ({ area, sa: false })), ...rest.map((area) => ({ area, sa: true }))];
+  const rest = (u.delayed || sa) ? [...new Set(appropriateAreas(u))].filter((a) => !own.includes(a) && entryOpen(g, u, a)) : [];   // 4.1c a delayed unit takes the nearest allowed area, otherwise it costs a Special Action
+  return [...own.map((area) => ({ area, sa: false })), ...rest.map((area) => ({ area, sa: !u.delayed }))];
 }
 export function placeArrival(g: Game, id: string, area: number) {
   const opt = arrivalOptions(g, id).find((o) => o.area === area); if (!opt) throw new Error('not a legal entry area');
@@ -827,7 +832,7 @@ export function placeArrival(g: Game, id: string, area: number) {
 function autoArrive(g: Game, id: string) {
   const u = g.units.find((x) => x.id === id)!, opts = listedEntries(u), to = opts.find((a) => g.control[a] === u.side && (blocks(g, a, u.side).length < 2 || stackFree(g, u, a))) ?? opts.find((a) => !unitsIn(g, a).length);
   g.pendingArrivals = g.pendingArrivals.filter((x) => x !== id);
-  if (to == null) { u.arrival = g.turn + 1; say(g, `${u.name} delayed one turn (entry blocked)`); return; }
+  if (to == null) { u.arrival = g.turn + 1; u.delayed = true; say(g, `${u.name} delayed one turn (entry blocked)`); return; }
   u.area = to; g.control[to] = u.side; g.arrived.push(id); say(g, `${u.name} arrives in ${areas.get(to)!.name}`);
 }
 
