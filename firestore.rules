@@ -1,0 +1,24 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // One table per id. Anyone signed in (anonymous sign-in is enough) can read it; only seated players change the game.
+    match /tables/{table}/docs/state {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.resource.data.keys().hasOnly(['rev', 'json', 'by'])
+        && request.resource.data.json.size() < 900000
+        && request.auth.uid in [get(/databases/$(database)/documents/tables/$(table)/docs/seats).data.get('german', ''),
+                                 get(/databases/$(database)/documents/tables/$(table)/docs/seats).data.get('allied', '')];
+      // the very first write creates the table: allowed while no seats document exists yet
+      allow create: if request.auth != null && !exists(/databases/$(database)/documents/tables/$(table)/docs/seats);
+    }
+    // Seats: take a free seat or give up your own; nobody can take or free someone else's.
+    match /tables/{table}/docs/seats {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && request.resource.data.keys().hasOnly(['german', 'allied'])
+        && (resource == null
+            || ((resource.data.get('german', null) == request.resource.data.get('german', null) || resource.data.get('german', null) == null || resource.data.get('german', null) == request.auth.uid)
+             && (resource.data.get('allied', null) == request.resource.data.get('allied', null) || resource.data.get('allied', null) == null || resource.data.get('allied', null) == request.auth.uid)));
+    }
+  }
+}

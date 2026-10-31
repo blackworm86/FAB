@@ -1,58 +1,66 @@
-/** Online play through the artifact's shared database: one table with a state document and a seats document.
- *  The rules engine is deterministic from the saved state (the dice come from the stored seed), so every player simply
- *  loads the newest state; the seat decides who may act. Without the `db` capability the game stays hot-seat. */
+/** Online play: one table with a state document and a seats document, kept in a shared store.
+ *  Two stores are supported: the claude.ai artifact database (when the page runs inside claude.ai) and Firebase (GitHub Pages deploy).
+ *  The rules engine is deterministic from the saved state (dice come from the stored seed), so every client simply loads the newest state;
+ *  the seat decides who may act. With neither store the game is hot-seat, and in dev mode a seat switch lets one machine play both sides. */
 import type { Game, Side } from '../../engine/src';
-
-type Snap = { exists: boolean; data(): Record<string, unknown> | undefined };
-type Ref = { get(): Promise<Snap>; set(d: Record<string, unknown>): Promise<void>; onSnapshot(n: (s: Snap) => void, e?: (x: unknown) => void): () => void; acquire(o: { holder: string; ttlMs?: number }): Promise<{ acquired: boolean }> };
-type Db = { doc(p: string): Ref };
-declare const claude: { use(name: string): Promise<unknown> } | undefined;
+import { artifactStore } from './store-artifact';
+import { firebaseStore } from './store-firebase';
 
 export interface Seats { german?: string | null; allied?: string | null }
-export const online = {
-  active: false, uid: '' as string, seats: {} as Seats, rev: 0, canWrite: true, error: '',
-  mySide(): Side | null { return this.seats.german === this.uid ? 'german' : this.seats.allied === this.uid ? 'allied' : null; },
-};
-let stateRef: Ref | null = null, seatsRef: Ref | null = null, lastJson = '', writing = false, queued: Game | null = null, onChange: () => void = () => {}, onRemote: (g: Game) => void = () => {};
+export interface StateDoc { rev: number; json: string; by?: string }
+/** What a storage backend has to provide. */
+export interface Store {
+  uid: string; canWrite: boolean;
+  watchState(next: (d: StateDoc | null) => void, err: (e: string) => void): void;
+  setState(d: StateDoc): Promise<void>;
+  watchSeats(next: (s: Seats) => void, err: (e: string) => void): void;
+  /** Take the seat for `side` (or give up every seat when null); resolves an error message, or '' on success. */
+  sit(side: Side | null): Promise<string>;
+}
 
-const slim = (g: Game) => { const c = { ...g, log: g.log.slice(-120) }; return JSON.stringify(c); };
+const params = new URLSearchParams(location.search);
+export const DEV = import.meta.env.DEV || params.has('dev') || (() => { try { return localStorage.getItem('fab-dev') === '1'; } catch { return false; } })();
+export const TABLE = params.get('table') || 'main';
+export type DevSeat = 'german' | 'allied' | 'both' | 'watch';
+
+export const online = {
+  /** 'off' = hot-seat, 'local' = seats enforced on this machine only (dev), 'remote' = shared through a store. */
+  mode: 'off' as 'off' | 'local' | 'remote', uid: '', seats: {} as Seats, rev: 0, canWrite: true, error: '', store: '' as string,
+  devSeat: 'both' as DevSeat,
+  mySide(): Side | null {
+    if (DEV && this.mode !== 'off') return this.devSeat === 'german' || this.devSeat === 'allied' ? this.devSeat : null;
+    return this.seats.german === this.uid && this.uid ? 'german' : this.seats.allied === this.uid && this.uid ? 'allied' : null;
+  },
+  /** True when this client may act for whoever's turn it is (dev "both" seat, or hot-seat). */
+  both() { return this.mode === 'off' || (DEV && this.devSeat === 'both'); },
+  get active() { return this.mode !== 'off'; },
+};
+let store: Store | null = null, lastJson = '', writing = false, queued: Game | null = null, onChange: () => void = () => {}, onRemote: (g: Game) => void = () => {};
+const slim = (g: Game) => JSON.stringify({ ...g, log: g.log.slice(-120) });
+const fail = (e: string) => { online.error = e; onChange(); };
 
 export async function startOnline(remote: (g: Game) => void, changed: () => void, current: () => Game) {
   onRemote = remote; onChange = changed;
-  try {
-    if (typeof claude === 'undefined') return;
-    const db = (await claude.use('db')) as Db | null, user = (await claude.use('user')) as { id(): Promise<string | null>; can(n: string): boolean | null } | null;
-    if (!db || !user) return;
-    online.uid = (await user.id()) ?? ''; if (!online.uid) return;
-    online.canWrite = user.can('data.write') !== false; online.active = true;
-    stateRef = db.doc('table/state'); seatsRef = db.doc('table/seats');
-    seatsRef.onSnapshot((s) => { online.seats = (s.exists ? (s.data() as Seats) : {}) ?? {}; onChange(); }, (e) => { online.error = String((e as { message?: string })?.message ?? e); onChange(); });
-    stateRef.onSnapshot((s) => {
-      if (!s.exists) { if (online.canWrite) void push(current()); return; }
-      const d = s.data() as { rev: number; json: string };
-      if (d.json === lastJson || d.rev < online.rev) return;
-      lastJson = d.json; online.rev = d.rev; try { onRemote(JSON.parse(d.json)); } catch { /* ignore a damaged document */ }
-    }, (e) => { online.error = String((e as { message?: string })?.message ?? e); onChange(); });
-  } catch (e) { online.active = false; online.error = String(e); }
+  try { store = (await artifactStore()) ?? (await firebaseStore(TABLE)); } catch (e) { online.error = String(e); store = null; }
+  if (!store) { if (DEV) { online.mode = 'local'; changed(); } return; }
+  online.mode = 'remote'; online.uid = store.uid; online.canWrite = store.canWrite; online.store = store.constructor === Object ? '' : '';
+  store.watchSeats((s) => { online.seats = s; onChange(); }, fail);
+  store.watchState((d) => {
+    if (!d) { if (online.canWrite) void push(current()); return; }
+    if (d.json === lastJson || d.rev < online.rev) return;
+    lastJson = d.json; online.rev = d.rev; try { onRemote(JSON.parse(d.json)); } catch { /* ignore a damaged document */ }
+  }, fail);
 }
 
-/** Publish the local state (coalescing quick bursts into one write at a time). */
+/** Publish the local state (quick bursts are coalesced into one write at a time). */
 export async function push(g: Game) {
-  if (!online.active || !stateRef || !online.canWrite) return;
+  if (online.mode !== 'remote' || !store || !online.canWrite) return;
   const json = slim(g); if (json === lastJson) return;
   if (writing) { queued = g; return; }
   writing = true;
-  try { lastJson = json; online.rev += 1; await stateRef.set({ rev: online.rev, json, by: online.uid }); }
-  catch (e) { online.error = String((e as { message?: string })?.message ?? e); onChange(); }
+  try { lastJson = json; online.rev += 1; await store.setState({ rev: online.rev, json, by: online.uid }); } catch (e) { fail(String((e as { message?: string })?.message ?? e)); }
   writing = false; if (queued) { const q = queued; queued = null; void push(q); }
 }
 
-/** Take a seat (first come, first served), or give it up. Uses a short lease so two players cannot take the same seat. */
-export async function sit(side: Side | null) {
-  if (!online.active || !seatsRef) return;
-  const lease = await seatsRef.acquire({ holder: online.uid, ttlMs: 4000 }); if (!lease.acquired) { online.error = 'The table is busy, try again'; onChange(); return; }
-  const cur = ((await seatsRef.get()).data() as Seats | undefined) ?? {}, next: Seats = { german: cur.german ?? null, allied: cur.allied ?? null };
-  if (next.german === online.uid) next.german = null; if (next.allied === online.uid) next.allied = null;
-  if (side) { if (next[side] && next[side] !== online.uid) { online.error = `The ${side} seat is taken`; onChange(); return; } next[side] = online.uid; }
-  online.error = ''; await seatsRef.set(next as Record<string, unknown>);
-}
+export async function sit(side: Side | null) { if (online.mode !== 'remote' || !store) return; const e = await store.sit(side); online.error = e; onChange(); }
+export function setDevSeat(s: DevSeat) { online.devSeat = s; onChange(); }

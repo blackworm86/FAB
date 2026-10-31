@@ -1,3 +1,5 @@
 node_modules/
-public/
+public/map.jpg
 dist/
+.env
+.env.local

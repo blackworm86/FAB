@@ -160,3 +160,4 @@ button.ico { min-width: 40px; min-height: 40px; display: inline-flex; align-item
 }
 
 .card2 { touch-action: pan-x; } .arr { touch-action: pan-x; } .c-hand { overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; } .arrtray { overscroll-behavior-x: contain; }
+button.ico.dev { border-color: #4aa3ff; color: #9fd0ff; }
