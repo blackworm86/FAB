@@ -84,6 +84,7 @@ let art: 'vector' | 'scan' = (() => { try { return localStorage.getItem('fab-art
 const boardCv = document.createElement('canvas'); boardCv.width = MW * 2; boardCv.height = MH * 2;
 const boardTex = new THREE.CanvasTexture(boardCv); boardTex.colorSpace = THREE.SRGBColorSpace; boardTex.anisotropy = 8;
 const loadImg = (src: string) => { const i = new Image(); i.onload = () => paintBoard(); i.src = src; return i; };
+const vpIcons = { allied: loadImg('./icons/vp-allied.svg'), german: loadImg('./icons/vp-german.svg'), mutual: loadImg('./icons/vp-mutual.svg') };
 const baseImg = loadImg('./map-base.svg'), linesImg = loadImg('./map-lines.svg');
 function applyArt() { const mat = board.material as THREE.MeshStandardMaterial; mat.map = art === 'scan' ? scanTex() : boardTex; mat.needsUpdate = true; if (art === 'vector') paintBoard(); }
 const setArt = (a: 'vector' | 'scan') => { art = a; try { localStorage.setItem('fab-art', a); } catch { /* private mode */ } applyArt(); };
@@ -213,7 +214,7 @@ const TDN_COL = [0xf4e3a4, 0xc9a24f, 0x8a8f86, 0x4a5028], ZONE_COL: Record<numbe
 const tintOf = (id: number) => (tint === 'tdn' ? TDN_COL[E.areas.get(id)!.tdn] : ZONE_COL[E.areas.get(id)!.zone]);
 const hex6 = (n: number) => '#' + n.toString(16).padStart(6, '0');
 /** What is printed on the map, and how. */
-const layers = (() => { const d = { numbers: true, tdn: true, vp: true, names: true, float: false }; try { return { ...d, ...JSON.parse(localStorage.getItem('fab-layers') ?? '{}') }; } catch { return d; } })();
+const layers = (() => { const d = { numbers: true, tdn: true, vp: true, names: true }; try { return { ...d, ...JSON.parse(localStorage.getItem('fab-layers') ?? '{}') }; } catch { return d; } })();
 const saveLayers = () => { try { localStorage.setItem('fab-layers', JSON.stringify(layers)); localStorage.setItem('fab-tint', tint); } catch { /* private mode */ } };
 /** Whose side of the table we look from: the German player looks up the map from the bottom, the Allied player down from the top. */
 const viewSide = (): E.Side => (online.active && !online.both() && online.mySide() ? online.mySide()! : 'german');
@@ -235,14 +236,11 @@ function drawItems(c: CanvasRenderingContext2D, a: MapArea, withName: boolean) {
     c.font = '700 16px "Arial Narrow", Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.fillStyle = col === 3 ? '#fff' : col === 2 ? '#111' : '#1a1608';
     c.fillText(String(layers.numbers ? a.id : t), 0, col === 3 ? -3 : 0);
   }
-  if (layers.vp) {
-    const v = ar.vp, cross = (x: number, y: number, r: number) => {
-      const q = r * 0.2, w = r * 0.34, P = [[-q, -q], [-w, -r], [w, -r], [q, -q], [r, -w], [r, w], [q, q], [w, r], [-w, r], [-q, q], [-r, w], [-r, -w]];
-      c.beginPath(); P.forEach(([px, py], i) => (i ? c.lineTo(x + px, y + py) : c.moveTo(x + px, y + py))); c.closePath(); c.lineJoin = 'round'; c.lineWidth = r * 0.26; c.strokeStyle = '#fff'; c.stroke(); c.fillStyle = '#0d0d0f'; c.fill();
-    }, star = (x: number, y: number, r: number, f: string, st: string) => { c.beginPath(); for (let i = 0; i < 10; i++) { const rr = i % 2 ? r * 0.45 : r; c.lineTo(x + rr * Math.sin(i * Math.PI / 5), y - rr * Math.cos(i * Math.PI / 5)); } c.closePath(); c.fillStyle = f; c.fill(); if (st) { c.lineWidth = 1.2; c.strokeStyle = st; c.stroke(); } };
-    for (let i = 0; i < v.allied; i++) cross((i - (v.allied - 1) / 2) * 24, -40, 10);
-    for (let i = 0; i < v.german; i++) { c.beginPath(); c.arc(0, -40 - i * 20, 9, 0, 7); c.fillStyle = '#2f78c8'; c.fill(); c.lineWidth = 1.5; c.strokeStyle = '#fff'; c.stroke(); star(0, -40 - i * 20, 6.5, '#fff', ''); }
-    if (v.mutual) star(0, -40, 11, '#f2d21b', '#c3281c');
+  if (layers.vp) {                                                                                   // the symbols are the editable files in public/icons
+    const v = ar.vp, put = (img: HTMLImageElement, x: number, y: number) => { if (img.naturalWidth) c.drawImage(img, x - 13, y - 13, 26, 26); };
+    for (let i = 0; i < v.allied; i++) put(vpIcons.allied, (i - (v.allied - 1) / 2) * 24, -40);
+    for (let i = 0; i < v.german; i++) put(vpIcons.german, 0, -40 - i * 20);
+    if (v.mutual) put(vpIcons.mutual, 0, -40);
   }
   if (layers.names && withName) { c.font = 'italic 600 16px "Arial Narrow", Arial, sans-serif'; c.textAlign = 'center'; c.lineWidth = 3.2; c.strokeStyle = '#bcc0ab'; c.strokeText(ar.name, 0, 26); c.fillStyle = '#1c2216'; c.fillText(ar.name, 0, 26); }
 }
@@ -260,26 +258,13 @@ function paintBoard() {
     c.restore();
   }
   c.drawImage(linesImg, 0, 0, boardCv.width, boardCv.height);
-  if (!layers.float) {
+  {
     c.save(); c.scale(k, k);
     for (const a of MAP.areas) { c.save(); c.translate(a.label[0], a.label[1]); c.rotate(viewRot()); drawItems(c, a, true); c.restore(); }
     if (layers.numbers) for (const e of MAP.entries) { c.save(); c.translate(e.x, e.y); c.rotate(viewRot()); drawEntry(c, e); c.restore(); }
     c.restore();
   }
-  boardTex.needsUpdate = true; buildFloat();
-}
-/** The same items as sprites floating above the areas, facing the camera: easier to read at a low angle or on a phone. */
-const floats = new THREE.Group(); scene.add(floats);
-function buildFloat() {
-  for (const o of floats.children) { const sp = o as THREE.Sprite; (sp.material as THREE.SpriteMaterial).map?.dispose(); sp.material.dispose(); } floats.clear();
-  if (!layers.float) return;
-  const mk = (draw: (c: CanvasRenderingContext2D) => void, w: number, h: number, ox: number, oy: number, p: THREE.Vector3, sc: number) => {
-    const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const c = cv.getContext('2d')!; c.translate(ox, oy); c.scale(1.3, 1.3); draw(c);
-    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false }));
-    sp.scale.set(w / sc, h / sc, 1); sp.position.copy(p); sp.renderOrder = 5; floats.add(sp);
-  };
-  for (const a of MAP.areas) { const p = toWorld(...a.label); p.y = 2.7; mk((c) => drawItems(c, a, true), 220, 170, 110, 105, p, 40); }
-  if (layers.numbers) for (const e of MAP.entries) { const p = toWorld(e.x, e.y); p.y = 1.2; mk((c) => drawEntry(c, e), 64, 64, 32, 28, p, 40); }
+  boardTex.needsUpdate = true;
 }
 applyArt();
 function paintAreas() {
@@ -839,7 +824,6 @@ function layersHtml() {
   const tintBtn = (v: typeof tint, label: string) => chip(label, tint === v, () => { tint = v; relayer(); });
   return `<div class="modal"><div class="sheet slim"><h3>Map layers <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
     <h4>Printed on the map</h4><div class="chips">${chip('Numbers', layers.numbers, () => { layers.numbers = !layers.numbers; relayer(); }, 'Area numbers and entry letters')}${chip('TDN', layers.tdn, () => { layers.tdn = !layers.tdn; relayer(); }, 'Terrain defence number: marker shape and colour')}${chip('Victory points', layers.vp, () => { layers.vp = !layers.vp; relayer(); })}${chip('Names', layers.names, () => { layers.names = !layers.names; relayer(); })}</div>
-    <h4>Style</h4><div class="chips">${chip('Printed', !layers.float, () => { layers.float = false; relayer(); }, 'Flat on the map, turned to face you')}${chip('Floating', layers.float, () => { layers.float = true; relayer(); }, 'Above each area, always facing the camera')}</div>
     <h4>Colour the areas</h4><div class="chips">${tintBtn('off', 'Off')}${tintBtn('tdn', 'TDN')}${tintBtn('zones', 'Army zones')}</div>
     <p class="hint">Roads, rivers and borders stay visible under the colours.</p></div></div>`;
 }
