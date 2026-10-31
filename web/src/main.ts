@@ -5,6 +5,7 @@ import * as E from '../../engine/src';
 import { labelSvg } from './art';
 import { chitSvg, mapMarkerSvg, loadChitArt, garrisonChit } from './chits';
 import { History } from './history';
+import { online, startOnline, push, sit } from './online';
 import { throwDice, clearDice, isHit, type DiceGroup } from './dice3d';
 
 type MapArea = { id: number; label: [number, number]; polygon: [number, number][] };
@@ -57,7 +58,8 @@ const KEY = 'fab-demo2';
 function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif && x.roadblocks && x.pendingArrivals && x.fwOwner && Array.isArray(x.recover) ? x : null; } catch { return null; } }
 let g: E.Game = load() ?? E.newGame();
 let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, previewArea: number | null = null, hoverArea: number | null = null, newOpts: E.Opts = { scenario: 'tournament', fuel: true };
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(g)); } catch { /* storage off: the game still runs */ } };
+let applyingRemote = false;
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(g)); } catch { /* storage off: the game still runs */ } if (!applyingRemote) void push(g); };
 
 /* ---------- three.js scene ---------- */
 const canvas = $('#gl') as HTMLCanvasElement;
@@ -336,12 +338,23 @@ let toast = '', toastT = 0;
 const say = (t: string) => { toast = t; clearTimeout(toastT); toastT = window.setTimeout(() => { toast = ''; render(); }, 2800); };
 let dragTargets: number[] = [];
 const hist = new History<E.Game>(); let note = '', selArr: string | null = null;
+/** Who may act right now: one side, or both while each handles its own assets (admin, reinforcement, battle set-up). */
+function actorNow(): E.Side | 'both' {
+  if (g.pendingBlow) return other(g.units.find((x) => x.id === g.pendingBlow!.unit)!.side);
+  const b = g.battle;
+  if (b) return b.stage === 'setup' ? 'both' : b.stage === 'defChoice' || b.stage === 'retreat' ? other(b.attacker) : b.attacker;
+  if (g.phase === 'admin' || g.phase === 'reinforcement') return 'both';
+  return g.phase === 'reaction' ? other(g.phasing) : g.phasing;
+}
+const allowed = () => !online.active || modal === 'menu' || (online.mySide() != null && (actorNow() === 'both' || actorNow() === online.mySide()));
+const notYou = () => online.mySide() == null ? 'You are watching. Take a seat in the menu to play.' : `Wait for the ${nm(actorNow() as E.Side)} player.`;
 function act(f: () => void, after = '') {
+  if (!allowed()) return say(notYou());
   const r = hist.run(g, () => { f(); auto(); });
   g = r.game; if (r.error) say(r.error.message); else note = after;
   save(); refresh();
 }
-function undo() { const p = hist.undo(); if (!p) return; g = p; selUnit = selChit = selArr = previewArea = hoverArea = null; note = ''; save(); refresh(); }
+function undo() { if (!allowed()) return say(notYou()); const p = hist.undo(); if (!p) return; g = p; selUnit = selChit = selArr = previewArea = hoverArea = null; note = ''; save(); refresh(); }
 window.addEventListener('keydown', (e) => {
   const t = e.target as HTMLElement | null, typing = !!t?.matches?.('input,select,textarea');
   if (e.key === 'Escape') { if (modal) { modal = null; render(); } else if (selUnit || selArr || selChit) { selUnit = selArr = selChit = null; previewArea = null; refresh(); } return; }
@@ -421,6 +434,7 @@ interface RollView { title: string; groups: (DiceGroup & { parts: [string, numbe
 let rollView: RollView | null = null, modal: 'menu' | 'boxes' | null = null, handSide: E.Side | null = null;
 const STAGE_NAME: Record<string, string> = { attArty: 'artillery', defArty: 'artillery', defFire: 'Defensive fire', offFire: 'Offensive fire' };
 function rollStage(b: E.Battle) {
+  if (!allowed()) return say(notYou());
   const side = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker), kind = b.stage.endsWith('Arty') ? 'arty' : 'ground', fl = E.fireList(g, b, side, kind), n0 = b.rolls.length, stage = b.stage;
   E.roll_step(g, b); save();
   const fresh = b.rolls.slice(n0);
@@ -518,10 +532,11 @@ const nm = (s: E.Side) => (s === 'german' ? 'German' : 'Allied');
 function topBar() {
   const v = E.victory(g), tr = E.TRACK[g.turn - 1], i = g.phasing === 'german' ? 0 : 1, at = STEP_OF[g.phase];
   return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game" aria-label="Menu, log and new game">${ico('menu')}</button><div class="c-crumbs">${STEPS.map((s, k) => `<span class="${k === at ? 'on' : k < at ? 'done' : ''}">${s}</span>`).join('')}</div>
-    <button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="Map overlay: terrain defence / army zones / off" aria-label="Map overlay">${ico('layers')}<span class="bl">Overlay</span></button><button class="ico" data-home title="Reset the camera" aria-label="Reset the camera">${ico('home')}<span class="bl">View</span></button><button class="ico" data-undo title="${hist.length ? 'Undo: ' + esc(note || 'last action') + ' (Ctrl+Z)' : 'Nothing to undo yet. Undo is available until a die is rolled.'}" aria-label="Undo" ${hist.length ? '' : 'disabled'}>${ico('undo')}<span class="bl">Undo</span></button><div class="c-stat"><span>TURN<b>${g.turn}</b></span><span>PLAYING<b class="${g.phasing}">${nm(g.phasing).toUpperCase()}</b></span><span>NET VP<b>${v.net > 0 ? 'GE +' + v.net : v.net < 0 ? 'AL +' + -v.net : '0'}</b></span><span title="Draws this phase (German / Allied)">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span><button class="ico" data-modal="boxes" title="Chit boxes" aria-label="Chit boxes">${ico('boxes')}</button></div></div>`;
+    <button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="Map overlay: terrain defence / army zones / off" aria-label="Map overlay">${ico('layers')}<span class="bl">Overlay</span></button><button class="ico" data-home title="Reset the camera" aria-label="Reset the camera">${ico('home')}<span class="bl">View</span></button><button class="ico" data-undo title="${hist.length ? 'Undo: ' + esc(note || 'last action') + ' (Ctrl+Z)' : 'Nothing to undo yet. Undo is available until a die is rolled.'}" aria-label="Undo" ${hist.length ? '' : 'disabled'}>${ico('undo')}<span class="bl">Undo</span></button><div class="c-stat"><span>TURN<b>${g.turn}</b></span><span>PLAYING<b class="${g.phasing}">${nm(g.phasing).toUpperCase()}</b></span>${online.active ? `<span>YOU<b class="${online.mySide() ?? ''}">${(online.mySide() ?? 'WATCHING').toUpperCase()}</b></span>` : ''}<span>NET VP<b>${v.net > 0 ? 'GE +' + v.net : v.net < 0 ? 'AL +' + -v.net : '0'}</b></span><span title="Draws this phase (German / Allied)">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span><button class="ico" data-modal="boxes" title="Chit boxes" aria-label="Chit boxes">${ico('boxes')}</button></div></div>`;
 }
 function prompt() {
   const b = g.battle;
+  if (online.active && !allowed() && !g.over) return online.mySide() == null ? '<b>Watching.</b> Take a seat in the menu to play.' : `<b>Waiting for the ${nm(actorNow() as E.Side)} player…</b>`;
   if (note && !b && hist.length) return `${esc(note)} <button data-do="${reg(() => undo())}">Undo</button>`;
   if (g.over) return `<b>${esc(g.over)}</b>`;
   if (g.pendingBlow) return `<b>${nm(other(g.units.find((x) => x.id === g.pendingBlow!.unit)!.side))}</b>: attempt to blow the bridge?`;
@@ -671,6 +686,7 @@ function modalHtml() {
     return `<h4 class="${s}">${nm(s)} · cup ${E.boxOf(g, s, 'cup').length}</h4><div class="chips"><b>Available</b> ${l('available')}</div><div class="chips"><b>Used</b> ${l('used')}</div><div class="chips"><b>Eliminated</b> ${l('eliminated')}</div>`; }).join('')}</div></div>`;
   if (modal === 'menu') return `<div class="modal"><div class="sheet"><h3>Menu <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3><h4>New game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as 'tournament' | 'campaign'; })}"><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
     <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Start', () => { g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'primary')}</div>
+    ${online.active ? `<h4>Online table</h4><p class="hint">Seats: German ${online.seats.german ? (online.seats.german === online.uid ? 'you' : 'taken') : 'free'} · Allied ${online.seats.allied ? (online.seats.allied === online.uid ? 'you' : 'taken') : 'free'}. Everyone who opens this page sees the same game; the seat decides who may act.${online.canWrite ? '' : ' You can only watch (ask for Contributor access to play).'}${online.error ? ' ' + esc(online.error) : ''}</p><div class="row">${btn('Sit as German', () => { void sit('german'); }, '', !online.canWrite)}${btn('Sit as Allied', () => { void sit('allied'); }, '', !online.canWrite)}${btn('Leave my seat', () => { void sit(null); })}</div>` : '<h4>Online play</h4><p class="hint">Not connected: publish and share the page to play with another person. This is a hot-seat game.</p>'}
     <h4>Map art</h4><div class="row"><select data-sel="${regv((x) => setArt(x as 'vector' | 'scan'))}"><option value="vector" ${art === 'vector' ? 'selected' : ''}>Vector layers (traced)</option><option value="scan" ${art === 'scan' ? 'selected' : ''}>Original scan</option></select></div>
     <h4>Log</h4><div class="log">${[...g.log].reverse().slice(0, 120).map((l) => `<div>${esc(l)}</div>`).join('')}</div></div></div>`;
   return '';
@@ -709,4 +725,5 @@ function frame() {
 }
 frame();
 loadChitArt().catch((e) => console.error(e)).finally(() => { auto(); refresh(); });
+void startOnline((rg) => { applyingRemote = true; g = rg; selUnit = selChit = selArr = null; previewArea = hoverArea = null; hist.clear(); try { save(); } finally { applyingRemote = false; } refresh(); }, () => render(), () => g);
 Object.assign(window, { __fab: { info: () => renderer.info.memory, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
