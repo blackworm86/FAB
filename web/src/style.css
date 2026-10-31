@@ -132,7 +132,8 @@ button.ico { min-width: 40px; min-height: 40px; display: inline-flex; align-item
 .c-table.rolling { opacity: .25; pointer-events: none; }
 .ln { display: grid; grid-template-columns: 1fr auto auto auto; gap: 2px 12px; align-items: center; } .ln .who { width: auto; } .ln .mods { grid-column: 1 / -1; grid-row: 2; flex: none; } .ln .sn { grid-column: 2; grid-row: 1; } .ln .res { grid-column: 3; grid-row: 1; } .ln .cnt { grid-column: 4; grid-row: 1; }
 @media (max-width: 860px) { .c-table.rolling { visibility: hidden; } button.ico .bl { display: none; } button.ico { min-width: 44px; min-height: 44px; } button.go { min-height: 44px; } .handtab button { min-height: 44px; } }
-@media (max-width: 1100px) { button.ico .bl { display: none; } }
+@media (max-width: 1500px) { button.ico .bl { display: none; } }
+@media (max-width: 1300px) { .c-stat span:nth-child(n+4) { display: none; } }
 /* battle strip: blocks shown face-on with a visible thickness, so every label is legible and identical in shape */
 .blk .b3 { --s: 60px; transform: none; transform-style: flat; margin: 0 8px 8px 0; filter: none; box-shadow: 6px 6px 0 #555a60, 9px 12px 12px #000a; background: var(--ge); }
 .blk .b3.allied { box-shadow: 6px 6px 0 #4b6a33, 9px 12px 12px #000a; } .blk .b3.british { box-shadow: 6px 6px 0 #2d4f86, 9px 12px 12px #000a; } .blk .b3.flat { box-shadow: 3px 4px 0 #8a8472, 5px 8px 8px #000a; }

@@ -20,7 +20,7 @@ export interface Unit {
   id: string; name: string; side: Side; cls: 'armor' | 'infantry'; q: Quality[]; max: number; str: number; area: number | null; garrison?: boolean;
   disorder: 0 | 1 | 2; unsupplied: boolean; moved: boolean; reserve: string | null; exploit: boolean; from?: number;
   arrival?: number; entry?: string[]; ech?: string; symbol?: string; code?: string;
-  chitId?: string; interdict?: string; adjOnly?: boolean; paradrop?: 'pending' | 'intact' | 'partial'; heydte?: boolean; bcross?: boolean;
+  chitId?: string; interdict?: string; adjOnly?: boolean; spent?: number; paradrop?: 'pending' | 'intact' | 'partial'; heydte?: boolean; bcross?: boolean;
 }
 export interface Roll { who: string; sn: number; dice: number[]; hits: number; kind: 'arty' | 'ground' }
 export interface Battle {
@@ -35,7 +35,7 @@ export interface Game {
   turn: number; lastTurn: number; phasing: Side; phase: Phase; units: Unit[]; chits: Chit[]; control: Record<number, Side>;
   fieldWorks: number[]; riverAssault: number[]; blown: string[]; contestedAtMoveStart: number[]; fought: number[];
   markers: { german: Record<string, number>; allied: Record<string, number> }; stratMoves: number; riverCross: string[]; blowTried: number[]; entered: Record<number, { id: string; river: boolean; blown: boolean }[]>;
-  pendingBlow: { unit: string; path: number[] } | null; greif: Record<string, string>; greifTried: string[]; fwBuilt: string[]; tfNew: string[]; elimLarge: string[]; captured: number[]; fuelAdded: boolean; opts: Opts;
+  pendingBlow: { unit: string; path: number[]; spent?: number } | null; greif: Record<string, string>; greifTried: string[]; fwBuilt: string[]; tfNew: string[]; elimLarge: string[]; captured: number[]; fuelAdded: boolean; opts: Opts;
   roadblocks: Record<number, Side>; interdicted: Record<number, string>; pooled: number | null; airSupply: { area: number; side: Side; id: string; stamp: number } | null; revealed: string | null; arrived: string[]; pendingArrivals: string[];
   battle: Battle | null; seed: number; rolls: number; log: string[]; over?: string;
 }
@@ -186,11 +186,10 @@ export function moveOptions(g: Game, id: string): Opt[] {
   const enemy = other(u.side), occ = (a: number) => ({ german: blocks(g, a, 'german').length, allied: blocks(g, a, 'allied').length });
   const garr = new Set(g.units.filter((x) => x.garrison && x.side === enemy && x.area != null && !blocks(g, x.area, enemy).length).map((x) => x.area!));
   const one = exploit && !reserveBt;
-  let r = reachable({ side: u.side, cls: u.cls, area: u.area, supplied: !u.unsupplied, disordered: u.disorder > 0, ownZone: one ? undefined : (ARMY(u) as 5 | 6 | 7 | undefined), boundaryPreauthorized: u.bcross },
+  let r = reachable({ side: u.side, cls: u.cls, area: u.area, supplied: !u.unsupplied, disordered: u.disorder > 0, adjacentOnly: one || !!u.adjOnly, spent: u.spent, ownZone: one ? undefined : (ARMY(u) as 5 | 6 | 7 | undefined), boundaryPreauthorized: u.bcross },
     { occupants: occ, blownBridges: new Set(g.blown), roadblocks: new Set([...garr, ...markerAreas(g, enemy)]), controller: (a) => g.control[a],
       extraCost: (f, t) => (markerAreas(g, enemy).includes(t) ? 1 : 0) + (u.side === 'german' && (g.interdicted[f] || g.interdicted[t]) ? 1 : 0) });
-  if (one) r = r.filter((x) => x.path.length === 2 && !g.blown.includes(keyOf(x.path[0], x.path[1])));
-  if (u.adjOnly) r = r.filter((x) => x.path.length === 2);
+  if (one) r = r.filter((x) => !g.blown.includes(keyOf(x.path[0], x.path[1])));                        // 7.31 no crossing of a blown bridge
   return r.filter((x) => {
     if (blocks(g, x.area, u.side).length >= 2) return false;                                           // 5.1
     const en = unitsIn(g, x.area, enemy).length > 0, cont = contested(g, x.area);
@@ -207,7 +206,7 @@ function finishMove(g: Game, u: Unit, opt: Opt, bridgeBlown: boolean) {
   const from = u.area!, to = opt.area, last = connection(opt.path[opt.path.length - 2], to)!, enemy = other(u.side);
   const intoEnemy = unitsIn(g, to, enemy).length > 0;
   if (u.side === 'german' && opt.fuel && g.opts.fuel) { const f = fuelChits(g)[0]; if (f) { f.box = 'used'; say(g, `fuel asset spent for ${u.name}`); } }
-  u.from = from; u.area = to; u.moved = true; u.adjOnly = false; dropReserve(g, u);
+  u.from = from; u.area = to; u.moved = true; u.adjOnly = false; u.spent = 0; dropReserve(g, u);
   if (u.side === 'german') for (let i = 1; i < opt.path.length; i++) { const k = keyOf(opt.path[i - 1], opt.path[i]); if (g.greif[k]) { chit(g, g.greif[k]).box = 'eliminated'; delete g.greif[k]; say(g, 'Greif Team Bridge: the bridge is taken'); } }
   const hd = unitsIn(g, to).find((x) => x.heydte);
   if (hd && u.side === 'german') { chit(g, hd.chitId!).box = 'used'; hd.area = null; hd.str = 0; say(g, 'von der Heydte is relieved and becomes a regular battle asset'); }
@@ -226,7 +225,7 @@ export function move(g: Game, id: string, to: number) {
   const prev = opt.path[opt.path.length - 2], last = connection(prev, to)!, enemy = other(u.side);
   const newly = unitsIn(g, to, enemy).length > 0 && !g.contestedAtMoveStart.includes(to) && !contested(g, to);
   if (last.river && !g.blown.includes(keyOf(prev, to)) && newly && !g.blowTried.includes(to) && (g.phase === 'movement' || g.phase === 'btMove')) {
-    g.pendingBlow = { unit: id, path: opt.path }; return 'blow';                                       // 5.35d the opponent may try to blow the bridge
+    g.pendingBlow = { unit: id, path: opt.path, spent: (moveOptions(g, id).find((x) => x.area === opt.path[opt.path.length - 2])?.cost ?? 0) }; return 'blow';                                       // 5.35d the opponent may try to blow the bridge
   }
   finishMove(g, u, opt, false); return 'moved';
 }
@@ -239,8 +238,12 @@ export function resolveBlow(g: Game, attempt: boolean) {
   const r = roll(g), need = g.greif[keyOf(prev, to)] ? 1 : 5;                       // 17.12: a Greif team holding the bridge makes it a 1
   if (r > need) { say(g, `bridge blow attempt failed (rolled ${r})`); finishMove(g, u, { ...opt, cost: p.path.length }, false); return 'failed'; }
   g.blown.push(keyOf(prev, to)); say(g, `bridge ${areas.get(prev)!.name}–${areas.get(to)!.name} blown (rolled ${r})`); dropGreif(g, keyOf(prev, to));
+  const exploitOnly = g.phase === 'btMove' && u.exploit && !u.reserve;
+  if (exploitOnly) { say(g, `${u.name} cannot cross the blown bridge and does not move (7.31)`); return 'stopped'; }          // exploitation units may not cross a blown bridge, even one blown by their own attempt
   if (p.path.length === 2) { finishMove(g, u, { ...opt, cost: 6 }, true); return 'blown-crossed'; }     // began adjacent: still crosses, whole allowance
-  u.area = prev; u.moved = true; dropReserve(g, u); u.from = p.path[0]; say(g, `${u.name} stops in ${areas.get(prev)!.name} (bridge blown ahead)`); updateControl(g, p.path[0]); updateControl(g, prev);
+  // 5.35d: it does not enter the area, loses one movement point, and may carry on from where it stands
+  const here = p.path.length - 2 > 0 ? prev : u.area!; u.spent = (p.spent ?? 0) + 1; u.area = here; u.from = p.path[0]; dropReserve(g, u);
+  say(g, `${u.name} stops in ${areas.get(prev)!.name} (bridge blown ahead) and may keep moving`); updateControl(g, p.path[0]); updateControl(g, prev);
   return 'stopped';
 }
 /** Strategic movement (5.4, 14.8): supplied reserve units, any friendly-controlled supplied area reachable over road/field links without blown bridges or enemy areas. */
@@ -676,7 +679,7 @@ function retreatExcess(g: Game) {
 function placeRiverAssaults(g: Game) {
   for (const [a, list] of Object.entries(g.entered)) {
     const area = +a, att = blocks(g, area, g.phasing);
-    if (contested(g, area) && att.length && att.every((u) => list.some((e) => e.id === u.id && e.river)) && list.some((e) => e.blown) && !g.riverAssault.includes(area)) { g.riverAssault.push(area); say(g, `river assault in ${areas.get(area)!.name}`); }
+    if (contested(g, area) && !g.contestedAtMoveStart.includes(area) && att.length && att.every((u) => list.some((e) => e.id === u.id && e.river)) && list.some((e) => e.blown) && !g.riverAssault.includes(area)) { g.riverAssault.push(area); say(g, `river assault in ${areas.get(area)!.name}`); }
   }
   g.entered = {}; g.riverCross = []; g.blowTried = [];
 }
@@ -719,17 +722,17 @@ export function endPhase(g: Game) {
       say(g, `Victory check: German ${v.german}, Allied ${v.allied}, net ${v.net > 0 ? 'German +' + v.net : v.net < 0 ? 'Allied +' + -v.net : '0'}`);
       if (sd && ((v.net > 0 && v.net >= sd[0]) || (v.net < 0 && -v.net >= sd[1]))) { g.over = `Sudden death victory: ${v.net > 0 ? 'German' : 'Allied'} (net ${Math.abs(v.net)})`; return; }
       if (g.turn >= g.lastTurn) { g.over = finalResult(g, v.net); return; }
-      g.turn++; g.phasing = 'german'; g.phase = 'reinforcement'; reinforcementPhase(g); g.units.forEach((u) => (u.moved = false)); say(g, 'reinforcement phase'); return;
+      g.turn++; g.phasing = 'german'; g.phase = 'reinforcement'; reinforcementPhase(g); g.units.forEach((u) => { u.moved = false; u.spent = 0; }); say(g, 'reinforcement phase'); return;
     }
     g.phase = 'admin'; drawFor(g); return;
   }
   const order: Phase[] = ['reinforcement', 'admin', 'movement', 'strategic', 'combat', 'reaction', 'btMove', 'btCombat', 'supply'];
   g.phase = order[order.indexOf(ph) + 1];
   if (g.phase === 'admin') { g.greifTried = []; drawFor(g); }
-  if (g.phase === 'movement') { g.units.forEach((u) => (u.moved = false)); g.contestedAtMoveStart = contestedAreas(g); g.stratMoves = 0; }
-  if (g.phase === 'strategic') g.units.forEach((u) => (u.moved = false));
+  if (g.phase === 'movement') { g.units.forEach((u) => { u.moved = false; u.spent = 0; }); g.contestedAtMoveStart = contestedAreas(g); g.stratMoves = 0; }
+  if (g.phase === 'strategic') g.units.forEach((u) => { u.moved = false; u.spent = 0; });
   if (g.phase === 'combat') g.fought = [];
-  if (g.phase === 'reaction' || g.phase === 'btMove') { g.units.forEach((u) => (u.moved = false)); if (g.phase === 'btMove') g.contestedAtMoveStart = contestedAreas(g); }
+  if (g.phase === 'reaction' || g.phase === 'btMove') { g.units.forEach((u) => { u.moved = false; u.spent = 0; }); if (g.phase === 'btMove') g.contestedAtMoveStart = contestedAreas(g); }
   if (g.phase === 'btCombat') g.fought = [];
   if (g.phase === 'supply') supplyPhase(g);
   say(g, 'phase start');

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defenderRetreatSA, arrivalOptions, placeArrival, newGame, endPhase, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, moveOptions, boxOf, roadblock, roadblockAreas, playInterdiction, staffBoundary, staffPool, staffIntel,
-  playAirSupply, airSupplyAreas, rerouteOptions, reroute, stratOptions, unitsIn, inSupply, assetLimits, areas, type Game } from '../src';
+  playAirSupply, airSupplyAreas, rerouteOptions, reroute, stratOptions, move, resolveBlow, connection, neighbors, unitsIn, inSupply, assetLimits, areas, type Game } from '../src';
 
 function toAdmin(seed: number, turn = 2, campaign = false): Game {
   const g = newGame(seed, campaign ? { scenario: 'campaign' } : {});
@@ -102,5 +102,39 @@ describe('retreat before combat (Special Action)', () => {
     chooseRetreat(g, b, opts[1]); expect(first.area).toBe(opts[1]); expect(first.disorder).toBe(1);
     while (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]);
     expect(b.stage).toBe('done'); expect(b.exploit).toBe(true);
+  });
+});
+
+describe('river crossings (5.35d, 5.35e, 7.31)', () => {
+  const quiet = () => {
+    const g = newGame(5); g.phase = 'movement'; g.phasing = 'german'; g.fought = []; g.contestedAtMoveStart = [];
+    const ger = g.units.find((u) => u.side === 'german' && !u.garrison && u.cls === 'armor')!, al = g.units.find((u) => u.side === 'allied' && !u.garrison)!;
+    g.units.forEach((u) => { if (u !== ger && u !== al) u.area = null; });
+    let pair: [number, number] | null = null;
+    for (const a of areas.keys()) { for (const b of neighbors(a)) { const c = connection(a, b)!; if (c.river && !c.restricted && !g.blown.includes(a < b ? `${a}-${b}` : `${b}-${a}`)) { pair = [a, b]; break; } } if (pair) break; }
+    const [a, b] = pair!; ger.area = a; al.area = b; ger.moved = false; ger.reserve = null; ger.disorder = 0; ger.unsupplied = false; g.control[a] = 'german'; g.control[b] = 'allied';
+    return { g, ger, a, b };
+  };
+  const blowUntil = (g: Game, id: string, to: number) => { for (let s = 1; s < 80; s++) { const g2: Game = JSON.parse(JSON.stringify(g)); g2.seed = s * 31; g2.rolls = 0; if (move(g2, id, to) !== 'blow') return null; if (resolveBlow(g2, true) !== 'stopped' && g2.blown.length > g.blown.length) return g2; } return null; };
+  it('a unit that crosses a bridge blown in reaction gets a river assault marker when the area is newly contested', () => {
+    const { g, ger, b } = quiet(), g2 = blowUntil(g, ger.id, b)!;
+    expect(g2.units.find((u) => u.id === ger.id)!.area).toBe(b);
+    endPhase(g2); expect(g2.riverAssault).toContain(b);
+  });
+  it('an exploitation unit never crosses a bridge blown by its own attempt and keeps its move', () => {
+    const { g, ger, b } = quiet(); g.phase = 'btMove'; ger.exploit = true;
+    for (let s = 1; s < 80; s++) { const g2: Game = JSON.parse(JSON.stringify(g)); g2.seed = s * 31; g2.rolls = 0; if (move(g2, ger.id, b) !== 'blow') continue; if (resolveBlow(g2, true) === 'stopped') { const u = g2.units.find((x) => x.id === ger.id)!; expect(u.area).not.toBe(b); expect(u.moved).toBe(false); expect(moveOptions(g2, u.id).some((o) => o.area === b)).toBe(false); return; } }
+    throw new Error('no blown bridge reached');
+  });
+  it('a unit that cannot cross loses 1 MP and may keep moving (5.35d)', () => {
+    const { g, ger } = quiet(); let found = false;
+    for (const o of moveOptions(g, ger.id).filter((x) => x.path.length > 2)) {
+      const last = o.path[o.path.length - 1], prev = o.path[o.path.length - 2];
+      if (!connection(prev, last)!.river) continue;
+      g.units.find((u) => u.side === 'allied' && u.area != null)!.area = last; g.control[last] = 'allied';
+      for (let s = 1; s < 80 && !found; s++) { const g2: Game = JSON.parse(JSON.stringify(g)); g2.seed = s * 17; g2.rolls = 0; if (move(g2, ger.id, last) !== 'blow') break; if (resolveBlow(g2, true) === 'stopped') { const u = g2.units.find((x) => x.id === ger.id)!; expect(u.area).toBe(prev); expect(u.moved).toBe(false); expect(u.spent).toBeGreaterThan(0); expect(moveOptions(g2, u.id).length).toBeGreaterThan(0); found = true; } }
+      if (found) break;
+    }
+    expect(found).toBe(true);
   });
 });
