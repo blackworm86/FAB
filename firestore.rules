@@ -1,24 +1,35 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // One table per id. Anyone signed in (anonymous sign-in is enough) can read it; only seated players change the game.
-    match /tables/{table}/docs/state {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.resource.data.keys().hasOnly(['rev', 'json', 'by'])
-        && request.resource.data.json.size() < 900000
-        && request.auth.uid in [get(/databases/$(database)/documents/tables/$(table)/docs/seats).data.get('german', ''),
-                                 get(/databases/$(database)/documents/tables/$(table)/docs/seats).data.get('allied', '')];
-      // the very first write creates the table: allowed while no seats document exists yet
-      allow create: if request.auth != null && !exists(/databases/$(database)/documents/tables/$(table)/docs/seats);
+    function signedIn() { return request.auth != null; }
+    // Guests sign in anonymously to watch; playing needs a Google or email account.
+    function isPlayer() { return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous'; }
+    // Admins are listed by hand in the console: document admins/<their uid>.
+    function isAdmin() { return isPlayer() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    function seats(table) { return get(/databases/$(database)/documents/tables/$(table)/docs/seats).data; }
+    function seated(table) {
+      return exists(/databases/$(database)/documents/tables/$(table)/docs/seats)
+        && (seats(table).get('german', '') == request.auth.uid || seats(table).get('allied', '') == request.auth.uid);
     }
-    // Seats: take a free seat or give up your own; nobody can take or free someone else's.
+    // A seat field may stay as it is, or change to nobody, or to the writer, and only from nobody or from the writer.
+    function seatOk(old, nw) { return old == nw || ((nw == null || nw == request.auth.uid) && (old == null || old == request.auth.uid)); }
+
+    match /admins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+    match /tables/{table}/docs/state {
+      allow read: if signedIn();
+      allow write: if isPlayer() && request.resource.data.keys().hasOnly(['rev', 'json', 'by'])
+        && request.resource.data.json.size() < 900000
+        && (isAdmin() || seated(table) || !exists(/databases/$(database)/documents/tables/$(table)/docs/seats));
+    }
     match /tables/{table}/docs/seats {
-      allow read: if request.auth != null;
-      allow create, update: if request.auth != null
-        && request.resource.data.keys().hasOnly(['german', 'allied'])
-        && (resource == null
-            || ((resource.data.get('german', null) == request.resource.data.get('german', null) || resource.data.get('german', null) == null || resource.data.get('german', null) == request.auth.uid)
-             && (resource.data.get('allied', null) == request.resource.data.get('allied', null) || resource.data.get('allied', null) == null || resource.data.get('allied', null) == request.auth.uid)));
+      allow read: if signedIn();
+      allow create, update: if isPlayer() && request.resource.data.keys().hasOnly(['german', 'allied', 'germanName', 'alliedName'])
+        && (isAdmin()
+            || (seatOk(resource == null ? null : resource.data.get('german', null), request.resource.data.get('german', null))
+             && seatOk(resource == null ? null : resource.data.get('allied', null), request.resource.data.get('allied', null))));
     }
   }
 }

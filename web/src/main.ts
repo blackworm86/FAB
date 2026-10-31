@@ -5,7 +5,7 @@ import * as E from '../../engine/src';
 import { labelSvg } from './art';
 import { chitSvg, mapMarkerSvg, loadChitArt, garrisonChit } from './chits';
 import { History } from './history';
-import { online, startOnline, push, sit, setDevSeat, DEV, type DevSeat } from './online';
+import { online, startOnline, push, sit, setDevSeat, auth, DEV, type DevSeat } from './online';
 import { throwDice, clearDice, isHit, type DiceGroup } from './dice3d';
 
 type MapArea = { id: number; label: [number, number]; polygon: [number, number][] };
@@ -680,18 +680,29 @@ function legend() {
   const items = tint === 'tdn' ? TDN_COL.map((c, i) => [c, `TDN ${i}`, (i ? `attackers −${i} to hit` : 'no modifier')]) : [[ZONE_COL[5], 'Zone 5', '5th Panzer Army'], [ZONE_COL[6], 'Zone 6', '6th Panzer Army'], [ZONE_COL[7], 'Zone 7', '7th Army']];
   return `<div class="legend" aria-label="Overlay legend"><b>${tint === 'tdn' ? 'Terrain defence' : 'Army zones'}</b>${items.map(([c, a, b]) => `<span><i style="background:${hex(c as number)}"></i>${a} <small>${b}</small></span>`).join('')}</div>`;
 }
+const TABLE_NAME = new URLSearchParams(location.search).get('table') || 'main';
+/** Sign-in panel (Firebase only): Google, or email and password; guests can watch but not play. */
+function accountHtml() {
+  if (!online.hasAccounts) return '';
+  const a = online.account;
+  if (a && !a.guest) return `<h4>Account</h4><p class="hint">Signed in as <b>${esc(a.name || a.email)}</b>${a.email ? ' · ' + esc(a.email) : ''}${a.admin ? ' · <b>admin</b>' : ''}</p><div class="row"><button data-auth="out">Sign out</button></div>`;
+  return `<h4>Sign in to play</h4><p class="hint">You are watching as a guest.</p><div class="row"><button class="primary" data-auth="google">Continue with Google</button></div>
+    <div class="authform"><input id="a-name" placeholder="Name (to register)" autocomplete="name"><input id="a-mail" type="email" placeholder="Email" autocomplete="email"><input id="a-pass" type="password" placeholder="Password (6+ characters)" autocomplete="current-password"></div>
+    <div class="row"><button data-auth="in">Sign in</button><button data-auth="reg">Register</button><button data-auth="reset">Forgot password</button></div>`;
+}
 function modalHtml() {
   if (modal === 'boxes') return `<div class="modal"><div class="sheet"><h3>Chit boxes <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>${(['allied', 'german'] as E.Side[]).map((s) => {
     const l = (bx: E.Chit['box']) => E.boxOf(g, s, bx).map((c) => `<span class="mini ${s}">${esc(chitLabel(c))}</span>`).join('') || '<small>empty</small>';
     return `<h4 class="${s}">${nm(s)} · cup ${E.boxOf(g, s, 'cup').length}</h4><div class="chips"><b>Available</b> ${l('available')}</div><div class="chips"><b>Used</b> ${l('used')}</div><div class="chips"><b>Eliminated</b> ${l('eliminated')}</div>`; }).join('')}</div></div>`;
   if (modal === 'menu') return `<div class="modal"><div class="sheet"><h3>Menu <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3><h4>New game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as 'tournament' | 'campaign'; })}"><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
     <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Start', () => { g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'primary')}</div>
-    ${online.mode === 'remote' ? `<h4>Online table</h4><p class="hint">Seats: German ${online.seats.german ? (online.seats.german === online.uid ? 'you' : 'taken') : 'free'} · Allied ${online.seats.allied ? (online.seats.allied === online.uid ? 'you' : 'taken') : 'free'}. Everyone who opens this table sees the same game; the seat decides who may act.${online.canWrite ? '' : ' You can only watch.'}${online.error ? ' ' + esc(online.error) : ''}</p><div class="row">${btn('Sit as German', () => { void sit('german'); }, '', !online.canWrite)}${btn('Sit as Allied', () => { void sit('allied'); }, '', !online.canWrite)}${btn('Leave my seat', () => { void sit(null); })}</div>` : online.mode === 'local' ? '<h4>Developer table</h4><p class="hint">No online store is configured. The Seat button in the top bar switches between German, Allied, both and watching, and the turn rules are enforced for the seat you hold.</p>' : '<h4>Online play</h4><p class="hint">Not connected. This is a hot-seat game on this machine.</p>'}
+    ${online.mode === 'remote' ? `${accountHtml()}<h4>Online table <small>${esc(TABLE_NAME)}</small></h4><p class="hint">Seats: German ${online.seats.german ? (online.seats.german === online.uid ? 'you' : esc(online.seats.germanName || 'taken')) : 'free'} · Allied ${online.seats.allied ? (online.seats.allied === online.uid ? 'you' : esc(online.seats.alliedName || 'taken')) : 'free'}. Everyone who opens this table sees the same game; the seat decides who may act.${online.hasAccounts && online.account?.guest ? ' Sign in above to take a seat.' : ''}${online.canWrite ? '' : ' You can only watch.'}${online.error ? ' <b class="bad">' + esc(online.error) + '</b>' : ''}</p><div class="row">${btn('Sit as German', () => { void sit('german'); }, '', !online.canWrite || !!online.account?.guest)}${btn('Sit as Allied', () => { void sit('allied'); }, '', !online.canWrite || !!online.account?.guest)}${btn('Leave my seat', () => { void sit(null); })}</div>${online.admin ? `<h4>Admin</h4><div class="row">${btn('Free German seat', () => { void auth.freeSeat('german'); })}${btn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div><p class="hint">To start a new game for the table, use New game above; as admin it replaces the shared game.</p>` : ''}` : online.mode === 'local' ? '<h4>Developer table</h4><p class="hint">No online store is configured. The Seat button in the top bar switches between German, Allied, both and watching, and the turn rules are enforced for the seat you hold.</p>' : '<h4>Online play</h4><p class="hint">Not connected. This is a hot-seat game on this machine.</p>'}
     <h4>Map art</h4><div class="row"><select data-sel="${regv((x) => setArt(x as 'vector' | 'scan'))}"><option value="vector" ${art === 'vector' ? 'selected' : ''}>Vector layers (traced)</option><option value="scan" ${art === 'scan' ? 'selected' : ''}>Original scan</option></select></div>
     <h4>Log</h4><div class="log">${[...g.log].reverse().slice(0, 120).map((l) => `<div>${esc(l)}</div>`).join('')}</div></div></div>`;
   return '';
 }
 function render() {
+  if (document.activeElement?.closest?.('.authform')) return;                                         // do not wipe what is being typed
   acts = {}; actv = {}; n = 0;
   const p = primary(), b = g.battle;
   const alert = g.pendingBlow ? (() => { const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!, path = g.pendingBlow!.path; return `<div class="c-ledger"><h3>${nm(other(u.side))}: bridge?</h3><p class="hint">${esc(u.name)} tries to cross into ${esc(areaName(path[path.length - 1]))}. Attempt to blow the bridge? It works on a roll of 1–5.</p><div class="row end">${btn('Let them cross', () => E.resolveBlow(g, false))}${btn('Attempt to blow it', () => E.resolveBlow(g, true), 'primary')}</div></div>`; })() : '';
@@ -703,6 +714,11 @@ function render() {
   ui.querySelectorAll<HTMLElement>('[data-sel]').forEach((e) => (e.onchange = () => { const f = actv[e.dataset.sel!]; if (f) { f(e instanceof HTMLInputElement && e.type === 'checkbox' ? (e.checked ? 'on' : 'off') : (e as HTMLSelectElement).value); save(); } }));
   ui.querySelectorAll<HTMLElement>('[data-arr]').forEach((e) => (e.onpointerdown = (ev) => dragArrival(ev, e)));
   ui.querySelectorAll<HTMLElement>('[data-arr]').forEach((e) => (e.onclick = () => { selArr = selArr === e.dataset.arr ? null : e.dataset.arr!; refresh(); frameArrival(); }));
+  ui.querySelectorAll<HTMLElement>('[data-auth]').forEach((e) => (e.onclick = () => {
+    const v = (id: string) => (document.getElementById(id) as HTMLInputElement | null)?.value.trim() ?? '', k = e.dataset.auth;
+    if (k === 'google') void auth.google(); else if (k === 'out') void auth.signOut();
+    else if (k === 'in') void auth.signIn(v('a-mail'), v('a-pass')); else if (k === 'reg') void auth.register(v('a-mail'), v('a-pass'), v('a-name')); else if (k === 'reset') void auth.reset(v('a-mail'));
+  }));
   ui.querySelectorAll<HTMLElement>('[data-seat]').forEach((e) => (e.onclick = () => { const order: DevSeat[] = ['both', 'german', 'allied', 'watch']; setDevSeat(order[(order.indexOf(online.devSeat) + 1) % order.length]); selUnit = selChit = selArr = null; previewArea = null; refresh(); }));
   ui.querySelectorAll<HTMLElement>('[data-home]').forEach((e) => (e.onclick = () => { goal = { t: new THREE.Vector3(17, 0, -3), dist: innerWidth < 700 ? 52 : 36, pitch: 1.0 }; yaw = 0; }));
   ui.querySelectorAll<HTMLElement>('[data-tint]').forEach((e) => (e.onclick = cycleTint));

@@ -4,7 +4,7 @@ The game is a static site (`web/`, built with Vite). Online play stores one tabl
 
 ## 1. Firebase (once)
 1. Create a project at console.firebase.google.com. Add a **Web app** and copy its config.
-2. **Build > Authentication > Sign-in method**: enable **Anonymous** (login with accounts comes later).
+2. **Authentication > Sign-in method**: enable **Anonymous** (guests who only watch), **Google** (set the support email) and **Email/Password**.
 3. **Authentication > Settings > Authorized domains**: add `<your-user>.github.io`.
 4. **Build > Firestore Database**: create it (production mode), then publish the rules: `npx firebase-tools deploy --only firestore:rules` from the repository root (`firestore.rules`, `firebase.json`). Test them first with `npx firebase-tools emulators:start` (the rules have not been run against the emulator yet).
 
@@ -25,3 +25,8 @@ Add `?dev=1` (or run `npm run dev`) to get the **Seat** button in the top bar. I
 cd web && cp .env.example .env.local   # optional; leave empty for hot-seat
 npm ci && npm run dev
 ```
+
+## 5. Accounts and the admin user
+- Visitors open the page as anonymous guests and can only watch. To take a seat they sign in from the menu (☰): **Continue with Google**, or an email and password (type a name and tap **Register**; **Forgot password** sends a reset mail).
+- **Make an admin:** sign in on the site once, then in Firebase open **Authentication > Users** and copy your **User UID**. In **Firestore Database > Data** add a collection `admins` with a document whose ID is that UID (any field, for example `role: "admin"`). Reload the site: the menu shows "admin". Admins can write any table and free a seat; nobody can create admins from the site (the rules only allow it in the console).
+- Publish the updated `firestore.rules` after every change to that file (Firestore > Rules).

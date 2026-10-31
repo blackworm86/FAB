@@ -6,7 +6,8 @@ import type { Game, Side } from '../../engine/src';
 import { artifactStore } from './store-artifact';
 import { firebaseStore } from './store-firebase';
 
-export interface Seats { german?: string | null; allied?: string | null }
+export interface Seats { german?: string | null; allied?: string | null; germanName?: string | null; alliedName?: string | null }
+export interface Account { uid: string; name: string; email: string; guest: boolean; admin: boolean }
 export interface StateDoc { rev: number; json: string; by?: string }
 /** What a storage backend has to provide. */
 export interface Store {
@@ -16,6 +17,10 @@ export interface Store {
   watchSeats(next: (s: Seats) => void, err: (e: string) => void): void;
   /** Take the seat for `side` (or give up every seat when null); resolves an error message, or '' on success. */
   sit(side: Side | null): Promise<string>;
+  /** Accounts: only the Firebase store has them (the artifact store identifies viewers itself). */
+  account?(): Account; onAccount?(f: (a: Account) => void): void;
+  google?(): Promise<string>; emailSignIn?(email: string, password: string): Promise<string>; emailRegister?(email: string, password: string, name: string): Promise<string>;
+  resetPassword?(email: string): Promise<string>; signOut?(): Promise<string>; freeSeat?(side: Side): Promise<string>;
 }
 
 const params = new URLSearchParams(location.search);
@@ -26,7 +31,7 @@ export type DevSeat = 'german' | 'allied' | 'both' | 'watch';
 export const online = {
   /** 'off' = hot-seat, 'local' = seats enforced on this machine only (dev), 'remote' = shared through a store. */
   mode: 'off' as 'off' | 'local' | 'remote', uid: '', seats: {} as Seats, rev: 0, canWrite: true, error: '', store: '' as string,
-  devSeat: 'both' as DevSeat,
+  devSeat: 'both' as DevSeat, account: null as Account | null, admin: false, hasAccounts: false,
   mySide(): Side | null {
     if (DEV && this.mode !== 'off') return this.devSeat === 'german' || this.devSeat === 'allied' ? this.devSeat : null;
     return this.seats.german === this.uid && this.uid ? 'german' : this.seats.allied === this.uid && this.uid ? 'allied' : null;
@@ -43,7 +48,8 @@ export async function startOnline(remote: (g: Game) => void, changed: () => void
   onRemote = remote; onChange = changed;
   try { store = (await artifactStore()) ?? (await firebaseStore(TABLE)); } catch (e) { online.error = String(e); store = null; }
   if (!store) { if (DEV) { online.mode = 'local'; changed(); } return; }
-  online.mode = 'remote'; online.uid = store.uid; online.canWrite = store.canWrite; online.store = store.constructor === Object ? '' : '';
+  online.mode = 'remote'; online.uid = store.uid; online.canWrite = store.canWrite;
+  if (store.account) { online.hasAccounts = true; const sync = (a: Account) => { online.account = a; online.uid = a.uid; online.admin = a.admin; onChange(); }; sync(store.account()); store.onAccount?.(sync); }
   store.watchSeats((s) => { online.seats = s; onChange(); }, fail);
   store.watchState((d) => {
     if (!d) { if (online.canWrite) void push(current()); return; }
@@ -55,6 +61,7 @@ export async function startOnline(remote: (g: Game) => void, changed: () => void
 /** Publish the local state (quick bursts are coalesced into one write at a time). */
 export async function push(g: Game) {
   if (online.mode !== 'remote' || !store || !online.canWrite) return;
+  if (online.hasAccounts && !online.admin && online.mySide() == null) return;                       // only seated players (or an admin) change a shared table
   const json = slim(g); if (json === lastJson) return;
   if (writing) { queued = g; return; }
   writing = true;
@@ -64,3 +71,10 @@ export async function push(g: Game) {
 
 export async function sit(side: Side | null) { if (online.mode !== 'remote' || !store) return; const e = await store.sit(side); online.error = e; onChange(); }
 export function setDevSeat(s: DevSeat) { online.devSeat = s; onChange(); }
+
+export const auth = {
+  google: () => run((s) => s.google?.()), signOut: () => run((s) => s.signOut?.()),
+  signIn: (e: string, p: string) => run((s) => s.emailSignIn?.(e, p)), register: (e: string, p: string, n: string) => run((s) => s.emailRegister?.(e, p, n)),
+  reset: (e: string) => run((s) => s.resetPassword?.(e)), freeSeat: (side: Side) => run((s) => s.freeSeat?.(side)),
+};
+async function run(f: (s: Store) => Promise<string> | undefined) { if (!store) return; const e = await f(store); online.error = e ?? ''; onChange(); }
