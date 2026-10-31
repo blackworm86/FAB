@@ -233,3 +233,4 @@ button.go .ic, button.plain .ic, .row button .ic { width: 18px; height: 18px; ve
   .c-vs { display: flex; align-items: center; justify-content: center; gap: 10px; } .c-vs .big { font-size: 22px; } .c-vs .gauge { width: 90px; margin: 0; }
 }
 @media (max-width: 700px) { .c-body, .c-side.german .c-body { flex-wrap: wrap; row-gap: 6px; } .c-slots { margin-left: 0; } }
+.modes { display: flex; gap: 6px; margin-top: 6px; } .modes .ico { min-width: 44px; height: 44px; } .modes .ico.on { background: var(--gold); color: #1a1608; }

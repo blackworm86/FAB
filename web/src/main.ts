@@ -278,6 +278,7 @@ function paintAreas() {
     if (id === (previewArea ?? hoverArea) && r) { c = 0xffe08a; o = 0.5; }
     if (id === selArea && !selUnit) { c = 0x4aa3ff; o = Math.max(o, 0.3); }
     if (dragTargets.includes(id)) { c = 0x37d67a; o = 0.5; }
+    if (tgt) { if (tgt.areas.has(id) || (tgt.any && false)) { c = tgt.color.get(id) ?? 0x37d67a; o = 0.5; } else if (tgt.pick.has(id)) { c = 0xe7b04a; o = 0.4; } }
     const ar = arrOpts().find((x) => x.area === id); if (ar) { c = ar.sa ? 0xff8a3d : 0x37d67a; o = 0.45; }
     if (g.battle?.stage === 'retreat' && E.retreatOptions(g, g.battle).includes(id)) { c = 0x37d67a; o = 0.5; }
     mat.color.setHex(c); mat.opacity = o;
@@ -323,22 +324,62 @@ const ABBR: Record<string, string> = { artillery: 'Arty', rocket_artillery: 'Rkt
   rebuild_or_replace_inf: 'Rebuild inf', rebuild_or_replace_arm: 'Rebuild arm', event_arriving_regiment: 'Regt', special_action_event: 'SA event', air_mission: 'Air', event_release: 'Release', event_greif_bridge: 'Greif bridge', event_greif_interdict: 'Greif interdict', event_bodenplatte: 'Bodenplatte', event_delayed_response: 'Delayed' };
 const chitLabel = (c: E.Chit) => `${ABBR[c.kind] ?? c.kind}${['fuel', 'sa_block', 'special_action_event', 'air_mission', 'replacement_inf', 'replacement_arm', 'event_delayed_response'].includes(c.kind) || c.name.length > 14 ? '' : ' ' + c.name}${c.turn !== 'S' && E.isEvent(c) ? ' T' + c.turn : ''}`;
 /* ---------- playing a chit: the blocks or areas it can be used on light up, and a tap applies it ---------- */
-interface Tgt { units: Map<string, () => void>; areas: Map<number, () => void>; chips: { label: string; img: string; fn: () => void }[]; hint: string }
+interface Tgt { units: Map<string, () => void>; areas: Map<number, () => void>; pick: Map<number, () => void>; color: Map<number, number>; chips: { label: string; img: string; fn: () => void }[]; buttons: { icon: string; label: string; fn: () => void; title?: string }[]; modes: { id: string; icon: string; label: string }[]; any: ((a: number) => (() => void) | null) | null; hint: string }
 const works = (fn: (t: E.Game) => void) => { try { const t = structuredClone(g); fn(t); return true; } catch { return false; } };
-let tgt: Tgt | null = null, infoOpen = false;
+let tgt: Tgt | null = null, infoOpen = false, tgtMode = '';
+const BRIDGE_KEY = (a: number, t: number) => (a < t ? `${a}-${t}` : `${t}-${a}`);
+/** What a chit can be used on, so the board itself can offer it: blocks and areas light up, and a tap applies it. Areas that only need a further choice (an engineer's area, a Greif bridge) are "pick" targets. */
 function targetsFor(c: E.Chit | null): Tgt | null {
   if (!c || g.phase !== 'admin' || c.box !== 'available') return null;
-  const t: Tgt = { units: new Map(), areas: new Map(), chips: [], hint: '' };
-  if (c.kind.startsWith('replacement') || c.kind === 'event_arriving_regiment' || c.kind.startsWith('rebuild')) {
+  const t: Tgt = { units: new Map(), areas: new Map(), pick: new Map(), color: new Map(), chips: [], buttons: [], modes: [], any: null, hint: '' }, a = selArea;
+  const k = c.kind;
+  if (k.startsWith('replacement') || k === 'event_arriving_regiment' || k.startsWith('rebuild')) {
     for (const u of g.units.filter((x) => E.eligibleForStep(c, x))) {
       if (u.area == null) t.chips.push({ label: u.name, img: unitFace(u), fn: () => E.playReplacement(g, c.id, u.id) });
       else t.units.set(u.id, () => E.playReplacement(g, c.id, u.id));
     }
     t.hint = t.units.size ? 'Tap a glowing block to add a step' : t.chips.length ? 'Tap a unit to bring back' : '';
-  } else if (c.kind === 'special_action_event' || c.kind === 'sa_block') {
+  } else if (k === 'special_action_event' || k === 'sa_block') {
     for (const u of g.units.filter((x) => x.side === c.side && x.area != null && !x.garrison)) if (works((tg) => E.qualityReplacement(tg, u.id))) t.units.set(u.id, () => E.qualityReplacement(g, u.id));
-    for (const a of E.areas.keys()) if (g.control[a] === c.side && works((tg) => E.rally(tg, c.side, a))) t.areas.set(a, () => E.rally(g, c.side, a));
+    for (const ar of E.areas.keys()) if (g.control[ar] === c.side && works((tg) => E.rally(tg, c.side, ar))) t.areas.set(ar, () => E.rally(g, c.side, ar));
     t.hint = 'Tap a glowing block (quality replacement) or area (rally)';
+  } else if (k === 'engineer') {
+    const capable = (ar: number) => E.bridgeTargets(g, c.side, ar).length || E.repairTargets(g, c.side, ar).length || E.roadblockAreas(g, c.side).includes(ar) || works((tg) => E.fieldWorksFor(tg, c.id, ar));
+    for (const ar of E.areas.keys()) if (capable(ar)) t.pick.set(ar, () => { selArea = ar; });
+    if (a != null && t.pick.has(a)) {
+      const bt = E.bridgeTargets(g, c.side, a), rt = E.repairTargets(g, c.side, a);
+      for (const n of bt) { t.areas.set(n, () => E.blowBridges(g, c.id, a, [n])); t.color.set(n, 0xff4d4d); }
+      for (const n of rt) { t.areas.set(n, () => E.repairBridge(g, c.id, a, n)); t.color.set(n, 0x37d67a); }
+      if (works((tg) => E.fieldWorksFor(tg, c.id, a))) t.buttons.push({ icon: 'gear', label: 'Field works', fn: () => E.fieldWorksFor(g, c.id, a), title: 'Build field works here' });
+      if (E.roadblockAreas(g, c.side).includes(a)) t.buttons.push({ icon: 'flag', label: 'Roadblock', fn: () => E.roadblock(g, c.id, a, false), title: '4.34 Roadblock' }, { icon: 'engineer', label: 'Defended', fn: () => E.roadblock(g, c.id, a, true), title: '4.35 Defended roadblock (the engineer stays)' });
+      t.hint = `${areaName(a)}: tap a red neighbour to blow its bridge${rt.length ? ', a green one to repair' : ''}`;
+    } else t.hint = 'Tap a glowing area where the engineer works';
+  } else if (k === 'command_staff') {
+    const own = g.units.filter((x) => x.side === c.side && x.area != null && !x.garrison), foe = g.units.filter((x) => x.side !== c.side && x.area != null && !x.garrison);
+    const sets: Record<string, { icon: string; label: string; units?: [string, () => void][]; areas?: [number, () => void][] }> = {};
+    if (c.side === 'german') sets.boundary = { icon: 'next', label: 'Boundary crossing (14.62a)', units: own.filter((x) => works((tg) => E.staffBoundary(tg, c.id, x.id))).map((x) => [x.id, () => E.staffBoundary(g, c.id, x.id)]) };
+    else sets.pool = { icon: 'task_force', label: 'Pooled assets (14.62b)', areas: [...E.areas.keys()].filter((ar) => works((tg) => E.staffPool(tg, c.id, ar))).map((ar) => [ar, () => E.staffPool(g, c.id, ar)]) };
+    sets.intel = { icon: 'info', label: 'Intelligence gathering (8.32)', units: foe.filter((x) => works((tg) => E.staffIntel(tg, c.id, x.id))).map((x) => [x.id, () => E.staffIntel(g, c.id, x.id)]) };
+    sets.repl = { icon: 'infantry_asset', label: 'Replacements found', units: own.filter((x) => x.cls === 'infantry' && x.str < x.max && works((tg) => E.staffReplacement(tg, c.id, x.id))).map((x) => [x.id, () => E.staffReplacement(g, c.id, x.id)]) };
+    sets.reserve = { icon: 'sa_block', label: 'Reserves made available (8.33)', units: own.filter((x) => E.canReserve(g, x)).map((x) => [x.id, () => E.staffReserve(g, c.id, x.id)]) };
+    for (const [id, v] of Object.entries(sets)) if (v.units?.length || v.areas?.length) t.modes.push({ id, icon: v.icon, label: v.label });
+    if (!t.modes.some((m) => m.id === tgtMode)) tgtMode = t.modes[0]?.id ?? '';
+    const cur = sets[tgtMode]; cur?.units?.forEach(([id, fn]) => t.units.set(id, fn)); cur?.areas?.forEach(([ar, fn]) => t.areas.set(ar, fn));
+    t.hint = cur ? cur.label : 'Nothing to do with this staff chit now';
+  } else if (k === 'event_greif_bridge') {
+    const valid = (ar: number) => E.neighbors(ar).filter((n) => E.connection(ar, n)!.river && !g.blown.includes(BRIDGE_KEY(ar, n)) && !g.greif[BRIDGE_KEY(ar, n)]);
+    for (const ar of E.areas.keys()) { const v = valid(ar); if (v.length === 1) t.areas.set(ar, () => E.playGreifBridge(g, c.id, ar, v[0])); else if (v.length > 1) t.pick.set(ar, () => { selArea = ar; }); }
+    if (a != null && valid(a).length > 1) for (const n of valid(a)) { t.areas.set(n, () => E.playGreifBridge(g, c.id, a, n)); t.color.set(n, 0x37d67a); }
+    t.hint = a != null && valid(a).length > 1 ? `Tap the neighbour across the river from ${areaName(a)}` : 'Tap a glowing area: the bridge is placed on its river boundary';
+  } else if (k === 'event_greif_interdict') {
+    for (const x of g.units.filter((u) => u.side === 'allied' && u.area != null && !u.garrison)) if (works((tg) => E.playInterdict(tg, c.id, x.id))) t.units.set(x.id, () => E.playInterdict(g, c.id, x.id));
+    t.hint = 'Tap a glowing Allied block to interdict it';
+  } else if (k === 'air_mission') {
+    t.any = (ar) => (works((tg) => E.playInterdiction(tg, c.id, ar)) ? () => E.playInterdiction(g, c.id, ar) : null); t.hint = 'Tap any area to interdict it (Germans pay +1 MP to enter and leave)';
+  } else if (k === 'event_release') {
+    for (const ar of [4, 6] as const) t.areas.set(ar, () => E.releaseUnit(g, c.id, ar)); t.hint = 'Tap the entry area';
+  } else if (c.name === 'v.d. Heydte' && E.heydteWindow(g, c)) {
+    for (const ar of [31, 52] as const) t.areas.set(ar, () => E.heydteDrop(g, c.id, ar)); t.hint = 'Tap a drop zone: Hohes Venn or Stoumont';
   } else return null;
   return t;
 }
@@ -352,48 +393,19 @@ function chitBar(c: E.Chit): string {
   const chips = tg?.chips.map((x) => `<button class="pc ${c.side}" data-do="${reg(x.fn)}" title="${esc(x.label)}"><img alt="" src="${x.img}"><small>${esc(x.label)}</small></button>`).join('') ?? '';
   return `<div class="c-dispatch chitbar"><div class="cbhead"><img class="cbimg" alt="" src="${chitImg(c)}"><div class="cbt"><b>${esc(c.name)}</b><small>${esc(tg?.hint || kind)}</small></div>
     <button class="ico" data-ui="${reg(() => { infoOpen = !infoOpen; })}" aria-pressed="${infoOpen}" aria-label="What it does" title="What it does">${ico('info')}</button><button class="ico" data-ui="${reg(() => { selChit = null; })}" aria-label="Put away" title="Put away">${ico('close')}</button></div>
-    ${infoOpen ? `<div class="inspect slimcard"><p>${esc((RULE[c.kind] ?? ['', ''])[1])}</p></div>` : ''}${chips ? `<div class="cbchips">${chips}</div>` : ''}${iconify(body)}</div>`;
+    ${infoOpen ? `<div class="inspect slimcard"><p>${esc((RULE[c.kind] ?? ['', ''])[1])}</p></div>` : ''}${tg && tg.modes.length > 1 ? `<div class="modes" role="group" aria-label="What to do">${tg.modes.map((m) => `<button class="ico ${m.id === tgtMode ? 'on' : ''}" data-ui="${reg(() => { tgtMode = m.id; refresh(); })}" title="${esc(m.label)}" aria-label="${esc(m.label)}">${ico(m.icon)}</button>`).join('')}</div>` : ''}${chips ? `<div class="cbchips">${chips}</div>` : ''}${tg?.buttons.length ? `<div class="row">${tg.buttons.map((b) => abtn(b.icon, b.label, b.fn, '', false, b.title)).join('')}</div>` : ''}${iconify(body)}</div>`;
 }
 function chitPanel(c: E.Chit): string {
   const a = selArea, out: string[] = [], u = selUnit ? g.units.find((x) => x.id === selUnit)! : null;
   const head = '';
   if (c.box !== 'available') return head + '<p class="hint">Only chits in the Available Box can be used.</p>';
   if (g.phase !== 'admin') return head + `<p class="hint">${E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission' ? 'This chit is assigned to a battle during the Combat Phase.' : c.kind === 'fuel' ? 'Fuel is spent automatically when a German unit moves more than 3 MP or strategic-moves.' : c.kind === 'sa_block' || c.kind === 'special_action_event' ? 'Special Actions are spent in battles (reinforce / retreat), Breakthrough phases and the Admin Phase.' : 'Events are played in the Admin Phase.'}</p>`;
-  if (c.kind === 'engineer') {
-    if (a == null) out.push('<p class="hint">Click an area on the map: the engineer works from there.</p>');
-    else {
-      out.push(`<p class="hint">From ${esc(areaName(a))}:</p>`);
-      const bt = E.bridgeTargets(g, c.side, a), rt = E.repairTargets(g, c.side, a);
-      bt.forEach((t) => out.push(btn(`Blow bridge → ${esc(areaName(t))}`, () => E.blowBridges(g, c.id, a, [t]))));
-      if (bt.length > 1) out.push(btn('Blow both bridges', () => E.blowBridges(g, c.id, a, bt.slice(0, 2))));
-      rt.forEach((t) => out.push(btn(`Repair bridge → ${esc(areaName(t))}`, () => E.repairBridge(g, c.id, a, t))));
-      out.push(btn('Build field works here', () => E.fieldWorksFor(g, c.id, a)));
-      if (E.roadblockAreas(g, c.side).includes(a)) out.push(btn('Roadblock here', () => E.roadblock(g, c.id, a, false), '', false, '4.34'), btn('Defended roadblock (engineer stays)', () => E.roadblock(g, c.id, a, true), '', false, '4.35'));
-    }
-  } else if (c.kind.startsWith('replacement') || c.kind === 'event_arriving_regiment' || c.kind.startsWith('rebuild')) {
+  if (c.kind.startsWith('replacement') || c.kind === 'event_arriving_regiment' || c.kind.startsWith('rebuild')) {
     const el = g.units.filter((x) => E.eligibleForStep(c, x));                                       // blocks on the map light up; eliminated ones come back from the chips above
     if (!el.length) out.push('<p class="hint">No reduced, supplied unit of the right class and Higher Echelon.</p>');
     if (c.kind.startsWith('rebuild')) g.units.filter((x) => x.area == null && x.max === 1 && x.side === c.side && x.q[0] !== 'elite' && !x.garrison && (c.kind.endsWith('arm') === (x.cls === 'armor')) && x.str === 0).forEach((x) => out.push(a == null ? '<p class="hint">Select an objective area to return an eliminated unit.</p>' : btn(`Return ${esc(x.name)} to ${esc(areaName(a))}`, () => E.playRebuild(g, c.id, x.id, a))));
-  } else if (c.kind === 'special_action_event' || c.kind === 'sa_block') {
-  } else if (c.kind === 'air_mission') {
-    out.push(a == null ? '<p class="hint">Select an area to interdict (Germans pay +1 MP to enter and leave it). In battles it works as artillery or +2 support; at the end of the turn it can air-supply an area.</p>' : btn(`Interdict ${esc(areaName(a))}`, () => E.playInterdiction(g, c.id, a)));
-  } else if (c.kind === 'command_staff') {
-    if (c.side === 'german') out.push(u && u.side === 'german' ? btn(`Boundary crossing: ${esc(u.name)}`, () => E.staffBoundary(g, c.id, u.id), '', false, '14.62a') : '<p class="hint">Select a German block for Boundary Crossing Pre-authorized.</p>');
-    else out.push(a != null ? btn(`Pool assets in ${esc(areaName(a))}`, () => E.staffPool(g, c.id, a), '', false, '14.62b') : '<p class="hint">Select an area to pool assets there.</p>');
-    if (u && u.side !== c.side) out.push(btn(`Intelligence: reveal ${esc(u.name)}`, () => E.staffIntel(g, c.id, u.id), '', false, '8.32'));
-    g.units.filter((x) => x.side === c.side && x.cls === 'infantry' && x.area != null && !x.garrison && x.str < x.max).forEach((x) => out.push(btn(`Replacements found: ${esc(x.name)}`, () => E.staffReplacement(g, c.id, x.id))));
-    if (u && u.side === c.side) out.push(btn(`Reserves: mark ${esc(u.name)}`, () => E.staffReserve(g, c.id, u.id), '', !E.canReserve(g, u)));
-  } else if (c.kind === 'event_greif_bridge') {
-    if (a == null) out.push('<p class="hint">Select an area: the bridges on its river boundaries are offered.</p>');
-    else E.neighbors(a).filter((t) => E.connection(a, t)!.river && !g.blown.includes(a < t ? `${a}-${t}` : `${t}-${a}`)).forEach((t) => out.push(btn(`Place on bridge ${esc(areaName(a))} – ${esc(areaName(t))}`, () => E.playGreifBridge(g, c.id, a, t))));
-  } else if (c.kind === 'event_greif_interdict') {
-    out.push(u && u.side === 'allied' ? btn(`Interdict ${esc(u.name)}`, () => E.playInterdict(g, c.id, u.id)) : '<p class="hint">Select an Allied block on the map.</p>');
   } else if (c.kind === 'event_bodenplatte') { out.push(btn(`Strike Allied air missions (${E.boxOf(g, 'allied', 'available').filter((x) => x.kind === 'air_mission').length} in the Available Box)`, () => E.playBodenplatte(g, c.id), 'primary')); }
-  else if (c.name === 'v.d. Heydte' && E.heydteWindow(g, c)) {
-    out.push('<p class="hint">Just drawn: it may parachute into a vacant Allied-controlled Hohes Venn or Stoumont, otherwise it stays a battle asset.</p>', btn('Drop at Hohes Venn', () => E.heydteDrop(g, c.id, 31)), btn('Drop at Stoumont', () => E.heydteDrop(g, c.id, 52)));
-  } else if (c.kind === 'event_release') { [4, 6].forEach((ar) => out.push(btn(`Enter at ${esc(areaName(ar))}`, () => E.releaseUnit(g, c.id, ar as 4 | 6)))); }
   else if (c.kind === 'fuel') out.push('<p class="hint">Fuel is spent automatically when a German unit moves more than 3 MP or strategic-moves.</p>');
-  else if (E.isArty(c) || E.isBattleAsset(c) || (c.kind as string) === 'air_mission') out.push('<p class="hint">Assigned to a battle in the Combat Phase.</p>');
   if (E.isEvent(c) && c.kind !== 'sa_block') out.push(btn('Alternate use', () => E.alternateUse(g, c.id), '', false, '4.21: return 2 assets to the cup instead'));
   return head + `<div class="row">${out.join('')}</div>`;
 }
@@ -499,7 +511,12 @@ function confirmMove() {
 }
 function click(e: PointerEvent) {
   const { unit, area } = pick(e);
-  { const c0 = selChit ? g.chits.find((x) => x.id === selChit) : null, tg = c0 && g.phase === 'admin' ? tgt : null; if (tg) { const fnU = unit ? tg.units.get(unit) : undefined, fnA = area != null ? tg.areas.get(area) : undefined; if (fnU || (!unit && fnA) || (fnA && !fnU && unit)) { selChit = null; return act((fnU ?? fnA)!); } } }
+  { const c0 = selChit ? g.chits.find((x) => x.id === selChit) : null, tg = c0 && g.phase === 'admin' ? tgt : null;
+    if (tg) {
+      const fnU = unit ? tg.units.get(unit) : undefined, fnA = area != null ? tg.areas.get(area) ?? tg.any?.(area) ?? undefined : undefined;
+      if (fnU || fnA) { return act((fnU ?? fnA)!); }
+      const pk = area != null && !unit ? tg.pick.get(area) : undefined; if (pk) { pk(); return refresh(); }
+    } }
   if (armed) { const id = armed; armed = null; const ok = area != null && dragTargets.includes(area); dragTargets = []; if (ok) return playChitOn(E.chit(g, id), area!); selChit = null; return refresh(); }
   const rb = g.battle;
   if (rb?.stage === 'retreat' && area != null && E.retreatOptions(g, rb).includes(area)) return act(() => E.chooseRetreat(g, rb, area));
@@ -628,7 +645,6 @@ function tapCard(id: string) {
     const why = E.canAssign(g, b, c.side, c); if (why) return say(why);
     return act(() => { if (c.kind === 'air_mission') E.assign(g, b, id, 'arty'); else E.assign(g, b, id); });
   }
-  if (chitTargets(c).length) { armed = armed === id ? null : id; dragTargets = armed ? chitTargets(c) : []; selChit = armed; if (armed) say('Tap a lit area on the map'); return refresh(); }
   selChit = selChit === id ? null : id; refresh();
 }
 function playChitOn(c: E.Chit, area: number) {
@@ -1025,7 +1041,7 @@ function render() {
   ui.querySelectorAll<HTMLElement>('[data-u]').forEach((e) => (e.onclick = () => { selUnit = e.dataset.u!; selArea = g.units.find((x) => x.id === selUnit)!.area ?? selArea; previewArea = null; refresh(); }));
   ui.querySelectorAll<HTMLElement>('.card2, .blk').forEach((e) => (e.onkeydown = (ev) => { if (ev.key !== 'Enter' && ev.key !== ' ') return; ev.preventDefault(); const id = e.dataset.chit, b2 = g.battle; if (e.classList.contains('card2') && id) { if (b2?.stage === 'setup') { const c = E.chit(g, id), why = E.canAssign(g, b2, c.side, c); if (why) say(why); else act(() => E.assign(g, b2, id, c.kind === 'air_mission' ? 'arty' : undefined)); } else if (!b2) { selChit = selChit === id ? null : id; refresh(); } } else e.click(); }));
   ui.querySelectorAll<HTMLElement>('.card2').forEach((e) => (e.onpointerdown = (ev) => { lastPointer = ev.pointerType; if (ev.pointerType === 'touch') return; if (ev.pointerType === 'mouse') ev.preventDefault(); if (g.battle || chitTargets(E.chit(g, e.dataset.chit!)).length) drag(ev, e); }));
-  ui.querySelectorAll<HTMLElement>('.card2').forEach((e) => (e.onclick = () => { if (lastPointer === 'touch') return tapCard(e.dataset.chit!); if (!g.battle && !chitTargets(E.chit(g, e.dataset.chit!)).length) { selChit = selChit === e.dataset.chit ? null : e.dataset.chit!; refresh(); } }));
+  ui.querySelectorAll<HTMLElement>('.card2').forEach((e) => (e.onclick = () => { if (lastPointer === 'touch') return tapCard(e.dataset.chit!); if (!g.battle) { selChit = selChit === e.dataset.chit ? null : e.dataset.chit!; refresh(); } }));
   ui.querySelectorAll<HTMLElement>('.blk[data-unit]').forEach((e) => (e.onclick = () => { const b2 = g.battle; if (!b2 || b2.stage !== 'setup') return; const s = e.dataset.side as E.Side, u = g.units.find((x) => x.id === e.dataset.unit)!; if (!mine(s)) return; if (u.garrison || (s === b2.attacker && u.disorder)) return; if (s === b2.attacker) b2.attPoint = u.id; else b2.defPoint = u.id; save(); render(); }));
 }
 let lastView: E.Side | null = null;
