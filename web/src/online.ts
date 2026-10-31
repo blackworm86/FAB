@@ -7,6 +7,8 @@ import { artifactStore } from './store-artifact';
 import { firebaseStore } from './store-firebase';
 
 export interface Seats { german?: string | null; allied?: string | null; germanName?: string | null; alliedName?: string | null }
+/** A match is a table plus a lobby record: who made it, which game and rules, who is in. */
+export interface Match { id: string; game: string; title: string; opts: { scenario: string; fuel: boolean; airborne?: boolean }; owner: string; members: string[]; germanName?: string; alliedName?: string; created: number }
 export interface Account { uid: string; name: string; email: string; guest: boolean; admin: boolean }
 export interface StateDoc { rev: number; json: string; by?: string }
 /** What a storage backend has to provide. */
@@ -20,12 +22,16 @@ export interface Store {
   /** Accounts: only the Firebase store has them (the artifact store identifies viewers itself). */
   account?(): Account; onAccount?(f: (a: Account) => void): void;
   google?(): Promise<string>; emailSignIn?(email: string, password: string): Promise<string>; emailRegister?(email: string, password: string, name: string): Promise<string>;
+  /** Lobby: create a match (state, creator's seat and record) and list the matches the user belongs to. Resolves the new id, or an error starting with '!'. */
+  createMatch?(m: Omit<Match, 'id' | 'owner' | 'members' | 'created'>, side: Side | null, stateJson: string): Promise<string>;
+  watchMyMatches?(next: (m: Match[]) => void, err: (e: string) => void): void;
   resetPassword?(email: string): Promise<string>; signOut?(): Promise<string>; freeSeat?(side: Side): Promise<string>;
 }
 
 const params = new URLSearchParams(location.search);
 export const DEV = import.meta.env.DEV || params.has('dev') || (() => { try { return localStorage.getItem('fab-dev') === '1'; } catch { return false; } })();
 export const TABLE = params.get('table') || 'main';
+export const HAS_TABLE = params.has('table'), LOCAL_ONLY = params.has('local');
 export type DevSeat = 'german' | 'allied' | 'both' | 'watch';
 
 export const online = {
@@ -46,6 +52,7 @@ const fail = (e: string) => { online.error = e; onChange(); };
 
 export async function startOnline(remote: (g: Game) => void, changed: () => void, current: () => Game) {
   onRemote = remote; onChange = changed;
+  if (LOCAL_ONLY) { if (DEV) { online.mode = 'local'; changed(); } return; }
   try { store = (await artifactStore()) ?? (await firebaseStore(TABLE)); } catch (e) { online.error = String(e); store = null; }
   if (!store) { if (DEV) { online.mode = 'local'; changed(); } return; }
   online.mode = 'remote'; online.uid = store.uid; online.canWrite = store.canWrite;
@@ -78,3 +85,9 @@ export const auth = {
   reset: (e: string) => run((s) => s.resetPassword?.(e)), freeSeat: (side: Side) => run((s) => s.freeSeat?.(side)),
 };
 async function run(f: (s: Store) => Promise<string> | undefined) { if (!store) return; const e = await f(store); online.error = e ?? ''; onChange(); }
+
+export const lobby = {
+  can: () => !!store?.createMatch,
+  create: async (m: Parameters<NonNullable<Store['createMatch']>>[0], side: Side | null, json: string) => store?.createMatch ? store.createMatch(m, side, json) : '!Online play is not set up',
+  watch: (next: (m: Match[]) => void) => store?.watchMyMatches?.(next, fail),
+};

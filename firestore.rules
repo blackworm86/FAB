@@ -18,6 +18,14 @@ service cloud.firestore {
       allow read: if signedIn() && request.auth.uid == uid;
       allow write: if false;
     }
+    // Lobby records. Anyone signed in may read one (to open an invite link); only the creator makes it; a joining player may add themself.
+    match /matches/{id} {
+      allow read: if signedIn();
+      allow create: if isPlayer() && request.resource.data.owner == request.auth.uid && request.resource.data.members == [request.auth.uid];
+      allow update: if isPlayer() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'germanName', 'alliedName'])
+        && request.resource.data.members.hasAll(resource.data.members) && request.resource.data.members.size() <= resource.data.members.size() + 1;
+      allow delete: if isPlayer() && resource.data.owner == request.auth.uid;
+    }
     match /tables/{table}/docs/state {
       allow read: if signedIn();
       allow write: if isPlayer() && request.resource.data.keys().hasOnly(['rev', 'json', 'by'])

@@ -20,3 +20,6 @@ FAB is a series: every game shares the same core rules (the chit boxes and selec
 - All state is visible to both players (no hidden blocks); the dev seat switch is where hidden information will be checked.
 - Turn control is enforced in the client and by Firestore rules only for who may write, not for what a move is. A server-side validator (Cloud Function re-running the deterministic engine) is the next step.
 - Dice come from the stored seed, so a player who reads the state could predict rolls; move the roll to the server when that matters.
+
+## Lobby and matches
+`web/src/games.ts` lists the series titles (Bulge ready; Sicily, Golan '73 pending). Signed-in players create a game in the lobby: `matches/{id}` (record), `tables/{id}/docs/seats`, `tables/{id}/docs/state`. The invite link is `?table={id}`; sitting adds the player to `members`. `?local=1` is hot-seat. Battle set-up: each seat handles only its own assets, both press Ready (`setReady`), the attacker may `cancelBattle` until a Special Action is spent; each fire step is rolled by the side that owns it.

@@ -29,6 +29,7 @@ export interface Battle {
   retreat?: { side: Side; queue: string[]; moved: boolean; after: 'ground' | 'arty' | 'sa'; h: number; excess: number };
   queue: ('attArty' | 'defArty' | 'defFire' | 'offFire')[]; assets: Record<Side, string[]>; air: Partial<Record<Side, { id: string; mode: 'arty' | 'support'; unit?: string }>>;
   pending: number; pendingKind?: 'arty' | 'ground'; engFw: boolean; rolls: Roll[]; result?: string; exploit: boolean; unitHit: Record<Side, boolean>; mark: number; hit?: Record<Side, string[]>;
+  ready?: Side[]; locked?: boolean;
 }
 export interface Opts { scenario: 'tournament' | 'campaign'; fuel: boolean; airborne?: boolean; advArty?: boolean }
 export interface Game {
@@ -469,9 +470,10 @@ export function startBattle(g: Game, a: number, viaSA = false): Battle {
   const att = fighters(g, a, g.phasing, true).filter((u) => !u.garrison), def = unitsIn(g, a, other(g.phasing));
   if (!att.length) throw new Error('no attacker in good order');
   if (bt && !newlyContested(g).includes(a)) { if (!viaSA) throw new Error('re-engaging an already contested area costs a Special Action'); spendSA(g, g.phasing, undefined, 'breakthrough combat'); }
+  const lockedAtStart = bt && !!viaSA;
   const pick = (us: Unit[]) => [...us].sort((x, y) => +!!x.garrison - +!!y.garrison || y.str - x.str)[0].id;
   const b: Battle = { area: a, attacker: g.phasing, attPoint: pick(att), defPoint: pick(def), bt, riverAssault: g.riverAssault.includes(a), stage: 'setup', queue: [], assets: { german: [], allied: [] }, air: {}, pending: 0,
-    engFw: false, rolls: [], exploit: false, unitHit: { german: false, allied: false }, mark: g.log.length, hit: { german: [], allied: [] } };
+    engFw: false, rolls: [], exploit: false, unitHit: { german: false, allied: false }, mark: g.log.length, hit: { german: [], allied: [] }, ready: [], locked: lockedAtStart };
   g.battle = b; return b;
 }
 /* --- assets (6.22, 6.23, 6.31, 16.1, 16.12, 16.23, 15.2) --- */
@@ -577,6 +579,19 @@ function next(g: Game, b: Battle) {
 export function beginCombat(g: Game, b: Battle) {
   if (b.stage !== 'setup') throw new Error('already started');
   b.queue = ['attArty', 'defArty', 'defFire', 'offFire']; next(g, b);
+}
+/** Hot-seat shortcut stays beginCombat; online each side confirms its set-up and combat starts when both are ready. */
+export function setReady(g: Game, b: Battle, side: Side, on = true) {
+  if (b.stage !== 'setup') throw new Error('already started');
+  const r = (b.ready ??= []).filter((x) => x !== side); if (on) r.push(side); b.ready = r;
+  if (r.length === 2) beginCombat(g, b);
+}
+/** Withdraw from a battle that has not rolled yet, returning every assigned asset. Not possible once a Special Action was spent. */
+export function cancelBattle(g: Game) {
+  const b = g.battle; if (!b) throw new Error('no battle'); if (b.stage !== 'setup') throw new Error('combat has begun');
+  if (b.locked) throw new Error('a Special Action was spent; the battle cannot be withdrawn');
+  for (const id of [...b.assets.german, ...b.assets.allied, ...Object.values(b.air).map((a) => a!.id)]) unassign(g, b, id);
+  g.battle = null;
 }
 export function roll_step(g: Game, b: Battle) {
   const st = b.stage;
@@ -693,14 +708,14 @@ export function defenderRetreatSA(g: Game, b: Battle) {
   if (b.stage !== 'setup') throw new Error('only before the first roll'); const def = other(b.attacker);
   if (b.assets[def].length || b.air[def]) throw new Error('defender has assets assigned');
   const us = unitsIn(g, b.area, def).filter((u) => !u.garrison); if (!us.length || unitsIn(g, b.area, def).some((u) => u.garrison)) throw new Error('garrisons cannot retreat');
-  spendSA(g, def, us[0].ech, 'retreat before combat'); us.forEach((x) => clearInterdict(g, x));
+  spendSA(g, def, us[0].ech, 'retreat before combat'); b.locked = true; us.forEach((x) => clearInterdict(g, x));
   b.retreat = { side: def, queue: us.map((u) => u.id), moved: false, after: 'sa', h: 0, excess: 0 }; advanceRetreat(g, b);
 }
 export function defenderReinforceSA(g: Game, b: Battle, unitId: string) {
   if (b.stage !== 'setup') throw new Error('only before the first roll'); const def = other(b.attacker), u = g.units.find((x) => x.id === unitId)!;
   if (unitsIn(g, b.area, def).some((x) => x.id.startsWith('DR-'))) throw new Error('a defended roadblock may not be reinforced (4.35)');
   if (u.side !== def || u.area == null || !neighbors(b.area).includes(u.area) || contested(g, u.area) || u.disorder || u.garrison || blocks(g, b.area, def).length >= 2) throw new Error('not a legal reinforcement');
-  spendSA(g, def, u.ech, 'reinforce a battle'); clearInterdict(g, u); const from = u.area; u.area = b.area; u.from = from; updateControl(g, from); say(g, `${u.name} reinforces ${areas.get(b.area)!.name}`);
+  spendSA(g, def, u.ech, 'reinforce a battle'); b.locked = true; clearInterdict(g, u); const from = u.area; u.area = b.area; u.from = from; updateControl(g, from); say(g, `${u.name} reinforces ${areas.get(b.area)!.name}`);
 }
 export function activateBreakthrough(g: Game, unitId: string) {
   const u = g.units.find((x) => x.id === unitId)!;

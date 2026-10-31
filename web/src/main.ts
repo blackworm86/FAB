@@ -5,7 +5,8 @@ import * as E from '../../engine/src';
 import { labelSvg } from './art';
 import { chitSvg, mapMarkerSvg, loadChitArt, garrisonChit } from './chits';
 import { History } from './history';
-import { online, startOnline, push, sit, setDevSeat, auth, DEV, type DevSeat } from './online';
+import { online, startOnline, push, sit, setDevSeat, auth, lobby, DEV, TABLE, HAS_TABLE, LOCAL_ONLY, type DevSeat, type Match } from './online';
+import { GAMES, gameInfo } from './games';
 import { throwDice, clearDice, isHit, type DiceGroup } from './dice3d';
 
 type MapArea = { id: number; label: [number, number]; polygon: [number, number][] };
@@ -54,7 +55,7 @@ const $ = (s: string) => document.querySelector(s) as HTMLElement;
 const areaName = (a: number) => E.areas.get(a)!.name;
 
 /* ---------- state ---------- */
-const KEY = 'fab-demo2';
+const KEY = TABLE === 'main' ? 'fab-demo2' : `fab-demo2-${TABLE}`;
 function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif && x.roadblocks && x.pendingArrivals && x.fwOwner && Array.isArray(x.recover) ? x : null; } catch { return null; } }
 let g: E.Game = load() ?? E.newGame();
 let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, previewArea: number | null = null, hoverArea: number | null = null, newOpts: E.Opts = { scenario: 'tournament', fuel: true };
@@ -342,11 +343,13 @@ const hist = new History<E.Game>(); let note = '', selArr: string | null = null;
 function actorNow(): E.Side | 'both' {
   if (g.pendingBlow) return other(g.units.find((x) => x.id === g.pendingBlow!.unit)!.side);
   const b = g.battle;
-  if (b) return b.stage === 'setup' ? 'both' : b.stage === 'defChoice' || b.stage === 'retreat' ? other(b.attacker) : b.attacker;
+  if (b) return b.stage === 'setup' ? 'both' : ['defArty', 'defFire', 'defChoice', 'retreat'].includes(b.stage) ? other(b.attacker) : b.attacker;
   if (g.phase === 'admin' || g.phase === 'reinforcement') return 'both';
   return g.phase === 'reaction' ? other(g.phasing) : g.phasing;
 }
 const allowed = () => !online.active || modal === 'menu' || online.both() || (online.mySide() != null && (actorNow() === 'both' || actorNow() === online.mySide()));
+/** In a shared-screen game every side is yours; online only your own seat's pieces. */
+const mine = (s: E.Side) => !online.active || online.both() || online.mySide() === s;
 const notYou = () => online.mySide() == null ? 'You are watching. Take a seat in the menu to play.' : `Wait for the ${nm(actorNow() as E.Side)} player.`;
 function act(f: () => void, after = '') {
   if (!allowed()) return say(notYou());
@@ -431,7 +434,7 @@ function placeBadges() {
 
 /* ---------- battle state shared with the view ---------- */
 interface RollView { title: string; groups: (DiceGroup & { parts: [string, number][]; hits: number })[]; pos: { x: number; y: number; group: number; v: number }[] | null }
-let rollView: RollView | null = null, modal: 'menu' | 'boxes' | null = null, handSide: E.Side | null = null;
+let rollView: RollView | null = null, modal: 'menu' | 'boxes' | 'lobby' | null = null, handSide: E.Side | null = null;
 const STAGE_NAME: Record<string, string> = { attArty: 'artillery', defArty: 'artillery', defFire: 'Defensive fire', offFire: 'Offensive fire' };
 function rollStage(b: E.Battle) {
   if (!allowed()) return say(notYou());
@@ -470,7 +473,7 @@ const fan = (cs: string[]) => cs.map((h, i) => h.replace('--r:0deg', `--r:${((i 
 /** Place every asset that may legally join, artillery first, for both sides. */
 function autoFill(b: E.Battle) {
   const order = (c: E.Chit) => (E.isArty(c) ? 0 : c.kind === 'engineer' ? 2 : 1);
-  for (const c of g.chits.filter((x) => x.box === 'available' && (E.isArty(x) || E.isBattleAsset(x))).sort((x, y) => order(x) - order(y))) { if (!E.canAssign(g, b, c.side, c)) E.assign(g, b, c.id); }
+  for (const c of g.chits.filter((x) => x.box === 'available' && (E.isArty(x) || E.isBattleAsset(x)) && mine(x.side)).sort((x, y) => order(x) - order(y))) { if (!E.canAssign(g, b, c.side, c)) E.assign(g, b, c.id); }
 }
 /** Where an event or asset chit can be played on the map (Admin Phase): the areas to light while it is dragged. */
 function chitTargets(c: E.Chit): number[] {
@@ -520,6 +523,7 @@ function drag(ev: PointerEvent, el: HTMLElement) {
     if (!ghost) zone = E.isArty(c) || c.kind === 'air_mission' ? 'arty' : 'asset';               // a plain click files the card where it belongs
     if (!zone && !unit) return;
     const why = E.canAssign(g, b, s, c) ?? (z?.dataset.side && z.dataset.side !== s ? 'That slot belongs to the other side' : null) ?? (zone === 'arty' && c.kind === 'engineer' ? 'Engineers go in the Assets slot' : zone === 'asset' && (E.isArty(c)) ? 'Artillery goes in the Artillery slot' : null);
+    if (!mine(s)) return say('Those are the other player\'s assets.');
     if (why) return say(why);
     act(() => { if (c.kind === 'air_mission') { if (unit) E.assign(g, b, id, 'support', unit); else E.assign(g, b, id, 'arty'); } else E.assign(g, b, id); });
   };
@@ -558,7 +562,13 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
   const b = g.battle;
   if (g.over || g.pendingBlow || rollView) return null;
   if (b) {
-    if (b.stage === 'setup') return { label: 'Begin combat ▸', fn: () => act(() => E.beginCombat(g, b)) };
+    if (b.stage === 'setup') {
+      const solo = !online.active || online.both(), me = online.mySide();
+      if (solo) return { label: 'Begin combat ▸', fn: () => act(() => E.beginCombat(g, b)) };
+      if (!me) return null;
+      const on = b.ready?.includes(me);
+      return { label: on ? 'Waiting for the other player… (tap to take back)' : 'Ready ▸', fn: () => act(() => E.setReady(g, b, me, !on)) };
+    }
     if (b.stage === 'done') return { label: 'Close battle ▸', fn: () => act(() => { E.closeBattle(g); const m = E.mustFight(g); if (m.length) { selArea = m[0]; E.startBattle(g, m[0], g.phase === 'btCombat'); } }) };
     if (b.stage.endsWith('Choice') || b.stage === 'retreat' || b.stage === 'attFirst') return null;
     return { label: `Roll ${STAGE_NAME[b.stage].toLowerCase()} ▸`, fn: () => rollStage(b) };
@@ -630,7 +640,7 @@ function handCards() {
   if (!b && g.phase === 'reinforcement') return tray();
   if (b) {
     if (b.stage !== 'setup') return '';
-    const cs = ([b.attacker, other(b.attacker)] as E.Side[]).sort().flatMap((s) => E.boxOf(g, s, 'available').filter((c) => E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission'));
+    const cs = ([b.attacker, other(b.attacker)] as E.Side[]).filter(mine).sort().flatMap((s) => E.boxOf(g, s, 'available').filter((c) => E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission'));
     const ok = cs.filter((c) => !E.canAssign(g, b, c.side, c));
     const bad = cs.filter((c) => E.canAssign(g, b, c.side, c)), seen = new Set<string>(), why = bad.filter((c) => { const k = c.name + c.ech; if (seen.has(k)) return false; seen.add(k); return true; }).map((c) => `<li><b>${esc(c.name)}</b> ${esc(E.canAssign(g, b, c.side, c)!)}</li>`).join('');
     return `<div class="handtab">${ok.length ? btn('Auto-fill assets', () => autoFill(b), '', false, 'Place every asset that can legally join, artillery first') : ''}${bad.length ? `<details class="why"><summary>${bad.length} assets cannot join</summary><ul>${why}</ul></details>` : ''}</div><div class="c-hand" ${handStyle(ok.length)}>${fan(ok.map((c) => card(c)))}</div>`;
@@ -649,15 +659,15 @@ function battleTable() {
   const side = (s: E.Side) => {
     const us = E.unitsIn(g, b.area, s), pt = s === att ? b.attPoint : b.defPoint, lim = E.assetLimits(g, b, s), ids = b.assets[s].map((id) => E.chit(g, id)), air = b.air[s] ? E.chit(g, b.air[s]!.id) : null;
     const arty = [...ids.filter((c) => E.isArty(c)), ...(air && b.air[s]!.mode === 'arty' ? [air] : [])], rest = ids.filter((c) => !E.isArty(c));
-    const mini = (c: E.Chit) => `<span class="mini ${c.side}" title="${esc(c.name)}"><img alt="${esc(c.name)}" src="${chitImg(c)}">${setup ? `<button class="x" aria-label="Remove ${esc(c.name)}" data-do="${reg(() => E.unassign(g, b, c.id))}">${ico('close')}</button>` : ''}</span>`;
+    const mini = (c: E.Chit) => `<span class="mini ${c.side}" title="${esc(c.name)}"><img alt="${esc(c.name)}" src="${chitImg(c)}">${setup ? `<button class="x" aria-label="Remove ${esc(c.name)}" data-do="${reg(() => { if (mine(c.side)) E.unassign(g, b, c.id); else say('Those are the other player\'s assets.'); })}">${ico('close')}</button>` : ''}</span>`;
     const sa = setup && s !== att ? E.saAvailable(g, s).length : 0;
     return `<div class="c-side ${s}"><h4>${nm(s)} <small>${s === att ? 'attacking' : 'defending'}</small></h4>
       <div class="c-body"><div class="c-row">${us.map((u) => `<div tabindex="0" role="button" class="blk ${s} ${u.id === pt ? 'pt' : ''} ${air && b.air[s]!.mode === 'support' && b.air[s]!.unit === u.id ? 'air' : ''}" data-unit="${u.id}" data-side="${s}" data-tag="${s === 'german' ? 'G' : 'A'}" title="${esc(u.name)}${u.id === pt ? ' (point unit)' : ''}" aria-label="${esc(u.name)}">${b3(unitFace(u), sideOfUnit(u), !!u.garrison)}</div>`).join('')}</div>
       <div class="c-slots"><div class="slot" data-side="${s}" data-zone="arty"><span class="lab">ARTY ${arty.length}/${lim.arty}</span>${arty.map(mini).join('') || '<small>drop</small>'}</div><div class="slot" data-side="${s}" data-zone="asset"><span class="lab">ASSETS</span>${rest.map(mini).join('') || '<small>drop</small>'}</div></div></div>
-      ${sa ? `<div class="row">${btn('Retreat (SA)', () => E.defenderRetreatSA(g, b), '', !!b.assets[s].length || us.some((u) => u.garrison) || !us.length)}</div>` : ''}</div>`;
+      ${sa ? `<div class="row">${btn('Retreat (SA)', () => E.defenderRetreatSA(g, b), '', !mine(s) || !!b.assets[s].length || us.some((u) => u.garrison) || !us.length)}</div>` : ''}</div>`;
   };
   const al = stats(b, 'allied'), ge = stats(b, 'german'), tot = al.mean + ge.mean || 1, side2 = att === 'german' ? ge : al;
-  return `<div class="c-table ${rollView ? 'rolling' : ''}"><div class="c-title">${b.bt ? 'BREAKTHROUGH · ' : ''}${g.fought.length + fightable().length > 1 ? `<small class="cnt">Battle ${Math.min(g.fought.length + 1, g.fought.length + fightable().length)} of ${g.fought.length + fightable().length}</small> ` : ''}${esc(L.name)} <small>TDN ${L.tdn}${g.fieldWorks.includes(b.area) ? ' · field works' : ''}${b.riverAssault ? ' · river assault' : ''}</small></div>${side('allied')}
+  return `<div class="c-table ${rollView ? 'rolling' : ''}"><div class="c-title">${b.bt ? 'BREAKTHROUGH · ' : ''}${g.fought.length + fightable().length > 1 ? `<small class="cnt">Battle ${Math.min(g.fought.length + 1, g.fought.length + fightable().length)} of ${g.fought.length + fightable().length}</small> ` : ''}${esc(L.name)} <small>TDN ${L.tdn}${g.fieldWorks.includes(b.area) ? ' · field works' : ''}${b.riverAssault ? ' · river assault' : ''}</small>${setup ? btn('Cancel battle', () => { E.cancelBattle(g); }, 'cancel', !mine(b.attacker) || !!b.locked, b.locked ? 'A Special Action was spent, so the battle must be fought' : 'Withdraw the attack and return every assigned asset') : ''}</div>${side('allied')}
     <div class="c-vs"><small>EXPECTED HITS</small><div class="big">${al.mean.toFixed(1)}<span>:</span>${ge.mean.toFixed(1)}</div><div class="gauge"><i style="width:${(al.mean / tot) * 100}%"></i></div><small>${nm(att)} ≥2 hits ${side2.p(2)}% · ≥3 ${side2.p(3)}%</small></div>${side('german')}</div>`;
 }
 function ledger() {
@@ -680,7 +690,39 @@ function legend() {
   const items = tint === 'tdn' ? TDN_COL.map((c, i) => [c, `TDN ${i}`, (i ? `attackers −${i} to hit` : 'no modifier')]) : [[ZONE_COL[5], 'Zone 5', '5th Panzer Army'], [ZONE_COL[6], 'Zone 6', '6th Panzer Army'], [ZONE_COL[7], 'Zone 7', '7th Army']];
   return `<div class="legend" aria-label="Overlay legend"><b>${tint === 'tdn' ? 'Terrain defence' : 'Army zones'}</b>${items.map(([c, a, b]) => `<span><i style="background:${hex(c as number)}"></i>${a} <small>${b}</small></span>`).join('')}</div>`;
 }
-const TABLE_NAME = new URLSearchParams(location.search).get('table') || 'main';
+const TABLE_NAME = TABLE;
+/* ---------- lobby ---------- */
+let matches: Match[] = [], form = { game: 'bulge', title: '', side: 'german' as E.Side | '', scenario: 'tournament' as E.Opts['scenario'], fuel: true }, lobbyMsg = '';
+const inviteLink = (id: string) => `${location.origin}${location.pathname}?table=${id}`;
+async function share(id: string, title: string) {
+  const url = inviteLink(id);
+  try { if (navigator.share) await navigator.share({ title: `FAB · ${title}`, text: 'Join my game of FAB', url }); else { await navigator.clipboard.writeText(url); lobbyMsg = 'Invite link copied.'; } } catch { lobbyMsg = url; }
+  render();
+}
+async function createGame() {
+  const info = gameInfo(form.game); if (!info?.ready) return;
+  const opts: E.Opts = { scenario: form.scenario, fuel: form.fuel }, title = form.title.trim() || `${info.name} · ${new Date().toLocaleDateString()}`;
+  lobbyMsg = 'Creating…'; render();
+  const id = await lobby.create({ game: form.game, title, opts }, form.side || null, JSON.stringify(E.newGame(5, opts)));
+  if (id.startsWith('!')) { lobbyMsg = id.slice(1); return render(); }
+  location.search = `?table=${id}`;
+}
+function lobbyHtml() {
+  const a = online.account, signed = !!a && !a.guest;
+  const games = GAMES.map((x) => `<button class="gamecard ${x.id === form.game ? 'sel' : ''}" ${x.ready ? '' : 'disabled'} data-do="${reg(() => { if (x.ready) form.game = x.id; })}"><b>${esc(x.name)}</b><small>${esc(x.vol)}${x.ready ? '' : ' · coming soon'}</small><span>${esc(x.blurb)}</span></button>`).join('');
+  const mine = matches.map((m) => `<div class="matchrow"><div><b>${esc(m.title)}</b><small>${esc(gameInfo(m.game)?.name ?? m.game)} · German ${esc(m.germanName || 'free')} · Allied ${esc(m.alliedName || 'free')}</small></div><div class="row">${btn('Open', () => { location.search = `?table=${m.id}`; }, 'primary')}${btn('Invite', () => { void share(m.id, m.title); })}</div></div>`).join('') || '<p class="hint">No games yet. Create one below, then send the invite link to your opponent.</p>';
+  return `<div class="modal lobby"><div class="sheet"><h3>Fast Action Battles ${HAS_TABLE ? `<button class="ico" data-modal="" aria-label="Close">${ico('close')}</button>` : ''}</h3>
+    <p class="hint">Choose a game, create a table and send the invite link. All titles share the same series rules.</p>
+    ${accountHtml()}
+    <h4>Games</h4><div class="gamegrid">${games}</div>
+    ${signed ? `<h4>New game</h4><div class="authform"><input placeholder="Game name (optional)" value="${esc(form.title)}" data-sel="${regv((x) => { form.title = x; })}"></div>
+      <div class="row"><select data-sel="${regv((x) => { form.scenario = x as E.Opts['scenario']; })}"><option value="tournament" ${form.scenario === 'tournament' ? 'selected' : ''}>Tournament</option><option value="campaign" ${form.scenario === 'campaign' ? 'selected' : ''}>Campaign</option></select>
+      <select data-sel="${regv((x) => { form.side = x as E.Side | ''; })}"><option value="german" ${form.side === 'german' ? 'selected' : ''}>I play German</option><option value="allied" ${form.side === 'allied' ? 'selected' : ''}>I play Allied</option><option value="" ${form.side === '' ? 'selected' : ''}>Leave both seats open</option></select>
+      <label><input type="checkbox" ${form.fuel ? 'checked' : ''} data-sel="${regv((x) => { form.fuel = x === 'on'; })}"> Fuel rule</label>${btn('Create game', () => { void createGame(); }, 'primary', !gameInfo(form.game)?.ready)}</div>
+      <h4>My games</h4>${mine}` : '<p class="hint">Sign in to create or join a game. Without an account you can still watch a game from its invite link.</p>'}
+    ${lobbyMsg ? `<p class="hint"><b>${esc(lobbyMsg)}</b></p>` : ''}${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}
+    <h4>Other ways to play</h4><div class="row">${btn('Hot-seat on this device', () => { location.search = '?local=1'; })}${HAS_TABLE ? '' : btn('Open the shared test table', () => { location.search = '?table=main'; })}</div></div></div>`;
+}
 /** Sign-in panel (Firebase only): Google, or email and password; guests can watch but not play. */
 function accountHtml() {
   if (!online.hasAccounts) return '';
@@ -691,12 +733,13 @@ function accountHtml() {
     <div class="row"><button data-auth="in">Sign in</button><button data-auth="reg">Register</button><button data-auth="reset">Forgot password</button></div>`;
 }
 function modalHtml() {
+  if (modal === 'lobby') return lobbyHtml();
   if (modal === 'boxes') return `<div class="modal"><div class="sheet"><h3>Chit boxes <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>${(['allied', 'german'] as E.Side[]).map((s) => {
     const l = (bx: E.Chit['box']) => E.boxOf(g, s, bx).map((c) => `<span class="mini ${s}">${esc(chitLabel(c))}</span>`).join('') || '<small>empty</small>';
     return `<h4 class="${s}">${nm(s)} · cup ${E.boxOf(g, s, 'cup').length}</h4><div class="chips"><b>Available</b> ${l('available')}</div><div class="chips"><b>Used</b> ${l('used')}</div><div class="chips"><b>Eliminated</b> ${l('eliminated')}</div>`; }).join('')}</div></div>`;
   if (modal === 'menu') return `<div class="modal"><div class="sheet"><h3>Menu <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3><h4>New game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as 'tournament' | 'campaign'; })}"><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
     <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Start', () => { g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'primary')}</div>
-    ${online.mode === 'remote' ? `${accountHtml()}<h4>Online table <small>${esc(TABLE_NAME)}</small></h4><p class="hint">Seats: German ${online.seats.german ? (online.seats.german === online.uid ? 'you' : esc(online.seats.germanName || 'taken')) : 'free'} · Allied ${online.seats.allied ? (online.seats.allied === online.uid ? 'you' : esc(online.seats.alliedName || 'taken')) : 'free'}. Everyone who opens this table sees the same game; the seat decides who may act.${online.hasAccounts && online.account?.guest ? ' Sign in above to take a seat.' : ''}${online.canWrite ? '' : ' You can only watch.'}${online.error ? ' <b class="bad">' + esc(online.error) + '</b>' : ''}</p><div class="row">${btn('Sit as German', () => { void sit('german'); }, '', !online.canWrite || !!online.account?.guest)}${btn('Sit as Allied', () => { void sit('allied'); }, '', !online.canWrite || !!online.account?.guest)}${btn('Leave my seat', () => { void sit(null); })}</div>${online.admin ? `<h4>Admin</h4><div class="row">${btn('Free German seat', () => { void auth.freeSeat('german'); })}${btn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div><p class="hint">To start a new game for the table, use New game above; as admin it replaces the shared game.</p>` : ''}` : online.mode === 'local' ? '<h4>Developer table</h4><p class="hint">No online store is configured. The Seat button in the top bar switches between German, Allied, both and watching, and the turn rules are enforced for the seat you hold.</p>' : '<h4>Online play</h4><p class="hint">Not connected. This is a hot-seat game on this machine.</p>'}
+    ${online.mode === 'remote' ? `${accountHtml()}<div class="row">${btn('Lobby · my games', () => { modal = 'lobby'; })}${TABLE !== 'main' ? btn('Invite a player', () => { void share(TABLE, TABLE); }) : ''}</div><h4>Online table <small>${esc(TABLE_NAME)}</small></h4><p class="hint">Seats: German ${online.seats.german ? (online.seats.german === online.uid ? 'you' : esc(online.seats.germanName || 'taken')) : 'free'} · Allied ${online.seats.allied ? (online.seats.allied === online.uid ? 'you' : esc(online.seats.alliedName || 'taken')) : 'free'}. Everyone who opens this table sees the same game; the seat decides who may act.${online.hasAccounts && online.account?.guest ? ' Sign in above to take a seat.' : ''}${online.canWrite ? '' : ' You can only watch.'}${online.error ? ' <b class="bad">' + esc(online.error) + '</b>' : ''}</p><div class="row">${btn('Sit as German', () => { void sit('german'); }, '', !online.canWrite || !!online.account?.guest)}${btn('Sit as Allied', () => { void sit('allied'); }, '', !online.canWrite || !!online.account?.guest)}${btn('Leave my seat', () => { void sit(null); })}</div>${online.admin ? `<h4>Admin</h4><div class="row">${btn('Free German seat', () => { void auth.freeSeat('german'); })}${btn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div><p class="hint">To start a new game for the table, use New game above; as admin it replaces the shared game.</p>` : ''}` : online.mode === 'local' ? '<h4>Developer table</h4><p class="hint">No online store is configured. The Seat button in the top bar switches between German, Allied, both and watching, and the turn rules are enforced for the seat you hold.</p>' : '<h4>Online play</h4><p class="hint">Not connected. This is a hot-seat game on this machine.</p>'}
     <h4>Map art</h4><div class="row"><select data-sel="${regv((x) => setArt(x as 'vector' | 'scan'))}"><option value="vector" ${art === 'vector' ? 'selected' : ''}>Vector layers (traced)</option><option value="scan" ${art === 'scan' ? 'selected' : ''}>Original scan</option></select></div>
     <h4>Log</h4><div class="log">${[...g.log].reverse().slice(0, 120).map((l) => `<div>${esc(l)}</div>`).join('')}</div></div></div>`;
   return '';
@@ -742,5 +785,16 @@ function frame() {
 }
 frame();
 loadChitArt().catch((e) => console.error(e)).finally(() => { auto(); refresh(); });
-void startOnline((rg) => { applyingRemote = true; g = rg; selUnit = selChit = selArr = null; previewArea = hoverArea = null; hist.clear(); try { save(); } finally { applyingRemote = false; } refresh(); }, () => render(), () => g);
+let lobbyOpened = false, lobbyUid = '';
+const onNet = (): void => {
+  if (online.mode !== 'remote' || !online.hasAccounts || LOCAL_ONLY) return;
+  if (!lobbyOpened && !HAS_TABLE) { lobbyOpened = true; modal = 'lobby'; }
+  if (lobbyUid !== online.uid) { lobbyUid = online.uid; lobby.watch((m) => { matches = m; render(); }); }
+};
+void startOnline((rg) => { const was = g.battle, n0 = was?.rolls.length ?? 0, st0 = was?.stage; applyingRemote = true; g = rg;
+  const nb = g.battle; if (was && nb && nb.area === was.area && nb.rolls.length > n0 && st0 && STAGE_NAME[st0]) {      // the other player rolled: show their dice here too
+    const side = st0 === 'attArty' || st0 === 'offFire' ? nb.attacker : other(nb.attacker);
+    rollView = { title: `${nm(side)} ${STAGE_NAME[st0]}`, pos: null, groups: nb.rolls.slice(n0).map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: [] })) };
+    if (rollView.groups.length) { const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block'; throwDice(cv, rollView.groups, (p) => { if (rollView) { rollView.pos = p; render(); } }); } else rollView = null;
+  } selUnit = selChit = selArr = null; previewArea = hoverArea = null; hist.clear(); try { save(); } finally { applyingRemote = false; } refresh(); }, () => { onNet(); render(); }, () => g);
 Object.assign(window, { __fab: { info: () => renderer.info.memory, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });

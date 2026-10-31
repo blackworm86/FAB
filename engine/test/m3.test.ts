@@ -206,3 +206,14 @@ describe('4.1a unused Special Action', () => {
     expect(used.box).toBe('available'); expect(g.recover).not.toContain('german');
   });
 });
+
+import { setReady, cancelBattle, assign as assignChit } from '../src/game';
+describe('battle set-up control', () => {
+  it('starts only when both sides are ready, and can be withdrawn before that', () => {
+    const g = newGame(5); g.phase = 'combat'; g.phasing = 'german'; const a = mustFight(g)[0] ?? 11;
+    const b = startBattle(g, a); setReady(g, b, 'german'); expect(b.stage).toBe('setup');
+    setReady(g, b, 'german', false); cancelBattle(g); expect(g.battle).toBeNull();
+    const b2 = startBattle(g, a); setReady(g, b2, 'german'); setReady(g, b2, 'allied'); expect(b2.stage).not.toBe('setup');
+    expect(() => cancelBattle(g)).toThrow();
+  });
+});
