@@ -902,3 +902,12 @@ function autoArrive(g: Game, id: string) {
 /** Test hooks for rules that have no public entry point. */
 export const updateControlForTest = updateControl;
 export const allocateForTest = allocate;
+
+/** The point unit a side designates for a battle (6.24), and the engineer's option to remove field works instead of firing (6.33): plain state changes, so they can travel as actions. */
+export function setPoint(g: Game, b: Battle, side: Side, unitId: string) {
+  if (b.stage !== 'setup') throw new Error('already started'); const u = g.units.find((x) => x.id === unitId);
+  if (!u || u.side !== side || u.area !== b.area || u.garrison) throw new Error('not a legal point unit');
+  if (side === b.attacker && u.disorder) throw new Error('a disordered unit cannot be the attacking point unit');
+  if (side === b.attacker) b.attPoint = unitId; else b.defPoint = unitId;
+}
+export function setEngFw(g: Game, b: Battle, on: boolean) { if (b.stage !== 'setup' && b.stage !== 'offFire') throw new Error('too late'); b.engFw = !!on; }
