@@ -32,7 +32,7 @@ const areaName = (a: number) => E.areas.get(a)!.name;
 
 /* ---------- state ---------- */
 const KEY = 'fab-demo2';
-function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif && x.roadblocks ? x : null; } catch { return null; } }
+function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif && x.roadblocks && x.pendingArrivals ? x : null; } catch { return null; } }
 let g: E.Game = load() ?? E.newGame();
 let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, previewArea: number | null = null, hoverArea: number | null = null, msg = '', newOpts: E.Opts = { scenario: 'tournament', fuel: true };
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(g)); } catch { /* storage off: the game still runs */ } };
@@ -95,6 +95,11 @@ function block(u: E.Unit) {
   return m;
 }
 const markers = new THREE.Group(); scene.add(markers);
+/** Remove a group's children and free their geometry and materials; the cached textures are shared and stay. */
+function disposeAll(group: THREE.Group) {
+  group.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh && !(o as THREE.LineSegments).isLineSegments) return; m.geometry?.dispose(); for (const mat of ([] as THREE.Material[]).concat(m.material)) mat.dispose(); });
+  group.clear();
+}
 const tagTex = new Map<string, THREE.CanvasTexture>();
 function tag(text: string, bg: string, size = 1.1) {
   const art = mapMarkerSvg(text);
@@ -111,7 +116,7 @@ function tag(text: string, bg: string, size = 1.1) {
   m.castShadow = true; return m;
 }
 function drawPieces() {
-  pieces.clear(); markers.clear();
+  disposeAll(pieces); disposeAll(markers);
   for (const a of MAP.areas) {
     const us = E.unitsIn(g, a.id), base = toWorld(...POLE.get(a.id)!), cont = E.contestedAreas(g).includes(a.id);
     us.forEach((u) => {
@@ -558,4 +563,4 @@ function frame() {
   placeCam(); renderer.render(scene, cam); placeBadges();
 }
 auto(); refresh(); frame();
-Object.assign(window, { __fab: { E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
+Object.assign(window, { __fab: { info: () => renderer.info.memory, E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
