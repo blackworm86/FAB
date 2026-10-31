@@ -334,7 +334,7 @@ let badges: Badge[] = [];
 function badgeList(): Badge[] {
   const out: Badge[] = [];
   if (selUnit && !g.battle) { const u = g.units.find((x) => x.id === selUnit)!; for (const o of optsFor(selUnit)) out.push({ area: o.area, text: g.phase === 'strategic' ? '' : `${o.cost}`, cls: o.mustStop ? 'stop' : o.fuel && u.side === 'german' ? 'fuel' : 'ok' }); }
-  if (!selUnit && (g.phase === 'combat' || g.phase === 'btCombat') && !g.battle) { const must = E.mustFight(g); for (const a of fightable()) out.push({ area: a, text: must.includes(a) ? 'FIGHT' : 'fight?', cls: must.includes(a) ? 'war' : 'opt' }); }
+  if (!selUnit && (g.phase === 'combat' || g.phase === 'btCombat') && !g.battle) { const must = E.mustFight(g); fightable().forEach((a, i) => out.push({ area: a, text: must.includes(a) ? String(i + 1) : '?', cls: must.includes(a) ? 'war' : 'opt' })); }
   for (const o of arrOpts()) out.push({ area: o.area, text: o.sa ? 'SA' : 'Enter', cls: o.sa ? 'stop' : 'ok' });
   if (g.battle?.stage === 'retreat') for (const a of E.retreatOptions(g, g.battle)) out.push({ area: a, text: 'Retreat', cls: 'ok' });
   return out;
@@ -377,12 +377,14 @@ const ICONS: Record<string, string> = {
   command_staff: '<path d="M12 3l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-3-5.4 3 1.1-6L3.2 9.4l6.1-.8z"/>',
   air_mission: '<path d="M2 14l9-2 3-9h2l-1 9 6 2v2l-6-1-1 5 2 1v1l-4-1-4 1v-1l2-1-1-5-7 1z"/>',
   sa_block: '<path d="M5 17l7-7 7 7M5 11l7-7 7 7"/>',
-  layers: '<path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5"/>', undo: '<path d="M9 7L4 12l5 5M4 12h10a5 5 0 010 10h-2"/>', menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', boxes: '<rect x="3" y="4" width="18" height="5"/><path d="M5 9v10h14V9M10 13h4"/>', close: '<path d="M6 6l12 12M18 6L6 18"/>', swap: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>', plus: '<path d="M12 5v14M5 12h14"/>',
+  home: '<path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/>', layers: '<path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5"/>', undo: '<path d="M9 7L4 12l5 5M4 12h10a5 5 0 010 10h-2"/>', menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', boxes: '<rect x="3" y="4" width="18" height="5"/><path d="M5 9v10h14V9M10 13h4"/>', close: '<path d="M6 6l12 12M18 6L6 18"/>', swap: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>', plus: '<path d="M12 5v14M5 12h14"/>',
 };
 const ico = (k: string, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k] ?? '<rect x="5" y="5" width="14" height="14"/>'}</svg>`;
 const chitUri = new Map<string, string>();
 const chitImg = (c: E.Chit) => { let u = chitUri.get(c.id); if (!u) { u = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(chitSvg(c)); chitUri.set(c.id, u); } return u; };
 const card = (c: E.Chit, r = 0, why: string | null = null) => `<div tabindex="0" role="button" class="card2 ${c.side} ${why ? 'bad' : ''} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" style="--r:${r}deg" title="${esc(why ?? c.name + ' · ' + c.ech)}" aria-label="${esc(c.name)}"><img alt="" draggable="false" src="${chitImg(c)}"></div>`;
+const overlapFor = (n: number) => { const cw = innerWidth < 860 ? 78 : 104, avail = innerWidth - 56; return n > 1 ? Math.max(12, Math.min(cw - (innerWidth < 860 ? 38 : 14), Math.ceil((n * cw - avail) / (n - 1)))) : 0; };
+const handStyle = (n: number) => `style="--ov:${overlapFor(n)}px"`;
 const fan = (cs: string[]) => cs.map((h, i) => h.replace('--r:0deg', `--r:${((i - (cs.length - 1) / 2) * Math.min(5, 40 / cs.length)).toFixed(1)}deg`)).join('');
 /** Place every asset that may legally join, artillery first, for both sides. */
 function autoFill(b: E.Battle) {
@@ -416,7 +418,7 @@ const nm = (s: E.Side) => (s === 'german' ? 'German' : 'Allied');
 function topBar() {
   const v = E.victory(g), tr = E.TRACK[g.turn - 1], i = g.phasing === 'german' ? 0 : 1, at = STEP_OF[g.phase];
   return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game" aria-label="Menu, log and new game">${ico('menu')}</button><div class="c-crumbs">${STEPS.map((s, k) => `<span class="${k === at ? 'on' : k < at ? 'done' : ''}">${s}</span>`).join('')}</div>
-    <button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="Map overlay: terrain defence / army zones / off" aria-label="Map overlay">${ico('layers')}<span class="bl">Overlay</span></button><button class="ico" data-undo title="${hist.length ? 'Undo: ' + esc(note || 'last action') + ' (Ctrl+Z)' : 'Nothing to undo yet. Undo is available until a die is rolled.'}" aria-label="Undo" ${hist.length ? '' : 'disabled'}>${ico('undo')}<span class="bl">Undo</span></button><div class="c-stat"><span>TURN<b>${g.turn}</b></span><span>PLAYING<b class="${g.phasing}">${nm(g.phasing).toUpperCase()}</b></span><span>NET VP<b>${v.net > 0 ? 'GE +' + v.net : v.net < 0 ? 'AL +' + -v.net : '0'}</b></span><span title="Draws this phase (German / Allied)">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span><button class="ico" data-modal="boxes" title="Chit boxes" aria-label="Chit boxes">${ico('boxes')}</button></div></div>`;
+    <button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="Map overlay: terrain defence / army zones / off" aria-label="Map overlay">${ico('layers')}<span class="bl">Overlay</span></button><button class="ico" data-home title="Reset the camera" aria-label="Reset the camera">${ico('home')}<span class="bl">View</span></button><button class="ico" data-undo title="${hist.length ? 'Undo: ' + esc(note || 'last action') + ' (Ctrl+Z)' : 'Nothing to undo yet. Undo is available until a die is rolled.'}" aria-label="Undo" ${hist.length ? '' : 'disabled'}>${ico('undo')}<span class="bl">Undo</span></button><div class="c-stat"><span>TURN<b>${g.turn}</b></span><span>PLAYING<b class="${g.phasing}">${nm(g.phasing).toUpperCase()}</b></span><span>NET VP<b>${v.net > 0 ? 'GE +' + v.net : v.net < 0 ? 'AL +' + -v.net : '0'}</b></span><span title="Draws this phase (German / Allied)">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span><button class="ico" data-modal="boxes" title="Chit boxes" aria-label="Chit boxes">${ico('boxes')}</button></div></div>`;
 }
 function prompt() {
   const b = g.battle;
@@ -513,11 +515,11 @@ function handCards() {
     const cs = ([b.attacker, other(b.attacker)] as E.Side[]).sort().flatMap((s) => E.boxOf(g, s, 'available').filter((c) => E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission'));
     const ok = cs.filter((c) => !E.canAssign(g, b, c.side, c));
     const bad = cs.filter((c) => E.canAssign(g, b, c.side, c)), seen = new Set<string>(), why = bad.filter((c) => { const k = c.name + c.ech; if (seen.has(k)) return false; seen.add(k); return true; }).map((c) => `<li><b>${esc(c.name)}</b> ${esc(E.canAssign(g, b, c.side, c)!)}</li>`).join('');
-    return `<div class="handtab">${ok.length ? btn('Auto-fill assets', () => autoFill(b), '', false, 'Place every asset that can legally join, artillery first') : ''}${bad.length ? `<details class="why"><summary>${bad.length} assets cannot join</summary><ul>${why}</ul></details>` : ''}</div><div class="c-hand">${fan(ok.map((c) => card(c)))}</div>`;
+    return `<div class="handtab">${ok.length ? btn('Auto-fill assets', () => autoFill(b), '', false, 'Place every asset that can legally join, artillery first') : ''}${bad.length ? `<details class="why"><summary>${bad.length} assets cannot join</summary><ul>${why}</ul></details>` : ''}</div><div class="c-hand" ${handStyle(ok.length)}>${fan(ok.map((c) => card(c)))}</div>`;
   }
   if (g.phase !== 'admin') return '';
   const s = handSide ?? g.phasing, cs = E.boxOf(g, s, 'available');
-  return `<div class="handtab"><button data-do="${reg(() => { handSide = other(s); })}" class="${s}">${nm(s)} hand · ${cs.length} ${ico('swap')}</button></div><div class="c-hand">${fan(cs.map((c) => card(c)))}</div>`;
+  return `<div class="handtab"><button data-do="${reg(() => { handSide = other(s); })}" class="${s}">${nm(s)} hand · ${cs.length} ${ico('swap')}</button></div><div class="c-hand" ${handStyle(cs.length)}>${fan(cs.map((c) => card(c)))}</div>`;
 }
 function stats(b: E.Battle, s: E.Side) {
   const ls = (['arty', 'ground'] as const).flatMap((k) => E.fireList(g, b, s, k)), pmf = E.hitPmf(ls.map((f) => ({ dice: f.dice, sn: f.sn })));
@@ -532,7 +534,7 @@ function battleTable() {
     const mini = (c: E.Chit) => `<span class="mini ${c.side}" title="${esc(c.name)}"><img alt="${esc(c.name)}" src="${chitImg(c)}">${setup ? `<button class="x" aria-label="Remove ${esc(c.name)}" data-do="${reg(() => E.unassign(g, b, c.id))}">${ico('close')}</button>` : ''}</span>`;
     const sa = setup && s !== att ? E.saAvailable(g, s).length : 0;
     return `<div class="c-side ${s}"><h4>${nm(s)} <small>${s === att ? 'attacking' : 'defending'}</small></h4>
-      <div class="c-body"><div class="c-row">${us.map((u) => `<div tabindex="0" role="button" class="blk ${s} ${u.id === pt ? 'pt' : ''} ${air && b.air[s]!.mode === 'support' && b.air[s]!.unit === u.id ? 'air' : ''}" data-unit="${u.id}" data-side="${s}" title="${esc(u.name)}${u.id === pt ? ' (point unit)' : ''}" aria-label="${esc(u.name)}">${b3(unitFace(u), sideOfUnit(u), !!u.garrison)}</div>`).join('')}</div>
+      <div class="c-body"><div class="c-row">${us.map((u) => `<div tabindex="0" role="button" class="blk ${s} ${u.id === pt ? 'pt' : ''} ${air && b.air[s]!.mode === 'support' && b.air[s]!.unit === u.id ? 'air' : ''}" data-unit="${u.id}" data-side="${s}" data-tag="${s === 'german' ? 'G' : 'A'}" title="${esc(u.name)}${u.id === pt ? ' (point unit)' : ''}" aria-label="${esc(u.name)}">${b3(unitFace(u), sideOfUnit(u), !!u.garrison)}</div>`).join('')}</div>
       <div class="c-slots"><div class="slot" data-side="${s}" data-zone="arty"><span class="lab">ARTY ${arty.length}/${lim.arty}</span>${arty.map(mini).join('') || '<small>drop</small>'}</div><div class="slot" data-side="${s}" data-zone="asset"><span class="lab">ASSETS</span>${rest.map(mini).join('') || '<small>drop</small>'}</div></div></div>
       ${sa ? `<div class="row">${btn('Retreat (SA)', () => E.defenderRetreatSA(g, b), '', !!b.assets[s].length || us.some((u) => u.garrison) || !us.length)}</div>` : ''}</div>`;
   };
@@ -581,6 +583,7 @@ function render() {
   ui.querySelectorAll<HTMLElement>('[data-sel]').forEach((e) => (e.onchange = () => { const f = actv[e.dataset.sel!]; if (f) { f(e instanceof HTMLInputElement && e.type === 'checkbox' ? (e.checked ? 'on' : 'off') : (e as HTMLSelectElement).value); save(); } }));
   ui.querySelectorAll<HTMLElement>('[data-arr]').forEach((e) => (e.onpointerdown = (ev) => dragArrival(ev, e)));
   ui.querySelectorAll<HTMLElement>('[data-arr]').forEach((e) => (e.onclick = () => { selArr = selArr === e.dataset.arr ? null : e.dataset.arr!; refresh(); frameArrival(); }));
+  ui.querySelectorAll<HTMLElement>('[data-home]').forEach((e) => (e.onclick = () => { goal = { t: new THREE.Vector3(17, 0, -3), dist: innerWidth < 700 ? 52 : 36, pitch: 1.0 }; yaw = 0; }));
   ui.querySelectorAll<HTMLElement>('[data-tint]').forEach((e) => (e.onclick = cycleTint));
   ui.querySelectorAll<HTMLElement>('[data-undo]').forEach((e) => (e.onclick = () => undo()));
   ui.querySelectorAll<HTMLElement>('[data-u]').forEach((e) => (e.onclick = () => { selUnit = e.dataset.u!; selArea = g.units.find((x) => x.id === selUnit)!.area ?? selArea; previewArea = null; refresh(); }));
