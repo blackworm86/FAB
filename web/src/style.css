@@ -109,3 +109,18 @@ button.ico.on { border-color: var(--gold); color: var(--gold); }
 @media (prefers-reduced-motion: reduce) { .card2 { transition: none; } }
 @media (hover: none) { .card2:hover { transform: rotate(var(--r)) translateY(0); } }
 .lbl { position: absolute; transform: translate(-50%, 0); font: 700 28px var(--sfd); text-align: center; text-shadow: 0 2px 6px #000; } .lbl.hit { color: #7ee08d; } .lbl.miss { color: #ff8d7e; } .lbl em { display: block; font: 600 11px var(--sf); letter-spacing: .1em; text-transform: uppercase; font-style: normal; }
+
+/* real 3D blocks in HTML: front label, right and top faces; --s is the block size */
+.b3 { --s: 64px; --d: calc(var(--s) * .5); position: relative; display: block; width: var(--s); height: var(--s); transform-style: preserve-3d; transform: rotateX(-22deg) rotateY(-30deg); margin: calc(var(--s) * .12) calc(var(--d) * .6) calc(var(--s) * .1) calc(var(--s) * .08); }
+.b3 > i { position: absolute; display: block; backface-visibility: hidden; }
+.b3 .f { inset: 0; transform: translateZ(calc(var(--d) / 2)); background: var(--ge); } .b3 .f img { width: 100%; height: 100%; display: block; }
+.b3 .r { top: 0; left: calc(var(--s) / 2 - var(--d) / 2); width: var(--d); height: var(--s); transform: rotateY(90deg) translateZ(calc(var(--s) / 2)); background: #565a5e; }
+.b3 .t { left: 0; top: calc(var(--s) / 2 - var(--d) / 2); width: var(--s); height: var(--d); transform: rotateX(90deg) translateZ(calc(var(--s) / 2)); background: #8e9298; }
+.b3.allied .r { background: #4b6a33; } .b3.allied .t { background: #7f9a5a; } .b3.british .r { background: #2d4f86; } .b3.british .t { background: #5b82c0; }
+.b3.flat { --d: calc(var(--s) * .12); } .b3.flat .r { background: #8a8472; } .b3.flat .t { background: #c9c3b0; }
+.arr .b3 { --s: 76px; } .arrtray .why { align-self: center; max-width: 150px; font-size: 11px; } .arr small { margin-top: 6px; }
+.blk { width: auto; height: auto; background: none; box-shadow: none; padding: 0; display: block; }
+.blk .b3 { --s: 56px; filter: drop-shadow(5px 7px 6px #000a); } .blk.pt .b3 .f { outline: 2px solid var(--gold); outline-offset: 1px; } .blk.air .b3 .f { outline: 2px solid #4aa3ff; }
+.ghost.b3 { --s: 76px; position: fixed; z-index: 99; pointer-events: none; transform: translate(-50%, -50%) rotateX(-22deg) rotateY(-30deg); margin: 0; filter: drop-shadow(8px 12px 10px #000a); }
+.blk.over .b3, .slot.over { filter: drop-shadow(0 0 6px var(--gold)); }
+@media (max-width: 860px) { .blk .b3 { --s: 46px; } .arr .b3 { --s: 62px; } }

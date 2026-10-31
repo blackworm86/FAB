@@ -472,10 +472,33 @@ function dispatch() {
   return '';
 }
 const svgUri = (svg: string) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+/** Fly the camera over the legal entry areas of the selected arriving block. */
+function frameArrival() { const all = arrOpts(), o = all.some((x) => !x.sa) ? all.filter((x) => !x.sa) : all; if (selArr && o.length) { const pts = o.map((x) => center(x.area)), cx = pts.reduce((a, p) => a + p.x, 0) / pts.length, cz = pts.reduce((a, p) => a + p.z, 0) / pts.length, r = Math.max(...pts.map((p) => Math.hypot(p.x - cx, p.z - cz))); goal = { t: new THREE.Vector3(cx, 0, cz), dist: Math.min(70, Math.max(24, r * 2.3 + 10)), pitch: 1.15 }; } }
+/** Drag an arriving block from the tray onto an entry area of the map. A click without moving still just selects it. */
+function dragArrival(ev: PointerEvent, el: HTMLElement) {
+  if (ev.button !== 0) return;
+  const id = el.dataset.arr!, x0 = ev.clientX, y0 = ev.clientY; let ghost: HTMLElement | null = null;
+  const mv = (e: PointerEvent) => {
+    if (!ghost && Math.hypot(e.clientX - x0, e.clientY - y0) > 8) { ghost = el.querySelector('.b3')!.cloneNode(true) as HTMLElement; ghost.classList.add('ghost'); document.body.appendChild(ghost); if (selArr !== id) { selArr = id; refresh(); frameArrival(); } }
+    if (ghost) { ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px'; }
+  };
+  const up = (e: PointerEvent) => {
+    window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
+    if (!ghost) return; ghost.remove(); e.preventDefault();
+    if (document.elementFromPoint(e.clientX, e.clientY) !== canvas) return say('Drop it on a highlighted entry area of the map');
+    const area = pick(e).area; if (area == null || !arrOpts().some((o) => o.area === area)) return say('That is not a legal entry area for this block');
+    selArr = null; act(() => { if (g.pendingArrivals.includes(id)) E.placeArrival(g, id, area); else E.placeTaskForce(g, id, area); });
+  };
+  window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
+}
+/** A block drawn as a real 3D object (front label, right and top faces), for the tray and the battle view. */
+const unitFace = (u: E.Unit) => svgUri(u.garrison ? garrisonArt(u) : labelSvg(u));
+const b3 = (face: string, side: E.Side | 'british', chit = false) => `<span class="b3 ${side} ${chit ? 'flat' : ''}" aria-hidden="true"><i class="f"><img alt="" draggable="false" src="${face}"></i><i class="r"></i><i class="t"></i></span>`;
+const sideOfUnit = (u: E.Unit) => (u.side === 'german' ? 'german' : BRIT.has(u.name) ? 'british' : 'allied');
 function tray() {
   const us = g.pendingArrivals.map((id) => g.units.find((x) => x.id === id)!), tf = g.tfNew.map((id) => E.chit(g, id));
   if (!us.length && !tf.length) return '';
-  return `<div class="arrtray" role="group" aria-label="Arriving reinforcements">${us.map((u) => `<button class="arr ${u.id === selArr ? 'sel' : ''}" data-arr="${u.id}" title="${esc(u.name)}"><span class="blk3d ${u.side}"><img alt="" src="${svgUri(u.garrison ? garrisonArt(u) : labelSvg(u))}"></span><small>${esc(u.name)}</small></button>`).join('')}${tf.map((c) => `<button class="arr ${c.id === selArr ? 'sel' : ''}" data-arr="${c.id}" title="Task Force"><span class="chit3d"><img alt="" src="${svgUri(garrisonChit('Task Force', `${c.turn}-*`, false))}"></span><small>Task Force</small></button>`).join('')}</div>`;
+  return `<div class="arrtray" role="group" aria-label="Arriving reinforcements"><span class="why">Drag a block to a highlighted entry area, or click it to see them.</span>${us.map((u) => `<button class="arr ${u.id === selArr ? 'sel' : ''}" data-arr="${u.id}" title="${esc(u.name)}">${b3(unitFace(u), sideOfUnit(u), !!u.garrison)}<small>${esc(u.name)}</small></button>`).join('')}${tf.map((c) => `<button class="arr ${c.id === selArr ? 'sel' : ''}" data-arr="${c.id}" title="Task Force">${b3(svgUri(garrisonChit('Task Force', `${c.turn}-*`, false)), 'allied', true)}<small>Task Force</small></button>`).join('')}</div>`;
 }
 function handCards() {
   const b = g.battle;
@@ -503,7 +526,7 @@ function battleTable() {
     const mini = (c: E.Chit) => `<span class="mini ${c.side}" title="${esc(c.name)}"><img alt="${esc(c.name)}" src="${chitImg(c)}">${setup ? `<button class="x" aria-label="Remove ${esc(c.name)}" data-do="${reg(() => E.unassign(g, b, c.id))}">${ico('close')}</button>` : ''}</span>`;
     const sa = setup && s !== att ? E.saAvailable(g, s).length : 0;
     return `<div class="c-side ${s}"><h4>${nm(s)} <small>${s === att ? 'attacking' : 'defending'}</small></h4>
-      <div class="c-body"><div class="c-row">${us.map((u) => `<div tabindex="0" role="button" class="blk ${s} ${u.id === pt ? 'pt' : ''} ${air && b.air[s]!.mode === 'support' && b.air[s]!.unit === u.id ? 'air' : ''}" data-unit="${u.id}" data-side="${s}" title="${esc(u.name)}${u.id === pt ? ' (point unit)' : ''}"><em>${pips(u)}</em><b>${esc(u.name)}</b></div>`).join('')}</div>
+      <div class="c-body"><div class="c-row">${us.map((u) => `<div tabindex="0" role="button" class="blk ${s} ${u.id === pt ? 'pt' : ''} ${air && b.air[s]!.mode === 'support' && b.air[s]!.unit === u.id ? 'air' : ''}" data-unit="${u.id}" data-side="${s}" title="${esc(u.name)}${u.id === pt ? ' (point unit)' : ''}" aria-label="${esc(u.name)}">${b3(unitFace(u), sideOfUnit(u), !!u.garrison)}</div>`).join('')}</div>
       <div class="c-slots"><div class="slot" data-side="${s}" data-zone="arty"><span class="lab">ARTY ${arty.length}/${lim.arty}</span>${arty.map(mini).join('') || '<small>drop</small>'}</div><div class="slot" data-side="${s}" data-zone="asset"><span class="lab">ASSETS</span>${rest.map(mini).join('') || '<small>drop</small>'}</div></div></div>
       ${sa ? `<div class="row">${btn('Retreat (SA)', () => E.defenderRetreatSA(g, b), '', !!b.assets[s].length || us.some((u) => u.garrison) || !us.length)}</div>` : ''}</div>`;
   };
@@ -550,7 +573,8 @@ function render() {
   ui.querySelectorAll<HTMLElement>('[data-do]').forEach((e) => (e.onclick = () => act(acts[e.dataset.do!])));
   ui.querySelectorAll<HTMLElement>('[data-modal]').forEach((e) => (e.onclick = () => { modal = (e.dataset.modal || null) as typeof modal; render(); }));
   ui.querySelectorAll<HTMLElement>('[data-sel]').forEach((e) => (e.onchange = () => { const f = actv[e.dataset.sel!]; if (f) { f(e instanceof HTMLInputElement && e.type === 'checkbox' ? (e.checked ? 'on' : 'off') : (e as HTMLSelectElement).value); save(); } }));
-  ui.querySelectorAll<HTMLElement>('[data-arr]').forEach((e) => (e.onclick = () => { selArr = selArr === e.dataset.arr ? null : e.dataset.arr!; refresh(); const all = arrOpts(), o = all.some((x) => !x.sa) ? all.filter((x) => !x.sa) : all; if (selArr && o.length) { const pts = o.map((x) => center(x.area)), cx = pts.reduce((a, p) => a + p.x, 0) / pts.length, cz = pts.reduce((a, p) => a + p.z, 0) / pts.length, r = Math.max(...pts.map((p) => Math.hypot(p.x - cx, p.z - cz))); goal = { t: new THREE.Vector3(cx, 0, cz), dist: Math.min(70, Math.max(24, r * 2.3 + 10)), pitch: 1.15 }; } }));
+  ui.querySelectorAll<HTMLElement>('[data-arr]').forEach((e) => (e.onpointerdown = (ev) => dragArrival(ev, e)));
+  ui.querySelectorAll<HTMLElement>('[data-arr]').forEach((e) => (e.onclick = () => { selArr = selArr === e.dataset.arr ? null : e.dataset.arr!; refresh(); frameArrival(); }));
   ui.querySelectorAll<HTMLElement>('[data-tint]').forEach((e) => (e.onclick = cycleTint));
   ui.querySelectorAll<HTMLElement>('[data-undo]').forEach((e) => (e.onclick = () => undo()));
   ui.querySelectorAll<HTMLElement>('[data-u]').forEach((e) => (e.onclick = () => { selUnit = e.dataset.u!; selArea = g.units.find((x) => x.id === selUnit)!.area ?? selArea; previewArea = null; refresh(); }));

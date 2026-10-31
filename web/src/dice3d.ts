@@ -18,8 +18,8 @@ function faceTex(num: number, col: keyof typeof DIE) {
   const key = col + num; let t = texCache.get(key); if (t) return t;
   const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d')!; x.fillStyle = DIE[col][0]; x.fillRect(0, 0, 256, 256);
   const g = x.createRadialGradient(100, 90, 20, 128, 128, 200); g.addColorStop(0, '#ffffff22'); g.addColorStop(1, '#00000033'); x.fillStyle = g; x.fillRect(0, 0, 256, 256);
-  x.fillStyle = DIE[col][1]; x.font = '700 104px "Saira Condensed", Arial Narrow, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(num), 128, 134);
-  if (num === 6 || num === 9) x.fillRect(150, 188, 22, 8);
+  x.fillStyle = DIE[col][1]; x.font = '700 124px "Saira Condensed", Arial Narrow, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(num), 128, 126);
+  if (num === 6 || num === 9) x.fillRect(132, 168, 36, 12);
   t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; texCache.set(key, t); return t;
 }
 function makeDie(col: keyof typeof DIE) {
@@ -27,7 +27,7 @@ function makeDie(col: keyof typeof DIE) {
   for (const f of faces()) {
     const [a, b, c, d] = f.v, cen = new THREE.Vector3().add(a).add(b).add(c).add(d).multiplyScalar(0.25);
     const nrm = new THREE.Vector3().subVectors(c, b).cross(new THREE.Vector3().subVectors(a, b)); if (nrm.dot(cen) < 0) nrm.negate(); nrm.normalize();
-    const up = new THREE.Vector3().subVectors(f.apex, cen).projectOnPlane(nrm).normalize(), right = new THREE.Vector3().crossVectors(up, nrm).normalize().negate();
+    const up = new THREE.Vector3().subVectors(f.apex, cen).projectOnPlane(nrm).normalize(), right = new THREE.Vector3().crossVectors(up, nrm).normalize();
     const pos: number[] = [], uv: number[] = [];
     for (const p of [a, b, c, d]) { const r = new THREE.Vector3().subVectors(p, cen); pos.push(p.x, p.y, p.z); uv.push(0.5 + r.dot(right) * 0.4, 0.5 + r.dot(up) * 0.4); }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
@@ -35,7 +35,7 @@ function makeDie(col: keyof typeof DIE) {
     const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: faceTex(f.num, col), roughness: 0.32, metalness: 0.08, side: THREE.DoubleSide })); m.castShadow = true; group.add(m); normals[f.num] = nrm;
     group.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: col === 'w' ? 0x8d8a80 : 0x000000, transparent: true, opacity: 0.5 })));
   }
-  group.scale.setScalar(0.6);
+  group.scale.setScalar(0.78);
   return { group, normals };
 }
 
@@ -51,7 +51,7 @@ export function throwDice(cv: HTMLCanvasElement, groups: DiceGroup[], done: (pos
   scene.add(new THREE.HemisphereLight(0xffffff, 0x445544, 0.9)); const sun = new THREE.DirectionalLight(0xffffff, 1.2); sun.position.set(-4, 9, 5); sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9 }); scene.add(sun);
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: 0.4 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
-  const all = groups.flatMap((g, gi) => g.dice.map((v) => ({ g, gi, v }))), per = all.length > 5 ? Math.ceil(all.length / 2) : all.length, sp = 1.5, quick = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const all = groups.flatMap((g, gi) => g.dice.map((v) => ({ g, gi, v }))), per = all.length > 5 ? Math.ceil(all.length / 2) : all.length, sp = 1.9, quick = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const items = all.map((d, k) => {
     const die = makeDie(d.g.col), row = k < per ? 0 : 1, col = row ? k - per : k, inRow = row ? all.length - per : per, x = (col - (inRow - 1) / 2) * sp, z = all.length > 5 ? (row ? 1.1 : -1.1) : 0.2;
     const q0 = new THREE.Quaternion().setFromUnitVectors(die.normals[d.v].clone(), new THREE.Vector3(0, 1, 0)), qEnd = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.random() * 6.28).multiply(q0);
