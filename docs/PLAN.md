@@ -37,3 +37,7 @@ Server-authoritative online play with hidden blocks, then a simple AI opponent b
 - Getting Started Card (starting Available Box / cup contents) – demo will start from the scenario tables only.
 - Turn track numbers (chit draws, sudden-death levels) – read from the map; confirm.
 - Bodenplatte: Player Aid D says 1-5 unaffected, 6-9 delayed, 10 eliminated; the play book (17.14) says the reverse. Player Aid D used until told otherwise.
+
+## Rules review (open items)
+Found by comparing the printed rules with the engine; fixed: 6.43 loss spreading across volleys, 8.24 no disorder for a retreat before combat, 5.21 reserve marker dropped when the area becomes contested, 5.2 a unit that moved cannot be marked, 5.23 field works belong to their builder and go when no friendly unit is left, 9.5 defended roadblocks of both sides removed, 15.3 turn-4 arrivals may break stacking at entry Z.
+Still open: 6.41 disordered attackers must not take losses and the first loss may fall on a chosen asset; 4.1c a delayed unit should use any appropriate entry area (14.2); 14.52 a surviving engineer may bridge in a dead army's zone; 16.11 von der Heydte costs the first mover one extra MP; 14.43 British operating limits (needs the area list northwest of the Meuse).

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defenderRetreatSA, arrivalOptions, placeArrival, newGame, endPhase, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, moveOptions, boxOf, roadblock, roadblockAreas, playInterdiction, staffBoundary, staffPool, staffIntel,
+import { canReserve, setReserve, blocks, updateControlForTest, allocateForTest, defenderRetreatSA, arrivalOptions, placeArrival, newGame, endPhase, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, moveOptions, boxOf, roadblock, roadblockAreas, playInterdiction, staffBoundary, staffPool, staffIntel,
   playAirSupply, airSupplyAreas, rerouteOptions, reroute, stratOptions, move, resolveBlow, connection, neighbors, unitsIn, inSupply, assetLimits, areas, type Game } from '../src';
 
 function toAdmin(seed: number, turn = 2, campaign = false): Game {
@@ -99,7 +99,7 @@ describe('retreat before combat (Special Action)', () => {
     expect(sa.box).toBe('used'); expect(b.stage).toBe('retreat');
     const opts = retreatOptions(g, b), first = g.units.find((x) => x.id === b.retreat!.queue[0])!;
     expect(opts.length).toBeGreaterThan(1);
-    chooseRetreat(g, b, opts[1]); expect(first.area).toBe(opts[1]); expect(first.disorder).toBe(1);
+    chooseRetreat(g, b, opts[1]); expect(first.area).toBe(opts[1]); expect(first.disorder).toBe(0);                     // 8.24: no disorder
     while (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]);
     expect(b.stage).toBe('done'); expect(b.exploit).toBe(true);
   });
@@ -136,5 +136,27 @@ describe('river crossings (5.35d, 5.35e, 7.31)', () => {
       if (found) break;
     }
     expect(found).toBe(true);
+  });
+});
+
+describe('rule fixes from the conformance review', () => {
+  it('5.21: a reserve marker is removed when the area becomes contested; 5.2: a unit that moved cannot be marked', () => {
+    const g = newGame(5), u = g.units.find((x) => x.side === 'allied' && x.area != null && !x.garrison && canReserve(g, x))!;
+    setReserve(g, u.id, true); expect(u.reserve).not.toBeNull();
+    const foe = g.units.find((x) => x.side === 'german' && x.area != null && !x.garrison)!; foe.area = u.area; updateControlForTest(g, u.area!);
+    expect(u.reserve).toBeNull();
+    const w = g.units.find((x) => x.side === 'allied' && x.area != null && !x.garrison && x !== u)!; w.moved = true; expect(canReserve(g, w)).toBe(false);
+  });
+  it('6.43: losses spread over all units across volleys of one battle', () => {
+    const g = newGame(5); const a = mustFight(g).find((x) => blocks(g, x, 'german').length === 2 && blocks(g, x, 'allied').length >= 1)!;
+    const b = startBattle(g, a); b.attacker = 'german'; const us = blocks(g, a, 'german'); us.forEach((u) => { u.str = u.max = 3; u.q = ['green', 'green', 'green']; });
+    b.attPoint = us[0].id; allocateForTest(g, b, 'german', 1); allocateForTest(g, b, 'german', 1);
+    expect(us.map((u) => u.str).sort()).toEqual([2, 2]);
+  });
+  it('9.5: a defended roadblock of the non-phasing side is removed too at the Supply Phase', () => {
+    const g = toAdmin(4, 2), eng = g.chits.find((c) => c.kind === 'engineer' && c.side === 'allied')!; eng.box = 'available';
+    g.phasing = 'allied'; const a = roadblockAreas(g, 'allied')[0]; roadblock(g, eng.id, a, true);
+    g.phasing = 'german'; g.phase = 'btCombat'; endPhase(g);
+    expect(g.units.some((u) => u.id.startsWith('DR-') && u.area != null)).toBe(false); expect(eng.box).toBe('used');
   });
 });

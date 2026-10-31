@@ -28,12 +28,12 @@ export interface Battle {
   stage: 'setup' | 'attArty' | 'defArty' | 'defFire' | 'offFire' | 'attChoice' | 'defChoice' | 'retreat' | 'done';
   retreat?: { side: Side; queue: string[]; moved: boolean; after: 'ground' | 'arty' | 'sa'; h: number; excess: number };
   queue: ('attArty' | 'defArty' | 'defFire' | 'offFire')[]; assets: Record<Side, string[]>; air: Partial<Record<Side, { id: string; mode: 'arty' | 'support'; unit?: string }>>;
-  pending: number; pendingKind?: 'arty' | 'ground'; engFw: boolean; rolls: Roll[]; result?: string; exploit: boolean; unitHit: Record<Side, boolean>; mark: number;
+  pending: number; pendingKind?: 'arty' | 'ground'; engFw: boolean; rolls: Roll[]; result?: string; exploit: boolean; unitHit: Record<Side, boolean>; mark: number; hit?: Record<Side, string[]>;
 }
 export interface Opts { scenario: 'tournament' | 'campaign'; fuel: boolean; airborne?: boolean; advArty?: boolean }
 export interface Game {
   turn: number; lastTurn: number; phasing: Side; phase: Phase; units: Unit[]; chits: Chit[]; control: Record<number, Side>;
-  fieldWorks: number[]; riverAssault: number[]; blown: string[]; contestedAtMoveStart: number[]; fought: number[];
+  fieldWorks: number[]; fwOwner: Record<number, Side>; riverAssault: number[]; blown: string[]; contestedAtMoveStart: number[]; fought: number[];
   markers: { german: Record<string, number>; allied: Record<string, number> }; stratMoves: number; riverCross: string[]; blowTried: number[]; entered: Record<number, { id: string; river: boolean; blown: boolean }[]>;
   pendingBlow: { unit: string; path: number[]; spent?: number } | null; greif: Record<string, string>; greifTried: string[]; fwBuilt: string[]; tfNew: string[]; elimLarge: string[]; captured: number[]; fuelAdded: boolean; opts: Opts;
   roadblocks: Record<number, Side>; interdicted: Record<number, string>; pooled: number | null; airSupply: { area: number; side: Side; id: string; stamp: number } | null; revealed: string | null; arrived: string[]; pendingArrivals: string[];
@@ -70,9 +70,10 @@ export function newGame(seed = Date.now() % 1e9, opts: Partial<Opts> = {}): Game
       code: r.start_area ? String(r.start_area) : r.arrival_turn ? `${r.arrival_turn}-${r.entry!.length > 1 ? r.entry![0] + r.entry![r.entry!.length - 1] : r.entry![0]}` : 'Res' });
   }
   for (const a of sc.garrisons) units.push({ id: `G${a}`, name: `Garrison ${areas.get(a)!.name}`, side: 'allied', cls: 'infantry', q: ['green'], max: 1, str: 1, area: a, garrison: true, disorder: 0, unsupplied: false, moved: true, reserve: null, exploit: false });
-  const g: Game = { turn: 1, lastTurn: last, phasing: 'german', phase: 'combat', units, chits: buildChits(last), control: {}, fieldWorks: [...sc.fieldWorks], riverAssault: [...sc.riverAssault], blown: [...sc.blownBridges],
+  const g: Game = { turn: 1, lastTurn: last, phasing: 'german', phase: 'combat', units, chits: buildChits(last), control: {}, fieldWorks: [...sc.fieldWorks], fwOwner: {}, riverAssault: [...sc.riverAssault], blown: [...sc.blownBridges],
     contestedAtMoveStart: [], fought: [], markers: { german: { z5: 2, z6: 2, z7: 1 }, allied: { z56: 3, z7: 2 } }, stratMoves: 0, riverCross: [], blowTried: [], entered: {}, pendingBlow: null, greif: {}, greifTried: [], fwBuilt: [], tfNew: [],
     elimLarge: [], captured: [], fuelAdded: false, opts: o, roadblocks: {}, interdicted: {}, pooled: null, airSupply: null, revealed: null, arrived: [], pendingArrivals: [], battle: null, seed, rolls: 0, log: [] };
+  for (const fa of g.fieldWorks) g.fwOwner[fa] = units.some((u) => u.side === 'allied' && u.area === fa) ? 'allied' : 'german';
   const peiper = units.find((u) => u.name === 'Peiper')!; peiper.reserve = 'z6'; g.markers.german.z6--;
   const ger = new Set(units.filter((u) => u.side === 'german' && u.area).map((u) => u.area!));
   const todo = units.filter((u) => u.side === 'allied' && u.area).map((u) => u.area!), seen = new Set(todo);
@@ -85,6 +86,7 @@ export function newGame(seed = Date.now() % 1e9, opts: Partial<Opts> = {}): Game
 
 /* ================= control, supply, VP ================= */
 function updateControl(g: Game, a: number) {
+  if (contested(g, a)) for (const u of unitsIn(g, a)) if (u.reserve) { g.markers[u.side][u.reserve]++; u.reserve = null; }       // 5.21 the marker goes when the area becomes contested
   const ge = blocks(g, a, 'german').length, al = blocks(g, a, 'allied').length, was = g.control[a];
   if (ge && !al && !unitsIn(g, a, 'allied').length) g.control[a] = 'german';
   if (al && !ge && !unitsIn(g, a, 'german').length) g.control[a] = 'allied';
@@ -163,7 +165,7 @@ export function placeTaskForce(g: Game, id: string, area: number) {
 /* ================= reserves ================= */
 const markerKey = (u: Unit) => (u.side === 'german' ? `z${zoneOf(u.area!)}` : zoneOf(u.area!) === 7 ? 'z7' : 'z56');
 export function canReserve(g: Game, u: Unit) {
-  return u.area != null && !u.garrison && !u.reserve && !u.unsupplied && u.disorder === 0 && !contested(g, u.area) && (g.markers[u.side][markerKey(u)] ?? 0) > 0;
+  return u.area != null && !u.garrison && !u.reserve && !u.moved && !u.unsupplied && u.disorder === 0 && !contested(g, u.area) && (g.markers[u.side][markerKey(u)] ?? 0) > 0;
 }
 export function setReserve(g: Game, id: string, on: boolean) {
   const u = g.units.find((x) => x.id === id)!;
@@ -313,7 +315,7 @@ export function fieldWorksFor(g: Game, id: string, area: number) {
   needAdmin(g); const c = chit(g, id);
   const same = blocks(g, area, c.side).some((u) => u.ech === c.ech || c.ech === 'us_sr' || u.ech === 'us_sr');
   if (c.kind !== 'engineer' || c.box !== 'available' || !supplied(g, c.side, area) || !same || g.fieldWorks.includes(area) || !echOk(c, area)) throw new Error('needs a supplied, uncontested area holding a unit of the engineer\'s echelon');
-  g.fieldWorks.push(area); c.box = 'used'; say(g, `${c.name} builds field works in ${areas.get(area)!.name}`);
+  g.fieldWorks.push(area); g.fwOwner[area] = c.side; c.box = 'used'; say(g, `${c.name} builds field works in ${areas.get(area)!.name}`);
 }
 function addStep(u: Unit, elite: boolean) {
   const nq = u.q[u.str]; if (u.str >= u.max || u.unsupplied || (!elite && nq === 'elite')) throw new Error('that unit cannot receive a step');
@@ -418,7 +420,7 @@ export function buildFieldWorks(g: Game, id: string) {
   const ok = (g.phase === 'movement' && u.side === g.phasing) || (g.phase === 'reaction' && u.side !== g.phasing && !!u.reserve) || (g.phase === 'btMove' && u.side === g.phasing && (!!u.reserve || u.exploit));
   if (!ok || u.moved || u.area == null || u.garrison || u.unsupplied || u.disorder || contested(g, u.area) || g.fieldWorks.includes(u.area)) throw new Error('needs a supplied unit in good order that has not moved, in an uncontested area without field works');
   if (u.interdict && !interdictCheck(g, u)) throw new Error('Greif interdict: morale check failed, it cannot build field works');
-  g.fieldWorks.push(u.area); u.moved = true; dropReserve(g, u); u.exploit = false; say(g, `${u.name} builds field works in ${areas.get(u.area)!.name}`);
+  g.fieldWorks.push(u.area); g.fwOwner[u.area] = u.side; u.moved = true; dropReserve(g, u); u.exploit = false; say(g, `${u.name} builds field works in ${areas.get(u.area)!.name}`);
 }
 
 /* ================= combat ================= */
@@ -440,7 +442,7 @@ export function startBattle(g: Game, a: number, viaSA = false): Battle {
   if (bt && !newlyContested(g).includes(a)) { if (!viaSA) throw new Error('re-engaging an already contested area costs a Special Action'); spendSA(g, g.phasing, undefined, 'breakthrough combat'); }
   const pick = (us: Unit[]) => [...us].sort((x, y) => +!!x.garrison - +!!y.garrison || y.str - x.str)[0].id;
   const b: Battle = { area: a, attacker: g.phasing, attPoint: pick(att), defPoint: pick(def), bt, riverAssault: g.riverAssault.includes(a), stage: 'setup', queue: [], assets: { german: [], allied: [] }, air: {}, pending: 0,
-    engFw: false, rolls: [], exploit: false, unitHit: { german: false, allied: false }, mark: g.log.length };
+    engFw: false, rolls: [], exploit: false, unitHit: { german: false, allied: false }, mark: g.log.length, hit: { german: [], allied: [] } };
   g.battle = b; return b;
 }
 /* --- assets (6.22, 6.23, 6.31, 16.1, 16.12, 16.23, 15.2) --- */
@@ -491,7 +493,7 @@ export function unassign(g: Game, b: Battle, id: string) {
 export interface Fire { key: string; who: string; shooter: Shooter; dice: number; sn: number; parts: [string, number][]; isAsset: boolean }
 export function fireList(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground'): Fire[] {
   const att = side === b.attacker, tp = point(g, b, other(side)); if (!tp) return [];
-  const out: Fire[] = [], tgt = { pointCls: tp.cls, pointQuality: quality(tp), fieldWorks: att && g.fieldWorks.includes(b.area), riverAssaultMarker: !att && b.riverAssault };
+  const out: Fire[] = [], tgt = { pointCls: tp.cls, pointQuality: quality(tp), fieldWorks: att && g.fieldWorks.includes(b.area) && (g.fwOwner[b.area] ?? other(side)) === other(side), riverAssaultMarker: !att && b.riverAssault };
   const set = { attacker: att, tdn: areas.get(b.area)!.tdn, riverAssault: att && b.riverAssault, advArty: g.opts.advArty };
   const add = (key: string, who: string, shooter: Shooter, isAsset: boolean) => { const r = successNumber(shooter, tgt, set); out.push({ key, who, shooter, dice: shooter.dice, sn: r.sn, parts: r.parts, isAsset }); };
   if (kind === 'arty') {
@@ -522,7 +524,7 @@ function stepLoss(g: Game, b: Battle, side: Side, key: string) {
 }
 /** 6.43: assets first, the first unit loss falls on the point unit, everyone takes one loss before anyone takes a second. */
 function allocate(g: Game, b: Battle, side: Side, n: number) {
-  const hit = new Set<string>();
+  b.hit ??= { german: [], allied: [] }; const hit = new Set<string>(b.hit[side]);                          // 6.43 everyone takes a loss before anyone takes a second, across all the volleys of one battle
   for (let i = 0; i < n; i++) {
     fixPoint(g, b);
     let ps = [...b.assets[side].filter((id) => isBattleAsset(chit(g, id))).map((id) => ({ key: id, asset: true, str: 1 })), ...unitsIn(g, b.area, side).map((u) => ({ key: u.id, asset: !!u.garrison, str: u.str }))];
@@ -531,7 +533,7 @@ function allocate(g: Game, b: Battle, side: Side, n: number) {
     const pid = side === b.attacker ? b.attPoint : b.defPoint;
     if (!b.unitHit[side] && cand.some((p) => p.key === pid)) cand = cand.filter((p) => p.asset || p.key === pid);
     cand.sort((x, y) => +!x.asset - +!y.asset || +(x.key !== pid) - +(y.key !== pid) || x.str - y.str);
-    stepLoss(g, b, side, cand[0].key); hit.add(cand[0].key);
+    stepLoss(g, b, side, cand[0].key); hit.add(cand[0].key); b.hit[side] = [...hit];
   }
   return 0;
 }
@@ -625,7 +627,7 @@ function advanceRetreat(g: Game, b: Battle) {
 }
 function moveRetreat(g: Game, b: Battle, u: Unit, to: number) {
   if (u.area == null) return;
-  const from = u.area; u.area = to; u.disorder = 1; b.retreat!.moved = true; updateControl(g, from); updateControl(g, to); say(g, `${u.name} retreats to ${areas.get(to)!.name}`);
+  const from = u.area; u.area = to; if (b.retreat!.after !== 'sa') u.disorder = 1; b.retreat!.moved = true;                  // 8.24 a retreat before combat does not disorder updateControl(g, from); updateControl(g, to); say(g, `${u.name} retreats to ${areas.get(to)!.name}`);
 }
 export function chooseRetreat(g: Game, b: Battle, to: number) {
   if (b.stage !== 'retreat' || !b.retreat) throw new Error('no retreat pending');
@@ -700,7 +702,7 @@ function supplyPhase(g: Game) {
   for (const h of g.units.filter((x) => x.heydte && x.area != null && g.turn >= 4 && x.side === g.phasing)) if (!inSupply(g, 'german', h.area!)) { const r = roll(g); if (!succeeds(r, moraleSn('veteran', false, true))) { say(g, `von der Heydte out of supply, morale failed (${r}): eliminated`); eliminate(g, h); } }
   g.riverAssault = []; g.fieldWorks = g.fieldWorks.filter((a) => !contested(g, a));
   g.roadblocks = {}; g.pooled = null; for (const [, id] of Object.entries(g.interdicted)) chit(g, id).box = 'eliminated'; g.interdicted = {};   // 4.34, 14.62b, 17.2
-  for (const u of g.units.filter((x) => x.id.startsWith('DR-') && x.side === g.phasing && x.area != null)) { chit(g, u.chitId!).box = 'used'; u.area = null; say(g, `${u.name} survives and returns to the Used Box`); }   // 4.35
+  for (const u of g.units.filter((x) => x.id.startsWith('DR-') && x.area != null)) { chit(g, u.chitId!).box = 'used'; u.area = null; say(g, `${u.name} survives and returns to the Used Box`); }   // 4.35
   g.units.forEach((x) => { if (x.side === g.phasing) x.bcross = false; });
   g.units.forEach((u) => { u.exploit = false; u.adjOnly = false; if (u.side === other(g.phasing)) dropReserve(g, u); });
 }
@@ -710,6 +712,8 @@ export function endPhase(g: Game) {
   if (g.pendingBlow) throw new Error('resolve the bridge-blowing attempt first');
   if (mustFight(g).length) throw new Error('newly contested areas must be fought first');
   const ph = g.phase;
+  g.fieldWorks = g.fieldWorks.filter((a) => { const o = g.fwOwner[a]; return o ? unitsIn(g, a, o).length > 0 : unitsIn(g, a).length > 0; });   // 5.23 gone when no friendly unit is left in the area
+  for (const a of Object.keys(g.fwOwner).map(Number)) if (!g.fieldWorks.includes(a)) delete g.fwOwner[a];
   if (ph === 'reinforcement') for (const id of [...g.pendingArrivals]) autoArrive(g, id);
   if (ph === 'admin') g.revealed = null;                                                      // 8.32 revealed only until the end of the Admin Phase
   if (ph === 'movement' || ph === 'btMove') placeRiverAssaults(g);
@@ -806,7 +810,8 @@ export function reroute(g: Game, unitId: string, area: number) {
 
 /* ================= arrivals (4.1c) ================= */
 const listedEntries = (u: Unit) => (u.entry ?? []).map((l) => ENTRY[l]?.area).filter(Boolean) as number[];
-const entryOpen = (g: Game, u: Unit, a: number) => (g.control[a] === u.side || !unitsIn(g, a).length) && blocks(g, a, u.side).length < 2 && !unitsIn(g, a, other(u.side)).length;
+const stackFree = (g: Game, u: Unit, a: number) => g.turn === 4 && u.side === 'german' && a === ENTRY.Z.area;                // 15.3
+const entryOpen = (g: Game, u: Unit, a: number) => (g.control[a] === u.side || !unitsIn(g, a).length) && (blocks(g, a, u.side).length < 2 || stackFree(g, u, a)) && !unitsIn(g, a, other(u.side)).length;
 /** Entry areas a block that has not arrived yet may be placed in. Areas outside its listed ones cost a Special Action (8.27). */
 export function arrivalOptions(g: Game, id: string): { area: number; sa: boolean }[] {
   const u = g.units.find((x) => x.id === id); if (!u || !g.pendingArrivals.includes(id)) return [];
@@ -820,8 +825,12 @@ export function placeArrival(g: Game, id: string, area: number) {
   u.area = area; g.control[area] = u.side; g.arrived.push(id); g.pendingArrivals = g.pendingArrivals.filter((x) => x !== id); say(g, `${u.name} arrives in ${areas.get(area)!.name}`);
 }
 function autoArrive(g: Game, id: string) {
-  const u = g.units.find((x) => x.id === id)!, opts = listedEntries(u), to = opts.find((a) => g.control[a] === u.side && blocks(g, a, u.side).length < 2) ?? opts.find((a) => !unitsIn(g, a).length);
+  const u = g.units.find((x) => x.id === id)!, opts = listedEntries(u), to = opts.find((a) => g.control[a] === u.side && (blocks(g, a, u.side).length < 2 || stackFree(g, u, a))) ?? opts.find((a) => !unitsIn(g, a).length);
   g.pendingArrivals = g.pendingArrivals.filter((x) => x !== id);
   if (to == null) { u.arrival = g.turn + 1; say(g, `${u.name} delayed one turn (entry blocked)`); return; }
   u.area = to; g.control[to] = u.side; g.arrived.push(id); say(g, `${u.name} arrives in ${areas.get(to)!.name}`);
 }
+
+/** Test hooks for rules that have no public entry point. */
+export const updateControlForTest = updateControl;
+export const allocateForTest = allocate;
