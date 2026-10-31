@@ -435,6 +435,7 @@ function placeBadges() {
 
 /* ---------- battle state shared with the view ---------- */
 interface RollView { title: string; groups: (DiceGroup & { parts: [string, number][]; hits: number })[]; pos: { x: number; y: number; group: number; v: number }[] | null }
+let menuTab = 'Game';
 let rollView: RollView | null = null, modal: 'menu' | 'boxes' | 'lobby' | 'rules' | null = null, handSide: E.Side | null = null;
 const STAGE_NAME: Record<string, string> = { attArty: 'artillery', defArty: 'artillery', defFire: 'Defensive fire', offFire: 'Offensive fire' };
 function rollStage(b: E.Battle) {
@@ -708,21 +709,28 @@ async function createGame() {
   if (id.startsWith('!')) { lobbyMsg = id.slice(1); return render(); }
   location.search = `?table=${id}`;
 }
+function joinByCode(v: string) {
+  const m = v.trim().match(/[?&]table=([\w-]+)/)?.[1] ?? v.trim(); if (!/^[\w-]{3,40}$/.test(m)) { lobbyMsg = 'Paste the invite link or the game code.'; return render(); }
+  location.search = `?table=${m}`;
+}
 function lobbyHtml() {
-  const a = online.account, signed = !!a && !a.guest;
+  const a = online.account, signed = !!a && !a.guest, info = gameInfo(form.game);
   const games = GAMES.map((x) => `<button class="gamecard ${x.id === form.game ? 'sel' : ''}" ${x.ready ? '' : 'disabled'} data-do="${reg(() => { if (x.ready) form.game = x.id; })}"><b>${esc(x.name)}</b><small>${esc(x.vol)}${x.ready ? '' : ' · coming soon'}</small><span>${esc(x.blurb)}</span></button>`).join('');
-  const mine = matches.map((m) => `<div class="matchrow"><div><b>${esc(m.title)}</b><small>${esc(gameInfo(m.game)?.name ?? m.game)} · German ${esc(m.germanName || 'free')} · Allied ${esc(m.alliedName || 'free')}</small></div><div class="row">${btn('Open', () => { location.search = `?table=${m.id}`; }, 'primary')}${btn('Invite', () => { void share(m.id, m.title); })}</div></div>`).join('') || '<p class="hint">No games yet. Create one below, then send the invite link to your opponent.</p>';
-  return `<div class="modal lobby"><div class="sheet"><h3>Fast Action Battles ${HAS_TABLE ? `<button class="ico" data-modal="" aria-label="Close">${ico('close')}</button>` : ''}</h3>
-    <p class="hint">Choose a game, create a table and send the invite link. All titles share the same series rules.</p>
-    ${accountHtml()}
-    <h4>Games</h4><div class="gamegrid">${games}</div>
-    ${signed ? `<h4>New game</h4><div class="authform"><input placeholder="Game name (optional)" value="${esc(form.title)}" data-sel="${regv((x) => { form.title = x; })}"></div>
-      <div class="row"><select data-sel="${regv((x) => { form.scenario = x as E.Opts['scenario']; })}"><option value="tournament" ${form.scenario === 'tournament' ? 'selected' : ''}>Tournament</option><option value="campaign" ${form.scenario === 'campaign' ? 'selected' : ''}>Campaign</option></select>
+  const mine = matches.map((m) => `<div class="matchrow"><div><b>${esc(m.title)}</b><small>${esc(gameInfo(m.game)?.name ?? m.game)} · German ${esc(m.germanName || 'open seat')} · Allied ${esc(m.alliedName || 'open seat')}</small></div><div class="row">${btn('Open', () => { location.search = `?table=${m.id}`; }, 'primary')}${btn('Invite', () => { void share(m.id, m.title); })}</div></div>`).join('') || '<p class="hint">You have no games yet. Create one below.</p>';
+  return `<div class="homepage"><div class="homein">
+    <header><h1>Fast Action Battles</h1><p>Series-rules tabletop wargames, played online.</p>${HAS_TABLE ? btn('← Back to the game', () => { modal = null; }, 'ghost') : ''}</header>
+    <section class="card"><h2>Account</h2>${accountHtml()}${signed ? '' : '<p class="hint">Guests can watch a game from its link. Sign in to create or play.</p>'}</section>
+    ${signed ? `<section class="card"><h2>My games</h2>${mine}</section>
+    <section class="card"><h2>New game</h2><h4>1 · Choose a game</h4><div class="gamegrid">${games}</div>
+      <h4>2 · Set it up</h4><div class="authform"><input placeholder="Name (optional)" value="${esc(form.title)}" data-sel="${regv((x) => { form.title = x; })}"></div>
+      <div class="row"><select data-sel="${regv((x) => { form.scenario = x as E.Opts['scenario']; })}"><option value="tournament" ${form.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${form.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
       <select data-sel="${regv((x) => { form.side = x as E.Side | ''; })}"><option value="german" ${form.side === 'german' ? 'selected' : ''}>I play German</option><option value="allied" ${form.side === 'allied' ? 'selected' : ''}>I play Allied</option><option value="" ${form.side === '' ? 'selected' : ''}>Leave both seats open</option></select>
-      <label><input type="checkbox" ${form.fuel ? 'checked' : ''} data-sel="${regv((x) => { form.fuel = x === 'on'; })}"> Fuel rule</label>${btn('Create game', () => { void createGame(); }, 'primary', !gameInfo(form.game)?.ready)}</div>
-      <h4>My games</h4>${mine}` : '<p class="hint">Sign in to create or join a game. Without an account you can still watch a game from its invite link.</p>'}
+      <label><input type="checkbox" ${form.fuel ? 'checked' : ''} data-sel="${regv((x) => { form.fuel = x === 'on'; })}"> German fuel rule</label></div>
+      <h4>3 · Create, then invite</h4><div class="row">${btn('Create game', () => { void createGame(); }, 'primary', !info?.ready)}</div></section>
+    <section class="card"><h2>Join a game</h2><div class="row authform"><input id="join" class="grow" placeholder="Paste an invite link or code">${btn('Join', () => { joinByCode(($('#join') as HTMLInputElement).value); })}</div></section>` : ''}
     ${lobbyMsg ? `<p class="hint"><b>${esc(lobbyMsg)}</b></p>` : ''}${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}
-    <h4>Other ways to play</h4><div class="row">${btn('Hot-seat on this device', () => { location.search = '?local=1'; })}${HAS_TABLE ? '' : btn('Open the shared test table', () => { location.search = '?table=main'; })}</div></div></div>`;
+    <details class="card"><summary>Other ways to play</summary><div class="row">${btn('Hot-seat on this device', () => { location.search = '?local=1'; })}${HAS_TABLE ? '' : btn('Shared test table', () => { location.search = '?table=main'; })}</div></details>
+  </div></div>`;
 }
 /** Sign-in panel (Firebase only): Google, or email and password; guests can watch but not play. */
 function accountHtml() {
@@ -749,11 +757,23 @@ function modalHtml() {
   if (modal === 'boxes') return `<div class="modal"><div class="sheet"><h3>Chit boxes <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>${(['allied', 'german'] as E.Side[]).map((s) => {
     const l = (bx: E.Chit['box']) => E.boxOf(g, s, bx).map((c) => `<span class="mini ${s}">${esc(chitLabel(c))}</span>`).join('') || '<small>empty</small>';
     return `<h4 class="${s}">${nm(s)} · cup ${E.boxOf(g, s, 'cup').length}</h4><div class="chips"><b>Available</b> ${l('available')}</div><div class="chips"><b>Used</b> ${l('used')}</div><div class="chips"><b>Eliminated</b> ${l('eliminated')}</div>`; }).join('')}</div></div>`;
-  if (modal === 'menu') return `<div class="modal"><div class="sheet"><h3>Menu <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3><h4>New game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as 'tournament' | 'campaign'; })}"><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
-    <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Start', () => { g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'primary')}</div>
-    ${online.mode === 'remote' ? `${accountHtml()}<div class="row">${btn('Lobby · my games', () => { modal = 'lobby'; })}${TABLE !== 'main' ? btn('Invite a player', () => { void share(TABLE, TABLE); }) : ''}</div><h4>Online table <small>${esc(TABLE_NAME)}</small></h4><p class="hint">Seats: German ${online.seats.german ? (online.seats.german === online.uid ? 'you' : esc(online.seats.germanName || 'taken')) : 'free'} · Allied ${online.seats.allied ? (online.seats.allied === online.uid ? 'you' : esc(online.seats.alliedName || 'taken')) : 'free'}. Everyone who opens this table sees the same game; the seat decides who may act.${online.hasAccounts && online.account?.guest ? ' Sign in above to take a seat.' : ''}${online.canWrite ? '' : ' You can only watch.'}${online.error ? ' <b class="bad">' + esc(online.error) + '</b>' : ''}</p><div class="row">${btn('Sit as German', () => { void sit('german'); }, '', !online.canWrite || !!online.account?.guest)}${btn('Sit as Allied', () => { void sit('allied'); }, '', !online.canWrite || !!online.account?.guest)}${btn('Leave my seat', () => { void sit(null); })}</div>${online.admin ? `<h4>Admin</h4><div class="row">${btn('Update rules', () => { modal = 'rules'; })}${btn('Free German seat', () => { void auth.freeSeat('german'); })}${btn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div><p class="hint">To start a new game for the table, use New game above; as admin it replaces the shared game.</p>` : ''}` : online.mode === 'local' ? '<h4>Developer table</h4><p class="hint">No online store is configured. The Seat button in the top bar switches between German, Allied, both and watching, and the turn rules are enforced for the seat you hold.</p>' : '<h4>Online play</h4><p class="hint">Not connected. This is a hot-seat game on this machine.</p>'}
-    <h4>Map art</h4><div class="row"><select data-sel="${regv((x) => setArt(x as 'vector' | 'scan'))}"><option value="vector" ${art === 'vector' ? 'selected' : ''}>Vector layers (traced)</option><option value="scan" ${art === 'scan' ? 'selected' : ''}>Original scan</option></select></div>
-    <h4>Log</h4><div class="log">${[...g.log].reverse().slice(0, 120).map((l) => `<div>${esc(l)}</div>`).join('')}</div></div></div>`;
+  if (modal === 'menu') {
+    const seat = (sd: E.Side) => online.seats[sd] ? (online.seats[sd] === online.uid ? 'you' : esc((sd === 'german' ? online.seats.germanName : online.seats.alliedName) || 'taken')) : 'free';
+    const tabs = ['Game', 'Log', 'Settings', ...(online.admin ? ['Admin'] : [])];
+    if (!tabs.includes(menuTab)) menuTab = 'Game';
+    const body = menuTab === 'Log' ? `<div class="log">${[...g.log].reverse().slice(0, 120).map((l) => `<div>${esc(l)}</div>`).join('')}</div>`
+      : menuTab === 'Settings' ? `<h4>Map art</h4><div class="row"><select data-sel="${regv((x) => setArt(x as 'vector' | 'scan'))}"><option value="vector" ${art === 'vector' ? 'selected' : ''}>Vector layers (traced)</option><option value="scan" ${art === 'scan' ? 'selected' : ''}>Original scan</option></select></div>
+        ${online.active && !online.admin && !online.both() ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as 'tournament' | 'campaign'; })}"><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
+        <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Restart', () => { if (!confirm('Restart and lose the current game?')) return; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'danger')}</div>`}`
+      : menuTab === 'Admin' ? `<div class="row">${btn('Update rules', () => { modal = 'rules'; })}${btn('Free German seat', () => { void auth.freeSeat('german'); })}${btn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div>`
+      : online.mode === 'remote' ? `<h4>Players</h4><p class="hint">German: <b>${seat('german')}</b> · Allied: <b>${seat('allied')}</b>${online.canWrite ? '' : ' · you can only watch'}</p>${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}
+          <div class="row">${btn('Sit as German', () => { void sit('german'); }, '', !online.canWrite || !!online.account?.guest)}${btn('Sit as Allied', () => { void sit('allied'); }, '', !online.canWrite || !!online.account?.guest)}${btn('Leave my seat', () => { void sit(null); })}</div>
+          ${TABLE !== 'main' ? `<h4>Invite</h4><div class="row">${btn('Share invite link', () => { void share(TABLE, TABLE); }, 'primary')}</div>` : ''}${online.account?.guest ? '<p class="hint">Sign in from the lobby to take a seat.</p>' : ''}`
+      : online.mode === 'local' ? '<p class="hint">Developer table. The Seat button in the top bar switches between German, Allied, both and watching; turn rules are enforced for the seat you hold.</p>' : '<p class="hint">Hot-seat game on this device.</p>';
+    return `<div class="modal"><div class="sheet"><h3>Game <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
+      <div class="tabs">${tabs.map((t) => `<button class="${t === menuTab ? 'on' : ''}" data-do="${reg(() => { menuTab = t; })}">${t}</button>`).join('')}</div>${body}
+      <div class="row sheetfoot">${online.mode === 'remote' ? btn('← Lobby', () => { modal = 'lobby'; }) : ''}${btn('Chit boxes', () => { modal = 'boxes'; })}</div></div></div>`;
+  }
   return '';
 }
 function render() {

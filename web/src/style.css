@@ -168,3 +168,11 @@ button.ico.dev { border-color: #4aa3ff; color: #9fd0ff; }
 .gamecard.sel { outline: 2px solid var(--gold); } .gamecard:disabled { opacity: .45; }
 .matchrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); } .matchrow small { display: block; opacity: .7; }
 .c-title .cancel { margin-left: 12px; font-size: 13px; }
+.homepage { position: fixed; inset: 0; z-index: 60; overflow: auto; background: #0b0d08; color: inherit; pointer-events: auto; }
+.homein { width: min(720px, 100%); margin: 0 auto; padding: 20px 16px 48px; display: grid; gap: 14px; }
+.homein header h1 { margin: 0; font: 700 34px var(--sfd); letter-spacing: .1em; text-transform: uppercase; color: var(--gold); } .homein header p { margin: 2px 0 8px; opacity: .75; }
+.homein .card { background: #11140c; border: 1px solid var(--line); padding: 12px 14px; } .homein .card h2 { margin: 0 0 6px; font: 700 20px var(--sfd); letter-spacing: .1em; text-transform: uppercase; }
+.homein .card h4 { margin: 12px 0 4px; font-size: 14px; letter-spacing: .08em; opacity: .85; } .homein summary { cursor: pointer; padding: 6px 0; }
+.homein .grow { flex: 1; min-width: 0; } .homein input, .homein select, .homein button { min-height: 44px; }
+.tabs { display: flex; gap: 4px; margin: 4px 0 10px; border-bottom: 1px solid var(--line); } .tabs button { flex: 1; min-height: 44px; background: none; border: 0; border-bottom: 3px solid transparent; color: inherit; font: 700 15px var(--sfd); letter-spacing: .08em; text-transform: uppercase; } .tabs button.on { border-color: var(--gold); color: var(--gold); }
+.sheetfoot { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); } button.danger { color: #ff9a8a; }
