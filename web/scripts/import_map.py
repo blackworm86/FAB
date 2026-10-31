@@ -72,10 +72,12 @@ json.dump(out, open('data/bulge/map.json', 'w'), separators=(',', ':'))
 print('areas', len(new_areas), 'of', len(old['areas']))
 # ---------------- board texture ----------------
 def d_of(layer, cls=None): return [(e.get('class'), e.get('d')) for e in layers[layer] if tag(e) == 'path' and (cls is None or e.get('class') == cls) and e.get('d')]
-ground = '#bcc7a9'; land = unary_union([pg for pg, _ in A if pg.area > 5000]).buffer(0)
+ground = '#bcc0ab'; land = unary_union([pg for pg, _ in A if pg.area > 5000]).buffer(0)
 land_d = ''.join('M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in g.exterior.coords) + 'Z' for g in (land.geoms if land.geom_type == 'MultiPolygon' else [land]))
 river_w = {'st2': 9, 'st5': 6, 'st3': 4.2}
-rivers = ''.join(f'<path d="{d}" stroke-width="{river_w.get(c, 5)}"/>' for c, d in d_of('Rivers'))
+RW = 0.45                                                                                      # printed rivers are thin: blue line with a thin white edge
+rivers_c = ''.join(f'<path d="{d}" stroke-width="{river_w.get(c, 5) * RW + 2.0:.2f}"/>' for c, d in d_of('Rivers'))
+rivers = ''.join(f'<path d="{d}" stroke-width="{river_w.get(c, 5) * RW:.2f}"/>' for c, d in d_of('Rivers'))
 roads = [d for _, d in d_of('Roads')]
 roads_c = ''.join(f'<path d="{d}"/>' for d in roads)
 bnd = ''
@@ -105,7 +107,7 @@ for a in out['areas']:
     for i in range(vp['allied']): marks += cross(x + (i - (vp['allied'] - 1) / 2) * 24, y - 40, 10)
     for i in range(vp['german']): marks += f'<circle cx="{x}" cy="{y - 40 - i * 20}" r="9" fill="#2f78c8" stroke="#fff" stroke-width="1.5"/>' + star(x, y - 40 - i * 20, 6.5, '#fff', 'none')
     if vp['mutual']: marks += star(x, y - 40, 11, '#f2d21b', '#c3281c')
-strips = ''
+strips = letters = ''
 E_SH = shapes('Entering_Zones'); used = set()
 for letter, e in sorted(entries.items()):
     pg = pgs.get(e['area']); 
@@ -115,21 +117,25 @@ for letter, e in sorted(entries.items()):
     if d > 12: report.append(f'entry {letter}: nearest drawn strip is {d:.0f}px away'); continue
     used.add(i); ge = e['side'] == 'german'
     strips += '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in q.exterior.coords) + f'Z" fill="{"#9fb0b8" if ge else "#2f9a52"}" stroke="#fff" stroke-width="1.6"/>'
-    c = q.representative_point(); strips += f'<text x="{c.x:.1f}" y="{c.y + 6:.1f}" text-anchor="middle" font-size="19" font-weight="700" fill="{"#111" if ge else "#fff"}" stroke="{"#fff" if ge else "#14502a"}" stroke-width="0.8" font-family="Arial, sans-serif">{letter}</text>'
+    c = q.representative_point(); letters += f'<text x="{c.x:.1f}" y="{c.y + 6:.1f}" text-anchor="middle" font-size="19" font-weight="700" fill="{"#111" if ge else "#fff"}" stroke="{"#fff" if ge else "#14502a"}" stroke-width="0.8" font-family="Arial, sans-serif">{letter}</text>'
 report.extend(f'drawn entry strip {i} was not matched to an entry area' for i in range(len(E_SH)) if i not in used)
 open('docs/maps/vector/import-report.txt', 'w').write('\n'.join(report) or 'no differences'); print('\n'.join(report[:40]) or 'no differences')
+import base64, os
+WP = 'docs/maps/vector/map-woods.png'                                                                 # forest pattern traced from the printed map by woods.py
+woods_g = f'<clipPath id="land"><path fill-rule="evenodd" d="{land_d}"/></clipPath><g id="woods" clip-path="url(#land)"><image href="data:image/png;base64,{base64.b64encode(open(WP, "rb").read()).decode()}" x="0" y="0" width="{W}" height="{H}" preserveAspectRatio="none"/></g>' if os.path.exists(WP) else '<g id="woods"></g>'
 svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">
 <rect id="frame" width="{W}" height="{H}" fill="#bccad3"/>
 <g id="terrain"><path fill="{ground}" fill-rule="evenodd" d="{land_d}"/></g>
-<g id="woods" opacity="0"></g>
+{woods_g}
 <g id="entering-zones">{strips}</g>
-<g id="boundaries" fill="none" stroke="#fbfbf6" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round">{bnd}</g>
-<g id="rivers" fill="none" stroke="#2f8fd0" stroke-linecap="round" stroke-linejoin="round">{rivers}</g>
-<g id="roads" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#3a3f3d" stroke-width="7.4">{roads_c}</g><g stroke="#5d6360" stroke-width="4.6">{roads_c}</g></g>
+<g id="boundaries" fill="none" stroke="#fbfbf6" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">{bnd}</g>
+<g id="rivers" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#ffffff">{rivers_c}</g><g stroke="#1c78c0">{rivers}</g></g>
+<g id="roads" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#e4e6d8" stroke-width="4.0" stroke-opacity="0.8">{roads_c}</g><g stroke="#585b56" stroke-width="2.4">{roads_c}</g></g>
 <g id="cities" fill="#6b706d" stroke="#3a3f3d" stroke-width="1.6">{cities}</g>
 <g id="towns">{towns}</g>
 <g id="outline" fill="none" stroke="#fbfbf6" stroke-width="4.6" stroke-linejoin="round">{outline}</g>
 <g id="markers">{marks}</g>
-<g id="labels" font-family="Arial Narrow, Arial, sans-serif" font-size="16" font-style="italic" fill="#2c3a22" stroke="{ground}" stroke-width="3.2" paint-order="stroke">{labels}</g>
+<g id="entry-letters">{letters}</g>
+<g id="labels" font-family="Arial Narrow, Arial, sans-serif" font-size="16" font-style="italic" font-weight="600" fill="#1c2216" stroke="{ground}" stroke-width="3.2" paint-order="stroke">{labels}</g>
 </svg>'''
 open('web/public/map-vector.svg', 'w').write(svg); print('svg', len(svg) // 1024, 'KB')
