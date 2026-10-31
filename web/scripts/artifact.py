@@ -9,5 +9,6 @@ open('dist/page.html', 'w').write(f'''<title>FAB: The Bulge</title>
 {body}<script type="module" src="assets/{js}"></script>
 ''')
 files = {f'assets/{js}': f'web/dist/assets/{js}', f'assets/{css}': f'web/dist/assets/{css}', 'map.jpg': 'web/dist/map.jpg', 'map-vector.svg': 'web/dist/map-vector.svg'}
+files.update({'chit/' + os.path.basename(f): 'web/' + f for f in sorted(glob.glob('dist/chit/*'))})
 files.update({'blocks/' + os.path.basename(f): 'web/' + f for f in sorted(glob.glob('dist/blocks/*.png'))})
 print(json.dumps(files))

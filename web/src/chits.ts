@@ -3,7 +3,16 @@
 import type { Chit } from '../../engine/src';
 import { ECH } from './art';
 import { GLYPHS } from './glyphs';
-import { CHIT_ART } from './chit-art';
+import { CHIT_FILES, CHIT_BOXES } from './chit-art';
+
+/** Image data URIs by name (the cut-outs must be inline: an SVG shown as an <img> cannot load other files), filled by loadChitArt before any chit is drawn. */
+export const CHIT_ART = { ...CHIT_BOXES } as unknown as { [K in keyof typeof CHIT_BOXES]: readonly number[] } & Record<keyof typeof CHIT_FILES, string>;
+const blobUri = (b: Blob) => new Promise<string>((ok, bad) => { const r = new FileReader(); r.onload = () => ok(r.result as string); r.onerror = () => bad(r.error); r.readAsDataURL(b); });
+export async function loadChitArt(base = './chit/') {
+  await Promise.all(Object.entries(CHIT_FILES).map(async ([k, f]) => { const r = await fetch(base + f); if (!r.ok) throw new Error(`chit art ${f}: ${r.status}`); (CHIT_ART as Record<string, string>)[k] = await blobUri(await r.blob()); }));
+}
+/** For tools that read the files themselves: key -> data URI. */
+export const setChitArt = (m: Record<string, string>) => Object.assign(CHIT_ART, m);
 
 type Weight = 'r' | 'b';
 function txt(s: string, x: number, y: number, size: number, o: { w?: Weight; anchor?: 'start' | 'middle' | 'end'; fill?: string; max?: number; italic?: boolean; stroke?: string; sw?: number; rot?: number } = {}) {

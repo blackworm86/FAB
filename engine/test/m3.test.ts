@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { arrivalOptions, placeArrival, chooseRetreat, retreatOptions, newGame, endPhase, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, moveOptions, boxOf, roadblock, roadblockAreas, playInterdiction, staffBoundary, staffPool, staffIntel,
+import { defenderRetreatSA, arrivalOptions, placeArrival, newGame, endPhase, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, moveOptions, boxOf, roadblock, roadblockAreas, playInterdiction, staffBoundary, staffPool, staffIntel,
   playAirSupply, airSupplyAreas, rerouteOptions, reroute, stratOptions, unitsIn, inSupply, assetLimits, areas, type Game } from '../src';
 
 function toAdmin(seed: number, turn = 2, campaign = false): Game {
@@ -88,5 +88,19 @@ describe('retreat choice (6.5)', () => {
       }
     }
     expect(seen).toBeGreaterThan(0);
+  });
+});
+
+describe('retreat before combat (Special Action)', () => {
+  it('stops at the retreat step when several areas are legal, then ends the battle with an exploitation chance', () => {
+    const g = newGame(1), b = startBattle(g, 10), sa = g.chits.find((c) => c.kind === 'sa_block' && c.side === 'allied')!;      // area 10: Allied defenders, retreat to 23 or 25
+    sa.box = 'available';
+    defenderRetreatSA(g, b);
+    expect(sa.box).toBe('used'); expect(b.stage).toBe('retreat');
+    const opts = retreatOptions(g, b), first = g.units.find((x) => x.id === b.retreat!.queue[0])!;
+    expect(opts.length).toBeGreaterThan(1);
+    chooseRetreat(g, b, opts[1]); expect(first.area).toBe(opts[1]); expect(first.disorder).toBe(1);
+    while (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]);
+    expect(b.stage).toBe('done'); expect(b.exploit).toBe(true);
   });
 });
