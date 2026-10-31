@@ -176,3 +176,6 @@ button.ico.dev { border-color: #4aa3ff; color: #9fd0ff; }
 .homein .grow { flex: 1; min-width: 0; } .homein input, .homein select, .homein button { min-height: 44px; }
 .tabs { display: flex; gap: 4px; margin: 4px 0 10px; border-bottom: 1px solid var(--line); } .tabs button { flex: 1; min-height: 44px; background: none; border: 0; border-bottom: 3px solid transparent; color: inherit; font: 700 15px var(--sfd); letter-spacing: .08em; text-transform: uppercase; } .tabs button.on { border-color: var(--gold); color: var(--gold); }
 .sheetfoot { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); } button.danger { color: #ff9a8a; }
+.c-side.theirs { opacity: .62; } .c-side.theirs .slot, .c-side.theirs .x { pointer-events: none; } .c-side.mine h4 { text-decoration: underline; text-decoration-color: var(--gold); text-underline-offset: 4px; }
+.handtab button { min-height: 44px; }
+.turnchip { display: inline-block; padding: 1px 7px; margin-right: 4px; font: 700 12px var(--sfd); letter-spacing: .1em; text-transform: uppercase; border-radius: 3px; } .turnchip.go { background: var(--gold); color: #1a1608; } .turnchip.wait { background: #333a2a; color: #cfd6bd; }
