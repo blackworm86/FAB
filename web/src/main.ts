@@ -722,8 +722,9 @@ const RULE: Record<string, [string, string]> = {
 };
 const pieceBtn = (c: E.Chit, f: () => void, on = false, dis = false) => `<button class="pc ${c.side} ${on ? 'on' : ''}" data-ui="${reg(f)}" ${dis ? 'disabled' : ''} title="${esc(c.name)}" aria-label="${esc(chitLabel(c))}"><img alt="" draggable="false" src="${chitImg(c)}"></button>`;
 const ruleCard = (c: E.Chit) => { const [t, d] = RULE[c.kind] ?? [c.kind, '']; return `<img class="big" alt="" src="${chitImg(c)}"><div><h4>${esc(c.name)} <small>${esc(t)}</small></h4><p>${esc(d)}</p></div>`; };
+const seatedView = () => online.active && !online.both() && !!online.mySide();
 function piecesHtml() {
-  const sd = piecesSide ?? viewSide(), tabs = chip('Pieces', piecesTab === 'boxes', () => { piecesTab = 'boxes'; }) + chip('Arrivals', piecesTab === 'arrivals', () => { piecesTab = 'arrivals'; }) + '<span class="sp"></span>' + (['german', 'allied'] as E.Side[]).map((x) => chip(nm(x), sd === x, () => { piecesSide = x; inspectId = null; })).join('');
+  const sd = piecesSide ?? viewSide(), tabs = chip('Pieces', piecesTab === 'boxes', () => { piecesTab = 'boxes'; }) + chip('Arrivals', piecesTab === 'arrivals', () => { piecesTab = 'arrivals'; }) + '<span class="sp"></span>' + (['german', 'allied'] as E.Side[]).sort((x, y) => +(y === viewSide()) - +(x === viewSide())).map((x) => chip(seatedView() ? (x === viewSide() ? 'My pieces' : 'Opponent\'s pieces') : nm(x), sd === x, () => { piecesSide = x; inspectId = null; })).join('');
   let body = '';
   if (piecesTab === 'boxes') {
     const sec = (title: string, bx: E.Chit['box']) => { const cs = E.boxOf(g, sd, bx); return `<h4>${title} <small>${cs.length}</small></h4><div class="pcgrid">${cs.map((c) => pieceBtn(c, () => { inspectId = inspectId === c.id ? null : c.id; }, inspectId === c.id)).join('') || '<small class="none">none</small>'}</div>`; };
@@ -739,7 +740,7 @@ function piecesHtml() {
     const pick = inspectId ? g.chits.find((c) => c.id === inspectId && c.side === sd) : null;
     body = `${pick ? `<div class="inspect">${ruleCard(pick)}</div>` : ''}${rows.join('')}`;
   }
-  return `<div class="modal"><div class="sheet wide"><h3>${nm(sd)} pieces <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3><div class="chips tabrow">${tabs}</div>${body}</div></div>`;
+  return `<div class="modal"><div class="sheet wide"><h3>${seatedView() ? (sd === viewSide() ? 'My pieces' : 'Opponent\'s pieces') : nm(sd) + ' pieces'} <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3><div class="chips tabrow">${tabs}</div>${body}</div></div>`;
 }
 function dispatch() {
   if (g.battle || g.over) return '';
