@@ -1,19 +1,41 @@
-"""Cut the illustrated parts of the printed chits (fuel barrels, Operation Bodenplatte, Air Mission, the Special Action arrow) out of the scan and embed them as small PNGs."""
-import base64, io, json, numpy as np
+"""Cut the illustrations (not the lettering) out of the printed chits: fuel barrels, the two Bodenplatte fighters, the Allied Air Mission fighters,
+and the Special Action arrow with its tank. Output: src/chit-art.ts with transparent PNGs as data URIs. Lettering is redrawn as vector text."""
+import base64, io, json, cv2, numpy as np
 from PIL import Image
-def png(im):
-    b = io.BytesIO(); im.save(b, 'PNG', optimize=True); return 'data:image/png;base64,' + base64.b64encode(b.getvalue()).decode()
-def jpg(im):
-    b = io.BytesIO(); im.save(b, 'JPEG', quality=90); return 'data:image/jpeg;base64,' + base64.b64encode(b.getvalue()).decode()
-raw = lambda i: Image.open(f'../assets/counters/raw/{i}.png').convert('RGB')
+SC = 4
+def png(rgba, w=None):
+    im = Image.fromarray(cv2.cvtColor(rgba, cv2.COLOR_BGRA2RGBA)); im = im.resize((im.width // 2, im.height // 2), Image.LANCZOS); b = io.BytesIO(); im.save(b, 'PNG', optimize=True); return 'data:image/png;base64,' + base64.b64encode(b.getvalue()).decode()
+def load(n): im = cv2.imread(f'../assets/counters/raw/{n}.png'); return cv2.resize(im, None, fx=SC, fy=SC, interpolation=cv2.INTER_CUBIC)
+def finish(big, mask, box):
+    mask = cv2.erode(mask, np.ones((5, 5), np.uint8)); mask = cv2.GaussianBlur(mask, (0, 0), 1.2)
+    rgba = np.dstack([big, mask]); x0, y0, x1, y1 = [v * SC for v in box]
+    return rgba[y0:y1, x0:x1], (box[0], box[1], box[2] - box[0], box[3] - box[1])
+def comps(fg, min_area):
+    n, lab, st, _ = cv2.connectedComponentsWithStats(fg); keep = np.zeros_like(fg)
+    for k in range(1, n):
+        if st[k][4] > min_area: keep[lab == k] = 255
+    return keep
 out = {}
-out['fuel'] = jpg(raw('R17'))
-out['boden'] = jpg(raw('R21'))
-air = raw('R41'); a = np.array(air); sky = [int(x) for x in np.median(a[40:60, 36:60].reshape(-1, 3), axis=0)]
-out['air'] = jpg(air); out['airSky'] = '#%02x%02x%02x' % tuple(sky)
+# fuel barrels: everything that is neither the orange panel, the yellow lettering nor the white corner box
+big = load('R17'); b, g, r = [big[:, :, i].astype(int) for i in range(3)]; hsv = cv2.cvtColor(big, cv2.COLOR_BGR2HSV); h, s, v = [x.astype(int) for x in cv2.split(hsv)]
+orange = (h > 5) & (h < 22) & (s > 150); yellow = (h >= 22) & (h < 35) & (s > 150) & (v > 150)
+fg = (~(orange | yellow)).astype(np.uint8) * 255; box = np.zeros_like(fg); box[22 * SC:92 * SC, 18 * SC:112 * SC] = 255; fg &= box
+fg = cv2.morphologyEx(fg, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8)); fg = cv2.morphologyEx(fg, cv2.MORPH_CLOSE, np.ones((13, 13), np.uint8)); fg = comps(fg, 6000)
+rgba, bx = finish(big, fg, (16, 20, 114, 100)); out['fuel'] = png(rgba); out['fuelBox'] = bx
+# fighters on a sky background
+def planes(name, region, min_area):
+    big = load(name); b, g, r = [big[:, :, i].astype(int) for i in range(3)]
+    sky = (b - r > 22) & (b > 150); fg = (~sky).astype(np.uint8) * 255; box = np.zeros_like(fg); x0, y0, x1, y1 = [q * SC for q in region]; box[y0:y1, x0:x1] = 255; fg &= box
+    fg = cv2.morphologyEx(fg, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8)); fg = cv2.morphologyEx(fg, cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8)); fg = comps(fg, min_area)
+    return big, fg
+big, fg = planes('R21', (20, 24, 146, 84), 2600); rgba, bx = finish(big, fg, (18, 22, 148, 86)); out['boden'] = png(rgba); out['bodenBox'] = bx
+big, fg = planes('R41', (20, 42, 146, 90), 6000); rgba, bx = finish(big, fg, (18, 40, 148, 92)); out['air'] = png(rgba); out['airBox'] = bx
 # Special Action arrow: key the purple panel out so the yellow arrow, tank and black arrows float on any panel colour
-sa = np.array(raw('R38')).astype(int); crop = sa[52:124, 18:148]; panel = np.median(sa[100:110, 125:140].reshape(-1, 3), axis=0)
+sa = np.array(Image.open('../assets/counters/raw/R38.png').convert('RGB')).astype(int); crop = sa[52:124, 18:148]; panel = np.median(sa[100:110, 125:140].reshape(-1, 3), axis=0)
 d = np.abs(crop - panel).sum(axis=2); alpha = np.clip((d - 40) * 5, 0, 255).astype(np.uint8)
-rgba = np.dstack([crop.astype(np.uint8), alpha]); out['saArrow'] = png(Image.fromarray(rgba, 'RGBA')); out['saPanel'] = '#%02x%02x%02x' % tuple(int(x) for x in panel)
+im = Image.fromarray(np.dstack([crop.astype(np.uint8), alpha]), 'RGBA'); b = io.BytesIO(); im.save(b, 'PNG', optimize=True); out['saArrow'] = 'data:image/png;base64,' + base64.b64encode(b.getvalue()).decode()
+def jpg(path):
+    im = Image.open(path).convert('RGB'); b = io.BytesIO(); im.save(b, 'JPEG', quality=88); return 'data:image/jpeg;base64,' + base64.b64encode(b.getvalue()).decode()
+for k, f in {'riverAssault': 'raw/R92', 'exploitation': 'raw/Rx1', 'boundary': 'raw/R67', 'bridgeRepairs': 'raw/R89', 'blown': 'backs/blown', 'roadBlock': 'backs/roadblock', 'noFuel': 'backs/no_fuel'}.items(): out[k] = jpg(f'../assets/counters/{f}.png')
 open('src/chit-art.ts', 'w').write('// generated by scripts/chit_art.py from the printed counters\nexport const CHIT_ART = ' + json.dumps(out) + ' as const;\n')
-print({k: len(v) for k, v in out.items()})
+print({k: (len(v) if isinstance(v, str) else v) for k, v in out.items()})
