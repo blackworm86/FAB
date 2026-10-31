@@ -182,7 +182,7 @@ button.ico.dev { border-color: #4aa3ff; color: #9fd0ff; }
 .handtab { display: flex; gap: 8px; align-items: center; } .handtab button.ico { min-width: 44px; width: auto; padding-inline: 10px; display: inline-flex; gap: 6px; align-items: center; justify-content: center; } .handtab button.ico .bl { display: inline; font-size: 13px; }
 .handtab summary { display: inline-flex; gap: 4px; align-items: center; min-height: 44px; padding-inline: 8px; cursor: pointer; } .handtab .ic { width: 20px; height: 20px; }
 button.go .ic, button.plain .ic, .row button .ic { width: 18px; height: 18px; vertical-align: -4px; } button.go .ic { margin-left: 6px; }
-@media (max-width: 520px) { [data-tint], [data-home] { display: none !important; } .handtab button.ico .bl { display: none; } .c-crumbs span.on { padding-inline: 14px; } }
+@media (max-width: 520px) { [data-home] { display: none !important; } .handtab button.ico .bl { display: none; } .c-crumbs span.on { padding-inline: 14px; } }
 .handtab button { background: #1d2114; border: 1px solid #8d9065aa; color: var(--ink); } .handtab button.danger { color: #ff9a8a; } .handtab button:disabled { opacity: .4; }
 @media (max-width: 520px) { .evh { display: none; } }
 @media (max-width: 520px) { .c-table .cnt { display: none; } .c-table { padding: 4px 8px 6px; gap: 2px 8px; } .c-title { font-size: 16px; margin: 0; } .slot { min-height: 52px; width: 80px; } .c-side h4 { margin: 0; } .c-vs .big { font-size: 26px; } .c-vs small:last-child { font-size: 11px; } }
@@ -212,3 +212,9 @@ button.go .ic, button.plain .ic, .row button .ic { width: 18px; height: 18px; ve
 .oob { border-top: 1px solid var(--line); padding: 6px 0; } .oob.now h4 { color: var(--gold); } .oob.past { opacity: .5; } .oob h4 { margin: 0 0 4px; } .oobrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; } .oobu { width: 64px; text-align: center; font-size: 11px; display: grid; gap: 1px; } .oobu img { width: 56px; height: 56px; margin: 0 auto; border-radius: 3px; } .oobu small { font-size: 10px; line-height: 1.1; } .oobu .en { opacity: .7; }
 .recover .row { margin-top: 4px; }
 @media (max-width: 520px) { .pc { width: 52px; height: 52px; } .inspect img.big { width: 64px; height: 64px; } .sheet.wide { padding: 12px; } }
+.chitbar { padding: 8px 10px; } .cbhead { display: flex; align-items: center; gap: 10px; } .cbimg { width: 52px; height: 52px; border-radius: 3px; flex: none; } .cbt { flex: 1; min-width: 0; display: grid; } .cbt b { font: 700 18px var(--sfd); letter-spacing: .06em; text-transform: uppercase; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .cbt small { font-size: 12.5px; opacity: .9; }
+.cbhead .ico { min-width: 44px; height: 44px; flex: none; } .cbhead .ico[aria-pressed="true"] { background: var(--gold); color: #1a1608; }
+.slimcard { margin: 6px 0 0; padding: 6px 10px; } .slimcard p { font-size: 12.5px; }
+.cbchips { display: flex; gap: 8px; overflow-x: auto; margin-top: 6px; padding-bottom: 2px; } .cbchips .pc { width: 64px; height: auto; display: grid; justify-items: center; gap: 2px; border: 1px solid var(--line); padding: 3px; } .cbchips .pc img { width: 52px; height: 52px; } .cbchips .pc small { font-size: 10px; line-height: 1.1; }
+.chitbar .row { gap: 6px; margin-top: 6px; } .chitbar .hint { font-size: 12px; margin: 4px 0; } button.ab { display: inline-flex; gap: 6px; align-items: center; min-height: 40px; } button.ab .ic { width: 18px; height: 18px; }
+@media (max-width: 520px) { .c-crumbs span.on { padding-inline: 12px 16px; font-size: 14px; letter-spacing: .05em; } .c-bar.t { gap: 4px; padding-inline: 6px; } .c-stat { gap: 8px; } }

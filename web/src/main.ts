@@ -185,6 +185,7 @@ function drawPieces() {
     order.forEach((u, n) => {
       const hid = !seen(u), m = block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
       m.position.x = p.x; m.position.z = p.z;
+      if (tgt?.units.has(u.id)) { const ring = new THREE.Mesh(new THREE.RingGeometry(1.15, 1.45, 40), new THREE.MeshBasicMaterial({ color: 0x37d67a, transparent: true, opacity: 0.95, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(p.x, 0.09, p.z); markers.add(ring); const glow = new THREE.Mesh(new THREE.CircleGeometry(1.15, 40), new THREE.MeshBasicMaterial({ color: 0x37d67a, transparent: true, opacity: 0.28 })); glow.rotation.x = -Math.PI / 2; glow.position.set(p.x, 0.085, p.z); markers.add(glow); }
       m.userData.unit = u.id; if (u.id === selUnit) { const o = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xffb347 })); m.add(o); }
       pieces.add(m);
       const tags: [string, string][] = []; let stackY = u.garrison ? 0.3 : 1.66;
@@ -321,9 +322,41 @@ const pips = (u: E.Unit) => Array.from({ length: u.str }, () => `<i class="pip $
 const ABBR: Record<string, string> = { artillery: 'Arty', rocket_artillery: 'Rkt', engineer: 'Eng', armor_asset: 'Armor', infantry_asset: 'Inf', task_force: 'TF', fuel: 'Fuel', command_staff: 'Staff', sa_block: 'SA', replacement_inf: 'Repl inf', replacement_arm: 'Repl arm',
   rebuild_or_replace_inf: 'Rebuild inf', rebuild_or_replace_arm: 'Rebuild arm', event_arriving_regiment: 'Regt', special_action_event: 'SA event', air_mission: 'Air', event_release: 'Release', event_greif_bridge: 'Greif bridge', event_greif_interdict: 'Greif interdict', event_bodenplatte: 'Bodenplatte', event_delayed_response: 'Delayed' };
 const chitLabel = (c: E.Chit) => `${ABBR[c.kind] ?? c.kind}${['fuel', 'sa_block', 'special_action_event', 'air_mission', 'replacement_inf', 'replacement_arm', 'event_delayed_response'].includes(c.kind) || c.name.length > 14 ? '' : ' ' + c.name}${c.turn !== 'S' && E.isEvent(c) ? ' T' + c.turn : ''}`;
+/* ---------- playing a chit: the blocks or areas it can be used on light up, and a tap applies it ---------- */
+interface Tgt { units: Map<string, () => void>; areas: Map<number, () => void>; chips: { label: string; img: string; fn: () => void }[]; hint: string }
+const works = (fn: (t: E.Game) => void) => { try { const t = structuredClone(g); fn(t); return true; } catch { return false; } };
+let tgt: Tgt | null = null, infoOpen = false;
+function targetsFor(c: E.Chit | null): Tgt | null {
+  if (!c || g.phase !== 'admin' || c.box !== 'available') return null;
+  const t: Tgt = { units: new Map(), areas: new Map(), chips: [], hint: '' };
+  if (c.kind.startsWith('replacement') || c.kind === 'event_arriving_regiment' || c.kind.startsWith('rebuild')) {
+    for (const u of g.units.filter((x) => E.eligibleForStep(c, x))) {
+      if (u.area == null) t.chips.push({ label: u.name, img: unitFace(u), fn: () => E.playReplacement(g, c.id, u.id) });
+      else t.units.set(u.id, () => E.playReplacement(g, c.id, u.id));
+    }
+    t.hint = t.units.size ? 'Tap a glowing block to add a step' : t.chips.length ? 'Tap a unit to bring back' : '';
+  } else if (c.kind === 'special_action_event' || c.kind === 'sa_block') {
+    for (const u of g.units.filter((x) => x.side === c.side && x.area != null && !x.garrison)) if (works((tg) => E.qualityReplacement(tg, u.id))) t.units.set(u.id, () => E.qualityReplacement(g, u.id));
+    for (const a of E.areas.keys()) if (g.control[a] === c.side && works((tg) => E.rally(tg, c.side, a))) t.areas.set(a, () => E.rally(g, c.side, a));
+    t.hint = 'Tap a glowing block (quality replacement) or area (rally)';
+  } else return null;
+  return t;
+}
+const abtn = (icon: string, label: string, fn: () => void, cls = '', dis = false, title = '') => btn(`${ico(icon)}<span>${esc(label)}</span>`, fn, 'ab ' + cls, dis, title || label);
+const BTN_ICON: [RegExp, string][] = [[/blow|bridge.*bridge/i, 'burst'], [/repair/i, 'engineer'], [/field works|fortify/i, 'shield'], [/roadblock|rally/i, 'flag'], [/interdict/i, 'warn'], [/alternate/i, 'swap'], [/pool/i, 'task_force'], [/intelligence/i, 'info'], [/reserve/i, 'sa_block'], [/replacement/i, 'infantry_asset'], [/drop|enter|place|boundary/i, 'next'], [/strike/i, 'air_mission']];
+/** Give a chit action its icon so the buttons read at a glance; the text stays as the label. */
+const iconify = (html: string) => html.replace(/<button class="([^"]*)" (data-do="[^"]+") ([^>]*)>([^<]*)<\/button>/g, (m, cls, d, rest, text) => { const ic = BTN_ICON.find(([re]) => re.test(text))?.[1]; return ic ? `<button class="${cls} ab" ${d} ${rest}>${ico(ic)}<span>${text}</span></button>` : m; });
+/** The selected chit: a slim bar with its picture, a one-line instruction, an info toggle and the actions as icon buttons. */
+function chitBar(c: E.Chit): string {
+  const tg = targetsFor(c), body = chitPanel(c), [kind] = RULE[c.kind] ?? [c.kind];
+  const chips = tg?.chips.map((x) => `<button class="pc ${c.side}" data-do="${reg(x.fn)}" title="${esc(x.label)}"><img alt="" src="${x.img}"><small>${esc(x.label)}</small></button>`).join('') ?? '';
+  return `<div class="c-dispatch chitbar"><div class="cbhead"><img class="cbimg" alt="" src="${chitImg(c)}"><div class="cbt"><b>${esc(c.name)}</b><small>${esc(tg?.hint || kind)}</small></div>
+    <button class="ico" data-ui="${reg(() => { infoOpen = !infoOpen; })}" aria-pressed="${infoOpen}" aria-label="What it does" title="What it does">${ico('info')}</button><button class="ico" data-ui="${reg(() => { selChit = null; })}" aria-label="Put away" title="Put away">${ico('close')}</button></div>
+    ${infoOpen ? `<div class="inspect slimcard"><p>${esc((RULE[c.kind] ?? ['', ''])[1])}</p></div>` : ''}${chips ? `<div class="cbchips">${chips}</div>` : ''}${iconify(body)}</div>`;
+}
 function chitPanel(c: E.Chit): string {
   const a = selArea, out: string[] = [], u = selUnit ? g.units.find((x) => x.id === selUnit)! : null;
-  const head = `<div><h2>${c.side === 'german' ? 'German' : 'Allied'} ${esc(ABBR[c.kind] ?? c.kind)}</h2><h3>${esc(c.name)}</h3><p class="hint">${esc(c.ech)} · in the ${c.box} box</p></div>`;
+  const head = '';
   if (c.box !== 'available') return head + '<p class="hint">Only chits in the Available Box can be used.</p>';
   if (g.phase !== 'admin') return head + `<p class="hint">${E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission' ? 'This chit is assigned to a battle during the Combat Phase.' : c.kind === 'fuel' ? 'Fuel is spent automatically when a German unit moves more than 3 MP or strategic-moves.' : c.kind === 'sa_block' || c.kind === 'special_action_event' ? 'Special Actions are spent in battles (reinforce / retreat), Breakthrough phases and the Admin Phase.' : 'Events are played in the Admin Phase.'}</p>`;
   if (c.kind === 'engineer') {
@@ -338,14 +371,10 @@ function chitPanel(c: E.Chit): string {
       if (E.roadblockAreas(g, c.side).includes(a)) out.push(btn('Roadblock here', () => E.roadblock(g, c.id, a, false), '', false, '4.34'), btn('Defended roadblock (engineer stays)', () => E.roadblock(g, c.id, a, true), '', false, '4.35'));
     }
   } else if (c.kind.startsWith('replacement') || c.kind === 'event_arriving_regiment' || c.kind.startsWith('rebuild')) {
-    const el = g.units.filter((x) => E.eligibleForStep(c, x));
-    el.forEach((x) => out.push(btn((x.area == null ? `Bring back ${esc(x.name)} with 1 step` : `+1 step: ${esc(x.name)} (${x.str}/${x.max}) in ${esc(areaName(x.area))}`), () => E.playReplacement(g, c.id, x.id))));
+    const el = g.units.filter((x) => E.eligibleForStep(c, x));                                       // blocks on the map light up; eliminated ones come back from the chips above
     if (!el.length) out.push('<p class="hint">No reduced, supplied unit of the right class and Higher Echelon.</p>');
     if (c.kind.startsWith('rebuild')) g.units.filter((x) => x.area == null && x.max === 1 && x.side === c.side && x.q[0] !== 'elite' && !x.garrison && (c.kind.endsWith('arm') === (x.cls === 'armor')) && x.str === 0).forEach((x) => out.push(a == null ? '<p class="hint">Select an objective area to return an eliminated unit.</p>' : btn(`Return ${esc(x.name)} to ${esc(areaName(a))}`, () => E.playRebuild(g, c.id, x.id, a))));
   } else if (c.kind === 'special_action_event' || c.kind === 'sa_block') {
-    if (a != null) out.push(btn(`Rally the troops around ${esc(areaName(a))}`, () => E.rally(g, g.control[a], a)));
-    if (u) out.push(btn(`Quality replacement: ${esc(u.name)}`, () => E.qualityReplacement(g, u.id)));
-    if (a == null && !u) out.push('<p class="hint">Select an area (rally) or a block (quality replacement).</p>');
   } else if (c.kind === 'air_mission') {
     out.push(a == null ? '<p class="hint">Select an area to interdict (Germans pay +1 MP to enter and leave it). In battles it works as artillery or +2 support; at the end of the turn it can air-supply an area.</p>' : btn(`Interdict ${esc(areaName(a))}`, () => E.playInterdiction(g, c.id, a)));
   } else if (c.kind === 'command_staff') {
@@ -365,7 +394,7 @@ function chitPanel(c: E.Chit): string {
   } else if (c.kind === 'event_release') { [4, 6].forEach((ar) => out.push(btn(`Enter at ${esc(areaName(ar))}`, () => E.releaseUnit(g, c.id, ar as 4 | 6)))); }
   else if (c.kind === 'fuel') out.push('<p class="hint">Fuel is spent automatically when a German unit moves more than 3 MP or strategic-moves.</p>');
   else if (E.isArty(c) || E.isBattleAsset(c) || (c.kind as string) === 'air_mission') out.push('<p class="hint">Assigned to a battle in the Combat Phase.</p>');
-  if (E.isEvent(c) && c.kind !== 'sa_block') out.push(btn('Use as alternate event (2 assets back to the cup)', () => E.alternateUse(g, c.id), '', false, '4.21'));
+  if (E.isEvent(c) && c.kind !== 'sa_block') out.push(btn('Alternate use', () => E.alternateUse(g, c.id), '', false, '4.21: return 2 assets to the cup instead'));
   return head + `<div class="row">${out.join('')}</div>`;
 }
 
@@ -467,6 +496,7 @@ function confirmMove() {
 }
 function click(e: PointerEvent) {
   const { unit, area } = pick(e);
+  { const c0 = selChit ? g.chits.find((x) => x.id === selChit) : null, tg = c0 && g.phase === 'admin' ? tgt : null; if (tg) { const fnU = unit ? tg.units.get(unit) : undefined, fnA = area != null ? tg.areas.get(area) : undefined; if (fnU || (!unit && fnA) || (fnA && !fnU && unit)) { selChit = null; return act((fnU ?? fnA)!); } } }
   if (armed) { const id = armed; armed = null; const ok = area != null && dragTargets.includes(area); dragTargets = []; if (ok) return playChitOn(E.chit(g, id), area!); selChit = null; return refresh(); }
   const rb = g.battle;
   if (rb?.stage === 'retreat' && area != null && E.retreatOptions(g, rb).includes(area)) return act(() => E.chooseRetreat(g, rb, area));
@@ -746,7 +776,7 @@ function dispatch() {
   if (g.battle || g.over) return '';
   const row = (k: string, v: string, c = '') => `<div class="r"><span>${k}</span><b class="${c}">${v}</b></div>`;
   const c = selChit ? g.chits.find((x) => x.id === selChit) : null;
-  if (c && g.phase === 'admin') return `<div class="c-dispatch">${chitPanel(c)}</div>`;
+  if (c && g.phase === 'admin') return chitBar(c);
   if (g.phase === 'reinforcement' && g.recover.length) return `<div class="c-dispatch recover"><h3>Unused Special Action</h3><p class="hint">Each side may bring one asset back from the Used Box (4.1a).</p>${g.recover.map((sd) => {
     const cs = E.boxOf(g, sd, 'used').filter((c) => E.isAsset(c)), pick = recoverSel[sd] ? cs.find((c) => c.id === recoverSel[sd]) : null, own = mine(sd);
     return `<h4 class="${sd}">${nm(sd)}</h4><div class="pcgrid">${cs.map((c) => pieceBtn(c, () => { recoverSel[sd] = recoverSel[sd] === c.id ? null : c.id; }, recoverSel[sd] === c.id, !own)).join('') || '<small>Nothing in the Used Box</small>'}</div>
@@ -1001,6 +1031,7 @@ function syncView() {
 }
 let ctlKey = '';
 function refresh() {
+  tgt = selChit ? targetsFor(g.chits.find((x) => x.id === selChit) ?? null) : null;
   if (tint === 'control') { const k = JSON.stringify(g.control) + E.contestedAreas(g).join(); if (k !== ctlKey) { ctlKey = k; paintBoard(); } }
   syncView(); syncBattleCam(); drawPieces(); paintAreas(); drawRoute(); badges = badgeList(); syncBadges(); render();
   if (!rollView) { const cv = $('#dice'); if (cv && cv.style.display !== 'none') { clearDice(); cv.style.display = 'none'; } }
