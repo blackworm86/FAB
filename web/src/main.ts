@@ -911,4 +911,14 @@ void startOnline((rg) => { const was = g.battle, n0 = was?.rolls.length ?? 0, st
     rollView = { title: `${nm(side)} ${STAGE_NAME[st0]}`, pos: null, groups: nb.rolls.slice(n0).map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: [] })) };
     if (rollView.groups.length) { const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block'; throwDice(cv, rollView.groups, (p) => { if (rollView) { rollView.pos = p; render(); } }); } else rollView = null;
   } selUnit = selChit = selArr = null; previewArea = hoverArea = null; hist.clear(); try { save(); } finally { applyingRemote = false; } refresh(); }, () => { onNet(); render(); }, () => g);
-Object.assign(window, { __fab: { setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
+/** Every drawn symbol and counter as SVG, for the editable sheets (docs/maps/vector/fab-*.svg). */
+function sheets() {
+  const seenSvg = new Set<string>(), out: Record<string, { id: string; label: string; svg: string }[]> = { chits: [], blocks: [], markers: [] };
+  const add = (k: string, id: string, label: string, svg: string | null) => { if (svg && !seenSvg.has(svg)) { seenSvg.add(svg); out[k].push({ id, label, svg }); } };
+  const cg = E.newGame(5, { scenario: 'campaign', fuel: true });
+  for (const c of cg.chits) add('chits', c.id, `${c.side} ${c.name}${c.turn != null ? ' t' + c.turn : ''}`, chitSvg(c));
+  for (const u of cg.units) add('blocks', u.id, `${u.name}${u.code ? ' ' + u.code : ''}`, u.garrison ? garrisonArt(u) : labelSvg(u));
+  for (const m of ['X', 'FW', 'RA', 'RB', 'DIS', 'REC', 'E', 'B', 'P', 'R5', 'R6', 'R7', 'A7', 'A56', 'GI', 'G', 'AIR', 'AS']) add('markers', m, m, mapMarkerSvg(m));
+  return out;
+}
+Object.assign(window, { __fab: { sheets, setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
