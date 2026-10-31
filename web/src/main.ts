@@ -276,7 +276,11 @@ function act(f: () => void, after = '') {
   save(); refresh();
 }
 function undo() { const p = hist.undo(); if (!p) return; g = p; selUnit = selChit = selArr = previewArea = hoverArea = null; note = ''; save(); refresh(); }
-window.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey && !(e.target as HTMLElement)?.matches?.('input,select')) { e.preventDefault(); undo(); } });
+window.addEventListener('keydown', (e) => {
+  const t = e.target as HTMLElement | null, typing = !!t?.matches?.('input,select,textarea');
+  if (e.key === 'Escape') { if (modal) { modal = null; render(); } else if (selUnit || selArr || selChit) { selUnit = selArr = selChit = null; previewArea = null; refresh(); } return; }
+  if (e.key === 'Enter' && !typing && !t?.matches?.('button,[role=button]') && !modal) { const go = document.querySelector<HTMLButtonElement>('#ui .go:not(:disabled)'); if (go) { e.preventDefault(); go.click(); } }
+ if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey && !(e.target as HTMLElement)?.matches?.('input,select')) { e.preventDefault(); undo(); } });
 const tfAreas = () => [...E.areas.keys()].filter((a) => g.control[a] === 'allied' && !E.contested(g, a) && E.inSupply(g, 'allied', a));
 function arrOpts(): { area: number; sa: boolean }[] {
   if (!selArr || g.phase !== 'reinforcement') return [];
@@ -286,7 +290,7 @@ function arrOpts(): { area: number; sa: boolean }[] {
 /* ---------- camera focus ---------- */
 type Goal = { t: THREE.Vector3; dist: number; pitch: number } | null; let goal: Goal = null, saved: Goal = null, inBattle = false;
 function syncBattleCam() {
-  if (g.battle && !inBattle) { saved = { t: target.clone(), dist, pitch }; const a = E.areas.get(g.battle.area)!, p = toWorld(...POLE.get(a.id)!); goal = { t: new THREE.Vector3(p.x, 0, p.z + 3.2), dist: 17, pitch: 1.0 }; }
+  if (g.battle && !inBattle) { saved = { t: target.clone(), dist, pitch }; const a = E.areas.get(g.battle.area)!, p = toWorld(...POLE.get(a.id)!); goal = { t: new THREE.Vector3(p.x, 0, p.z - 1.6), dist: 17, pitch: 1.0 }; }
   if (!g.battle && inBattle && saved) goal = saved;
   inBattle = !!g.battle;
 }
@@ -437,6 +441,8 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
     if (b.stage.endsWith('Choice') || b.stage === 'retreat') return null;
     return { label: `Roll ${STAGE_NAME[b.stage].toLowerCase()} ▸`, fn: () => rollStage(b) };
   }
+  const must = E.mustFight(g);
+  if (must.length && (g.phase === 'combat' || g.phase === 'btCombat')) return { label: `Fight ${areaName(must[0])} ▸`, fn: () => { selUnit = null; selArea = must[0]; E.startBattle(g, must[0], g.phase === 'btCombat'); } };
   return { label: `End ${STEPS[STEP_OF[g.phase]].toLowerCase()} ▸`, fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; }), dis: !!E.mustFight(g).length };
 }
 function dispatch() {
@@ -497,8 +503,8 @@ function battleTable() {
     const mini = (c: E.Chit) => `<span class="mini ${c.side}" title="${esc(c.name)}"><img alt="${esc(c.name)}" src="${chitImg(c)}">${setup ? `<button class="x" aria-label="Remove ${esc(c.name)}" data-do="${reg(() => E.unassign(g, b, c.id))}">${ico('close')}</button>` : ''}</span>`;
     const sa = setup && s !== att ? E.saAvailable(g, s).length : 0;
     return `<div class="c-side ${s}"><h4>${nm(s)} <small>${s === att ? 'attacking' : 'defending'}</small></h4>
-      <div class="c-row">${us.map((u) => `<div tabindex="0" role="button" class="blk ${s} ${u.id === pt ? 'pt' : ''} ${air && b.air[s]!.mode === 'support' && b.air[s]!.unit === u.id ? 'air' : ''}" data-unit="${u.id}" data-side="${s}" title="${esc(u.name)}${u.id === pt ? ' (point unit)' : ''}"><em>${pips(u)}</em><b>${esc(u.name)}</b></div>`).join('')}</div>
-      <div class="c-slots"><div class="slot" data-side="${s}" data-zone="arty"><span class="lab">ARTY ${arty.length}/${lim.arty}</span>${arty.map(mini).join('') || '<small>drop</small>'}</div><div class="slot" data-side="${s}" data-zone="asset"><span class="lab">ASSETS</span>${rest.map(mini).join('') || '<small>drop</small>'}</div></div>
+      <div class="c-body"><div class="c-row">${us.map((u) => `<div tabindex="0" role="button" class="blk ${s} ${u.id === pt ? 'pt' : ''} ${air && b.air[s]!.mode === 'support' && b.air[s]!.unit === u.id ? 'air' : ''}" data-unit="${u.id}" data-side="${s}" title="${esc(u.name)}${u.id === pt ? ' (point unit)' : ''}"><em>${pips(u)}</em><b>${esc(u.name)}</b></div>`).join('')}</div>
+      <div class="c-slots"><div class="slot" data-side="${s}" data-zone="arty"><span class="lab">ARTY ${arty.length}/${lim.arty}</span>${arty.map(mini).join('') || '<small>drop</small>'}</div><div class="slot" data-side="${s}" data-zone="asset"><span class="lab">ASSETS</span>${rest.map(mini).join('') || '<small>drop</small>'}</div></div></div>
       ${sa ? `<div class="row">${btn('Retreat (SA)', () => E.defenderRetreatSA(g, b), '', !!b.assets[s].length || us.some((u) => u.garrison) || !us.length)}</div>` : ''}</div>`;
   };
   const al = stats(b, 'allied'), ge = stats(b, 'german'), tot = al.mean + ge.mean || 1, side2 = att === 'german' ? ge : al;
@@ -538,7 +544,8 @@ function render() {
   acts = {}; actv = {}; n = 0;
   const p = primary(), b = g.battle;
   const alert = g.pendingBlow ? (() => { const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!, path = g.pendingBlow!.path; return `<div class="c-ledger"><h3>${nm(other(u.side))}: bridge?</h3><p class="hint">${esc(u.name)} tries to cross into ${esc(areaName(path[path.length - 1]))}. Attempt to blow the bridge? It works on a roll of 1–5.</p><div class="row end">${btn('Let them cross', () => E.resolveBlow(g, false))}${btn('Attempt to blow it', () => E.resolveBlow(g, true), 'primary')}</div></div>`; })() : '';
-  $('#ui').innerHTML = topBar() + (b ? battleTable() : dispatch()) + handCards() + alert + ledger() + `<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis ? 'disabled' : ''}>${p.label}</button>` : ''}</div>` + legend() + (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '') + modalHtml();
+  const dockMain = alert || ledger() || handCards();
+  $('#ui').innerHTML = topBar() + `<div class="stage">${b ? battleTable() : dispatch()}${legend()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis ? 'disabled' : ''}>${p.label}</button>` : ''}</div></div>` + modalHtml();
   const ui = $('#ui');
   ui.querySelectorAll<HTMLElement>('[data-do]').forEach((e) => (e.onclick = () => act(acts[e.dataset.do!])));
   ui.querySelectorAll<HTMLElement>('[data-modal]').forEach((e) => (e.onclick = () => { modal = (e.dataset.modal || null) as typeof modal; render(); }));
