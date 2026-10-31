@@ -21,6 +21,8 @@ fill = lambda c: (re.search(r'fill:\s*(#\w+)', css.get(c, '')) or [None, None])[
 TDN_OF = {'#f5dd9d': 0, '#b89554': 1, '#797667': 2, '#52531c': 3}; ZONE_OF = {'#878787': 5, '#951b81': 6, '#009fe3': 7}
 tag = lambda e: e.tag.split('}')[1]
 def pts_of(e, n=12):
+    if tag(e) == 'rect':
+        x, y, w, h = (float(e.get(k)) for k in ('x', 'y', 'width', 'height')); return [(x, y), (x + w, y), (x + w, y + h), (x, y + h)]
     if tag(e) == 'polygon':
         v = list(map(float, re.findall(r'-?[\d.]+', e.get('points')))); return list(zip(v[::2], v[1::2]))
     out = []
@@ -30,10 +32,10 @@ def pts_of(e, n=12):
 def shapes(layer):
     out = []
     for e in layers[layer]:
-        if tag(e) not in ('path', 'polygon'): continue
+        if tag(e) not in ('path', 'polygon', 'rect'): continue
         try: pg = fix(SP(pts_of(e)))
         except Exception: continue
-        if pg.area > 500: out.append((pg, e.get('class')))
+        if pg.area > 150: out.append((pg, e.get('class')))
     return out
 A, Z = shapes('Areas'), shapes('Zones')
 areas = {a['id']: a for a in json.load(open('data/bulge/areas.json'))}; old = json.load(open('data/bulge/map.json'))
@@ -68,8 +70,6 @@ old.pop('size', None)
 out = {'size': [W, H], 'areas': [{k: v for k, v in a.items() if k != 'drawn'} for a in new_areas], 'connections': old['connections']}
 json.dump(out, open('data/bulge/map.json', 'w'), separators=(',', ':'))
 print('areas', len(new_areas), 'of', len(old['areas']))
-open('docs/maps/vector/import-report.txt', 'w').write('\n'.join(report) or 'no differences'); print('\n'.join(report[:40]) or 'no differences')
-
 # ---------------- board texture ----------------
 def d_of(layer, cls=None): return [(e.get('class'), e.get('d')) for e in layers[layer] if tag(e) == 'path' and (cls is None or e.get('class') == cls) and e.get('d')]
 ground = '#bcc7a9'; land = unary_union([pg for pg, _ in A if pg.area > 5000]).buffer(0)
@@ -82,6 +82,7 @@ bnd = ''
 for e in layers['Boundaries']:
     t = tag(e); a = {k: v for k, v in e.attrib.items() if k != 'class'}
     bnd += '<' + t + ''.join(f' {k}="{v}"' for k, v in a.items()) + '/>'
+outline = ''.join(f'<path d="{e.get("d")}"/>' for e in layers['OUTLINE'] if tag(e) == 'path')
 towns, cities = '', ''
 for e in layers['Towns']:
     t = tag(e)
@@ -102,31 +103,29 @@ for a in out['areas']:
     for i in range(vp['german']): marks += f'<circle cx="{x}" cy="{y - 40 - i * 20}" r="9" fill="#2f78c8" stroke="#fff" stroke-width="1.5"/>' + star(x, y - 40 - i * 20, 6.5, '#fff', 'none')
     if vp['mutual']: marks += star(x, y - 40, 11, '#f2d21b', '#c3281c')
 strips = ''
-outer = land.boundary
-for letter, e in entries.items():
-    pg = next((pgs[e['area']] for _ in [0] if e['area'] in pgs), None)
+E_SH = shapes('Entering_Zones'); used = set()
+for letter, e in sorted(entries.items()):
+    pg = pgs.get(e['area']); 
     if pg is None: continue
-    edge = pg.boundary.intersection(outer.buffer(2.5))
-    lines = [g for g in (edge.geoms if hasattr(edge, 'geoms') else [edge]) if g.length > 20]
-    if not lines: continue
-    ln = max(lines, key=lambda g: g.length)
-    band = ln.buffer(21, cap_style=2).difference(land.buffer(1)).buffer(0)
-    if band.is_empty: continue
-    ge = e['side'] == 'german'; col = '#9fb0b8' if ge else '#58a05a'
-    for g in (band.geoms if hasattr(band, 'geoms') else [band]):
-        if g.area > 40: strips += '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in g.exterior.coords) + f'Z" fill="{col}" stroke="#fff" stroke-width="1.6"/>'
-    c = band.representative_point() if band.centroid.distance(band) > 3 else band.centroid
-    strips += f'<text x="{c.x:.1f}" y="{c.y + 6:.1f}" text-anchor="middle" font-size="20" font-weight="700" fill="{"#111" if ge else "#fff"}" stroke="{"#fff" if ge else "#2f6a31"}" stroke-width="0.8" font-family="Arial, sans-serif">{letter}</text>'
+    cand = [(pg.distance(q), i) for i, (q, c) in enumerate(E_SH) if i not in used]
+    d, i = min(cand); q, c = E_SH[i]
+    if d > 12: report.append(f'entry {letter}: nearest drawn strip is {d:.0f}px away'); continue
+    used.add(i); ge = e['side'] == 'german'
+    strips += '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in q.exterior.coords) + f'Z" fill="{"#9fb0b8" if ge else "#2f9a52"}" stroke="#fff" stroke-width="1.6"/>'
+    c = q.representative_point(); strips += f'<text x="{c.x:.1f}" y="{c.y + 6:.1f}" text-anchor="middle" font-size="19" font-weight="700" fill="{"#111" if ge else "#fff"}" stroke="{"#fff" if ge else "#14502a"}" stroke-width="0.8" font-family="Arial, sans-serif">{letter}</text>'
+report.extend(f'drawn entry strip {i} was not matched to an entry area' for i in range(len(E_SH)) if i not in used)
+open('docs/maps/vector/import-report.txt', 'w').write('\n'.join(report) or 'no differences'); print('\n'.join(report[:40]) or 'no differences')
 svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">
 <rect id="frame" width="{W}" height="{H}" fill="#bccad3"/>
 <g id="terrain"><path fill="{ground}" fill-rule="evenodd" d="{land_d}"/></g>
 <g id="woods" opacity="0"></g>
-<g id="rivers" fill="none" stroke="#2f8fd0" stroke-linecap="round" stroke-linejoin="round">{rivers}</g>
-<g id="entry-strips">{strips}</g>
-<g id="roads" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#3a3f3d" stroke-width="7.4">{roads_c}</g><g stroke="#5d6360" stroke-width="4.6">{roads_c}</g></g>
+<g id="entering-zones">{strips}</g>
 <g id="boundaries" fill="none" stroke="#fbfbf6" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round">{bnd}</g>
+<g id="rivers" fill="none" stroke="#2f8fd0" stroke-linecap="round" stroke-linejoin="round">{rivers}</g>
+<g id="roads" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#3a3f3d" stroke-width="7.4">{roads_c}</g><g stroke="#5d6360" stroke-width="4.6">{roads_c}</g></g>
 <g id="cities" fill="#6b706d" stroke="#3a3f3d" stroke-width="1.6">{cities}</g>
 <g id="towns">{towns}</g>
+<g id="outline" fill="none" stroke="#fbfbf6" stroke-width="4.6" stroke-linejoin="round">{outline}</g>
 <g id="markers">{marks}</g>
 <g id="labels" font-family="Arial Narrow, Arial, sans-serif" font-size="16" font-style="italic" fill="#2c3a22" stroke="{ground}" stroke-width="3.2" paint-order="stroke">{labels}</g>
 </svg>'''
