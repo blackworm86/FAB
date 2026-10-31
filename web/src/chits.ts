@@ -20,7 +20,8 @@ const flat = (fill: string) => `<svg xmlns="http://www.w3.org/2000/svg" width="3
 const turn = (t: number | 'S' | string | null | undefined, x: number, y: number, size: number, fill = '#111') => t == null ? '' : t === 'S'
   ? `<rect x="${x}" y="${y - 24}" width="22" height="30" fill="#fff"/>${txt('S', x + 11, y + 1, 29, { w: 'b', anchor: 'middle' })}`
   : txt(String(t), x, y, size, { w: 'b', fill });
-const panel = (fill: string) => `<rect x="10" y="15" width="137" height="141" fill="#fff"/><rect x="13" y="18" width="131" height="135" fill="${fill}"/>`;
+const SHIFT = '<g transform="translate(1.5 -5.5)">';                           // the printed panels sit 5.5 units high on the scan crop; centre them on the chit
+const panel = (fill: string) => `${SHIFT}<rect x="10" y="15" width="137" height="141" fill="#fff"/><rect x="13" y="18" width="131" height="135" fill="${fill}"/>`;
 const CX = 80, CY = 77;                                                          // centre of the unit square on asset chits
 const square = (fill: string, cy = CY, s = 68) => `<rect x="${CX - s / 2}" y="${cy - s / 2}" width="${s}" height="${s}" fill="${fill}" stroke="#0b0b10" stroke-width="3.4"/>`;
 const INK = '#0b0b10';
@@ -29,7 +30,8 @@ const SPLIT: Record<string, string[]> = { 'non-elite inf repl': ['Non-Elite', 'I
   'delayed response': ['Delayed', 'Response'], 'regt only for 4th inf div': ['Regt only for', '4th Inf Div'], 'regt only for 1st inf div': ['Regt only for', '1st Inf Div'] };
 const wrap = (name: string) => SPLIT[name.toLowerCase()] ?? (name.length > 12 ? name.split(/ (.+)/).filter(Boolean) : [name]);
 const QDOT: Record<string, [string, string]> = { elite: ['#d7262b', '#fff'], veteran: ['#101014', ''], green: ['#fff', '#8a8d95'] };
-const cross = (x: number, y: number, r: number, fill = '#101014', edge = '#fff') => { const a = r * 0.34, b = r * 0.5, p = `M${-a} ${-b}H${a}V${-a}H${b}V${a}H${a}V${b}H${-a}V${a}H${-b}V${-a}H${-a}Z`; return `<g transform="translate(${x} ${y})"><path d="M${-a * .8} ${-r}H${a * .8}L${a} ${-a}L${r} ${-a * .8}V${a * .8}L${a} ${a}L${a * .8} ${r}H${-a * .8}L${-a} ${a}L${-r} ${a * .8}V${-a * .8}L${-a} ${-a}Z" fill="${fill}" stroke="${edge}" stroke-width="${r * .16}" stroke-linejoin="round"/>${p ? '' : ''}</g>`; };
+/** The German Balkenkreuz: black cross with flared arms and a white border. r is the half-length of an arm. */
+const cross = (x: number, y: number, r: number, fill = '#0d0d0f', edge = '#fff') => { const a = r * 0.2, b = r * 0.34, p = [[-a, -a], [-b, -r], [b, -r], [a, -a], [r, -b], [r, b], [a, a], [b, r], [-b, r], [-a, a], [-r, b], [-r, -b]].map(([u, v]) => `${(x + u).toFixed(1)} ${(y + v).toFixed(1)}`).join('L'); return `<path d="M${p}Z" fill="${edge}" stroke="${edge}" stroke-width="${(r * 0.26).toFixed(1)}" stroke-linejoin="round"/><path d="M${p}Z" fill="${fill}"/>`; };
 const star = (x: number, y: number, r: number, fill = '#fff') => `<path d="M${Array.from({ length: 10 }, (_, i) => `${(x + (i % 2 ? r * .4 : r) * Math.sin(i * Math.PI / 5)).toFixed(1)} ${(y - (i % 2 ? r * .4 : r) * Math.cos(i * Math.PI / 5)).toFixed(1)}`).join('L')}Z" fill="${fill}"/>`;
 const img = (href: string, x = 0, y = 0, w = 160, h = 160) => `<image href="${href}" x="${x}" y="${y}" width="${w}" height="${h}"/>`;
 const asBox = (b: readonly number[]) => ({ x: b[0], y: b[1], w: b[2], h: b[3] });
@@ -37,6 +39,27 @@ const asBox = (b: readonly number[]) => ({ x: b[0], y: b[1], w: b[2], h: b[3] })
 /** Garrison asset (area number in a white box) or Task Force (turn and star): the light-blue X square on an olive chit. */
 export function garrisonChit(label: string, num: string, boxed = true, dotFill = '#fff') {
   return `${open('allied')}${boxed ? `<rect x="14" y="17" width="21" height="38" fill="#fff"/>${txt(num, 30, 51, 21, { rot: -90 })}` : txt(num, 31, 55, 24, { w: 'r', rot: -90 })}<circle cx="82" cy="19" r="8.5" fill="${dotFill}" stroke="#8d9068" stroke-width="1.6"/>${square('#8ec3ea', CY + 2, 70)}<path d="M${CX - 35} ${CY + 2 - 35}L${CX + 35} ${CY + 2 + 35}M${CX + 35} ${CY + 2 - 35}L${CX - 35} ${CY + 2 + 35}" stroke="${INK}" stroke-width="3"/>${txt(label, 82, 141, 23, { anchor: 'middle', max: 100 })}</svg>`;
+}
+
+
+const MK = (inner: string, bg = '#0b0b10') => `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160"><rect width="160" height="160" fill="${bg}"/>${inner}</svg>`;
+const outl = (str: string, x: number, y: number, size: number, o: { fill?: string; rot?: number; max?: number } = {}) => txt(str, x, y, size, { w: 'b', anchor: 'middle', fill: o.fill ?? '#fff', stroke: '#1b1b18', sw: 120, rot: o.rot, max: o.max });
+const ARROW = (fill: string, rot = 0, cx = 80, cy = 80, k = 1) => `<g transform="translate(${cx} ${cy}) rotate(${rot}) scale(${k})"><path d="M-48 -13H14V-30L50 0L14 30V13H-48Z" fill="${fill}" stroke="#2a1a10" stroke-width="2.2" stroke-linejoin="round"/></g>`;
+function marker(name: string): string | null {
+  switch (name) {
+    case 'Field Works': {                                              // the brown toothed ring on a pale tile
+      const teeth = Array.from({ length: 8 }, (_, i) => `<rect x="-6" y="-46" width="12" height="16" rx="1" fill="#7a4636" transform="rotate(${i * 45})"/>`).join('');
+      return MK(`<rect x="6" y="6" width="148" height="148" fill="#ecdcd6" stroke="#cfb9b0" stroke-width="2"/><g transform="translate(80 80)">${teeth}<circle r="29" fill="none" stroke="#7a4636" stroke-width="10"/></g>`, '#d7c4bc');
+    }
+    case 'Blown Bridge': return MK(`<rect x="12" y="12" width="136" height="136" fill="#d8301c"/><path d="${Array.from({ length: 24 }, (_, i) => { const r = i % 2 ? 30 : 62, a = i * Math.PI / 12; return `${i ? 'L' : 'M'}${(80 + r * Math.cos(a)).toFixed(1)} ${(84 + r * Math.sin(a) * .8).toFixed(1)}`; }).join('')}Z" fill="#f59a1c"/><circle cx="80" cy="84" r="26" fill="#f8d23a"/><path d="M36 112L68 90L80 100L96 88L124 112Z" fill="#2a1a10"/><circle cx="62" cy="80" r="2" fill="#2a1a10"/><circle cx="98" cy="78" r="2" fill="#2a1a10"/>${outl('Blown', 80, 44, 36, { fill: '#e8d6c8', max: 112 })}${outl('Bridge', 80, 138, 34, { fill: '#cfc6cf', max: 112 })}`);
+    case 'Road Block': return MK(`<rect x="8" y="8" width="144" height="144" fill="#b2561d"/><rect x="18" y="18" width="124" height="124" fill="#fff"/><path d="M18 78H142V142H18Z" fill="#b4c84a"/><path d="M18 100H142V142H18Z" fill="#d6b840"/><g fill="#fff" stroke="#c4311c" stroke-width="3" stroke-linejoin="round"><path d="M34 100L48 72L62 100Z"/><path d="M66 100L80 72L94 100Z"/><path d="M98 100L112 72L126 100Z"/></g><rect x="54" y="104" width="52" height="12" fill="#222"/>${outl('Road', 80, 56, 38, { max: 100 })}${outl('Block', 80, 134, 38, { max: 100 })}`, '#c8d1c4');
+    case 'No Fuel': { const b = asBox(CHIT_ART.fuelBox); return MK(`<rect x="8" y="8" width="144" height="144" fill="#c9cbcf"/><g opacity=".75">${img(CHIT_ART.fuel, 24, 28, 112, 92)}</g><circle cx="80" cy="76" r="54" fill="none" stroke="#d3262a" stroke-width="13"/><path d="M42 114L118 38" stroke="#d3262a" stroke-width="13"/>`, '#dfe0e2'); void b; }
+    case 'Exploitation': { const t = asBox(CHIT_ART.tankBox); return MK(`<rect x="4" y="4" width="152" height="152" fill="#dd4a22"/><rect x="14" y="14" width="132" height="132" fill="#dcdee2"/><path d="M14 98H146V146H14Z" fill="#b3bdd1"/>${ARROW('#e0452a', -14, 96, 112, 1.05)}<image href="${CHIT_ART.tank}" x="${t.x}" y="${t.y + 1}" width="${t.w}" height="${t.h}"/>${txt('Exploitation', 80, 64, 31, { w: 'b', anchor: 'middle', fill: '#f2de2a', stroke: '#16140a', sw: 110, max: 124 })}`, '#e0541f'); }
+    case 'River Assault': return MK(`<rect x="2" y="2" width="156" height="156" fill="#eee7b0"/><rect x="14" y="14" width="132" height="132" fill="#8b8f4a"/><path d="M14 14H146V60C110 70 60 90 14 130Z" fill="#a5a85c" opacity=".7"/><path d="M86 14C70 40 100 62 86 90C74 112 96 130 84 146" fill="none" stroke="#3b73c4" stroke-width="12" stroke-linecap="round"/><g transform="translate(78 82) rotate(-12)"><path d="M54 -6C20 -20 -20 -22 -50 -2L-56 -14L-72 10L-44 24L-48 12C-18 -2 20 0 54 12Z" fill="#e0452a" stroke="#2a1a10" stroke-width="2" stroke-linejoin="round" transform="scale(1.15)"/></g>${outl('River', 80, 46, 32, { rot: -14, max: 90 })}${outl('Assault', 80, 128, 32, { rot: -14, max: 100 })}`, '#eee7b0');
+    case 'Boundary Crossing': return MK(`<rect x="8" y="8" width="144" height="144" fill="#5a6a3a"/><rect x="8" y="8" width="144" height="144" fill="#9aa25a" opacity=".35"/><circle cx="28" cy="130" r="4" fill="#f0b81c"/><circle cx="46" cy="140" r="4" fill="#f0b81c"/><circle cx="64" cy="146" r="4" fill="#f0b81c"/><path d="M24 66L58 40V54H128V90H58V104Z" fill="#7d838a" stroke="#21262b" stroke-width="3" stroke-linejoin="round"/>${outl('Boundary', 80, 32, 28, { rot: 3, max: 120 })}${outl('Crossing', 80, 134, 28, { rot: 3, max: 120 })}`, '#1d2a2b');
+    case 'Remaining German Bridge Repairs': return MK(`<rect x="8" y="8" width="144" height="144" fill="#6b7358"/><rect x="14" y="14" width="132" height="132" fill="#b9bf6c"/><path d="M14 112H146V146H14Z" fill="#6aa0d8"/><path d="M26 124C26 100 54 94 80 94C106 94 134 100 134 124Z" fill="#14140f"/><circle cx="60" cy="118" r="5" fill="#e6b83a"/><circle cx="100" cy="118" r="5" fill="#e6b83a"/>${txt('Remaining', 80, 36, 21, { w: 'b', anchor: 'middle', fill: '#14240f', max: 112 })}${txt('German', 80, 52, 21, { w: 'b', anchor: 'middle', fill: '#14240f', max: 90 })}${outl('Bridge', 80, 86, 38, { max: 118 })}${txt('Repairs', 80, 140, 28, { w: 'b', anchor: 'middle', fill: '#1d4f9b', max: 100 })}`, '#7b8087');
+  }
+  return null;
 }
 
 export type Counter = { id?: string; kind: string; name: string; side: 'german' | 'allied' | 'none'; ech: string; turn?: number | 'S' | null; q?: string | null };
@@ -59,24 +82,24 @@ export function chitSvg(c: Chit | Counter): string {
   if (k === 'replacement_inf' || k === 'replacement_arm' || k === 'rebuild_or_replace_inf' || k === 'rebuild_or_replace_arm') {
     const rebuild = k.startsWith('rebuild'), inf = k.endsWith('inf'), ink = rebuild ? '#1c2b0d' : '#2c0c2a', fill = rebuild ? '#a9d37a' : ech, ls = wrap(name), n = ls.length;
     const sym = inf ? `<rect x="61" y="40" width="43" height="29" fill="#fff" stroke="#111" stroke-width="2.4"/><path d="M61 40L104 69M104 40L61 69" stroke="#111" stroke-width="1.6"/>` : `<rect x="61" y="40" width="43" height="29" fill="#fff" stroke="#111" stroke-width="2.4"/><rect x="68" y="46" width="29" height="17" rx="8.5" fill="none" stroke="#111" stroke-width="1.8"/>`;
-    return `${open(side)}${panel(fill)}${turn(t, 22, 52, 32)}${sym}${ls.map((l, i) => txt(l, 82, (n === 2 ? 99 : 94) + i * (n === 2 ? 28 : 24), n === 2 ? 27 : 23, { anchor: 'middle', fill: ink, max: 108 })).join('')}</svg>`;
+    return `${open(side)}${panel(fill)}${turn(t, 22, 52, 32)}${sym}${ls.map((l, i) => txt(l, 82, (n === 2 ? 99 : 94) + i * (n === 2 ? 28 : 24), n === 2 ? 27 : 23, { anchor: 'middle', fill: ink, max: 108 })).join('')}</g></svg>`;
   }
-  if (k === 'command_staff') return `${open(side, ['#f07a17', '#f89a47', '#c25d0a'])}${turn(t, 12, 51, 33)}${txt('Command', 36, 42, 25, { max: 99 })}<rect x="48" y="55" width="66" height="64" fill="none" stroke="#fff" stroke-width="4.6"/>${txt('HQ', 81, 102, 46, { w: 'b', anchor: 'middle', fill: '#fff' })}${txt('Staff Asset', 82, 150, 26, { anchor: 'middle', max: 104 })}</svg>`;
+  if (k === 'command_staff') return `${open(side, ['#f07a17', '#f89a47', '#c25d0a'])}<g transform="translate(0 -4)">${turn(t, 12, 51, 33)}${txt('Command', 36, 42, 25, { max: 99 })}<rect x="48" y="55" width="66" height="64" fill="none" stroke="#fff" stroke-width="4.6"/>${txt('HQ', 81, 102, 46, { w: 'b', anchor: 'middle', fill: '#fff' })}${txt('Staff Asset', 82, 150, 26, { anchor: 'middle', max: 104 })}</g></svg>`;
   if (k === 'fuel' || k === 'fuel_bid') {
     const b = asBox(CHIT_ART.fuelBox), captured = name.startsWith('Captured'), bid = k === 'fuel_bid';
-    return `${open(side, ['#f07a17', '#f89a47', '#c25d0a'])}${bid ? txt('Bid', 14, 34, 26, { w: 'b' }) : ''}${captured ? txt('Captured', 80, 24, 23, { anchor: 'middle', max: 100 }) : ''}${img(CHIT_ART.fuel, b.x, b.y, b.w, b.h)}${txt('Fuel', 100, 112, 38, { w: 'b', anchor: 'middle', fill: '#ffe100', stroke: '#111', sw: 90, max: 84 })}${txt('Asset', 83, 146, 27, { w: 'b', anchor: 'middle', max: 76 })}</svg>`;
+    return `${open(side, ['#f07a17', '#f89a47', '#c25d0a'])}${bid ? txt('Bid', 14, 34, 26, { w: 'b' }) : ''}${captured ? txt('Captured', 80, 24, 23, { anchor: 'middle', max: 100 }) : ''}${img(CHIT_ART.fuel, b.x + 2, b.y + 6, b.w * 1.12, b.h * 1.12)}${txt('Fuel', 100, 112, 38, { w: 'b', anchor: 'middle', fill: '#ffe100', stroke: '#111', sw: 90, max: 84 })}${txt('Asset', 83, 146, 27, { w: 'b', anchor: 'middle', max: 76 })}</svg>`;
   }
   if (k === 'event_bodenplatte') { const b = asBox(CHIT_ART.bodenBox); return `${open(side, ['#9fcff0', '#c4e3f7', '#78a8cc'])}${turn(t, 14, 38, 32)}${img(CHIT_ART.boden, b.x, b.y + 2, b.w, b.h)}${txt('Operation', 80, 118, 31, { w: 'b', anchor: 'middle', fill: '#fff', stroke: '#222', sw: 130, max: 128 })}${txt('Bodenplatte', 80, 148, 31, { w: 'b', anchor: 'middle', fill: '#fff', stroke: '#222', sw: 130, max: 128 })}</svg>`; }
   if (k === 'air_mission') { const b = asBox(CHIT_ART.airBox); return `${flat('#1f5db0')}<rect x="8" y="8" width="144" height="144" fill="#9fcff0" stroke="#fff" stroke-width="3"/>${turn(t, 16, 44, 32)}${txt('Allied', 98, 36, 22, { anchor: 'middle' })}${img(CHIT_ART.air, b.x + 2, b.y + 8, b.w, b.h)}${txt('Air', 14, 112, 36, { w: 'b', fill: '#fff', stroke: '#222', sw: 130 })}${txt('Mission', 14, 144, 36, { w: 'b', fill: '#fff', stroke: '#222', sw: 130, max: 130 })}</svg>`; }
   if (k === 'special_action_event') {
     const dark = ['#4d5b2c', '#8e2d82', '#3d6dcc'].includes(ech), f = dark ? '#fff' : '#111';
-    return `${open(side)}${panel(ech)}${turn(t, 22, 52, 32)}${txt('Special', 86, 44, 26, { w: 'b', italic: true, anchor: 'middle', fill: f, max: 78 })}<image href="${CHIT_ART.saArrow}" x="18" y="52" width="130" height="72"/>${txt('Action', 86, 147, 26, { w: 'b', italic: true, anchor: 'middle', fill: f, max: 78 })}</svg>`;
+    return `${open(side)}${panel(ech)}${turn(t, 22, 52, 32)}${txt('Special', 86, 44, 26, { w: 'b', italic: true, anchor: 'middle', fill: f, max: 78 })}<image href="${CHIT_ART.saArrow}" x="18" y="52" width="130" height="72"/>${txt('Action', 86, 147, 26, { w: 'b', italic: true, anchor: 'middle', fill: f, max: 78 })}</g></svg>`;
   }
-  if (k === 'event_greif_bridge') return `${open(side)}${panel('#e8412b')}${turn(t, 22, 52, 32)}<path d="M20 69H54" stroke="#fff" stroke-width="2.4"/><path d="M50 62L62 69L50 76Z" fill="#fff"/><path d="M76 61Q80 64 86 64H112Q118 64 122 61M76 76Q80 73 86 73H112Q118 73 122 76" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>${txt('Greif Team', 81, 114, 29, { w: 'b', anchor: 'middle', max: 108 })}${txt('Bridge', 81, 145, 30, { anchor: 'middle', max: 108 })}</svg>`;
-  if (k === 'event_greif_interdict') return `${open(side)}${panel('#e8412b')}${turn(t, 22, 52, 32)}${txt('?', 78, 78, 68, { anchor: 'middle', fill: '#fff' })}${txt('Greif Team', 81, 114, 29, { w: 'b', anchor: 'middle', max: 108 })}${txt('Interdict', 81, 145, 30, { anchor: 'middle', max: 108 })}</svg>`;
-  if (k === 'event_delayed_response') return `${open(side)}${panel('#f07a17')}<ellipse cx="82" cy="100" rx="46" ry="44" fill="#fff"/>${turn(t, 22, 52, 32)}${txt('Delayed', 84, 85, 31, { anchor: 'middle', max: 100 })}${txt('Response', 82, 128, 31, { anchor: 'middle', max: 108 })}</svg>`;
-  if (k === 'event_arriving_regiment') return `${open(side)}${panel('#a9d37a')}${turn(t, 22, 52, 32)}${txt('III', 79, 46, 14, { w: 'b', anchor: 'middle', max: 22 })}<rect x="57" y="53" width="44" height="26" fill="#fff" stroke="#111" stroke-width="2.4"/><path d="M57 53L101 79M101 53L57 79" stroke="#111" stroke-width="1.6"/>${wrap(name).map((l, i) => txt(l, 81, 107 + i * 28, 22, { anchor: 'middle', fill: '#1c2b0d', max: 108 })).join('')}</svg>`;
-  if (k === 'event_release') { const ls = wrap(name); return `${open(side)}${panel('#f07a17')}${turn(t, 22, 52, 32)}${ls.map((l, i) => txt(l, 82, 66 + i * 35, 33, { anchor: 'middle', max: 106 })).join('')}</svg>`; }
+  if (k === 'event_greif_bridge') return `${open(side)}${panel('#e8412b')}${turn(t, 22, 52, 32)}<path d="M20 69H54" stroke="#fff" stroke-width="2.4"/><path d="M50 62L62 69L50 76Z" fill="#fff"/><path d="M76 61Q80 64 86 64H112Q118 64 122 61M76 76Q80 73 86 73H112Q118 73 122 76" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>${txt('Greif Team', 81, 114, 29, { w: 'b', anchor: 'middle', max: 108 })}${txt('Bridge', 81, 145, 30, { anchor: 'middle', max: 108 })}</g></svg>`;
+  if (k === 'event_greif_interdict') return `${open(side)}${panel('#e8412b')}${turn(t, 22, 52, 32)}${txt('?', 78, 78, 68, { anchor: 'middle', fill: '#fff' })}${txt('Greif Team', 81, 114, 29, { w: 'b', anchor: 'middle', max: 108 })}${txt('Interdict', 81, 145, 30, { anchor: 'middle', max: 108 })}</g></svg>`;
+  if (k === 'event_delayed_response') return `${open(side)}${panel('#f07a17')}<ellipse cx="82" cy="100" rx="46" ry="44" fill="#fff"/>${turn(t, 22, 52, 32)}${txt('Delayed', 84, 85, 31, { anchor: 'middle', max: 100 })}${txt('Response', 82, 128, 31, { anchor: 'middle', max: 108 })}</g></svg>`;
+  if (k === 'event_arriving_regiment') return `${open(side)}${panel('#a9d37a')}${turn(t, 22, 52, 32)}${txt('III', 79, 46, 14, { w: 'b', anchor: 'middle', max: 22 })}<rect x="57" y="53" width="44" height="26" fill="#fff" stroke="#111" stroke-width="2.4"/><path d="M57 53L101 79M101 53L57 79" stroke="#111" stroke-width="1.6"/>${wrap(name).map((l, i) => txt(l, 81, 107 + i * 28, 22, { anchor: 'middle', fill: '#1c2b0d', max: 108 })).join('')}</g></svg>`;
+  if (k === 'event_release') { const ls = wrap(name); return `${open(side)}${panel('#f07a17')}${turn(t, 22, 52, 32)}${ls.map((l, i) => txt(l, 88, 66 + i * 35, 33, { anchor: 'middle', max: 92 })).join('')}</g></svg>`; }
   /* markers and backs */
   const id = (c as Counter).id ?? '';
   if (k === 'reserve_marker') {
@@ -89,16 +112,13 @@ export function chitSvg(c: Chit | Counter): string {
     if (name === 'Game Turn') return `${flat('#2c3a44')}${txt('Game', 80, 74, 52, { w: 'b', anchor: 'middle', fill: '#fff', max: 130 })}${txt('Turn', 80, 126, 52, { w: 'b', anchor: 'middle', fill: '#fff', max: 130 })}</svg>`;
     if (name === 'VPs') return `${flat('#2c3a44')}${cross(80, 52, 30)}${txt('VPs', 80, 138, 50, { w: 'b', anchor: 'middle', fill: '#fff', max: 130 })}</svg>`;
     if (name === 'Disordered / Recovering') return `${flat('#f4c423')}<path d="${Array.from({ length: 16 }, (_, i) => { const r = i % 2 ? 36 : 74, a = i * Math.PI / 8; return `${i ? 'L' : 'M'}${(80 + r * Math.cos(a)).toFixed(1)} ${(80 + r * Math.sin(a)).toFixed(1)}`; }).join('')}Z" fill="#ea5a24" stroke="#c0301c" stroke-width="2"/>${txt('D', 80, 118, 98, { w: 'b', anchor: 'middle' })}</svg>`;
-    if (name === 'River Assault') return `${img(CHIT_ART.riverAssault)}</svg>`.replace(/^/, '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160">');
-    if (name === 'Exploitation') return `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160">${img(CHIT_ART.exploitation)}</svg>`;
-    if (name === 'Boundary Crossing') return `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160">${img(CHIT_ART.boundary)}</svg>`;
-    if (name.startsWith('Remaining German Bridge')) return `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160">${img(CHIT_ART.bridgeRepairs)}</svg>`;
+    const m = marker(name); if (m) return m;
   }
-  const raster = (href: string) => `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160">${img(href)}</svg>`;
+  if (id === 'GEAR') return marker('Field Works')!;
   switch (id) {
-    case 'back_blown': return raster(CHIT_ART.blown);
-    case 'back_roadblock': return raster(CHIT_ART.roadBlock);
-    case 'back_no_fuel': return raster(CHIT_ART.noFuel);
+    case 'back_blown': return marker('Blown Bridge')!;
+    case 'back_roadblock': return marker('Road Block')!;
+    case 'back_no_fuel': return marker('No Fuel')!;
     case 'back_recovering': return `${flat('#f2e9b8')}<rect x="14" y="14" width="132" height="132" fill="#e9dd5b" stroke="#fff" stroke-width="5"/>${txt('R', 80, 120, 108, { w: 'b', anchor: 'middle', fill: '#2e8b3a' })}</svg>`;
     case 'back_star': return `${flat('#0f55b5')}${star(80, 82, 62, '#e6eaf0')}</svg>`;
     case 'back_vps': return `${flat('#0f55b5')}${star(80, 52, 32, '#e6eaf0')}${txt('VPs', 80, 138, 50, { w: 'b', anchor: 'middle', fill: '#fff', max: 130 })}</svg>`;
@@ -113,5 +133,5 @@ export function chitSvg(c: Chit | Counter): string {
     case 'back_zone5_de': case 'back_zone6_de': case 'back_zone7_de': { const z = id[9]; return `${flat('#2c3a44')}${cross(80, 38, 17)}${txt(`Zone ${z}`, 80, 96, 34, { w: 'b', anchor: 'middle', fill: '#fff' })}${txt('Reserve Unit', 80, 126, 20, { anchor: 'middle', fill: '#fff', max: 120 })}</svg>`; }
     case 'back_zone7_al': case 'back_zones56_al': return `${flat('#0f55b5')}${star(80, 38, 20)}${txt(id === 'back_zone7_al' ? 'Zone 7' : 'Zones 5/6', 80, 96, 34, { w: 'b', anchor: 'middle', fill: '#fff', max: 128 })}${txt('Reserve Unit', 80, 126, 20, { anchor: 'middle', fill: '#fff', max: 120 })}</svg>`;
   }
-  return `${open(side)}${panel(ech)}${turn(t, 22, 52, 32)}${wrap(name).map((l, i) => txt(l, 82, 94 + i * 26, 23, { anchor: 'middle', max: 108 })).join('')}</svg>`;
+  return `${open(side)}${panel(ech)}${turn(t, 22, 52, 32)}${wrap(name).map((l, i) => txt(l, 82, 94 + i * 26, 23, { anchor: 'middle', max: 108 })).join('')}</g></svg>`;
 }

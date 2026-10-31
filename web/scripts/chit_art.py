@@ -34,6 +34,15 @@ big, fg = planes('R41', (20, 42, 146, 90), 6000); rgba, bx = finish(big, fg, (18
 sa = np.array(Image.open('../assets/counters/raw/R38.png').convert('RGB')).astype(int); crop = sa[52:124, 18:148]; panel = np.median(sa[100:110, 125:140].reshape(-1, 3), axis=0)
 d = np.abs(crop - panel).sum(axis=2); alpha = np.clip((d - 40) * 5, 0, 255).astype(np.uint8)
 im = Image.fromarray(np.dstack([crop.astype(np.uint8), alpha]), 'RGBA'); b = io.BytesIO(); im.save(b, 'PNG', optimize=True); out['saArrow'] = 'data:image/png;base64,' + base64.b64encode(b.getvalue()).decode()
+# the tank on the Exploitation counter: silhouette from its black outline, filled
+im4 = cv2.resize(cv2.imread('../assets/counters/raw/Rx1.png'), None, fx=SC, fy=SC, interpolation=cv2.INTER_CUBIC)
+x0, y0, x1, y1 = 14 * SC, 98 * SC, 108 * SC, 154 * SC; crop = im4[y0:y1, x0:x1]; g = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+dark = (g < 105).astype(np.uint8) * 255; dark = cv2.morphologyEx(dark, cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
+cs, _ = cv2.findContours(dark, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE); sil = np.zeros_like(dark)
+for c in cs:
+    if cv2.contourArea(c) > 3000: cv2.drawContours(sil, [c], -1, 255, -1)
+sil = cv2.GaussianBlur(cv2.erode(sil, np.ones((3, 3), np.uint8)), (0, 0), 1.2)
+tank = np.dstack([crop, sil]); out['tank'] = png(tank); out['tankBox'] = (14, 98, 94, 56)
 def jpg(path):
     im = Image.open(path).convert('RGB'); b = io.BytesIO(); im.save(b, 'JPEG', quality=88); return 'data:image/jpeg;base64,' + base64.b64encode(b.getvalue()).decode()
 for k, f in {'riverAssault': 'raw/R92', 'exploitation': 'raw/Rx1', 'boundary': 'raw/R67', 'bridgeRepairs': 'raw/R89', 'blown': 'backs/blown', 'roadBlock': 'backs/roadblock', 'noFuel': 'backs/no_fuel'}.items(): out[k] = jpg(f'../assets/counters/{f}.png')

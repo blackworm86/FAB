@@ -88,7 +88,10 @@ for e in layers['Towns']:
     t = tag(e)
     if t == 'circle': towns += f'<circle cx="{e.get("cx")}" cy="{e.get("cy")}" r="7.5" fill="#fff" stroke="#3b403d" stroke-width="2.6"/>'
     else: cities += '<' + t + ''.join(f' {k}="{v}"' for k, v in e.attrib.items() if k != 'class') + '/>'
-def cross(x, y, r): return f'<path d="M{x - r * .3:.1f} {y - r:.1f}h{r * .6:.1f}v{r * .55:.1f}h{r * .7:.1f}v{r * .6:.1f}h{-r * .7:.1f}v{r * 1.25:.1f}h{-r * .6:.1f}v{-r * 1.25:.1f}h{-r * .7:.1f}v{-r * .6:.1f}h{r * .7:.1f}Z" fill="#111"/>'
+def cross(x, y, r):
+    a, b = r * .2, r * .34; pts = [(-a, -a), (-b, -r), (b, -r), (a, -a), (r, -b), (r, b), (a, a), (b, r), (-b, r), (-a, a), (-r, b), (-r, -b)]
+    d = 'M' + 'L'.join(f'{x + u:.1f} {y + v:.1f}' for u, v in pts) + 'Z'
+    return f'<path d="{d}" fill="#fff" stroke="#fff" stroke-width="{r * .26:.1f}" stroke-linejoin="round"/><path d="{d}" fill="#0d0d0f"/>'
 def star(x, y, r, f, s): return '<path d="M' + 'L'.join(f'{x + (r if i % 2 == 0 else r * .45) * math.sin(i * math.pi / 5):.1f} {y - (r if i % 2 == 0 else r * .45) * math.cos(i * math.pi / 5):.1f}' for i in range(10)) + f'Z" fill="{f}" stroke="{s}" stroke-width="1.2"/>'
 marks = labels = ''
 for a in out['areas']:
