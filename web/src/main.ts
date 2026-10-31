@@ -21,6 +21,16 @@ function pole(poly: [number, number][]): [number, number] {
   for (let i = 0; i <= 40; i++) for (let j = 0; j <= 40; j++) { const x = x0 + ((x1 - x0) * i) / 40, y = y0 + ((y1 - y0) * j) / 40; if (!inside(x, y)) continue; const d = edge(x, y); if (d > bd) { bd = d; best = [x, y]; } }
   return best;
 }
+/** Candidate spots inside an area: grid points (world cm) with their clearance from the border, so pieces can be kept fully inside it. */
+const CELLS = new Map<number, { x: number; z: number; d: number }[]>();
+function cellsOf(id: number) {
+  let c = CELLS.get(id); if (c) return c;
+  const poly = MAP.areas.find((a) => a.id === id)!.polygon, xs = poly.map((p) => p[0]), ys = poly.map((p) => p[1]); c = [];
+  const inside = (x: number, y: number) => { let k = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) k = !k; } return k; };
+  const edge = (x: number, y: number) => { let d = 1e9; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [ax, ay] = poly[j], [bx, by] = poly[i], dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy || 1))); d = Math.min(d, Math.hypot(x - ax - t * dx, y - ay - t * dy)); } return d; };
+  for (let x = Math.min(...xs); x <= Math.max(...xs); x += 5) for (let y = Math.min(...ys); y <= Math.max(...ys); y += 5) if (inside(x, y)) { const w = toWorld(x, y); c.push({ x: w.x, z: w.z, d: edge(x, y) / S }); }
+  CELLS.set(id, c); return c;
+}
 const POLE = new Map<number, [number, number]>(MAP.areas.map((a) => [a.id, pole(a.polygon)]));
 /** Marker spot on the shared border of two areas (the scan carries no marker positions for most connections). */
 function borderMid(a: number, b: number): [number, number] {
@@ -140,40 +150,50 @@ function owned(text: string, bg: string, size: number, side: E.Side) {
 }
 function drawPieces() {
   disposeAll(pieces); disposeAll(markers);
-  const taken: { x: number; z: number; r: number }[] = [];
-  /** Nearest free spot to (x, z) for a marker of radius r that touches no block and no other marker. */
-  const free = (x: number, z: number, r: number) => {
-    const ok = (px: number, pz: number) => taken.every((t) => Math.hypot(t.x - px, t.z - pz) >= t.r + r);
-    let spot = { x, z };
-    if (!ok(x, z)) outer: for (let ring = 1; ring <= 10; ring++) for (let k = 0; k < 16; k++) { const a = (k / 16) * Math.PI * 2, px = x + Math.cos(a) * ring * 0.45, pz = z + Math.sin(a) * ring * 0.45; if (ok(px, pz)) { spot = { x: px, z: pz }; break outer; } }
-    taken.push({ ...spot, r }); return spot;
+  const taken = new Map<number, { x: number; z: number; r: number }[]>(), edgeTaken: { x: number; z: number; r: number }[] = [];
+  /** Spot inside the area nearest to (x, z) whose footprint (radius r) is fully inside it and clear of what is already there. */
+  const inArea = (id: number, x: number, z: number, r: number) => {
+    const t = taken.get(id) ?? (taken.set(id, []), taken.get(id)!), cells = cellsOf(id);
+    for (const need of [r, r * 0.75, r * 0.5, 0]) {
+      let best: { x: number; z: number } | null = null, bd = 1e9;
+      for (const c of cells) { if (c.d < need) continue; const d = Math.hypot(c.x - x, c.z - z); if (d < bd && t.every((q) => Math.hypot(q.x - c.x, q.z - c.z) >= q.r + r * (need === r ? 1 : 0.7))) { bd = d; best = c; } }
+      if (best) { t.push({ ...best, r }); return best; }
+    }
+    const p = toWorld(...POLE.get(id)!); t.push({ x: p.x, z: p.z, r }); return p;
   };
-  const rows = new Map<number, { base: THREE.Vector3; cont: boolean; us: E.Unit[] }>();
+  const free = (x: number, z: number, r: number) => {
+    const all = [...edgeTaken, ...[...taken.values()].flat()], ok = (px: number, pz: number) => all.every((t) => Math.hypot(t.x - px, t.z - pz) >= t.r + r);
+    let spot = { x, z };
+    if (!ok(x, z)) outer: for (let ring = 1; ring <= 10; ring++) for (let k = 0; k < 16; k++) { const a = (k / 16) * Math.PI * 2, px = x + Math.cos(a) * ring * 0.4, pz = z + Math.sin(a) * ring * 0.4; if (ok(px, pz)) { spot = { x: px, z: pz }; break outer; } }
+    edgeTaken.push({ ...spot, r }); return spot;
+  };
+  const rows = new Map<number, { base: THREE.Vector3; cont: boolean }>();
   for (const a of MAP.areas) {
-    const us = E.unitsIn(g, a.id), base = toWorld(...POLE.get(a.id)!), cont = E.contestedAreas(g).includes(a.id); rows.set(a.id, { base, cont, us });
-    us.forEach((u) => {
+    const us = E.unitsIn(g, a.id), base = toWorld(...POLE.get(a.id)!), cont = E.contestedAreas(g).includes(a.id); rows.set(a.id, { base, cont });
+    const order = [...us].sort((p, q) => +(p.side !== 'german') - +(q.side !== 'german') || +!!p.garrison - +!!q.garrison);
+    order.forEach((u) => {
       const m = block(u), same = us.filter((x) => x.side === u.side), row = u.side === 'german' ? 1.1 : -1.1;
-      m.position.x = base.x + (same.indexOf(u) - (same.length - 1) / 2) * 1.75; m.position.z = base.z + (cont ? row : 0.4);
+      const p = inArea(a.id, base.x + (same.indexOf(u) - (same.length - 1) / 2) * 1.75, base.z + (cont ? row : 0.4), u.garrison ? 0.75 : 0.95);
+      m.position.x = p.x; m.position.z = p.z;
       m.userData.unit = u.id; if (u.id === selUnit) { const o = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xffb347 })); m.add(o); }
-      pieces.add(m); taken.push({ x: m.position.x, z: m.position.z, r: 1.15 });
+      pieces.add(m);
       const tags: [string, string][] = [];
       if (u.disorder && !u.garrison) { const k = tag(u.disorder === 1 ? 'DIS' : 'REC', u.disorder === 1 ? '#8a1f1f' : '#a8741a', 1.1); k.position.set(m.position.x, 1.66, m.position.z); markers.add(k); }
       if (u.reserve) tags.push([u.side === 'german' ? ({ z5: 'R5', z6: 'R6', z7: 'R7' } as Record<string, string>)[u.reserve] ?? 'R5' : u.reserve === 'z7' ? 'A7' : 'A56', '#2d6cb0']); if (u.exploit) tags.push(['E', '#d9741c']); if (u.unsupplied && !u.garrison) tags.push(['S', '#b8312f']); if (u.interdict) tags.push(['GI', '#8a2f9c']); if (u.bcross) tags.push(['B', '#8a6a1c']);
       tags.forEach(([t, c], i) => { const k = tag(t, c, 0.85); k.position.set(m.position.x - 0.5 + i * 0.95, (u.garrison ? 0.3 : 1.75), m.position.z); markers.add(k); });
     });
   }
-  // area markers sit in a lane beside the group they belong to, never on a block or on each other
+  // area markers: inside their own area, next to the group they belong to
   for (const a of MAP.areas) {
-    const { base, cont, us } = rows.get(a.id)!, mine: { side?: E.Side; t: string; c: string }[] = [];
+    const { base, cont } = rows.get(a.id)!, mine: { side?: E.Side; t: string; c: string }[] = [];
     if (g.roadblocks[a.id]) mine.push({ side: g.roadblocks[a.id], t: 'RB', c: '#6b4a8a' }); if (g.interdicted[a.id]) mine.push({ t: 'AIR', c: '#2f6fb0' }); if (g.pooled === a.id) mine.push({ side: 'allied', t: 'P', c: '#3f8a5a' }); if (g.airSupply?.area === a.id) mine.push({ side: g.airSupply.side, t: 'AS', c: '#2f6fb0' });
     if (g.fieldWorks.includes(a.id)) mine.push({ side: g.fwOwner[a.id] ?? g.control[a.id], t: 'FW', c: '#7a5a2b' });
     if (g.riverAssault.includes(a.id)) mine.push({ side: g.phasing, t: 'RA', c: '#2a7fb8' });
     mine.forEach((m, i) => {
       const side = m.side ?? g.control[a.id], lane = cont ? (side === 'german' ? 1 : -1) : 1, size = 1.1;
-      const p = free(base.x + (i - (mine.length - 1) / 2) * 1.5, base.z + lane * 2.5, size / 2 + 0.2);
+      const p = inArea(a.id, base.x + (i - (mine.length - 1) / 2) * 1.5, base.z + lane * 2.3, size / 2 + 0.25);
       const k = m.side ? owned(m.t, m.c, size, m.side) : tag(m.t, m.c, size); k.position.set(p.x, 0.02, p.z); markers.add(k);
     });
-    void us;
   }
   for (const k of Object.keys(g.greif)) { const [x, y] = k.split('-').map(Number), q = toWorld(...borderMid(x, y)), p = free(q.x, q.z - 1.3, 0.8), t = tag('G', '#8a2f9c', 1.2); t.position.set(p.x, 0.07, p.z); t.rotation.y = -borderAngle(x, y); markers.add(t); }
   for (const k of g.blown) { const [x, y] = k.split('-').map(Number), q = toWorld(...borderMid(x, y)), p = free(q.x, q.z, 1.0), t = tag('X', '#d9421f', 1.6); t.position.set(p.x, 0.07, p.z); t.rotation.y = -borderAngle(x, y); markers.add(t); }
@@ -679,4 +699,4 @@ function frame() {
 }
 frame();
 loadChitArt().catch((e) => console.error(e)).finally(() => { auto(); refresh(); });
-Object.assign(window, { __fab: { info: () => renderer.info.memory, E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
+Object.assign(window, { __fab: { info: () => renderer.info.memory, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
