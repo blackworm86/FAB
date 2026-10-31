@@ -101,16 +101,28 @@ for a in out['areas']:
     for i in range(vp['allied']): marks += cross(x + (i - (vp['allied'] - 1) / 2) * 24, y - 40, 10)
     for i in range(vp['german']): marks += f'<circle cx="{x}" cy="{y - 40 - i * 20}" r="9" fill="#2f78c8" stroke="#fff" stroke-width="1.5"/>' + star(x, y - 40 - i * 20, 6.5, '#fff', 'none')
     if vp['mutual']: marks += star(x, y - 40, 11, '#f2d21b', '#c3281c')
+strips = ''
+outer = land.boundary
 for letter, e in entries.items():
-    a = next((q for q in out['areas'] if q['id'] == e['area']), None)
-    if a:
-        ge = e['side'] == 'german'
-        marks += f'<g><rect x="{a["label"][0] + 22}" y="{a["label"][1] - 14}" width="24" height="24" fill="{"#9fb0b8" if ge else "#58a05a"}" stroke="#fff" stroke-width="2"/><text x="{a["label"][0] + 34}" y="{a["label"][1] + 4}" text-anchor="middle" font-size="16" font-weight="700" fill="#111" font-family="Arial, sans-serif">{letter}</text></g>'
+    pg = next((pgs[e['area']] for _ in [0] if e['area'] in pgs), None)
+    if pg is None: continue
+    edge = pg.boundary.intersection(outer.buffer(2.5))
+    lines = [g for g in (edge.geoms if hasattr(edge, 'geoms') else [edge]) if g.length > 20]
+    if not lines: continue
+    ln = max(lines, key=lambda g: g.length)
+    band = ln.buffer(21, cap_style=2).difference(land.buffer(1)).buffer(0)
+    if band.is_empty: continue
+    ge = e['side'] == 'german'; col = '#9fb0b8' if ge else '#58a05a'
+    for g in (band.geoms if hasattr(band, 'geoms') else [band]):
+        if g.area > 40: strips += '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in g.exterior.coords) + f'Z" fill="{col}" stroke="#fff" stroke-width="1.6"/>'
+    c = band.representative_point() if band.centroid.distance(band) > 3 else band.centroid
+    strips += f'<text x="{c.x:.1f}" y="{c.y + 6:.1f}" text-anchor="middle" font-size="20" font-weight="700" fill="{"#111" if ge else "#fff"}" stroke="{"#fff" if ge else "#2f6a31"}" stroke-width="0.8" font-family="Arial, sans-serif">{letter}</text>'
 svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">
 <rect id="frame" width="{W}" height="{H}" fill="#bccad3"/>
 <g id="terrain"><path fill="{ground}" fill-rule="evenodd" d="{land_d}"/></g>
 <g id="woods" opacity="0"></g>
 <g id="rivers" fill="none" stroke="#2f8fd0" stroke-linecap="round" stroke-linejoin="round">{rivers}</g>
+<g id="entry-strips">{strips}</g>
 <g id="roads" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#3a3f3d" stroke-width="7.4">{roads_c}</g><g stroke="#5d6360" stroke-width="4.6">{roads_c}</g></g>
 <g id="boundaries" fill="none" stroke="#fbfbf6" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round">{bnd}</g>
 <g id="cities" fill="#6b706d" stroke="#3a3f3d" stroke-width="1.6">{cities}</g>
