@@ -644,7 +644,7 @@ const nm = (s: E.Side) => (s === 'german' ? 'German' : 'Allied');
 function topBar() {
   const v = E.victory(g), tr = E.TRACK[g.turn - 1], i = g.phasing === 'german' ? 0 : 1, at = STEP_OF[g.phase];
   return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game" aria-label="Menu, log and new game">${ico('menu')}</button><div class="c-crumbs">${STEPS.map((s, k) => `<span class="${k === at ? 'on' : k < at ? 'done' : ''}">${s}</span>`).join('')}</div>
-    <button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="Map overlay: terrain defence / army zones / off" aria-label="Map overlay">${ico('layers')}<span class="bl">Overlay</span></button><button class="ico" data-home title="Reset the camera" aria-label="Reset the camera">${ico('home')}<span class="bl">View</span></button><button class="ico" data-undo title="${hist.length ? 'Undo: ' + esc(note || 'last action') + ' (Ctrl+Z)' : 'Nothing to undo yet. Undo is available until a die is rolled.'}" aria-label="Undo" ${hist.length ? '' : 'disabled'}>${ico('undo')}<span class="bl">Undo</span></button><div class="c-stat"><span>TURN<b>${g.turn}</b></span><span>PLAYING<b class="${g.phasing}">${nm(g.phasing).toUpperCase()}</b></span>${online.active ? `<span>YOU<b class="${online.mySide() ?? ''}">${online.both() ? 'BOTH' : (online.mySide() ?? 'WATCHING').toUpperCase()}</b></span>` : ''}${DEV ? `<button class="ico dev" data-seat title="Developer: switch seat (German, Allied, both, watching)" aria-label="Switch seat">${ico('swap')}<span class="bl">Seat</span></button>` : ''}<span>NET VP<b>${v.net > 0 ? 'GE +' + v.net : v.net < 0 ? 'AL +' + -v.net : '0'}</b></span><span title="Draws this phase (German / Allied)">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span><button class="ico" data-modal="boxes" title="Chit boxes" aria-label="Chit boxes">${ico('boxes')}</button></div></div>`;
+    <button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="Map overlay: terrain defence / army zones / off" aria-label="Map overlay">${ico('layers')}<span class="bl">Overlay</span></button><button class="ico" data-home title="Reset the camera" aria-label="Reset the camera">${ico('home')}<span class="bl">View</span></button><button class="ico" data-undo title="${hist.length ? 'Undo: ' + esc(note || 'last action') + ' (Ctrl+Z)' : 'Nothing to undo yet. Undo is available until a die is rolled.'}" aria-label="Undo" ${hist.length ? '' : 'disabled'}>${ico('undo')}<span class="bl">Undo</span></button><div class="c-stat"><span>TURN<b>${g.turn}</b></span><span>PLAYING<b class="${g.phasing}">${nm(g.phasing).toUpperCase()}</b></span>${online.active ? `<span>YOU<b class="${online.mySide() ?? ''}">${online.both() ? 'BOTH' : (online.mySide() ?? 'WATCHING').toUpperCase()}</b></span>` : ''}${DEV ? `<button class="ico dev" data-seat title="Developer: switch seat (German, Allied, both, watching)" aria-label="Switch seat">${ico('swap')}<span class="bl">Seat</span></button>` : ''}<span>NET VP<b>${v.net > 0 ? 'GE +' + v.net : v.net < 0 ? 'AL +' + -v.net : '0'}</b></span><span title="Draws this phase (German / Allied)">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span><button class="ico" data-modal="boxes" title="Pieces: boxes, arrivals" aria-label="Pieces">${ico('boxes')}</button></div></div>`;
 }
 function prompt() {
   const chip = online.active && !online.both() && online.mySide() && !g.over ? `<span class="turnchip ${allowed() ? 'go' : 'wait'}">${allowed() ? 'Your move' : 'Waiting'}</span> ` : '';
@@ -694,12 +694,63 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
   }
   return { label: `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`, fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; }), dis: !!E.mustFight(g).length || !!g.recover.length };
 }
+const recoverSel: Record<string, string | null> = {};
+let piecesTab: 'boxes' | 'arrivals' = 'boxes', piecesSide: E.Side | null = null, inspectId: string | null = null;
+/** A short reading of what a chit does, in the series' own vocabulary; the printed rule is the authority. */
+const RULE: Record<string, [string, string]> = {
+  artillery: ['Artillery', 'Assigned to a battle during set-up (limit by Higher Echelon, 6.22). It fires before the ground units: one die at the Success Number from the Combat Table; hits are applied to the point unit first (6.42).'],
+  rocket_artillery: ['Rocket artillery', 'Fires like artillery in the artillery steps of a battle. Assigned during set-up, one per echelon.'],
+  engineer: ['Engineer', 'Admin Phase: blow or repair a bridge, build field works, lay a roadblock (4.34, 4.35). In a battle it may remove enemy field works instead of firing (6.33).'],
+  armor_asset: ['Armor asset', 'A battle asset: assigned in set-up, fires in the ground-fire steps and may take the first hit instead of the point unit (6.4).'],
+  infantry_asset: ['Infantry asset', 'A battle asset: assigned in set-up, fires in the ground-fire steps and may take the first hit instead of the point unit (6.4).'],
+  task_force: ['Task Force', 'Allied garrison-type asset placed in an entry area when it arrives.'],
+  fuel: ['Fuel', 'German fuel. One is spent when a German unit moves more than 3 movement points or makes a strategic move.'],
+  command_staff: ['Command / Staff asset', 'Staff functions in the Admin Phase: Intelligence Gathering (reveal one enemy block), Reserves Made Available and the other staff actions (8.3).'],
+  sa_block: ['Special Action', 'The reusable Special Action: spent to reinforce or retreat in a battle, for breakthrough actions and in the Admin Phase. If it is not spent in a turn, the side recovers an asset (4.1a).'],
+  special_action_event: ['Special Action event', 'A one-use Special Action.'],
+  replacement_inf: ['Replacements', 'Admin Phase: add one step to a supplied infantry-class unit (non-elite, 8.31).'],
+  replacement_arm: ['Replacements', 'Admin Phase: add one step to a supplied armor-class unit (non-elite, 8.31).'],
+  rebuild_or_replace_inf: ['Rebuild or replace', 'Admin Phase: rebuild an eliminated infantry unit or add a step.'],
+  rebuild_or_replace_arm: ['Rebuild or replace', 'Admin Phase: rebuild an eliminated armor unit or add a step.'],
+  event_arriving_regiment: ['Arriving regiment', 'Admin Phase: brings an eliminated division back as one step, or adds a step (17.23).'],
+  event_release: ['Release', 'Event played in the Admin Phase (17).'],
+  event_greif_bridge: ['Greif Team: Bridge', 'Placed on a river boundary; the first German unit crossing it takes the bridge (17.1).'],
+  event_greif_interdict: ['Greif Team: Interdict', 'Marks an Allied unit as interdicted; it needs a Special Action to move (17.1).'],
+  event_bodenplatte: ['Operation Bodenplatte', 'German air strike on the Allied Air Missions: roll for the target, a 10 eliminates it, 6 to 9 delay it (17).'],
+  event_delayed_response: ['Delayed Response', 'No effect when drawn.'],
+  air_mission: ['Air Mission', 'Allied air power: assign as artillery or support in a battle, or fly an Interdiction or Air Supply mission (17.2). Bad weather limits the turns it is available.'],
+};
+const pieceBtn = (c: E.Chit, f: () => void, on = false, dis = false) => `<button class="pc ${c.side} ${on ? 'on' : ''}" data-ui="${reg(f)}" ${dis ? 'disabled' : ''} title="${esc(c.name)}" aria-label="${esc(chitLabel(c))}"><img alt="" draggable="false" src="${chitImg(c)}"></button>`;
+const ruleCard = (c: E.Chit) => { const [t, d] = RULE[c.kind] ?? [c.kind, '']; return `<img class="big" alt="" src="${chitImg(c)}"><div><h4>${esc(c.name)} <small>${esc(t)}</small></h4><p>${esc(d)}</p></div>`; };
+function piecesHtml() {
+  const sd = piecesSide ?? viewSide(), tabs = chip('Pieces', piecesTab === 'boxes', () => { piecesTab = 'boxes'; }) + chip('Arrivals', piecesTab === 'arrivals', () => { piecesTab = 'arrivals'; }) + '<span class="sp"></span>' + (['german', 'allied'] as E.Side[]).map((x) => chip(nm(x), sd === x, () => { piecesSide = x; inspectId = null; })).join('');
+  let body = '';
+  if (piecesTab === 'boxes') {
+    const sec = (title: string, bx: E.Chit['box']) => { const cs = E.boxOf(g, sd, bx); return `<h4>${title} <small>${cs.length}</small></h4><div class="pcgrid">${cs.map((c) => pieceBtn(c, () => { inspectId = inspectId === c.id ? null : c.id; }, inspectId === c.id)).join('') || '<small class="none">none</small>'}</div>`; };
+    const pick = inspectId ? g.chits.find((c) => c.id === inspectId && c.side === sd) : null;
+    body = `${pick ? `<div class="inspect">${ruleCard(pick)}</div>` : '<p class="hint">Tap a piece to read what it does.</p>'}<h4>Cup <small>${E.boxOf(g, sd, 'cup').length} chits, drawn at random</small></h4>${sec('Available', 'available')}${sec('Used', 'used')}${sec('Eliminated', 'eliminated')}`;
+  } else {
+    const rows: string[] = [];
+    for (let t = 1; t <= g.lastTurn; t++) {
+      const us = g.units.filter((u) => u.side === sd && u.arrival === t), cs = g.chits.filter((c) => c.side === sd && c.turn === t);
+      if (!us.length && !cs.length) continue;
+      rows.push(`<div class="oob ${t === g.turn ? 'now' : t < g.turn ? 'past' : ''}"><h4>Turn ${t}${t === g.turn ? ' · now' : ''}</h4><div class="oobrow">${us.map((u) => `<div class="oobu" title="${esc(u.name)}"><img alt="" src="${unitFace(u)}"><small>${esc(u.name)}</small><small class="en">${u.entry ? 'Entry ' + u.entry.join('/') : ''}</small></div>`).join('')}${cs.map((c) => pieceBtn(c, () => { inspectId = inspectId === c.id ? null : c.id; }, inspectId === c.id)).join('')}</div></div>`);
+    }
+    const pick = inspectId ? g.chits.find((c) => c.id === inspectId && c.side === sd) : null;
+    body = `${pick ? `<div class="inspect">${ruleCard(pick)}</div>` : ''}${rows.join('')}`;
+  }
+  return `<div class="modal"><div class="sheet wide"><h3>${nm(sd)} pieces <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3><div class="chips tabrow">${tabs}</div>${body}</div></div>`;
+}
 function dispatch() {
   if (g.battle || g.over) return '';
   const row = (k: string, v: string, c = '') => `<div class="r"><span>${k}</span><b class="${c}">${v}</b></div>`;
   const c = selChit ? g.chits.find((x) => x.id === selChit) : null;
   if (c && g.phase === 'admin') return `<div class="c-dispatch">${chitPanel(c)}</div>`;
-  if (g.phase === 'reinforcement' && g.recover.length) return `<div class="c-dispatch"><h3>Unused Special Action</h3><p class="hint">The reusable Special Action was not spent, so each side may bring one asset back from the Used Box (4.1a).</p>${g.recover.map((s) => `<h4 class="${s}">${nm(s)}</h4><div class="row">${E.boxOf(g, s, 'used').filter((c) => E.isAsset(c)).map((c) => btn(esc(chitLabel(c)), () => E.recoverAsset(g, s, c.id), '', false, c.ech)).join('')}${btn('None', () => E.recoverAsset(g, s, null))}</div>`).join('')}</div>`;
+  if (g.phase === 'reinforcement' && g.recover.length) return `<div class="c-dispatch recover"><h3>Unused Special Action</h3><p class="hint">Each side may bring one asset back from the Used Box (4.1a).</p>${g.recover.map((sd) => {
+    const cs = E.boxOf(g, sd, 'used').filter((c) => E.isAsset(c)), pick = recoverSel[sd] ? cs.find((c) => c.id === recoverSel[sd]) : null, own = mine(sd);
+    return `<h4 class="${sd}">${nm(sd)}</h4><div class="pcgrid">${cs.map((c) => pieceBtn(c, () => { recoverSel[sd] = recoverSel[sd] === c.id ? null : c.id; }, recoverSel[sd] === c.id, !own)).join('') || '<small>Nothing in the Used Box</small>'}</div>
+      ${pick ? `<div class="inspect">${ruleCard(pick)}</div>` : ''}<div class="row">${btn(pick ? `Bring back ${esc(pick.name)}` : 'Choose an asset', () => { E.recoverAsset(g, sd, pick!.id); recoverSel[sd] = null; }, 'primary', !pick || !own)}${btn('None', () => E.recoverAsset(g, sd, null), '', !own)}</div>`;
+  }).join('')}</div>`;
   if (g.phase === 'reinforcement' && selArr) { const o = arrOpts(), name = g.pendingArrivals.includes(selArr) ? g.units.find((x) => x.id === selArr)!.name : 'Task Force'; return `<div class="c-dispatch"><h3>${esc(name)}</h3><p class="hint">${o.length ? 'Click a highlighted area on the map, or pick one:' : 'No legal area right now.'}</p><div class="row">${o.filter((x) => !x.sa).slice(0, 14).map((x) => btn(esc(areaName(x.area)), () => { const id = selArr!; selArr = null; if (g.pendingArrivals.includes(id)) E.placeArrival(g, id, x.area); else E.placeTaskForce(g, id, x.area); })).join('')}</div>${o.some((x) => x.sa) ? `<details><summary class=\"why\">Other entry areas (cost a Special Action, 8.27)</summary><div class=\"row\">${o.filter((x) => x.sa).map((x) => btn(esc(areaName(x.area)), () => { const id = selArr!; selArr = null; E.placeArrival(g, id, x.area); })).join('')}</div></details>` : ''}</div>`; }
   if (g.phase === 'btCombat' && !selUnit && selArea == null) { const air = E.boxOf(g, g.phasing, 'available').filter((x) => x.kind === 'air_mission'), as = E.airSupplyAreas(g, g.phasing); if (air.length && as.length && !g.airSupply) return `<div class="c-dispatch"><h3>Air supply</h3><p class="hint">Before the Supply Phase an Air Mission can supply one cut-off area (17.2).</p><div class="row">${as.map((ar) => btn(esc(areaName(ar)), () => E.playAirSupply(g, air[0].id, ar))).join('')}</div></div>`; }
   const u = selUnit ? g.units.find((x) => x.id === selUnit) : null;
@@ -877,7 +928,7 @@ function rulesHtml() {
 const fxRow = (f: Fx) => `<div class="fxrow ${f.cls}">${ico(f.icon)}<b>${esc(f.head)}</b><span>${esc(f.text)}</span></div>`;
 const modIcon = (why: string) => /base/i.test(why) ? 'target' : /armor|infantry|class/i.test(why) ? 'armor_asset' : /green|veteran|elite|quality/i.test(why) ? 'star' : /terrain|tdn/i.test(why) ? 'tree' : /field/i.test(why) ? 'shield' : /river/i.test(why) ? 'wave' : /disorder|supply/i.test(why) ? 'warn' : /air|asset|artillery/i.test(why) ? 'air_mission' : 'info';
 const modChips = (parts: [string, number][]) => parts.map(([w, v]) => `<span class="m2 ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}" title="${esc(w)}">${ico(modIcon(w))}${v > 0 ? '+' : v < 0 ? '−' : ''}${v ? Math.abs(v) : ''}</span>`).join('');
-const chip = (label: string, on: boolean, f: () => void, title = '') => `<button class="chip ${on ? 'on' : ''}" aria-pressed="${on}" data-do="${reg(f)}" title="${esc(title)}">${on ? ico('check') : ''}${label}</button>`;
+const chip = (label: string, on: boolean, f: () => void, title = '') => `<button class="chip ${on ? 'on' : ''}" aria-pressed="${on}" data-ui="${reg(f)}" title="${esc(title)}">${on ? ico('check') : ''}${label}</button>`;
 const relayer = () => { saveLayers(); paintBoard(); legendDirty(); };
 const legendDirty = () => { /* the legend is part of render() */ };
 function layersHtml() {
@@ -891,9 +942,7 @@ function modalHtml() {
   if (modal === 'layers') return layersHtml();
   if (modal === 'rules') return rulesHtml();
   if (modal === 'lobby') return lobbyHtml();
-  if (modal === 'boxes') return `<div class="modal"><div class="sheet"><h3>Chit boxes <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>${(['allied', 'german'] as E.Side[]).map((s) => {
-    const l = (bx: E.Chit['box']) => E.boxOf(g, s, bx).map((c) => `<span class="mini ${s}">${esc(chitLabel(c))}</span>`).join('') || '<small>empty</small>';
-    return `<h4 class="${s}">${nm(s)} · cup ${E.boxOf(g, s, 'cup').length}</h4><div class="chips"><b>Available</b> ${l('available')}</div><div class="chips"><b>Used</b> ${l('used')}</div><div class="chips"><b>Eliminated</b> ${l('eliminated')}</div>`; }).join('')}</div></div>`;
+  if (modal === 'boxes') return piecesHtml();
   if (modal === 'menu') {
     const seat = (sd: E.Side) => online.seats[sd] ? (online.seats[sd] === online.uid ? 'you' : esc((sd === 'german' ? online.seats.germanName : online.seats.alliedName) || 'taken')) : 'free';
     const tabs = ['Game', 'Log', 'Settings', ...(online.admin ? ['Admin'] : [])];
@@ -909,7 +958,7 @@ function modalHtml() {
       : online.mode === 'local' ? '<p class="hint">Developer table. The Seat button in the top bar switches between German, Allied, both and watching; turn rules are enforced for the seat you hold.</p>' : '<p class="hint">Hot-seat game on this device.</p>';
     return `<div class="modal"><div class="sheet"><h3>Game <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
       <div class="tabs">${tabs.map((t) => `<button class="${t === menuTab ? 'on' : ''}" data-do="${reg(() => { menuTab = t; })}">${t}</button>`).join('')}</div>${body}
-      <div class="row sheetfoot">${btn(`${ico('back')} Lobby`, () => { if (online.mode === 'remote') modal = 'lobby'; else location.href = location.pathname; })}${btn('Chit boxes', () => { modal = 'boxes'; })}</div></div></div>`;
+      <div class="row sheetfoot">${btn(`${ico('back')} Lobby`, () => { if (online.mode === 'remote') modal = 'lobby'; else location.href = location.pathname; })}${btn('Pieces', () => { modal = 'boxes'; })}</div></div></div>`;
   }
   return '';
 }
@@ -923,6 +972,7 @@ function render() {
   $('#ui').innerHTML = topBar() + `<div class="stage">${b ? battleTable() : dispatch()}${legend()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
   const ui = $('#ui');
   { const h = ui.querySelector<HTMLElement>('.c-hand'), a = ui.querySelector<HTMLElement>('.arrtray'); if (h) h.scrollLeft = keepH; if (a) a.scrollLeft = keepA; }
+  ui.querySelectorAll<HTMLElement>('[data-ui]').forEach((e) => (e.onclick = () => { acts[e.dataset.ui!]?.(); render(); }));            // view-only choices: allowed for everyone, never touch the game
   ui.querySelectorAll<HTMLElement>('[data-do]').forEach((e) => (e.onclick = () => act(acts[e.dataset.do!])));
   ui.querySelectorAll<HTMLElement>('[data-modal]').forEach((e) => (e.onclick = () => { modal = (e.dataset.modal || null) as typeof modal; render(); }));
   ui.querySelectorAll<HTMLElement>('[data-sel]').forEach((e) => (e.onchange = () => { const f = actv[e.dataset.sel!]; if (f) { f(e instanceof HTMLInputElement && e.type === 'checkbox' ? (e.checked ? 'on' : 'off') : (e as HTMLSelectElement).value); save(); } }));
