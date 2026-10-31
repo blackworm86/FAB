@@ -402,10 +402,37 @@ const allowed = () => !online.active || modal === 'menu' || online.both() || (on
 /** In a shared-screen game every side is yours; online only your own seat's pieces. */
 const mine = (s: E.Side) => !online.active || online.both() || online.mySide() === s;
 const notYou = () => online.mySide() == null ? 'You are watching. Take a seat in the menu to play.' : `Wait for the ${nm(actorNow() as E.Side)} player.`;
+/* ---------- what a hit did: step losses, eliminations, retreats, field works ---------- */
+type Fx = { area: number; icon: string; head: string; text: string; cls: 'loss' | 'elim' | 'dis' | 'fw' | 'ret' | 'cap' };
+let battleFx: Fx[] = [], rollFx: Fx[] = [];
+const snap = (x: E.Game) => ({ u: new Map(x.units.map((u) => [u.id, { str: u.str, area: u.area, dis: u.disorder, name: u.name }])), c: new Map(x.chits.map((c) => [c.id, c.box])), fw: [...x.fieldWorks], ctl: { ...x.control }, area: x.battle?.area ?? null });
+function diffFx(a: ReturnType<typeof snap>, x: E.Game): Fx[] {
+  const out: Fx[] = [], ba = x.battle?.area ?? a.area;
+  for (const u of x.units) {
+    const o = a.u.get(u.id); if (!o) continue;
+    if (u.area == null && o.area != null) out.push({ area: o.area, icon: 'skull', head: 'ELIMINATED', text: o.name, cls: 'elim' });
+    else if (u.str < o.str) out.push({ area: u.area ?? o.area ?? 0, icon: 'burst', head: `−${o.str - u.str} STEP`, text: `${u.name} ${u.str}/${o.str}`, cls: 'loss' });
+    if (u.area != null && o.area != null && u.area !== o.area) out.push({ area: u.area, icon: 'back', head: 'RETREATS', text: `${u.name} → ${E.areas.get(u.area)!.name}`, cls: 'ret' });
+    if (u.area != null && u.disorder > o.dis) out.push({ area: u.area, icon: 'warn', head: 'DISORDERED', text: u.name, cls: 'dis' });
+  }
+  for (const c of x.chits) if (ba != null && a.c.get(c.id) === 'map' && c.box === 'eliminated') out.push({ area: ba, icon: 'skull', head: 'ASSET LOST', text: c.name, cls: 'elim' });
+  for (const f of a.fw) if (!x.fieldWorks.includes(f)) out.push({ area: f, icon: 'nofw', head: 'FIELD WORKS REMOVED', text: E.areas.get(f)!.name, cls: 'fw' });
+  for (const [k, v] of Object.entries(x.control)) if (a.ctl[+k] !== v) out.push({ area: +k, icon: 'flag', head: `${nm(v as E.Side).toUpperCase()} CONTROL`, text: E.areas.get(+k)!.name, cls: 'cap' });
+  return out;
+}
+const fxEls: { el: HTMLElement; area: number; born: number; k: number }[] = [];
+function showFx(list: Fx[]) {
+  let layer = document.getElementById('fx'); if (!layer) { layer = document.createElement('div'); layer.id = 'fx'; document.body.appendChild(layer); }
+  list.forEach((f, i) => { const el = document.createElement('div'); el.className = `fx ${f.cls}`; el.style.animationDelay = `${i * 0.18}s`; el.innerHTML = `${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small>`; layer!.appendChild(el); fxEls.push({ el, area: f.area, born: performance.now() + i * 180, k: fxEls.filter((x) => x.area === f.area).length }); });
+}
+/** Record and show what changed between two states. */
+let pendingFx: Fx[] = [];
+function noteFx(a: ReturnType<typeof snap>, x: E.Game, fresh?: boolean) { const d = diffFx(a, x); if (!d.length) return; battleFx.push(...d); if (fresh) { rollFx = d; pendingFx = d; } else showFx(d); }       // after a roll the effects wait for the dice to settle
 function act(f: () => void, after = '') {
   if (!allowed()) return say(notYou());
+  const before = g.battle ? snap(g) : null;
   const r = hist.run(g, () => { f(); auto(); });
-  g = r.game; if (r.error) say(r.error.message); else note = after;
+  g = r.game; if (r.error) say(r.error.message); else { note = after; if (before) noteFx(before, g); }
   save(); refresh();
 }
 function undo() { if (!allowed()) return say(notYou()); const p = hist.undo(); if (!p) return; g = p; selUnit = selChit = selArr = previewArea = hoverArea = null; note = ''; save(); refresh(); }
@@ -482,7 +509,16 @@ function syncBadges() {
   const layer = $('#badges'); layer.innerHTML = ''; badgeEls.clear();
   for (const b of badges) { const d = document.createElement('div'); d.className = 'bdg ' + b.cls; d.textContent = b.text; layer.appendChild(d); badgeEls.set(String(b.area), d); }
 }
+function placeFx() {
+  const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(), now = performance.now();
+  for (let i = fxEls.length - 1; i >= 0; i--) {
+    const f = fxEls[i]; if (now - f.born > 7000) { f.el.remove(); fxEls.splice(i, 1); continue; }
+    const p = center(f.area); v.set(p.x, 3, p.z).project(cam); f.el.style.display = v.z < 1 && now >= f.born ? '' : 'none';
+    f.el.style.transform = `translate(${(v.x * 0.5 + 0.5) * r.width}px, ${(-v.y * 0.5 + 0.5) * r.height - f.k * 58}px) translate(-50%, -100%)`;
+  }
+}
 function placeBadges() {
+  placeFx();
   const r = canvas.getBoundingClientRect(), v = new THREE.Vector3();
   for (const [k, d] of badgeEls) { const p = d.classList.contains('tint') ? toWorld(...(MAP.areas.find((x) => x.id === +k)!.label)).add(new THREE.Vector3(0, 0, 2.3)) : center(+k); v.set(p.x, 2.2, p.z - 4).project(cam); d.style.display = v.z < 1 ? '' : 'none'; d.style.transform = `translate(${(v.x * 0.5 + 0.5) * r.width}px, ${(-v.y * 0.5 + 0.5) * r.height}px) translate(-50%, -50%)`; }
 }
@@ -495,13 +531,13 @@ const STAGE_NAME: Record<string, string> = { attArty: 'artillery', defArty: 'art
 function rollStage(b: E.Battle) {
   if (!allowed()) return say(notYou());
   const side = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker), kind = b.stage.endsWith('Arty') ? 'arty' : 'ground', fl = E.fireList(g, b, side, kind), n0 = b.rolls.length, stage = b.stage;
-  E.roll_step(g, b); save();
+  const before = snap(g); E.roll_step(g, b); rollFx = []; noteFx(before, g, true); save();
   const fresh = b.rolls.slice(n0);
   rollView = { title: `${side === 'german' ? 'German' : 'Allied'} ${STAGE_NAME[stage]}`, pos: null, groups: fresh.map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: fl.find((f) => f.who === r.who)?.parts ?? [] })) };
   if (!rollView.groups.length) { rollView = null; return refresh(); }
   refresh();
   const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block';
-  throwDice(cv, rollView.groups, (p) => { if (rollView) { rollView.pos = p; render(); } });
+  throwDice(cv, rollView.groups, (p) => { if (rollView) { rollView.pos = p; render(); showFx(pendingFx); pendingFx = []; } });
 }
 function endRoll() { rollView = null; clearDice(); ($('#dice') as HTMLElement).style.display = 'none'; refresh(); }
 
@@ -518,6 +554,7 @@ const ICONS: Record<string, string> = {
   air_mission: '<path d="M2 14l9-2 3-9h2l-1 9 6 2v2l-6-1-1 5 2 1v1l-4-1-4 1v-1l2-1-1-5-7 1z"/>',
   sa_block: '<path d="M5 17l7-7 7 7M5 11l7-7 7 7"/>',
   target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>', star: '<path d="M12 3l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-3-5.4 3 1.1-6L3.2 9.4l6.1-.8z"/>', tree: '<path d="M12 3l6 8h-3l4 6H5l4-6H6zM12 17v4"/>', shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>', wave: '<path d="M3 9c3-3 6 3 9 0s6 3 9 0M3 15c3-3 6 3 9 0s6 3 9 0"/>', warn: '<path d="M12 4l9 16H3zM12 10v5M12 17.5v.5"/>',
+  skull: '<path d="M12 3a8 8 0 00-5 14v3h3v-2h4v2h3v-3a8 8 0 00-5-14z"/><circle cx="9" cy="11" r="1.5"/><circle cx="15" cy="11" r="1.5"/>', burst: '<path d="M12 2l2 6 6-2-3 5 5 3-6 1 1 6-5-4-5 4 1-6-6-1 5-3-3-5 6 2z"/>', nofw: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM5 5l14 14"/>', flag: '<path d="M6 21V4M6 5h12l-3 4 3 4H6"/>',
   next: '<path d="M5 12h13M13 6l6 6-6 6"/>', back: '<path d="M19 12H6M11 6l-6 6 6 6"/>', check: '<path d="M4 12.5l5 5L20 6.5"/>', wand: '<path d="M4 20L15 9M13 5l1-2 1 2 2 1-2 1-1 2-1-2-2-1zM18 12l.7-1.4L20 10l-1.3-.6L18 8l-.6 1.4L16 10l1.4.6z"/>', info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>', share: '<path d="M12 15V3M7 8l5-5 5 5M5 13v7h14v-7"/>', dice: '<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="15" r="1"/><circle cx="15" cy="9" r="1"/><circle cx="9" cy="15" r="1"/>',
   home: '<path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/>', layers: '<path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5"/>', undo: '<path d="M9 7L4 12l5 5M4 12h10a5 5 0 010 10h-2"/>', menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', boxes: '<rect x="3" y="4" width="18" height="5"/><path d="M5 9v10h14V9M10 13h4"/>', close: '<path d="M6 6l12 12M18 6L6 18"/>', swap: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>', plus: '<path d="M12 5v14M5 12h14"/>',
 };
@@ -621,7 +658,7 @@ function promptText() {
   if (g.over) return `<b>${esc(g.over)}</b>`;
   if (g.pendingBlow) return `<b>${nm(other(g.units.find((x) => x.id === g.pendingBlow!.unit)!.side))}</b>: attempt to blow the bridge?`;
   if (b?.stage === 'retreat') return '<b>Choose the retreat area.</b>';
-  if (b) return b.stage === 'setup' ? (() => { const me = online.mySide(), rd = (sd: E.Side) => b.ready?.includes(sd); return online.active && !online.both() && me ? `<b>${rd(me) ? 'You are ready.' : 'Tap an asset to add it, then press Ready.'}</b> Opponent: ${rd(other(me)) ? 'ready' : 'preparing'}.` : '<b>Tap a card to add it</b>; tap a block to set the point unit.'; })() : b.stage === 'done' ? `<b>${esc(b.result ?? '')}</b>` : rollView ? '' : b.stage.endsWith('Choice') ? 'Choose how to take the hits.' : `Next: <b>${STAGE_NAME[b.stage]}</b>`;
+  if (b) return b.stage === 'setup' ? (() => { const me = online.mySide(), rd = (sd: E.Side) => b.ready?.includes(sd); return online.active && !online.both() && me ? `<b>${rd(me) ? 'You are ready.' : 'Tap an asset to add it, then press Ready.'}</b> Opponent: ${rd(other(me)) ? 'ready' : 'preparing'}.` : '<b>Tap a card to add it</b>; tap a block to set the point unit.'; })() : b.stage === 'done' ? '' : rollView ? '' : b.stage.endsWith('Choice') ? 'Choose how to take the hits.' : `Next: <b>${STAGE_NAME[b.stage]}</b>`;
   const m = E.mustFight(g).length;
   switch (g.phase) {
     case 'reinforcement': return '<b>Pick a new block</b>, then a lit entry area.';
@@ -652,7 +689,7 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
   const must = E.mustFight(g);
   if (g.phase === 'combat' || g.phase === 'btCombat') {                                              // the player picks the battle and starts it; nothing opens by itself
     const sel = selArea != null && fightable().includes(selArea) ? selArea : null;
-    if (sel != null) return { label: `Fight ${areaName(sel)}`, fn: () => { selUnit = null; E.startBattle(g, sel, g.phase === 'btCombat'); } };
+    if (sel != null) return { label: `Fight ${areaName(sel)}`, fn: () => { selUnit = null; battleFx = []; rollFx = []; E.startBattle(g, sel, g.phase === 'btCombat'); } };
     if (must.length) return { label: 'Select a battle', fn: () => undefined, dis: true };
   }
   return { label: `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`, fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; }), dis: !!E.mustFight(g).length || !!g.recover.length };
@@ -750,9 +787,10 @@ function ledger() {
   const b = g.battle; if (!b || g.pendingBlow) return '';
   if (rollView) {
     const rv = rollView, hits = rv.groups.reduce((a, x) => a + x.hits, 0), labels = (rv.pos ?? []).map((p) => { const hit = isHit(p.v, rv.groups[p.group].sn); return `<div class="lbl ${hit ? 'hit' : 'miss'}" style="left:${p.x}px;top:${p.y}px">${hit ? 'HIT!' : 'MISS'}</div>`; }).join('');
-    return `<div class="labels">${labels}</div><div class="c-ledger tight"><div class="lh"><h3>${esc(rv.title)}</h3><b class="tot ${hits ? 'hit' : 'miss'}">${rv.pos ? `${hits} hit${hits === 1 ? '' : 's'}` : '…'}</b></div>${rv.groups.map((x) => `<div class="ln2"><span class="who">${esc(x.label)}</span><span class="sn">SN ${x.sn}</span><span class="cnt">${x.dice.length}${ico('dice')}</span><b class="${x.hits ? 'hit' : 'miss'}">${x.hits}</b></div>`).join('')}
+    return `<div class="labels">${labels}</div><div class="c-ledger tight"><div class="lh"><h3>${esc(rv.title)}</h3><b class="tot ${hits ? 'hit' : 'miss'}">${rv.pos ? `${hits} hit${hits === 1 ? '' : 's'}` : '…'}</b></div>${rv.pos ? rollFx.map(fxRow).join('') : ''}${rv.groups.map((x) => `<div class="ln2"><span class="who">${esc(x.label)}</span><span class="sn">SN ${x.sn}</span><span class="cnt">${x.dice.length}${ico('dice')}</span><b class="${x.hits ? 'hit' : 'miss'}">${x.hits}</b></div>`).join('')}
       <div class="row end"><button class="primary" data-do="${reg(() => endRoll())}" ${rv.pos ? '' : 'disabled'}>Continue${ico('next')}</button></div></div>`;
   }
+  if (b.stage === 'done') return `<div class="c-ledger tight"><div class="lh"><h3>Battle over</h3></div><p class="resline">${esc(b.result ?? '')}</p>${battleFx.map(fxRow).join('')}</div>`;
   if (b.stage === 'retreat' && b.retreat) { const u = g.units.find((x) => x.id === b.retreat!.queue[0])!; return `<div class="c-ledger"><h3>${esc(u.name)} retreats</h3><p class="hint">The block becomes disordered.</p><div class="row">${E.retreatOptions(g, b).map((a) => btn(esc(areaName(a)), () => E.chooseRetreat(g, b, a), 'primary')).join('')}</div></div>`; }
   if (b.stage === 'attFirst') { const att = b.attacker, opts = [{ k: b.attPoint, n: `${g.units.find((u) => u.id === b.attPoint)!.name} (point unit, loses a step)` }, ...b.assets[att].filter((id) => E.isBattleAsset(E.chit(g, id))).map((id) => ({ k: id, n: `${E.chit(g, id).name} (asset is eliminated)` }))]; return `<div class="c-ledger"><h3>${b.pending} hit(s) on the attackers</h3><p class="hint">The first hit falls on the point unit or on one battle asset (6.41a). Which one?</p><div class="row">${opts.map((o) => btn(esc(o.n), () => E.chooseFirstLoss(g, b, o.k))).join('')}</div></div>`; }
   if (b.stage === 'attChoice') return `<div class="c-ledger"><h3>${b.pending} hit(s) on the attackers</h3><p class="hint">Abort: all attackers disordered, no losses. Or take the losses.</p><div class="row end">${btn('Abort attack', () => E.attackerChoice(g, b, true))}${btn('Take losses', () => E.attackerChoice(g, b, false), 'primary')}</div></div>`;
@@ -836,6 +874,7 @@ function rulesHtml() {
     <h4>Single line</h4><textarea readonly rows="4" style="width:100%;font:12px monospace">${esc(rulesOne())}</textarea></div></div>`;
 }
 /** A Success Number modifier as a small icon chip: the sign and size are the data, the full reason is the tooltip. */
+const fxRow = (f: Fx) => `<div class="fxrow ${f.cls}">${ico(f.icon)}<b>${esc(f.head)}</b><span>${esc(f.text)}</span></div>`;
 const modIcon = (why: string) => /base/i.test(why) ? 'target' : /armor|infantry|class/i.test(why) ? 'armor_asset' : /green|veteran|elite|quality/i.test(why) ? 'star' : /terrain|tdn/i.test(why) ? 'tree' : /field/i.test(why) ? 'shield' : /river/i.test(why) ? 'wave' : /disorder|supply/i.test(why) ? 'warn' : /air|asset|artillery/i.test(why) ? 'air_mission' : 'info';
 const modChips = (parts: [string, number][]) => parts.map(([w, v]) => `<span class="m2 ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}" title="${esc(w)}">${ico(modIcon(w))}${v > 0 ? '+' : v < 0 ? '−' : ''}${v ? Math.abs(v) : ''}</span>`).join('');
 const chip = (label: string, on: boolean, f: () => void, title = '') => `<button class="chip ${on ? 'on' : ''}" aria-pressed="${on}" data-do="${reg(f)}" title="${esc(title)}">${on ? ico('check') : ''}${label}</button>`;
@@ -930,11 +969,11 @@ const onNet = (): void => {
   if (!lobbyOpened && !HAS_TABLE) { lobbyOpened = true; modal = 'lobby'; }
   if (lobbyUid !== online.uid) { lobbyUid = online.uid; lobby.watch((m) => { matches = m; render(); }); }
 };
-void startOnline((rg) => { const was = g.battle, n0 = was?.rolls.length ?? 0, st0 = was?.stage; applyingRemote = true; g = rg;
-  const nb = g.battle; if (was && nb && nb.area === was.area && nb.rolls.length > n0 && st0 && STAGE_NAME[st0]) {      // the other player rolled: show their dice here too
+void startOnline((rg) => { const was = g.battle, n0 = was?.rolls.length ?? 0, st0 = was?.stage, pre = was ? snap(g) : null; applyingRemote = true; g = rg;
+  const nb = g.battle; const rolled = !!(was && nb && nb.area === was.area && nb.rolls.length > n0); if (pre) noteFx(pre, g, rolled); if (was && nb && nb.area === was.area && nb.rolls.length > n0 && st0 && STAGE_NAME[st0]) {      // the other player rolled: show their dice here too
     const side = st0 === 'attArty' || st0 === 'offFire' ? nb.attacker : other(nb.attacker);
     rollView = { title: `${nm(side)} ${STAGE_NAME[st0]}`, pos: null, groups: nb.rolls.slice(n0).map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: [] })) };
-    if (rollView.groups.length) { const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block'; throwDice(cv, rollView.groups, (p) => { if (rollView) { rollView.pos = p; render(); } }); } else rollView = null;
+    if (rollView.groups.length) { const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block'; throwDice(cv, rollView.groups, (p) => { if (rollView) { rollView.pos = p; render(); showFx(pendingFx); pendingFx = []; } }); } else rollView = null;
   } selUnit = selChit = selArr = null; previewArea = hoverArea = null; hist.clear(); try { save(); } finally { applyingRemote = false; } refresh(); }, () => { onNet(); render(); }, () => g);
 /** Every drawn symbol and counter as SVG, for the editable sheets (docs/maps/vector/fab-*.svg). */
 function sheets() {
