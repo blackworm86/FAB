@@ -209,9 +209,10 @@ function drawPieces() {
   for (const k of g.blown) { const [x, y] = k.split('-').map(Number), q = toWorld(...borderMid(x, y)), p = free(q.x, q.z, 0.85), t = tag('X', '#d9421f', CHIT); t.position.set(p.x, 0.07, p.z); t.rotation.y = -borderAngle(x, y); markers.add(t); }
 }
 /** Map overlays: the area tint (terrain defence or army zones) is painted into the board under the line work. */
-let tint: 'off' | 'tdn' | 'zones' = (() => { try { const t = localStorage.getItem('fab-tint'); return t === 'tdn' || t === 'zones' ? t : 'off'; } catch { return 'off'; } })();
+let tint: 'off' | 'tdn' | 'zones' | 'control' = (() => { try { const t = localStorage.getItem('fab-tint'); return t === 'tdn' || t === 'zones' || t === 'control' ? t : 'off'; } catch { return 'off'; } })();
 const TDN_COL = [0xf4e3a4, 0xc9a24f, 0x8a8f86, 0x4a5028], ZONE_COL: Record<number, number> = { 5: 0x3a3f46, 6: 0x951b81, 7: 0x009fe3 };   // the TDN colours are the printed TDN markers'
-const tintOf = (id: number) => (tint === 'tdn' ? TDN_COL[E.areas.get(id)!.tdn] : ZONE_COL[E.areas.get(id)!.zone]);
+const CONTROL_COL = { allied: 0x6aa84f, german: 0x8a9096, contested: 0x9b59d0 };                      // allied green, axis grey, contested violet (red and yellow are the combat highlights)
+const tintOf = (id: number) => (tint === 'tdn' ? TDN_COL[E.areas.get(id)!.tdn] : tint === 'control' ? (E.contested(g, id) ? CONTROL_COL.contested : CONTROL_COL[g.control[id] ?? 'german']) : ZONE_COL[E.areas.get(id)!.zone]);
 const hex6 = (n: number) => '#' + n.toString(16).padStart(6, '0');
 /** What is printed on the map, and how. */
 const layers = (() => { const d = { numbers: true, tdn: true, vp: true, names: true }; try { return { ...d, ...JSON.parse(localStorage.getItem('fab-layers') ?? '{}') }; } catch { return d; } })();
@@ -437,6 +438,7 @@ function confirmMove() {
 }
 function click(e: PointerEvent) {
   const { unit, area } = pick(e);
+  if (armed) { const id = armed; armed = null; const ok = area != null && dragTargets.includes(area); dragTargets = []; if (ok) return playChitOn(E.chit(g, id), area!); selChit = null; return refresh(); }
   const rb = g.battle;
   if (rb?.stage === 'retreat' && area != null && E.retreatOptions(g, rb).includes(area)) return act(() => E.chooseRetreat(g, rb, area));
   if (g.pendingBlow || g.battle) return;
@@ -542,6 +544,19 @@ function chitTargets(c: E.Chit): number[] {
   }
 }
 /** The chit was dropped on an area: play it there, or open its panel when there is a choice to make. */
+let lastPointer = 'mouse', armed: string | null = null;
+/** Touch: a card is tapped, never dragged (so the hand can scroll). In a battle it files itself; an event or asset with map targets lights them and waits for a tap on one. */
+function tapCard(id: string) {
+  const c = E.chit(g, id), b = g.battle;
+  if (b) {
+    if (b.stage !== 'setup') return;
+    if (!mine(c.side)) return say('Those are the other player\'s assets.');
+    const why = E.canAssign(g, b, c.side, c); if (why) return say(why);
+    return act(() => { if (c.kind === 'air_mission') E.assign(g, b, id, 'arty'); else E.assign(g, b, id); });
+  }
+  if (chitTargets(c).length) { armed = armed === id ? null : id; dragTargets = armed ? chitTargets(c) : []; selChit = armed; if (armed) say('Tap a lit area on the map'); return refresh(); }
+  selChit = selChit === id ? null : id; refresh();
+}
 function playChitOn(c: E.Chit, area: number) {
   selArea = area;
   const panel = () => { selChit = c.id; refresh(); };
@@ -597,6 +612,7 @@ function prompt() {
 }
 function promptText() {
   const b = g.battle;
+  if (armed) return '<b>Tap a lit area</b> on the map to play it.';
   if (online.active && !allowed() && !g.over) return online.mySide() == null ? '<b>Watching.</b> Take a seat in the menu.' : `<b>Waiting for the ${nm(actorNow() as E.Side)} player…</b>`;
   if (note && !b && hist.length) return `${esc(note)} <button data-do="${reg(() => undo())}">Undo</button>`;
   if (g.over) return `<b>${esc(g.over)}</b>`;
@@ -653,11 +669,6 @@ function dispatch() {
     const fw = can && u.area != null && !u.unsupplied && !u.disorder && !E.contested(g, u.area) && !g.fieldWorks.includes(u.area) && ((g.phase === 'movement' && u.side === g.phasing) || (g.phase === 'reaction' && u.side !== g.phasing && !!u.reserve) || (g.phase === 'btMove' && u.side === g.phasing && (!!u.reserve || u.exploit)));
     return `<div class="c-dispatch"><h3 class="${u.side}">${esc(u.name)}</h3><div class="pipsrow">${pips(u)} <small>${u.garrison ? 'asset' : u.cls} · ${tags.join(' · ') || 'in order'}</small></div>${route}
       <div class="row">${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve', () => E.setReserve(g, u.id, false)) : btn('Reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u))) : ''}${fw ? btn('Fortify', () => E.buildFieldWorks(g, u.id)) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn('Activate (SA)', () => E.activateBreakthrough(g, u.id), '', !E.saAvailable(g, u.side, u.ech).length) : ''}</div></div>`;
-  }
-  if (selArea != null) {
-    const a = E.areas.get(selArea)!, us = E.unitsIn(g, selArea);
-    return `<div class="c-dispatch"><h3>${esc(a.name)}</h3>${row('Terrain TDN', `${a.tdn}`)}${row('Control', nm(g.control[a.id]))}${g.fieldWorks.includes(a.id) ? row('Field works', 'yes') : ''}${(a.vp.allied || a.vp.german || a.vp.mutual) ? row('Victory area', a.vp.mutual ? 'both' : a.vp.german ? 'German ' + a.vp.german : 'Allied ' + a.vp.allied) : ''}
-      ${us.map((u) => `<button class="unit" data-u="${u.id}"><b class="${u.side}">${esc(u.name)}</b><span class="pipsrow">${pips(u)}</span></button>`).join('') || '<p class="hint">Empty.</p>'}</div>`;
   }
   return '';
 }
@@ -749,8 +760,8 @@ function ledger() {
 function legend() {
   if (tint === 'off') return '';
   const hex = (n: number) => '#' + n.toString(16).padStart(6, '0');
-  const items = tint === 'tdn' ? TDN_COL.map((c, i) => [c, `TDN ${i}`, (i ? `attackers −${i} to hit` : 'no modifier')]) : [[ZONE_COL[5], 'Zone 5', '5th Panzer Army'], [ZONE_COL[6], 'Zone 6', '6th Panzer Army'], [ZONE_COL[7], 'Zone 7', '7th Army']];
-  return `<div class="legend" aria-label="Overlay legend"><b>${tint === 'tdn' ? 'Terrain defence' : 'Army zones'}</b>${items.map(([c, a, b]) => `<span><i style="background:${hex(c as number)}"></i>${a} <small>${b}</small></span>`).join('')}</div>`;
+  const items = tint === 'control' ? [[CONTROL_COL.allied, 'Allied', 'control'], [CONTROL_COL.german, 'German', 'control'], [CONTROL_COL.contested, 'Contested', 'both sides present']] : tint === 'tdn' ? TDN_COL.map((c, i) => [c, `TDN ${i}`, (i ? `attackers −${i} to hit` : 'no modifier')]) : [[ZONE_COL[5], 'Zone 5', '5th Panzer Army'], [ZONE_COL[6], 'Zone 6', '6th Panzer Army'], [ZONE_COL[7], 'Zone 7', '7th Army']];
+  return `<div class="legend" aria-label="Overlay legend"><b>${tint === 'tdn' ? 'Terrain defence' : tint === 'control' ? 'Area control' : 'Army zones'}</b>${items.map(([c, a, b]) => `<span><i style="background:${hex(c as number)}"></i>${a} <small>${b}</small></span>`).join('')}</div>`;
 }
 const TABLE_NAME = TABLE;
 /* ---------- lobby ---------- */
@@ -824,7 +835,7 @@ function layersHtml() {
   const tintBtn = (v: typeof tint, label: string) => chip(label, tint === v, () => { tint = v; relayer(); });
   return `<div class="modal"><div class="sheet slim"><h3>Map layers <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
     <h4>Printed on the map</h4><div class="chips">${chip('Numbers', layers.numbers, () => { layers.numbers = !layers.numbers; relayer(); }, 'Area numbers and entry letters')}${chip('TDN', layers.tdn, () => { layers.tdn = !layers.tdn; relayer(); }, 'Terrain defence number: marker shape and colour')}${chip('Victory points', layers.vp, () => { layers.vp = !layers.vp; relayer(); })}${chip('Names', layers.names, () => { layers.names = !layers.names; relayer(); })}</div>
-    <h4>Colour the areas</h4><div class="chips">${tintBtn('off', 'Off')}${tintBtn('tdn', 'TDN')}${tintBtn('zones', 'Army zones')}</div>
+    <h4>Colour the areas</h4><div class="chips">${tintBtn('off', 'Off')}${tintBtn('tdn', 'TDN')}${tintBtn('zones', 'Army zones')}${tintBtn('control', 'Control')}</div>
     <p class="hint">Roads, rivers and borders stay visible under the colours.</p></div></div>`;
 }
 function modalHtml() {
@@ -859,8 +870,10 @@ function render() {
   const p = primary(), b = g.battle;
   const alert = g.pendingBlow ? (() => { const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!, path = g.pendingBlow!.path; return `<div class="c-ledger"><h3>${nm(other(u.side))}: bridge?</h3><p class="hint">${esc(u.name)} tries to cross into ${esc(areaName(path[path.length - 1]))}. Attempt to blow the bridge? It works on a roll of 1–5.</p><div class="row end">${btn('Let them cross', () => E.resolveBlow(g, false))}${btn('Attempt to blow it', () => E.resolveBlow(g, true), 'primary')}</div></div>`; })() : '';
   const dockMain = alert || ledger() || handCards();
+  const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
   $('#ui').innerHTML = topBar() + `<div class="stage">${b ? battleTable() : dispatch()}${legend()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
   const ui = $('#ui');
+  { const h = ui.querySelector<HTMLElement>('.c-hand'), a = ui.querySelector<HTMLElement>('.arrtray'); if (h) h.scrollLeft = keepH; if (a) a.scrollLeft = keepA; }
   ui.querySelectorAll<HTMLElement>('[data-do]').forEach((e) => (e.onclick = () => act(acts[e.dataset.do!])));
   ui.querySelectorAll<HTMLElement>('[data-modal]').forEach((e) => (e.onclick = () => { modal = (e.dataset.modal || null) as typeof modal; render(); }));
   ui.querySelectorAll<HTMLElement>('[data-sel]').forEach((e) => (e.onchange = () => { const f = actv[e.dataset.sel!]; if (f) { f(e instanceof HTMLInputElement && e.type === 'checkbox' ? (e.checked ? 'on' : 'off') : (e as HTMLSelectElement).value); save(); } }));
@@ -877,8 +890,8 @@ function render() {
   ui.querySelectorAll<HTMLElement>('[data-undo]').forEach((e) => (e.onclick = () => undo()));
   ui.querySelectorAll<HTMLElement>('[data-u]').forEach((e) => (e.onclick = () => { selUnit = e.dataset.u!; selArea = g.units.find((x) => x.id === selUnit)!.area ?? selArea; previewArea = null; refresh(); }));
   ui.querySelectorAll<HTMLElement>('.card2, .blk').forEach((e) => (e.onkeydown = (ev) => { if (ev.key !== 'Enter' && ev.key !== ' ') return; ev.preventDefault(); const id = e.dataset.chit, b2 = g.battle; if (e.classList.contains('card2') && id) { if (b2?.stage === 'setup') { const c = E.chit(g, id), why = E.canAssign(g, b2, c.side, c); if (why) say(why); else act(() => E.assign(g, b2, id, c.kind === 'air_mission' ? 'arty' : undefined)); } else if (!b2) { selChit = selChit === id ? null : id; refresh(); } } else e.click(); }));
-  ui.querySelectorAll<HTMLElement>('.card2').forEach((e) => (e.onpointerdown = (ev) => { if (ev.pointerType === 'mouse') ev.preventDefault(); if (g.battle || chitTargets(E.chit(g, e.dataset.chit!)).length) drag(ev, e); }));
-  ui.querySelectorAll<HTMLElement>('.card2').forEach((e) => (e.onclick = () => { if (!g.battle && !chitTargets(E.chit(g, e.dataset.chit!)).length) { selChit = selChit === e.dataset.chit ? null : e.dataset.chit!; refresh(); } }));
+  ui.querySelectorAll<HTMLElement>('.card2').forEach((e) => (e.onpointerdown = (ev) => { lastPointer = ev.pointerType; if (ev.pointerType === 'touch') return; if (ev.pointerType === 'mouse') ev.preventDefault(); if (g.battle || chitTargets(E.chit(g, e.dataset.chit!)).length) drag(ev, e); }));
+  ui.querySelectorAll<HTMLElement>('.card2').forEach((e) => (e.onclick = () => { if (lastPointer === 'touch') return tapCard(e.dataset.chit!); if (!g.battle && !chitTargets(E.chit(g, e.dataset.chit!)).length) { selChit = selChit === e.dataset.chit ? null : e.dataset.chit!; refresh(); } }));
   ui.querySelectorAll<HTMLElement>('.blk[data-unit]').forEach((e) => (e.onclick = () => { const b2 = g.battle; if (!b2 || b2.stage !== 'setup') return; const s = e.dataset.side as E.Side, u = g.units.find((x) => x.id === e.dataset.unit)!; if (!mine(s)) return; if (u.garrison || (s === b2.attacker && u.disorder)) return; if (s === b2.attacker) b2.attPoint = u.id; else b2.defPoint = u.id; save(); render(); }));
 }
 let lastView: E.Side | null = null;
@@ -886,7 +899,9 @@ let lastView: E.Side | null = null;
 function syncView() {
   const v = viewSide(); if (v === lastView) return; const first = lastView === null; lastView = v; yaw = v === 'allied' ? Math.PI : 0; if (!first) goal = { t: new THREE.Vector3(17, 0, -3), dist, pitch }; paintBoard();
 }
+let ctlKey = '';
 function refresh() {
+  if (tint === 'control') { const k = JSON.stringify(g.control) + E.contestedAreas(g).join(); if (k !== ctlKey) { ctlKey = k; paintBoard(); } }
   syncView(); syncBattleCam(); drawPieces(); paintAreas(); drawRoute(); badges = badgeList(); syncBadges(); render();
   if (!rollView) { const cv = $('#dice'); if (cv && cv.style.display !== 'none') { clearDice(); cv.style.display = 'none'; } }
 }
