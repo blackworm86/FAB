@@ -722,7 +722,7 @@ function lobbyHtml() {
   const games = GAMES.map((x) => `<button class="gamecard ${x.id === form.game ? 'sel' : ''}" ${x.ready ? '' : 'disabled'} data-do="${reg(() => { if (x.ready) form.game = x.id; })}"><b>${esc(x.name)}</b><small>${esc(x.vol)}${x.ready ? '' : ' · coming soon'}</small><span>${esc(x.blurb)}</span></button>`).join('');
   const mine = matches.map((m) => `<div class="matchrow"><div><b>${esc(m.title)}</b><small>${esc(gameInfo(m.game)?.name ?? m.game)} · German ${esc(m.germanName || 'open seat')} · Allied ${esc(m.alliedName || 'open seat')}</small></div><div class="row">${btn('Open', () => { location.search = `?table=${m.id}`; }, 'primary')}${btn('Invite', () => { void share(m.id, m.title); })}</div></div>`).join('') || '<p class="hint">You have no games yet. Create one below.</p>';
   return `<div class="homepage"><div class="homein">
-    <header><h1>Fast Action Battles</h1><p>Series-rules tabletop wargames, played online.</p>${HAS_TABLE ? btn('← Back to the game', () => { modal = null; }, 'ghost') : ''}</header>
+    <header><h1>Fast Action Battles</h1><p>Series-rules tabletop wargames, played online.</p>${HAS_TABLE ? btn('← Back to the game', () => { modal = null; }, 'plain') : ''}</header>
     <section class="card"><h2>Account</h2>${accountHtml()}${signed ? '' : '<p class="hint">Guests can watch a game from its link. Sign in to create or play.</p>'}</section>
     ${signed ? `<section class="card"><h2>My games</h2>${mine}</section>
     <section class="card"><h2>New game</h2><h4>1 · Choose a game</h4><div class="gamegrid">${games}</div>
