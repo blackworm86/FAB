@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import mapJson from '../../data/bulge/map.json';
 import * as E from '../../engine/src';
-import { labelSvg, garrisonSvg } from './art';
-import { chitSvg, mapMarkerSvg, loadChitArt } from './chits';
+import { labelSvg } from './art';
+import { chitSvg, mapMarkerSvg, loadChitArt, garrisonChit } from './chits';
 import { History } from './history';
 import { throwDice, clearDice, isHit, type DiceGroup } from './dice3d';
 
@@ -35,7 +35,7 @@ const areaName = (a: number) => E.areas.get(a)!.name;
 const KEY = 'fab-demo2';
 function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif && x.roadblocks && x.pendingArrivals ? x : null; } catch { return null; } }
 let g: E.Game = load() ?? E.newGame();
-let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, previewArea: number | null = null, hoverArea: number | null = null, msg = '', newOpts: E.Opts = { scenario: 'tournament', fuel: true };
+let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, previewArea: number | null = null, hoverArea: number | null = null, newOpts: E.Opts = { scenario: 'tournament', fuel: true };
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(g)); } catch { /* storage off: the game still runs */ } };
 
 /* ---------- three.js scene ---------- */
@@ -83,11 +83,16 @@ const svgTex = (key: string, svg: string) => { if (!labelTex.has(key)) { const t
 const WOOD = { german: 0x8e9296, allied: 0x5d8a45 };
 const BRIT = new Set(['43 Inf', '53 Inf', 'Guards', '51 Inf']);
 
+/** Garrison and Task Force counters, drawn like the printed ones (area number, or turn and star). */
+function garrisonArt(u: E.Unit) {
+  const tf = u.id.startsWith('TF-') ? E.chit(g, u.chitId!).turn : null;
+  return garrisonChit(tf != null ? 'Task Force' : u.name.replace('Garrison ', ''), tf != null ? `${tf}-*` : u.id.replace(/^G/, ''), tf == null);
+}
 function block(u: E.Unit) {
   const w = 1.6, h = 1.6, d = 0.8;                                    // 16 x 16 x 8 mm block
   const wood = new THREE.MeshStandardMaterial({ color: BRIT.has(u.name) ? 0x3f6fb8 : WOOD[u.side], roughness: 0.75 });
   if (u.garrison) {
-    const chit = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new THREE.BoxGeometry(1.43, 0.18, 1.43), [chit, chit, new THREE.MeshStandardMaterial({ map: svgTex(u.id, garrisonSvg(u.name, u.side === 'german')) }), chit, chit, chit]); // 9/16 in chit
+    const chit = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new THREE.BoxGeometry(1.43, 0.18, 1.43), [chit, chit, new THREE.MeshStandardMaterial({ map: svgTex(u.id, garrisonArt(u)) }), chit, chit, chit]); // 9/16 in chit
     m.position.y = 0.09; m.castShadow = true; return m;
   }
   const face = new THREE.MeshStandardMaterial({ map: svgTex(`${u.id}-${u.str}`, labelSvg(u)), roughness: 0.6 });
@@ -193,13 +198,10 @@ const reg = (f: () => void) => { const k = 'a' + n++; acts[k] = f; return k; };
 const regv = (f: (v: string) => void) => { const k = 'v' + n++; actv[k] = f; return k; };
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 const btn = (label: string, f: () => void, cls = '', dis = false, title = '') => `<button class="${cls}" data-do="${reg(f)}" ${dis ? 'disabled' : ''} title="${esc(title)}">${label}</button>`;
-const sideName = (s: E.Side) => (s === 'german' ? 'German' : 'Allied');
-const PHASE_NAME: Record<E.Phase, string> = { reinforcement: 'Reinforce', admin: 'Admin', movement: 'Move', strategic: 'Strat', combat: 'Combat', reaction: 'Reaction', btMove: 'Break. move', btCombat: 'Break. combat', supply: 'Supply' };
 const pips = (u: E.Unit) => Array.from({ length: u.str }, () => `<i class="pip ${E.quality(u)}"></i>`).join('');
 const ABBR: Record<string, string> = { artillery: 'Arty', rocket_artillery: 'Rkt', engineer: 'Eng', armor_asset: 'Armor', infantry_asset: 'Inf', task_force: 'TF', fuel: 'Fuel', command_staff: 'Staff', sa_block: 'SA', replacement_inf: 'Repl inf', replacement_arm: 'Repl arm',
   rebuild_or_replace_inf: 'Rebuild inf', rebuild_or_replace_arm: 'Rebuild arm', event_arriving_regiment: 'Regt', special_action_event: 'SA event', air_mission: 'Air', event_release: 'Release', event_greif_bridge: 'Greif bridge', event_greif_interdict: 'Greif interdict', event_bodenplatte: 'Bodenplatte', event_delayed_response: 'Delayed' };
 const chitLabel = (c: E.Chit) => `${ABBR[c.kind] ?? c.kind}${['fuel', 'sa_block', 'special_action_event', 'air_mission', 'replacement_inf', 'replacement_arm', 'event_delayed_response'].includes(c.kind) || c.name.length > 14 ? '' : ' ' + c.name}${c.turn !== 'S' && E.isEvent(c) ? ' T' + c.turn : ''}`;
-const chitChip = (c: E.Chit, extra = '') => `<button class="chit ${c.side} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" title="${esc(c.name + ' · ' + c.ech)}">${esc(chitLabel(c))}${extra}</button>`;
 function chitPanel(c: E.Chit): string {
   const a = selArea, out: string[] = [], u = selUnit ? g.units.find((x) => x.id === selUnit)! : null;
   const head = `<div><h2>${c.side === 'german' ? 'German' : 'Allied'} ${esc(ABBR[c.kind] ?? c.kind)}</h2><h3>${esc(c.name)}</h3><p class="hint">${esc(c.ech)} · in the ${c.box} box</p></div>`;
@@ -217,7 +219,7 @@ function chitPanel(c: E.Chit): string {
       if (E.roadblockAreas(g, c.side).includes(a)) out.push(btn('Roadblock here', () => E.roadblock(g, c.id, a, false), '', false, '4.34'), btn('Defended roadblock (engineer stays)', () => E.roadblock(g, c.id, a, true), '', false, '4.35'));
     }
   } else if (c.kind.startsWith('replacement') || c.kind === 'event_arriving_regiment' || c.kind.startsWith('rebuild')) {
-    const el = g.units.filter((x) => E.eligibleForStep(g, c, x));
+    const el = g.units.filter((x) => E.eligibleForStep(c, x));
     el.forEach((x) => out.push(btn(`+1 step: ${esc(x.name)} (${x.str}/${x.max}) in ${esc(areaName(x.area!))}`, () => E.playReplacement(g, c.id, x.id))));
     if (!el.length) out.push('<p class="hint">No reduced, supplied unit of the right class and Higher Echelon.</p>');
     if (c.kind.startsWith('rebuild')) g.units.filter((x) => x.area == null && x.max === 1 && x.side === c.side && x.q[0] !== 'elite' && !x.garrison && (c.kind.endsWith('arm') === (x.cls === 'armor')) && x.str === 0).forEach((x) => out.push(a == null ? '<p class="hint">Select an objective area to return an eliminated unit.</p>' : btn(`Return ${esc(x.name)} to ${esc(areaName(a))}`, () => E.playRebuild(g, c.id, x.id, a))));
@@ -269,7 +271,7 @@ let toast = '', toastT = 0;
 const say = (t: string) => { toast = t; clearTimeout(toastT); toastT = window.setTimeout(() => { toast = ''; render(); }, 2800); };
 const hist = new History<E.Game>(); let note = '', selArr: string | null = null;
 function act(f: () => void, after = '') {
-  const r = hist.run(g, () => { f(); msg = ''; auto(); });
+  const r = hist.run(g, () => { f(); auto(); });
   g = r.game; if (r.error) say(r.error.message); else note = after;
   save(); refresh();
 }
@@ -304,7 +306,7 @@ function click(e: PointerEvent) {
   if (g.pendingBlow || g.battle) return;
   if (selArr && area != null && arrOpts().some((o) => o.area === area)) { const id = selArr; selArr = null; return act(() => { if (g.pendingArrivals.includes(id)) E.placeArrival(g, id, area); else E.placeTaskForce(g, id, area); }); }
   if (selUnit && area != null && optsFor(selUnit).some((o) => o.area === area)) { previewArea = area; refresh(); return; }
-  if ((g.phase === 'combat' || g.phase === 'btCombat') && area != null && fightable().includes(area)) { selArea = area; selUnit = null; return act(() => { E.startBattle(g, area, g.phase === 'btCombat'); lastFire = []; }); }
+  if ((g.phase === 'combat' || g.phase === 'btCombat') && area != null && fightable().includes(area)) { selArea = area; selUnit = null; return act(() => { E.startBattle(g, area, g.phase === 'btCombat'); }); }
   if (unit) { selUnit = unit; selArea = g.units.find((x) => x.id === unit)!.area; } else { selArea = area; selUnit = null; }
   previewArea = null; hoverArea = null; refresh();
 }
@@ -345,7 +347,7 @@ function placeBadges() {
 
 /* ---------- battle state shared with the view ---------- */
 interface RollView { title: string; groups: (DiceGroup & { parts: [string, number][]; hits: number })[]; pos: { x: number; y: number; group: number; v: number }[] | null }
-let rollView: RollView | null = null, lastFire: E.Fire[] = [], modal: 'menu' | 'boxes' | null = null, handSide: E.Side | null = null;
+let rollView: RollView | null = null, modal: 'menu' | 'boxes' | null = null, handSide: E.Side | null = null;
 const STAGE_NAME: Record<string, string> = { attArty: 'artillery', defArty: 'artillery', defFire: 'Defensive fire', offFire: 'Offensive fire' };
 function rollStage(b: E.Battle) {
   const side = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker), kind = b.stage.endsWith('Arty') ? 'arty' : 'ground', fl = E.fireList(g, b, side, kind), n0 = b.rolls.length, stage = b.stage;
@@ -449,7 +451,7 @@ function dispatch() {
     const to = previewArea ?? hoverArea, o = to != null ? optsFor(u.id).find((x) => x.area === to) : null, n = fuelLeft(), strat = g.phase === 'strategic';
     const tags = [u.disorder === 1 ? 'disordered' : u.disorder === 2 ? 'recovering' : '', u.unsupplied ? 'unsupplied' : '', u.reserve ? 'reserve' : '', u.exploit ? 'exploit' : '', u.interdict ? 'interdicted' : ''].filter(Boolean);
     let route = '';
-    if (o) route = `<div class="route"><h4>→ ${esc(areaName(o.area))}</h4>${strat ? row('Strategic move', 'any distance') : row('Movement', `${o.cost} MP`)}${u.side === 'german' && g.opts.fuel ? row('Fuel', o.fuel ? `−1 &nbsp;(${n} → ${n - 1})` : 'not needed', o.fuel ? 'bad' : '') : ''}${o.mustStop ? row('Stops here', 'enemy present, battle follows', 'bad') : ''}${btn('Move here', () => { previewArea = o.area; confirmMoveNow(); }, 'primary')}</div>`;
+    if (o) route = `<div class="route"><h4>→ ${esc(areaName(o.area))}</h4>${strat ? row('Strategic move', 'any distance') : row('Movement', `${o.cost} MP`)}${u.side === 'german' && g.opts.fuel ? row('Fuel', o.fuel ? `−1 &nbsp;(${n} → ${n - 1})` : 'not needed', o.fuel ? 'bad' : '') : ''}${o.mustStop ? row('Stops here', 'enemy present, battle follows', 'bad') : ''}${btn('Move here', () => { previewArea = o.area; confirmMove(); }, 'primary')}</div>`;
     else if (optsFor(u.id).length) route = `<p class="hint">${optsFor(u.id).length} destination(s). Hover or click a highlighted area.</p>`;
     const can = ['movement', 'reaction', 'btMove'].includes(g.phase) && !u.garrison && !u.moved;
     const fw = can && u.area != null && !u.unsupplied && !u.disorder && !E.contested(g, u.area) && !g.fieldWorks.includes(u.area) && ((g.phase === 'movement' && u.side === g.phasing) || (g.phase === 'reaction' && u.side !== g.phasing && !!u.reserve) || (g.phase === 'btMove' && u.side === g.phasing && (!!u.reserve || u.exploit)));
@@ -463,12 +465,11 @@ function dispatch() {
   }
   return '';
 }
-function confirmMoveNow() { confirmMove(); }
 const svgUri = (svg: string) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 function tray() {
   const us = g.pendingArrivals.map((id) => g.units.find((x) => x.id === id)!), tf = g.tfNew.map((id) => E.chit(g, id));
   if (!us.length && !tf.length) return '';
-  return `<div class="arrtray" role="group" aria-label="Arriving reinforcements">${us.map((u) => `<button class="arr ${u.id === selArr ? 'sel' : ''}" data-arr="${u.id}" title="${esc(u.name)}"><span class="blk3d ${u.side}"><img alt="" src="${svgUri(u.garrison ? garrisonSvg(u.name, u.side === 'german') : labelSvg(u))}"></span><small>${esc(u.name)}</small></button>`).join('')}${tf.map((c) => `<button class="arr ${c.id === selArr ? 'sel' : ''}" data-arr="${c.id}" title="Task Force"><span class="chit3d"><img alt="" src="${svgUri(garrisonSvg('Task Force', false))}"></span><small>Task Force</small></button>`).join('')}</div>`;
+  return `<div class="arrtray" role="group" aria-label="Arriving reinforcements">${us.map((u) => `<button class="arr ${u.id === selArr ? 'sel' : ''}" data-arr="${u.id}" title="${esc(u.name)}"><span class="blk3d ${u.side}"><img alt="" src="${svgUri(u.garrison ? garrisonArt(u) : labelSvg(u))}"></span><small>${esc(u.name)}</small></button>`).join('')}${tf.map((c) => `<button class="arr ${c.id === selArr ? 'sel' : ''}" data-arr="${c.id}" title="Task Force"><span class="chit3d"><img alt="" src="${svgUri(garrisonChit('Task Force', `${c.turn}-*`, false))}"></span><small>Task Force</small></button>`).join('')}</div>`;
 }
 function handCards() {
   const b = g.battle;

@@ -281,14 +281,14 @@ export function spendSA(g: Game, side: Side, ech?: string, why = 'Special Action
 const needAdmin = (g: Game) => { if (g.phase !== 'admin') throw new Error('only in the Admin Phase'); };
 export const suppliedArea = (g: Game, side: Side, a: number) => g.control[a] === side && inSupply(g, side, a) && !contested(g, a);
 const supplied = (g: Game, side: Side, a: number) => g.control[a] === side && inSupply(g, side, a) && !contested(g, a);
-const echOk = (g: Game, c: Chit, a: number) => c.side === 'allied' || c.ech === 'de_sr' || c.ech === 'german' || ZONE[c.ech] === zoneOf(a);   // 16.1 German assets/events act only in their own army's zone
+const echOk = (c: Chit, a: number) => c.side === 'allied' || c.ech === 'de_sr' || c.ech === 'german' || ZONE[c.ech] === zoneOf(a);   // 16.1 German assets/events act only in their own army's zone
 export function bridgeTargets(g: Game, side: Side, area: number) {
   return neighbors(area).filter((n) => connection(area, n)!.river && !g.blown.includes(keyOf(area, n)) && supplied(g, side, area));
 }
 export function blowBridges(g: Game, id: string, area: number, targets: number[]) {
   needAdmin(g); const c = chit(g, id);
   if (c.kind !== 'engineer' || c.box !== 'available') throw new Error('engineer not available');
-  if (!echOk(g, c, area) || !bridgeTargets(g, c.side, area).length || targets.length < 1 || targets.length > 2 || !targets.every((t) => bridgeTargets(g, c.side, area).includes(t))) throw new Error('not a legal bridge-blowing');
+  if (!echOk(c, area) || !bridgeTargets(g, c.side, area).length || targets.length < 1 || targets.length > 2 || !targets.every((t) => bridgeTargets(g, c.side, area).includes(t))) throw new Error('not a legal bridge-blowing');
   c.box = 'used';
   for (const t of targets) {
     const k = keyOf(area, t);
@@ -303,20 +303,20 @@ export function repairTargets(g: Game, side: Side, area: number) {
 }
 export function repairBridge(g: Game, id: string, area: number, to: number) {
   needAdmin(g); const c = chit(g, id);
-  if (c.kind !== 'engineer' || c.box !== 'available' || !echOk(g, c, area) || !repairTargets(g, c.side, area).includes(to)) throw new Error('not a legal repair');
+  if (c.kind !== 'engineer' || c.box !== 'available' || !echOk(c, area) || !repairTargets(g, c.side, area).includes(to)) throw new Error('not a legal repair');
   g.blown = g.blown.filter((k) => k !== keyOf(area, to)); c.box = 'used'; say(g, `${c.name} repairs the bridge ${areas.get(area)!.name}–${areas.get(to)!.name}`);
 }
 export function fieldWorksFor(g: Game, id: string, area: number) {
   needAdmin(g); const c = chit(g, id);
   const same = blocks(g, area, c.side).some((u) => u.ech === c.ech || c.ech === 'us_sr' || u.ech === 'us_sr');
-  if (c.kind !== 'engineer' || c.box !== 'available' || !supplied(g, c.side, area) || !same || g.fieldWorks.includes(area) || !echOk(g, c, area)) throw new Error('needs a supplied, uncontested area holding a unit of the engineer\'s echelon');
+  if (c.kind !== 'engineer' || c.box !== 'available' || !supplied(g, c.side, area) || !same || g.fieldWorks.includes(area) || !echOk(c, area)) throw new Error('needs a supplied, uncontested area holding a unit of the engineer\'s echelon');
   g.fieldWorks.push(area); c.box = 'used'; say(g, `${c.name} builds field works in ${areas.get(area)!.name}`);
 }
-function addStep(g: Game, u: Unit, elite: boolean) {
+function addStep(u: Unit, elite: boolean) {
   const nq = u.q[u.str]; if (u.str >= u.max || u.unsupplied || (!elite && nq === 'elite')) throw new Error('that unit cannot receive a step');
   u.str++;
 }
-export function eligibleForStep(g: Game, c: Chit, u: Unit) {
+export function eligibleForStep(c: Chit, u: Unit) {
   if (u.side !== c.side || u.area == null || u.garrison || u.unsupplied || u.str >= u.max) return false;
   const arm = c.kind === 'replacement_arm' || c.kind === 'rebuild_or_replace_arm', inf = c.kind === 'replacement_inf' || c.kind === 'rebuild_or_replace_inf';
   if (c.kind === 'event_arriving_regiment') return u.name === `${parseInt(c.division ?? '')} Inf`;
@@ -327,8 +327,8 @@ export function eligibleForStep(g: Game, c: Chit, u: Unit) {
 }
 export function playReplacement(g: Game, id: string, unitId: string) {
   needAdmin(g); const c = chit(g, id), u = g.units.find((x) => x.id === unitId)!;
-  if (c.box !== 'available' || !eligibleForStep(g, c, u)) throw new Error('that unit is not eligible');
-  addStep(g, u, c.kind === 'event_arriving_regiment'); c.box = 'eliminated'; say(g, `${c.name}: ${u.name} gains a step (${u.str}/${u.max})`);
+  if (c.box !== 'available' || !eligibleForStep(c, u)) throw new Error('that unit is not eligible');
+  addStep(u, c.kind === 'event_arriving_regiment'); c.box = 'eliminated'; say(g, `${c.name}: ${u.name} gains a step (${u.str}/${u.max})`);
 }
 export function playRebuild(g: Game, id: string, unitId: string, area: number) {
   needAdmin(g); const c = chit(g, id), u = g.units.find((x) => x.id === unitId)!;
@@ -355,7 +355,7 @@ export function qualityReplacement(g: Game, unitId: string) {
 export function staffReplacement(g: Game, id: string, unitId: string) {
   needAdmin(g); const c = chit(g, id), u = g.units.find((x) => x.id === unitId)!;
   if (c.kind !== 'command_staff' || c.box !== 'available' || u.side !== c.side || u.cls !== 'infantry' || u.area == null || u.garrison) throw new Error('not eligible');
-  addStep(g, u, false); c.box = 'used'; say(g, `Command staff: ${u.name} gains a step`);
+  addStep(u, false); c.box = 'used'; say(g, `Command staff: ${u.name} gains a step`);
 }
 export function staffReserve(g: Game, id: string, unitId: string) {
   needAdmin(g); const c = chit(g, id); if (c.kind !== 'command_staff' || c.box !== 'available') throw new Error('not available');
@@ -604,10 +604,9 @@ function finishDef(g: Game, b: Battle, kind: 'arty' | 'ground', retreated: boole
   next(g, b);
 }
 /** Where a retreating block may go: adjacent, friendly-controlled, free of enemies, room for one more block (6.5). */
-export function retreatOptions(g: Game, b: Battle, unitId?: string): number[] {
+export function retreatOptions(g: Game, b: Battle): number[] {
   const r = b.retreat; if (!r) return [];
-  const u = g.units.find((x) => x.id === (unitId ?? r.queue[0]))!;
-  return neighbors(b.area).filter((n) => g.control[n] === r.side && !unitsIn(g, n, other(r.side)).length && blocks(g, n, r.side).length < 2 && !(g.blown.includes(keyOf(b.area, n)) && false) && u != null);
+  return neighbors(b.area).filter((n) => g.control[n] === r.side && !unitsIn(g, n, other(r.side)).length && blocks(g, n, r.side).length < 2);
 }
 function advanceRetreat(g: Game, b: Battle) {
   const r = b.retreat!;
@@ -751,7 +750,7 @@ const vacantSupplied = (g: Game, side: Side, a: number) => supplied(g, side, a) 
 /** 4.34 / 4.35: a roadblock marker, or the engineer itself as a defended roadblock. */
 export function roadblock(g: Game, id: string, area: number, defended: boolean) {
   needAdmin(g); const c = chit(g, id);
-  if (c.kind !== 'engineer' || c.box !== 'available' || !echOk(g, c, area) || !vacantSupplied(g, c.side, area) || g.roadblocks[area]) throw new Error('needs a supplied, friendly, vacant area with a Terrain Difficulty Number of 1 or more');
+  if (c.kind !== 'engineer' || c.box !== 'available' || !echOk(c, area) || !vacantSupplied(g, c.side, area) || g.roadblocks[area]) throw new Error('needs a supplied, friendly, vacant area with a Terrain Difficulty Number of 1 or more');
   if (defended) {
     g.units.push({ id: `DR-${id}`, name: `Defended roadblock (${areas.get(area)!.name})`, side: c.side, cls: 'infantry', q: ['green'], max: 1, str: 1, area, garrison: true, disorder: 0, unsupplied: false, moved: true, reserve: null, exploit: false, ech: c.ech, chitId: id });
     c.box = 'map';

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { arrivalOptions, placeArrival, newGame, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, assign, canAssign, endPhase, moveOptions, move, resolveBlow, setReserve, canReserve,
-  stratOptions, stratMove, contestedAreas, unitsIn, boxOf, victory, assetLimits, chit, type Game } from '../src';
+  stratOptions, stratMove, contestedAreas, unitsIn, boxOf, victory, assetLimits, type Game } from '../src';
 
 function runBattle(g: Game, a: number, flip: boolean) {
   const b = startBattle(g, a);
