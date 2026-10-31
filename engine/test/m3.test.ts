@@ -217,3 +217,14 @@ describe('battle set-up control', () => {
     expect(() => cancelBattle(g)).toThrow();
   });
 });
+
+import { visibleTo } from '../src/game';
+describe('block visibility', () => {
+  it('hides upright enemy blocks until a battle reveals them', () => {
+    const g = newGame(5); g.phase = 'combat'; g.phasing = 'german'; const a = mustFight(g)[0] ?? 11;
+    const ge = g.units.find((u) => u.side === 'german' && u.area === a && !u.garrison), al = g.units.find((u) => u.side === 'allied' && u.area === a && !u.garrison);
+    expect(ge && al).toBeTruthy();
+    expect(visibleTo(g, al, 'german')).toBe(false); expect(visibleTo(g, al, 'allied')).toBe(true); expect(visibleTo(g, al, null)).toBe(true);
+    const b = startBattle(g, a); beginCombat(g, b); expect(visibleTo(g, al, 'german')).toBe(true); expect(visibleTo(g, ge, 'allied')).toBe(true);
+  });
+});

@@ -188,3 +188,5 @@ button.go .ic, button.plain .ic, .row button .ic { width: 18px; height: 18px; ve
 @media (max-width: 520px) { .c-table .cnt { display: none; } .c-table { padding: 4px 8px 6px; gap: 2px 8px; } .c-title { font-size: 16px; margin: 0; } .slot { min-height: 52px; width: 80px; } .c-side h4 { margin: 0; } .c-vs .big { font-size: 26px; } .c-vs small:last-child { font-size: 11px; } }
 .matchrow { flex-wrap: wrap; }
 .c-ledger .row.end { display: flex; gap: 8px; } .c-ledger .row.end button { flex: 1; min-height: 46px; }
+.sheet.slim { width: min(440px, 94vw); } .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }
+.chip { min-height: 44px; padding: 0 14px; display: inline-flex; align-items: center; gap: 6px; background: #11140c; border: 1px solid var(--line); color: var(--ink); } .chip.on { background: var(--gold); color: #1a1608; border-color: var(--gold); } .chip .ic { width: 18px; height: 18px; }

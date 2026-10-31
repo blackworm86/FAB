@@ -11,8 +11,9 @@ import rulesText from '../../firestore.rules?raw';
 import { throwDice, clearDice, isHit, type DiceGroup } from './dice3d';
 
 type MapArea = { id: number; label: [number, number]; polygon: [number, number][] };
+type MapEntry = { letter: string; x: number; y: number; side: E.Side };
 type MapConn = { a: number; b: number; marker: [number, number] | null };
-const MAP = mapJson as unknown as { size: [number, number]; areas: MapArea[]; connections: MapConn[] };
+const MAP = mapJson as unknown as { size: [number, number]; areas: MapArea[]; connections: MapConn[]; entries: MapEntry[] };
 // World unit = 1 cm. The scan is the full 34 x 22 in map (86.36 x 55.88 cm) at 2448 x 1584 px.
 const [MW, MH] = MAP.size, S = 2448 / 86.36;                                  // map pixels per cm
 const toWorld = (x: number, y: number) => new THREE.Vector3(x / S - MW / (2 * S), 0, y / S - MH / (2 * S));
@@ -73,25 +74,19 @@ scene.add(new THREE.HemisphereLight(0xeef3ff, 0x2a2622, 1.0));
 const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(-20, 50, 32); sun.castShadow = true;
 sun.shadow.mapSize.set(4096, 4096); Object.assign(sun.shadow.camera, { left: -35, right: 35, top: 35, bottom: -35, far: 200 }); scene.add(sun);
 
-const mapTex = new THREE.TextureLoader().load('./map.jpg'); mapTex.colorSpace = THREE.SRGBColorSpace;
-mapTex.repeat.set(MW / 2448, 1); mapTex.anisotropy = 8;              // the scan is 2448 wide; the playing area is the left 1740 px
-const board = new THREE.Mesh(new THREE.PlaneGeometry(MW / S, MH / S), new THREE.MeshStandardMaterial({ map: mapTex, roughness: 0.9 }));
+let mapTex: THREE.Texture | null = null;                                                          // the scan is only loaded on request (it is not part of the repository)
+function scanTex() { if (!mapTex) { mapTex = new THREE.TextureLoader().load('./map.jpg'); mapTex.colorSpace = THREE.SRGBColorSpace; mapTex.repeat.set(MW / 2448, 1); mapTex.anisotropy = 8; } return mapTex; }
+const board = new THREE.Mesh(new THREE.PlaneGeometry(MW / S, MH / S), new THREE.MeshStandardMaterial({ map: null, roughness: 0.9 }));
 board.rotation.x = -Math.PI / 2; board.receiveShadow = true; scene.add(board);
-/** Map art: the traced vector layers (default) or the original scan, which stays in the repo for the later 3D scenery pass. */
+/** Map art: the traced vector layers (default) or the original scan. */
 let art: 'vector' | 'scan' = (() => { try { return localStorage.getItem('fab-art') === 'scan' ? 'scan' : 'vector'; } catch { return 'vector'; } })();
-let vecTex: THREE.CanvasTexture | null = null;
-function applyArt() {
-  const mat = board.material as THREE.MeshStandardMaterial;
-  if (art === 'scan') { mat.map = mapTex; mat.needsUpdate = true; return; }
-  if (vecTex) { mat.map = vecTex; mat.needsUpdate = true; return; }
-  const img = new Image(); img.onload = () => {
-    const c = document.createElement('canvas'); c.width = MW * 2; c.height = MH * 2; c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
-    vecTex = new THREE.CanvasTexture(c); vecTex.colorSpace = THREE.SRGBColorSpace; vecTex.anisotropy = 8; if (art === 'vector') applyArt();
-  };
-  img.src = './map-vector.svg';
-}
+/* The board texture is composed in layers: ground and forest, then the area tint (so roads and rivers stay visible), then the line work, then the printed items (numbers, TDN, VP, names), turned to face the player. */
+const boardCv = document.createElement('canvas'); boardCv.width = MW * 2; boardCv.height = MH * 2;
+const boardTex = new THREE.CanvasTexture(boardCv); boardTex.colorSpace = THREE.SRGBColorSpace; boardTex.anisotropy = 8;
+const loadImg = (src: string) => { const i = new Image(); i.onload = () => paintBoard(); i.src = src; return i; };
+const baseImg = loadImg('./map-base.svg'), linesImg = loadImg('./map-lines.svg');
+function applyArt() { const mat = board.material as THREE.MeshStandardMaterial; mat.map = art === 'scan' ? scanTex() : boardTex; mat.needsUpdate = true; if (art === 'vector') paintBoard(); }
 const setArt = (a: 'vector' | 'scan') => { art = a; try { localStorage.setItem('fab-art', a); } catch { /* private mode */ } applyArt(); };
-applyArt();
 const table = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({ color: 0x3b2a1d, roughness: 1 }));
 table.rotation.x = -Math.PI / 2; table.position.y = -0.02; scene.add(table);
 
@@ -114,15 +109,15 @@ function garrisonArt(u: E.Unit) {
   const tf = u.id.startsWith('TF-') ? E.chit(g, u.chitId!).turn : null;
   return garrisonChit(tf != null ? 'Task Force' : u.name.replace('Garrison ', ''), tf != null ? `${tf}-*` : u.id.replace(/^G/, ''), tf == null);
 }
-function block(u: E.Unit) {
+function block(u: E.Unit, hidden = false) {
   const w = 1.6, h = 1.6, d = 0.8;                                    // 16 x 16 x 8 mm block
   const wood = new THREE.MeshStandardMaterial({ color: BRIT.has(u.name) ? 0x3f6fb8 : WOOD[u.side], roughness: 0.75 });
   if (u.garrison) {
     const chit = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new THREE.BoxGeometry(1.43, 0.18, 1.43), [chit, chit, new THREE.MeshStandardMaterial({ map: svgTex(u.id, garrisonArt(u)) }), chit, chit, chit]); // 9/16 in chit
     m.position.y = 0.09; m.castShadow = true; return m;
   }
-  const face = new THREE.MeshStandardMaterial({ map: svgTex(`${u.id}-${u.str}`, labelSvg(u)), roughness: 0.6 });
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [wood, wood, wood, wood, face, wood]);
+  const face = hidden ? wood : new THREE.MeshStandardMaterial({ map: svgTex(`${u.id}-${u.str}`, labelSvg(u)), roughness: 0.6 });   // upright blocks show their blank back to the enemy
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [wood, wood, wood, wood, face, wood]); m.rotation.y = viewRot();
   m.position.y = h / 2; m.castShadow = true;
   return m;
 }
@@ -187,7 +182,7 @@ function drawPieces() {
     let lay = place(false);
     if (lay.tight && order.length > 1) { taken.set(a.id, lay.saved); const col = place(true); if (!col.tight) lay = col; else { taken.set(a.id, lay.saved); lay = place(false); } }
     order.forEach((u, n) => {
-      const m = block(u), p = lay.spots[n];
+      const hid = !seen(u), m = block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
       m.position.x = p.x; m.position.z = p.z;
       m.userData.unit = u.id; if (u.id === selUnit) { const o = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xffb347 })); m.add(o); }
       pieces.add(m);
@@ -212,11 +207,81 @@ function drawPieces() {
   for (const k of Object.keys(g.greif)) { const [x, y] = k.split('-').map(Number), q = toWorld(...borderMid(x, y)), p = free(q.x, q.z - 1.3, 0.8), t = tag('G', '#8a2f9c', CHIT); t.position.set(p.x, 0.07, p.z); t.rotation.y = -borderAngle(x, y); markers.add(t); }
   for (const k of g.blown) { const [x, y] = k.split('-').map(Number), q = toWorld(...borderMid(x, y)), p = free(q.x, q.z, 0.85), t = tag('X', '#d9421f', CHIT); t.position.set(p.x, 0.07, p.z); t.rotation.y = -borderAngle(x, y); markers.add(t); }
 }
-/** Map overlays: terrain defence numbers (TDN) or the army zones, tinted over the board. */
+/** Map overlays: the area tint (terrain defence or army zones) is painted into the board under the line work. */
 let tint: 'off' | 'tdn' | 'zones' = (() => { try { const t = localStorage.getItem('fab-tint'); return t === 'tdn' || t === 'zones' ? t : 'off'; } catch { return 'off'; } })();
-const TDN_COL = [0xd9d26a, 0xe8a33d, 0xd9622b, 0x9c2a2a], ZONE_COL: Record<number, number> = { 5: 0x3a3f46, 6: 0x951b81, 7: 0x009fe3 };
+const TDN_COL = [0xf4e3a4, 0xc9a24f, 0x8a8f86, 0x4a5028], ZONE_COL: Record<number, number> = { 5: 0x3a3f46, 6: 0x951b81, 7: 0x009fe3 };   // the TDN colours are the printed TDN markers'
 const tintOf = (id: number) => (tint === 'tdn' ? TDN_COL[E.areas.get(id)!.tdn] : ZONE_COL[E.areas.get(id)!.zone]);
-const cycleTint = () => { tint = tint === 'off' ? 'tdn' : tint === 'tdn' ? 'zones' : 'off'; try { localStorage.setItem('fab-tint', tint); } catch { /* private mode */ } refresh(); };
+const hex6 = (n: number) => '#' + n.toString(16).padStart(6, '0');
+/** What is printed on the map, and how. */
+const layers = (() => { const d = { numbers: true, tdn: true, vp: true, names: true, float: false }; try { return { ...d, ...JSON.parse(localStorage.getItem('fab-layers') ?? '{}') }; } catch { return d; } })();
+const saveLayers = () => { try { localStorage.setItem('fab-layers', JSON.stringify(layers)); localStorage.setItem('fab-tint', tint); } catch { /* private mode */ } };
+/** Whose side of the table we look from: the German player looks up the map from the bottom, the Allied player down from the top. */
+const viewSide = (): E.Side => (online.active && !online.both() && online.mySide() ? online.mySide()! : 'german');
+const fogSide = (): E.Side | 'spectator' | null => (online.active && !online.both() ? online.mySide() ?? 'spectator' : null);
+const seen = (u: E.Unit) => E.visibleTo(g, u, fogSide());
+const viewRot = () => (viewSide() === 'allied' ? Math.PI : 0);
+/** One area's printed items around (0, 0) = the area's label point, upright for the viewer. */
+function drawItems(c: CanvasRenderingContext2D, a: MapArea, withName: boolean) {
+  const ar = E.areas.get(a.id)!, t = ar.tdn;
+  const showShape = layers.numbers || layers.tdn;
+  if (showShape) {
+    c.lineWidth = 1.6; const col = layers.tdn ? t : -1;
+    c.beginPath();
+    if (col === 0 || col === -1) { c.arc(0, -3, 13, 0, 7); c.fillStyle = col === 0 ? '#f4e3a4' : '#ece6cc'; c.strokeStyle = '#8a7a3a'; }
+    else if (col === 1) { c.roundRect(-14, -15, 28, 24, 3); c.fillStyle = '#c9a24f'; c.strokeStyle = '#6b5420'; }
+    else if (col === 2) { [[-15, -3], [-7, -15], [7, -15], [15, -3], [7, 9], [-7, 9]].forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fillStyle = '#8a8f86'; c.strokeStyle = '#2d3330'; }
+    else { c.moveTo(-15, -14); c.lineTo(15, -14); c.lineTo(0, 12); c.closePath(); c.fillStyle = '#4a5028'; c.strokeStyle = '#1d2110'; }
+    c.fill(); c.stroke();
+    c.font = '700 16px "Arial Narrow", Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.fillStyle = col === 3 ? '#fff' : col === 2 ? '#111' : '#1a1608';
+    c.fillText(String(layers.numbers ? a.id : t), 0, col === 3 ? -3 : 0);
+  }
+  if (layers.vp) {
+    const v = ar.vp, cross = (x: number, y: number, r: number) => {
+      const q = r * 0.2, w = r * 0.34, P = [[-q, -q], [-w, -r], [w, -r], [q, -q], [r, -w], [r, w], [q, q], [w, r], [-w, r], [-q, q], [-r, w], [-r, -w]];
+      c.beginPath(); P.forEach(([px, py], i) => (i ? c.lineTo(x + px, y + py) : c.moveTo(x + px, y + py))); c.closePath(); c.lineJoin = 'round'; c.lineWidth = r * 0.26; c.strokeStyle = '#fff'; c.stroke(); c.fillStyle = '#0d0d0f'; c.fill();
+    }, star = (x: number, y: number, r: number, f: string, st: string) => { c.beginPath(); for (let i = 0; i < 10; i++) { const rr = i % 2 ? r * 0.45 : r; c.lineTo(x + rr * Math.sin(i * Math.PI / 5), y - rr * Math.cos(i * Math.PI / 5)); } c.closePath(); c.fillStyle = f; c.fill(); if (st) { c.lineWidth = 1.2; c.strokeStyle = st; c.stroke(); } };
+    for (let i = 0; i < v.allied; i++) cross((i - (v.allied - 1) / 2) * 24, -40, 10);
+    for (let i = 0; i < v.german; i++) { c.beginPath(); c.arc(0, -40 - i * 20, 9, 0, 7); c.fillStyle = '#2f78c8'; c.fill(); c.lineWidth = 1.5; c.strokeStyle = '#fff'; c.stroke(); star(0, -40 - i * 20, 6.5, '#fff', ''); }
+    if (v.mutual) star(0, -40, 11, '#f2d21b', '#c3281c');
+  }
+  if (layers.names && withName) { c.font = 'italic 600 16px "Arial Narrow", Arial, sans-serif'; c.textAlign = 'center'; c.lineWidth = 3.2; c.strokeStyle = '#bcc0ab'; c.strokeText(ar.name, 0, 26); c.fillStyle = '#1c2216'; c.fillText(ar.name, 0, 26); }
+}
+/** Entry-zone letters are printed on the map as well; they turn with the viewer. */
+function drawEntry(c: CanvasRenderingContext2D, e: MapEntry) {
+  const ge = e.side === 'german'; c.font = '700 19px Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.lineWidth = 3; c.strokeStyle = ge ? '#ffffffcc' : '#14502a'; c.strokeText(e.letter, 0, 6); c.fillStyle = ge ? '#111' : '#fff'; c.fillText(e.letter, 0, 6);
+}
+function paintBoard() {
+  if (art !== 'vector' || !baseImg.naturalWidth || !linesImg.naturalWidth) return;
+  const c = boardCv.getContext('2d')!, k = 2; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, boardCv.width, boardCv.height);
+  c.drawImage(baseImg, 0, 0, boardCv.width, boardCv.height);
+  if (tint !== 'off') {
+    c.save(); c.scale(k, k); c.globalAlpha = 0.6;
+    for (const a of MAP.areas) { c.beginPath(); a.polygon.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fillStyle = hex6(tintOf(a.id)); c.fill(); }
+    c.restore();
+  }
+  c.drawImage(linesImg, 0, 0, boardCv.width, boardCv.height);
+  if (!layers.float) {
+    c.save(); c.scale(k, k);
+    for (const a of MAP.areas) { c.save(); c.translate(a.label[0], a.label[1]); c.rotate(viewRot()); drawItems(c, a, true); c.restore(); }
+    if (layers.numbers) for (const e of MAP.entries) { c.save(); c.translate(e.x, e.y); c.rotate(viewRot()); drawEntry(c, e); c.restore(); }
+    c.restore();
+  }
+  boardTex.needsUpdate = true; buildFloat();
+}
+/** The same items as sprites floating above the areas, facing the camera: easier to read at a low angle or on a phone. */
+const floats = new THREE.Group(); scene.add(floats);
+function buildFloat() {
+  for (const o of floats.children) { const sp = o as THREE.Sprite; (sp.material as THREE.SpriteMaterial).map?.dispose(); sp.material.dispose(); } floats.clear();
+  if (!layers.float) return;
+  const mk = (draw: (c: CanvasRenderingContext2D) => void, w: number, h: number, ox: number, oy: number, p: THREE.Vector3, sc: number) => {
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const c = cv.getContext('2d')!; c.translate(ox, oy); c.scale(1.3, 1.3); draw(c);
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false }));
+    sp.scale.set(w / sc, h / sc, 1); sp.position.copy(p); sp.renderOrder = 5; floats.add(sp);
+  };
+  for (const a of MAP.areas) { const p = toWorld(...a.label); p.y = 2.7; mk((c) => drawItems(c, a, true), 220, 170, 110, 105, p, 40); }
+  if (layers.numbers) for (const e of MAP.entries) { const p = toWorld(e.x, e.y); p.y = 1.2; mk((c) => drawEntry(c, e), 64, 64, 32, 28, p, 40); }
+}
+applyArt();
 function paintAreas() {
   const strat = g.phase === 'strategic' && selUnit, opts = selUnit ? (strat ? E.stratOptions(g, selUnit).map((a) => ({ area: a, mustStop: false })) : E.moveOptions(g, selUnit)) : [];
   const fight = g.phase === 'combat' || g.phase === 'btCombat' ? E.contestedAreas(g).filter((a) => !g.fought.includes(a)) : [], must = new Set(E.mustFight(g));
@@ -228,7 +293,6 @@ function paintAreas() {
     if (dragTargets.includes(id)) { c = 0x37d67a; o = 0.5; }
     const ar = arrOpts().find((x) => x.area === id); if (ar) { c = ar.sa ? 0xff8a3d : 0x37d67a; o = 0.45; }
     if (g.battle?.stage === 'retreat' && E.retreatOptions(g, g.battle).includes(id)) { c = 0x37d67a; o = 0.5; }
-    if (o === 0 && tint !== 'off') { c = tintOf(id); o = 0.45; }
     mat.color.setHex(c); mat.opacity = o;
   }
 }
@@ -373,7 +437,7 @@ function arrOpts(): { area: number; sa: boolean }[] {
 /* ---------- camera focus ---------- */
 type Goal = { t: THREE.Vector3; dist: number; pitch: number } | null; let goal: Goal = null, saved: Goal = null, inBattle = false;
 function syncBattleCam() {
-  if (g.battle && !inBattle) { saved = { t: target.clone(), dist, pitch }; const a = E.areas.get(g.battle.area)!, p = toWorld(...POLE.get(a.id)!); goal = { t: new THREE.Vector3(p.x, 0, p.z - 1.6), dist: 17, pitch: 1.0 }; }
+  if (g.battle && !inBattle) { saved = { t: target.clone(), dist, pitch }; const a = E.areas.get(g.battle.area)!, p = toWorld(...POLE.get(a.id)!); goal = { t: new THREE.Vector3(p.x, 0, p.z - 1.6 * (viewSide() === 'allied' ? -1 : 1)), dist: 17, pitch: 1.0 }; }
   if (!g.battle && inBattle && saved) goal = saved;
   inBattle = !!g.battle;
 }
@@ -394,7 +458,8 @@ function click(e: PointerEvent) {
   if (selArr && area != null && arrOpts().some((o) => o.area === area)) { const id = selArr; selArr = null; return act(() => { if (g.pendingArrivals.includes(id)) E.placeArrival(g, id, area); else E.placeTaskForce(g, id, area); }); }
   if (selUnit && area != null && optsFor(selUnit).some((o) => o.area === area)) { previewArea = area; refresh(); return; }
   if ((g.phase === 'combat' || g.phase === 'btCombat') && area != null && fightable().includes(area)) { selArea = area; selUnit = null; return act(() => { E.startBattle(g, area, g.phase === 'btCombat'); }); }
-  if (unit) { selUnit = unit; selArea = g.units.find((x) => x.id === unit)!.area; } else { selArea = area; selUnit = null; }
+  const uu = unit ? g.units.find((x) => x.id === unit) : null;
+  if (uu && seen(uu)) { selUnit = unit!; selArea = uu.area; } else { selArea = area; selUnit = null; }
   previewArea = null; hoverArea = null; refresh();
 }
 canvas.addEventListener('pointermove', (e) => {
@@ -436,7 +501,7 @@ function placeBadges() {
 /* ---------- battle state shared with the view ---------- */
 interface RollView { title: string; groups: (DiceGroup & { parts: [string, number][]; hits: number })[]; pos: { x: number; y: number; group: number; v: number }[] | null }
 let menuTab = 'Game';
-let rollView: RollView | null = null, modal: 'menu' | 'boxes' | 'lobby' | 'rules' | null = null, handSide: E.Side | null = null;
+let rollView: RollView | null = null, modal: 'menu' | 'boxes' | 'lobby' | 'rules' | 'layers' | null = null, handSide: E.Side | null = null;
 const STAGE_NAME: Record<string, string> = { attArty: 'artillery', defArty: 'artillery', defFire: 'Defensive fire', offFire: 'Offensive fire' };
 function rollStage(b: E.Battle) {
   if (!allowed()) return say(notYou());
@@ -634,6 +699,7 @@ function dragArrival(ev: PointerEvent, el: HTMLElement) {
   window.addEventListener('pointercancel', () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); ghost?.remove(); }, { once: true });
 }
 /** A block drawn as a real 3D object (front label, right and top faces), for the tray and the battle view. */
+const blankFace = (side: E.Side) => svgUri(`<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100"><rect width="100" height="100" fill="${side === 'german' ? '#8e9296' : '#5d8a45'}"/></svg>`);
 const unitFace = (u: E.Unit) => svgUri(u.garrison ? garrisonArt(u) : labelSvg(u));
 const b3 = (face: string, side: E.Side | 'british', chit = false) => `<span class="b3 ${side} ${chit ? 'flat' : ''}" aria-hidden="true"><i class="f"><img alt="" draggable="false" src="${face}"></i><i class="r"></i><i class="t"></i></span>`;
 const sideOfUnit = (u: E.Unit) => (u.side === 'german' ? 'german' : BRIT.has(u.name) ? 'british' : 'allied');
@@ -669,13 +735,13 @@ function battleTable() {
     const mini = (c: E.Chit) => `<span class="mini ${c.side}" title="${esc(c.name)}"><img alt="${esc(c.name)}" src="${chitImg(c)}">${setup ? `<button class="x" aria-label="Remove ${esc(c.name)}" data-do="${reg(() => { if (mine(c.side)) E.unassign(g, b, c.id); else say('Those are the other player\'s assets.'); })}">${ico('close')}</button>` : ''}</span>`;
     const sa = setup && s !== att ? E.saAvailable(g, s).length : 0;
     return `<div class="c-side ${s} ${mine(s) ? 'mine' : 'theirs'}"><h4>${nm(s)} <small>${s === att ? 'attacking' : 'defending'}${online.active && !online.both() ? (mine(s) ? ' · you' : ' · opponent') : ''}</small></h4>
-      <div class="c-body"><div class="c-row">${us.map((u) => `<div tabindex="0" role="button" class="blk ${s} ${u.id === pt ? 'pt' : ''} ${air && b.air[s]!.mode === 'support' && b.air[s]!.unit === u.id ? 'air' : ''}" data-unit="${u.id}" data-side="${s}" data-tag="${s === 'german' ? 'G' : 'A'}" title="${esc(u.name)}${u.id === pt ? ' (point unit)' : ''}" aria-label="${esc(u.name)}">${b3(unitFace(u), sideOfUnit(u), !!u.garrison)}</div>`).join('')}</div>
+      <div class="c-body"><div class="c-row">${us.map((u) => `<div tabindex="0" role="button" class="blk ${s} ${u.id === pt && seen(u) ? 'pt' : ''} ${air && b.air[s]!.mode === 'support' && b.air[s]!.unit === u.id ? 'air' : ''}" data-unit="${u.id}" data-side="${s}" data-tag="${s === 'german' ? 'G' : 'A'}" title="${seen(u) ? esc(u.name) + (u.id === pt ? ' (point unit)' : '') : 'Hidden block'}" aria-label="${seen(u) ? esc(u.name) : 'Hidden block'}">${b3(seen(u) ? unitFace(u) : blankFace(u.side), sideOfUnit(u), !!u.garrison)}</div>`).join('')}</div>
       <div class="c-slots"><div class="slot" data-side="${s}" data-zone="arty"><span class="lab">ARTY ${arty.length}/${lim.arty}</span>${arty.map(mini).join('') || '<small>drop</small>'}</div><div class="slot" data-side="${s}" data-zone="asset"><span class="lab">ASSETS</span>${rest.map(mini).join('') || '<small>drop</small>'}</div></div></div>
       ${sa ? `<div class="row">${btn('Retreat (SA)', () => E.defenderRetreatSA(g, b), '', !mine(s) || !!b.assets[s].length || us.some((u) => u.garrison) || !us.length)}</div>` : ''}</div>`;
   };
-  const al = stats(b, 'allied'), ge = stats(b, 'german'), tot = al.mean + ge.mean || 1, side2 = att === 'german' ? ge : al;
+  const covered = E.unitsIn(g, b.area).some((u) => !seen(u)), al = stats(b, 'allied'), ge = stats(b, 'german'), tot = al.mean + ge.mean || 1, side2 = att === 'german' ? ge : al;
   return `<div class="c-table ${rollView ? 'rolling' : ''}"><div class="c-title">${b.bt ? 'BREAKTHROUGH · ' : ''}${g.fought.length + fightable().length > 1 ? `<small class="cnt">Battle ${Math.min(g.fought.length + 1, g.fought.length + fightable().length)} of ${g.fought.length + fightable().length}</small> ` : ''}${esc(L.name)} <small>TDN ${L.tdn}${g.fieldWorks.includes(b.area) ? ' · <abbr title="Field works">FW</abbr>' : ''}${b.riverAssault ? ' · <abbr title="River assault">RA</abbr>' : ''}</small></div>${side('allied')}
-    <div class="c-vs"><small class="evh">EXPECTED HITS</small><div class="big">${al.mean.toFixed(1)}<span>:</span>${ge.mean.toFixed(1)}</div><div class="gauge"><i style="width:${(al.mean / tot) * 100}%"></i></div><small>${nm(att)} ≥2 hits ${side2.p(2)}% · ≥3 ${side2.p(3)}%</small></div>${side('german')}</div>`;
+    <div class="c-vs">${covered ? '<small class="evh">UNITS ARE REVEALED WHEN COMBAT BEGINS</small><div class="big">?<span>:</span>?</div>' : `<small class="evh">EXPECTED HITS</small><div class="big">${al.mean.toFixed(1)}<span>:</span>${ge.mean.toFixed(1)}</div><div class="gauge"><i style="width:${(al.mean / tot) * 100}%"></i></div><small>${nm(att)} ≥2 hits ${side2.p(2)}% · ≥3 ${side2.p(3)}%</small>`}</div>${side('german')}</div>`;
 }
 function ledger() {
   const b = g.battle; if (!b || g.pendingBlow) return '';
@@ -766,7 +832,19 @@ function rulesHtml() {
     <h4>Expanded</h4><textarea readonly rows="10" style="width:100%;font:12px monospace">${esc(rulesText)}</textarea>
     <h4>Single line</h4><textarea readonly rows="4" style="width:100%;font:12px monospace">${esc(rulesOne())}</textarea></div></div>`;
 }
+const chip = (label: string, on: boolean, f: () => void, title = '') => `<button class="chip ${on ? 'on' : ''}" aria-pressed="${on}" data-do="${reg(f)}" title="${esc(title)}">${on ? ico('check') : ''}${label}</button>`;
+const relayer = () => { saveLayers(); paintBoard(); legendDirty(); };
+const legendDirty = () => { /* the legend is part of render() */ };
+function layersHtml() {
+  const tintBtn = (v: typeof tint, label: string) => chip(label, tint === v, () => { tint = v; relayer(); });
+  return `<div class="modal"><div class="sheet slim"><h3>Map layers <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
+    <h4>Printed on the map</h4><div class="chips">${chip('Numbers', layers.numbers, () => { layers.numbers = !layers.numbers; relayer(); }, 'Area numbers and entry letters')}${chip('TDN', layers.tdn, () => { layers.tdn = !layers.tdn; relayer(); }, 'Terrain defence number: marker shape and colour')}${chip('Victory points', layers.vp, () => { layers.vp = !layers.vp; relayer(); })}${chip('Names', layers.names, () => { layers.names = !layers.names; relayer(); })}</div>
+    <h4>Style</h4><div class="chips">${chip('Printed', !layers.float, () => { layers.float = false; relayer(); }, 'Flat on the map, turned to face you')}${chip('Floating', layers.float, () => { layers.float = true; relayer(); }, 'Above each area, always facing the camera')}</div>
+    <h4>Colour the areas</h4><div class="chips">${tintBtn('off', 'Off')}${tintBtn('tdn', 'TDN')}${tintBtn('zones', 'Army zones')}</div>
+    <p class="hint">Roads, rivers and borders stay visible under the colours.</p></div></div>`;
+}
 function modalHtml() {
+  if (modal === 'layers') return layersHtml();
   if (modal === 'rules') return rulesHtml();
   if (modal === 'lobby') return lobbyHtml();
   if (modal === 'boxes') return `<div class="modal"><div class="sheet"><h3>Chit boxes <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>${(['allied', 'german'] as E.Side[]).map((s) => {
@@ -777,7 +855,7 @@ function modalHtml() {
     const tabs = ['Game', 'Log', 'Settings', ...(online.admin ? ['Admin'] : [])];
     if (!tabs.includes(menuTab)) menuTab = 'Game';
     const body = menuTab === 'Log' ? `<div class="log">${[...g.log].reverse().slice(0, 120).map((l) => `<div>${esc(l)}</div>`).join('')}</div>`
-      : menuTab === 'Settings' ? `<h4>Map</h4><div class="row">${btn(`${ico('layers')} Overlay: ${tint}`, () => { document.querySelector<HTMLElement>('[data-tint]')?.click(); })}${btn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Map art</h4><div class="row"><select data-sel="${regv((x) => setArt(x as 'vector' | 'scan'))}"><option value="vector" ${art === 'vector' ? 'selected' : ''}>Vector layers (traced)</option><option value="scan" ${art === 'scan' ? 'selected' : ''}>Original scan</option></select></div>
+      : menuTab === 'Settings' ? `<h4>Map</h4><div class="row">${btn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${btn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Map art</h4><div class="row"><select data-sel="${regv((x) => setArt(x as 'vector' | 'scan'))}"><option value="vector" ${art === 'vector' ? 'selected' : ''}>Vector layers (traced)</option><option value="scan" ${art === 'scan' ? 'selected' : ''}>Original scan</option></select></div>
         ${online.active && !online.admin && !online.both() ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as 'tournament' | 'campaign'; })}"><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
         <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Restart', () => { if (!confirm('Restart and lose the current game?')) return; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'danger')}</div>`}`
       : menuTab === 'Admin' ? `<div class="row">${btn('Update rules', () => { modal = 'rules'; })}${btn('Free German seat', () => { void auth.freeSeat('german'); })}${btn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div>`
@@ -810,17 +888,22 @@ function render() {
     else if (k === 'in') void auth.signIn(v('a-mail'), v('a-pass')); else if (k === 'reg') void auth.register(v('a-mail'), v('a-pass'), v('a-name')); else if (k === 'reset') void auth.reset(v('a-mail'));
   }));
   ui.querySelectorAll<HTMLElement>('[data-seat]').forEach((e) => (e.onclick = () => { const order: DevSeat[] = ['both', 'german', 'allied', 'watch']; setDevSeat(order[(order.indexOf(online.devSeat) + 1) % order.length]); selUnit = selChit = selArr = null; previewArea = null; refresh(); }));
-  ui.querySelectorAll<HTMLElement>('[data-home]').forEach((e) => (e.onclick = () => { goal = { t: new THREE.Vector3(17, 0, -3), dist: innerWidth < 700 ? 52 : 36, pitch: 1.0 }; yaw = 0; }));
-  ui.querySelectorAll<HTMLElement>('[data-tint]').forEach((e) => (e.onclick = cycleTint));
+  ui.querySelectorAll<HTMLElement>('[data-home]').forEach((e) => (e.onclick = () => { goal = { t: new THREE.Vector3(17, 0, -3), dist: innerWidth < 700 ? 52 : 36, pitch: 1.0 }; yaw = viewRot(); }));
+  ui.querySelectorAll<HTMLElement>('[data-tint]').forEach((e) => (e.onclick = () => { modal = 'layers'; render(); }));
   ui.querySelectorAll<HTMLElement>('[data-undo]').forEach((e) => (e.onclick = () => undo()));
   ui.querySelectorAll<HTMLElement>('[data-u]').forEach((e) => (e.onclick = () => { selUnit = e.dataset.u!; selArea = g.units.find((x) => x.id === selUnit)!.area ?? selArea; previewArea = null; refresh(); }));
   ui.querySelectorAll<HTMLElement>('.card2, .blk').forEach((e) => (e.onkeydown = (ev) => { if (ev.key !== 'Enter' && ev.key !== ' ') return; ev.preventDefault(); const id = e.dataset.chit, b2 = g.battle; if (e.classList.contains('card2') && id) { if (b2?.stage === 'setup') { const c = E.chit(g, id), why = E.canAssign(g, b2, c.side, c); if (why) say(why); else act(() => E.assign(g, b2, id, c.kind === 'air_mission' ? 'arty' : undefined)); } else if (!b2) { selChit = selChit === id ? null : id; refresh(); } } else e.click(); }));
   ui.querySelectorAll<HTMLElement>('.card2').forEach((e) => (e.onpointerdown = (ev) => { if (ev.pointerType === 'mouse') ev.preventDefault(); if (g.battle || chitTargets(E.chit(g, e.dataset.chit!)).length) drag(ev, e); }));
   ui.querySelectorAll<HTMLElement>('.card2').forEach((e) => (e.onclick = () => { if (!g.battle && !chitTargets(E.chit(g, e.dataset.chit!)).length) { selChit = selChit === e.dataset.chit ? null : e.dataset.chit!; refresh(); } }));
-  ui.querySelectorAll<HTMLElement>('.blk[data-unit]').forEach((e) => (e.onclick = () => { const b2 = g.battle; if (!b2 || b2.stage !== 'setup') return; const s = e.dataset.side as E.Side, u = g.units.find((x) => x.id === e.dataset.unit)!; if (u.garrison || (s === b2.attacker && u.disorder)) return; if (s === b2.attacker) b2.attPoint = u.id; else b2.defPoint = u.id; save(); render(); }));
+  ui.querySelectorAll<HTMLElement>('.blk[data-unit]').forEach((e) => (e.onclick = () => { const b2 = g.battle; if (!b2 || b2.stage !== 'setup') return; const s = e.dataset.side as E.Side, u = g.units.find((x) => x.id === e.dataset.unit)!; if (!mine(s)) return; if (u.garrison || (s === b2.attacker && u.disorder)) return; if (s === b2.attacker) b2.attPoint = u.id; else b2.defPoint = u.id; save(); render(); }));
+}
+let lastView: E.Side | null = null;
+/** Standard view: German from the bottom of the map, Allied from the top; the printed items turn with it. */
+function syncView() {
+  const v = viewSide(); if (v === lastView) return; const first = lastView === null; lastView = v; yaw = v === 'allied' ? Math.PI : 0; if (!first) goal = { t: new THREE.Vector3(17, 0, -3), dist, pitch }; paintBoard();
 }
 function refresh() {
-  syncBattleCam(); drawPieces(); paintAreas(); drawRoute(); badges = badgeList(); syncBadges(); render();
+  syncView(); syncBattleCam(); drawPieces(); paintAreas(); drawRoute(); badges = badgeList(); syncBadges(); render();
   if (!rollView) { const cv = $('#dice'); if (cv && cv.style.display !== 'none') { clearDice(); cv.style.display = 'none'; } }
 }
 function frame() {

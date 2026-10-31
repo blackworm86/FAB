@@ -7,7 +7,7 @@ FAB is a series: every game shares the same core rules (the chit boxes and selec
 | Series rules | `engine/src/{dice,combat,movement,chits}.ts`, most of `game.ts` | Dice (seeded), Player Aid C tables, movement graph search, chit kinds and boxes, the phase machine. |
 | Game data | `data/bulge/*.json` | Map polygons and connections, areas, units, counters, reinforcements, scenarios, entry areas. |
 | Game-exclusive rules | `game.ts` sections marked 14-17 (zones, fuel, Greif, Bodenplatte, Heydte, British limits, airborne) | These are the parts a new game replaces. |
-| Client | `web/src` | Board, UI, chits, dice, online. Reads the map from `data/<game>/map.json` and `public/map-vector.svg`. |
+| Client | `web/src` | Board, UI, chits, dice, online. Reads the map from `data/<game>/map.json` and `public/map-base.svg and map-lines.svg`. |
 | Online | `web/src/online.ts` + `store-*.ts` | One state document and one seats document per table; stores are pluggable. |
 
 ## Plan for game 2
@@ -17,7 +17,7 @@ FAB is a series: every game shares the same core rules (the chit boxes and selec
 4. Matches database: a `matches/{id}` document (players, game, scenario, status, result) and a per-user list, once login exists. Online play stays the same: tables are `tables/{match}/docs/{state,seats}`.
 
 ## Known gaps before multi-user play
-- All state is visible to both players (no hidden blocks); the dev seat switch is where hidden information will be checked.
+- Hidden blocks (6.24): `visibleTo` in the engine decides what a seat may read; the web client draws hidden enemy blocks as blank backs and each seat looks from its own edge of the map. This is enforced in the browser only: the shared state still contains every block, so a determined player could read it. Real secrecy needs a server.
 - Turn control is enforced in the client and by Firestore rules only for who may write, not for what a move is. A server-side validator (Cloud Function re-running the deterministic engine) is the next step.
 - Dice come from the stored seed, so a player who reads the state could predict rolls; move the roll to the server when that matters.
 

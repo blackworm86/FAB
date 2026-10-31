@@ -21,6 +21,7 @@ export interface Unit {
   disorder: 0 | 1 | 2; unsupplied: boolean; moved: boolean; reserve: string | null; exploit: boolean; from?: number;
   arrival?: number; entry?: string[]; ech?: string; symbol?: string; code?: string;
   chitId?: string; interdict?: string; adjOnly?: boolean; spent?: number; delayed?: boolean; paradrop?: 'pending' | 'intact' | 'partial'; heydte?: boolean; bcross?: boolean;
+  up?: number;   /** area where the block lies face-up after a battle (6.24); it is upright, so hidden from the enemy, whenever it is elsewhere */
 }
 export interface Roll { who: string; sn: number; dice: number[]; hits: number; kind: 'arty' | 'ground' }
 export interface Battle {
@@ -576,8 +577,15 @@ function next(g: Game, b: Battle) {
   if (s === 'attArty' || s === 'defArty') { const side = s === 'attArty' ? b.attacker : other(b.attacker); if (!fireList(g, b, side, 'arty').length) return next(g, b); }
   b.stage = s; return;
 }
+/** 6.24, 5.22: may `side` read this block? Own blocks, face-up blocks, a block in an area where enemy blocks are face-up, and the Intelligence Gathering target. Chits are always face-up. */
+export function visibleTo(g: Game, u: Unit, side: Side | 'spectator' | null): boolean {
+  if (side === null || u.side === side || u.garrison || g.revealed === u.id || u.area == null) return true;
+  if (u.up === u.area) return true;
+  return g.units.some((x) => x.area === u.area && x.side !== u.side && x.up === u.area);
+}
 export function beginCombat(g: Game, b: Battle) {
   if (b.stage !== 'setup') throw new Error('already started');
+  for (const u of g.units) if (u.area === b.area && !u.garrison) u.up = b.area;                // 6.24 units are revealed once both point units are designated
   b.queue = ['attArty', 'defArty', 'defFire', 'offFire']; next(g, b);
 }
 /** Hot-seat shortcut stays beginCombat; online each side confirms its set-up and combat starts when both are ready. */
