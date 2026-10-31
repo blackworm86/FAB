@@ -1,4 +1,4 @@
-:root { --bg: #0b0d08; --ink: #ddd7b5; --gold: #e7b04a; --line: #8d9065; --red: #d1432f; --ok: #5d8b3a; --bad: #ff9c8a; --good: #a9e08a; --ge: #b9bcc0; --al: #9db36a;
+:root { --bg: #0b0d08; --ink: #ddd7b5; --gold: #e7b04a; --line: #8d9065; --red: #b53a27; --ok: #5d8b3a; --bad: #ff9c8a; --good: #a9e08a; --ge: #b9bcc0; --al: #9db36a;
   --sfd: "Saira Condensed", "Arial Narrow", sans-serif; --sf: "JetBrains Mono", monospace; color-scheme: dark; }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font: 14px var(--sf); overflow: hidden; }
@@ -13,11 +13,11 @@ button { font: inherit; color: inherit; background: #1d2114; border: 1px solid v
 button:hover:not(:disabled) { border-color: var(--gold); }
 button:disabled { opacity: .4; cursor: default; }
 button.primary, button.go { background: var(--gold); color: #1a1608; border-color: transparent; font: 700 15px var(--sfd); letter-spacing: .1em; text-transform: uppercase; }
-button.go { background: var(--red); color: #fff4e8; padding: 12px 26px; font-size: 18px; box-shadow: 0 4px 0 #7d2417; }
+button.go { background: var(--red); color: #fff; min-height: 44px; padding: 12px 26px; font-size: 18px; box-shadow: 0 4px 0 #6a1e12; }
 button.ico { padding: 4px 10px; font-size: 16px; background: transparent; }
 button:focus-visible, .card2:focus-visible { outline: 2px solid #4aa3ff; outline-offset: 1px; }
 .c-crumbs { display: flex; font: 600 15px var(--sfd); letter-spacing: .14em; text-transform: uppercase; overflow: hidden; }
-.c-crumbs span { padding: 6px 16px; color: #8d9065; white-space: nowrap; } .c-crumbs span.done { color: #ddd7b588; }
+.c-crumbs span { padding: 6px 16px; color: #8d9065; white-space: nowrap; } .c-crumbs span.done { color: #aca78d; }
 .c-crumbs span.on { color: #1a1608; background: var(--gold); padding-inline: 24px; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 12px 50%); }
 .c-stat { margin-left: auto; display: flex; gap: 22px; align-items: center; font-size: 12px; color: #b3ad8b; white-space: nowrap; } .c-stat b { color: var(--ink); font: 700 22px var(--sfd); letter-spacing: .06em; margin-left: 6px; }
 b.german, h3.german { color: var(--ge); } b.allied, h3.allied { color: var(--al); }
@@ -124,3 +124,12 @@ button.ico.on { border-color: var(--gold); color: var(--gold); }
 .ghost.b3 { --s: 76px; position: fixed; z-index: 99; pointer-events: none; transform: translate(-50%, -50%) rotateX(-22deg) rotateY(-30deg); margin: 0; filter: drop-shadow(8px 12px 10px #000a); }
 .blk.over .b3, .slot.over { filter: drop-shadow(0 0 6px var(--gold)); }
 @media (max-width: 860px) { .blk .b3 { --s: 46px; } .arr .b3 { --s: 62px; } }
+
+button.ico { min-width: 40px; min-height: 40px; display: inline-flex; align-items: center; gap: 6px; justify-content: center; } button.ico .bl { font: 600 13px var(--sfd); letter-spacing: .1em; text-transform: uppercase; }
+.slot .lab, .slot small, .arr small { font-size: 11px; } .slot.legal { border-color: var(--gold); background: #e7b04a33; }
+.c-title small.cnt { color: var(--ink); background: #ffffff14; padding: 1px 8px; margin: 0 8px 0 0; }
+.handtab { align-items: center; } .handtab details { position: relative; } .handtab summary { cursor: pointer; padding: 6px 10px; } .handtab ul { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin: 0 0 4px; padding: 10px 14px 10px 28px; list-style: disc; width: max-content; max-width: min(520px, 92vw); max-height: 40vh; overflow: auto; background: #0b0d08f5; border: 1px solid var(--line); font-size: 12px; text-align: left; z-index: 12; } .handtab li b { color: var(--ink); }
+.c-table.rolling { opacity: .25; pointer-events: none; }
+.ln { display: grid; grid-template-columns: 1fr auto auto auto; gap: 2px 12px; align-items: center; } .ln .who { width: auto; } .ln .mods { grid-column: 1 / -1; grid-row: 2; flex: none; } .ln .sn { grid-column: 2; grid-row: 1; } .ln .res { grid-column: 3; grid-row: 1; } .ln .cnt { grid-column: 4; grid-row: 1; }
+@media (max-width: 860px) { .c-table.rolling { visibility: hidden; } button.ico .bl { display: none; } button.ico { min-width: 44px; min-height: 44px; } button.go { min-height: 44px; } .handtab button { min-height: 44px; } }
+@media (max-width: 1100px) { button.ico .bl { display: none; } }

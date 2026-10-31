@@ -47,7 +47,7 @@ export function throwDice(cv: HTMLCanvasElement, groups: DiceGroup[], done: (pos
   clearDice();
   const w = cv.clientWidth || 1280, h = cv.clientHeight || 720, r = new THREE.WebGLRenderer({ canvas: cv, alpha: true, antialias: true });
   r.setSize(w, h, false); r.setPixelRatio(Math.min(2, devicePixelRatio)); r.shadowMap.enabled = true;
-  const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(28, w / h, 0.1, 100); cam.position.set(0, 12, 8.6); cam.lookAt(0, 0, 0.6);
+  const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(28, w / h, 0.1, 100); cam.position.set(0, 12, 8.6).multiplyScalar(Math.max(1, 1.25 / (w / h))); cam.lookAt(0, 0, 0.6);
   scene.add(new THREE.HemisphereLight(0xffffff, 0x445544, 0.9)); const sun = new THREE.DirectionalLight(0xffffff, 1.2); sun.position.set(-4, 9, 5); sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9 }); scene.add(sun);
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: 0.4 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
