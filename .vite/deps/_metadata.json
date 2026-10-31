@@ -1,0 +1,44 @@
+{
+  "hash": "c5d6372c",
+  "configHash": "cd85a984",
+  "lockfileHash": "e3b0c442",
+  "browserHash": "50b8a6e3",
+  "optimized": {
+    "firebase/app": {
+      "src": "../../web/node_modules/firebase/app/dist/esm/index.esm.js",
+      "file": "firebase_app.js",
+      "fileHash": "386bf7ad",
+      "needsInterop": false
+    },
+    "firebase/auth": {
+      "src": "../../web/node_modules/firebase/auth/dist/esm/index.esm.js",
+      "file": "firebase_auth.js",
+      "fileHash": "26444a0c",
+      "needsInterop": false
+    },
+    "firebase/firestore": {
+      "src": "../../web/node_modules/firebase/firestore/dist/esm/index.esm.js",
+      "file": "firebase_firestore.js",
+      "fileHash": "2f2dec66",
+      "needsInterop": false
+    },
+    "three": {
+      "src": "../../web/node_modules/three/build/three.module.js",
+      "file": "three.js",
+      "fileHash": "9dea6db6",
+      "needsInterop": false
+    },
+    "three/examples/jsm/geometries/RoundedBoxGeometry.js": {
+      "src": "../../web/node_modules/three/examples/jsm/geometries/RoundedBoxGeometry.js",
+      "file": "three_examples_jsm_geometries_RoundedBoxGeometry__js.js",
+      "fileHash": "e5683e9e",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "index.esm-EcALX_p_": {
+      "file": "index.esm-EcALX_p_.js",
+      "isDynamicEntry": false
+    }
+  }
+}
