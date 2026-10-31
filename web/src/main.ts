@@ -28,12 +28,22 @@ function borderMid(a: number, b: number): [number, number] {
   if (near.length) { const mx = near.reduce((s, p) => s + p[0], 0) / near.length, my = near.reduce((s, p) => s + p[1], 0) / near.length; return [mx, my]; }
   const pa = POLE.get(a)!, pb = POLE.get(b)!; return [(pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2];
 }
+/** General direction of the border between two areas (the river runs along it), as an angle in map space. */
+function borderAngle(a: number, b: number): number {
+  const A = MAP.areas.find((x) => x.id === a)!, B = MAP.areas.find((x) => x.id === b)!, near = A.polygon.filter((p) => B.polygon.some((q) => Math.hypot(p[0] - q[0], p[1] - q[1]) < 8));
+  if (near.length >= 2) {
+    const mx = near.reduce((t, p) => t + p[0], 0) / near.length, my = near.reduce((t, p) => t + p[1], 0) / near.length; let sxx = 0, syy = 0, sxy = 0;
+    for (const p of near) { sxx += (p[0] - mx) ** 2; syy += (p[1] - my) ** 2; sxy += (p[0] - mx) * (p[1] - my); }
+    return 0.5 * Math.atan2(2 * sxy, sxx - syy);
+  }
+  const pa = POLE.get(a)!, pb = POLE.get(b)!; return Math.atan2(pb[1] - pa[1], pb[0] - pa[0]) + Math.PI / 2;
+}
 const $ = (s: string) => document.querySelector(s) as HTMLElement;
 const areaName = (a: number) => E.areas.get(a)!.name;
 
 /* ---------- state ---------- */
 const KEY = 'fab-demo2';
-function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif && x.roadblocks && x.pendingArrivals && x.fwOwner ? x : null; } catch { return null; } }
+function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif && x.roadblocks && x.pendingArrivals && x.fwOwner && Array.isArray(x.recover) ? x : null; } catch { return null; } }
 let g: E.Game = load() ?? E.newGame();
 let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, previewArea: number | null = null, hoverArea: number | null = null, newOpts: E.Opts = { scenario: 'tournament', fuel: true };
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(g)); } catch { /* storage off: the game still runs */ } };
@@ -122,28 +132,51 @@ function tag(text: string, bg: string, size = 1.1) {
   const side = new THREE.MeshStandardMaterial({ color: bg }), m = new THREE.Mesh(new THREE.BoxGeometry(size, 0.12, size), [side, side, new THREE.MeshStandardMaterial({ map: t }), side, side, side]);
   m.castShadow = true; return m;
 }
+const SIDE_HEX = { german: 0xb9bcc0, allied: 0x9db36a };
+/** A marker on a plate in its owner's colour, so it is clear whom it helps (field works) or who is attacking (river assault). */
+function owned(text: string, bg: string, size: number, side: E.Side) {
+  const grp = new THREE.Group(), plate = new THREE.Mesh(new THREE.BoxGeometry(size + 0.32, 0.07, size + 0.32), new THREE.MeshStandardMaterial({ color: SIDE_HEX[side], roughness: 0.7 })), t = tag(text, bg, size);
+  plate.position.y = 0.035; t.position.y = 0.07 + 0.06; plate.castShadow = true; grp.add(plate, t); return grp;
+}
 function drawPieces() {
   disposeAll(pieces); disposeAll(markers);
+  const taken: { x: number; z: number; r: number }[] = [];
+  /** Nearest free spot to (x, z) for a marker of radius r that touches no block and no other marker. */
+  const free = (x: number, z: number, r: number) => {
+    const ok = (px: number, pz: number) => taken.every((t) => Math.hypot(t.x - px, t.z - pz) >= t.r + r);
+    let spot = { x, z };
+    if (!ok(x, z)) outer: for (let ring = 1; ring <= 10; ring++) for (let k = 0; k < 16; k++) { const a = (k / 16) * Math.PI * 2, px = x + Math.cos(a) * ring * 0.45, pz = z + Math.sin(a) * ring * 0.45; if (ok(px, pz)) { spot = { x: px, z: pz }; break outer; } }
+    taken.push({ ...spot, r }); return spot;
+  };
+  const rows = new Map<number, { base: THREE.Vector3; cont: boolean; us: E.Unit[] }>();
   for (const a of MAP.areas) {
-    const us = E.unitsIn(g, a.id), base = toWorld(...POLE.get(a.id)!), cont = E.contestedAreas(g).includes(a.id);
+    const us = E.unitsIn(g, a.id), base = toWorld(...POLE.get(a.id)!), cont = E.contestedAreas(g).includes(a.id); rows.set(a.id, { base, cont, us });
     us.forEach((u) => {
       const m = block(u), same = us.filter((x) => x.side === u.side), row = u.side === 'german' ? 1.1 : -1.1;
       m.position.x = base.x + (same.indexOf(u) - (same.length - 1) / 2) * 1.75; m.position.z = base.z + (cont ? row : 0.4);
       m.userData.unit = u.id; if (u.id === selUnit) { const o = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xffb347 })); m.add(o); }
-      pieces.add(m);
+      pieces.add(m); taken.push({ x: m.position.x, z: m.position.z, r: 1.15 });
       const tags: [string, string][] = [];
       if (u.disorder && !u.garrison) { const k = tag(u.disorder === 1 ? 'DIS' : 'REC', u.disorder === 1 ? '#8a1f1f' : '#a8741a', 1.1); k.position.set(m.position.x, 1.66, m.position.z); markers.add(k); }
       if (u.reserve) tags.push([u.side === 'german' ? ({ z5: 'R5', z6: 'R6', z7: 'R7' } as Record<string, string>)[u.reserve] ?? 'R5' : u.reserve === 'z7' ? 'A7' : 'A56', '#2d6cb0']); if (u.exploit) tags.push(['E', '#d9741c']); if (u.unsupplied && !u.garrison) tags.push(['S', '#b8312f']); if (u.interdict) tags.push(['GI', '#8a2f9c']); if (u.bcross) tags.push(['B', '#8a6a1c']);
       tags.forEach(([t, c], i) => { const k = tag(t, c, 0.85); k.position.set(m.position.x - 0.5 + i * 0.95, (u.garrison ? 0.3 : 1.75), m.position.z); markers.add(k); });
     });
-    const area: [string, string][] = [];
-    if (g.roadblocks[a.id]) area.push(['RB', '#6b4a8a']); if (g.interdicted[a.id]) area.push(['AIR', '#2f6fb0']); if (g.pooled === a.id) area.push(['P', '#3f8a5a']); if (g.airSupply?.area === a.id) area.push(['AS', '#2f6fb0']);
-    if (g.fieldWorks.includes(a.id)) area.push(['FW', '#7a5a2b']); if (g.riverAssault.includes(a.id)) area.push(['RA', '#2a7fb8']);
-    const owner = us.some((u) => u.side === g.control[a.id]) ? g.control[a.id] : us[0]?.side ?? g.control[a.id], grp = us.filter((u) => u.side === owner), gx = grp.length ? Math.max(...grp.map((u) => base.x + (grp.indexOf(u) - (grp.length - 1) / 2) * 1.75)) + 1.7 : base.x + 1.7, gz = base.z + (cont ? (owner === 'german' ? 1.1 : -1.1) : 0.4);
-    area.forEach(([t, c], i) => { const k = tag(t, c, 1.1); k.position.set(gx + i * 1.3, 0.07, gz); markers.add(k); });
   }
-  for (const k of Object.keys(g.greif)) { const [x, y] = k.split('-').map(Number), p = toWorld(...borderMid(x, y)), t = tag('G', '#8a2f9c', 1.2); t.position.set(p.x, 0.07, p.z - 1.3); markers.add(t); }
-  for (const k of g.blown) { const [x, y] = k.split('-').map(Number), p = toWorld(...borderMid(x, y)), t = tag('X', '#d9421f', 1.6); t.position.set(p.x, 0.07, p.z); t.rotation.y = 0.3; markers.add(t); }
+  // area markers sit in a lane beside the group they belong to, never on a block or on each other
+  for (const a of MAP.areas) {
+    const { base, cont, us } = rows.get(a.id)!, mine: { side?: E.Side; t: string; c: string }[] = [];
+    if (g.roadblocks[a.id]) mine.push({ side: g.roadblocks[a.id], t: 'RB', c: '#6b4a8a' }); if (g.interdicted[a.id]) mine.push({ t: 'AIR', c: '#2f6fb0' }); if (g.pooled === a.id) mine.push({ side: 'allied', t: 'P', c: '#3f8a5a' }); if (g.airSupply?.area === a.id) mine.push({ side: g.airSupply.side, t: 'AS', c: '#2f6fb0' });
+    if (g.fieldWorks.includes(a.id)) mine.push({ side: g.fwOwner[a.id] ?? g.control[a.id], t: 'FW', c: '#7a5a2b' });
+    if (g.riverAssault.includes(a.id)) mine.push({ side: g.phasing, t: 'RA', c: '#2a7fb8' });
+    mine.forEach((m, i) => {
+      const side = m.side ?? g.control[a.id], lane = cont ? (side === 'german' ? 1 : -1) : 1, size = 1.1;
+      const p = free(base.x + (i - (mine.length - 1) / 2) * 1.5, base.z + lane * 2.5, size / 2 + 0.2);
+      const k = m.side ? owned(m.t, m.c, size, m.side) : tag(m.t, m.c, size); k.position.set(p.x, 0.02, p.z); markers.add(k);
+    });
+    void us;
+  }
+  for (const k of Object.keys(g.greif)) { const [x, y] = k.split('-').map(Number), q = toWorld(...borderMid(x, y)), p = free(q.x, q.z - 1.3, 0.8), t = tag('G', '#8a2f9c', 1.2); t.position.set(p.x, 0.07, p.z); t.rotation.y = -borderAngle(x, y); markers.add(t); }
+  for (const k of g.blown) { const [x, y] = k.split('-').map(Number), q = toWorld(...borderMid(x, y)), p = free(q.x, q.z, 1.0), t = tag('X', '#d9421f', 1.6); t.position.set(p.x, 0.07, p.z); t.rotation.y = -borderAngle(x, y); markers.add(t); }
 }
 /** Map overlays: terrain defence numbers (TDN) or the army zones, tinted over the board. */
 let tint: 'off' | 'tdn' | 'zones' = (() => { try { const t = localStorage.getItem('fab-tint'); return t === 'tdn' || t === 'zones' ? t : 'off'; } catch { return 'off'; } })();
@@ -259,7 +292,7 @@ const fightable = () => E.contestedAreas(g).filter((a) => !g.fought.includes(a))
 function idle(): boolean {                                                // phases with nothing to do are skipped for the player
   const p = g.phasing, o = other(p), us = (s: E.Side) => g.units.filter((u) => u.side === s && u.area != null && !u.garrison);
   switch (g.phase) {
-    case 'reinforcement': return !g.tfNew.length && !g.pendingArrivals.length;
+    case 'reinforcement': return !g.tfNew.length && !g.pendingArrivals.length && !g.recover.length;
     case 'strategic': return !us(p).some((u) => u.reserve);
     case 'combat': case 'btCombat': return !fightable().length;
     case 'reaction': return !us(o).some((u) => u.reserve);
@@ -350,7 +383,7 @@ function syncBadges() {
 }
 function placeBadges() {
   const r = canvas.getBoundingClientRect(), v = new THREE.Vector3();
-  for (const [k, d] of badgeEls) { const p = d.classList.contains('tint') ? toWorld(...(MAP.areas.find((x) => x.id === +k)!.label)).add(new THREE.Vector3(0, 0, 2.3)) : center(+k); v.set(p.x, 0.5, p.z + 1.6).project(cam); d.style.display = v.z < 1 ? '' : 'none'; d.style.transform = `translate(${(v.x * 0.5 + 0.5) * r.width}px, ${(-v.y * 0.5 + 0.5) * r.height}px) translate(-50%, -50%)`; }
+  for (const [k, d] of badgeEls) { const p = d.classList.contains('tint') ? toWorld(...(MAP.areas.find((x) => x.id === +k)!.label)).add(new THREE.Vector3(0, 0, 2.3)) : center(+k); v.set(p.x, 2.2, p.z - 4).project(cam); d.style.display = v.z < 1 ? '' : 'none'; d.style.transform = `translate(${(v.x * 0.5 + 0.5) * r.width}px, ${(-v.y * 0.5 + 0.5) * r.height}px) translate(-50%, -50%)`; }
 }
 
 /* ---------- battle state shared with the view ---------- */
@@ -487,13 +520,14 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
   }
   const must = E.mustFight(g);
   if (must.length && (g.phase === 'combat' || g.phase === 'btCombat')) return { label: `Fight ${areaName(must[0])} ▸`, fn: () => { selUnit = null; selArea = must[0]; E.startBattle(g, must[0], g.phase === 'btCombat'); } };
-  return { label: `End ${STEPS[STEP_OF[g.phase]].toLowerCase()} ▸`, fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; }), dis: !!E.mustFight(g).length };
+  return { label: `End ${STEPS[STEP_OF[g.phase]].toLowerCase()} ▸`, fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; }), dis: !!E.mustFight(g).length || !!g.recover.length };
 }
 function dispatch() {
   if (g.battle || g.over) return '';
   const row = (k: string, v: string, c = '') => `<div class="r"><span>${k}</span><b class="${c}">${v}</b></div>`;
   const c = selChit ? g.chits.find((x) => x.id === selChit) : null;
   if (c && g.phase === 'admin') return `<div class="c-dispatch">${chitPanel(c)}</div>`;
+  if (g.phase === 'reinforcement' && g.recover.length) return `<div class="c-dispatch"><h3>Unused Special Action</h3><p class="hint">The reusable Special Action was not spent, so each side may bring one asset back from the Used Box (4.1a).</p>${g.recover.map((s) => `<h4 class="${s}">${nm(s)}</h4><div class="row">${E.boxOf(g, s, 'used').filter((c) => E.isAsset(c)).map((c) => btn(esc(chitLabel(c)), () => E.recoverAsset(g, s, c.id), '', false, c.ech)).join('')}${btn('None', () => E.recoverAsset(g, s, null))}</div>`).join('')}</div>`;
   if (g.phase === 'reinforcement' && selArr) { const o = arrOpts(), name = g.pendingArrivals.includes(selArr) ? g.units.find((x) => x.id === selArr)!.name : 'Task Force'; return `<div class="c-dispatch"><h3>${esc(name)}</h3><p class="hint">${o.length ? 'Click a highlighted area on the map, or pick one:' : 'No legal area right now.'}</p><div class="row">${o.filter((x) => !x.sa).slice(0, 14).map((x) => btn(esc(areaName(x.area)), () => { const id = selArr!; selArr = null; if (g.pendingArrivals.includes(id)) E.placeArrival(g, id, x.area); else E.placeTaskForce(g, id, x.area); })).join('')}</div>${o.some((x) => x.sa) ? `<details><summary class=\"why\">Other entry areas (cost a Special Action, 8.27)</summary><div class=\"row\">${o.filter((x) => x.sa).map((x) => btn(esc(areaName(x.area)), () => { const id = selArr!; selArr = null; E.placeArrival(g, id, x.area); })).join('')}</div></details>` : ''}</div>`; }
   if (g.phase === 'btCombat' && !selUnit && selArea == null) { const air = E.boxOf(g, g.phasing, 'available').filter((x) => x.kind === 'air_mission'), as = E.airSupplyAreas(g, g.phasing); if (air.length && as.length && !g.airSupply) return `<div class="c-dispatch"><h3>Air supply</h3><p class="hint">Before the Supply Phase an Air Mission can supply one cut-off area (17.2).</p><div class="row">${as.map((ar) => btn(esc(areaName(ar)), () => E.playAirSupply(g, air[0].id, ar))).join('')}</div></div>`; }
   const u = selUnit ? g.units.find((x) => x.id === selUnit) : null;

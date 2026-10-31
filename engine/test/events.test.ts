@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { chooseFirstLoss, newGame, endPhase, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, moveOptions, move, resolveBlow, boxOf, chit, playGreifBridge, playInterdict,
+import { chooseFirstLoss, newGame, endPhase as endPhaseRaw, autoRecover, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, moveOptions, move, resolveBlow, boxOf, chit, playGreifBridge, playInterdict,
   playBodenplatte, heydteDrop, heydteWindow, buildFieldWorks, unitsIn, setReserve, canReserve, type Game } from '../src';
+const endPhase = (g: Game) => { autoRecover(g); endPhaseRaw(g); };
 
 function toAdmin(seed: number, turn = 2, campaign = false): Game {
   const g = newGame(seed, campaign ? { scenario: 'campaign' } : {});

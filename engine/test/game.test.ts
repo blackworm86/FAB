@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { chooseFirstLoss, arrivalOptions, placeArrival, newGame, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, assign, canAssign, endPhase, moveOptions, move, resolveBlow, setReserve, canReserve,
+import { chooseFirstLoss, arrivalOptions, placeArrival, newGame, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, assign, canAssign, endPhase as endPhaseRaw, autoRecover, moveOptions, move, resolveBlow, setReserve, canReserve,
   stratOptions, stratMove, contestedAreas, unitsIn, boxOf, victory, assetLimits, type Game } from '../src';
+const endPhase = (g: Game) => { autoRecover(g); endPhaseRaw(g); };
 
 function runBattle(g: Game, a: number, flip: boolean) {
   const b = startBattle(g, a);

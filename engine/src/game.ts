@@ -37,6 +37,7 @@ export interface Game {
   markers: { german: Record<string, number>; allied: Record<string, number> }; stratMoves: number; riverCross: string[]; blowTried: number[]; entered: Record<number, { id: string; river: boolean; blown: boolean }[]>;
   pendingBlow: { unit: string; path: number[]; spent?: number } | null; greif: Record<string, string>; greifTried: string[]; fwBuilt: string[]; tfNew: string[]; elimLarge: string[]; captured: number[]; fuelAdded: boolean; opts: Opts;
   roadblocks: Record<number, Side>; interdicted: Record<number, string>; pooled: number | null; airSupply: { area: number; side: Side; id: string; stamp: number } | null; revealed: string | null; arrived: string[]; pendingArrivals: string[];
+  recover: Side[];
   battle: Battle | null; seed: number; rolls: number; log: string[]; over?: string;
 }
 type RawUnit = { id: string; name: string; side: string; echelon?: string; symbol?: string; cls?: string; steps?: number; quality_by_step?: Quality[]; start_area?: number; arrival_turn?: number; entry?: string[]; kind?: string };
@@ -75,7 +76,7 @@ export function newGame(seed = Date.now() % 1e9, opts: Partial<Opts> = {}): Game
   for (const a of sc.garrisons) units.push({ id: `G${a}`, name: `Garrison ${areas.get(a)!.name}`, side: 'allied', cls: 'infantry', q: ['green'], max: 1, str: 1, area: a, garrison: true, disorder: 0, unsupplied: false, moved: true, reserve: null, exploit: false });
   const g: Game = { turn: 1, lastTurn: last, phasing: 'german', phase: 'combat', units, chits: buildChits(last), control: {}, fieldWorks: [...sc.fieldWorks], fwOwner: {}, riverAssault: [...sc.riverAssault], blown: [...sc.blownBridges],
     contestedAtMoveStart: [], fought: [], markers: { german: { z5: 2, z6: 2, z7: 1 }, allied: { z56: 3, z7: 2 } }, stratMoves: 0, riverCross: [], blowTried: [], entered: {}, pendingBlow: null, greif: {}, greifTried: [], fwBuilt: [], tfNew: [],
-    elimLarge: [], captured: [], fuelAdded: false, opts: o, roadblocks: {}, interdicted: {}, pooled: null, airSupply: null, revealed: null, arrived: [], pendingArrivals: [], battle: null, seed, rolls: 0, log: [] };
+    elimLarge: [], captured: [], fuelAdded: false, opts: o, roadblocks: {}, interdicted: {}, pooled: null, airSupply: null, revealed: null, arrived: [], pendingArrivals: [], recover: [], battle: null, seed, rolls: 0, log: [] };
   for (const fa of g.fieldWorks) g.fwOwner[fa] = units.some((u) => u.side === 'allied' && u.area === fa) ? 'allied' : 'german';
   const peiper = units.find((u) => u.name === 'Peiper')!; peiper.reserve = 'z6'; g.markers.german.z6--;
   const ger = new Set(units.filter((u) => u.side === 'german' && u.area).map((u) => u.area!));
@@ -136,19 +137,32 @@ function drawChits(g: Game, side: Side, n: number) {
   }
 }
 const rngf = (g: Game) => rng(g.seed * 104729 + g.rolls++)();
+/** 4.1b-c: the Used Box goes back to the cup (German artillery attrition first, 16.12). */
+function recycleUsed(g: Game, side: Side) {
+  if (side === 'german') { const art = boxOf(g, side, 'used').find((c) => c.kind === 'artillery'); if (art) { art.box = 'eliminated'; say(g, `German artillery attrition: ${art.name} eliminated (16.12)`); } }
+  boxOf(g, side, 'used').forEach((c) => (c.box = c.kind === 'sa_block' ? 'available' : 'cup'));
+}
+/** 4.1a: with the reusable Special Action unused, move one asset of the player's choice from the Used Box to the Available Box (or none). */
+export function recoverAsset(g: Game, side: Side, id: string | null) {
+  if (!g.recover.includes(side)) throw new Error('no recovery pending for that side');
+  if (id != null) { const c = chit(g, id); if (c.side !== side || c.box !== 'used' || !isAsset(c)) throw new Error('pick an asset from the Used Box'); c.box = 'available'; say(g, `${side}: ${c.name} returned to Available (unused Special Action)`); }
+  g.recover = g.recover.filter((s) => s !== side); recycleUsed(g, side);
+}
+/** The old automatic choice (engineer first), for tests and for a player who just wants to move on. */
+export function autoRecover(g: Game) {
+  const pri = ['engineer', 'artillery', 'rocket_artillery', 'armor_asset', 'fuel', 'infantry_asset', 'command_staff'];
+  for (const side of [...g.recover]) { const back = boxOf(g, side, 'used').filter((c) => isAsset(c)).sort((a, b) => pri.indexOf(a.kind) - pri.indexOf(b.kind))[0]; recoverAsset(g, side, back?.id ?? null); }
+}
 function reinforcementPhase(g: Game) {
   g.arrived = [];
+  g.recover = [];
   for (const side of ['german', 'allied'] as Side[]) {
     const sa = g.chits.find((c) => c.kind === 'sa_block' && c.side === side && c.turn === 2 && g.turn >= 2)!;
     if (g.turn >= 2) {
-      if (sa.box === 'available') {                                               // 4.1a unused reusable SA: bring one asset back too
-        const pri = ['engineer', 'artillery', 'rocket_artillery', 'armor_asset', 'fuel', 'infantry_asset', 'command_staff'];
-        const back = boxOf(g, side, 'used').filter((c) => isAsset(c)).sort((a, b) => pri.indexOf(a.kind) - pri.indexOf(b.kind))[0];
-        if (back) { back.box = 'available'; say(g, `${side}: ${back.name} returned to Available (unused Special Action)`); }
-      } else sa.box = 'available';
+      if (sa.box === 'available') { if (boxOf(g, side, 'used').some((c) => isAsset(c))) { g.recover.push(side); continue; } }   // 4.1a unused reusable SA: the player brings one asset back first
+      else sa.box = 'available';
     }
-    if (side === 'german') { const art = boxOf(g, side, 'used').find((c) => c.kind === 'artillery'); if (art) { art.box = 'eliminated'; say(g, `German artillery attrition: ${art.name} eliminated (16.12)`); } }
-    boxOf(g, side, 'used').forEach((c) => (c.box = c.kind === 'sa_block' ? 'available' : 'cup'));
+    recycleUsed(g, side);
   }
   g.pendingArrivals = g.units.filter((x) => x.arrival === g.turn && x.area == null && x.str > 0).map((x) => x.id);
   g.tfNew = [];
@@ -738,6 +752,7 @@ function supplyPhase(g: Game) {
 }
 export function endPhase(g: Game) {
   if (g.over) return;
+  if (g.recover.length) throw new Error('choose the assets to recover first (4.1a)');
   if (g.battle) throw new Error('finish the open battle first');
   if (g.pendingBlow) throw new Error('resolve the bridge-blowing attempt first');
   if (mustFight(g).length) throw new Error('newly contested areas must be fought first');

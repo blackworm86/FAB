@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { eligibleForStep, playReplacement, BRITISH_AREAS, chooseFirstLoss, bridgeTargets, blowBridges, canReserve, setReserve, blocks, updateControlForTest, allocateForTest, defenderRetreatSA, arrivalOptions, placeArrival, newGame, endPhase, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, moveOptions, boxOf, roadblock, roadblockAreas, playInterdiction, staffBoundary, staffPool, staffIntel,
+import { recoverAsset, eligibleForStep, playReplacement, BRITISH_AREAS, chooseFirstLoss, bridgeTargets, blowBridges, canReserve, setReserve, blocks, updateControlForTest, allocateForTest, defenderRetreatSA, arrivalOptions, placeArrival, newGame, endPhase as endPhaseRaw, autoRecover, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, moveOptions, boxOf, roadblock, roadblockAreas, playInterdiction, staffBoundary, staffPool, staffIntel,
   playAirSupply, airSupplyAreas, rerouteOptions, reroute, stratOptions, move, resolveBlow, connection, neighbors, unitsIn, inSupply, assetLimits, areas, type Game } from '../src';
+const endPhase = (g: Game) => { autoRecover(g); endPhaseRaw(g); };
 
 function toAdmin(seed: number, turn = 2, campaign = false): Game {
   const g = newGame(seed, campaign ? { scenario: 'campaign' } : {});
@@ -191,4 +192,17 @@ describe('second review fixes', () => {
     expect(u.str).toBe(1); expect(u.area).not.toBeNull(); expect(g.elimLarge).not.toContain(u.id);
   });
   it('Rochefort has terrain 0 in the map data', () => { expect(areas.get(82)!.tdn).toBe(0); });
+});
+
+describe('4.1a unused Special Action', () => {
+  it('lets the player choose which asset returns from the Used Box before the box is recycled', () => {
+    const g = newGame(5); g.turn = 1; g.phasing = 'allied'; g.phase = 'supply'; g.fought = [];
+    const used = g.chits.find((c) => c.side === 'german' && c.kind === 'engineer')!, other = g.chits.find((c) => c.side === 'german' && c.kind === 'artillery')!;
+    used.box = 'used'; other.box = 'used'; g.chits.find((c) => c.kind === 'sa_block' && c.side === 'german')!.box = 'available';
+    endPhaseRaw(g);
+    expect(g.turn).toBe(2); expect(g.recover).toContain('german'); expect(used.box).toBe('used');
+    expect(() => endPhaseRaw(g)).toThrow();
+    recoverAsset(g, 'german', used.id);
+    expect(used.box).toBe('available'); expect(g.recover).not.toContain('german');
+  });
 });
