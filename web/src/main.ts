@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import mapJson from '../../data/bulge/map.json';
-import * as E from '../../engine/src';
+import * as E from './engine-rec';
 import { labelSvg } from './art';
 import { chitSvg, mapMarkerSvg, loadChitArt, garrisonChit } from './chits';
 import { History } from './history';
-import { online, startOnline, push, sit, setDevSeat, auth, lobby, DEV, TABLE, HAS_TABLE, LOCAL_ONLY, type DevSeat, type Match } from './online';
+import { online, startOnline, push, sit, setDevSeat, auth, lobby, sendCalls, restartRemote, DEV, TABLE, HAS_TABLE, LOCAL_ONLY, type DevSeat, type Match } from './online';
 import { GAMES, gameInfo } from './games';
 import rulesText from '../../firestore.rules?raw';
 import { throwDice, clearDice, isHit, type DiceGroup } from './dice3d';
@@ -472,8 +472,19 @@ function showFx(list: Fx[]) {
 /** Record and show what changed between two states. */
 let pendingFx: Fx[] = [];
 function noteFx(a: ReturnType<typeof snap>, x: E.Game, fresh?: boolean) { const d = diffFx(a, x); if (!d.length) return; battleFx.push(...d); if (fresh) { rollFx = d; pendingFx = d; } else showFx(d); }       // after a roll the effects wait for the dice to settle
+/** Refereed tables: run the player's action once on a scratch copy only to write down the engine calls it makes, then send those to the server. The answer comes back as the next state. */
+function serverAct(f: () => void) {
+  if (online.busy) return;
+  const snap = structuredClone(g); let err: Error | null = null;
+  E.record.start(); try { f(); } catch (e) { err = e as Error; }
+  const calls = E.record.stop(); g = snap;
+  if (err) { say(err.message); return refresh(); }
+  if (!calls.length) return refresh();
+  void sendCalls(calls).then((e) => { if (e) say(e); });
+}
 function act(f: () => void, after = '') {
   if (!allowed()) return say(notYou());
+  if (online.server) return serverAct(f);
   const before = g.battle ? snap(g) : null;
   const r = hist.run(g, () => { f(); auto(); });
   g = r.game; if (r.error) say(r.error.message); else { note = after; if (before) noteFx(before, g); }
@@ -580,6 +591,7 @@ let rollView: RollView | null = null, modal: 'menu' | 'boxes' | 'lobby' | 'rules
 const STAGE_NAME: Record<string, string> = { attArty: 'artillery', defArty: 'artillery', defFire: 'Defensive fire', offFire: 'Offensive fire' };
 function rollStage(b: E.Battle) {
   if (!allowed()) return say(notYou());
+  if (online.server) return serverAct(() => E.roll_step(g, b));
   const side = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker), kind = b.stage.endsWith('Arty') ? 'arty' : 'ground', fl = E.fireList(g, b, side, kind), n0 = b.rolls.length, stage = b.stage;
   const before = snap(g); E.roll_step(g, b); rollFx = []; noteFx(before, g, true); save();
   const fresh = b.rolls.slice(n0);
@@ -910,7 +922,7 @@ function ledger() {
   if (STAGE_NAME[b.stage]) {                                                                           // fire step: who rolls, what, against which number and why
     const sd = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker), fl = E.fireList(g, b, sd, b.stage.endsWith('Arty') ? 'arty' : 'ground'), mineStep = !online.active || online.both() || online.mySide() === sd;
     const lines = fl.map((f) => `<div class="fl"><span class="who">${esc(f.who)}</span><span class="cnt">${f.dice}${ico('dice')}</span><b class="sn">SN ${f.sn}</b><span class="chips2">${modChips(f.parts)}</span></div>`).join('') || '<p class="hint">Nothing can fire.</p>';
-    return `<div class="c-ledger tight"><div class="lh"><h3 class="${sd}">${nm(sd)} ${esc(STAGE_NAME[b.stage].toLowerCase())}</h3></div>${lines}${b.stage === 'offFire' && b.assets[b.attacker].some((id) => E.chit(g, id).kind === 'engineer') && g.fieldWorks.includes(b.area) ? `<label><input type="checkbox" ${b.engFw ? 'checked' : ''} data-sel="${regv((v) => { b.engFw = v === 'on'; })}"> Engineer removes the field works instead of firing (6.33)</label>` : ''}${mineStep ? '' : `<p class="hint">Waiting for the ${nm(sd)} player to roll…</p>`}</div>`;
+    return `<div class="c-ledger tight"><div class="lh"><h3 class="${sd}">${nm(sd)} ${esc(STAGE_NAME[b.stage].toLowerCase())}</h3></div>${lines}${b.stage === 'offFire' && b.assets[b.attacker].some((id) => E.chit(g, id).kind === 'engineer') && g.fieldWorks.includes(b.area) ? `<label><input type="checkbox" ${b.engFw ? 'checked' : ''} data-sel="${regv((v) => { act(() => E.setEngFw(g, b, v === 'on')); })}"> Engineer removes the field works instead of firing (6.33)</label>` : ''}${mineStep ? '' : `<p class="hint">Waiting for the ${nm(sd)} player to roll…</p>`}</div>`;
   }
   return '';
 }
@@ -1011,7 +1023,7 @@ function modalHtml() {
     const body = menuTab === 'Log' ? `<div class="log">${[...g.log].reverse().slice(0, 120).map((l) => `<div>${esc(l)}</div>`).join('')}</div>`
       : menuTab === 'Settings' ? `<h4>Map</h4><div class="row">${btn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${btn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Map art</h4><div class="row"><select data-sel="${regv((x) => setArt(x as 'vector' | 'scan'))}"><option value="vector" ${art === 'vector' ? 'selected' : ''}>Vector layers (traced)</option><option value="scan" ${art === 'scan' ? 'selected' : ''}>Original scan</option></select></div>
         ${online.active && !online.admin && !online.both() ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as 'tournament' | 'campaign'; })}"><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
-        <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Restart', () => { if (!confirm('Restart and lose the current game?')) return; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'danger')}</div>`}`
+        <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Restart', () => { if (!confirm('Restart and lose the current game?')) return; if (online.server) { void restartRemote(newOpts as unknown as Record<string, unknown>).then((e) => { if (e) say(e); }); modal = null; return; } g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'danger')}</div>`}`
       : menuTab === 'Admin' ? `<div class="row">${btn('Update rules', () => { modal = 'rules'; })}${btn('Free German seat', () => { void auth.freeSeat('german'); })}${btn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div>`
       : online.mode === 'remote' ? `<h4>Players</h4><p class="hint">German: <b>${seat('german')}</b> · Allied: <b>${seat('allied')}</b>${online.canWrite ? '' : ' · you can only watch'}</p>${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}
           <div class="row">${btn('Sit as German', () => { void sit('german'); }, '', !online.canWrite || !!online.account?.guest)}${btn('Sit as Allied', () => { void sit('allied'); }, '', !online.canWrite || !!online.account?.guest)}${btn('Leave my seat', () => { void sit(null); })}</div>
@@ -1030,7 +1042,7 @@ function render() {
   const alert = g.pendingBlow ? (() => { const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!, path = g.pendingBlow!.path; return `<div class="c-ledger"><h3>${nm(other(u.side))}: bridge?</h3><p class="hint">${esc(u.name)} tries to cross into ${esc(areaName(path[path.length - 1]))}. Attempt to blow the bridge? It works on a roll of 1–5.</p><div class="row end">${btn('Let them cross', () => E.resolveBlow(g, false))}${btn('Attempt to blow it', () => E.resolveBlow(g, true), 'primary')}</div></div>`; })() : '';
   const dockMain = alert || ledger() || handCards();
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = topBar() + `<div class="stage">${b ? battleTable() : dispatch()}${legend()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
+  $('#ui').innerHTML = topBar() + `<div class="stage">${b ? battleTable() : dispatch()}${legend()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() || online.busy ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
   const ui = $('#ui');
   { const h = ui.querySelector<HTMLElement>('.c-hand'), a = ui.querySelector<HTMLElement>('.arrtray'); if (h) h.scrollLeft = keepH; if (a) a.scrollLeft = keepA; }
   ui.querySelectorAll<HTMLElement>('[data-ui]').forEach((e) => (e.onclick = () => { acts[e.dataset.ui!]?.(); render(); }));            // view-only choices: allowed for everyone, never touch the game
@@ -1052,7 +1064,7 @@ function render() {
   ui.querySelectorAll<HTMLElement>('.card2, .blk').forEach((e) => (e.onkeydown = (ev) => { if (ev.key !== 'Enter' && ev.key !== ' ') return; ev.preventDefault(); const id = e.dataset.chit, b2 = g.battle; if (e.classList.contains('card2') && id) { if (b2?.stage === 'setup') { const c = E.chit(g, id), why = E.canAssign(g, b2, c.side, c); if (why) say(why); else act(() => E.assign(g, b2, id, c.kind === 'air_mission' ? 'arty' : undefined)); } else if (!b2) { selChit = selChit === id ? null : id; refresh(); } } else e.click(); }));
   ui.querySelectorAll<HTMLElement>('.card2').forEach((e) => (e.onpointerdown = (ev) => { lastPointer = ev.pointerType; if (ev.pointerType === 'touch') return; if (ev.pointerType === 'mouse') ev.preventDefault(); if (g.battle || chitTargets(E.chit(g, e.dataset.chit!)).length) drag(ev, e); }));
   ui.querySelectorAll<HTMLElement>('.card2').forEach((e) => (e.onclick = () => { if (lastPointer === 'touch') return tapCard(e.dataset.chit!); if (!g.battle) { selChit = selChit === e.dataset.chit ? null : e.dataset.chit!; refresh(); } }));
-  ui.querySelectorAll<HTMLElement>('.blk[data-unit]').forEach((e) => (e.onclick = () => { const b2 = g.battle; if (!b2 || b2.stage !== 'setup') return; const s = e.dataset.side as E.Side, u = g.units.find((x) => x.id === e.dataset.unit)!; if (!mine(s)) return; if (u.garrison || (s === b2.attacker && u.disorder)) return; if (s === b2.attacker) b2.attPoint = u.id; else b2.defPoint = u.id; save(); render(); }));
+  ui.querySelectorAll<HTMLElement>('.blk[data-unit]').forEach((e) => (e.onclick = () => { const b2 = g.battle; if (!b2 || b2.stage !== 'setup') return; const s = e.dataset.side as E.Side, u = g.units.find((x) => x.id === e.dataset.unit)!; if (!mine(s)) return; if (u.garrison || (s === b2.attacker && u.disorder)) return; act(() => E.setPoint(g, b2, s, u.id)); }));
 }
 let lastView: E.Side | null = null;
 /** Standard view: German from the bottom of the map, Allied from the top; the printed items turn with it. */

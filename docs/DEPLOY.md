@@ -30,3 +30,16 @@ npm ci && npm run dev
 - Visitors open the page as anonymous guests and can only watch. To take a seat they sign in from the menu (☰): **Continue with Google**, or an email and password (type a name and tap **Register**; **Forgot password** sends a reset mail).
 - **Make an admin:** sign in on the site once, then in Firebase open **Authentication > Users** and copy your **User UID**. In **Firestore Database > Data** add a collection `admins` with a document whose ID is that UID (any field, for example `role: "admin"`). Reload the site: the menu shows "admin". Admins can write any table and free a seat; nobody can create admins from the site (the rules only allow it in the console).
 - Publish the updated `firestore.rules` after every change to that file (Firestore > Rules).
+
+
+## Refereed games (hidden blocks kept on the server)
+
+Ordinary tables keep the whole game in one document that both players' browsers read. A **refereed** table keeps it only on the server:
+
+- `functions/` is a Cloud Functions referee (`createTable`, `act`, `restartTable`, `deleteTable`) that runs the same rules engine.
+- The full game is in `tables/{id}/private/full`, which no client can read. Each seat reads `tables/{id}/views/german` or `.../allied`, a copy with the other side's hidden blocks stripped of identity, strength and quality (ids are replaced by opaque ones) and without the dice seed.
+- A player's browser never changes the game. It records the engine calls the player's action makes and sends them to `act`; the server checks the seat and the turn, replays them and writes the new views.
+
+To switch it on: (1) upgrade the Firebase project to the Blaze plan (a card is required; personal use stays inside the free quota), (2) create a service account key and store it as the repository secret `FIREBASE_SERVICE_ACCOUNT`, (3) run the `referee` workflow, (4) set the repository variable `VITE_USE_FUNCTIONS` to `1` and re-run `deploy`. Games created before that stay ordinary tables.
+
+Limits: the server checks that the seat owns the piece and that it is that seat's turn or step; it does not yet validate every argument beyond what the engine itself throws on. The log is scrubbed of hidden block names by string match. `?fake=german` / `?fake=allied` (development only) runs the same server code inside the browser so two tabs can try a refereed game without deploying.

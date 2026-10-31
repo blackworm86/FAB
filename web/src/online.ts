@@ -2,7 +2,7 @@
  *  Two stores are supported: the claude.ai artifact database (when the page runs inside claude.ai) and Firebase (GitHub Pages deploy).
  *  The rules engine is deterministic from the saved state (dice come from the stored seed), so every client simply loads the newest state;
  *  the seat decides who may act. With neither store the game is hot-seat, and in dev mode a seat switch lets one machine play both sides. */
-import type { Game, Side } from '../../engine/src';
+import type { Call, Game, Side } from '../../engine/src';
 import { artifactStore } from './store-artifact';
 import { firebaseStore } from './store-firebase';
 
@@ -14,6 +14,8 @@ export interface StateDoc { rev: number; json: string; by?: string }
 /** What a storage backend has to provide. */
 export interface Store {
   uid: string; canWrite: boolean;
+  /** A refereed table: its state comes as a view cut for this seat, and moves are sent as calls to the server. */
+  server?: boolean; sendCalls?(calls: Call[], rev: number): Promise<string>; restart?(opts: Record<string, unknown>): Promise<string>;
   watchState(next: (d: StateDoc | null) => void, err: (e: string) => void): void;
   setState(d: StateDoc): Promise<void>;
   watchSeats(next: (s: Seats) => void, err: (e: string) => void): void;
@@ -39,7 +41,7 @@ export type DevSeat = 'german' | 'allied' | 'both' | 'watch';
 export const online = {
   /** 'off' = hot-seat, 'local' = seats enforced on this machine only (dev), 'remote' = shared through a store. */
   mode: 'off' as 'off' | 'local' | 'remote', uid: '', seats: {} as Seats, rev: 0, canWrite: true, error: '', store: '' as string,
-  devSeat: 'both' as DevSeat, account: null as Account | null, admin: false, hasAccounts: false,
+  devSeat: 'both' as DevSeat, server: false, busy: false, account: null as Account | null, admin: false, hasAccounts: false,
   mySide(): Side | null {
     if (DEV && this.mode !== 'off') return this.devSeat === 'german' || this.devSeat === 'allied' ? this.devSeat : null;
     return this.seats.german === this.uid && this.uid ? 'german' : this.seats.allied === this.uid && this.uid ? 'allied' : null;
@@ -55,9 +57,9 @@ const fail = (e: string) => { online.error = e; onChange(); };
 export async function startOnline(remote: (g: Game) => void, changed: () => void, current: () => Game) {
   onRemote = remote; onChange = changed;
   if (LOCAL_ONLY) { if (DEV) { online.mode = 'local'; changed(); } return; }
-  try { store = (await artifactStore()) ?? (await firebaseStore(TABLE)); } catch (e) { online.error = String(e); store = null; }
+  try { const fake = DEV ? params.get('fake') : null; store = fake === 'german' || fake === 'allied' ? (await import('./store-fake')).fakeStore(fake) : (await artifactStore()) ?? (await firebaseStore(TABLE)); } catch (e) { online.error = String(e); store = null; }
   if (!store) { if (DEV) { online.mode = 'local'; changed(); } return; }
-  online.mode = 'remote'; online.uid = store.uid; online.canWrite = store.canWrite;
+  online.mode = 'remote'; online.uid = store.uid; online.canWrite = store.canWrite; online.server = !!store.server;
   if (store.account) { online.hasAccounts = true; const sync = (a: Account) => { online.account = a; online.uid = a.uid; online.admin = a.admin; onChange(); }; sync(store.account()); store.onAccount?.(sync); }
   store.watchSeats((s) => { online.seats = s; onChange(); }, fail);
   store.watchState((d) => {
@@ -69,7 +71,7 @@ export async function startOnline(remote: (g: Game) => void, changed: () => void
 
 /** Publish the local state (quick bursts are coalesced into one write at a time). */
 export async function push(g: Game) {
-  if (online.mode !== 'remote' || !store || !online.canWrite) return;
+  if (online.mode !== 'remote' || !store || !online.canWrite || online.server) return;               // a refereed table is only written by the server
   if (online.hasAccounts && !online.admin && online.mySide() == null) return;                       // only seated players (or an admin) change a shared table
   const json = slim(g); if (json === lastJson) return;
   if (writing) { queued = g; return; }
@@ -94,3 +96,11 @@ export const lobby = {
   remove: (id: string) => run((st) => st.deleteMatch?.(id)), leave: (id: string) => run((st) => st.leaveMatch?.(id)),
   watch: (next: (m: Match[]) => void) => store?.watchMyMatches?.(next, fail),
 };
+
+/** Refereed tables: send the calls the player made; the server answers with the new view through the normal state feed. Resolves '' or the reason it was refused. */
+export async function sendCalls(calls: Call[]): Promise<string> {
+  if (!store?.sendCalls) return 'Not a refereed table';
+  online.busy = true; onChange();
+  try { return await store.sendCalls(calls, online.rev); } finally { online.busy = false; onChange(); }
+}
+export const restartRemote = (opts: Record<string, unknown>) => store?.restart?.(opts) ?? Promise.resolve('Not a refereed table');

@@ -6,3 +6,5 @@ node_modules/
 .codex/
 skills-lock.json
 __pycache__/
+functions/lib/
+functions/node_modules/
