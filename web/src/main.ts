@@ -710,6 +710,12 @@ async function share(id: string, title: string) {
   try { if (navigator.share) await navigator.share({ title: `FAB · ${title}`, text: 'Join my game of FAB', url }); else { await navigator.clipboard.writeText(url); lobbyMsg = 'Invite link copied.'; } } catch { lobbyMsg = url; }
   render();
 }
+async function dropMatch(m: { id: string; title: string; owner: string }) {
+  const own = m.owner === online.uid || online.admin;
+  if (!confirm(own ? `Delete "${m.title}" for everyone? This cannot be undone.` : `Remove "${m.title}" from your games?`)) return;
+  await (own ? lobby.remove(m.id) : lobby.leave(m.id));
+  if (m.id === TABLE) location.search = '';
+}
 async function createGame() {
   const info = gameInfo(form.game); if (!info?.ready) return;
   const opts: E.Opts = { scenario: form.scenario, fuel: form.fuel }, title = form.title.trim() || `${info.name} · ${new Date().toLocaleDateString()}`;
@@ -725,7 +731,7 @@ function joinByCode(v: string) {
 function lobbyHtml() {
   const a = online.account, signed = !!a && !a.guest, info = gameInfo(form.game);
   const games = GAMES.map((x) => `<button class="gamecard ${x.id === form.game ? 'sel' : ''}" ${x.ready ? '' : 'disabled'} data-do="${reg(() => { if (x.ready) form.game = x.id; })}"><b>${esc(x.name)}</b><small>${esc(x.vol)}${x.ready ? '' : ' · coming soon'}</small><span>${esc(x.blurb)}</span></button>`).join('');
-  const mine = matches.map((m) => `<div class="matchrow"><div><b>${esc(m.title)}</b><small>${esc(gameInfo(m.game)?.name ?? m.game)} · German ${esc(m.germanName || 'open seat')} · Allied ${esc(m.alliedName || 'open seat')}</small></div><div class="row">${btn('Open', () => { location.search = `?table=${m.id}`; }, 'primary')}${btn(`${ico('share')} Invite`, () => { void share(m.id, m.title); })}</div></div>`).join('') || '<p class="hint">You have no games yet. Create one below.</p>';
+  const mine = matches.map((m) => `<div class="matchrow"><div><b>${esc(m.title)}</b><small>${esc(gameInfo(m.game)?.name ?? m.game)} · German ${esc(m.germanName || 'open seat')} · Allied ${esc(m.alliedName || 'open seat')}</small></div><div class="row">${btn('Open', () => { location.search = `?table=${m.id}`; }, 'primary')}${btn(`${ico('share')} Invite`, () => { void share(m.id, m.title); })}${btn(`${ico('close')}<span class="bl">${m.owner === online.uid || online.admin ? 'Delete' : 'Leave'}</span>`, () => { void dropMatch(m); }, 'ico danger', false, m.owner === online.uid || online.admin ? 'Delete this game for everyone' : 'Remove this game from your list')}</div></div>`).join('') || '<p class="hint">You have no games yet. Create one below.</p>';
   return `<div class="homepage"><div class="homein">
     <header><h1>Fast Action Battles</h1><p>Series-rules tabletop wargames, played online.</p>${HAS_TABLE ? btn(`${ico('back')} Back to the game`, () => { modal = null; }, 'plain') : ''}</header>
     <section class="card"><h2>Account</h2>${accountHtml()}${signed ? '' : '<p class="hint">Guests can watch a game from its link. Sign in to create or play.</p>'}</section>
@@ -777,7 +783,7 @@ function modalHtml() {
       : menuTab === 'Admin' ? `<div class="row">${btn('Update rules', () => { modal = 'rules'; })}${btn('Free German seat', () => { void auth.freeSeat('german'); })}${btn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div>`
       : online.mode === 'remote' ? `<h4>Players</h4><p class="hint">German: <b>${seat('german')}</b> · Allied: <b>${seat('allied')}</b>${online.canWrite ? '' : ' · you can only watch'}</p>${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}
           <div class="row">${btn('Sit as German', () => { void sit('german'); }, '', !online.canWrite || !!online.account?.guest)}${btn('Sit as Allied', () => { void sit('allied'); }, '', !online.canWrite || !!online.account?.guest)}${btn('Leave my seat', () => { void sit(null); })}</div>
-          ${TABLE !== 'main' ? `<h4>Invite</h4><div class="row">${btn(`${ico('share')} Share invite link`, () => { void share(TABLE, TABLE); }, 'primary')}</div>` : ''}${online.account?.guest ? '<p class="hint">Sign in from the lobby to take a seat.</p>' : ''}`
+          ${TABLE !== 'main' ? `<h4>Game</h4><div class="row">${btn(`${ico('close')} End game`, () => { const m = matches.find((x) => x.id === TABLE); void dropMatch(m ?? { id: TABLE, title: TABLE, owner: '' }); }, 'danger', !online.account || online.account.guest)}</div><h4>Invite</h4><div class="row">${btn(`${ico('share')} Share invite link`, () => { void share(TABLE, TABLE); }, 'primary')}</div>` : ''}${online.account?.guest ? '<p class="hint">Sign in from the lobby to take a seat.</p>' : ''}`
       : online.mode === 'local' ? '<p class="hint">Developer table. The Seat button in the top bar switches between German, Allied, both and watching; turn rules are enforced for the seat you hold.</p>' : '<p class="hint">Hot-seat game on this device.</p>';
     return `<div class="modal"><div class="sheet"><h3>Game <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
       <div class="tabs">${tabs.map((t) => `<button class="${t === menuTab ? 'on' : ''}" data-do="${reg(() => { menuTab = t; })}">${t}</button>`).join('')}</div>${body}

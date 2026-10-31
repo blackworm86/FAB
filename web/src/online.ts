@@ -24,6 +24,8 @@ export interface Store {
   google?(): Promise<string>; emailSignIn?(email: string, password: string): Promise<string>; emailRegister?(email: string, password: string, name: string): Promise<string>;
   /** Lobby: create a match (state, creator's seat and record) and list the matches the user belongs to. Resolves the new id, or an error starting with '!'. */
   createMatch?(m: Omit<Match, 'id' | 'owner' | 'members' | 'created'>, side: Side | null, stateJson: string): Promise<string>;
+  /** Owner or admin: remove the match with its state and seats. Resolves '' or an error. Others: leave (drop their membership). */
+  deleteMatch?(id: string): Promise<string>; leaveMatch?(id: string): Promise<string>;
   watchMyMatches?(next: (m: Match[]) => void, err: (e: string) => void): void;
   resetPassword?(email: string): Promise<string>; signOut?(): Promise<string>; freeSeat?(side: Side): Promise<string>;
 }
@@ -89,5 +91,6 @@ async function run(f: (s: Store) => Promise<string> | undefined) { if (!store) r
 export const lobby = {
   can: () => !!store?.createMatch,
   create: async (m: Parameters<NonNullable<Store['createMatch']>>[0], side: Side | null, json: string) => store?.createMatch ? store.createMatch(m, side, json) : '!Online play is not set up',
+  remove: (id: string) => run((st) => st.deleteMatch?.(id)), leave: (id: string) => run((st) => st.leaveMatch?.(id)),
   watch: (next: (m: Match[]) => void) => store?.watchMyMatches?.(next, fail),
 };

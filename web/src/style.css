@@ -186,3 +186,4 @@ button.go .ic, button.plain .ic, .row button .ic { width: 18px; height: 18px; ve
 .handtab button { background: #1d2114; border: 1px solid #8d9065aa; color: var(--ink); } .handtab button.danger { color: #ff9a8a; } .handtab button:disabled { opacity: .4; }
 @media (max-width: 520px) { .evh { display: none; } }
 @media (max-width: 520px) { .c-table .cnt { display: none; } .c-table { padding: 4px 8px 6px; gap: 2px 8px; } .c-title { font-size: 16px; margin: 0; } .slot { min-height: 52px; width: 80px; } .c-side h4 { margin: 0; } .c-vs .big { font-size: 26px; } .c-vs small:last-child { font-size: 11px; } }
+.matchrow { flex-wrap: wrap; }

@@ -55,6 +55,12 @@ export async function firebaseStore(table: string): Promise<Store | null> {
         return id;
       } catch (e) { return '!' + msg(e); }
     },
+    async deleteMatch(id) {
+      try { for (const d of ['state', 'seats']) await fs.deleteDoc(fs.doc(db, 'tables', id, 'docs', d)); await fs.deleteDoc(fs.doc(db, 'matches', id)); return ''; } catch (e) { return msg(e); }
+    },
+    async leaveMatch(id) {
+      try { await fs.updateDoc(fs.doc(db, 'matches', id), { members: fs.arrayRemove(account.uid) }); return ''; } catch (e) { return msg(e); }
+    },
     watchMyMatches: (next, err) => {
       unsubM?.(); unsubM = null;
       const go = () => { if (account.guest) return next([]); unsubM = fs.onSnapshot(fs.query(fs.collection(db, 'matches'), fs.where('members', 'array-contains', account.uid)), (q) => next(q.docs.map((d) => ({ id: d.id, ...d.data() }) as Match).sort((a, b) => b.created - a.created)), (e) => err(msg(e))); };

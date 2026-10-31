@@ -12,6 +12,7 @@ service cloud.firestore {
         && (seats(table).get('german', '') == request.auth.uid || seats(table).get('allied', '') == request.auth.uid);
     }
     // A seat field may stay as it is, or change to nobody, or to the writer, and only from nobody or from the writer.
+    function matchOwner(t) { return exists(/databases/$(database)/documents/matches/$(t)) && get(/databases/$(database)/documents/matches/$(t)).data.owner == request.auth.uid; }
     function seatOk(old, nw) { return old == nw || ((nw == null || nw == request.auth.uid) && (old == null || old == request.auth.uid)); }
 
     match /admins/{uid} {
@@ -23,17 +24,20 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create: if isPlayer() && request.resource.data.owner == request.auth.uid && request.resource.data.members == [request.auth.uid];
       allow update: if isPlayer() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'germanName', 'alliedName'])
-        && request.resource.data.members.hasAll(resource.data.members) && request.resource.data.members.size() <= resource.data.members.size() + 1;
-      allow delete: if isPlayer() && resource.data.owner == request.auth.uid;
+        && ((request.resource.data.members.hasAll(resource.data.members) && request.resource.data.members.size() <= resource.data.members.size() + 1)
+            || (request.auth.uid in resource.data.members && resource.data.members.hasAll(request.resource.data.members) && request.resource.data.members.size() == resource.data.members.size() - 1));
+      allow delete: if isPlayer() && (resource.data.owner == request.auth.uid || isAdmin());
     }
     match /tables/{table}/docs/state {
       allow read: if signedIn();
+      allow delete: if isPlayer() && (isAdmin() || matchOwner(table));
       allow write: if isPlayer() && request.resource.data.keys().hasOnly(['rev', 'json', 'by'])
         && request.resource.data.json.size() < 900000
         && (isAdmin() || seated(table) || !exists(/databases/$(database)/documents/tables/$(table)/docs/seats));
     }
     match /tables/{table}/docs/seats {
       allow read: if signedIn();
+      allow delete: if isPlayer() && (isAdmin() || matchOwner(table));
       allow create, update: if isPlayer() && request.resource.data.keys().hasOnly(['german', 'allied', 'germanName', 'alliedName'])
         && (isAdmin()
             || (seatOk(resource == null ? null : resource.data.get('german', null), request.resource.data.get('german', null))
