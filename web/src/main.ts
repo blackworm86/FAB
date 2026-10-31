@@ -787,7 +787,7 @@ function modalHtml() {
       : online.mode === 'local' ? '<p class="hint">Developer table. The Seat button in the top bar switches between German, Allied, both and watching; turn rules are enforced for the seat you hold.</p>' : '<p class="hint">Hot-seat game on this device.</p>';
     return `<div class="modal"><div class="sheet"><h3>Game <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
       <div class="tabs">${tabs.map((t) => `<button class="${t === menuTab ? 'on' : ''}" data-do="${reg(() => { menuTab = t; })}">${t}</button>`).join('')}</div>${body}
-      <div class="row sheetfoot">${online.mode === 'remote' ? btn(`${ico('back')} Lobby`, () => { modal = 'lobby'; }) : ''}${btn('Chit boxes', () => { modal = 'boxes'; })}</div></div></div>`;
+      <div class="row sheetfoot">${btn(`${ico('back')} Lobby`, () => { if (online.mode === 'remote') modal = 'lobby'; else location.href = location.pathname; })}${btn('Chit boxes', () => { modal = 'boxes'; })}</div></div></div>`;
   }
   return '';
 }
