@@ -160,7 +160,7 @@ function drawPieces() {
     for (const need of [r, r * 0.75, r * 0.5, 0]) {
       let best: { x: number; z: number } | null = null, bd = 1e9;
       for (const c of cells) { if (c.d < need) continue; const d = Math.hypot(c.x - x, c.z - z); if (d < bd && t.every((q) => Math.hypot(q.x - c.x, q.z - c.z) >= q.r + r * (need === r ? 1 : 0.7))) { bd = d; best = c; } }
-      if (best) { t.push({ ...best, r }); return best; }
+      if (best) { t.push({ ...best, r }); (best as { tight?: boolean }).tight = need < r; return best; }
     }
     const p = toWorld(...POLE.get(id)!); t.push({ x: p.x, z: p.z, r }); return p;
   };
@@ -174,9 +174,16 @@ function drawPieces() {
   for (const a of MAP.areas) {
     const us = E.unitsIn(g, a.id), base = toWorld(...POLE.get(a.id)!), cont = E.contestedAreas(g).includes(a.id); rows.set(a.id, { base, cont });
     const order = [...us].sort((p, q) => +(p.side !== 'german') - +(q.side !== 'german') || +!!p.garrison - +!!q.garrison);
-    order.forEach((u) => {
-      const m = block(u), same = us.filter((x) => x.side === u.side), row = u.side === 'german' ? 1.1 : -1.1;
-      const p = inArea(a.id, base.x + (same.indexOf(u) - (same.length - 1) / 2) * 1.75, base.z + (cont ? row : 0.4), u.garrison ? 0.75 : 0.95);
+    const place = (column: boolean) => {                                                           // a row of blocks, or a column when the area is too narrow for a row
+      const t = taken.get(a.id) ?? [], saved = [...t]; let tight = false;
+      const spots = order.map((u) => { const same = us.filter((x) => x.side === u.side), idx = column ? order.indexOf(u) - (order.length - 1) / 2 : same.indexOf(u) - (same.length - 1) / 2, row = u.side === 'german' ? 1.1 : -1.1;
+        const p = column ? inArea(a.id, base.x, base.z + idx * 1.8, u.garrison ? 0.75 : 0.95) : inArea(a.id, base.x + idx * 1.75, base.z + (cont ? row : 0.4), u.garrison ? 0.75 : 0.95); if ((p as { tight?: boolean }).tight) tight = true; return p; });
+      return { spots, tight, saved };
+    };
+    let lay = place(false);
+    if (lay.tight && order.length > 1) { taken.set(a.id, lay.saved); const col = place(true); if (!col.tight) lay = col; else { taken.set(a.id, lay.saved); lay = place(false); } }
+    order.forEach((u, n) => {
+      const m = block(u), p = lay.spots[n];
       m.position.x = p.x; m.position.z = p.z;
       m.userData.unit = u.id; if (u.id === selUnit) { const o = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xffb347 })); m.add(o); }
       pieces.add(m);
