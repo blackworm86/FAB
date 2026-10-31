@@ -470,7 +470,7 @@ const ico = (k: string, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24"
 const chitUri = new Map<string, string>();
 const chitImg = (c: E.Chit) => { let u = chitUri.get(c.id); if (!u) { u = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(chitSvg(c)); chitUri.set(c.id, u); } return u; };
 const card = (c: E.Chit, r = 0, why: string | null = null) => `<div tabindex="0" role="button" class="card2 ${c.side} ${why ? 'bad' : ''} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" style="--r:${r}deg" title="${esc(why ?? c.name + ' · ' + c.ech)}" aria-label="${esc(c.name)}"><img alt="" draggable="false" src="${chitImg(c)}"></div>`;
-const overlapFor = (n: number) => { const cw = innerWidth < 860 ? 78 : 104, avail = innerWidth - 56; return n > 1 ? Math.max(12, Math.min(cw - (innerWidth < 860 ? 38 : 14), Math.ceil((n * cw - avail) / (n - 1)))) : 0; };
+const overlapFor = (n: number) => { const cw = innerWidth < 860 ? 78 : 104, avail = innerWidth - 56; const sq = Math.ceil((n * cw - avail) / (n - 1)); return n > 1 ? (innerWidth < 520 ? Math.min(Math.max(8, sq), 22) : Math.max(12, Math.min(cw - (innerWidth < 860 ? 38 : 14), sq))) : 0; };   // phones: always keep ~42px of each card tappable and let the hand scroll
 const handStyle = (n: number) => `style="--ov:${overlapFor(n)}px"`;
 const fan = (cs: string[]) => cs.map((h, i) => h.replace('--r:0deg', `--r:${((i - (cs.length - 1) / 2) * Math.min(5, 40 / cs.length)).toFixed(1)}deg`)).join('');
 /** Place every asset that may legally join, artillery first, for both sides. */
@@ -552,7 +552,7 @@ function promptText() {
   if (g.over) return `<b>${esc(g.over)}</b>`;
   if (g.pendingBlow) return `<b>${nm(other(g.units.find((x) => x.id === g.pendingBlow!.unit)!.side))}</b>: attempt to blow the bridge?`;
   if (b?.stage === 'retreat') return '<b>Choose the retreat area.</b>';
-  if (b) return b.stage === 'setup' ? (() => { const me = online.mySide(), rd = (sd: E.Side) => b.ready?.includes(sd); return online.active && !online.both() && me ? `<b>${rd(me) ? 'You are ready.' : 'Tap an asset to add it, then press Ready.'}</b> Opponent: ${rd(other(me)) ? 'ready' : 'preparing'}.` : '<b>Tap a card to add it.</b> Tap a block to make it the point unit.'; })() : b.stage === 'done' ? `<b>${esc(b.result ?? '')}</b>` : rollView ? 'Dice are cast automatically. <b>1 always hits, 10 always misses.</b>' : b.stage.endsWith('Choice') ? 'Choose how to take the hits.' : `Next: <b>${STAGE_NAME[b.stage]}</b>`;
+  if (b) return b.stage === 'setup' ? (() => { const me = online.mySide(), rd = (sd: E.Side) => b.ready?.includes(sd); return online.active && !online.both() && me ? `<b>${rd(me) ? 'You are ready.' : 'Tap an asset to add it, then press Ready.'}</b> Opponent: ${rd(other(me)) ? 'ready' : 'preparing'}.` : '<b>Tap a card to add it</b>; tap a block to set the point unit.'; })() : b.stage === 'done' ? `<b>${esc(b.result ?? '')}</b>` : rollView ? 'Dice are cast automatically. <b>1 always hits, 10 always misses.</b>' : b.stage.endsWith('Choice') ? 'Choose how to take the hits.' : `Next: <b>${STAGE_NAME[b.stage]}</b>`;
   const m = E.mustFight(g).length;
   switch (g.phase) {
     case 'reinforcement': return '<b>Pick a new block</b>, then a lit entry area.';
@@ -653,7 +653,7 @@ function handCards() {
     return `<div class="handtab">${mine(b.attacker) ? btn(`${ico('close')}<span class="bl">Cancel</span>`, () => { E.cancelBattle(g); }, 'ico danger', !!b.locked, b.locked ? 'A Special Action was spent, so the battle must be fought' : 'Withdraw the attack and return every assigned asset') : ''}${ok.length ? btn(`${ico('wand')}<span class="bl">Auto-fill</span>`, () => autoFill(b), 'ico', false, 'Auto-fill: place every asset that can legally join, artillery first') : ''}${bad.length ? `<details class="why"><summary title="Assets that cannot join, and why">${ico('info')} ${bad.length}</summary><ul>${why}</ul></details>` : ''}</div><div class="c-hand" ${handStyle(ok.length)}>${fan(ok.map((c) => card(c)))}</div>`;
   }
   if (g.phase !== 'admin') return '';
-  const s = handSide ?? g.phasing, cs = E.boxOf(g, s, 'available');
+  const s = handSide ?? g.phasing, cs = [...E.boxOf(g, s, 'available')].sort((x, y) => x.kind.localeCompare(y.kind) || x.name.localeCompare(y.name));
   return `<div class="handtab"><button data-do="${reg(() => { handSide = other(s); })}" class="${s}">${nm(s)} hand · ${cs.length} ${ico('swap')}</button></div><div class="c-hand" ${handStyle(cs.length)}>${fan(cs.map((c) => card(c)))}</div>`;
 }
 function stats(b: E.Battle, s: E.Side) {
