@@ -128,7 +128,7 @@ function drawPieces() {
 }
 /** Map overlays: terrain defence numbers (TDN) or the army zones, tinted over the board. */
 let tint: 'off' | 'tdn' | 'zones' = (() => { try { const t = localStorage.getItem('fab-tint'); return t === 'tdn' || t === 'zones' ? t : 'off'; } catch { return 'off'; } })();
-const TDN_COL = [0xd9d26a, 0xe8a33d, 0xd9622b, 0x9c2a2a], ZONE_COL: Record<number, number> = { 5: 0x4c8ed9, 6: 0xc2429a, 7: 0x4fb06a };
+const TDN_COL = [0xd9d26a, 0xe8a33d, 0xd9622b, 0x9c2a2a], ZONE_COL: Record<number, number> = { 5: 0x3a3f46, 6: 0x951b81, 7: 0x009fe3 };
 const tintOf = (id: number) => (tint === 'tdn' ? TDN_COL[E.areas.get(id)!.tdn] : ZONE_COL[E.areas.get(id)!.zone]);
 const cycleTint = () => { tint = tint === 'off' ? 'tdn' : tint === 'tdn' ? 'zones' : 'off'; try { localStorage.setItem('fab-tint', tint); } catch { /* private mode */ } refresh(); };
 function paintAreas() {
@@ -141,7 +141,7 @@ function paintAreas() {
     if (id === selArea && !selUnit) { c = 0x4aa3ff; o = Math.max(o, 0.3); }
     const ar = arrOpts().find((x) => x.area === id); if (ar) { c = ar.sa ? 0xff8a3d : 0x37d67a; o = 0.45; }
     if (g.battle?.stage === 'retreat' && E.retreatOptions(g, g.battle).includes(id)) { c = 0x37d67a; o = 0.5; }
-    if (o === 0 && tint !== 'off') { c = tintOf(id); o = 0.38; }
+    if (o === 0 && tint !== 'off') { c = tintOf(id); o = 0.45; }
     mat.color.setHex(c); mat.opacity = o;
   }
 }
@@ -318,7 +318,6 @@ function badgeList(): Badge[] {
   const out: Badge[] = [];
   if (selUnit && !g.battle) { const u = g.units.find((x) => x.id === selUnit)!; for (const o of optsFor(selUnit)) out.push({ area: o.area, text: g.phase === 'strategic' ? '' : `${o.cost}`, cls: o.mustStop ? 'stop' : o.fuel && u.side === 'german' ? 'fuel' : 'ok' }); }
   if (!selUnit && (g.phase === 'combat' || g.phase === 'btCombat') && !g.battle) { const must = E.mustFight(g); for (const a of fightable()) out.push({ area: a, text: must.includes(a) ? 'FIGHT' : 'fight?', cls: must.includes(a) ? 'war' : 'opt' }); }
-  if (tint !== 'off') for (const a of E.areas.values()) out.push({ area: a.id, text: tint === 'tdn' ? `TDN ${a.tdn}` : `Z${a.zone}`, cls: 'tint' });
   for (const o of arrOpts()) out.push({ area: o.area, text: o.sa ? 'SA' : 'Enter', cls: o.sa ? 'stop' : 'ok' });
   if (g.battle?.stage === 'retreat') for (const a of E.retreatOptions(g, g.battle)) out.push({ area: a, text: 'Retreat', cls: 'ok' });
   return out;
