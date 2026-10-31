@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { bridgeTargets, blowBridges, canReserve, setReserve, blocks, updateControlForTest, allocateForTest, defenderRetreatSA, arrivalOptions, placeArrival, newGame, endPhase, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, moveOptions, boxOf, roadblock, roadblockAreas, playInterdiction, staffBoundary, staffPool, staffIntel,
+import { BRITISH_AREAS, chooseFirstLoss, bridgeTargets, blowBridges, canReserve, setReserve, blocks, updateControlForTest, allocateForTest, defenderRetreatSA, arrivalOptions, placeArrival, newGame, endPhase, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, moveOptions, boxOf, roadblock, roadblockAreas, playInterdiction, staffBoundary, staffPool, staffIntel,
   playAirSupply, airSupplyAreas, rerouteOptions, reroute, stratOptions, move, resolveBlow, connection, neighbors, unitsIn, inSupply, assetLimits, areas, type Game } from '../src';
 
 function toAdmin(seed: number, turn = 2, campaign = false): Game {
   const g = newGame(seed, campaign ? { scenario: 'campaign' } : {});
-  for (const a of mustFight(g)) { const b = startBattle(g, a); beginCombat(g, b); for (let i = 0; i < 30 && b.stage !== 'done'; i++) { if (b.stage === 'attChoice') attackerChoice(g, b, false); else if (b.stage === 'defChoice') defenderChoice(g, b, false); else if (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]); else roll_step(g, b); } closeBattle(g); }
+  for (const a of mustFight(g)) { const b = startBattle(g, a); beginCombat(g, b); for (let i = 0; i < 90 && b.stage !== 'done'; i++) { if (b.stage === 'attChoice') attackerChoice(g, b, false); else if (b.stage === 'defChoice') defenderChoice(g, b, false); else if (b.stage === 'attFirst') chooseFirstLoss(g, b, b.attPoint); else if (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]); else roll_step(g, b); } closeBattle(g); }
   while (!(g.turn === turn && g.phase === 'admin')) endPhase(g);
   return g;
 }
@@ -63,7 +63,7 @@ describe('M3 rules', () => {
   });
   it('Reroute (8.27): a reinforcement may move to another entry area for a Special Action', () => {
     const g = newGame(9, { scenario: 'campaign' });
-    while (!(g.turn === 2 && g.phase === 'reinforcement')) { for (const a of mustFight(g)) { const b = startBattle(g, a); beginCombat(g, b); for (let i = 0; i < 30 && b.stage !== 'done'; i++) { if (b.stage === 'attChoice') attackerChoice(g, b, false); else if (b.stage === 'defChoice') defenderChoice(g, b, false); else if (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]); else roll_step(g, b); } closeBattle(g); } endPhase(g); }
+    while (!(g.turn === 2 && g.phase === 'reinforcement')) { for (const a of mustFight(g)) { const b = startBattle(g, a); beginCombat(g, b); for (let i = 0; i < 90 && b.stage !== 'done'; i++) { if (b.stage === 'attChoice') attackerChoice(g, b, false); else if (b.stage === 'defChoice') defenderChoice(g, b, false); else if (b.stage === 'attFirst') chooseFirstLoss(g, b, b.attPoint); else if (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]); else roll_step(g, b); } closeBattle(g); } endPhase(g); }
     for (const id of [...g.pendingArrivals]) { const o = arrivalOptions(g, id).find((x) => !x.sa); if (o) placeArrival(g, id, o.area); }
     const u = g.units.find((x) => g.arrived.includes(x.id) && rerouteOptions(g, x.id).length);
     if (u) { const to = rerouteOptions(g, u.id)[0], before = boxOf(g, u.side, 'available').length; reroute(g, u.id, to); expect(u.area).toBe(to); expect(boxOf(g, u.side, 'available').length).toBeLessThanOrEqual(before); }
@@ -78,10 +78,10 @@ describe('retreat choice (6.5)', () => {
       const g = newGame(seed);
       for (const a of mustFight(g)) {
         const b = startBattle(g, a); beginCombat(g, b);
-        for (let i = 0; i < 30 && b.stage !== 'done'; i++) {
+        for (let i = 0; i < 90 && b.stage !== 'done'; i++) {
           if (b.stage === 'attChoice') attackerChoice(g, b, false);
           else if (b.stage === 'defChoice') defenderChoice(g, b, true);
-          else if (b.stage === 'retreat') { const opts = retreatOptions(g, b); expect(opts.length).toBeGreaterThan(1); const u = g.units.find((x) => x.id === b.retreat!.queue[0])!; chooseRetreat(g, b, opts[opts.length - 1]); expect(u.area).toBe(opts[opts.length - 1]); expect(u.disorder).toBe(1); seen++; }
+          else if (b.stage === 'attFirst') chooseFirstLoss(g, b, b.attPoint); else if (b.stage === 'retreat') { const opts = retreatOptions(g, b); expect(opts.length).toBeGreaterThan(1); const u = g.units.find((x) => x.id === b.retreat!.queue[0])!; chooseRetreat(g, b, opts[opts.length - 1]); expect(u.area).toBe(opts[opts.length - 1]); expect(u.disorder).toBe(1); seen++; }
           else roll_step(g, b);
         }
         if (b.stage === 'done') closeBattle(g);
@@ -173,5 +173,12 @@ describe('entry areas and engineers (14.2, 14.52, 16.11)', () => {
     const other = g.chits.find((c) => c.kind === 'engineer' && c.ech === 'de_5pz')!; other.box = 'available';
     const a = [...areas.keys()].find((x) => areas.get(x)!.zone === 6 && bridgeTargets(g, 'german', x).length);
     if (a != null) { blowBridges(g, other.id, a, [bridgeTargets(g, 'german', a)[0]]); expect(other.box).toBe('used'); }
+  });
+});
+
+describe('British limits (14.43)', () => {
+  it('British blocks never get a destination, strat-move or entry outside the area northwest of the Meuse', () => {
+    const g = newGame(5, { scenario: 'campaign' }); const br = g.units.find((u) => u.ech === 'br_xxx')!;
+    for (const a of BRITISH_AREAS) { br.area = a; br.moved = false; g.phase = 'movement'; g.phasing = 'allied'; for (const o of moveOptions(g, br.id)) expect(BRITISH_AREAS.has(o.area)).toBe(true); }
   });
 });

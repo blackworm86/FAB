@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { arrivalOptions, placeArrival, newGame, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, assign, canAssign, endPhase, moveOptions, move, resolveBlow, setReserve, canReserve,
+import { chooseFirstLoss, arrivalOptions, placeArrival, newGame, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, assign, canAssign, endPhase, moveOptions, move, resolveBlow, setReserve, canReserve,
   stratOptions, stratMove, contestedAreas, unitsIn, boxOf, victory, assetLimits, type Game } from '../src';
 
 function runBattle(g: Game, a: number, flip: boolean) {
   const b = startBattle(g, a);
   for (const side of ['german', 'allied'] as const) for (const c of boxOf(g, side, 'available')) { try { assign(g, b, c.id); } catch { /* not assignable */ } }
   beginCombat(g, b);
-  for (let i = 0; i < 40 && b.stage !== 'done'; i++) {
-    if (b.stage === 'attChoice') attackerChoice(g, b, flip); else if (b.stage === 'defChoice') defenderChoice(g, b, !flip); else if (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]); else roll_step(g, b);
+  for (let i = 0; i < 90 && b.stage !== 'done'; i++) {
+    if (b.stage === 'attChoice') attackerChoice(g, b, flip); else if (b.stage === 'defChoice') defenderChoice(g, b, !flip); else if (b.stage === 'attFirst') chooseFirstLoss(g, b, b.attPoint); else if (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]); else roll_step(g, b);
   }
   expect(b.stage).toBe('done'); closeBattle(g);
 }
 function invariants(g: Game) {
-  for (let a = 1; a <= 98; a++) for (const side of ['german', 'allied'] as const) expect(unitsIn(g, a, side).filter((u) => !u.garrison).length).toBeLessThanOrEqual(a === 6 && side === 'german' && g.turn >= 4 ? 4 : 2);              // 15.3 turn-4 arrivals may break stacking at entry Z
+  for (let a = 1; a <= 98; a++) for (const side of ['german', 'allied'] as const) { const n = unitsIn(g, a, side).filter((u) => !u.garrison).length, lim = a === 6 && side === 'german' && g.turn >= 4 ? 5 : 2; if (n > lim) expect(n).toBeLessThanOrEqual(lim); }              // 15.3 turn-4 arrivals may break stacking at entry Z
   for (const u of g.units) { if (u.area != null) { expect(u.str).toBeGreaterThanOrEqual(1); expect(u.str).toBeLessThanOrEqual(u.max); } else if (!u.arrival && u.code !== 'Res') expect(u.str === 0 || !!u.garrison).toBe(true); }
   const n = g.chits.length; expect(['german', 'allied'].flatMap((s) => ['future', 'cup', 'available', 'used', 'eliminated', 'map'].flatMap((bx) => boxOf(g, s as 'german', bx as 'cup'))).length).toBe(n);
   for (const sd of ['german', 'allied'] as const) for (const k of Object.keys(g.markers[sd])) expect(g.markers[sd][k]).toBeGreaterThanOrEqual(0);

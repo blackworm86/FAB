@@ -25,7 +25,7 @@ export interface Unit {
 export interface Roll { who: string; sn: number; dice: number[]; hits: number; kind: 'arty' | 'ground' }
 export interface Battle {
   area: number; attacker: Side; attPoint: string; defPoint: string; bt: boolean; riverAssault: boolean;
-  stage: 'setup' | 'attArty' | 'defArty' | 'defFire' | 'offFire' | 'attChoice' | 'defChoice' | 'retreat' | 'done';
+  stage: 'setup' | 'attArty' | 'defArty' | 'defFire' | 'offFire' | 'attChoice' | 'attFirst' | 'defChoice' | 'retreat' | 'done';
   retreat?: { side: Side; queue: string[]; moved: boolean; after: 'ground' | 'arty' | 'sa'; h: number; excess: number };
   queue: ('attArty' | 'defArty' | 'defFire' | 'offFire')[]; assets: Record<Side, string[]>; air: Partial<Record<Side, { id: string; mode: 'arty' | 'support'; unit?: string }>>;
   pending: number; pendingKind?: 'arty' | 'ground'; engFw: boolean; rolls: Roll[]; result?: string; exploit: boolean; unitHit: Record<Side, boolean>; mark: number; hit?: Record<Side, string[]>;
@@ -196,6 +196,7 @@ export function moveOptions(g: Game, id: string): Opt[] {
       extraCost: (f, t) => (markerAreas(g, enemy).includes(t) ? 1 : 0) + (u.side === 'allied' && unitsIn(g, t, 'german').some((x) => x.heydte) ? 1 : 0) + (u.side === 'german' && (g.interdicted[f] || g.interdicted[t]) ? 1 : 0) });
   if (one) r = r.filter((x) => !g.blown.includes(keyOf(x.path[0], x.path[1])));                        // 7.31 no crossing of a blown bridge
   return r.filter((x) => {
+    if (!britishOk(u, x.area)) return false;
     if (blocks(g, x.area, u.side).length >= 2) return false;                                           // 5.1
     const en = unitsIn(g, x.area, enemy).length > 0, cont = contested(g, x.area);
     if (g.phase === 'reaction' && en && !cont) return false;                                           // 7.2: reaction never creates a newly contested area
@@ -266,7 +267,7 @@ export function stratOptions(g: Game, id: string): number[] {
     seen.add(n); if (!(u.side === 'german' && g.interdicted[n])) q.push(n);                    // 17.2 no strat-move through an interdicted area
   } }
   seen.delete(u.area);
-  return [...seen].filter((a) => blocks(g, a, u.side).length < 2 && inSupply(g, u.side, a));
+  return [...seen].filter((a) => britishOk(u, a) && blocks(g, a, u.side).length < 2 && inSupply(g, u.side, a));
 }
 export function stratMove(g: Game, id: string, to: number) {
   if (!stratOptions(g, id).includes(to)) throw new Error('illegal strategic move');
@@ -289,6 +290,9 @@ export function spendSA(g: Game, side: Side, ech?: string, why = 'Special Action
 const needAdmin = (g: Game) => { if (g.phase !== 'admin') throw new Error('only in the Admin Phase'); };
 export const suppliedArea = (g: Game, side: Side, a: number) => g.control[a] === side && inSupply(g, side, a) && !contested(g, a);
 const supplied = (g: Game, side: Side, a: number) => g.control[a] === side && inSupply(g, side, a) && !contested(g, a);
+/** 14.43: the British operate only northwest of the Meuse, from area 57 in the north to area 96 in the west (areas on that side of the Meuse in the hand-drawn map). */
+export const BRITISH_AREAS = new Set([57, 58, 78, 79, 92, 93, 94, 95, 96]);
+const britishOk = (u: Unit, a: number) => u.ech !== 'br_xxx' || BRITISH_AREAS.has(a);
 const ARMY_ECH: Record<number, string> = { 5: 'de_5pz', 6: 'de_6pz', 7: 'de_7a' };
 const echOk = (g: Game, c: Chit, a: number) => c.side === 'allied' || c.ech === 'de_sr' || c.ech === 'german' || ZONE[c.ech] === zoneOf(a) ||
   (c.kind === 'engineer' && !g.chits.some((x) => x.kind === 'engineer' && x.ech === ARMY_ECH[zoneOf(a)] && x.box !== 'eliminated'));   // 14.52 an army that lost its engineer may borrow another   // 16.1 German assets/events act only in their own army's zone
@@ -565,10 +569,24 @@ export function roll_step(g: Game, b: Battle) {
   throw new Error('nothing to roll');
 }
 function hitAttacker(g: Game, b: Battle, h: number) {
-  if (h > 0) { b.unitHit[b.attacker] = false; allocate(g, b, b.attacker, 1); }                                   // 6.41a
-  const rest = h - 1;
+  if (h > 0) {
+    b.unitHit[b.attacker] = false;
+    if (b.assets[b.attacker].some((id) => isBattleAsset(chit(g, id)))) { b.pending = h; b.stage = 'attFirst'; return; }                // 6.41a the attacker picks the point unit or one battle asset
+    allocate(g, b, b.attacker, 1);
+  }
+  afterFirstHit(g, b, h - 1);
+}
+function afterFirstHit(g: Game, b: Battle, rest: number) {
   if (rest > 0 && unitsIn(g, b.area, b.attacker).some((u) => !u.garrison)) { b.pending = rest; b.stage = 'attChoice'; return; }
   next(g, b);
+}
+/** 6.41a: the first hit on the attacker falls on the point unit or on any one assigned battle asset, the player's choice. */
+export function chooseFirstLoss(g: Game, b: Battle, key: string) {
+  if (b.stage !== 'attFirst') throw new Error('no choice pending');
+  const att = b.attacker; fixPoint(g, b);
+  if (key !== b.attPoint && !b.assets[att].includes(key)) throw new Error('the first loss falls on the point unit or one battle asset');
+  const h = b.pending; b.pending = 0; stepLoss(g, b, att, key); b.hit ??= { german: [], allied: [] }; b.hit[att] = [...new Set([...b.hit[att], key])];
+  afterFirstHit(g, b, h - 1);
 }
 export function attackerChoice(g: Game, b: Battle, abort: boolean) {
   if (b.stage !== 'attChoice') throw new Error('no choice pending');

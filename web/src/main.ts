@@ -482,7 +482,7 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
   if (b) {
     if (b.stage === 'setup') return { label: 'Begin combat ▸', fn: () => act(() => E.beginCombat(g, b)) };
     if (b.stage === 'done') return { label: 'Close battle ▸', fn: () => act(() => { E.closeBattle(g); const m = E.mustFight(g); if (m.length) { selArea = m[0]; E.startBattle(g, m[0], g.phase === 'btCombat'); } }) };
-    if (b.stage.endsWith('Choice') || b.stage === 'retreat') return null;
+    if (b.stage.endsWith('Choice') || b.stage === 'retreat' || b.stage === 'attFirst') return null;
     return { label: `Roll ${STAGE_NAME[b.stage].toLowerCase()} ▸`, fn: () => rollStage(b) };
   }
   const must = E.mustFight(g);
@@ -589,6 +589,7 @@ function ledger() {
       <div class="row end"><button class="primary" data-do="${reg(() => endRoll())}" ${rv.pos ? '' : 'disabled'}>Continue ▸</button></div></div>`;
   }
   if (b.stage === 'retreat' && b.retreat) { const u = g.units.find((x) => x.id === b.retreat!.queue[0])!; return `<div class="c-ledger"><h3>${esc(u.name)} retreats</h3><p class="hint">Pick the area. The block becomes disordered.</p><div class="row">${E.retreatOptions(g, b).map((a) => btn(esc(areaName(a)), () => E.chooseRetreat(g, b, a), 'primary')).join('')}</div></div>`; }
+  if (b.stage === 'attFirst') { const att = b.attacker, opts = [{ k: b.attPoint, n: `${g.units.find((u) => u.id === b.attPoint)!.name} (point unit, loses a step)` }, ...b.assets[att].filter((id) => E.isBattleAsset(E.chit(g, id))).map((id) => ({ k: id, n: `${E.chit(g, id).name} (asset is eliminated)` }))]; return `<div class="c-ledger"><h3>${b.pending} hit(s) on the attackers</h3><p class="hint">The first hit falls on the point unit or on one battle asset (6.41a). Which one?</p><div class="row">${opts.map((o) => btn(esc(o.n), () => E.chooseFirstLoss(g, b, o.k))).join('')}</div></div>`; }
   if (b.stage === 'attChoice') return `<div class="c-ledger"><h3>${b.pending} hit(s) on the attackers</h3><p class="hint">Abort the attack (all attackers disordered, no more losses) or continue and take them as step losses?</p><div class="row end">${btn('Abort attack', () => E.attackerChoice(g, b, true))}${btn('Take losses', () => E.attackerChoice(g, b, false), 'primary')}</div></div>`;
   if (b.stage === 'defChoice') return `<div class="c-ledger"><h3>${b.pending} hit(s) on the defenders</h3><p class="hint">${b.pendingKind === 'arty' ? 'Disorder all defenders to absorb 1 hit, or take every hit as a step loss?' : 'Retreat all units (absorbs 1 hit, they become disordered) or stand and take step losses?'}</p><div class="row end">${btn('Take losses', () => E.defenderChoice(g, b, false))}${btn(b.pendingKind === 'arty' ? 'Disorder (absorb 1)' : 'Retreat', () => E.defenderChoice(g, b, true), 'primary')}</div></div>`;
   if (b.stage === 'offFire' && b.assets[b.attacker].some((id) => E.chit(g, id).kind === 'engineer') && g.fieldWorks.includes(b.area)) return `<div class="c-ledger slim"><label><input type="checkbox" ${b.engFw ? 'checked' : ''} data-sel="${regv((v) => { b.engFw = v === 'on'; })}"> Engineer removes the field works instead of firing (6.33)</label></div>`;
