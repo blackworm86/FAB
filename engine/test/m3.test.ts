@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BRITISH_AREAS, chooseFirstLoss, bridgeTargets, blowBridges, canReserve, setReserve, blocks, updateControlForTest, allocateForTest, defenderRetreatSA, arrivalOptions, placeArrival, newGame, endPhase, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, moveOptions, boxOf, roadblock, roadblockAreas, playInterdiction, staffBoundary, staffPool, staffIntel,
+import { eligibleForStep, playReplacement, BRITISH_AREAS, chooseFirstLoss, bridgeTargets, blowBridges, canReserve, setReserve, blocks, updateControlForTest, allocateForTest, defenderRetreatSA, arrivalOptions, placeArrival, newGame, endPhase, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, moveOptions, boxOf, roadblock, roadblockAreas, playInterdiction, staffBoundary, staffPool, staffIntel,
   playAirSupply, airSupplyAreas, rerouteOptions, reroute, stratOptions, move, resolveBlow, connection, neighbors, unitsIn, inSupply, assetLimits, areas, type Game } from '../src';
 
 function toAdmin(seed: number, turn = 2, campaign = false): Game {
@@ -181,4 +181,14 @@ describe('British limits (14.43)', () => {
     const g = newGame(5, { scenario: 'campaign' }); const br = g.units.find((u) => u.ech === 'br_xxx')!;
     for (const a of BRITISH_AREAS) { br.area = a; br.moved = false; g.phase = 'movement'; g.phasing = 'allied'; for (const o of moveOptions(g, br.id)) expect(BRITISH_AREAS.has(o.area)).toBe(true); }
   });
+});
+
+describe('second review fixes', () => {
+  it('17.23: an arriving-regiment event brings an eliminated infantry division back with one step', () => {
+    const g = toAdmin(4, 2, true), c = g.chits.find((x) => x.kind === 'event_arriving_regiment' && x.division?.startsWith('1'))!; c.box = 'available';
+    const u = g.units.find((x) => x.name === '1 Inf')!; u.area = null; u.str = 0; g.elimLarge.push(u.id);
+    expect(eligibleForStep(c, u)).toBe(true); playReplacement(g, c.id, u.id);
+    expect(u.str).toBe(1); expect(u.area).not.toBeNull(); expect(g.elimLarge).not.toContain(u.id);
+  });
+  it('Rochefort has terrain 0 in the map data', () => { expect(areas.get(82)!.tdn).toBe(0); });
 });

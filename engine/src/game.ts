@@ -142,8 +142,8 @@ function reinforcementPhase(g: Game) {
     const sa = g.chits.find((c) => c.kind === 'sa_block' && c.side === side && c.turn === 2 && g.turn >= 2)!;
     if (g.turn >= 2) {
       if (sa.box === 'available') {                                               // 4.1a unused reusable SA: bring one asset back too
-        const pri = ['engineer', 'artillery', 'rocket_artillery', 'armor_asset', 'infantry_asset'];
-        const back = boxOf(g, side, 'used').filter((c) => isAsset(c) && c.kind !== 'fuel').sort((a, b) => pri.indexOf(a.kind) - pri.indexOf(b.kind))[0];
+        const pri = ['engineer', 'artillery', 'rocket_artillery', 'armor_asset', 'fuel', 'infantry_asset', 'command_staff'];
+        const back = boxOf(g, side, 'used').filter((c) => isAsset(c)).sort((a, b) => pri.indexOf(a.kind) - pri.indexOf(b.kind))[0];
         if (back) { back.box = 'available'; say(g, `${side}: ${back.name} returned to Available (unused Special Action)`); }
       } else sa.box = 'available';
     }
@@ -331,6 +331,7 @@ function addStep(u: Unit, elite: boolean) {
   u.str++;
 }
 export function eligibleForStep(c: Chit, u: Unit) {
+  if (c.kind === 'event_arriving_regiment' && u.side === c.side && u.area == null && u.str === 0 && !u.garrison) return u.name === `${parseInt(c.division ?? '')} Inf`;     // 17.23 brings an eliminated division back
   if (u.side !== c.side || u.area == null || u.garrison || u.unsupplied || u.str >= u.max) return false;
   const arm = c.kind === 'replacement_arm' || c.kind === 'rebuild_or_replace_arm', inf = c.kind === 'replacement_inf' || c.kind === 'rebuild_or_replace_inf';
   if (c.kind === 'event_arriving_regiment') return u.name === `${parseInt(c.division ?? '')} Inf`;
@@ -342,6 +343,11 @@ export function eligibleForStep(c: Chit, u: Unit) {
 export function playReplacement(g: Game, id: string, unitId: string) {
   needAdmin(g); const c = chit(g, id), u = g.units.find((x) => x.id === unitId)!;
   if (c.box !== 'available' || !eligibleForStep(c, u)) throw new Error('that unit is not eligible');
+  if (u.area == null) {                                                                                     // 17.23: back into play with one step in a free friendly entry area
+    const to = [...listedEntries(u), ...appropriateAreas(u)].find((a) => entryOpen(g, u, a)); if (to == null) throw new Error('no free entry area for it right now');
+    u.str = 1; u.area = to; u.disorder = 0; u.unsupplied = false; g.control[to] = u.side; g.elimLarge = g.elimLarge.filter((x) => x !== u.id); c.box = 'eliminated';
+    return say(g, `${c.name}: ${u.name} returns in ${areas.get(to)!.name} with 1 step`);
+  }
   addStep(u, c.kind === 'event_arriving_regiment'); c.box = 'eliminated'; say(g, `${c.name}: ${u.name} gains a step (${u.str}/${u.max})`);
 }
 export function playRebuild(g: Game, id: string, unitId: string, area: number) {
@@ -396,7 +402,7 @@ export function playInterdict(g: Game, id: string, unitId: string) {
 }
 /** 17.11: when the unit next tries to move, build field works or take a reserve marker it rolls morale with +2; on failure it only stays or moves one area. */
 export function interdictCheck(g: Game, u: Unit) {
-  const r = roll(g), ok = succeeds(r, moraleSn(quality(u), u.disorder > 0, u.unsupplied) + 2);
+  const r = roll(g), ok = succeeds(r, moraleSn(quality(u), u.disorder > 0, u.unsupplied && !(g.opts.airborne && AIRBORNE.has(u.name))) + 2);
   chit(g, u.interdict!).box = 'eliminated'; u.interdict = undefined;
   say(g, `Greif interdict: ${u.name} morale check rolled ${r} → ${ok ? 'passed, no effect' : 'failed'}`); return ok;
 }
@@ -663,7 +669,7 @@ function end(g: Game, b: Battle, result: string) {
   for (const side of ['german', 'allied'] as Side[]) { const a = b.air[side]; if (a) chit(g, a.id).box = 'eliminated'; }      // air missions are single-use
   g.fought.push(b.area); for (const n of [b.area, ...neighbors(b.area)]) updateControl(g, n);
   if (b.exploit && !b.bt && !b.riverAssault) for (const u of unitsIn(g, b.area, b.attacker).filter((x) => x.cls === 'armor' && !x.garrison)) {      // 6.8
-    const r = roll(g), ok = succeeds(r, moraleSn(quality(u), u.disorder > 0, u.unsupplied)); if (ok) u.exploit = true;
+    const r = roll(g), ok = succeeds(r, moraleSn(quality(u), u.disorder > 0, u.unsupplied && !(g.opts.airborne && AIRBORNE.has(u.name)))); if (ok) u.exploit = true;
     say(g, `${u.name} exploitation morale check: rolled ${r} → ${ok ? 'exploitation marker' : 'failed'}`);
   }
   say(g, `${areas.get(b.area)!.name}: ${result}`);
@@ -704,7 +710,8 @@ function retreatExcess(g: Game) {
 function placeRiverAssaults(g: Game) {
   for (const [a, list] of Object.entries(g.entered)) {
     const area = +a, att = blocks(g, area, g.phasing);
-    if (contested(g, area) && !g.contestedAtMoveStart.includes(area) && att.length && att.every((u) => list.some((e) => e.id === u.id && e.river)) && list.some((e) => e.blown) && !g.riverAssault.includes(area)) { g.riverAssault.push(area); say(g, `river assault in ${areas.get(area)!.name}`); }
+    if (contested(g, area) && !g.contestedAtMoveStart.includes(area) && att.length && att.every((u) => list.some((e) => e.id === u.id && e.river)) && list.some((e) => e.blown) && !g.riverAssault.includes(area) && g.riverAssault.length < 4) {      // 4 markers in the counter mix
+ g.riverAssault.push(area); say(g, `river assault in ${areas.get(area)!.name}`); }
   }
   g.entered = {}; g.riverCross = []; g.blowTried = [];
 }

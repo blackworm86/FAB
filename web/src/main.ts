@@ -222,7 +222,7 @@ function chitPanel(c: E.Chit): string {
     }
   } else if (c.kind.startsWith('replacement') || c.kind === 'event_arriving_regiment' || c.kind.startsWith('rebuild')) {
     const el = g.units.filter((x) => E.eligibleForStep(c, x));
-    el.forEach((x) => out.push(btn(`+1 step: ${esc(x.name)} (${x.str}/${x.max}) in ${esc(areaName(x.area!))}`, () => E.playReplacement(g, c.id, x.id))));
+    el.forEach((x) => out.push(btn((x.area == null ? `Bring back ${esc(x.name)} with 1 step` : `+1 step: ${esc(x.name)} (${x.str}/${x.max}) in ${esc(areaName(x.area))}`), () => E.playReplacement(g, c.id, x.id))));
     if (!el.length) out.push('<p class="hint">No reduced, supplied unit of the right class and Higher Echelon.</p>');
     if (c.kind.startsWith('rebuild')) g.units.filter((x) => x.area == null && x.max === 1 && x.side === c.side && x.q[0] !== 'elite' && !x.garrison && (c.kind.endsWith('arm') === (x.cls === 'armor')) && x.str === 0).forEach((x) => out.push(a == null ? '<p class="hint">Select an objective area to return an eliminated unit.</p>' : btn(`Return ${esc(x.name)} to ${esc(areaName(a))}`, () => E.playRebuild(g, c.id, x.id, a))));
   } else if (c.kind === 'special_action_event' || c.kind === 'sa_block') {

@@ -52,7 +52,7 @@ for oa in old['areas']:
     ring = pg.simplify(0.35, preserve_topology=True); ring = max(ring.geoms, key=lambda g: g.area) if ring.geom_type == 'MultiPolygon' else ring
     poly = [[round(x, 1), round(y, 1)] for x, y in list(ring.exterior.coords)[:-1]]
     lab = oa['label'] if pg.contains(Point(*oa['label'])) else [round(rp.x), round(rp.y)]
-    new_areas.append({**oa, 'label': lab, 'polygon': poly, 'drawn': True}); oa['_pg'] = pg
+    new_areas.append({**oa, 'tdn': tdn if tdn is not None else oa['tdn'], 'label': lab, 'polygon': poly, 'drawn': True}); oa['_pg'] = pg
 shapes_by_id = {a['id']: next(pg for pg, c in A if pg.contains(SP(a['polygon']).buffer(0).representative_point())) if False else None for a in new_areas}
 # adjacency of the drawn areas against the connection list
 pgs = {}
