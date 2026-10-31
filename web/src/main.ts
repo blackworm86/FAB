@@ -422,10 +422,12 @@ function arrOpts(): { area: number; sa: boolean }[] {
 
 /* ---------- camera focus ---------- */
 type Goal = { t: THREE.Vector3; dist: number; pitch: number } | null; let goal: Goal = null, saved: Goal = null, inBattle = false;
+let frameKey = '';
 function syncBattleCam() {
-  if (g.battle && !inBattle) { saved = { t: target.clone(), dist, pitch }; const a = E.areas.get(g.battle.area)!, p = toWorld(...POLE.get(a.id)!); goal = { t: new THREE.Vector3(p.x, 0, p.z - 1.6 * (viewSide() === 'allied' ? -1 : 1)), dist: 17, pitch: 1.0 }; }
-  if (!g.battle && inBattle && saved) goal = saved;
-  inBattle = !!g.battle;
+  const b = g.battle, key = b ? `${b.area}:${b.stage === 'setup' ? 's' : 'f'}` : '';                 // re-centre when a battle opens and when its rolling starts
+  if (b && key !== frameKey) { if (!inBattle) saved = { t: target.clone(), dist, pitch }; const p = toWorld(...POLE.get(b.area)!); goal = { t: new THREE.Vector3(p.x, 0, p.z - 1.6 * (viewSide() === 'allied' ? -1 : 1)), dist: innerWidth < 700 ? 15 : 17, pitch: 1.0 }; }
+  if (!b && inBattle && saved) goal = saved;
+  frameKey = key; inBattle = !!b;
 }
 
 /* ---------- map interaction ---------- */
@@ -444,7 +446,7 @@ function click(e: PointerEvent) {
   if (g.pendingBlow || g.battle) return;
   if (selArr && area != null && arrOpts().some((o) => o.area === area)) { const id = selArr; selArr = null; return act(() => { if (g.pendingArrivals.includes(id)) E.placeArrival(g, id, area); else E.placeTaskForce(g, id, area); }); }
   if (selUnit && area != null && optsFor(selUnit).some((o) => o.area === area)) { previewArea = area; refresh(); return; }
-  if ((g.phase === 'combat' || g.phase === 'btCombat') && area != null && fightable().includes(area)) { selArea = area; selUnit = null; return act(() => { E.startBattle(g, area, g.phase === 'btCombat'); }); }
+  if ((g.phase === 'combat' || g.phase === 'btCombat') && area != null && fightable().includes(area)) { selArea = selArea === area ? null : area; selUnit = null; previewArea = null; return refresh(); }
   const uu = unit ? g.units.find((x) => x.id === unit) : null;
   if (uu && seen(uu)) { selUnit = unit!; selArea = uu.area; } else { selArea = area; selUnit = null; }
   previewArea = null; hoverArea = null; refresh();
@@ -515,6 +517,7 @@ const ICONS: Record<string, string> = {
   command_staff: '<path d="M12 3l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-3-5.4 3 1.1-6L3.2 9.4l6.1-.8z"/>',
   air_mission: '<path d="M2 14l9-2 3-9h2l-1 9 6 2v2l-6-1-1 5 2 1v1l-4-1-4 1v-1l2-1-1-5-7 1z"/>',
   sa_block: '<path d="M5 17l7-7 7 7M5 11l7-7 7 7"/>',
+  target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>', star: '<path d="M12 3l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-3-5.4 3 1.1-6L3.2 9.4l6.1-.8z"/>', tree: '<path d="M12 3l6 8h-3l4 6H5l4-6H6zM12 17v4"/>', shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>', wave: '<path d="M3 9c3-3 6 3 9 0s6 3 9 0M3 15c3-3 6 3 9 0s6 3 9 0"/>', warn: '<path d="M12 4l9 16H3zM12 10v5M12 17.5v.5"/>',
   next: '<path d="M5 12h13M13 6l6 6-6 6"/>', back: '<path d="M19 12H6M11 6l-6 6 6 6"/>', check: '<path d="M4 12.5l5 5L20 6.5"/>', wand: '<path d="M4 20L15 9M13 5l1-2 1 2 2 1-2 1-1 2-1-2-2-1zM18 12l.7-1.4L20 10l-1.3-.6L18 8l-.6 1.4L16 10l1.4.6z"/>', info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>', share: '<path d="M12 15V3M7 8l5-5 5 5M5 13v7h14v-7"/>', dice: '<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="15" r="1"/><circle cx="15" cy="9" r="1"/><circle cx="9" cy="15" r="1"/>',
   home: '<path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/>', layers: '<path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5"/>', undo: '<path d="M9 7L4 12l5 5M4 12h10a5 5 0 010 10h-2"/>', menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', boxes: '<rect x="3" y="4" width="18" height="5"/><path d="M5 9v10h14V9M10 13h4"/>', close: '<path d="M6 6l12 12M18 6L6 18"/>', swap: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>', plus: '<path d="M12 5v14M5 12h14"/>',
 };
@@ -618,7 +621,7 @@ function promptText() {
   if (g.over) return `<b>${esc(g.over)}</b>`;
   if (g.pendingBlow) return `<b>${nm(other(g.units.find((x) => x.id === g.pendingBlow!.unit)!.side))}</b>: attempt to blow the bridge?`;
   if (b?.stage === 'retreat') return '<b>Choose the retreat area.</b>';
-  if (b) return b.stage === 'setup' ? (() => { const me = online.mySide(), rd = (sd: E.Side) => b.ready?.includes(sd); return online.active && !online.both() && me ? `<b>${rd(me) ? 'You are ready.' : 'Tap an asset to add it, then press Ready.'}</b> Opponent: ${rd(other(me)) ? 'ready' : 'preparing'}.` : '<b>Tap a card to add it</b>; tap a block to set the point unit.'; })() : b.stage === 'done' ? `<b>${esc(b.result ?? '')}</b>` : rollView ? 'Dice are cast automatically. <b>1 always hits, 10 always misses.</b>' : b.stage.endsWith('Choice') ? 'Choose how to take the hits.' : `Next: <b>${STAGE_NAME[b.stage]}</b>`;
+  if (b) return b.stage === 'setup' ? (() => { const me = online.mySide(), rd = (sd: E.Side) => b.ready?.includes(sd); return online.active && !online.both() && me ? `<b>${rd(me) ? 'You are ready.' : 'Tap an asset to add it, then press Ready.'}</b> Opponent: ${rd(other(me)) ? 'ready' : 'preparing'}.` : '<b>Tap a card to add it</b>; tap a block to set the point unit.'; })() : b.stage === 'done' ? `<b>${esc(b.result ?? '')}</b>` : rollView ? '' : b.stage.endsWith('Choice') ? 'Choose how to take the hits.' : `Next: <b>${STAGE_NAME[b.stage]}</b>`;
   const m = E.mustFight(g).length;
   switch (g.phase) {
     case 'reinforcement': return '<b>Pick a new block</b>, then a lit entry area.';
@@ -642,12 +645,16 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
       const on = b.ready?.includes(me);
       return { label: on ? 'Waiting… tap to undo' : 'Ready', fn: () => act(() => E.setReady(g, b, me, !on)) };
     }
-    if (b.stage === 'done') return { label: 'Close battle', fn: () => act(() => { E.closeBattle(g); const m = E.mustFight(g); if (m.length) { selArea = m[0]; E.startBattle(g, m[0], g.phase === 'btCombat'); } }) };
+    if (b.stage === 'done') return { label: 'Close battle', fn: () => act(() => { E.closeBattle(g); selArea = null; }) };
     if (b.stage.endsWith('Choice') || b.stage === 'retreat' || b.stage === 'attFirst') return null;
     return { label: `Roll ${STAGE_NAME[b.stage].toLowerCase()}`, fn: () => rollStage(b) };
   }
   const must = E.mustFight(g);
-  if (must.length && (g.phase === 'combat' || g.phase === 'btCombat')) return { label: `Fight ${areaName(must[0])}`, fn: () => { selUnit = null; selArea = must[0]; E.startBattle(g, must[0], g.phase === 'btCombat'); } };
+  if (g.phase === 'combat' || g.phase === 'btCombat') {                                              // the player picks the battle and starts it; nothing opens by itself
+    const sel = selArea != null && fightable().includes(selArea) ? selArea : null;
+    if (sel != null) return { label: `Fight ${areaName(sel)}`, fn: () => { selUnit = null; E.startBattle(g, sel, g.phase === 'btCombat'); } };
+    if (must.length) return { label: 'Select a battle', fn: () => undefined, dis: true };
+  }
   return { label: `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`, fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; }), dis: !!E.mustFight(g).length || !!g.recover.length };
 }
 function dispatch() {
@@ -732,19 +739,19 @@ function battleTable() {
     const sa = setup && s !== att ? E.saAvailable(g, s).length : 0;
     return `<div class="c-side ${s} ${mine(s) ? 'mine' : 'theirs'}"><h4>${nm(s)} <small>${s === att ? 'attacking' : 'defending'}${online.active && !online.both() ? (mine(s) ? ' · you' : ' · opponent') : ''}</small></h4>
       <div class="c-body"><div class="c-row">${us.map((u) => `<div tabindex="0" role="button" class="blk ${s} ${u.id === pt && seen(u) ? 'pt' : ''} ${air && b.air[s]!.mode === 'support' && b.air[s]!.unit === u.id ? 'air' : ''}" data-unit="${u.id}" data-side="${s}" data-tag="${s === 'german' ? 'G' : 'A'}" title="${seen(u) ? esc(u.name) + (u.id === pt ? ' (point unit)' : '') : 'Hidden block'}" aria-label="${seen(u) ? esc(u.name) : 'Hidden block'}">${b3(seen(u) ? unitFace(u) : blankFace(u.side), sideOfUnit(u), !!u.garrison)}</div>`).join('')}</div>
-      <div class="c-slots"><div class="slot" data-side="${s}" data-zone="arty"><span class="lab">ARTY ${arty.length}/${lim.arty}</span>${arty.map(mini).join('') || '<small>drop</small>'}</div><div class="slot" data-side="${s}" data-zone="asset"><span class="lab">ASSETS</span>${rest.map(mini).join('') || '<small>drop</small>'}</div></div></div>
+      <div class="c-slots">${setup || arty.length ? `<div class="slot" data-side="${s}" data-zone="arty"><span class="lab">ARTY ${arty.length}/${lim.arty}</span>${arty.map(mini).join('') || '<small>drop</small>'}</div>` : ''}${setup || rest.length ? `<div class="slot" data-side="${s}" data-zone="asset"><span class="lab">ASSETS</span>${rest.map(mini).join('') || '<small>drop</small>'}</div>` : ''}</div></div>
       ${sa ? `<div class="row">${btn('Retreat (SA)', () => E.defenderRetreatSA(g, b), '', !mine(s) || !!b.assets[s].length || us.some((u) => u.garrison) || !us.length)}</div>` : ''}</div>`;
   };
   const covered = E.unitsIn(g, b.area).some((u) => !seen(u)), al = stats(b, 'allied'), ge = stats(b, 'german'), tot = al.mean + ge.mean || 1, side2 = att === 'german' ? ge : al;
   return `<div class="c-table ${rollView ? 'rolling' : ''}"><div class="c-title">${b.bt ? 'BREAKTHROUGH · ' : ''}${g.fought.length + fightable().length > 1 ? `<small class="cnt">Battle ${Math.min(g.fought.length + 1, g.fought.length + fightable().length)} of ${g.fought.length + fightable().length}</small> ` : ''}${esc(L.name)} <small>TDN ${L.tdn}${g.fieldWorks.includes(b.area) ? ' · <abbr title="Field works">FW</abbr>' : ''}${b.riverAssault ? ' · <abbr title="River assault">RA</abbr>' : ''}</small></div>${side('allied')}
-    <div class="c-vs">${covered ? '<small class="evh">UNITS ARE REVEALED WHEN COMBAT BEGINS</small><div class="big">?<span>:</span>?</div>' : `<small class="evh">EXPECTED HITS</small><div class="big">${al.mean.toFixed(1)}<span>:</span>${ge.mean.toFixed(1)}</div><div class="gauge"><i style="width:${(al.mean / tot) * 100}%"></i></div><small>${nm(att)} ≥2 hits ${side2.p(2)}% · ≥3 ${side2.p(3)}%</small>`}</div>${side('german')}</div>`;
+    <div class="c-vs">${covered ? '<div class="big">?<span>:</span>?</div>' : `<div class="big" title="Expected hits per combat round: Allied : German">${al.mean.toFixed(1)}<span>:</span>${ge.mean.toFixed(1)}</div><div class="gauge"><i style="width:${(al.mean / tot) * 100}%"></i></div>`}</div>${side('german')}</div>`;
 }
 function ledger() {
   const b = g.battle; if (!b || g.pendingBlow) return '';
   if (rollView) {
-    const rv = rollView, hits = rv.groups.reduce((s, x) => s + x.hits, 0), labels = (rv.pos ?? []).map((p) => { const gr = rv.groups[p.group], hit = isHit(p.v, gr.sn); return `<div class="lbl ${hit ? 'hit' : 'miss'}" style="left:${p.x}px;top:${p.y}px">${p.v}<em>${hit ? 'hit' : 'miss'}${p.v === 1 || p.v === 10 ? ' · always' : ''}</em></div>`; }).join('');
-    return `<div class="labels">${labels}</div><div class="c-ledger"><h3>${esc(rv.title)} · ${rv.pos ? `${hits} hit${hits === 1 ? '' : 's'}` : 'rolling…'}</h3>${rv.groups.map((x) => `<div class="ln"><span class="who">${esc(x.label)}</span><span class="mods">${x.parts.map(([w, v]) => `<span class="m ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}">${esc(w)}${v ? ` ${v > 0 ? '+' : '−'}${Math.abs(v)}` : ''}</span>`).join('')}</span><span class="sn">SN ${x.sn}</span><span class="res">${x.dice.map((d) => `<b class="${isHit(d, x.sn) ? 'hit' : 'miss'}">${d}</b>`).join(' ')}</span><span class="cnt">${x.hits}</span></div>`).join('')}
-      <div class="row end"><button class="primary" data-do="${reg(() => endRoll())}" ${rv.pos ? '' : 'disabled'}>Continue ▸</button></div></div>`;
+    const rv = rollView, hits = rv.groups.reduce((a, x) => a + x.hits, 0), labels = (rv.pos ?? []).map((p) => { const hit = isHit(p.v, rv.groups[p.group].sn); return `<div class="lbl ${hit ? 'hit' : 'miss'}" style="left:${p.x}px;top:${p.y}px">${hit ? 'HIT!' : 'MISS'}</div>`; }).join('');
+    return `<div class="labels">${labels}</div><div class="c-ledger tight"><div class="lh"><h3>${esc(rv.title)}</h3><b class="tot ${hits ? 'hit' : 'miss'}">${rv.pos ? `${hits} hit${hits === 1 ? '' : 's'}` : '…'}</b></div>${rv.groups.map((x) => `<div class="ln2"><span class="who">${esc(x.label)}</span><span class="sn">SN ${x.sn}</span><span class="cnt">${x.dice.length}${ico('dice')}</span><b class="${x.hits ? 'hit' : 'miss'}">${x.hits}</b></div>`).join('')}
+      <div class="row end"><button class="primary" data-do="${reg(() => endRoll())}" ${rv.pos ? '' : 'disabled'}>Continue${ico('next')}</button></div></div>`;
   }
   if (b.stage === 'retreat' && b.retreat) { const u = g.units.find((x) => x.id === b.retreat!.queue[0])!; return `<div class="c-ledger"><h3>${esc(u.name)} retreats</h3><p class="hint">The block becomes disordered.</p><div class="row">${E.retreatOptions(g, b).map((a) => btn(esc(areaName(a)), () => E.chooseRetreat(g, b, a), 'primary')).join('')}</div></div>`; }
   if (b.stage === 'attFirst') { const att = b.attacker, opts = [{ k: b.attPoint, n: `${g.units.find((u) => u.id === b.attPoint)!.name} (point unit, loses a step)` }, ...b.assets[att].filter((id) => E.isBattleAsset(E.chit(g, id))).map((id) => ({ k: id, n: `${E.chit(g, id).name} (asset is eliminated)` }))]; return `<div class="c-ledger"><h3>${b.pending} hit(s) on the attackers</h3><p class="hint">The first hit falls on the point unit or on one battle asset (6.41a). Which one?</p><div class="row">${opts.map((o) => btn(esc(o.n), () => E.chooseFirstLoss(g, b, o.k))).join('')}</div></div>`; }
@@ -752,8 +759,8 @@ function ledger() {
   if (b.stage === 'defChoice') return `<div class="c-ledger"><h3>${b.pending} hit(s) on the defenders</h3><p class="hint">${b.pendingKind === 'arty' ? 'Disorder all defenders to absorb 1 hit, or take every hit.' : 'Retreat (absorbs 1 hit, units disordered) or stand and take the hits.'}</p><div class="row end">${btn('Take losses', () => E.defenderChoice(g, b, false))}${btn(b.pendingKind === 'arty' ? 'Disorder (absorb 1)' : 'Retreat', () => E.defenderChoice(g, b, true), 'primary')}</div></div>`;
   if (STAGE_NAME[b.stage]) {                                                                           // fire step: who rolls, what, against which number and why
     const sd = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker), fl = E.fireList(g, b, sd, b.stage.endsWith('Arty') ? 'arty' : 'ground'), mineStep = !online.active || online.both() || online.mySide() === sd;
-    const lines = fl.map((f) => `<div class="ln"><span class="who">${esc(f.who)}</span><span class="mods"><b>${f.dice}</b> dice at <b>SN ${f.sn}</b>${f.parts.map(([w, v]) => `<span class="m ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}">${esc(w)}${v ? ` ${v > 0 ? '+' : '−'}${Math.abs(v)}` : ''}</span>`).join('')}</span></div>`).join('') || '<p class="hint">Nothing can fire.</p>';
-    return `<div class="c-ledger"><h3 class="${sd}">${nm(sd)} ${esc(STAGE_NAME[b.stage].toLowerCase())}</h3>${lines}${b.stage === 'offFire' && b.assets[b.attacker].some((id) => E.chit(g, id).kind === 'engineer') && g.fieldWorks.includes(b.area) ? `<label><input type="checkbox" ${b.engFw ? 'checked' : ''} data-sel="${regv((v) => { b.engFw = v === 'on'; })}"> Engineer removes the field works instead of firing (6.33)</label>` : ''}<p class="hint">${mineStep ? 'Press <b>Roll</b> below. 1 always hits, 10 always misses.' : `Waiting for the ${nm(sd)} player to roll…`}</p></div>`;
+    const lines = fl.map((f) => `<div class="fl"><span class="who">${esc(f.who)}</span><span class="cnt">${f.dice}${ico('dice')}</span><b class="sn">SN ${f.sn}</b><span class="chips2">${modChips(f.parts)}</span></div>`).join('') || '<p class="hint">Nothing can fire.</p>';
+    return `<div class="c-ledger tight"><div class="lh"><h3 class="${sd}">${nm(sd)} ${esc(STAGE_NAME[b.stage].toLowerCase())}</h3></div>${lines}${b.stage === 'offFire' && b.assets[b.attacker].some((id) => E.chit(g, id).kind === 'engineer') && g.fieldWorks.includes(b.area) ? `<label><input type="checkbox" ${b.engFw ? 'checked' : ''} data-sel="${regv((v) => { b.engFw = v === 'on'; })}"> Engineer removes the field works instead of firing (6.33)</label>` : ''}${mineStep ? '' : `<p class="hint">Waiting for the ${nm(sd)} player to roll…</p>`}</div>`;
   }
   return '';
 }
@@ -828,6 +835,9 @@ function rulesHtml() {
     <h4>Expanded</h4><textarea readonly rows="10" style="width:100%;font:12px monospace">${esc(rulesText)}</textarea>
     <h4>Single line</h4><textarea readonly rows="4" style="width:100%;font:12px monospace">${esc(rulesOne())}</textarea></div></div>`;
 }
+/** A Success Number modifier as a small icon chip: the sign and size are the data, the full reason is the tooltip. */
+const modIcon = (why: string) => /base/i.test(why) ? 'target' : /armor|infantry|class/i.test(why) ? 'armor_asset' : /green|veteran|elite|quality/i.test(why) ? 'star' : /terrain|tdn/i.test(why) ? 'tree' : /field/i.test(why) ? 'shield' : /river/i.test(why) ? 'wave' : /disorder|supply/i.test(why) ? 'warn' : /air|asset|artillery/i.test(why) ? 'air_mission' : 'info';
+const modChips = (parts: [string, number][]) => parts.map(([w, v]) => `<span class="m2 ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}" title="${esc(w)}">${ico(modIcon(w))}${v > 0 ? '+' : v < 0 ? '−' : ''}${v ? Math.abs(v) : ''}</span>`).join('');
 const chip = (label: string, on: boolean, f: () => void, title = '') => `<button class="chip ${on ? 'on' : ''}" aria-pressed="${on}" data-do="${reg(f)}" title="${esc(title)}">${on ? ico('check') : ''}${label}</button>`;
 const relayer = () => { saveLayers(); paintBoard(); legendDirty(); };
 const legendDirty = () => { /* the legend is part of render() */ };
