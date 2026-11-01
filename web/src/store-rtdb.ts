@@ -24,8 +24,10 @@ export async function rtdbStore(table: string): Promise<Store | null> {
     });
   });
   const seatName = () => (account.name || account.email || 'Player') + (account.admin ? ' (admin)' : '');
-  const enc = <T,>(o: Record<string, T>) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, JSON.stringify(v)]));
-  const dec = <T,>(o: Record<string, string> | null | undefined) => Object.fromEntries(Object.entries(o ?? {}).map(([k, v]) => [k, JSON.parse(v) as T]));
+  /** Database keys may not contain . # $ / [ ] (a Task Force id has a dot), so keys are percent-encoded on the way in and decoded on the way out. */
+  const ek = (k: string) => encodeURIComponent(k).replace(/\./g, '%2E'), dk = (k: string) => decodeURIComponent(k);
+  const enc = <T,>(o: Record<string, T>) => Object.fromEntries(Object.entries(o).map(([k, v]) => [ek(k), JSON.stringify(v)]));
+  const dec = <T,>(o: Record<string, string> | null | undefined) => Object.fromEntries(Object.entries(o ?? {}).map(([k, v]) => [dk(k), JSON.parse(v) as T]));
   const seatOf = (s: Seats): Side | '' => (account.uid && s.german === account.uid ? 'german' : account.uid && s.allied === account.uid ? 'allied' : '');
   /** The seats of this game, from the two nodes that hold them. */
   const watchSeatNodes = (next: (s: Seats) => void, err: (e: string) => void) => {
