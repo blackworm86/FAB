@@ -60,7 +60,7 @@ function rebuild() {
 let store: Store | null = null, lastJson = '', writing = false, queued: Game | null = null, onChange: () => void = () => {}, onRemote: (g: Game) => void = () => {};
 const slim = (g: Game) => JSON.stringify({ ...g, log: g.log.slice(-120) });
 const fail = (e: string) => { online.error = e; onChange(); };
-let notify: (m: string) => void = () => {};
+let notify: (m: string) => void = () => {}, onGone: () => void = () => {}, had = false;
 /** The store refuses a save when the other player saved first (same rev). Take their game, and tell the player to repeat the move. */
 function conflictOr(e: unknown) {
   const m = String((e as { message?: string })?.message ?? e);
@@ -68,8 +68,8 @@ function conflictOr(e: unknown) {
   fail(m);
 }
 
-export async function startOnline(remote: (g: Game) => void, changed: () => void, current: () => Game, say: (m: string) => void = () => {}) {
-  onRemote = remote; onChange = changed; notify = say;
+export async function startOnline(remote: (g: Game) => void, changed: () => void, current: () => Game, say: (m: string) => void = () => {}, gone: () => void = () => {}) {
+  onRemote = remote; onChange = changed; notify = say; onGone = gone;
   try { const fake = DEV ? params.get('fake') : null; store = fake === 'german' || fake === 'allied' ? (await import('./store-fake')).fakeSplitStore(fake) : await firebaseStore(TABLE); } catch (e) { online.error = String(e); store = null; }
   { const fk = DEV ? params.get('fake') : null; if (store && (fk === 'german' || fk === 'allied')) online.devSeat = fk; }          // a stand-in referee plays one seat per tab
   if (!store) { if (DEV) online.mode = 'local'; online.ready = true; changed(); return; }
@@ -80,11 +80,12 @@ export async function startOnline(remote: (g: Game) => void, changed: () => void
   if (online.split) {
     // hidden blocks split between seats: rebuild the game this seat plays on from the shared copy, its private details and the reveals
     store.watchPriv?.((p) => { const sp = mySeat(); if (sp) sp.priv = p; rebuild(); }); store.watchReveals?.((r) => { const sp = mySeat(); if (sp) sp.reveals = r; rebuild(); });
-    store.watchState((d) => { if (!d) return; if (d.rev >= online.rev) pubDoc = d; if (d.json === lastJson || d.rev < online.rev) return; online.rev = d.rev; lastJson = d.json; rebuild(); }, fail);
+    store.watchState((d) => { if (!d) { if (had) onGone(); return; } had = true; if (d.rev >= online.rev) pubDoc = d; if (d.json === lastJson || d.rev < online.rev) return; online.rev = d.rev; lastJson = d.json; rebuild(); }, fail);
     return;
   }
   store.watchState((d) => {
-    if (!d) { if (online.canWrite) void push(current()); return; }
+    if (!d) { if (had) { onGone(); return; } if (online.canWrite) void push(current()); return; }
+    had = true;
     if (d.json === lastJson || d.rev < online.rev) return;
     lastJson = d.json; online.rev = d.rev; try { onRemote(JSON.parse(d.json)); } catch { /* ignore a damaged document */ }
   }, fail);

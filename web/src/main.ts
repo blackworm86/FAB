@@ -772,7 +772,7 @@ function legend() {
   return `<div class="legend" aria-label="Overlay legend"><b>${tint === 'tdn' ? 'Terrain defence' : tint === 'control' ? 'Area control' : 'Army zones'}</b>${items.map(([c, a, b]) => `<span><i style="background:${hex(c as number)}"></i>${a} <small>${b}</small></span>`).join('')}</div>`;
 }
 /* ---------- home: sign in, your games, a new game, join ---------- */
-let matches: Match[] = [], form = { game: 'bulge', title: '', side: 'german' as E.Side | '', scenario: 'tournament' as E.Opts['scenario'], fuel: true }, homeMsg = '', creating = false;
+let matches: Match[] = [], form = { game: 'bulge', title: '', side: 'german' as E.Side | '', scenario: 'tournament' as E.Opts['scenario'], fuel: true }, homeMsg = (() => { try { const m = sessionStorage.getItem('fab-notice') ?? ''; sessionStorage.removeItem('fab-notice'); return m; } catch { return ''; } })(), creating = false;
 const inviteLink = (id: string) => `${location.origin}${location.pathname}?table=${id}`;
 const homeUrl = () => location.pathname;
 async function share(id: string, title: string) {
@@ -966,7 +966,7 @@ void startOnline((rg) => { const was = g.battle, n0 = was?.rolls.length ?? 0, st
     const side = st0 === 'attArty' || st0 === 'offFire' ? nb.attacker : other(nb.attacker);
     rollView = { title: `${nm(side)} ${STAGE_NAME[st0]}`, pos: null, groups: nb.rolls.slice(n0).map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: [] })) };
     if (rollView.groups.length) { const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block'; throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; render(); showFx(pendingFx); pendingFx = []; setTimeout(() => { if (rollView === rv) endRoll(); }, 4000); } }); } else rollView = null;       // the other player's dice clear themselves
-  } selUnit = selChit = selArr = null; previewArea = hoverArea = null; hist.clear(); try { save(); } finally { applyingRemote = false; } refresh(); }, () => { onNet(); render(); }, () => g, say);
+  } selUnit = selChit = selArr = null; previewArea = hoverArea = null; hist.clear(); try { save(); } finally { applyingRemote = false; } refresh(); }, () => { onNet(); render(); }, () => g, say, () => { try { sessionStorage.setItem('fab-notice', 'That game was deleted by its creator.'); } catch { /* private mode */ } location.href = homeUrl(); });       // the table is gone: nobody stays inside it
 /** Every drawn symbol and counter as SVG, for the editable sheets (docs/maps/vector/fab-*.svg). */
 function sheets() {
   const seenSvg = new Set<string>(), out: Record<string, { id: string; label: string; svg: string }[]> = { chits: [], blocks: [], markers: [] };
