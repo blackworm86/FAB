@@ -1,5 +1,6 @@
 // Counters redrawn from the printed ones: geometry measured on the scans, lettering as outlined Roboto Condensed paths, and the illustrations
 // (fuel barrels, fighters, the Special Action arrow) cut out of the scan. 160 x 160 units like the 160 px raw counters.
+import { MARKER_ART } from './marker-art';
 import type { Chit } from '../../engine/src';
 import { ECH } from './art';
 import { GLYPHS } from './glyphs';
@@ -73,6 +74,7 @@ function marker(name: string): string | null {
 
 /** The printed marker art by short code used on the map: X blown bridge, FW field works, RA river assault, RB road block, DIS disordered, REC recovering. */
 export const mapMarkerSvg = (code: string): string | null => {
+  if (MARKER_ART[code]) return `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160"><image href="${MARKER_ART[code]}" width="160" height="160"/></svg>`;
   const m: Record<string, string> = { X: 'Blown Bridge', FW: 'Field Works', RA: 'River Assault', RB: 'Road Block' };
   if (m[code]) return marker(m[code]);
   const counters: Record<string, Counter> = {
