@@ -65,7 +65,7 @@ let notify: (m: string) => void = () => {}, onGone: () => void = () => {}, had =
 function conflictOr(e: unknown) {
   const m = String((e as { message?: string })?.message ?? e);
   if (m.includes('CONFLICT')) { lastJson = ''; notify('The other player moved at the same moment. Their move is in; repeat yours.'); rebuildLater = true; return; }
-  fail(m);
+  notify('Not saved: ' + m); fail(m);
 }
 
 export async function startOnline(remote: (g: Game) => void, changed: () => void, current: () => Game, say: (m: string) => void = () => {}, gone: () => void = () => {}) {
@@ -79,7 +79,7 @@ export async function startOnline(remote: (g: Game) => void, changed: () => void
   online.split = !!store.split;
   if (online.split) {
     // hidden blocks split between seats: rebuild the game this seat plays on from the shared copy, its private details and the reveals
-    store.watchPriv?.((p) => { const sp = mySeat(); if (sp) sp.priv = p; rebuild(); }); store.watchReveals?.((r) => { const sp = mySeat(); if (sp) sp.reveals = r; rebuild(); });
+    store.watchPriv?.((p) => { const sp = mySeat(); if (sp) sp.priv = p; rebuild(); if (p && queued) { const q = queued; queued = null; void pushSplit(q); } }); store.watchReveals?.((r) => { const sp = mySeat(); if (sp) sp.reveals = r; rebuild(); });
     store.watchState((d) => { if (!d) { if (had) onGone(); return; } had = true; if (d.rev >= online.rev) pubDoc = d; if (d.json === lastJson || d.rev < online.rev) return; online.rev = d.rev; lastJson = d.json; rebuild(); }, fail);
     return;
   }
@@ -124,15 +124,16 @@ export const lobby = {
 
 /** Split tables: write this seat's private details when they changed, then the shared copy with this seat's hidden blocks hidden again. */
 async function pushSplit(g: Game) {
-  const sp = mySeat(); if (online.mode !== 'remote' || !store || !sp?.priv) return;
+  const sp = mySeat(); if (online.mode !== 'remote' || !store || !sp) return;
+  if (!sp.priv) { queued = g; notify('Your block details have not loaded yet. The move is kept and will be sent when they do.'); return; }
   const out = sp.save(g); if (out.pub === lastJson) return;
   if (writing) { queued = g; return; }
-  writing = true;
+  writing = true; const dog = setTimeout(() => { if (writing) { writing = false; notify('Saving is taking too long. Check your connection.'); rebuild(); } }, 10000);
   try {
     if (out.priv) await store.setPriv?.(out.priv);
     lastJson = out.pub; online.rev += 1; pubDoc = { rev: online.rev, json: out.pub, by: online.uid }; await store.setState(pubDoc);
   } catch (e) { conflictOr(e); }
-  writing = false; if (rebuildLater) { rebuildLater = false; rebuild(); }
+  clearTimeout(dog); writing = false; if (rebuildLater) { rebuildLater = false; rebuild(); }
   if (queued) { const q = queued; queued = null; void pushSplit(q); }
 }
 /** The owner's client publishes the details of its blocks the other side may now see: the battle area once both are ready, and an Intelligence Gathering target. */

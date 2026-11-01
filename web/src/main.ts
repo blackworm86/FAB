@@ -821,6 +821,7 @@ function homeHtml() {
 /** A slim bar over the table when you are not seated, or while you wait for an opponent. */
 function seatBar() {
   if (online.mode !== 'remote' || !online.hasAccounts) return '';
+  if (online.error) return `<div class="seatbar err"><span>${esc(online.error)}</span>${ubtn('OK', () => { online.error = ''; })}</div>`;
   const a = online.account, me = online.mySide(), s = online.seats, title = matches.find((m) => m.id === TABLE)?.title ?? 'a game of FAB';
   if (!a || a.guest) return `<div class="seatbar"><span>You are watching.</span>${ubtn('Sign in to play', () => { try { sessionStorage.setItem('fab-next', TABLE); } catch { /* private mode */ } location.href = homeUrl(); }, 'primary')}</div>`;
   if (!me) { const free = (['german', 'allied'] as E.Side[]).filter((x) => !s[x]); return `<div class="seatbar"><span>${free.length ? 'Take a seat:' : 'Both seats are taken. You are watching.'}</span>${free.map((x) => ubtn(`Play ${nm(x)}`, () => { void sit(x); }, 'primary')).join('')}</div>`; }
@@ -887,7 +888,9 @@ function modalHtml() {
   return '';
 }
 const inGame = () => HAS_TABLE || DEV_FAKE || online.mode === 'local';
-function render() {
+/** Draw the interface; if something in it throws, say so on screen instead of leaving a stale picture. */
+function render() { syncView(); try { renderInner(); } catch (e) { console.error(e); $('#ui').innerHTML = `<div class="seatbar err"><span>Display problem: ${esc(String((e as Error)?.message ?? e))}</span>${ubtn('Reload', () => location.reload(), 'primary')}</div>`; bind($('#ui')); } }
+function renderInner() {
   if (document.activeElement?.closest?.('.authform')) return;                                         // do not wipe what is being typed
   acts = {}; actv = {}; n = 0;
   canvas.style.display = inGame() ? '' : 'none';
@@ -966,7 +969,7 @@ void startOnline((rg) => { const was = g.battle, n0 = was?.rolls.length ?? 0, st
     const side = st0 === 'attArty' || st0 === 'offFire' ? nb.attacker : other(nb.attacker);
     rollView = { title: `${nm(side)} ${STAGE_NAME[st0]}`, pos: null, groups: nb.rolls.slice(n0).map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: [] })) };
     if (rollView.groups.length) { const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block'; throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; render(); showFx(pendingFx); pendingFx = []; setTimeout(() => { if (rollView === rv) endRoll(); }, 4000); } }); } else rollView = null;       // the other player's dice clear themselves
-  } selUnit = selChit = selArr = null; previewArea = hoverArea = null; hist.clear(); try { save(); } finally { applyingRemote = false; } refresh(); }, () => { onNet(); render(); }, () => g, say, () => { try { sessionStorage.setItem('fab-notice', 'That game was deleted by its creator.'); } catch { /* private mode */ } location.href = homeUrl(); });       // the table is gone: nobody stays inside it
+  } selUnit = selChit = selArr = null; previewArea = hoverArea = null; hist.clear(); try { save(); } finally { applyingRemote = false; } refresh(); }, () => { onNet(); syncView(); render(); }, () => g, say, () => { try { sessionStorage.setItem('fab-notice', 'That game was deleted by its creator.'); } catch { /* private mode */ } location.href = homeUrl(); });       // the table is gone: nobody stays inside it
 /** Every drawn symbol and counter as SVG, for the editable sheets (docs/maps/vector/fab-*.svg). */
 function sheets() {
   const seenSvg = new Set<string>(), out: Record<string, { id: string; label: string; svg: string }[]> = { chits: [], blocks: [], markers: [] };
