@@ -71,7 +71,7 @@ function conflictOr(e: unknown) {
 
 export async function startOnline(remote: (g: Game) => void, changed: () => void, current: () => Game, say: (m: string) => void = () => {}, gone: () => void = () => {}) {
   onRemote = remote; onChange = changed; notify = say; onGone = gone;
-  try { const fake = DEV ? params.get('fake') : null; store = fake === 'german' || fake === 'allied' ? (await import('./store-fake')).fakeSplitStore(fake) : import.meta.env.VITE_FIREBASE_DATABASE_URL ? await rtdbStore(TABLE) : await firebaseStore(TABLE); } catch (e) { online.error = String(e); store = null; }
+  try { const fake = DEV ? params.get('fake') : null; store = await Promise.race([(async () => (fake === 'german' || fake === 'allied' ? (await import('./store-fake')).fakeSplitStore(fake) : import.meta.env.VITE_FIREBASE_DATABASE_URL ? await rtdbStore(TABLE) : await firebaseStore(TABLE)))(), new Promise<never>((_, no) => setTimeout(() => no(new Error('Could not reach the game database. Check the database address and your connection.')), 15000))]); } catch (e) { online.error = String(e); store = null; }
   { const fk = DEV ? params.get('fake') : null; if (store && (fk === 'german' || fk === 'allied')) online.devSeat = fk; }          // a stand-in referee plays one seat per tab
   if (!store) { if (DEV) online.mode = 'local'; online.ready = true; changed(); return; }
   online.ready = true; online.mode = 'remote'; online.uid = store.uid; online.canWrite = store.canWrite;
