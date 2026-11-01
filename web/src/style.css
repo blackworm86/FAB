@@ -243,3 +243,4 @@ button.go .ic, button.plain .ic, .row button .ic { width: 18px; height: 18px; ve
 .seatrow { display: flex; gap: 10px; align-items: center; padding: 4px 0; } .seatrow b { width: 70px; font: 700 16px var(--sfd); letter-spacing: .06em; text-transform: uppercase; } .seatrow span { flex: 1; }
 .seatbar.err { border-color: var(--bad); color: #ffb3a7; }
 .seatbar { z-index: 40; } .syncdot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; align-self: center; background: #7ee08d; } .syncdot.wait { background: #e7b04a; } .syncdot.bad { background: #ff5a4d; box-shadow: 0 0 0 3px #ff5a4d55; }
+.modal { z-index: 80; }
