@@ -184,13 +184,13 @@ function disc(kind: 'x' | 'point', size: number) {
   const m = new THREE.Mesh(new THREE.CircleGeometry(size, 28), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false })); m.rotation.x = -Math.PI / 2; return m;
 }
 /** The battle on the table: each side's assigned assets as cardboard counters in a row behind its blocks, with a red cross to take one back before the battle starts. */
-function drawBattleTable(b: E.Battle) {
+function drawBattleTable(b: E.Battle, spot: (id: number, x: number, z: number, r: number) => { x: number; z: number }) {
   const base = toWorld(...POLE.get(b.area)!);
   for (const sd of ['german', 'allied'] as E.Side[]) {
     const ids = [...b.assets[sd], ...(b.air[sd] ? [b.air[sd]!.id] : [])], dir = sd === 'german' ? 1 : -1;
     ids.forEach((id, i) => {
-      const m = chit3d(E.chit(g, id)), x = base.x + (i - (ids.length - 1) / 2) * 1.9, z = base.z + dir * 3.0; m.userData.chit = id; m.position.set(x, 0.06, z); pieces.add(m);
-      if (b.stage === 'setup' && mine(sd)) { const d = disc('x', 0.42); d.position.set(x + 0.8, 0.2, z - 0.8); d.userData.chit = id; pieces.add(d); }
+      const m = chit3d(E.chit(g, id)), at = spot(b.area, base.x + (i - (ids.length - 1) / 2) * 1.9, base.z + dir * 2.6, 0.85), x = at.x, z = at.z; m.userData.chit = id; m.position.set(x, 0.06, z); pieces.add(m);
+      if (b.stage === 'setup' && mine(sd)) { const d = disc('x', 0.42); d.position.set(x + 0.5, 0.2, z - 0.5); d.userData.chit = id; pieces.add(d); }
       if (tgt?.units.has(id)) { const ring = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.25, 40), new THREE.MeshBasicMaterial({ color: 0x37d67a, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.14, z); markers.add(ring); }
     });
   }
@@ -244,7 +244,7 @@ function drawPieces() {
       tags.forEach(([t, c], i) => { const k = tag(t, c, CHIT); k.position.set(m.position.x + i * 0.12, stackY + i * 0.14, m.position.z - i * 0.08); k.rotation.y = (i % 2 ? 0.12 : -0.08); markers.add(k); });
     });
   }
-  if (g.battle) { drawBattleTable(g.battle); }
+  if (g.battle) { drawBattleTable(g.battle, inArea); }
   // area markers: inside their own area, next to the group they belong to
   for (const a of MAP.areas) {
     const { base, cont } = rows.get(a.id)!, mine: { side?: E.Side; t: string; c: string }[] = [];
