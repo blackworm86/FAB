@@ -157,6 +157,31 @@ function owned(text: string, bg: string, size: number, side: E.Side) {
   const grp = new THREE.Group(), plate = new THREE.Mesh(new RoundedBoxGeometry(size + 0.2, 0.07, size + 0.2, 2, 0.1), new THREE.MeshStandardMaterial({ color: SIDE_HEX[side], roughness: 0.7 })), t = tag(text, bg, size);
   plate.position.y = 0.035; t.position.y = 0.07 + 0.06; plate.castShadow = true; grp.add(plate, t); return grp;
 }
+/** A cardboard counter lying on the board: the chit's own printed art on a thin rounded square. */
+function chit3d(c: E.Chit) {
+  const edge = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new RoundedBoxGeometry(CHIT, 0.12, CHIT, 2, 0.1), [edge, edge, new THREE.MeshStandardMaterial({ map: svgTex('chit:' + c.id, chitSvg(c)), roughness: 0.7 }), edge, edge, edge]);
+  m.castShadow = true; m.position.y = 0.06; m.rotation.y = viewRot(); return m;
+}
+/** The outline of an area pushed outwards by `d` (cm), as a flat ribbon of width `w` lying on the board. */
+function outlineRibbon(id: number, d: number, w: number, color: number) {
+  const pts = areaWorld(id).map((q) => new THREE.Vector2(q.x, q.z)), n = pts.length;
+  const area2 = pts.reduce((a, q, i) => a + (q.x * pts[(i + 1) % n].y - pts[(i + 1) % n].x * q.y), 0), sgn = area2 > 0 ? 1 : -1;
+  const norm = (i: number) => { const a = pts[(i + n - 1) % n], b = pts[i], c = pts[(i + 1) % n], e1 = b.clone().sub(a).normalize(), e2 = c.clone().sub(b).normalize(); const n1 = new THREE.Vector2(e1.y, -e1.x).multiplyScalar(sgn), n2 = new THREE.Vector2(e2.y, -e2.x).multiplyScalar(sgn), m = n1.add(n2); return m.lengthSq() < 1e-6 ? n1 : m.normalize().multiplyScalar(1 / Math.max(0.5, m.dot(n2) || 1)); };
+  const pos: number[] = [], idx: number[] = [];
+  pts.forEach((q, i) => { const nn = norm(i), a = q.clone().addScaledVector(nn, d), b = q.clone().addScaledVector(nn, d + w); pos.push(a.x, 0.04, a.y, b.x, 0.04, b.y); });
+  for (let i = 0; i < n; i++) { const a = i * 2, b = ((i + 1) % n) * 2; idx.push(a, a + 1, b, b, a + 1, b + 1); }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx);
+  return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.92, side: THREE.DoubleSide, depthWrite: false }));
+}
+/** The battle on the table: its outline, and each side's assigned assets as cardboard counters in a row behind its blocks. */
+function drawBattleTable(b: E.Battle) {
+  markers.add(outlineRibbon(b.area, 0.7, 0.3, b.stage === 'setup' ? 0xffd37a : 0xff7a6a));
+  const base = toWorld(...POLE.get(b.area)!);
+  for (const sd of ['german', 'allied'] as E.Side[]) {
+    const ids = [...b.assets[sd], ...(b.air[sd] ? [b.air[sd]!.id] : [])], dir = sd === 'german' ? 1 : -1;
+    ids.forEach((id, i) => { const m = chit3d(E.chit(g, id)); m.position.set(base.x + (i - (ids.length - 1) / 2) * 1.7, 0.06, base.z + dir * 3.0); markers.add(m); });
+  }
+}
 function drawPieces() {
   disposeAll(pieces); disposeAll(markers);
   const taken = new Map<number, { x: number; z: number; r: number }[]>(), edgeTaken: { x: number; z: number; r: number }[] = [];
@@ -190,16 +215,19 @@ function drawPieces() {
     if (lay.tight && order.length > 1) { taken.set(a.id, lay.saved); const col = place(true); if (!col.tight) lay = col; else { taken.set(a.id, lay.saved); lay = place(false); } }
     order.forEach((u, n) => {
       const hid = !seen(u), m = block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
+      const flat = cont && !hid && !u.garrison;                                                           // revealed blocks lie flat, label up, while the area is contested
       m.position.x = p.x; m.position.z = p.z;
+      if (flat) { m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, viewRot(), 0); m.position.y = 0.4; }
       if (tgt?.units.has(u.id)) { const ring = new THREE.Mesh(new THREE.RingGeometry(1.15, 1.45, 40), new THREE.MeshBasicMaterial({ color: 0x37d67a, transparent: true, opacity: 0.95, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(p.x, 0.09, p.z); markers.add(ring); const glow = new THREE.Mesh(new THREE.CircleGeometry(1.15, 40), new THREE.MeshBasicMaterial({ color: 0x37d67a, transparent: true, opacity: 0.28 })); glow.rotation.x = -Math.PI / 2; glow.position.set(p.x, 0.085, p.z); markers.add(glow); }
-      m.userData.unit = u.id; if (u.id === selUnit) { const o = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xffb347 })); m.add(o); }
+      m.userData.unit = u.id; if (u.id === selUnit || (g.battle && !hid && (u.id === g.battle.attPoint || u.id === g.battle.defPoint))) { const o = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xffb347 })); m.add(o); }
       pieces.add(m);
-      const tags: [string, string][] = []; let stackY = u.garrison ? 0.3 : 1.66;
-      if (u.disorder && !u.garrison) { const k = tag(u.disorder === 1 ? 'DIS' : 'REC', u.disorder === 1 ? '#8a1f1f' : '#a8741a', CHIT); k.position.set(m.position.x, 1.66, m.position.z); markers.add(k); stackY = 1.66 + 0.14; }
+      const tags: [string, string][] = []; const top = flat ? 0.85 : 1.66; let stackY = u.garrison ? 0.3 : top;
+      if (u.disorder && !u.garrison) { const k = tag(u.disorder === 1 ? 'DIS' : 'REC', u.disorder === 1 ? '#8a1f1f' : '#a8741a', CHIT); k.position.set(m.position.x, top, m.position.z); markers.add(k); stackY = top + 0.14; }
       if (u.reserve) tags.push([u.side === 'german' ? ({ z5: 'R5', z6: 'R6', z7: 'R7' } as Record<string, string>)[u.reserve] ?? 'R5' : u.reserve === 'z7' ? 'A7' : 'A56', '#2d6cb0']); if (u.exploit) tags.push(['E', '#d9741c']); if (u.unsupplied && !u.garrison) tags.push(['S', '#b8312f']); if (u.interdict) tags.push(['GI', '#8a2f9c']); if (u.bcross) tags.push(['B', '#8a6a1c']);
       tags.forEach(([t, c], i) => { const k = tag(t, c, CHIT); k.position.set(m.position.x + i * 0.12, stackY + i * 0.14, m.position.z - i * 0.08); k.rotation.y = (i % 2 ? 0.12 : -0.08); markers.add(k); });
     });
   }
+  if (g.battle) { drawBattleTable(g.battle); }
   // area markers: inside their own area, next to the group they belong to
   for (const a of MAP.areas) {
     const { base, cont } = rows.get(a.id)!, mine: { side?: E.Side; t: string; c: string }[] = [];
@@ -272,14 +300,14 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('pointerdown', (e) => { goal = null; canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; pinch = 0; });
 canvas.addEventListener('pointermove', (e) => {
   const p = ptrs.get(e.pointerId); if (!p) return; ptrs.set(e.pointerId, [e.clientX, e.clientY]);
-  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch) dist = Math.min(110, Math.max(7, dist * pinch / d)); pinch = d; moved = 99; return; }
+  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch) dist = clampDist(dist * pinch / d); pinch = d; moved = 99; return; }
   const dx = e.clientX - p[0], dy = e.clientY - p[1]; moved += Math.abs(dx) + Math.abs(dy);
-  if (e.buttons === 2 || e.shiftKey) { yaw -= dx * 0.006; pitch = Math.min(1.5, Math.max(0.35, pitch + dy * 0.006)); }
+  if (e.buttons === 2 || e.shiftKey || lock) { yaw -= dx * 0.006; pitch = Math.min(1.5, Math.max(0.35, pitch + dy * 0.006)); }
   else { const k = dist * 0.0018, c = Math.cos(yaw), s = Math.sin(yaw); target.x -= (dx * c + dy * s) * k; target.z -= (-dx * s + dy * c) * k; }
 });
 canvas.addEventListener('pointerup', (e) => { ptrs.delete(e.pointerId); if (moved < 6) click(e); });
 canvas.addEventListener('pointercancel', (e) => ptrs.delete(e.pointerId));
-canvas.addEventListener('wheel', (e) => { goal = null; e.preventDefault(); dist = Math.min(110, Math.max(7, dist * Math.exp(e.deltaY * 0.0012))); }, { passive: false });
+canvas.addEventListener('wheel', (e) => { goal = null; e.preventDefault(); dist = clampDist(dist * Math.exp(e.deltaY * 0.0012)); }, { passive: false });
 
 const ray = new THREE.Raycaster();
 function pick(e: PointerEvent) {
@@ -402,12 +430,21 @@ function reinforceTargets(): Tgt | null {
   return t;
 }
 let frameKey = '';
+/** The battle camera: held on the contested area (fitted to it), where the player can still zoom and orbit but not pan away. */
+let lock: { c: THREE.Vector3; d: number } | null = null;
+const clampDist = (d: number) => (lock ? Math.min(lock.d * 1.7, Math.max(lock.d * 0.45, d)) : Math.min(110, Math.max(7, d)));
+function areaWorld(id: number) { return MAP.areas.find((a) => a.id === id)!.polygon.map(([x, y]) => toWorld(x, y)); }
 function syncBattleCam() {
-  const b = g.battle; let key = b ? `${b.area}:${b.stage === 'setup' ? 's' : 'f'}` : '';                 // re-centre when a battle opens and when its rolling starts
-  if (b && reinforcing) key = key + 'r';
-  if (b && key !== frameKey) { if (!inBattle) saved = { t: target.clone(), dist, pitch }; const p = toWorld(...POLE.get(b.area)!); goal = { t: new THREE.Vector3(p.x, 0, p.z - 1.6 * (viewSide() === 'allied' ? -1 : 1)), dist: (innerWidth < 700 ? 15 : 17) + (reinforcing ? 12 : 0), pitch: 1.0 }; }
-  if (!b) reinforcing = false;
-  if (!b && inBattle && saved) goal = saved;
+  const b = g.battle; let key = b ? `${b.area}:${b.stage === 'setup' ? 's' : 'f'}` : '';
+  if (b && reinforcing) key += 'r';
+  if (b && key !== frameKey) {
+    if (!inBattle) saved = { t: target.clone(), dist, pitch };
+    const pts = areaWorld(b.area), xs = pts.map((q) => q.x), zs = pts.map((q) => q.z), w = Math.max(...xs) - Math.min(...xs), h = Math.max(...zs) - Math.min(...zs);
+    const c = new THREE.Vector3((Math.max(...xs) + Math.min(...xs)) / 2, 0, (Math.max(...zs) + Math.min(...zs)) / 2), r = Math.max(w, h) / 2 + 6, fit = Math.max(18, r * (innerWidth < innerHeight ? 3.6 : 2.5));
+
+    lock = reinforcing ? null : { c, d: fit }; goal = { t: c, dist: reinforcing ? fit * 1.8 : fit, pitch: 1.15 }; yaw = viewRot();
+  }
+  if (!b) { reinforcing = false; lock = null; if (inBattle && saved) goal = saved; }
   frameKey = key; inBattle = !!b;
 }
 
@@ -430,7 +467,12 @@ function click(e: PointerEvent) {
     } }
   const rb = g.battle;
   if (rb?.stage === 'retreat' && area != null && E.retreatOptions(g, rb).includes(area)) return act(() => E.chooseRetreat(g, rb, area));
-  if (g.pendingBlow || g.battle) return;
+  if (g.battle && !g.pendingBlow) {                                                                         // a battle is on the table: tapping a block makes it that side's point unit
+    const b = g.battle, u = unit ? g.units.find((x) => x.id === unit) : null;
+    if (b.stage === 'setup' && u && seen(u) && mine(u.side) && !u.garrison && !(u.side === b.attacker && u.disorder)) act(() => E.setPoint(g, b, u.side, u.id));
+    return;
+  }
+  if (g.pendingBlow) return;
   if (selArr && area != null && arrOpts().some((o) => o.area === area)) { const id = selArr; selArr = null; return act(() => { if (g.pendingArrivals.includes(id)) E.placeArrival(g, id, area); else E.placeTaskForce(g, id, area); }); }
   if (selUnit && area != null && optsFor(selUnit).some((o) => o.area === area)) { previewArea = area; refresh(); return; }
   if ((g.phase === 'combat' || g.phase === 'btCombat') && area != null && fightable().includes(area)) { selArea = selArea === area ? null : area; selUnit = null; previewArea = null; return refresh(); }
@@ -968,6 +1010,7 @@ function frame() {
   const r = canvas.getBoundingClientRect();
   if (canvas.width !== Math.round(r.width * renderer.getPixelRatio())) { renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; cam.updateProjectionMatrix(); }
   if (goal) { target.lerp(goal.t, 0.1); dist += (goal.dist - dist) * 0.1; pitch += (goal.pitch - pitch) * 0.1; if (target.distanceTo(goal.t) < 0.05 && Math.abs(dist - goal.dist) < 0.1) goal = null; }
+  if (lock && !goal) target.copy(lock.c);
   placeCam(); renderer.render(scene, cam); placeBadges();
 }
 frame();

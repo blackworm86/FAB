@@ -244,3 +244,5 @@ button.go .ic, button.plain .ic, .row button .ic { width: 18px; height: 18px; ve
 .seatbar.err { border-color: var(--bad); color: #ffb3a7; }
 .seatbar { z-index: 40; } .syncdot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; align-self: center; background: #7ee08d; } .syncdot.wait { background: #e7b04a; } .syncdot.bad { background: #ff5a4d; box-shadow: 0 0 0 3px #ff5a4d55; }
 .modal { z-index: 80; }
+.c-table .c-row { display: none; }
+@media (min-width: 701px) { .c-table { padding: 4px 12px 6px; } .c-table .slot { width: 92px; min-height: 52px; padding-top: 12px; } .c-table .mini { width: 38px; height: 38px; } .c-title { font-size: 17px; } }
