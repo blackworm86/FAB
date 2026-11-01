@@ -615,7 +615,7 @@ function rollStage(b: E.Battle) {
   if (!rollView.groups.length) { rollView = null; return refresh(); }
   refresh();
   const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block';
-  throwDice(cv, rollView.groups, (p) => { if (rollView) { rollView.pos = p; render(); showFx(pendingFx); pendingFx = []; } });
+  throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; render(); showFx(pendingFx); pendingFx = []; setTimeout(() => { if (rollView === rv) endRoll(); }, 3800); } });          // the result clears by itself; a tap on it skips the wait
 }
 function endRoll() { rollView = null; clearDice(); ($('#dice') as HTMLElement).style.display = 'none'; refresh(); }
 
@@ -894,8 +894,8 @@ function ledger() {
   const b = g.battle; if (!b || g.pendingBlow) return '';
   if (rollView) {
     const rv = rollView, hits = rv.groups.reduce((a, x) => a + x.hits, 0), labels = (rv.pos ?? []).map((p) => { const hit = isHit(p.v, rv.groups[p.group].sn); return `<div class="lbl ${hit ? 'hit' : 'miss'}" style="left:${p.x}px;top:${p.y}px">${hit ? 'HIT!' : 'MISS'}</div>`; }).join('');
-    return `<div class="labels">${labels}</div><div class="c-ledger tight"><div class="lh"><h3>${esc(rv.title)}</h3><b class="tot ${hits ? 'hit' : 'miss'}">${rv.pos ? `${hits} hit${hits === 1 ? '' : 's'}` : '…'}</b></div>${rv.pos ? rollFx.map(fxRow).join('') : ''}${rv.groups.map((x) => `<div class="ln2"><span class="who">${esc(x.label)}</span><span class="sn">SN ${x.sn}</span><span class="cnt">${x.dice.length}${ico('dice')}</span><b class="${x.hits ? 'hit' : 'miss'}">${x.hits}</b></div>`).join('')}
-      ${rv.remote ? '' : `<div class="row end"><button class="primary" data-do="${reg(() => endRoll())}" ${rv.pos ? '' : 'disabled'}>Continue${ico('next')}</button></div>`}</div>`;
+    return `<div class="labels">${labels}</div><div class="c-ledger tight" data-ui="${reg(() => { if (rollView?.pos) endRoll(); })}" title="Tap to continue"><div class="lh"><h3>${esc(rv.title)}</h3><b class="tot ${hits ? 'hit' : 'miss'}">${rv.pos ? `${hits} hit${hits === 1 ? '' : 's'}` : '…'}</b></div>${rv.pos ? rollFx.map(fxRow).join('') : ''}${rv.groups.map((x) => `<div class="ln2"><span class="who">${esc(x.label)}</span><span class="sn">SN ${x.sn}</span><span class="cnt">${x.dice.length}${ico('dice')}</span><b class="${x.hits ? 'hit' : 'miss'}">${x.hits}</b></div>`).join('')}
+      </div>`;
   }
   if (b.stage === 'done') return `<div class="c-ledger tight"><div class="lh"><h3>Battle over</h3></div><p class="resline">${esc(b.result ?? '')}</p>${battleFx.map(fxRow).join('')}</div>`;
   if (b.stage === 'retreat' && b.retreat) return '';                                                    // the lit areas on the table are the choice
