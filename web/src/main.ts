@@ -816,6 +816,7 @@ function homeHtml() {
   return `<div class="homepage"><div class="homein">${head}
     <section class="card"><div class="lh"><h2>Your games</h2><span class="who">${esc(a!.name || a!.email)} <button class="plain" data-auth="out">Sign out</button></span></div>${mine}${create}</section>
     <section class="card"><h2>Join with an invite</h2><div class="row authform"><input id="join" class="grow" placeholder="Paste the invite link or code">${btn('Join', () => { joinByCode(($('#join') as HTMLInputElement).value); })}</div></section>
+    ${online.admin ? `<section class="card"><h2>Admin</h2><div class="row">${btn('Update rules', () => { modal = 'rules'; })}</div></section>` : ''}
     ${homeMsg ? `<p class="hint"><b>${esc(homeMsg)}</b></p>` : ''}${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}
   </div></div>`;
 }
@@ -845,7 +846,7 @@ const rulesOne = () => (DB_URL ? JSON.stringify(JSON.parse(rulesText)) : rulesTe
 const rulesLink = () => { const p = import.meta.env.VITE_FIREBASE_PROJECT_ID ?? ''; return DB_URL ? `https://console.firebase.google.com/project/${p}/database/${new URL(DB_URL).hostname.split('.')[0]}/rules` : `https://console.firebase.google.com/project/${p}/firestore/databases/-default-/rules`; };
 async function copyText(t: string, what: string) { try { await navigator.clipboard.writeText(t); toast = `${what} copied`; } catch { toast = 'Copy failed: select the text below and copy it by hand'; } render(); setTimeout(() => { toast = ''; render(); }, 2500); }
 function rulesHtml() {
-  return `<div class="modal"><div class="sheet"><h3>Update Firebase rules <button class="ico" data-modal="menu" aria-label="Back">${ico('close')}</button></h3>
+  return `<div class="modal"><div class="sheet"><h3>Update Firebase rules <button class="ico" data-modal="${inGame() ? 'menu' : ''}" aria-label="Back">${ico('close')}</button></h3>
     <p class="hint">These are the rules this version of the site expects. Copy them, open the Firebase rules editor, replace everything there with them and press Publish.</p>
     <div class="row"><a class="primary" href="${rulesLink()}" target="_blank" rel="noopener" style="padding:8px 12px;text-decoration:none">Open Firebase rules ↗</a>${btn('Copy expanded', () => { void copyText(rulesText, 'Rules'); })}${btn('Copy single line', () => { void copyText(rulesOne(), 'Single-line rules'); })}</div>
     <h4>Expanded</h4><textarea readonly rows="10" style="width:100%;font:12px monospace">${esc(rulesText)}</textarea>
@@ -898,7 +899,7 @@ function renderInner() {
   if (document.activeElement?.closest?.('.authform')) return;                                         // do not wipe what is being typed
   acts = {}; actv = {}; n = 0;
   canvas.style.display = inGame() ? '' : 'none';
-  if (!inGame()) { $('#ui').innerHTML = homeHtml(); bind($('#ui')); return; }
+  if (!inGame()) { $('#ui').innerHTML = (modal === 'rules' ? rulesHtml() : '') + homeHtml(); bind($('#ui')); return; }
   if (rollView && !g.battle) endRoll();                                                                   // dice left on screen after the battle is over
   const p = primary(), b = g.battle;
   const alert = g.pendingBlow ? (() => { const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!, path = g.pendingBlow!.path; return `<div class="c-ledger"><h3>${nm(other(u.side))}: bridge?</h3><p class="hint">${esc(u.name)} tries to cross into ${esc(areaName(path[path.length - 1]))}. Attempt to blow the bridge? It works on a roll of 1–5.</p><div class="row end">${btn('Let them cross', () => E.resolveBlow(g, false))}${btn('Attempt to blow it', () => E.resolveBlow(g, true), 'primary')}</div></div>`; })() : '';
