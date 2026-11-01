@@ -771,7 +771,7 @@ const pieceBtn = (c: E.Chit, f: () => void, on = false, dis = false) => `<button
 const ruleCard = (c: E.Chit) => { const [t, d] = RULE[c.kind] ?? [c.kind, '']; return `<img class="big" alt="" src="${chitImg(c)}"><div><h4>${esc(c.name)} <small>${esc(t)}</small></h4><p>${esc(d)}</p></div>`; };
 const seatedView = () => online.active && !online.both() && !!online.mySide();
 function piecesHtml() {
-  const sd = piecesSide ?? viewSide(), tabs = chip('Pieces', piecesTab === 'boxes', () => { piecesTab = 'boxes'; }) + chip('Arrivals', piecesTab === 'arrivals', () => { piecesTab = 'arrivals'; }) + '<span class="sp"></span>' + (['german', 'allied'] as E.Side[]).sort((x, y) => +(y === viewSide()) - +(x === viewSide())).map((x) => chip(seatedView() ? (x === viewSide() ? 'My pieces' : 'Opponent\'s pieces') : nm(x), sd === x, () => { piecesSide = x; inspectId = null; })).join('');
+  const sd = piecesSide ?? viewSide(), tabs = chip('', piecesTab === 'boxes', () => { piecesTab = 'boxes'; }, 'Pieces in the boxes', 'boxes') + chip('', piecesTab === 'arrivals', () => { piecesTab = 'arrivals'; }, 'Arrivals by turn', 'calendar') + '<span class="sp"></span>' + (['german', 'allied'] as E.Side[]).sort((x, y) => +(y === viewSide()) - +(x === viewSide())).map((x) => chip(x === 'german' ? 'GE' : 'AL', sd === x, () => { piecesSide = x; inspectId = null; }, seatedView() ? (x === viewSide() ? 'My pieces' : 'Opponent\'s pieces') : nm(x) + ' pieces')).join('');
   let body = '';
   if (piecesTab === 'boxes') {
     const sec = (title: string, bx: E.Chit['box']) => { const cs = E.boxOf(g, sd, bx); return `<h4>${title} <small>${cs.length}</small></h4><div class="pcgrid">${cs.map((c) => pieceBtn(c, () => { inspectId = inspectId === c.id ? null : c.id; }, inspectId === c.id)).join('') || '<small class="none">none</small>'}</div>`; };
@@ -991,14 +991,15 @@ function rulesHtml() {
 /** A Success Number modifier as a small icon chip: the sign and size are the data, the full reason is the tooltip. */
 const modIcon = (why: string) => /base/i.test(why) ? 'target' : /armor|infantry|class/i.test(why) ? 'armor_asset' : /green|veteran|elite|quality/i.test(why) ? 'star' : /terrain|tdn/i.test(why) ? 'tree' : /field/i.test(why) ? 'gear' : /river/i.test(why) ? 'wave' : /disorder/i.test(why) ? 'disorder' : /supply/i.test(why) ? 'warn' : /air|asset|artillery/i.test(why) ? 'air_mission' : 'info';
 const modChips = (parts: [string, number][]) => parts.map(([w, v]) => `<span class="m2 ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}" title="${esc(w)}">${ico(modIcon(w))}${v > 0 ? '+' : v < 0 ? '−' : ''}${v ? Math.abs(v) : ''}</span>`).join('');
-const chip = (label: string, on: boolean, f: () => void, title = '') => `<button class="chip ${on ? 'on' : ''}" aria-pressed="${on}" data-ui="${reg(f)}" title="${esc(title)}">${on ? ico('check') : ''}${label}</button>`;
+/** A toggle chip. With `icon` the icon replaces the tick; with an empty label it is icon-only and `title` names it. */
+const chip = (label: string, on: boolean, f: () => void, title = '', icon = '') => `<button class="chip ${on ? 'on' : ''} ${label ? '' : 'iconly'}" aria-pressed="${on}" data-ui="${reg(f)}" title="${esc(title || label)}" aria-label="${esc(title || label)}">${icon ? ico(icon) : on ? ico('check') : ''}${label ? `<span>${label}</span>` : ''}</button>`;
 const relayer = () => { saveLayers(); paintBoard(); };
 function layersHtml() {
-  const tintBtn = (v: typeof tint, label: string) => chip(label, tint === v, () => { tint = v; relayer(); });
-  return `<div class="modal"><div class="sheet slim"><h3>Map layers <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
-    <h4>Printed on the map</h4><div class="chips">${chip('Numbers', layers.numbers, () => { layers.numbers = !layers.numbers; relayer(); }, 'Area numbers and entry letters')}${chip('TDN', layers.tdn, () => { layers.tdn = !layers.tdn; relayer(); }, 'Terrain defence number: marker shape and colour')}${chip('Victory points', layers.vp, () => { layers.vp = !layers.vp; relayer(); })}${chip('Names', layers.names, () => { layers.names = !layers.names; relayer(); })}</div>
-    <h4>Colour the areas</h4><div class="chips">${tintBtn('off', 'Off')}${tintBtn('tdn', 'TDN')}${tintBtn('zones', 'Army zones')}${tintBtn('control', 'Control')}</div>
-    <p class="hint">Roads, rivers and borders stay visible under the colours.</p></div></div>`;
+  const tintBtn = (v: typeof tint, label: string, icon: string, title: string) => chip(label, tint === v, () => { tint = v; relayer(); }, title, icon);
+  const lay = (k: 'numbers' | 'tdn' | 'vp' | 'names', icon: string, title: string) => chip('', layers[k], () => { layers[k] = !layers[k]; relayer(); }, title, icon);
+  return `<div class="modal"><div class="sheet slim"><h3>${ico('layers')} Map <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
+    <h4>Printed</h4><div class="chips">${lay('numbers', 'hash', 'Area numbers and entry letters')}${lay('tdn', 'tree', 'Terrain defence number')}${lay('vp', 'star', 'Victory points')}${lay('names', 'text', 'Place names')}</div>
+    <h4>Colour</h4><div class="chips">${tintBtn('off', '', 'close', 'No colour')}${tintBtn('tdn', '', 'tree', 'Terrain defence')}${tintBtn('zones', '', 'layers', 'Army zones')}${tintBtn('control', '', 'flag', 'Who holds each area')}</div></div></div>`;
 }
 function modalHtml() {
   if (modal === 'layers') return layersHtml();
@@ -1023,8 +1024,8 @@ function modalHtml() {
           ${own && TABLE !== 'main' ? `<div class="row">${btn(`${ico('close')} Delete this game`, () => { void dropMatch(m ?? { id: TABLE, title: TABLE, owner: '' }); }, 'danger')}</div>` : ''}`; })()
       : '<p class="hint">Developer table. The Seat button in the top bar switches between German, Allied, both and watching; turn rules are enforced for the seat you hold.</p>';
     return `<div class="modal"><div class="sheet"><h3>Game <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
-      <div class="tabs">${tabs.map((t) => `<button class="${t === menuTab ? 'on' : ''}" data-do="${reg(() => { menuTab = t; })}">${t}</button>`).join('')}</div>${body}
-      <div class="row sheetfoot">${btn(`${ico('back')} Leave game`, () => { location.href = homeUrl(); })}</div></div></div>`;
+      <div class="tabs">${tabs.map((t) => `<button class="${t === menuTab ? 'on' : ''}" data-ui="${reg(() => { menuTab = t; })}" title="${t}" aria-label="${t}">${ico(({ Players: 'users', Log: 'list', Settings: 'sliders', Admin: 'lock' } as Record<string, string>)[t] ?? 'info')}</button>`).join('')}</div>${body}
+      <div class="row sheetfoot">${ubtn(`${ico('back')}<span>Leave game</span>`, () => { location.href = homeUrl(); })}</div></div></div>`;
   }
   return '';
 }

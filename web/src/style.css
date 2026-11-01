@@ -259,3 +259,6 @@ button.go .ic, button.plain .ic, .row button .ic { width: 18px; height: 18px; ve
 @keyframes glowp { 50% { opacity: .55; } } @media (prefers-reduced-motion: reduce) { #glow polygon { animation: none !important; } }
 .mapbubble { position: absolute; left: 0; top: 0; z-index: 11; pointer-events: auto; display: grid; gap: 4px; justify-items: center; background: #0b0d08f2; border: 1px solid var(--gold); padding: 6px 10px; font-size: 13px; max-width: 260px; text-align: center; } .mapbubble b { font: 700 20px var(--sfd); letter-spacing: .08em; text-transform: uppercase; color: var(--gold); } .mapbubble.wait b { font-size: 15px; color: var(--ink); } .mapbubble .row { display: flex; gap: 6px; }
 .mapbubble::after { content: ""; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); border: 8px solid transparent; border-top-color: var(--gold); border-bottom: 0; }
+.chip.iconly { min-width: 48px; justify-content: center; padding: 0 10px; } .chip .ic { width: 20px; height: 20px; } .tabs button .ic { width: 22px; height: 22px; display: block; margin: 0 auto; }
+.sheet h3 .ic { width: 22px; height: 22px; vertical-align: -3px; margin-right: 6px; } .tabrow { flex-wrap: nowrap; }
+.sheet h3 { display: flex; align-items: center; gap: 8px; } .sheet h3 .ico { margin-left: auto; } .sheet h3 .ic { margin: 0; }
