@@ -572,7 +572,8 @@ function placeFocus() {
 /** Decisions made on the table: small bubbles over the side that has to choose. Their buttons are bound like any other. */
 function placeBubbles() {
   const r = canvas.getBoundingClientRect(), v = new THREE.Vector3();
-  document.querySelectorAll<HTMLElement>('#ui .mapbubble').forEach((e) => { v.set(+e.dataset.wx!, 1.8, +e.dataset.wz!).project(cam); e.style.transform = `translate(${(v.x * 0.5 + 0.5) * r.width}px, ${(-v.y * 0.5 + 0.5) * r.height}px) translate(-50%, -100%)`; e.style.display = v.z < 1 ? '' : 'none'; });
+  document.querySelectorAll<HTMLElement>('#ui .mapbubble').forEach((e) => { v.set(+e.dataset.wx!, 1.8, +e.dataset.wz!).project(cam); const w = e.offsetWidth || 200, h = e.offsetHeight || 80, x = Math.min(r.width - w / 2 - 6, Math.max(w / 2 + 6, (v.x * 0.5 + 0.5) * r.width)), y = Math.min(r.height - 8, Math.max(h + 60, (-v.y * 0.5 + 0.5) * r.height));       // always on screen
+    e.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`; e.style.display = v.z < 1 ? '' : 'none'; });
 }
 /** The first loss of a failed attack (6.41a) is chosen on the table: the point unit or one battle asset lights up. */
 function decisionTargets(): Tgt | null {
@@ -588,6 +589,7 @@ function decisionBubble(): string {
   const who = b.stage === 'defChoice' ? other(b.attacker) : b.attacker, base = toWorld(...POLE.get(b.area)!), at = `data-wx="${base.x}" data-wz="${base.z + (who === 'german' ? 1 : -1) * 0.8}"`;
   if (!allowed()) return `<div class="mapbubble wait" ${at}><b>${nm(who)} decides…</b></div>`;
   if (b.stage === 'attFirst') return `<div class="mapbubble" ${at}><b>${b.pending} hit${b.pending > 1 ? 's' : ''}</b><span>Tap the point unit or an asset to take the first loss</span></div>`;
+  if (b.stage === 'attChoice') return `<div class="mapbubble" ${at}><b>${b.pending} hit${b.pending > 1 ? 's' : ''}</b><div class="row">${btn(`${ico('back')}<span>Abort attack</span>`, () => E.attackerChoice(g, g.battle!, true), 'ab', false, 'Abort: all attackers disordered, no losses')}${btn(`${ico('xbold')}<span>Take losses</span>`, () => E.attackerChoice(g, g.battle!, false), 'ab primary', false, 'Continue and take the step losses')}</div></div>`;
   if (b.stage !== 'defChoice') return '';
   const arty = b.pendingKind === 'arty';
   return `<div class="mapbubble" ${at}><b>${b.pending} hit${b.pending > 1 ? 's' : ''}</b><div class="row">${btn(`${ico('xbold')}<span>Take losses</span>`, () => E.defenderChoice(g, g.battle!, false), 'ab', false, 'Stand and take the step losses')}${btn(`${ico(arty ? 'disorder' : 'back')}<span>${arty ? 'Disperse' : 'Retreat'}</span>`, () => E.defenderChoice(g, g.battle!, true), 'ab primary', false, arty ? 'Disorder all defenders to absorb 1 hit' : 'Retreat (absorbs 1 hit, units disordered)')}</div></div>`;
