@@ -25,7 +25,7 @@ export async function firebaseStore(table: string): Promise<Store | null> {
     });
   });
   let split = false; try { const m = await fs.getDoc(fs.doc(db, 'tables', table, 'docs', 'meta')); const d = m.exists() ? (m.data() as { server?: boolean; split?: boolean }) : {}; split = d.split === true; } catch { /* no meta: an ordinary table */ }
-  const seatName = (s: Side) => (account.name || account.email || 'Player') + (account.admin ? ' (admin)' : '');
+  const seatName = () => (account.name || account.email || 'Player') + (account.admin ? ' (admin)' : '');
   return {
     get uid() { return account.uid; }, get canWrite() { return true; }, split,
     watchPriv: (next: (p: Priv | null) => void) => {
@@ -49,16 +49,16 @@ export async function firebaseStore(table: string): Promise<Store | null> {
         const r = await fs.runTransaction(db, async (tx) => {
           const snap = await tx.get(seatsRef), cur = (snap.exists() ? snap.data() : {}) as Seats, next: Seats = { german: cur.german ?? null, allied: cur.allied ?? null, germanName: cur.germanName ?? null, alliedName: cur.alliedName ?? null };
           if (next.german === uid) { next.german = null; next.germanName = null; } if (next.allied === uid) { next.allied = null; next.alliedName = null; }
-          if (side) { if (next[side] && next[side] !== uid) return `The ${side} seat is taken`; next[side] = uid; next[side === 'german' ? 'germanName' : 'alliedName'] = seatName(side); }
+          if (side) { if (next[side] && next[side] !== uid) return `The ${side} seat is taken`; next[side] = uid; next[side === 'german' ? 'germanName' : 'alliedName'] = seatName(); }
           tx.set(seatsRef, next); return '';
         });
-        if (r === '' && side && table !== 'main') await fs.updateDoc(fs.doc(db, 'matches', table), { members: fs.arrayUnion(uid), [side + 'Name']: seatName(side) }).catch(() => undefined);
+        if (r === '' && side && table !== 'main') await fs.updateDoc(fs.doc(db, 'matches', table), { members: fs.arrayUnion(uid), [side + 'Name']: seatName() }).catch(() => undefined);
         return r;
       } catch (e) { return msg(e); }
     },
     async createMatch(m, side, stateJson) {
       if (account.guest) return '!Sign in to create a game';
-      const id = Math.random().toString(36).slice(2, 8), uid = account.uid, name = seatName(side ?? 'german');
+      const id = Math.random().toString(36).slice(2, 8), uid = account.uid, name = seatName();
       try {
         await fs.setDoc(fs.doc(db, 'matches', id), { ...m, owner: uid, members: [uid], created: Date.now(), split: true, ...(side ? { [side + 'Name']: name } : {}) });
         const seats: Seats = { german: null, allied: null, germanName: null, alliedName: null }; if (side) { seats[side] = uid; seats[side === 'german' ? 'germanName' : 'alliedName'] = name; }

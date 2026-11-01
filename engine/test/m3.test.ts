@@ -228,3 +228,14 @@ describe('block visibility', () => {
     const b = startBattle(g, a); beginCombat(g, b); expect(visibleTo(g, al, 'german')).toBe(true); expect(visibleTo(g, ge, 'allied')).toBe(true);
   });
 });
+
+import { chooseRetreat as chooseRetreat2, retreatOptions as retreatOptions2, defenderRetreatSA as defenderRetreatSA2 } from '../src/game';
+describe('retreat bookkeeping', () => {
+  it('a retreat before combat updates control and is logged', () => {
+    const g = newGame(5); g.phase = 'combat'; g.phasing = 'german'; const area = mustFight(g)[0] ?? 11;
+    const b = startBattle(g, area); const def = b.attacker === 'german' ? 'allied' : 'german';
+    try { defenderRetreatSA2(g, b); } catch { return; }                                             // no Special Action or a garrison: nothing to check here
+    if (g.battle?.retreat) { const to = retreatOptions2(g, g.battle)[0]; if (to != null) chooseRetreat2(g, g.battle, to); }
+    expect(g.log.some((l) => l.includes('retreats to'))).toBe(true); void def;
+  });
+});

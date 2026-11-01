@@ -35,7 +35,7 @@ export function toPublic(g: Game, side: Side, salt: string, enemyAlias: Map<stri
 }
 
 /** The game this seat plays on: the shared copy with this seat's own details put back, and the details of anything the other side has revealed. */
-export function compose(pub: Game, side: Side, priv: Priv | null, reveals: Reveals): { game: Game; enemyAlias: Map<string, string> } {
+export function compose(pub: Game, priv: Priv | null, reveals: Reveals): { game: Game; enemyAlias: Map<string, string> } {
   const enemyAlias = new Map<string, string>(), pairs: [string, string][] = [], details = new Map<string, UnitSecret>();
   if (priv) for (const [id, s] of Object.entries(priv.secrets)) { const a = alias(priv.salt, id); pairs.push([a, id]); details.set(id, s); }
   for (const [a, r] of Object.entries(reveals)) if (!pairs.some(([x]) => x === a)) { pairs.push([a, r.id]); details.set(r.id, r); enemyAlias.set(r.id, a); }
@@ -72,7 +72,7 @@ export class SplitSeat {
   enemyAlias = new Map<string, string>();
   constructor(public side: Side) {}
   /** The game this seat plays on, from the shared copy (remembers the aliases of what the other side revealed). */
-  open(pub: Game): Game { const r = compose(pub, this.side, this.priv, this.reveals); this.enemyAlias = r.enemyAlias; return r.game; }
+  open(pub: Game): Game { const r = compose(pub, this.priv, this.reveals); this.enemyAlias = r.enemyAlias; return r.game; }
   /** What to write after a move: the shared copy, and this seat's private details when they changed. */
   save(g: Game): { pub: string; priv?: Priv } {
     if (!this.priv) throw new Error('private details not loaded yet');

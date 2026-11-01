@@ -10,7 +10,7 @@ describe('split hidden blocks (no server)', () => {
     const own = g.units.find((u) => u.side === 'german' && u.area != null && !u.garrison)!;
     expect(JSON.stringify(pub)).not.toContain(own.name);
     const privG: Priv = { salt: SG, secrets: secretsOf(g, 'german') };
-    const mine = compose(pub, 'german', privG, {}).game, back = mine.units.find((u) => u.id === own.id)!;
+    const mine = compose(pub, privG, {}).game, back = mine.units.find((u) => u.id === own.id)!;
     expect(back.name).toBe(own.name); expect(back.str).toBe(own.str);
     const theirs = mine.units.find((u) => u.side === 'allied' && u.area === area && !u.garrison)!;
     expect(isPlaceholder(theirs)).toBe(true);                                              // the German seat cannot read Allied blocks
@@ -20,7 +20,7 @@ describe('split hidden blocks (no server)', () => {
     const b = startBattle(g, area); setReady(g, b, 'german'); setReady(g, b, 'allied'); expect(b.stage).toBe('setup');
     const reveals = revealsIn(g, 'allied', area, SA);
     const pub = JSON.parse(toPublic(g, 'allied', SA, new Map())) as Game;
-    const { game } = compose(pub, 'german', { salt: SG, secrets: secretsOf(g, 'german') }, reveals);
+    const { game } = compose(pub, { salt: SG, secrets: secretsOf(g, 'german') }, reveals);
     const foe = game.units.find((u) => u.side === 'allied' && u.area === area && !u.garrison)!; expect(isPlaceholder(foe)).toBe(false);
   });
 });

@@ -695,7 +695,8 @@ function advanceRetreat(g: Game, b: Battle) {
 }
 function moveRetreat(g: Game, b: Battle, u: Unit, to: number) {
   if (u.area == null) return;
-  const from = u.area; u.area = to; if (b.retreat!.after !== 'sa') u.disorder = 1; b.retreat!.moved = true;                  // 8.24 a retreat before combat does not disorder updateControl(g, from); updateControl(g, to); say(g, `${u.name} retreats to ${areas.get(to)!.name}`);
+  const from = u.area; u.area = to; if (b.retreat!.after !== 'sa') u.disorder = 1; b.retreat!.moved = true;                  // 8.24 a retreat before combat does not disorder
+  updateControl(g, from); updateControl(g, to); say(g, `${u.name} retreats to ${areas.get(to)!.name}`);
 }
 export function chooseRetreat(g: Game, b: Battle, to: number) {
   if (b.stage !== 'retreat' || !b.retreat) throw new Error('no retreat pending');
@@ -912,4 +913,4 @@ export function setPoint(g: Game, b: Battle, side: Side, unitId: string) {
   if (side === b.attacker && u.disorder) throw new Error('a disordered unit cannot be the attacking point unit');
   if (side === b.attacker) b.attPoint = unitId; else b.defPoint = unitId;
 }
-export function setEngFw(g: Game, b: Battle, on: boolean) { if (b.stage !== 'setup' && b.stage !== 'offFire') throw new Error('too late'); b.engFw = !!on; }
+export function setEngFw(_g: Game, b: Battle, on: boolean) { if (b.stage !== 'setup' && b.stage !== 'offFire') throw new Error('too late'); b.engFw = !!on; }
