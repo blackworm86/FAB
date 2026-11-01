@@ -48,15 +48,15 @@ export function throwDice(cv: HTMLCanvasElement, groups: DiceGroup[], done: (pos
   clearDice();
   const w = cv.clientWidth || 1280, h = cv.clientHeight || 720, r = new THREE.WebGLRenderer({ canvas: cv, alpha: true, antialias: true });
   r.setSize(w, h, false); r.setPixelRatio(Math.min(2, devicePixelRatio)); r.shadowMap.enabled = true;
-  const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(28, w / h, 0.1, 100); cam.position.set(0, 12, 8.6).multiplyScalar(Math.max(1, 1.25 / (w / h))); cam.lookAt(0, 0, 0.6);
+  const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(28, w / h, 0.1, 100); cam.position.set(0, 12, 8.6).multiplyScalar(Math.max(1, 1.25 / (w / h), (() => { const L = layoutOf(groups.reduce((a, g) => a + g.dice.length, 0), w / h); return (((L.per - 1) * 2.3 + 3) * L.k) / (2 * Math.tan(14 * Math.PI / 180) * (w / h) * 14.8); })())); cam.lookAt(0, 0, 0.6);
   scene.add(new THREE.HemisphereLight(0xffffff, 0x445544, 0.9)); const sun = new THREE.DirectionalLight(0xffffff, 1.2); sun.position.set(-4, 9, 5); sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9 }); scene.add(sun);
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: 0.4 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
-  const all = groups.flatMap((g, gi) => g.dice.map((v) => ({ g, gi, v }))), per = all.length > 5 ? Math.ceil(all.length / 2) : all.length, sp = 2.3, quick = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const all = groups.flatMap((g, gi) => g.dice.map((v) => ({ g, gi, v }))), L = layoutOf(all.length, w / h), per = L.per, nRows = L.rows, sp = 2.3 * L.k, quick = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const items = all.map((d, k) => {
-    const die = makeDie(d.g.col), row = k < per ? 0 : 1, col = row ? k - per : k, inRow = row ? all.length - per : per, x = (col - (inRow - 1) / 2) * sp, z = all.length > 5 ? (row ? 1.1 : -1.1) : 0.2;
+    const die = makeDie(d.g.col), row = Math.floor(k / per), col = k - row * per, inRow = Math.min(per, all.length - row * per), x = (col - (inRow - 1) / 2) * sp, z = nRows > 1 ? (row - (nRows - 1) / 2) * 2.4 * L.k + 0.2 : 0.2;
     const q0 = new THREE.Quaternion().setFromUnitVectors(die.normals[d.v].clone(), new THREE.Vector3(0, 1, 0)), upT = die.ups[d.v].clone().applyQuaternion(q0), qEnd = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI - Math.atan2(upT.x, upT.z)).multiply(q0);   // lands with the number upright for the viewer
-    const sx = x - 6 + Math.random(), sz = z - 5; die.group.position.set(sx, 5, sz); scene.add(die.group);
+    const sx = x - 6 + Math.random(), sz = z - 5; die.group.position.set(sx, 5, sz); die.group.scale.setScalar(L.k); scene.add(die.group);
     return { die, x, z, sx, sz, qEnd, axis: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize(), spin: 9 + Math.random() * 6, delay: k * 0.07, dur: 1.4 + Math.random() * 0.4, d };
   });
   const t0 = performance.now(), ease = (t: number) => 1 - Math.pow(1 - t, 3); let raf = 0, finished = false, dead = false;
@@ -78,3 +78,6 @@ export function throwDice(cv: HTMLCanvasElement, groups: DiceGroup[], done: (pos
   raf = requestAnimationFrame(frame);
   stop = () => { dead = true; cancelAnimationFrame(raf); r.dispose(); r.clear(); };
 }
+
+/** Rows and sizes for this many dice on this screen: portrait screens get fewer dice per row, and many dice get smaller. */
+function layoutOf(n: number, aspect: number) { const m = aspect < 0.8 ? 3 : aspect < 1.3 ? 4 : 6, rows = Math.ceil(n / m), per = Math.ceil(n / rows); return { per, rows, k: rows >= 2 ? (rows >= 3 ? 0.6 : 0.72) : 1 }; }

@@ -427,7 +427,7 @@ function act(f: () => void, after = '') {
   if (!allowed()) return say(notYou());
   const before = g.battle ? snap(g) : null;
   const r = hist.run(g, () => { f(); auto(); });
-  g = r.game; if (r.error) say(r.error.message); else { note = after; if (before && !rollNoted) noteFx(before, g); }       // a roll already noted its own effects, to show them once the dice have settled
+  g = r.game; if (r.error) say(/pending|already/.test(r.error.message) ? `That choice is no longer open (the game is at ${g.battle?.stage ?? 'no battle'}). Refreshed.` : r.error.message); else { note = after; if (before && !rollNoted) noteFx(before, g); }       // a roll already noted its own effects, to show them once the dice have settled
   rollNoted = false;
   save(); refresh();
 }
@@ -578,8 +578,8 @@ function placeBubbles() {
 function decisionTargets(): Tgt | null {
   const b = g.battle; if (!b || b.stage !== 'attFirst' || !allowed()) return null;
   const t: Tgt = { units: new Map(), areas: new Map(), pick: new Map(), color: new Map(), chips: [], buttons: [], modes: [], any: null, hint: '' };
-  t.units.set(b.attPoint, () => E.chooseFirstLoss(g, b, b.attPoint));
-  for (const id of b.assets[b.attacker].filter((x) => E.isBattleAsset(E.chit(g, x)))) t.units.set(id, () => E.chooseFirstLoss(g, b, id));
+  t.units.set(b.attPoint, () => E.chooseFirstLoss(g, g.battle!, b.attPoint));
+  for (const id of b.assets[b.attacker].filter((x) => E.isBattleAsset(E.chit(g, x)))) t.units.set(id, () => E.chooseFirstLoss(g, g.battle!, id));
   return t;
 }
 /** The choice the battle is waiting for, as a bubble over the deciding side's row. */
@@ -588,8 +588,9 @@ function decisionBubble(): string {
   const who = b.stage === 'defChoice' ? other(b.attacker) : b.attacker, base = toWorld(...POLE.get(b.area)!), at = `data-wx="${base.x}" data-wz="${base.z + (who === 'german' ? 1 : -1) * 0.8}"`;
   if (!allowed()) return `<div class="mapbubble wait" ${at}><b>${nm(who)} decides…</b></div>`;
   if (b.stage === 'attFirst') return `<div class="mapbubble" ${at}><b>${b.pending} hit${b.pending > 1 ? 's' : ''}</b><span>Tap the point unit or an asset to take the first loss</span></div>`;
+  if (b.stage !== 'defChoice') return '';
   const arty = b.pendingKind === 'arty';
-  return `<div class="mapbubble" ${at}><b>${b.pending} hit${b.pending > 1 ? 's' : ''}</b><div class="row">${btn(`${ico('xbold')}<span>Take losses</span>`, () => E.defenderChoice(g, b, false), 'ab', false, 'Stand and take the step losses')}${btn(`${ico(arty ? 'disorder' : 'back')}<span>${arty ? 'Disperse' : 'Retreat'}</span>`, () => E.defenderChoice(g, b, true), 'ab primary', false, arty ? 'Disorder all defenders to absorb 1 hit' : 'Retreat (absorbs 1 hit, units disordered)')}</div></div>`;
+  return `<div class="mapbubble" ${at}><b>${b.pending} hit${b.pending > 1 ? 's' : ''}</b><div class="row">${btn(`${ico('xbold')}<span>Take losses</span>`, () => E.defenderChoice(g, g.battle!, false), 'ab', false, 'Stand and take the step losses')}${btn(`${ico(arty ? 'disorder' : 'back')}<span>${arty ? 'Disperse' : 'Retreat'}</span>`, () => E.defenderChoice(g, g.battle!, true), 'ab primary', false, arty ? 'Disorder all defenders to absorb 1 hit' : 'Retreat (absorbs 1 hit, units disordered)')}</div></div>`;
 }
 function placeBadges() {
   { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(); fxLayer.place((area, unit) => { const o = unit ? pieces.children.find((x) => x.userData.unit === unit) : undefined, p = o ? o.position : center(area); v.set(p.x, o ? 1.6 : 3, p.z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width + (o ? 34 : 0), y: (-v.y * 0.5 + 0.5) * r.height, visible: v.z < 1 }; }); }
@@ -1106,7 +1107,8 @@ const onNet = (): void => {
   if (next && !HAS_TABLE && online.account && !online.account.guest) { try { sessionStorage.removeItem('fab-next'); } catch { /* private mode */ } location.href = `${homeUrl()}?table=${next}`; }     // back to the invite that sent you to sign in
 };
 void startOnline((rg) => { const was = g.battle, n0 = was?.rolls.length ?? 0, st0 = was?.stage, pre = was ? snap(g) : null; applyingRemote = true; g = rg;
-  const nb = g.battle; const rolled = !!(was && nb && nb.area === was.area && nb.rolls.length > n0); if (pre) noteFx(pre, g, rolled); if (was && nb && nb.area === was.area && nb.rolls.length > n0 && st0 && STAGE_NAME[st0]) {      // the other player rolled: show their dice here too
+  const nb = g.battle; const rolled = !!(was && nb && nb.area === was.area && nb.rolls.length > n0); if (pre) { try { noteFx(pre, g, rolled); } catch (e) { console.error(e); } }                  // a failure while describing the changes must never stop the screen from updating
+  if (was && nb && nb.area === was.area && nb.rolls.length > n0 && st0 && STAGE_NAME[st0]) {      // the other player rolled: show their dice here too
     const side = st0 === 'attArty' || st0 === 'offFire' ? nb.attacker : other(nb.attacker);
     rollView = { remote: true, title: `${nm(side)} ${STAGE_NAME[st0]}`, pos: null, groups: nb.rolls.slice(n0).map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: [] })) };
     if (rollView.groups.length) { const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block'; throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; render(); showFx(pendingFx); pendingFx = []; setTimeout(() => { if (rollView === rv) endRoll(); }, 4000); } }); } else rollView = null;       // the other player's dice clear themselves
