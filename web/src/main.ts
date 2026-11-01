@@ -413,7 +413,7 @@ function actorNow(): E.Side | 'both' {
   if (g.phase === 'admin' || g.phase === 'reinforcement') return 'both';
   return g.phase === 'reaction' ? other(g.phasing) : g.phasing;
 }
-const allowed = () => !online.active || modal === 'menu' || online.both() || (online.mySide() != null && (actorNow() === 'both' || actorNow() === online.mySide()));
+const allowed = () => !online.active || online.both() || (online.mySide() != null && (actorNow() === 'both' || actorNow() === online.mySide()));
 /** In a shared-screen game every side is yours; online only your own seat's pieces. */
 const mine = (s: E.Side) => !online.active || online.both() || online.mySide() === s;
 const notYou = () => online.mySide() == null ? 'You are watching. Take a seat in the menu to play.' : `Wait for the ${nm(actorNow() as E.Side)} player.`;
@@ -572,8 +572,8 @@ function placeFocus() {
 /** Decisions made on the table: small bubbles over the side that has to choose. Their buttons are bound like any other. */
 function placeBubbles() {
   const r = canvas.getBoundingClientRect(), v = new THREE.Vector3();
-  document.querySelectorAll<HTMLElement>('#ui .mapbubble').forEach((e) => { v.set(+e.dataset.wx!, 1.8, +e.dataset.wz!).project(cam); const w = e.offsetWidth || 200, h = e.offsetHeight || 80, x = Math.min(r.width - w / 2 - 6, Math.max(w / 2 + 6, (v.x * 0.5 + 0.5) * r.width)), y = Math.min(r.height - 8, Math.max(h + 60, (-v.y * 0.5 + 0.5) * r.height));       // always on screen
-    e.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`; e.style.display = v.z < 1 ? '' : 'none'; });
+  document.querySelectorAll<HTMLElement>('#ui .mapbubble').forEach((e) => { v.set(+e.dataset.wx!, 0.2, +e.dataset.wz!).project(cam); const w = e.offsetWidth || 200, h = e.offsetHeight || 80, x = Math.min(r.width - w / 2 - 6, Math.max(w / 2 + 6, (v.x * 0.5 + 0.5) * r.width)), y = Math.min(r.height - h - 70, Math.max(60, (-v.y * 0.5 + 0.5) * r.height));       // always on screen
+    e.style.transform = `translate(${x}px, ${y}px) translate(-50%, 0)`; e.style.display = v.z < 1 ? '' : 'none'; });
 }
 /** The first loss of a failed attack (6.41a) is chosen on the table: the point unit or one battle asset lights up. */
 function decisionTargets(): Tgt | null {
@@ -586,13 +586,13 @@ function decisionTargets(): Tgt | null {
 /** The choice the battle is waiting for, as a bubble over the deciding side's row. */
 function decisionBubble(): string {
   const b = g.battle; if (!b || rollView || !['attChoice', 'defChoice', 'attFirst'].includes(b.stage)) return '';
-  const who = b.stage === 'defChoice' ? other(b.attacker) : b.attacker, base = toWorld(...POLE.get(b.area)!), at = `data-wx="${base.x}" data-wz="${base.z + (who === 'german' ? 1 : -1) * 0.8}"`;
+  const who = b.stage === 'defChoice' ? other(b.attacker) : b.attacker, poly = areaWorld(b.area), edge = viewSide() === 'allied' ? Math.min(...poly.map((q) => q.z)) - 0.8 : Math.max(...poly.map((q) => q.z)) + 0.8, base = toWorld(...POLE.get(b.area)!), at = `data-wx="${base.x}" data-wz="${edge}"`;       // just outside the area on the near side, so the pieces stay visible
   if (!allowed()) return `<div class="mapbubble wait" ${at}><b>${nm(who)} decides…</b></div>`;
   if (b.stage === 'attFirst') return `<div class="mapbubble" ${at}><b>${b.pending} hit${b.pending > 1 ? 's' : ''}</b><span>Tap the point unit or an asset to take the first loss</span></div>`;
-  if (b.stage === 'attChoice') return `<div class="mapbubble" ${at}><b>${b.pending} hit${b.pending > 1 ? 's' : ''}</b><div class="row">${btn(`${ico('back')}<span>Abort attack</span>`, () => E.attackerChoice(g, g.battle!, true), 'ab', false, 'Abort: all attackers disordered, no losses')}${btn(`${ico('xbold')}<span>Take losses</span>`, () => E.attackerChoice(g, g.battle!, false), 'ab primary', false, 'Continue and take the step losses')}</div></div>`;
+  if (b.stage === 'attChoice') return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b><div class="row">${btn(`${ico('back')}`, () => E.attackerChoice(g, g.battle!, true), 'ab', false, 'Abort: all attackers disordered, no losses')}${btn(`${ico('xbold')}`, () => E.attackerChoice(g, g.battle!, false), 'ab primary', false, 'Continue and take the step losses')}</div></div>`;
   if (b.stage !== 'defChoice') return '';
   const arty = b.pendingKind === 'arty';
-  return `<div class="mapbubble" ${at}><b>${b.pending} hit${b.pending > 1 ? 's' : ''}</b><div class="row">${btn(`${ico('xbold')}<span>Take losses</span>`, () => E.defenderChoice(g, g.battle!, false), 'ab', false, 'Stand and take the step losses')}${btn(`${ico(arty ? 'disorder' : 'back')}<span>${arty ? 'Disperse' : 'Retreat'}</span>`, () => E.defenderChoice(g, g.battle!, true), 'ab primary', false, arty ? 'Disorder all defenders to absorb 1 hit' : 'Retreat (absorbs 1 hit, units disordered)')}</div></div>`;
+  return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b><div class="row">${btn(`${ico('xbold')}`, () => E.defenderChoice(g, g.battle!, false), 'ab', false, 'Stand and take the step losses')}${btn(`${ico(arty ? 'disorder' : 'back')}`, () => E.defenderChoice(g, g.battle!, true), 'ab primary', false, arty ? 'Disorder all defenders to absorb 1 hit' : 'Retreat (absorbs 1 hit, units disordered)')}</div></div>`;
 }
 function placeBadges() {
   { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(); fxLayer.place((area, unit) => { const o = unit ? pieces.children.find((x) => x.userData.unit === unit) : undefined, p = o ? o.position : center(area); v.set(p.x, o ? 1.6 : 3, p.z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width + (o ? 34 : 0), y: (-v.y * 0.5 + 0.5) * r.height, visible: v.z < 1 }; }); }
@@ -1013,19 +1013,19 @@ function modalHtml() {
     const tabs = ['Players', 'Log', 'Settings', ...(online.admin ? ['Admin'] : [])];
     if (!tabs.includes(menuTab)) menuTab = 'Players';
     const body = menuTab === 'Log' ? `<div class="log">${[...g.log].reverse().slice(0, 120).map((l) => `<div>${esc(l)}</div>`).join('')}</div>`
-      : menuTab === 'Settings' ? `<h4>Map</h4><div class="row">${btn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${btn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Map art</h4><div class="row"><select data-sel="${regv((x) => setArt(x as 'vector' | 'scan'))}"><option value="vector" ${art === 'vector' ? 'selected' : ''}>Vector layers (traced)</option><option value="scan" ${art === 'scan' ? 'selected' : ''}>Original scan</option></select></div>
+      : menuTab === 'Settings' ? `<h4>Map</h4><div class="row">${ubtn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${ubtn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Map art</h4><div class="row"><select data-sel="${regv((x) => setArt(x as 'vector' | 'scan'))}"><option value="vector" ${art === 'vector' ? 'selected' : ''}>Vector layers (traced)</option><option value="scan" ${art === 'scan' ? 'selected' : ''}>Original scan</option></select></div>
         ${online.active && !online.admin && !online.both() ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as 'tournament' | 'campaign'; })}"><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
         <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Restart', () => { if (!confirm('Restart and lose the current game?')) return; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'danger')}</div>`}`
-      : menuTab === 'Admin' ? `<div class="row">${btn('Update rules', () => { modal = 'rules'; })}${btn('Free German seat', () => { void auth.freeSeat('german'); })}${btn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div>`
+      : menuTab === 'Admin' ? `<div class="row">${ubtn('Update rules', () => { modal = 'rules'; })}${ubtn('Free German seat', () => { void auth.freeSeat('german'); })}${ubtn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div>`
       : online.mode === 'remote' ? (() => {
         const a = online.account, signed = !!a && !a.guest, me = online.mySide(), title = matches.find((m) => m.id === TABLE)?.title ?? TABLE, m = matches.find((x) => x.id === TABLE), own = !!m && (m.owner === online.uid || online.admin);
         const row = (sd: E.Side) => { const who = online.seats[sd] ? (online.seats[sd] === online.uid ? 'you' : esc((sd === 'german' ? online.seats.germanName : online.seats.alliedName) || 'taken')) : 'free';
-          return `<div class="seatrow"><b class="${sd}">${nm(sd)}</b><span>${who}</span>${online.seats[sd] === online.uid ? btn('Leave seat', () => { void sit(null); }) : !online.seats[sd] && signed && !me ? btn('Take seat', () => { void sit(sd); }, 'primary') : ''}</div>`; };
+          return `<div class="seatrow"><b class="${sd}">${nm(sd)}</b><span>${who}</span>${online.seats[sd] === online.uid ? ubtn('Leave seat', () => { void sit(null); }) : !online.seats[sd] && signed && !me ? ubtn('Take seat', () => { void sit(sd); }, 'primary') : ''}</div>`; };
         return `<h4>Players</h4>${row('german')}${row('allied')}${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}
-          <div class="row">${btn(`${ico('share')} Invite a player`, () => { void share(TABLE, title); })}</div>
+          <div class="row">${ubtn(`${ico('share')} Invite a player`, () => { void share(TABLE, title); })}</div>
           <p class="hint">Connection: ${esc(online.sync)}</p>
           <p class="hint">${signed ? `Signed in as <b>${esc(a!.name || a!.email)}</b>` : 'You are watching as a guest.'}</p>
-          ${own && TABLE !== 'main' ? `<div class="row">${btn(`${ico('close')} Delete this game`, () => { void dropMatch(m ?? { id: TABLE, title: TABLE, owner: '' }); }, 'danger')}</div>` : ''}`; })()
+          ${own && TABLE !== 'main' ? `<div class="row">${ubtn(`${ico('close')} Delete this game`, () => { void dropMatch(m ?? { id: TABLE, title: TABLE, owner: '' }); }, 'danger')}</div>` : ''}`; })()
       : '<p class="hint">Developer table. The Seat button in the top bar switches between German, Allied, both and watching; turn rules are enforced for the seat you hold.</p>';
     return `<div class="modal"><div class="sheet"><h3>Game <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
       <div class="tabs">${tabs.map((t) => `<button class="${t === menuTab ? 'on' : ''}" data-ui="${reg(() => { menuTab = t; })}" title="${t}" aria-label="${t}">${ico(({ Players: 'users', Log: 'list', Settings: 'sliders', Admin: 'lock' } as Record<string, string>)[t] ?? 'info')}</button>`).join('')}</div>${body}
