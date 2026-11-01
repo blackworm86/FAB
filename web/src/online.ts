@@ -41,7 +41,7 @@ export type DevSeat = 'german' | 'allied' | 'both' | 'watch';
 export const online = {
   /** 'off' = hot-seat, 'local' = seats enforced on this machine only (dev), 'remote' = shared through a store. */
   mode: 'off' as 'off' | 'local' | 'remote', uid: '', seats: {} as Seats, rev: 0, canWrite: true, error: '', store: '' as string,
-  ready: false, devSeat: 'both' as DevSeat, split: false, enemyAlias: new Map<string, string>(), account: null as Account | null, admin: false, hasAccounts: false,
+  sync: 'connecting' as string, ready: false, devSeat: 'both' as DevSeat, split: false, enemyAlias: new Map<string, string>(), account: null as Account | null, admin: false, hasAccounts: false,
   mySide(): Side | null {
     if (DEV && this.mode !== 'off') return this.devSeat === 'german' || this.devSeat === 'allied' ? this.devSeat : null;
     return this.seats.german === this.uid && this.uid ? 'german' : this.seats.allied === this.uid && this.uid ? 'allied' : null;
@@ -66,7 +66,7 @@ let notify: (m: string) => void = () => {}, onGone: () => void = () => {}, had =
 function conflictOr(e: unknown) {
   const m = String((e as { message?: string })?.message ?? e);
   if (m.includes('CONFLICT')) { lastJson = ''; notify('The other player moved at the same moment. Their move is in; repeat yours.'); rebuildLater = true; return; }
-  notify('Not saved: ' + m); fail(m);
+  online.sync = 'NOT SAVED: ' + m; notify('Not saved: ' + m); fail(m);
 }
 
 export async function startOnline(remote: (g: Game) => void, changed: () => void, current: () => Game, say: (m: string) => void = () => {}, gone: () => void = () => {}) {
@@ -81,7 +81,7 @@ export async function startOnline(remote: (g: Game) => void, changed: () => void
   if (online.split) {
     // hidden blocks split between seats: rebuild the game this seat plays on from the shared copy, its private details and the reveals
     store.watchPriv?.((p) => { const sp = mySeat(); if (sp) sp.priv = p; rebuild(); if (p && queued) { const q = queued; queued = null; void pushSplit(q); } }); store.watchReveals?.((r) => { const sp = mySeat(); if (sp) sp.reveals = r; rebuild(); });
-    store.watchState((d) => { if (!d) { if (had) onGone(); return; } had = true; online.rev = Math.max(online.rev, d.rev); pubDoc = d; if (d.json === lastJson) return; lastJson = d.json; rebuild(); }, fail);
+    store.watchState((d) => { if (!d) { if (had) onGone(); return; } had = true; online.sync = `received rev ${d.rev} ${new Date().toLocaleTimeString()}`; onChange(); online.rev = Math.max(online.rev, d.rev); pubDoc = d; if (d.json === lastJson) return; lastJson = d.json; rebuild(); }, fail);
     return;
   }
   store.watchState((d) => {
@@ -126,13 +126,13 @@ export const lobby = {
 /** Split tables: write this seat's private details when they changed, then the shared copy with this seat's hidden blocks hidden again. */
 async function pushSplit(g: Game) {
   const sp = mySeat(); if (online.mode !== 'remote' || !store || !sp) return;
-  if (!sp.priv) { queued = g; notify('Your block details have not loaded yet. The move is kept and will be sent when they do.'); return; }
+  if (!sp.priv) { online.sync = 'NOT SAVED: your private block details have not loaded'; queued = g; notify('Your block details have not loaded yet. The move is kept and will be sent when they do.'); return; }
   const out = sp.save(g); if (out.pub === lastJson) return;
   if (writing) { queued = g; return; }
   writing = true; const dog = setTimeout(() => { if (writing) { writing = false; notify('Saving is taking too long. Check your connection.'); rebuild(); } }, 10000);
   try {
     if (out.priv) await store.setPriv?.(out.priv);
-    lastJson = out.pub; pubDoc = { rev: online.rev, json: out.pub, by: online.uid }; await store.setState(pubDoc);
+    lastJson = out.pub; pubDoc = { rev: online.rev, json: out.pub, by: online.uid }; online.sync = 'saving'; onChange(); await store.setState(pubDoc); online.sync = `saved ${new Date().toLocaleTimeString()}`; onChange();
   } catch (e) { conflictOr(e); }
   clearTimeout(dog); writing = false; if (rebuildLater) { rebuildLater = false; rebuild(); }
   if (queued) { const q = queued; queued = null; void pushSplit(q); }
