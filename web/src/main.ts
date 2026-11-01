@@ -201,7 +201,7 @@ function drawBattleTable(b: E.Battle, spot: (id: number, x: number, z: number, r
 function drawPointMarks(b: E.Battle) {
   for (const [uid, sd] of [[b.attPoint, b.attacker], [b.defPoint, other(b.attacker)]] as const) {                  // the point unit carries a gold target
     const o = pieces.children.find((x) => x.userData.unit === uid); const u = g.units.find((x) => x.id === uid); if (!o || !u || !seen(u)) continue; void sd;
-    const d = discSprite('point', 0.5); d.position.set(o.position.x, o.position.y > 0.6 ? 2.1 : 0.9, o.position.z); d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
+    const d = discSprite('point', 0.26), c = viewSide() === 'allied' ? -1 : 1; d.position.set(o.position.x + 0.58 * c, o.position.y > 0.6 ? 1.95 : 0.9, o.position.z - 0.58 * c);                 // a back corner of the block, clear of its pips and symbol d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
   }
 }
 function drawPieces() {
