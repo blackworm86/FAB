@@ -296,6 +296,8 @@ function inside(x: number, y: number, poly: [number, number][]) { let c = false;
 let acts: Record<string, () => void> = {}, actv: Record<string, (v: string) => void> = {}, n = 0;
 const reg = (f: () => void) => { const k = 'a' + n++; acts[k] = f; return k; };
 const regv = (f: (v: string) => void) => { const k = 'v' + n++; actv[k] = f; return k; };
+/** A button that only changes what you see or who sits where, never the game: it works for anyone, whoever's turn it is. */
+const ubtn = (label: string, f: () => void, cls = '', dis = false, title = '') => `<button class="${cls}" data-ui="${reg(f)}" ${dis ? 'disabled' : ''} title="${esc(title)}">${label}</button>`;
 const btn = (label: string, f: () => void, cls = '', dis = false, title = '') => `<button class="${cls}" data-do="${reg(f)}" ${dis ? 'disabled' : ''} title="${esc(title)}">${label}</button>`;
 const pips = (u: E.Unit) => Array.from({ length: u.str }, () => `<i class="pip ${E.quality(u)}"></i>`).join('');
 const ABBR: Record<string, string> = { artillery: 'Arty', rocket_artillery: 'Rkt', engineer: 'Eng', armor_asset: 'Armor', infantry_asset: 'Inf', task_force: 'TF', fuel: 'Fuel', command_staff: 'Staff', sa_block: 'SA', replacement_inf: 'Repl inf', replacement_arm: 'Repl arm',
@@ -820,9 +822,9 @@ function homeHtml() {
 function seatBar() {
   if (online.mode !== 'remote' || !online.hasAccounts) return '';
   const a = online.account, me = online.mySide(), s = online.seats, title = matches.find((m) => m.id === TABLE)?.title ?? 'a game of FAB';
-  if (!a || a.guest) return `<div class="seatbar"><span>You are watching.</span>${btn('Sign in to play', () => { try { sessionStorage.setItem('fab-next', TABLE); } catch { /* private mode */ } location.href = homeUrl(); }, 'primary')}</div>`;
-  if (!me) { const free = (['german', 'allied'] as E.Side[]).filter((x) => !s[x]); return `<div class="seatbar"><span>${free.length ? 'Take a seat:' : 'Both seats are taken. You are watching.'}</span>${free.map((x) => btn(`Play ${nm(x)}`, () => { void sit(x); }, 'primary')).join('')}</div>`; }
-  if (!s.german || !s.allied) return `<div class="seatbar"><span>Waiting for your opponent.</span>${btn(`${ico('share')} Invite`, () => { void share(TABLE, title); }, 'primary')}</div>`;
+  if (!a || a.guest) return `<div class="seatbar"><span>You are watching.</span>${ubtn('Sign in to play', () => { try { sessionStorage.setItem('fab-next', TABLE); } catch { /* private mode */ } location.href = homeUrl(); }, 'primary')}</div>`;
+  if (!me) { const free = (['german', 'allied'] as E.Side[]).filter((x) => !s[x]); return `<div class="seatbar"><span>${free.length ? 'Take a seat:' : 'Both seats are taken. You are watching.'}</span>${free.map((x) => ubtn(`Play ${nm(x)}`, () => { void sit(x); }, 'primary')).join('')}</div>`; }
+  if (!s.german || !s.allied) return `<div class="seatbar"><span>Waiting for your opponent.</span>${ubtn(`${ico('share')} Invite`, () => { void share(TABLE, title); }, 'primary')}</div>`;
   return '';
 }
 /** Sign-in panel (Firebase only): Google, or email and password; guests can watch but not play. */
@@ -902,7 +904,7 @@ function render() {
 function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
   { const h = ui.querySelector<HTMLElement>('.c-hand'), a = ui.querySelector<HTMLElement>('.arrtray'); if (h) h.scrollLeft = keepH; if (a) a.scrollLeft = keepA; }
   ui.querySelectorAll<HTMLElement>('[data-ui]').forEach((e) => (e.onclick = () => { acts[e.dataset.ui!]?.(); render(); }));            // view-only choices: allowed for everyone, never touch the game
-  ui.querySelectorAll<HTMLElement>('[data-do]').forEach((e) => (e.onclick = () => act(acts[e.dataset.do!])));
+  ui.querySelectorAll<HTMLElement>('[data-do]').forEach((e) => (e.onclick = () => { if (inGame()) act(acts[e.dataset.do!]); else { acts[e.dataset.do!]?.(); render(); } }));        // on the home page nothing is a game move
   ui.querySelectorAll<HTMLElement>('[data-modal]').forEach((e) => (e.onclick = () => { modal = (e.dataset.modal || null) as typeof modal; render(); }));
   ui.querySelectorAll<HTMLElement>('[data-sel]').forEach((e) => (e.onchange = () => { const f = actv[e.dataset.sel!]; if (f) { f(e instanceof HTMLInputElement && e.type === 'checkbox' ? (e.checked ? 'on' : 'off') : (e as HTMLSelectElement).value); save(); } }));
   ui.querySelectorAll<HTMLElement>('[data-arr]').forEach((e) => (e.onpointerdown = (ev) => dragArrival(ev, e)));
