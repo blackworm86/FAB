@@ -141,13 +141,13 @@ function tag(text: string, bg: string, size = 1.1) {
     const key = 'art:' + text; let at = tagTex.get(key);
     if (!at) { at = new THREE.CanvasTexture(document.createElement('canvas')); const im = new Image(); im.onload = () => { const c = document.createElement('canvas'); c.width = c.height = 256; c.getContext('2d')!.drawImage(im, 0, 0, 256, 256); at!.image = c; at!.colorSpace = THREE.SRGBColorSpace; at!.anisotropy = 8; at!.needsUpdate = true; }; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(art); tagTex.set(key, at); }
     const edge = new THREE.MeshStandardMaterial({ color: 0x2a2a28 }), m = new THREE.Mesh(new RoundedBoxGeometry(size, 0.12, size, 2, 0.1), [edge, edge, new THREE.MeshStandardMaterial({ map: at }), edge, edge, edge]);
-    m.castShadow = true; return m;
+    m.castShadow = true; m.rotation.y = viewRot(); return m;
   }
   let t = tagTex.get(text + bg);
   if (!t) { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d')!; x.fillStyle = bg; x.fillRect(0, 0, 128, 128); x.strokeStyle = '#fff'; x.lineWidth = 8; x.strokeRect(4, 4, 120, 120);
     x.fillStyle = '#fff'; x.font = `bold ${text.length > 2 ? 46 : 60}px Arial Narrow, Arial, sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(text, 64, 68); t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; tagTex.set(text + bg, t); }
   const side = new THREE.MeshStandardMaterial({ color: bg }), m = new THREE.Mesh(new RoundedBoxGeometry(size, 0.12, size, 2, 0.1), [side, side, new THREE.MeshStandardMaterial({ map: t }), side, side, side]);
-  m.castShadow = true; return m;
+  m.castShadow = true; m.rotation.y = viewRot(); return m;
 }
 /** Every counter is a 9/16 inch square (1.43 cm) with slightly rounded corners. */
 const CHIT = 1.43;
@@ -248,7 +248,7 @@ function drawPieces() {
       const tags: [string, string][] = []; const top = flat ? 0.85 : 1.66; let stackY = u.garrison ? 0.3 : top;
       if (u.disorder && !u.garrison) { const k = tag(u.disorder === 1 ? 'DIS' : 'REC', u.disorder === 1 ? '#8a1f1f' : '#a8741a', CHIT * 0.62), dc = viewSide() === 'allied' ? -1 : 1; k.position.set(m.position.x - 0.52 * dc, top, m.position.z + 0.52 * dc); markers.add(k); stackY = top + 0.14; }
       if (u.reserve) tags.push([u.side === 'german' ? ({ z5: 'R5', z6: 'R6', z7: 'R7' } as Record<string, string>)[u.reserve] ?? 'R5' : u.reserve === 'z7' ? 'A7' : 'A56', '#2d6cb0']); if (u.exploit) tags.push(['E', '#d9741c']); if (u.unsupplied && !u.garrison) tags.push(['S', '#b8312f']); if (u.interdict) tags.push(['GI', '#8a2f9c']); if (u.bcross) tags.push(['B', '#8a6a1c']);
-      tags.forEach(([t, c], i) => { const k = tag(t, c, CHIT); k.position.set(m.position.x + i * 0.12, stackY + i * 0.14, m.position.z - i * 0.08); k.rotation.y = (i % 2 ? 0.12 : -0.08); markers.add(k); });
+      tags.forEach(([t, c], i) => { const k = tag(t, c, CHIT); k.position.set(m.position.x + i * 0.12, stackY + i * 0.14, m.position.z - i * 0.08); k.rotation.y = viewRot() + (i % 2 ? 0.12 : -0.08); markers.add(k); });
     });
   }
   if (g.battle) drawPointMarks(g.battle);
@@ -604,7 +604,7 @@ function syncMoveMarks() {
   if (g.over || g.battle || g.pendingBlow || selUnit || !['movement', 'strategic', 'reaction', 'btMove'].includes(g.phase) || !allowed() || !mine(actor)) return;
   for (const u of g.units.filter((x) => x.side === actor && x.area != null && !x.garrison && seen(x))) {
     let can = false; if (!u.moved) { try { can = (g.phase === 'strategic' ? (u.reserve ? E.stratOptions(g, u.id).length : 0) : E.moveOptions(g, u.id).length) > 0; } catch { can = false; } }
-    const el = document.createElement('div'); el.className = 'mm ' + (can ? 'go' : 'no'); el.innerHTML = ico(can ? 'next' : 'minus'); el.title = can ? `${u.name} can move` : `${u.name} cannot move`; layer.appendChild(el); moveMarks.push({ el, unit: u.id });
+    const el = document.createElement('div'); el.className = 'mm ' + (can ? 'go' : 'no'); el.innerHTML = ico(can ? 'back' : 'minus'); el.title = can ? `${u.name} can move` : `${u.name} cannot move`; layer.appendChild(el); moveMarks.push({ el, unit: u.id });
   }
 }
 function placeMoveMarks() {
