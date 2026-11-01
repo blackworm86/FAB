@@ -1,0 +1,61 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "admins": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid"
+      }
+    },
+    "users": {
+      "$uid": {
+        "games": {
+          ".read": "auth != null && auth.uid === $uid",
+          "$id": {
+            ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && auth.uid === $uid"
+          }
+        }
+      }
+    },
+    "games": {
+      "$id": {
+        ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && !newData.exists() && (data.child('meta/owner').val() === auth.uid || root.child('admins').child(auth.uid).exists())",
+        "meta": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && !data.exists() && newData.child('owner').val() === auth.uid",
+          ".validate": "newData.hasChildren(['title', 'game', 'owner', 'created'])"
+        },
+        "members": {
+          ".read": "auth != null",
+          "$uid": {
+            ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && auth.uid === $uid"
+          }
+        },
+        "seats": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && (root.child('admins').child(auth.uid).exists() || ((newData.child('german').val() === data.child('german').val() || (newData.child('german').val() === auth.uid && !data.child('german').exists()) || (data.child('german').val() === auth.uid && !newData.child('german').exists())) && (newData.child('allied').val() === data.child('allied').val() || (newData.child('allied').val() === auth.uid && !data.child('allied').exists()) || (data.child('allied').val() === auth.uid && !newData.child('allied').exists()))))"
+        },
+        "seatNames": {
+          ".read": "auth != null",
+          "$side": {
+            ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && (root.child('games').child($id).child('seats').child($side).val() === auth.uid || root.child('admins').child(auth.uid).exists())"
+          }
+        },
+        "state": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && (!data.exists() || root.child('games').child($id).child('seats/german').val() === auth.uid || root.child('games').child($id).child('seats/allied').val() === auth.uid || root.child('admins').child(auth.uid).exists())"
+        },
+        "priv": {
+          "$side": {
+            ".read": "auth != null && root.child('games').child($id).child('seats').child($side).val() === auth.uid",
+            ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && (!data.exists() || root.child('games').child($id).child('seats').child($side).val() === auth.uid || root.child('admins').child(auth.uid).exists())"
+          }
+        },
+        "reveals": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && (root.child('games').child($id).child('seats/german').val() === auth.uid || root.child('games').child($id).child('seats/allied').val() === auth.uid || root.child('admins').child(auth.uid).exists())"
+        }
+      }
+    }
+  }
+}

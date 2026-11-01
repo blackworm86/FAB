@@ -4,6 +4,7 @@
  *  the seat decides who may act. With neither store the game is hot-seat, and in dev mode a seat switch lets one machine play both sides. */
 import { SplitSeat, type Game, type Side, type Priv, type Reveals } from '../../engine/src';
 import { firebaseStore } from './store-firebase';
+import { rtdbStore } from './store-rtdb';
 
 export interface Seats { german?: string | null; allied?: string | null; germanName?: string | null; alliedName?: string | null }
 /** A match is a table plus a lobby record: who made it, which game and rules, who is in. */
@@ -70,7 +71,7 @@ function conflictOr(e: unknown) {
 
 export async function startOnline(remote: (g: Game) => void, changed: () => void, current: () => Game, say: (m: string) => void = () => {}, gone: () => void = () => {}) {
   onRemote = remote; onChange = changed; notify = say; onGone = gone;
-  try { const fake = DEV ? params.get('fake') : null; store = fake === 'german' || fake === 'allied' ? (await import('./store-fake')).fakeSplitStore(fake) : await firebaseStore(TABLE); } catch (e) { online.error = String(e); store = null; }
+  try { const fake = DEV ? params.get('fake') : null; store = fake === 'german' || fake === 'allied' ? (await import('./store-fake')).fakeSplitStore(fake) : import.meta.env.VITE_FIREBASE_DATABASE_URL ? await rtdbStore(TABLE) : await firebaseStore(TABLE); } catch (e) { online.error = String(e); store = null; }
   { const fk = DEV ? params.get('fake') : null; if (store && (fk === 'german' || fk === 'allied')) online.devSeat = fk; }          // a stand-in referee plays one seat per tab
   if (!store) { if (DEV) online.mode = 'local'; online.ready = true; changed(); return; }
   online.ready = true; online.mode = 'remote'; online.uid = store.uid; online.canWrite = store.canWrite;
@@ -80,7 +81,7 @@ export async function startOnline(remote: (g: Game) => void, changed: () => void
   if (online.split) {
     // hidden blocks split between seats: rebuild the game this seat plays on from the shared copy, its private details and the reveals
     store.watchPriv?.((p) => { const sp = mySeat(); if (sp) sp.priv = p; rebuild(); if (p && queued) { const q = queued; queued = null; void pushSplit(q); } }); store.watchReveals?.((r) => { const sp = mySeat(); if (sp) sp.reveals = r; rebuild(); });
-    store.watchState((d) => { if (!d) { if (had) onGone(); return; } had = true; if (d.rev >= online.rev) pubDoc = d; if (d.json === lastJson || d.rev < online.rev) return; online.rev = d.rev; lastJson = d.json; rebuild(); }, fail);
+    store.watchState((d) => { if (!d) { if (had) onGone(); return; } had = true; online.rev = Math.max(online.rev, d.rev); pubDoc = d; if (d.json === lastJson) return; lastJson = d.json; rebuild(); }, fail);
     return;
   }
   store.watchState((d) => {
@@ -131,7 +132,7 @@ async function pushSplit(g: Game) {
   writing = true; const dog = setTimeout(() => { if (writing) { writing = false; notify('Saving is taking too long. Check your connection.'); rebuild(); } }, 10000);
   try {
     if (out.priv) await store.setPriv?.(out.priv);
-    lastJson = out.pub; online.rev += 1; pubDoc = { rev: online.rev, json: out.pub, by: online.uid }; await store.setState(pubDoc);
+    lastJson = out.pub; pubDoc = { rev: online.rev, json: out.pub, by: online.uid }; await store.setState(pubDoc);
   } catch (e) { conflictOr(e); }
   clearTimeout(dog); writing = false; if (rebuildLater) { rebuildLater = false; rebuild(); }
   if (queued) { const q = queued; queued = null; void pushSplit(q); }

@@ -13,7 +13,8 @@ import { drawItems as drawAreaItems, drawEntry } from './board-art';
 import { targetsFor, type Tgt } from './chit-play';
 import { snap, diffFx, FxLayer, fxRow, FX_SAMPLES, type Fx } from './fx';
 import { RULE } from './rules-text';
-import rulesText from '../../firestore.rules?raw';
+import firestoreRules from '../../firestore.rules?raw';
+import databaseRules from '../../database.rules.json?raw';
 import { throwDice, clearDice, isHit, type DiceGroup } from './dice3d';
 
 type MapArea = { id: number; label: [number, number]; polygon: [number, number][] };
@@ -837,8 +838,11 @@ function accountHtml() {
     <div class="authform"><input id="a-name" placeholder="Name (to register)" autocomplete="name"><input id="a-mail" type="email" placeholder="Email" autocomplete="email"><input id="a-pass" type="password" placeholder="Password (6+ characters)" autocomplete="current-password"></div>
     <div class="row"><button data-auth="in">Sign in</button><button data-auth="reg">Register</button><button data-auth="reset">Forgot password</button></div>`;
 }
-const rulesOne = () => rulesText.replace(/\/\/.*$/gm, '').replace(/\s+/g, ' ').trim();
-const rulesLink = () => `https://console.firebase.google.com/project/${import.meta.env.VITE_FIREBASE_PROJECT_ID ?? ''}/firestore/databases/-default-/rules`;
+const DB_URL = (import.meta.env.VITE_FIREBASE_DATABASE_URL as string | undefined) ?? '';
+/** The rules this version of the site expects: the Realtime Database ones once a database is configured. */
+const rulesText = DB_URL ? databaseRules : firestoreRules;
+const rulesOne = () => (DB_URL ? JSON.stringify(JSON.parse(rulesText)) : rulesText.replace(/\/\/.*$/gm, '').replace(/\s+/g, ' ').trim());
+const rulesLink = () => { const p = import.meta.env.VITE_FIREBASE_PROJECT_ID ?? ''; return DB_URL ? `https://console.firebase.google.com/project/${p}/database/${new URL(DB_URL).hostname.split('.')[0]}/rules` : `https://console.firebase.google.com/project/${p}/firestore/databases/-default-/rules`; };
 async function copyText(t: string, what: string) { try { await navigator.clipboard.writeText(t); toast = `${what} copied`; } catch { toast = 'Copy failed: select the text below and copy it by hand'; } render(); setTimeout(() => { toast = ''; render(); }, 2500); }
 function rulesHtml() {
   return `<div class="modal"><div class="sheet"><h3>Update Firebase rules <button class="ico" data-modal="menu" aria-label="Back">${ico('close')}</button></h3>

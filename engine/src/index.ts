@@ -6,3 +6,4 @@ export * from './chits';
 export * from './game';
 export * from './redact';
 export * from './split';
+export * from './fields';
