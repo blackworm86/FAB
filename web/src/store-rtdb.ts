@@ -6,7 +6,7 @@ const msg = (e: unknown) => { const c = (e as { code?: string })?.code ?? ''; co
  *  Visitors watch as anonymous guests; playing needs a Google or email account; admins are listed under `admins/{uid}`. */
 export async function rtdbStore(table: string): Promise<Store | null> {
   const env = import.meta.env, apiKey = env.VITE_FIREBASE_API_KEY, projectId = env.VITE_FIREBASE_PROJECT_ID, databaseURL = env.VITE_FIREBASE_DATABASE_URL as string | undefined;
-  if (!apiKey || !projectId || !databaseURL) return null;
+  if (!apiKey || !projectId || !databaseURL) return null;     // not configured: the site shows its home page without online play
   const [{ initializeApp }, A, rt] = await Promise.all([import('firebase/app'), import('firebase/auth'), import('firebase/database')]);
   const app = initializeApp({ apiKey, projectId, databaseURL, authDomain: env.VITE_FIREBASE_AUTH_DOMAIN ?? `${projectId}.firebaseapp.com`, appId: env.VITE_FIREBASE_APP_ID, messagingSenderId: env.VITE_FIREBASE_SENDER_ID });
   const auth = A.getAuth(app), db = rt.getDatabase(app), R = (p: string) => rt.ref(db, p), G = (p: string) => R(`games/${table}/${p}`);
@@ -35,7 +35,7 @@ export async function rtdbStore(table: string): Promise<Store | null> {
   };
   let lastTree: Tree | null = null;
   return {
-    get uid() { return account.uid; }, get canWrite() { return true; }, split: true,
+    get uid() { return account.uid; }, 
     account: () => account, onAccount: (f) => { listeners.push(f); },
     watchState: (next, err) => {
       rt.onValue(G('state'), (s) => {

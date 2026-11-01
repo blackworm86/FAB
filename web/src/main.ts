@@ -6,14 +6,13 @@ import { labelSvg } from './art';
 import { chitSvg, mapMarkerSvg, loadChitArt, garrisonChit } from './chits';
 import { History } from './history';
 import { online, startOnline, push, sit, setDevSeat, auth, lobby, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, type DevSeat, type Match } from './online';
-import { GAMES, gameInfo } from './games';
+import { gameInfo } from './games';
 import { ICONS, ico } from './icons';
 import { esc, nm } from './util';
 import { drawItems as drawAreaItems, drawEntry } from './board-art';
 import { targetsFor, type Tgt } from './chit-play';
 import { snap, diffFx, FxLayer, fxRow, FX_SAMPLES, type Fx } from './fx';
 import { RULE } from './rules-text';
-import firestoreRules from '../../firestore.rules?raw';
 import databaseRules from '../../database.rules.json?raw';
 import { throwDice, clearDice, isHit, type DiceGroup } from './dice3d';
 
@@ -839,11 +838,10 @@ function accountHtml() {
     <div class="authform"><input id="a-name" placeholder="Name (to register)" autocomplete="name"><input id="a-mail" type="email" placeholder="Email" autocomplete="email"><input id="a-pass" type="password" placeholder="Password (6+ characters)" autocomplete="current-password"></div>
     <div class="row"><button data-auth="in">Sign in</button><button data-auth="reg">Register</button><button data-auth="reset">Forgot password</button></div>`;
 }
-const DB_URL = (import.meta.env.VITE_FIREBASE_DATABASE_URL as string | undefined) ?? '';
-/** The rules this version of the site expects: the Realtime Database ones once a database is configured. */
-const rulesText = DB_URL ? databaseRules : firestoreRules;
-const rulesOne = () => (DB_URL ? JSON.stringify(JSON.parse(rulesText)) : rulesText.replace(/\/\/.*$/gm, '').replace(/\s+/g, ' ').trim());
-const rulesLink = () => { const p = import.meta.env.VITE_FIREBASE_PROJECT_ID ?? ''; return DB_URL ? `https://console.firebase.google.com/project/${p}/database/${new URL(DB_URL).hostname.split('.')[0]}/rules` : `https://console.firebase.google.com/project/${p}/firestore/databases/-default-/rules`; };
+/** The rules this version of the site expects (database.rules.json), as pretty text and as one line. */
+const rulesText = databaseRules;
+const rulesOne = () => JSON.stringify(JSON.parse(rulesText));
+const rulesLink = () => { const p = import.meta.env.VITE_FIREBASE_PROJECT_ID ?? '', u = (import.meta.env.VITE_FIREBASE_DATABASE_URL as string | undefined) ?? ''; let name = ''; try { name = new URL(u).hostname.split('.')[0]; } catch { /* not configured */ } return `https://console.firebase.google.com/project/${p}/database/${name}/rules`; };
 async function copyText(t: string, what: string) { try { await navigator.clipboard.writeText(t); toast = `${what} copied`; } catch { toast = 'Copy failed: select the text below and copy it by hand'; } render(); setTimeout(() => { toast = ''; render(); }, 2500); }
 function rulesHtml() {
   return `<div class="modal"><div class="sheet"><h3>Update Firebase rules <button class="ico" data-modal="${inGame() ? 'menu' : ''}" aria-label="Back">${ico('close')}</button></h3>
@@ -869,7 +867,6 @@ function modalHtml() {
   if (modal === 'rules') return rulesHtml();
   if (modal === 'boxes') return piecesHtml();
   if (modal === 'menu') {
-    const seat = (sd: E.Side) => online.seats[sd] ? (online.seats[sd] === online.uid ? 'you' : esc((sd === 'german' ? online.seats.germanName : online.seats.alliedName) || 'taken')) : 'free';
     const tabs = ['Players', 'Log', 'Settings', ...(online.admin ? ['Admin'] : [])];
     if (!tabs.includes(menuTab)) menuTab = 'Players';
     const body = menuTab === 'Log' ? `<div class="log">${[...g.log].reverse().slice(0, 120).map((l) => `<div>${esc(l)}</div>`).join('')}</div>`
@@ -940,14 +937,14 @@ function syncView() {
 }
 /** Split tables: publish the blocks the other side may now see, and (attacker's seat) start combat once both sides are ready and their blocks are known. */
 function driveSplit() {
-  const me = online.mySide(); if (!online.split || !me) return;
+  const me = online.mySide(); if (online.mode !== 'remote' || !me) return;
   void publishReveals(g);
   const b = g.battle;
   if (b && b.stage === 'setup' && b.ready?.length === 2 && g.deferBegin && me === b.attacker && E.unitsIn(g, b.area).every((u) => u.name !== 'Hidden block')) act(() => E.beginCombat(g, b));
 }
 let ctlKey = '', tgtKey = '';
 function refresh() {
-  if (online.split) setTimeout(driveSplit, 0);
+  if (online.mode === 'remote') setTimeout(driveSplit, 0);
   { const key = `${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
     if (key !== tgtKey) { tgtKey = key; tgt = selChit ? targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: unitFace, areaName }) : null; } }
   if (tint === 'control') { const k = JSON.stringify(g.control) + E.contestedAreas(g).join(); if (k !== ctlKey) { ctlKey = k; paintBoard(); } }
@@ -975,7 +972,7 @@ void startOnline((rg) => { const was = g.battle, n0 = was?.rolls.length ?? 0, st
     const side = st0 === 'attArty' || st0 === 'offFire' ? nb.attacker : other(nb.attacker);
     rollView = { title: `${nm(side)} ${STAGE_NAME[st0]}`, pos: null, groups: nb.rolls.slice(n0).map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: [] })) };
     if (rollView.groups.length) { const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block'; throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; render(); showFx(pendingFx); pendingFx = []; setTimeout(() => { if (rollView === rv) endRoll(); }, 4000); } }); } else rollView = null;       // the other player's dice clear themselves
-  } selUnit = selChit = selArr = null; previewArea = hoverArea = null; hist.clear(); try { save(); } finally { applyingRemote = false; } refresh(); }, () => { onNet(); syncView(); render(); }, () => g, say, () => { try { sessionStorage.setItem('fab-notice', 'That game was deleted by its creator.'); } catch { /* private mode */ } location.href = homeUrl(); });       // the table is gone: nobody stays inside it
+  } selUnit = selChit = selArr = null; previewArea = hoverArea = null; hist.clear(); try { save(); } finally { applyingRemote = false; } refresh(); }, () => { onNet(); syncView(); render(); }, say, () => { try { sessionStorage.setItem('fab-notice', 'That game was deleted by its creator.'); } catch { /* private mode */ } location.href = homeUrl(); });       // the table is gone: nobody stays inside it
 /** Every drawn symbol and counter as SVG, for the editable sheets (docs/maps/vector/fab-*.svg). */
 function sheets() {
   const seenSvg = new Set<string>(), out: Record<string, { id: string; label: string; svg: string }[]> = { chits: [], blocks: [], markers: [] };

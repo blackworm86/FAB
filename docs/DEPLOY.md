@@ -1,48 +1,41 @@
 # Deploying: GitHub Pages and Firebase
 
-The game is a static site (`web/`, built with Vite). Online play stores one table per id in Firestore; everything else runs in the browser.
+The game is a static site (`web/`, built with Vite) on GitHub Pages. Firebase provides login (Authentication) and storage (Realtime Database). Everything else, including the rules engine, runs in the browser. Both are on Firebase's free Spark plan.
 
 ## 1. Firebase (once)
 1. Create a project at console.firebase.google.com. Add a **Web app** and copy its config.
 2. **Authentication > Sign-in method**: enable **Anonymous** (guests who only watch), **Google** (set the support email) and **Email/Password**.
 3. **Authentication > Settings > Authorized domains**: add `<your-user>.github.io`.
-4. **Build > Firestore Database**: create it (production mode), then publish the rules: `npx firebase-tools deploy --only firestore:rules` from the repository root (`firestore.rules`, `firebase.json`). Test them first with `npx firebase-tools emulators:start` (the rules have not been run against the emulator yet).
+4. **Build > Realtime Database**: create it (locked mode). Note its address, e.g. `https://<project>-default-rtdb.<region>.firebasedatabase.app` (the region is part of it unless the database is in the US).
+5. Publish `database.rules.json` in **Realtime Database > Rules**. After a change to that file, use the site's **Admin > Update rules** page (home page for admins): it shows the rules, a copy button and a link to the editor.
 
 ## 2. GitHub Pages
 1. Repository **Settings > Pages > Source: GitHub Actions**.
-2. **Settings > Secrets and variables > Actions > Variables**: add `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_SENDER_ID` (the web config values; they are not secrets, the rules protect the data).
-3. Merge to `main`. `.github/workflows/pages.yml` runs the typecheck and tests, builds `web/` and publishes `web/dist`. The site is at `https://<your-user>.github.io/<repository>/` (the build uses relative paths, so a project site works).
+2. **Settings > Secrets and variables > Actions > Variables**: add `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_SENDER_ID` and `VITE_FIREBASE_DATABASE_URL` (the web config values and the database address; they are not secrets, the rules protect the data).
+3. Merge to `main`. `.github/workflows/pages.yml` runs the typechecks and tests, builds `web/` and publishes `web/dist`. The site is at `https://<your-user>.github.io/<repository>/`.
 
-## 3. Playing
-- Open `.../?table=my-game` on two machines (any name; the default table is `main`). Each player takes a seat in the menu (☰). Anyone else watches.
-- With no Firebase variables set (for example a local `npm run dev`) the site shows the home page without games; add `?dev=1` for a local development table.
+## 3. Accounts and the admin user
+- Visitors are anonymous guests and can only watch. To play they sign in on the home page with Google, or email and password.
+- **Make an admin:** sign in once, then in Firebase open **Authentication > Users** and copy your **User UID**. In **Realtime Database > Data** add `admins/<your UID>` with the value `true`. The home page then shows an **Admin** card; a game's Menu shows an **Admin** tab.
 
-## 4. Developer seat switch
-Add `?dev=1` (or run `npm run dev`) to get the **Seat** button in the top bar. It cycles **Both, German, Allied, Watching**, enforces the turn rules for the seat you pick, and shows `YOU` in the header, so one machine can check two-player control and, later, what each side may see. With a Firebase table the state document is only writable by a seated user, so for dev use the emulator or run without Firebase variables.
+## 4. Playing
+Home page: sign in, **New game** (choose your seat), invite a player with the share button or link (`?table=<id>`), the opponent opens it and takes the free seat.
 
-## Local development
+## 5. How a game is stored
+Everything of one game is under `games/<id>`:
+- `meta`: title, scenario, creator. `members`, `seats`, `seatNames`.
+- `state`: the shared game as many small values (`f/<field>`, `units/<n>`, `chits/<n>`) plus a revision. A move writes only what changed, so two players changing different things never overwrite each other.
+- `priv/german`, `priv/allied`: the real details of that side's blocks. Only the player in that seat can read them.
+- `reveals`: details of blocks the other side may see (a battle area once both pressed Ready, an Intelligence Gathering target).
+- `users/<uid>/games/<id>`: each player's list of games.
+
+In the shared game, every block nobody may see (6.24) is a placeholder with an opaque id and no name, strength or quality. Each browser puts its own details back, runs the rules on its own copy and writes the changes.
+
+Limits: the database rules stop a player reading the opponent's block details; they cannot check that a move was legal, so a modified browser could write a false game. The dice seed is part of the shared game, so a determined player could predict rolls. Log lines are cleaned of hidden names by text match.
+
+## 6. Development
 ```bash
-cd web && cp .env.example .env.local   # optional; without it only the dev table (?dev=1) works
+cd web && cp .env.example .env.local   # optional; without it only the development table works
 npm ci && npm run dev
 ```
-
-## 5. Accounts and the admin user
-- Visitors open the page as anonymous guests and can only watch. To take a seat they sign in from the menu (☰): **Continue with Google**, or an email and password (type a name and tap **Register**; **Forgot password** sends a reset mail).
-- **Make an admin:** sign in on the site once, then in Firebase open **Authentication > Users** and copy your **User UID**. In **Firestore Database > Data** add a collection `admins` with a document whose ID is that UID (any field, for example `role: "admin"`). Reload the site: the menu shows "admin". Admins can write any table and free a seat; nobody can create admins from the site (the rules only allow it in the console).
-- Publish the updated `firestore.rules` after every change to that file (Firestore > Rules).
-
-
-## Hidden blocks (free, no extra service)
-
-New games created from the lobby keep each side's blocks hidden from the other side, using only Firebase's free plan and Firestore security rules:
-
-- `tables/{id}/docs/state` is the game everyone reads. Every block that nobody may see (6.24) appears there as a placeholder with an opaque id, no name, no strength, no quality.
-- `tables/{id}/priv/german` and `priv/allied` hold the real details of that side's blocks. The rules let only the player in that seat read or change them.
-- When a battle starts, each player's browser publishes the details of its own blocks in the battle area to `tables/{id}/docs/reveals` (after both sides press Ready); the attacker's seat then begins combat. Intelligence Gathering works the same way for the one block chosen. A block is face-up in the shared game from then on, as on the table.
-- Every browser still runs the rules on its own copy (own blocks real, the other side's hidden ones placeholders) and writes the result, as before. The rules stop a player reading the opponent's details; they do not stop a player writing a wrong game.
-
-Publish the rules again after updating (Admin, Update rules). Games created before this update, and the shared test table, stay ordinary tables where hiding is done in the browser only.
-
-Limits: the dice seed is part of the shared game, so a determined player could predict rolls; log lines are scrubbed of hidden names by string match; a modified browser could write false data to the shared game or the reveals. For fully trusted play a server is needed.
-
-Development: `?dev=1&fake=german` and `?dev=1&fake=allied` open two tabs of one browser as the two seats of a split table kept in localStorage, with no Firebase.
+`?dev=1` opens a local table and shows a **Seat** button (Both, German, Allied, Watching). `?dev=1&fake=german` and `?dev=1&fake=allied` in two tabs of one browser play the two seats of a game kept in localStorage, with no Firebase.
