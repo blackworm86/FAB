@@ -1,0 +1,6 @@
+{
+  "name": "fab-referee",
+  "private": true,
+  "description": "Only for the Netlify referee function; the game itself lives in web/ and engine/.",
+  "dependencies": { "firebase-admin": "^12.7.0" }
+}

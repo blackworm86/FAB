@@ -11,9 +11,13 @@ export async function firebaseStore(table: string): Promise<Store | null> {
   const app = initializeApp({ apiKey, projectId, authDomain: env.VITE_FIREBASE_AUTH_DOMAIN ?? `${projectId}.firebaseapp.com`, appId: env.VITE_FIREBASE_APP_ID, messagingSenderId: env.VITE_FIREBASE_SENDER_ID });
   const auth = A.getAuth(app), db = fs.getFirestore(app);
   const stateRef = fs.doc(db, 'tables', table, 'docs', 'state'), seatsRef = fs.doc(db, 'tables', table, 'docs', 'seats');
-  const useFunctions = !!env.VITE_USE_FUNCTIONS;
-  let fnApi: ((name: string) => (data: unknown) => Promise<{ data: unknown }>) | null = null;
-  const call = async (name: string, data: unknown) => { if (!fnApi) { const F = await import('firebase/functions'); const f = F.getFunctions(app); fnApi = (n) => F.httpsCallable(f, n) as unknown as (d: unknown) => Promise<{ data: unknown }>; } return (await fnApi(name)(data)).data as Record<string, unknown>; };
+  const refereeUrl = (env.VITE_REFEREE_URL as string | undefined)?.replace(/\/$/, '') ?? '', useReferee = !!refereeUrl;
+  /** Ask the referee (a Netlify function, free tier) to do something; it checks the Firebase login we send. */
+  const call = async (op: string, data: Record<string, unknown>) => {
+    const tok = await auth.currentUser?.getIdToken(); if (!tok) throw new Error('Sign in first');
+    const r = await fetch(`${refereeUrl}/.netlify/functions/referee`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` }, body: JSON.stringify({ op, ...data }) });
+    const j = (await r.json().catch(() => ({}))) as Record<string, unknown>; if (!r.ok) throw new Error(String(j.error ?? `The referee answered ${r.status}`)); return j;
+  };
   let account: Account = { uid: '', name: '', email: '', guest: true, admin: false };
   const listeners: ((a: Account) => void)[] = []; let unsubM: (() => void) | null = null;
   const read = async (u: import('firebase/auth').User): Promise<Account> => {
@@ -61,7 +65,7 @@ export async function firebaseStore(table: string): Promise<Store | null> {
     },
     async createMatch(m, side, stateJson) {
       if (account.guest) return '!Sign in to create a game';
-      if (useFunctions) { try { const r = await call('createTable', { title: m.title, game: m.game, opts: m.opts, side }); return String(r.id); } catch (e) { return '!' + msg(e); } }
+      if (useReferee) { try { const r = await call('createTable', { title: m.title, game: m.game, opts: m.opts, side }); return String(r.id); } catch (e) { return '!' + msg(e); } }
       const id = Math.random().toString(36).slice(2, 8), uid = account.uid, name = seatName(side ?? 'german');
       try {
         await fs.setDoc(fs.doc(db, 'matches', id), { ...m, owner: uid, members: [uid], created: Date.now(), ...(side ? { [side + 'Name']: name } : {}) });

@@ -12,21 +12,5 @@
     "ui": {
       "enabled": true
     }
-  },
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "default",
-      "predeploy": [
-        "npm --prefix functions install",
-        "npm --prefix functions run build"
-      ],
-      "ignore": [
-        "node_modules",
-        "src",
-        "tsconfig.json",
-        ".git"
-      ]
-    }
-  ]
+  }
 }
