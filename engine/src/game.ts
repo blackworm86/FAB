@@ -580,9 +580,11 @@ function next(g: Game, b: Battle) {
   b.stage = s; return;
 }
 /** 6.24, 5.22: may `side` read this block? Own blocks, face-up blocks, a block in an area where enemy blocks are face-up, and the Intelligence Gathering target. Chits are always face-up. */
+/** Blocks that were face-up in a battle stand up again once their area is no longer contested. */
+export function settleUp(g: Game) { for (const u of g.units) if (u.up != null && (u.up !== u.area || !contested(g, u.up))) u.up = undefined; }
 export function visibleTo(g: Game, u: Unit, side: Side | 'spectator' | null): boolean {
   if (side === null || u.side === side || u.garrison || g.revealed === u.id || u.area == null) return true;
-  if (u.up === u.area) return true;
+  if (u.up === u.area && contested(g, u.area)) return true;                                           // face-up only while the area stays contested (the blocks stand up again when the enemy leaves)
   return g.units.some((x) => x.area === u.area && x.side !== u.side && x.up === u.area);
 }
 export function beginCombat(g: Game, b: Battle) {
@@ -714,7 +716,7 @@ function end(g: Game, b: Battle, result: string) {
   }
   say(g, `${areas.get(b.area)!.name}: ${result}`);
 }
-export function closeBattle(g: Game) { if (g.battle?.stage !== 'done') throw new Error('battle not finished'); g.battle = null; }
+export function closeBattle(g: Game) { if (g.battle?.stage !== 'done') throw new Error('battle not finished'); g.battle = null; settleUp(g); }
 export function defenderRetreatSA(g: Game, b: Battle) {
   if (b.stage !== 'setup') throw new Error('only before the first roll'); const def = other(b.attacker);
   if (b.assets[def].length || b.air[def]) throw new Error('defender has assets assigned');
@@ -777,6 +779,7 @@ function supplyPhase(g: Game) {
   g.units.forEach((u) => { u.exploit = false; u.adjOnly = false; if (u.side === other(g.phasing)) dropReserve(g, u); });
 }
 export function endPhase(g: Game) {
+  settleUp(g);
   if (g.over) return;
   if (g.recover.length) throw new Error('choose the assets to recover first (4.1a)');
   if (g.battle) throw new Error('finish the open battle first');

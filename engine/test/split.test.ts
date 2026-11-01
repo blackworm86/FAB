@@ -69,3 +69,16 @@ describe('two seats play a split table', () => {
     expect(isPlaceholder(now)).toBe(false); expect(now.str).toBe(truth.str);            // not the strength it had when it was first revealed
   });
 });
+
+import { settleUp, closeBattle, roll_step } from '../src';
+describe('face-up blocks stand up again', () => {
+  it('a block revealed in a battle is hidden again when its area is no longer contested', () => {
+    const g = newGame(5); g.phase = 'combat'; g.phasing = 'german'; const area = mustFight(g)[0] ?? 11;
+    const b = startBattle(g, area); for (const u of g.units) if (u.area === area && !u.garrison) u.up = area; void b;
+    const al = g.units.find((u) => u.side === 'allied' && u.area === area && !u.garrison)!;
+    expect(isPlaceholder(al)).toBe(false);
+    for (const u of g.units.filter((x) => x.side === 'german' && x.area === area)) u.area = null as unknown as number;        // the attackers leave
+    expect(al.up).toBe(area); settleUp(g); expect(al.up).toBeUndefined();
+    void closeBattle; void roll_step;
+  });
+});

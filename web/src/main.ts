@@ -189,14 +189,17 @@ function drawBattleTable(b: E.Battle, spot: (id: number, x: number, z: number, r
   for (const sd of ['german', 'allied'] as E.Side[]) {
     const ids = [...b.assets[sd], ...(b.air[sd] ? [b.air[sd]!.id] : [])], dir = sd === 'german' ? 1 : -1;
     ids.forEach((id, i) => {
-      const m = chit3d(E.chit(g, id)), at = spot(b.area, base.x + (i - (ids.length - 1) / 2) * 1.9, base.z + dir * 2.6, 0.85), x = at.x, z = at.z; m.userData.chit = id; m.position.set(x, 0.06, z); pieces.add(m);
+      const m = chit3d(E.chit(g, id)), at = spot(b.area, base.x + (i - (ids.length - 1) / 2) * 1.9, base.z + dir * 2.2, 0.8), x = at.x, z = at.z; m.userData.chit = id; m.position.set(x, 0.06, z); pieces.add(m);
       if (b.stage === 'setup' && mine(sd)) { const d = disc('x', 0.42); d.position.set(x + 0.5, 0.2, z - 0.5); d.userData.chit = id; pieces.add(d); }
       if (tgt?.units.has(id)) { const ring = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.25, 40), new THREE.MeshBasicMaterial({ color: 0x37d67a, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.14, z); markers.add(ring); }
     });
   }
+}
+/** The point unit of each side carries a gold target (after the blocks are placed). */
+function drawPointMarks(b: E.Battle) {
   for (const [uid, sd] of [[b.attPoint, b.attacker], [b.defPoint, other(b.attacker)]] as const) {                  // the point unit carries a gold target
     const o = pieces.children.find((x) => x.userData.unit === uid); const u = g.units.find((x) => x.id === uid); if (!o || !u || !seen(u)) continue; void sd;
-    const d = disc('point', 0.45); d.position.set(o.position.x + 0.55, o.position.y > 0.6 ? 1.75 : 0.95, o.position.z - 0.55); markers.add(d);
+    const d = disc('point', 0.45); d.position.set(o.position.x, o.position.y > 0.6 ? 1.72 : 0.9, o.position.z); d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
   }
 }
 function drawPieces() {
@@ -219,6 +222,7 @@ function drawPieces() {
     edgeTaken.push({ ...spot, r }); return spot;
   };
   const rows = new Map<number, { base: THREE.Vector3; cont: boolean }>();
+  if (g.battle) drawBattleTable(g.battle, inArea);                                                      // counters first, so blocks make room around them and nothing hides one
   for (const a of MAP.areas) {
     const us = E.unitsIn(g, a.id), base = toWorld(...POLE.get(a.id)!), cont = E.contestedAreas(g).includes(a.id); rows.set(a.id, { base, cont });
     const order = [...us].sort((p, q) => +(p.side !== 'german') - +(q.side !== 'german') || +!!p.garrison - +!!q.garrison);
@@ -244,7 +248,7 @@ function drawPieces() {
       tags.forEach(([t, c], i) => { const k = tag(t, c, CHIT); k.position.set(m.position.x + i * 0.12, stackY + i * 0.14, m.position.z - i * 0.08); k.rotation.y = (i % 2 ? 0.12 : -0.08); markers.add(k); });
     });
   }
-  if (g.battle) { drawBattleTable(g.battle, inArea); }
+  if (g.battle) drawPointMarks(g.battle);
   // area markers: inside their own area, next to the group they belong to
   for (const a of MAP.areas) {
     const { base, cont } = rows.get(a.id)!, mine: { side?: E.Side; t: string; c: string }[] = [];
