@@ -594,7 +594,24 @@ function decisionBubble(): string {
   const arty = b.pendingKind === 'arty';
   return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b><div class="row">${btn(`${ico('xbold')}`, () => E.defenderChoice(g, g.battle!, false), 'ab', false, 'Stand and take the step losses')}${btn(`${ico(arty ? 'disorder' : 'back')}`, () => E.defenderChoice(g, g.battle!, true), 'ab primary', false, arty ? 'Disorder all defenders to absorb 1 hit' : 'Retreat (absorbs 1 hit, units disordered)')}</div></div>`;
 }
+/** Who can move now: a green arrow over every block that has somewhere to go; the side's other blocks get a grey dash. Hidden once a block is picked or a battle opens. */
+let moveMarks: { el: HTMLElement; unit: string }[] = [];
+function syncMoveMarks() {
+  const layer = document.getElementById('marks')!; layer.innerHTML = ''; moveMarks = [];
+  const actor = g.phase === 'reaction' ? other(g.phasing) : g.phasing;
+  if (g.over || g.battle || g.pendingBlow || selUnit || !['movement', 'strategic', 'reaction', 'btMove'].includes(g.phase) || !allowed() || !mine(actor)) return;
+  for (const u of g.units.filter((x) => x.side === actor && x.area != null && !x.garrison && seen(x))) {
+    let can = false; if (!u.moved) { try { can = (g.phase === 'strategic' ? (u.reserve ? E.stratOptions(g, u.id).length : 0) : E.moveOptions(g, u.id).length) > 0; } catch { can = false; } }
+    const el = document.createElement('div'); el.className = 'mm ' + (can ? 'go' : 'no'); el.innerHTML = ico(can ? 'next' : 'minus'); el.title = can ? `${u.name} can move` : `${u.name} cannot move`; layer.appendChild(el); moveMarks.push({ el, unit: u.id });
+  }
+}
+function placeMoveMarks() {
+  if (!moveMarks.length) return;
+  const r = canvas.getBoundingClientRect(), v = new THREE.Vector3();
+  for (const m of moveMarks) { const o = pieces.children.find((x) => x.userData.unit === m.unit); if (!o) { m.el.style.display = 'none'; continue; } v.set(o.position.x, 2.3, o.position.z).project(cam); m.el.style.display = v.z < 1 ? '' : 'none'; m.el.style.transform = `translate(${(v.x * 0.5 + 0.5) * r.width}px, ${(-v.y * 0.5 + 0.5) * r.height}px) translate(-50%, -100%)`; }
+}
 function placeBadges() {
+  placeMoveMarks();
   { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(); fxLayer.place((area, unit) => { const o = unit ? pieces.children.find((x) => x.userData.unit === unit) : undefined, p = o ? o.position : center(area); v.set(p.x, o ? 1.6 : 3, p.z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width + (o ? 34 : 0), y: (-v.y * 0.5 + 0.5) * r.height, visible: v.z < 1 }; }); }
   placeFocus(); placeBubbles();
   const r = canvas.getBoundingClientRect(), v = new THREE.Vector3();
@@ -1091,7 +1108,7 @@ function refresh() {
   { const key = `${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
     if (key !== tgtKey) { tgtKey = key; tgt = reinforcing ? reinforceTargets() : decisionTargets() ?? (selChit ? targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: unitFace, areaName }) : null); } }
   if (tint === 'control') { const k = JSON.stringify(g.control) + E.contestedAreas(g).join(); if (k !== ctlKey) { ctlKey = k; paintBoard(); } }
-  syncView(); syncBattleCam(); drawPieces(); paintAreas(); drawRoute(); badges = g.battle ? [] : badgeList(); syncBadges(); render();
+  syncView(); syncBattleCam(); drawPieces(); paintAreas(); drawRoute(); badges = g.battle ? [] : badgeList(); syncBadges(); syncMoveMarks(); render();
   if (!rollView) { const cv = $('#dice'); if (cv && cv.style.display !== 'none') { clearDice(); cv.style.display = 'none'; } }
 }
 function frame() {
