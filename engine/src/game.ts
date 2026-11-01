@@ -62,7 +62,7 @@ export const newlyContested = (g: Game) => contestedAreas(g).filter((a) => !g.co
 export const chit = (g: Game, id: string) => g.chits.find((c) => c.id === id)!;
 export const boxOf = (g: Game, side: Side, box: Chit['box']) => g.chits.filter((c) => c.side === side && c.box === box);
 const roll = (g: Game) => d10(rng(g.seed * 7919 + g.rolls++));
-const say = (g: Game, s: string) => { g.log.push(`T${g.turn} ${g.phasing === 'german' ? 'GE' : 'AL'} ${g.phase}: ${s}`); };
+const say = (g: Game, s: string) => { g.log.push(`T${g.turn} ${g.phasing === 'german' ? 'GE' : 'AL'} ${g.phase}: ${s}`); if (g.log.length > 400) g.log.splice(0, g.log.length - 300); };   // the log only has to be read, so it stays short
 const AIRBORNE = new Set(['82', '101', '517']);                                                // 18.5
 const ARMY = (u: Unit): number | undefined => (u.ech ? ZONE[u.ech] : undefined);
 

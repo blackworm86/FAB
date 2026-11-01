@@ -6,3 +6,4 @@ node_modules/
 .codex/
 skills-lock.json
 __pycache__/
+.vite/

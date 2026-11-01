@@ -1,9 +1,8 @@
 /** Online play: one table with a state document and a seats document, kept in a shared store.
- *  Two stores are supported: the claude.ai artifact database (when the page runs inside claude.ai) and Firebase (GitHub Pages deploy).
+ *  The store is Firebase (GitHub Pages deploy).
  *  The rules engine is deterministic from the saved state (dice come from the stored seed), so every client simply loads the newest state;
  *  the seat decides who may act. With neither store the game is hot-seat, and in dev mode a seat switch lets one machine play both sides. */
-import { compose, toPublic, secretsOf, revealsIn, revealOf, type Game, type Side, type Priv, type Reveals } from '../../engine/src';
-import { artifactStore } from './store-artifact';
+import { compose, toPublic, secretsOf, revealsIn, revealOf, freshReveals, type Game, type Side, type Priv, type Reveals } from '../../engine/src';
 import { firebaseStore } from './store-firebase';
 
 export interface Seats { german?: string | null; allied?: string | null; germanName?: string | null; alliedName?: string | null }
@@ -21,7 +20,7 @@ export interface Store {
   watchSeats(next: (s: Seats) => void, err: (e: string) => void): void;
   /** Take the seat for `side` (or give up every seat when null); resolves an error message, or '' on success. */
   sit(side: Side | null): Promise<string>;
-  /** Accounts: only the Firebase store has them (the artifact store identifies viewers itself). */
+  /** Accounts: only the Firebase store has them . */
   account?(): Account; onAccount?(f: (a: Account) => void): void;
   google?(): Promise<string>; emailSignIn?(email: string, password: string): Promise<string>; emailRegister?(email: string, password: string, name: string): Promise<string>;
   /** Lobby: create a match (state, creator's seat and record) and list the matches the user belongs to. Resolves the new id, or an error starting with '!'. */
@@ -51,19 +50,28 @@ export const online = {
   get active() { return this.mode !== 'off'; },
 };
 let priv: Priv | null = null, reveals: Reveals = {}, pubDoc: StateDoc | null = null;
+let rebuildLater = false;
 function rebuild() {
-  if (!pubDoc || writing) return; const side = online.mySide(), g0 = JSON.parse(pubDoc.json) as Game;
+  if (writing) { rebuildLater = true; return; }       // a save is in flight: apply what arrived as soon as it ends
+  if (!pubDoc) return; const side = online.mySide(), g0 = JSON.parse(pubDoc.json) as Game;
   if (!side) { onRemote(g0); return; }
   const { game, enemyAlias } = compose(g0, side, priv, reveals); online.enemyAlias = enemyAlias; onRemote(game);
 }
 let store: Store | null = null, lastJson = '', writing = false, queued: Game | null = null, onChange: () => void = () => {}, onRemote: (g: Game) => void = () => {};
 const slim = (g: Game) => JSON.stringify({ ...g, log: g.log.slice(-120) });
 const fail = (e: string) => { online.error = e; onChange(); };
+let notify: (m: string) => void = () => {};
+/** The store refuses a save when the other player saved first (same rev). Take their game, and tell the player to repeat the move. */
+function conflictOr(e: unknown) {
+  const m = String((e as { message?: string })?.message ?? e);
+  if (m.includes('CONFLICT')) { lastJson = ''; notify('The other player moved at the same moment. Their move is in; repeat yours.'); rebuildLater = true; return; }
+  fail(m);
+}
 
-export async function startOnline(remote: (g: Game) => void, changed: () => void, current: () => Game) {
-  onRemote = remote; onChange = changed;
+export async function startOnline(remote: (g: Game) => void, changed: () => void, current: () => Game, say: (m: string) => void = () => {}) {
+  onRemote = remote; onChange = changed; notify = say;
   if (LOCAL_ONLY) { if (DEV) { online.mode = 'local'; changed(); } return; }
-  try { const fake = DEV ? params.get('fake') : null; store = fake === 'german' || fake === 'allied' ? (await import('./store-fake')).fakeSplitStore(fake) : (await artifactStore()) ?? (await firebaseStore(TABLE)); } catch (e) { online.error = String(e); store = null; }
+  try { const fake = DEV ? params.get('fake') : null; store = fake === 'german' || fake === 'allied' ? (await import('./store-fake')).fakeSplitStore(fake) : await firebaseStore(TABLE); } catch (e) { online.error = String(e); store = null; }
   { const fk = DEV ? params.get('fake') : null; if (store && (fk === 'german' || fk === 'allied')) online.devSeat = fk; }          // a stand-in referee plays one seat per tab
   if (!store) { if (DEV) { online.mode = 'local'; changed(); } return; }
   online.mode = 'remote'; online.uid = store.uid; online.canWrite = store.canWrite;
@@ -91,8 +99,9 @@ export async function push(g: Game) {
   const json = slim(g); if (json === lastJson) return;
   if (writing) { queued = g; return; }
   writing = true;
-  try { lastJson = json; online.rev += 1; await store.setState({ rev: online.rev, json, by: online.uid }); } catch (e) { fail(String((e as { message?: string })?.message ?? e)); }
-  writing = false; if (queued) { const q = queued; queued = null; void push(q); }
+  try { lastJson = json; online.rev += 1; await store.setState({ rev: online.rev, json, by: online.uid }); } catch (e) { conflictOr(e); }
+  writing = false; if (rebuildLater) { rebuildLater = false; rebuild(); }
+  if (queued) { const q = queued; queued = null; void push(q); }
 }
 
 export async function sit(side: Side | null) { if (online.mode !== 'remote' || !store) return; const e = await store.sit(side); online.error = e; onChange(); }
@@ -122,8 +131,9 @@ async function pushSplit(g: Game) {
   try {
     const sec = secretsOf(g, side); if (JSON.stringify(sec) !== JSON.stringify(priv.secrets)) { priv = { salt: priv.salt, secrets: sec }; await store.setPriv?.(priv); }
     lastJson = json; online.rev += 1; pubDoc = { rev: online.rev, json, by: online.uid }; await store.setState(pubDoc);
-  } catch (e) { fail(String((e as { message?: string })?.message ?? e)); }
-  writing = false; if (queued) { const q = queued; queued = null; void pushSplit(q); }
+  } catch (e) { conflictOr(e); }
+  writing = false; if (rebuildLater) { rebuildLater = false; rebuild(); }
+  if (queued) { const q = queued; queued = null; void pushSplit(q); }
 }
 /** The owner's client publishes the details of its blocks the other side may now see: the battle area once both are ready, and an Intelligence Gathering target. */
 export async function publishReveals(g: Game) {
@@ -131,6 +141,6 @@ export async function publishReveals(g: Game) {
   let r: Reveals = {};
   const b = g.battle; if (b && b.stage === 'setup' && (b.ready?.length ?? 0) === 2) r = { ...r, ...revealsIn(g, side, b.area, priv.salt) };
   if (g.revealed && g.units.find((u) => u.id === g.revealed)?.side === side) r = { ...r, ...revealOf(g, g.revealed, priv.salt) };
-  const fresh = Object.keys(r).filter((k) => !reveals[k]); if (!fresh.length) return;
-  reveals = { ...reveals, ...r }; await store.mergeReveals?.(Object.fromEntries(fresh.map((k) => [k, r[k]])));
+  const fresh = freshReveals(reveals, r); if (!Object.keys(fresh).length) return;
+  reveals = { ...reveals, ...fresh }; await store.mergeReveals?.(fresh);
 }

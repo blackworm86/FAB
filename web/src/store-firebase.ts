@@ -39,7 +39,8 @@ export async function firebaseStore(table: string): Promise<Store | null> {
     async mergeReveals(r: Reveals) { await fs.setDoc(fs.doc(db, 'tables', table, 'docs', 'reveals'), r, { merge: true }); },
     account: () => account, onAccount: (f) => { listeners.push(f); },
     watchState: (next, err) => { fs.onSnapshot(stateRef, (s) => next(s.exists() ? (s.data() as StateDoc) : null), (e) => err(msg(e))); },
-    setState: (d) => fs.setDoc(stateRef, d),
+    // refuse a save made on top of an older game: if the stored rev is already as new as ours, the other player saved first
+    setState: (d) => fs.runTransaction(db, async (tx) => { const cur = await tx.get(stateRef); if (cur.exists() && (cur.data() as StateDoc).rev >= d.rev) throw new Error('CONFLICT'); tx.set(stateRef, d); }),
     watchSeats: (next, err) => { fs.onSnapshot(seatsRef, (s) => next(s.exists() ? (s.data() as Seats) : {}), (e) => err(msg(e))); },
     async sit(side: Side | null) {
       if (account.guest) return 'Sign in to take a seat';

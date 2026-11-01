@@ -7,6 +7,8 @@ import { chitSvg, mapMarkerSvg, loadChitArt, garrisonChit } from './chits';
 import { History } from './history';
 import { online, startOnline, push, sit, setDevSeat, auth, lobby, publishReveals, DEV, TABLE, HAS_TABLE, LOCAL_ONLY, type DevSeat, type Match } from './online';
 import { GAMES, gameInfo } from './games';
+import { ICONS, ico } from './icons';
+import { RULE } from './rules-text';
 import rulesText from '../../firestore.rules?raw';
 import { throwDice, clearDice, isHit, type DiceGroup } from './dice3d';
 
@@ -517,7 +519,6 @@ function click(e: PointerEvent) {
       if (fnU || fnA) { return act((fnU ?? fnA)!); }
       const pk = area != null && !unit ? tg.pick.get(area) : undefined; if (pk) { pk(); return refresh(); }
     } }
-  if (armed) { const id = armed; armed = null; const ok = area != null && dragTargets.includes(area); dragTargets = []; if (ok) return playChitOn(E.chit(g, id), area!); selChit = null; return refresh(); }
   const rb = g.battle;
   if (rb?.stage === 'retreat' && area != null && E.retreatOptions(g, rb).includes(area)) return act(() => E.chooseRetreat(g, rb, area));
   if (g.pendingBlow || g.battle) return;
@@ -592,24 +593,7 @@ function rollStage(b: E.Battle) {
 function endRoll() { rollView = null; clearDice(); ($('#dice') as HTMLElement).style.display = 'none'; refresh(); }
 
 /* ---------- cards and drag and drop ---------- */
-const ICONS: Record<string, string> = {
-  artillery: '<rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><circle cx="12" cy="12" r="3.6" fill="currentColor"/>',
-  rocket_artillery: '<rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path d="M6.8 12h10.4M13.6 8.2l3.8 3.8-3.8 3.8" stroke-width="2"/>',
-  engineer: '<path d="M14.5 3.5a4.8 4.8 0 00-4.4 6.4L3.6 16.4a2.2 2.2 0 003.1 3.1l6.5-6.5a4.8 4.8 0 006.4-4.4l-3 3-2.8-.7-.7-2.8z"/>',
-  armor_asset: '<rect x="3" y="12" width="18" height="6" rx="3"/><path d="M7 12V8h8l2 4M15 9h7"/>',
-  infantry_asset: '<rect x="3" y="6" width="18" height="12"/><path d="M3 6l18 12M21 6L3 18"/>',
-  task_force: '<rect x="3" y="12.5" width="7.5" height="7.5" rx="1"/><rect x="13.5" y="12.5" width="7.5" height="7.5" rx="1"/><rect x="8.25" y="4" width="7.5" height="7.5" rx="1"/>',
-  fuel: '<path d="M5 8.5L8.5 5H18v16H5z"/><path d="M8.5 5V3h5v2"/><path d="M8.5 12.5l6.5 5.5M15 12.5L8.5 18"/>',
-  command_staff: '<path d="M12 3l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-3-5.4 3 1.1-6L3.2 9.4l6.1-.8z"/>',
-  air_mission: '<path d="M12 3.2c1.2 0 1.8 1 1.8 2.3V18l1.2 2.4v1H9v-1L10.2 18V5.5C10.2 4.2 10.8 3.2 12 3.2z"/><path d="M10.2 9.2L2.6 10.8v2.7l7.6-1M13.8 9.2l7.6 1.6v2.7l-7.6-1"/><path d="M9.6 19.3H5.6v1.9l4.4-.5M14.4 19.3h4v1.9l-4.4-.5"/><path d="M8.2 2.2h7.6"/>',
-  sa_block: '<path d="M5 17l7-7 7 7M5 11l7-7 7 7"/>',
-  target: '<circle cx="12" cy="12" r="6.8"/><circle cx="12" cy="12" r="2.2"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/>', star: '<path d="M12 3l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-3-5.4 3 1.1-6L3.2 9.4l6.1-.8z"/>', tree: '<path d="M12 3l6 8h-3l4 6H5l4-6H6zM12 17v4"/>', shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>', wave: '<path d="M3 9c3-3 6 3 9 0s6 3 9 0M3 15c3-3 6 3 9 0s6 3 9 0"/>', warn: '<path d="M12 4l9 16H3zM12 10v5M12 17.5v.5"/>',
-  gear: '<path d="M19.18 10.21L21.90 10.56L21.90 13.44L19.18 13.79L18.34 15.81L20.02 17.98L17.98 20.02L15.81 18.34L13.79 19.18L13.44 21.90L10.56 21.90L10.21 19.18L8.19 18.34L6.02 20.02L3.98 17.98L5.66 15.81L4.82 13.79L2.10 13.44L2.10 10.56L4.82 10.21L5.66 8.19L3.98 6.02L6.02 3.98L8.19 5.66L10.21 4.82L10.56 2.10L13.44 2.10L13.79 4.82L15.81 5.66L17.98 3.98L20.02 6.02L18.34 8.19Z"/><circle cx="12" cy="12" r="3.1"/>', nogear: '<path d="M19.18 10.21L21.90 10.56L21.90 13.44L19.18 13.79L18.34 15.81L20.02 17.98L17.98 20.02L15.81 18.34L13.79 19.18L13.44 21.90L10.56 21.90L10.21 19.18L8.19 18.34L6.02 20.02L3.98 17.98L5.66 15.81L4.82 13.79L2.10 13.44L2.10 10.56L4.82 10.21L5.66 8.19L3.98 6.02L6.02 3.98L8.19 5.66L10.21 4.82L10.56 2.10L13.44 2.10L13.79 4.82L15.81 5.66L17.98 3.98L20.02 6.02L18.34 8.19Z"/><circle cx="12" cy="12" r="3.1"/><path d="M4 4l16 16" stroke-width="2.4"/>', disorder: '<path d="M12.00 1.00L14.15 3.98L17.50 2.47L17.87 6.13L21.53 6.50L20.02 9.85L23.00 12.00L20.02 14.15L21.53 17.50L17.87 17.87L17.50 21.53L14.15 20.02L12.00 23.00L9.85 20.02L6.50 21.53L6.13 17.87L2.47 17.50L3.98 14.15L1.00 12.00L3.98 9.85L2.47 6.50L6.13 6.13L6.50 2.47L9.85 3.98Z" stroke-width="1.4"/><path d="M9 8h2.2a4 4 0 010 8H9z" stroke-width="1.8"/>', xbold: '<path d="M5 5l14 14M19 5L5 19" stroke-width="3.2"/>',
-  burst: '<rect x="3.5" y="5.5" width="17" height="13" rx="2"/><circle cx="8" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="16" cy="12" r="1.3"/>', flag: '<path d="M6 21V4M6 5h12l-3 4 3 4H6"/>',
-  next: '<path d="M5 12h13M13 6l6 6-6 6"/>', back: '<path d="M19 12H6M11 6l-6 6 6 6"/>', check: '<path d="M4 12.5l5 5L20 6.5"/>', wand: '<path d="M4 20L15.5 8.5"/><path d="M15.5 8.5l2.7-2.7" stroke-width="3.6"/><path d="M18.5 2.2v1.6M22 5.7h-1.6M21 3.2l-1.1 1.1"/>', info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>', share: '<path d="M12 15V3M7 8l5-5 5 5M5 13v7h14v-7"/>', dice: '<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="15" r="1"/><circle cx="15" cy="9" r="1"/><circle cx="9" cy="15" r="1"/>',
-  home: '<path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/>', layers: '<path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5"/>', undo: '<path d="M9 7L4 12l5 5M4 12h10a5 5 0 010 10h-2"/>', menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', boxes: '<rect x="3" y="4" width="18" height="5"/><path d="M5 9v10h14V9M10 13h4"/>', close: '<path d="M6 6l12 12M18 6L6 18"/>', swap: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>', plus: '<path d="M12 5v14M5 12h14"/>',
-};
-const ico = (k: string, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k] ?? '<rect x="5" y="5" width="14" height="14"/>'}</svg>`;
+
 const chitUri = new Map<string, string>();
 const chitImg = (c: E.Chit) => { let u = chitUri.get(c.id); if (!u) { u = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(chitSvg(c)); chitUri.set(c.id, u); } return u; };
 const card = (c: E.Chit, r = 0, why: string | null = null) => `<div tabindex="0" role="button" class="card2 ${c.side} ${why ? 'bad' : ''} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" style="--r:${r}deg" title="${esc(why ?? c.name + ' · ' + c.ech)}" aria-label="${esc(c.name)}"><img alt="" draggable="false" src="${chitImg(c)}"></div>`;
@@ -635,7 +619,7 @@ function chitTargets(c: E.Chit): number[] {
   }
 }
 /** The chit was dropped on an area: play it there, or open its panel when there is a choice to make. */
-let lastPointer = 'mouse', armed: string | null = null;
+let lastPointer = 'mouse';
 /** Touch: a card is tapped, never dragged (so the hand can scroll). In a battle it files itself; an event or asset with map targets lights them and waits for a tap on one. */
 let handInfo = false, handInspect: string | null = null;
 function tapCard(id: string) {
@@ -705,7 +689,6 @@ function prompt() {
 }
 function promptText() {
   const b = g.battle;
-  if (armed) return '<b>Tap a lit area</b> on the map to play it.';
   if (online.active && !allowed() && !g.over) return online.mySide() == null ? '<b>Watching.</b> Take a seat in the menu.' : `<b>Waiting for the ${nm(actorNow() as E.Side)} player…</b>`;
   if (note && !b && hist.length) return `${esc(note)} <button data-do="${reg(() => undo())}">Undo</button>`;
   if (g.over) return `<b>${esc(g.over)}</b>`;
@@ -751,29 +734,7 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
 const recoverSel: Record<string, string | null> = {};
 let piecesTab: 'boxes' | 'arrivals' = 'boxes', piecesSide: E.Side | null = null, inspectId: string | null = null;
 /** A short reading of what a chit does, in the series' own vocabulary; the printed rule is the authority. */
-const RULE: Record<string, [string, string]> = {
-  artillery: ['Artillery', 'Assigned to a battle during set-up (limit by Higher Echelon, 6.22). It fires before the ground units: one die at the Success Number from the Combat Table; hits are applied to the point unit first (6.42).'],
-  rocket_artillery: ['Rocket artillery', 'Fires like artillery in the artillery steps of a battle. Assigned during set-up, one per echelon.'],
-  engineer: ['Engineer', 'Admin Phase: blow or repair a bridge, build field works, lay a roadblock (4.34, 4.35). In a battle it may remove enemy field works instead of firing (6.33).'],
-  armor_asset: ['Armor asset', 'A battle asset: assigned in set-up, fires in the ground-fire steps and may take the first hit instead of the point unit (6.4).'],
-  infantry_asset: ['Infantry asset', 'A battle asset: assigned in set-up, fires in the ground-fire steps and may take the first hit instead of the point unit (6.4).'],
-  task_force: ['Task Force', 'Allied garrison-type asset placed in an entry area when it arrives.'],
-  fuel: ['Fuel', 'German fuel. One is spent when a German unit moves more than 3 movement points or makes a strategic move.'],
-  command_staff: ['Command / Staff asset', 'Staff functions in the Admin Phase: Intelligence Gathering (reveal one enemy block), Reserves Made Available and the other staff actions (8.3).'],
-  sa_block: ['Special Action', 'The reusable Special Action: spent to reinforce or retreat in a battle, for breakthrough actions and in the Admin Phase. If it is not spent in a turn, the side recovers an asset (4.1a).'],
-  special_action_event: ['Special Action event', 'A one-use Special Action.'],
-  replacement_inf: ['Replacements', 'Admin Phase: add one step to a supplied infantry-class unit (non-elite, 8.31).'],
-  replacement_arm: ['Replacements', 'Admin Phase: add one step to a supplied armor-class unit (non-elite, 8.31).'],
-  rebuild_or_replace_inf: ['Rebuild or replace', 'Admin Phase: rebuild an eliminated infantry unit or add a step.'],
-  rebuild_or_replace_arm: ['Rebuild or replace', 'Admin Phase: rebuild an eliminated armor unit or add a step.'],
-  event_arriving_regiment: ['Arriving regiment', 'Admin Phase: brings an eliminated division back as one step, or adds a step (17.23).'],
-  event_release: ['Release', 'Event played in the Admin Phase (17).'],
-  event_greif_bridge: ['Greif Team: Bridge', 'Placed on a river boundary; the first German unit crossing it takes the bridge (17.1).'],
-  event_greif_interdict: ['Greif Team: Interdict', 'Marks an Allied unit as interdicted; it needs a Special Action to move (17.1).'],
-  event_bodenplatte: ['Operation Bodenplatte', 'German air strike on the Allied Air Missions: roll for the target, a 10 eliminates it, 6 to 9 delay it (17).'],
-  event_delayed_response: ['Delayed Response', 'No effect when drawn.'],
-  air_mission: ['Air Mission', 'Allied air power: assign as artillery or support in a battle, or fly an Interdiction or Air Supply mission (17.2). Bad weather limits the turns it is available.'],
-};
+
 const pieceBtn = (c: E.Chit, f: () => void, on = false, dis = false) => `<button class="pc ${c.side} ${on ? 'on' : ''}" data-ui="${reg(f)}" ${dis ? 'disabled' : ''} title="${esc(c.name)}" aria-label="${esc(chitLabel(c))}"><img alt="" draggable="false" src="${chitImg(c)}"></button>`;
 const ruleCard = (c: E.Chit) => { const [t, d] = RULE[c.kind] ?? [c.kind, '']; return `<img class="big" alt="" src="${chitImg(c)}"><div><h4>${esc(c.name)} <small>${esc(t)}</small></h4><p>${esc(d)}</p></div>`; };
 const seatedView = () => online.active && !online.both() && !!online.mySide();
@@ -991,8 +952,7 @@ const fxRow = (f: Fx) => `<div class="fxrow ${f.cls}">${ico(f.icon)}<b>${esc(f.h
 const modIcon = (why: string) => /base/i.test(why) ? 'target' : /armor|infantry|class/i.test(why) ? 'armor_asset' : /green|veteran|elite|quality/i.test(why) ? 'star' : /terrain|tdn/i.test(why) ? 'tree' : /field/i.test(why) ? 'gear' : /river/i.test(why) ? 'wave' : /disorder/i.test(why) ? 'disorder' : /supply/i.test(why) ? 'warn' : /air|asset|artillery/i.test(why) ? 'air_mission' : 'info';
 const modChips = (parts: [string, number][]) => parts.map(([w, v]) => `<span class="m2 ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}" title="${esc(w)}">${ico(modIcon(w))}${v > 0 ? '+' : v < 0 ? '−' : ''}${v ? Math.abs(v) : ''}</span>`).join('');
 const chip = (label: string, on: boolean, f: () => void, title = '') => `<button class="chip ${on ? 'on' : ''}" aria-pressed="${on}" data-ui="${reg(f)}" title="${esc(title)}">${on ? ico('check') : ''}${label}</button>`;
-const relayer = () => { saveLayers(); paintBoard(); legendDirty(); };
-const legendDirty = () => { /* the legend is part of render() */ };
+const relayer = () => { saveLayers(); paintBoard(); };
 function layersHtml() {
   const tintBtn = (v: typeof tint, label: string) => chip(label, tint === v, () => { tint = v; relayer(); });
   return `<div class="modal"><div class="sheet slim"><h3>Map layers <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
@@ -1067,10 +1027,11 @@ function driveSplit() {
   const b = g.battle;
   if (b && b.stage === 'setup' && b.ready?.length === 2 && g.deferBegin && me === b.attacker && E.unitsIn(g, b.area).every((u) => u.name !== 'Hidden block')) act(() => E.beginCombat(g, b));
 }
-let ctlKey = '';
+let ctlKey = '', tgtKey = '';
 function refresh() {
   if (online.split) setTimeout(driveSplit, 0);
-  tgt = selChit ? targetsFor(g.chits.find((x) => x.id === selChit) ?? null) : null;
+  { const key = `${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
+    if (key !== tgtKey) { tgtKey = key; tgt = selChit ? targetsFor(g.chits.find((x) => x.id === selChit) ?? null) : null; } }
   if (tint === 'control') { const k = JSON.stringify(g.control) + E.contestedAreas(g).join(); if (k !== ctlKey) { ctlKey = k; paintBoard(); } }
   syncView(); syncBattleCam(); drawPieces(); paintAreas(); drawRoute(); badges = badgeList(); syncBadges(); render();
   if (!rollView) { const cv = $('#dice'); if (cv && cv.style.display !== 'none') { clearDice(); cv.style.display = 'none'; } }
@@ -1095,7 +1056,7 @@ void startOnline((rg) => { const was = g.battle, n0 = was?.rolls.length ?? 0, st
     const side = st0 === 'attArty' || st0 === 'offFire' ? nb.attacker : other(nb.attacker);
     rollView = { title: `${nm(side)} ${STAGE_NAME[st0]}`, pos: null, groups: nb.rolls.slice(n0).map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: [] })) };
     if (rollView.groups.length) { const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block'; throwDice(cv, rollView.groups, (p) => { if (rollView) { rollView.pos = p; render(); showFx(pendingFx); pendingFx = []; } }); } else rollView = null;
-  } selUnit = selChit = selArr = null; previewArea = hoverArea = null; hist.clear(); try { save(); } finally { applyingRemote = false; } refresh(); }, () => { onNet(); render(); }, () => g);
+  } selUnit = selChit = selArr = null; previewArea = hoverArea = null; hist.clear(); try { save(); } finally { applyingRemote = false; } refresh(); }, () => { onNet(); render(); }, () => g, say);
 /** Every drawn symbol and counter as SVG, for the editable sheets (docs/maps/vector/fab-*.svg). */
 function sheets() {
   const seenSvg = new Set<string>(), out: Record<string, { id: string; label: string; svg: string }[]> = { chits: [], blocks: [], markers: [] };

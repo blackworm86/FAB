@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { newGame, startBattle, mustFight, type Game } from '../src';
-import { toPublic, compose, secretsOf, revealsIn, isPlaceholder, setReady, type Priv } from '../src';
+import { toPublic, compose, secretsOf, revealsIn, freshReveals, isPlaceholder, setReady, type Priv } from '../src';
 describe('split hidden blocks (no server)', () => {
   const SG = 'salt-g', SA = 'salt-a';
   it('keeps each seat\'s block details out of the shared copy and puts them back for their owner', () => {
@@ -22,5 +22,17 @@ describe('split hidden blocks (no server)', () => {
     const pub = JSON.parse(toPublic(g, 'allied', SA, new Map())) as Game;
     const { game } = compose(pub, 'german', { salt: SG, secrets: secretsOf(g, 'german') }, reveals);
     const foe = game.units.find((u) => u.side === 'allied' && u.area === area && !u.garrison)!; expect(isPlaceholder(foe)).toBe(false);
+  });
+});
+
+describe('reveals stay current', () => {
+  it('publishes a block again when its details changed, so a second battle shows the new strength', () => {
+    const g = newGame(5); g.phase = 'combat'; g.phasing = 'german'; const area = mustFight(g)[0] ?? 11;
+    const first = revealsIn(g, 'allied', area, 'sa'), u = g.units.find((x) => x.side === 'allied' && x.area === area && !x.garrison)!;
+    expect(Object.keys(freshReveals({}, first)).length).toBe(Object.keys(first).length);
+    expect(Object.keys(freshReveals(first, revealsIn(g, 'allied', area, 'sa'))).length).toBe(0);             // nothing changed: nothing to publish
+    u.str = Math.max(1, u.str - 1);
+    const now = revealsIn(g, 'allied', area, 'sa'), changed = freshReveals(first, now);
+    expect(Object.values(changed).some((r) => r.id === u.id && r.str === u.str)).toBe(u.str !== (Object.values(first).find((r) => r.id === u.id)!.str));
   });
 });

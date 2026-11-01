@@ -52,6 +52,11 @@ export function revealsIn(g: Game, side: Side, area: number, salt: string): Reve
 export function revealOf(g: Game, unitId: string, salt: string): Reveals { const u = g.units.find((x) => x.id === unitId); return u ? { [alias(salt, u.id)]: { id: u.id, ...secretOf(u) } } : {}; }
 export { other };
 
+/** The reveals worth publishing: new blocks, and blocks whose details changed since they were last published (a block that lost a step and fights again). */
+export function freshReveals(published: Reveals, wanted: Reveals): Reveals {
+  return Object.fromEntries(Object.entries(wanted).filter(([k, v]) => JSON.stringify(published[k]) !== JSON.stringify(v)));
+}
+
 /** A new split table: the shared copy and one private document per seat, made from a fresh full game. Only used once, when the table is created. */
 export function initSplit(full: Game, saltGerman: string, saltAllied: string): { pub: string; german: Priv; allied: Priv } {
   full.deferBegin = true;
