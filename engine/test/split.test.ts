@@ -82,3 +82,17 @@ describe('face-up blocks stand up again', () => {
     void closeBattle; void roll_step;
   });
 });
+
+import { move, moveOptions } from '../src';
+describe('entering a face-up contested area (5.22)', () => {
+  it('a unit that moves into an area whose enemy is face-up is revealed', () => {
+    const g = newGame(5); g.phase = 'movement'; g.phasing = 'german'; g.contestedAtMoveStart = [];
+    const al = g.units.find((u) => u.side === 'allied' && u.area != null && !u.garrison)!;
+    for (const u of g.units.filter((x) => x.side === 'german' && x.area === al.area)) u.area = null as unknown as number;
+    const ge = g.units.find((u) => u.side === 'german' && u.area != null && !u.garrison && moveOptions(g, u.id).some((o) => o.area === al.area));
+    if (!ge) return;
+    al.up = al.area!; const first = g.units.filter((x) => x.side === 'german' && !x.garrison && x.area != null && x.id !== ge.id && moveOptions(g, x.id).some((o) => o.area === al.area))[0];
+    g.contestedAtMoveStart = [al.area!];
+    const mover = first ?? ge; const r = move(g, mover.id, al.area!); if (r === 'moved') expect(mover.up).toBe(al.area);
+  });
+});

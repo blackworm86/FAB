@@ -85,6 +85,7 @@ export class SplitSeat {
     if (!this.priv) return {};
     let want: Reveals = {};
     const b = g.battle; if (b && b.stage === 'setup' && (b.ready?.length ?? 0) === 2) want = { ...want, ...revealsIn(g, this.side, b.area, this.priv.salt) };
+    for (const u of g.units) if (u.side === this.side && u.up != null && u.up === u.area) want[alias(this.priv.salt, u.id)] = { id: u.id, ...secretOf(u) };            // blocks that are face-up (a battle, or entering a face-up area) are shown to the other side
     if (g.revealed && g.units.find((u) => u.id === g.revealed)?.side === this.side) want = { ...want, ...revealOf(g, g.revealed, this.priv.salt) };
     const fresh = freshReveals(this.reveals, want); this.reveals = { ...this.reveals, ...fresh }; return fresh;
   }

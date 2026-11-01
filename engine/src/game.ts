@@ -230,7 +230,8 @@ function finishMove(g: Game, u: Unit, opt: Opt, bridgeBlown: boolean) {
   const from = u.area!, to = opt.area, last = connection(opt.path[opt.path.length - 2], to)!, enemy = other(u.side);
   const intoEnemy = unitsIn(g, to, enemy).length > 0;
   if (u.side === 'german' && opt.fuel && g.opts.fuel) { const f = fuelChits(g)[0]; if (f) { f.box = 'used'; say(g, `fuel asset spent for ${u.name}`); } }
-  u.from = from; u.area = to; u.moved = true; u.adjOnly = false; u.spent = 0; dropReserve(g, u);
+  const faceUp = unitsIn(g, to, enemy).some((x) => x.up === to);                              // 5.22 a unit entering a contested area whose forces are already face-up is revealed too
+  u.from = from; u.area = to; if (faceUp) u.up = to; u.moved = true; u.adjOnly = false; u.spent = 0; dropReserve(g, u);
   if (u.side === 'german') for (let i = 1; i < opt.path.length; i++) { const k = keyOf(opt.path[i - 1], opt.path[i]); if (g.greif[k]) { chit(g, g.greif[k]).box = 'eliminated'; delete g.greif[k]; say(g, 'Greif Team Bridge: the bridge is taken'); } }
   const hd = unitsIn(g, to).find((x) => x.heydte);
   if (hd && u.side === 'german') { chit(g, hd.chitId!).box = 'used'; hd.area = null; hd.str = 0; say(g, 'von der Heydte is relieved and becomes a regular battle asset'); }
