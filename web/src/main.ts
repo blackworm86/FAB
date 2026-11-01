@@ -173,13 +173,15 @@ function outlineRibbon(id: number, d: number, w: number, color: number) {
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx);
   return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.92, side: THREE.DoubleSide, depthWrite: false }));
 }
-/** The battle on the table: its outline, and each side's assigned assets as cardboard counters in a row behind its blocks. */
+/** The battle on the table: the area's own outline, glowing, and each side's assigned assets as cardboard counters in a row behind its blocks. */
+const glow: THREE.MeshBasicMaterial[] = [];
 function drawBattleTable(b: E.Battle) {
-  markers.add(outlineRibbon(b.area, 0.7, 0.3, b.stage === 'setup' ? 0xffd37a : 0xff7a6a));
+  const col = b.stage === 'setup' ? 0xffd37a : 0xff7a6a; glow.length = 0;
+  for (const [d, w, o] of [[-0.55, 1.1, 0.18], [-0.3, 0.6, 0.35], [-0.12, 0.24, 0.95]] as const) { const m = outlineRibbon(b.area, d, w, col); (m.material as THREE.MeshBasicMaterial).opacity = o; (m.material as THREE.MeshBasicMaterial).blending = THREE.AdditiveBlending; glow.push(m.material as THREE.MeshBasicMaterial); markers.add(m); }
   const base = toWorld(...POLE.get(b.area)!);
   for (const sd of ['german', 'allied'] as E.Side[]) {
     const ids = [...b.assets[sd], ...(b.air[sd] ? [b.air[sd]!.id] : [])], dir = sd === 'german' ? 1 : -1;
-    ids.forEach((id, i) => { const m = chit3d(E.chit(g, id)); m.position.set(base.x + (i - (ids.length - 1) / 2) * 1.7, 0.06, base.z + dir * 3.0); markers.add(m); });
+    ids.forEach((id, i) => { const m = chit3d(E.chit(g, id)); m.userData.chit = id; m.position.set(base.x + (i - (ids.length - 1) / 2) * 1.7, 0.06, base.z + dir * 3.0); pieces.add(m); });
   }
 }
 function drawPieces() {
@@ -316,7 +318,7 @@ function pick(e: PointerEvent) {
   const hitBoard = ray.intersectObject(board)[0];
   let area: number | null = null;
   if (hitBoard) { const px = (hitBoard.point.x + MW / (2 * S)) * S, py = (hitBoard.point.z + MH / (2 * S)) * S; area = MAP.areas.find((a) => inside(px, py, a.polygon))?.id ?? null; }
-  return { unit: hitPiece?.object.userData.unit as string | undefined, area };
+  return { unit: hitPiece?.object.userData.unit as string | undefined, chit: hitPiece?.object.userData.chit as string | undefined, area };
 }
 function inside(x: number, y: number, poly: [number, number][]) { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; }
 
@@ -468,7 +470,8 @@ function click(e: PointerEvent) {
   const rb = g.battle;
   if (rb?.stage === 'retreat' && area != null && E.retreatOptions(g, rb).includes(area)) return act(() => E.chooseRetreat(g, rb, area));
   if (g.battle && !g.pendingBlow) {                                                                         // a battle is on the table: tapping a block makes it that side's point unit
-    const b = g.battle, u = unit ? g.units.find((x) => x.id === unit) : null;
+    const b = g.battle, u = unit ? g.units.find((x) => x.id === unit) : null, { chit: tapped } = pick(e);
+    if (b.stage === 'setup' && tapped) { const c = E.chit(g, tapped); if (mine(c.side)) act(() => E.unassign(g, b, tapped)); else say('Those are the other player\'s assets.'); return; }
     if (b.stage === 'setup' && u && seen(u) && mine(u.side) && !u.garrison && !(u.side === b.attacker && u.disorder)) act(() => E.setPoint(g, b, u.side, u.id));
     return;
   }
@@ -606,7 +609,14 @@ function drag(ev: PointerEvent, el: HTMLElement) {
     }
     if (b?.stage === 'setup' && handInfo && !ghost) { handInspect = handInspect === id ? null : id; render(); return; }
     if (!b || b.stage !== 'setup') { if (!ghost) { selChit = selChit === id ? null : id; refresh(); } return; }
-    const z = ghost ? at(e) as HTMLElement | undefined : undefined, s = c.side;
+    const s = c.side;
+    if (ghost && document.elementFromPoint(e.clientX, e.clientY) === canvas) {                                // dropped on the table: the card joins the battle
+      const { unit: du, area } = pick(e); if (area !== b.area) return say('Drop it on the battle area.');
+      if (!mine(s)) return say('Those are the other player\'s assets.');
+      const why = E.canAssign(g, b, s, c); if (why) return say(why);
+      return act(() => { if (c.kind === 'air_mission') { const t = du ? g.units.find((x) => x.id === du) : null; if (t && t.side === s && t.area === b.area) E.assign(g, b, id, 'support', du!); else E.assign(g, b, id, 'arty'); } else E.assign(g, b, id); });
+    }
+    const z = ghost ? at(e) as HTMLElement | undefined : undefined;
     let zone = z?.dataset.zone, unit = z?.dataset.unit;
     if (!ghost) zone = E.isArty(c) || c.kind === 'air_mission' ? 'arty' : 'asset';               // a plain click files the card where it belongs
     if (!zone && !unit) return;
@@ -787,18 +797,16 @@ function battleTable() {
   const b = g.battle; if (!b) return '';
   const L = E.areas.get(b.area)!, att = b.attacker, setup = b.stage === 'setup';
   const side = (s: E.Side) => {
-    const us = E.unitsIn(g, b.area, s), pt = s === att ? b.attPoint : b.defPoint, lim = E.assetLimits(g, b, s), ids = b.assets[s].map((id) => E.chit(g, id)), air = b.air[s] ? E.chit(g, b.air[s]!.id) : null;
-    const arty = [...ids.filter((c) => E.isArty(c)), ...(air && b.air[s]!.mode === 'arty' ? [air] : [])], rest = ids.filter((c) => !E.isArty(c));
-    const mini = (c: E.Chit) => `<span class="mini ${c.side}" title="${esc(c.name)}"><img alt="${esc(c.name)}" src="${chitImg(c)}">${setup ? `<button class="x" aria-label="Remove ${esc(c.name)}" data-do="${reg(() => { if (mine(c.side)) E.unassign(g, b, c.id); else say('Those are the other player\'s assets.'); })}">${ico('close')}</button>` : ''}</span>`;
+    const us = E.unitsIn(g, b.area, s), lim = E.assetLimits(g, b, s), ids = b.assets[s].map((id) => E.chit(g, id)), air = b.air[s] ? E.chit(g, b.air[s]!.id) : null;
+    const arty = ids.filter((c) => E.isArty(c)).length + (air && b.air[s]!.mode === 'arty' ? 1 : 0), rest = ids.length - ids.filter((c) => E.isArty(c)).length;
     const sa = setup && s !== att ? E.saAvailable(g, s).length : 0;
-    return `<div class="c-side ${s} ${mine(s) ? 'mine' : 'theirs'}"><h4 title="${nm(s)} ${s === att ? 'attacking' : 'defending'}"><span class="tag">${s === 'german' ? 'GE' : 'AL'}</span>${ico(s === att ? 'next' : 'shield')}<span class="nm">${nm(s)}</span>${online.active && !online.both() ? `<small>${mine(s) ? 'you' : 'foe'}</small>` : ''}</h4>
-      <div class="c-body"><div class="c-row">${us.map((u) => `<div tabindex="0" role="button" class="blk ${s} ${u.id === pt && seen(u) ? 'pt' : ''} ${air && b.air[s]!.mode === 'support' && b.air[s]!.unit === u.id ? 'air' : ''}" data-unit="${u.id}" data-side="${s}" data-tag="${s === 'german' ? 'G' : 'A'}" title="${seen(u) ? esc(u.name) + (u.id === pt ? ' (point unit)' : '') : 'Hidden block'}" aria-label="${seen(u) ? esc(u.name) : 'Hidden block'}">${b3(seen(u) ? unitFace(u) : blankFace(u.side), sideOfUnit(u), !!u.garrison)}</div>`).join('')}</div>
-      <div class="c-slots">${setup || arty.length ? `<div class="slot" data-side="${s}" data-zone="arty"><span class="lab" title="Artillery ${arty.length} of ${lim.arty}">${ico('artillery')}${arty.length}/${lim.arty}</span>${arty.map(mini).join('') || ico('plus')}</div>` : ''}${setup || rest.length ? `<div class="slot" data-side="${s}" data-zone="asset"><span class="lab" title="Battle assets and events">${ico('armor_asset')}</span>${rest.map(mini).join('') || ico('plus')}</div>` : ''}</div></div>
+    return `<div class="bside ${s} ${mine(s) ? 'mine' : 'theirs'}"><h4 title="${nm(s)} ${s === att ? 'attacking' : 'defending'}"><span class="tag">${s === 'german' ? 'GE' : 'AL'}</span>${ico(s === att ? 'next' : 'shield')}${online.active && !online.both() ? `<small>${mine(s) ? 'you' : 'foe'}</small>` : ''}</h4>
+      <span class="chp" title="Artillery assigned">${ico('artillery')}${arty}/${lim.arty}</span>${rest || setup ? `<span class="chp" title="Battle assets and events">${ico('armor_asset')}${rest}</span>` : ''}
       ${sa ? `<div class="row">${btn(`${ico('back')}<span class="bl">Retreat</span>`, () => E.defenderRetreatSA(g, b), 'ico', !mine(s) || !!b.assets[s].length || us.some((u) => u.garrison) || !us.length, 'Retreat before combat (uses a Special Action)')}${ubtn(`${ico('plus')}<span class="bl">Reinforce</span>`, () => { reinforcing = !reinforcing; refresh(); }, `ico ${reinforcing ? 'on' : ''}`, !mine(s), 'Bring in a neighbouring block (uses a Special Action)')}</div>` : ''}</div>`;
   };
   const covered = E.unitsIn(g, b.area).some((u) => !seen(u)), al = stats(b, 'allied'), ge = stats(b, 'german'), tot = al.mean + ge.mean || 1;
-  return `<div class="c-table ${rollView ? 'rolling' : ''}"><div class="c-title">${g.fought.length + fightable().length > 1 ? `<small class="cnt" title="Battle ${g.fought.length + 1} of ${g.fought.length + fightable().length}">${Math.min(g.fought.length + 1, g.fought.length + fightable().length)}/${g.fought.length + fightable().length}</small>` : ''}${b.bt ? '<small class="cnt" title="Breakthrough combat">BT</small>' : ''}<b>${esc(L.name)}</b><span class="chp" title="Terrain defence number ${L.tdn}: attackers −${L.tdn} to hit">${ico('tree')}${L.tdn}</span>${g.fieldWorks.includes(b.area) ? `<span class="chp" title="Field works">${ico('gear')}</span>` : ''}${b.riverAssault ? `<span class="chp" title="River assault">${ico('wave')}</span>` : ''}</div>${side('allied')}
-    <div class="c-vs">${covered ? '<div class="big">?<span>:</span>?</div>' : `<div class="big" title="Expected hits per combat round: Allied : German">${al.mean.toFixed(1)}<span>:</span>${ge.mean.toFixed(1)}</div><div class="gauge"><i style="width:${(al.mean / tot) * 100}%"></i></div>`}</div>${side('german')}</div>`;
+  return `<div class="c-table slim ${rollView ? 'rolling' : ''}">${side('allied')}<div class="bmid"><div class="c-title">${g.fought.length + fightable().length > 1 ? `<small class="cnt" title="Battle ${g.fought.length + 1} of ${g.fought.length + fightable().length}">${Math.min(g.fought.length + 1, g.fought.length + fightable().length)}/${g.fought.length + fightable().length}</small>` : ''}${b.bt ? '<small class="cnt" title="Breakthrough combat">BT</small>' : ''}<b>${esc(L.name)}</b><span class="chp" title="Terrain defence number ${L.tdn}: attackers −${L.tdn} to hit">${ico('tree')}${L.tdn}</span>${g.fieldWorks.includes(b.area) ? `<span class="chp" title="Field works">${ico('gear')}</span>` : ''}${b.riverAssault ? `<span class="chp" title="River assault">${ico('wave')}</span>` : ''}</div>
+    <div class="c-vs">${covered ? '<div class="big">?<span>:</span>?</div>' : `<div class="big" title="Expected hits per combat round: Allied : German">${al.mean.toFixed(1)}<span>:</span>${ge.mean.toFixed(1)}</div><div class="gauge"><i style="width:${(al.mean / tot) * 100}%"></i></div>`}</div></div>${side('german')}</div>`;
 }
 function ledger() {
   const b = g.battle; if (!b || g.pendingBlow) return '';
@@ -1011,6 +1019,7 @@ function frame() {
   if (canvas.width !== Math.round(r.width * renderer.getPixelRatio())) { renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; cam.updateProjectionMatrix(); }
   if (goal) { target.lerp(goal.t, 0.1); dist += (goal.dist - dist) * 0.1; pitch += (goal.pitch - pitch) * 0.1; if (target.distanceTo(goal.t) < 0.05 && Math.abs(dist - goal.dist) < 0.1) goal = null; }
   if (lock && !goal) target.copy(lock.c);
+  if (glow.length) { const k = 0.8 + 0.2 * Math.sin(performance.now() / 380); glow[0].opacity = 0.18 * k; glow[1].opacity = 0.35 * k; }
   placeCam(); renderer.render(scene, cam); placeBadges();
 }
 frame();
