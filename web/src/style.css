@@ -262,3 +262,16 @@ button.go .ic, button.plain .ic, .row button .ic { width: 18px; height: 18px; ve
 .chip.iconly { min-width: 48px; justify-content: center; padding: 0 10px; } .chip .ic { width: 20px; height: 20px; } .tabs button .ic { width: 22px; height: 22px; display: block; margin: 0 auto; }
 .sheet h3 .ic { width: 22px; height: 22px; vertical-align: -3px; margin-right: 6px; } .tabrow { flex-wrap: nowrap; }
 .sheet h3 { display: flex; align-items: center; gap: 8px; } .sheet h3 .ico { margin-left: auto; } .sheet h3 .ic { margin: 0; }
+/* home */
+.hbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; } .hbar h1 { font-size: 28px; } .hbar p { margin: 0; } .hbar .who { display: flex; align-items: center; gap: 6px; }
+.avatar { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; background: var(--gold); color: #1a1608; font: 700 20px var(--sfd); }
+.homein .lh h2, .homein .lh h3 { display: flex; align-items: center; gap: 8px; margin: 0; } .homein .lh { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.sheetbox { background: #0b0d08; border: 1px solid var(--gold); padding: 10px; margin-bottom: 10px; display: grid; gap: 10px; }
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; } .tile { min-height: 76px; display: grid; place-items: center; align-content: center; gap: 2px; background: #11140c; border: 2px solid var(--line); color: var(--ink); } .tile b { font: 700 28px var(--sfd); letter-spacing: .1em; } .tile small { opacity: .75; } .tile.german b { color: var(--ge); } .tile.allied b { color: var(--al); } .tile.on { border-color: var(--gold); background: #e7b04a22; } .tile.on small { opacity: 1; }
+.joincard { padding: 8px; } .joincard .row { flex-wrap: nowrap; } .joincard .primary { display: inline-flex; gap: 6px; align-items: center; }
+/* clearer icons: heavier line, a little larger */
+.ic { stroke-width: 2.1; } button .ic { width: 22px; height: 22px; } .chip .ic { width: 22px; height: 22px; }
+.hbar h1 { font-size: 22px; letter-spacing: .08em; white-space: nowrap; } .matchrow .open .seats { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; } .matchrow .open .seats b { font: 700 12px var(--sf); border: 1px solid currentColor; padding: 0 3px; opacity: .8; } .st { width: 9px; height: 9px; border-radius: 50%; background: #e7b04a; } .st.live { background: #7ee08d; }
+.joincard .row { flex-wrap: nowrap; } .joincard .primary { flex: none; }
+.hbar > div:first-child { min-width: 0; flex: 1; } .hbar h1 { white-space: normal; font-size: 20px; letter-spacing: .06em; line-height: 1.1; } .hbar .who { flex: none; } .homepage, .homein { max-width: 100vw; }
+.hbar h1 { line-height: 1; }
