@@ -32,14 +32,17 @@ npm ci && npm run dev
 - Publish the updated `firestore.rules` after every change to that file (Firestore > Rules).
 
 
-## Refereed games (hidden blocks kept on the server), free
+## Hidden blocks (free, no extra service)
 
-Ordinary tables keep the whole game in one document that both players' browsers read. A **refereed** table keeps it only on the server:
+New games created from the lobby keep each side's blocks hidden from the other side, using only Firebase's free plan and Firestore security rules:
 
-- `netlify/functions/referee.ts` is one Netlify function (free tier, no card) that runs the same rules engine. It uses a Firebase service account, which works on the free Spark plan.
-- The full game is in Firestore `tables/{id}/private/full`, which no client can read (rules deny it; the service account bypasses them). Each seat reads `tables/{id}/views/german` or `.../allied`, a copy with the other side's hidden blocks stripped of identity, strength and quality (ids are replaced by opaque ones) and without the dice seed.
-- A player's browser never changes the game. It records the engine calls the player's action makes and POSTs them, with its Firebase login token, to the referee, which checks the seat and the turn, replays them and writes the new views. Operations: `createTable`, `act`, `restartTable`, `deleteTable`.
+- `tables/{id}/docs/state` is the game everyone reads. Every block that nobody may see (6.24) appears there as a placeholder with an opaque id, no name, no strength, no quality.
+- `tables/{id}/priv/german` and `priv/allied` hold the real details of that side's blocks. The rules let only the player in that seat read or change them.
+- When a battle starts, each player's browser publishes the details of its own blocks in the battle area to `tables/{id}/docs/reveals` (after both sides press Ready); the attacker's seat then begins combat. Intelligence Gathering works the same way for the one block chosen. A block is face-up in the shared game from then on, as on the table.
+- Every browser still runs the rules on its own copy (own blocks real, the other side's hidden ones placeholders) and writes the result, as before. The rules stop a player reading the opponent's details; they do not stop a player writing a wrong game.
 
-To switch it on: (1) Firebase console, Project settings, Service accounts, Generate new private key; (2) on netlify.com sign in with GitHub, Add new site, Import from GitHub, pick this repository (the settings come from `netlify.toml`), and add the environment variable `FIREBASE_SERVICE_ACCOUNT` with the whole JSON of that key; (3) set the repository variable `VITE_REFEREE_URL` to the Netlify site address and re-run the `deploy` workflow; (4) publish the rules again (Admin, Update rules). Games created before that stay ordinary tables.
+Publish the rules again after updating (Admin, Update rules). Games created before this update, and the shared test table, stay ordinary tables where hiding is done in the browser only.
 
-Limits: the server checks that the seat owns the piece and that it is that seat's turn or step; beyond that it relies on what the engine itself throws on. The log is scrubbed of hidden block names by string match. Netlify's free tier allows 125,000 function calls a month. `?fake=german` / `?fake=allied` (development only) runs the same server code inside the browser so two tabs can try a refereed game without deploying anything.
+Limits: the dice seed is part of the shared game, so a determined player could predict rolls; log lines are scrubbed of hidden names by string match; a modified browser could write false data to the shared game or the reveals. For fully trusted play a server is needed.
+
+Development: `?dev=1&fake=german` and `?dev=1&fake=allied` open two tabs of one browser as the two seats of a split table kept in localStorage, with no Firebase.

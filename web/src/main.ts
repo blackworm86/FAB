@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import mapJson from '../../data/bulge/map.json';
-import * as E from './engine-rec';
+import * as E from '../../engine/src';
 import { labelSvg } from './art';
 import { chitSvg, mapMarkerSvg, loadChitArt, garrisonChit } from './chits';
 import { History } from './history';
-import { online, startOnline, push, sit, setDevSeat, auth, lobby, sendCalls, restartRemote, DEV, TABLE, HAS_TABLE, LOCAL_ONLY, type DevSeat, type Match } from './online';
+import { online, startOnline, push, sit, setDevSeat, auth, lobby, publishReveals, DEV, TABLE, HAS_TABLE, LOCAL_ONLY, type DevSeat, type Match } from './online';
 import { GAMES, gameInfo } from './games';
 import rulesText from '../../firestore.rules?raw';
 import { throwDice, clearDice, isHit, type DiceGroup } from './dice3d';
@@ -472,19 +472,8 @@ function showFx(list: Fx[]) {
 /** Record and show what changed between two states. */
 let pendingFx: Fx[] = [];
 function noteFx(a: ReturnType<typeof snap>, x: E.Game, fresh?: boolean) { const d = diffFx(a, x); if (!d.length) return; battleFx.push(...d); if (fresh) { rollFx = d; pendingFx = d; } else showFx(d); }       // after a roll the effects wait for the dice to settle
-/** Refereed tables: run the player's action once on a scratch copy only to write down the engine calls it makes, then send those to the server. The answer comes back as the next state. */
-function serverAct(f: () => void) {
-  if (online.busy) return;
-  const snap = structuredClone(g); let err: Error | null = null;
-  E.record.start(); try { f(); } catch (e) { err = e as Error; }
-  const calls = E.record.stop(); g = snap;
-  if (err) { say(err.message); return refresh(); }
-  if (!calls.length) return refresh();
-  void sendCalls(calls).then((e) => { if (e) say(e); });
-}
 function act(f: () => void, after = '') {
   if (!allowed()) return say(notYou());
-  if (online.server) return serverAct(f);
   const before = g.battle ? snap(g) : null;
   const r = hist.run(g, () => { f(); auto(); });
   g = r.game; if (r.error) say(r.error.message); else { note = after; if (before) noteFx(before, g); }
@@ -591,7 +580,6 @@ let rollView: RollView | null = null, modal: 'menu' | 'boxes' | 'lobby' | 'rules
 const STAGE_NAME: Record<string, string> = { attArty: 'artillery', defArty: 'artillery', defFire: 'Defensive fire', offFire: 'Offensive fire' };
 function rollStage(b: E.Battle) {
   if (!allowed()) return say(notYou());
-  if (online.server) return serverAct(() => E.roll_step(g, b));
   const side = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker), kind = b.stage.endsWith('Arty') ? 'arty' : 'ground', fl = E.fireList(g, b, side, kind), n0 = b.rolls.length, stage = b.stage;
   const before = snap(g); E.roll_step(g, b); rollFx = []; noteFx(before, g, true); save();
   const fresh = b.rolls.slice(n0);
@@ -723,6 +711,7 @@ function promptText() {
   if (g.over) return `<b>${esc(g.over)}</b>`;
   if (g.pendingBlow) return `<b>${nm(other(g.units.find((x) => x.id === g.pendingBlow!.unit)!.side))}</b>: attempt to blow the bridge?`;
   if (b?.stage === 'retreat') return '<b>Choose the retreat area.</b>';
+  if (b && b.stage === 'setup' && b.ready?.length === 2) return '<b>Both ready.</b> Blocks are revealed…';
   if (b) return b.stage === 'setup' ? (() => { const me = online.mySide(), rd = (sd: E.Side) => b.ready?.includes(sd); return online.active && !online.both() && me ? `<b>${rd(me) ? 'You are ready.' : 'Tap an asset to add it, then press Ready.'}</b> Opponent: ${rd(other(me)) ? 'ready' : 'preparing'}.` : '<b>Tap a card to add it.</b> Tap a block for point unit.'; })() : b.stage === 'done' ? '' : rollView ? '' : b.stage.endsWith('Choice') ? 'Choose how to take the hits.' : `Next: <b>${STAGE_NAME[b.stage]}</b>`;
   const m = E.mustFight(g).length;
   switch (g.phase) {
@@ -951,7 +940,7 @@ async function createGame() {
   const info = gameInfo(form.game); if (!info?.ready) return;
   const opts: E.Opts = { scenario: form.scenario, fuel: form.fuel }, title = form.title.trim() || `${info.name} · ${new Date().toLocaleDateString()}`;
   lobbyMsg = 'Creating…'; render();
-  const id = await lobby.create({ game: form.game, title, opts }, form.side || null, JSON.stringify(E.newGame(5, opts)));
+  const id = await lobby.create({ game: form.game, title, opts }, form.side || null, JSON.stringify(E.newGame(undefined, opts)));
   if (id.startsWith('!')) { lobbyMsg = id.slice(1); return render(); }
   location.search = `?table=${id}`;
 }
@@ -1023,7 +1012,7 @@ function modalHtml() {
     const body = menuTab === 'Log' ? `<div class="log">${[...g.log].reverse().slice(0, 120).map((l) => `<div>${esc(l)}</div>`).join('')}</div>`
       : menuTab === 'Settings' ? `<h4>Map</h4><div class="row">${btn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${btn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Map art</h4><div class="row"><select data-sel="${regv((x) => setArt(x as 'vector' | 'scan'))}"><option value="vector" ${art === 'vector' ? 'selected' : ''}>Vector layers (traced)</option><option value="scan" ${art === 'scan' ? 'selected' : ''}>Original scan</option></select></div>
         ${online.active && !online.admin && !online.both() ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as 'tournament' | 'campaign'; })}"><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
-        <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Restart', () => { if (!confirm('Restart and lose the current game?')) return; if (online.server) { void restartRemote(newOpts as unknown as Record<string, unknown>).then((e) => { if (e) say(e); }); modal = null; return; } g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'danger')}</div>`}`
+        <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Restart', () => { if (!confirm('Restart and lose the current game?')) return; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'danger')}</div>`}`
       : menuTab === 'Admin' ? `<div class="row">${btn('Update rules', () => { modal = 'rules'; })}${btn('Free German seat', () => { void auth.freeSeat('german'); })}${btn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div>`
       : online.mode === 'remote' ? `<h4>Players</h4><p class="hint">German: <b>${seat('german')}</b> · Allied: <b>${seat('allied')}</b>${online.canWrite ? '' : ' · you can only watch'}</p>${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}
           <div class="row">${btn('Sit as German', () => { void sit('german'); }, '', !online.canWrite || !!online.account?.guest)}${btn('Sit as Allied', () => { void sit('allied'); }, '', !online.canWrite || !!online.account?.guest)}${btn('Leave my seat', () => { void sit(null); })}</div>
@@ -1042,7 +1031,7 @@ function render() {
   const alert = g.pendingBlow ? (() => { const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!, path = g.pendingBlow!.path; return `<div class="c-ledger"><h3>${nm(other(u.side))}: bridge?</h3><p class="hint">${esc(u.name)} tries to cross into ${esc(areaName(path[path.length - 1]))}. Attempt to blow the bridge? It works on a roll of 1–5.</p><div class="row end">${btn('Let them cross', () => E.resolveBlow(g, false))}${btn('Attempt to blow it', () => E.resolveBlow(g, true), 'primary')}</div></div>`; })() : '';
   const dockMain = alert || ledger() || handCards();
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = topBar() + `<div class="stage">${b ? battleTable() : dispatch()}${legend()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() || online.busy ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
+  $('#ui').innerHTML = topBar() + `<div class="stage">${b ? battleTable() : dispatch()}${legend()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
   const ui = $('#ui');
   { const h = ui.querySelector<HTMLElement>('.c-hand'), a = ui.querySelector<HTMLElement>('.arrtray'); if (h) h.scrollLeft = keepH; if (a) a.scrollLeft = keepA; }
   ui.querySelectorAll<HTMLElement>('[data-ui]').forEach((e) => (e.onclick = () => { acts[e.dataset.ui!]?.(); render(); }));            // view-only choices: allowed for everyone, never touch the game
@@ -1071,8 +1060,16 @@ let lastView: E.Side | null = null;
 function syncView() {
   const v = viewSide(); if (v === lastView) return; const first = lastView === null; lastView = v; yaw = v === 'allied' ? Math.PI : 0; if (!first) goal = { t: new THREE.Vector3(17, 0, -3), dist, pitch }; paintBoard();
 }
+/** Split tables: publish the blocks the other side may now see, and (attacker's seat) start combat once both sides are ready and their blocks are known. */
+function driveSplit() {
+  const me = online.mySide(); if (!online.split || !me) return;
+  void publishReveals(g);
+  const b = g.battle;
+  if (b && b.stage === 'setup' && b.ready?.length === 2 && g.deferBegin && me === b.attacker && E.unitsIn(g, b.area).every((u) => u.name !== 'Hidden block')) act(() => E.beginCombat(g, b));
+}
 let ctlKey = '';
 function refresh() {
+  if (online.split) setTimeout(driveSplit, 0);
   tgt = selChit ? targetsFor(g.chits.find((x) => x.id === selChit) ?? null) : null;
   if (tint === 'control') { const k = JSON.stringify(g.control) + E.contestedAreas(g).join(); if (k !== ctlKey) { ctlKey = k; paintBoard(); } }
   syncView(); syncBattleCam(); drawPieces(); paintAreas(); drawRoute(); badges = badgeList(); syncBadges(); render();

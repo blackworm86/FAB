@@ -34,6 +34,8 @@ export interface Battle {
 }
 export interface Opts { scenario: 'tournament' | 'campaign'; fuel: boolean; airborne?: boolean; advArty?: boolean }
 export interface Game {
+  /** Set when hidden blocks are split between seats: setReady does not start combat by itself (see split.ts). */
+  deferBegin?: boolean;
   turn: number; lastTurn: number; phasing: Side; phase: Phase; units: Unit[]; chits: Chit[]; control: Record<number, Side>;
   fieldWorks: number[]; fwOwner: Record<number, Side>; riverAssault: number[]; blown: string[]; contestedAtMoveStart: number[]; fought: number[];
   markers: { german: Record<string, number>; allied: Record<string, number> }; stratMoves: number; riverCross: string[]; blowTried: number[]; entered: Record<number, { id: string; river: boolean; blown: boolean }[]>;
@@ -592,7 +594,7 @@ export function beginCombat(g: Game, b: Battle) {
 export function setReady(g: Game, b: Battle, side: Side, on = true) {
   if (b.stage !== 'setup') throw new Error('already started');
   const r = (b.ready ??= []).filter((x) => x !== side); if (on) r.push(side); b.ready = r;
-  if (r.length === 2) beginCombat(g, b);
+  if (r.length === 2 && !g.deferBegin) beginCombat(g, b);
 }
 /** Withdraw from a battle that has not rolled yet, returning every assigned asset. Not possible once a Special Action was spent. */
 export function cancelBattle(g: Game) {

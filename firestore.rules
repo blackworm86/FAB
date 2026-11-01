@@ -28,21 +28,28 @@ service cloud.firestore {
             || (request.auth.uid in resource.data.members && resource.data.members.hasAll(request.resource.data.members) && request.resource.data.members.size() == resource.data.members.size() - 1));
       allow delete: if isPlayer() && (resource.data.owner == request.auth.uid || isAdmin());
     }
-    // Refereed tables: the full game lives in tables/{id}/private (nobody can read it, only the server), each seat reads its own redacted view,
-    // and only the server writes. Whether a table is refereed is recorded in docs/meta.
-    function refereed(table) { return exists(/databases/$(database)/documents/tables/$(table)/docs/meta); }
-    match /tables/{table}/private/{doc} { allow read, write: if false; }
-    match /tables/{table}/docs/meta { allow read: if signedIn(); allow write: if false; }
-    match /tables/{table}/views/{view} {
-      allow write: if false;
-      allow read: if signedIn() && (view == 'public'
-        || (view == 'german' && seats(table).get('german', '') == request.auth.uid)
-        || (view == 'allied' && seats(table).get('allied', '') == request.auth.uid));
+    // Hidden blocks (split tables): the shared game in docs/state holds hidden blocks as opaque placeholders; each seat keeps the details of its own
+    // blocks in priv/{side}, which only that seat can read, and publishes details the other side may see into docs/reveals. docs/meta marks such a table.
+    match /tables/{table}/priv/{side} {
+      allow read: if isPlayer() && seats(table).get(side, '') == request.auth.uid;
+      allow create: if isPlayer();
+      allow update: if isPlayer() && seats(table).get(side, '') == request.auth.uid;
+      allow delete: if isPlayer() && (isAdmin() || matchOwner(table));
+    }
+    match /tables/{table}/docs/meta {
+      allow read: if signedIn();
+      allow create: if isPlayer();
+      allow delete: if isPlayer() && (isAdmin() || matchOwner(table));
+    }
+    match /tables/{table}/docs/reveals {
+      allow read: if signedIn();
+      allow write: if isPlayer() && seated(table);
+      allow delete: if isPlayer() && (isAdmin() || matchOwner(table));
     }
     match /tables/{table}/docs/state {
       allow read: if signedIn();
       allow delete: if isPlayer() && (isAdmin() || matchOwner(table));
-      allow write: if isPlayer() && !refereed(table) && request.resource.data.keys().hasOnly(['rev', 'json', 'by'])
+      allow write: if isPlayer() && request.resource.data.keys().hasOnly(['rev', 'json', 'by'])
         && request.resource.data.json.size() < 900000
         && (isAdmin() || seated(table) || !exists(/databases/$(database)/documents/tables/$(table)/docs/seats));
     }
