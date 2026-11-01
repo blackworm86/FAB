@@ -457,7 +457,7 @@ function syncBattleCam() {
   if (b && key !== frameKey) {
     if (!inBattle) saved = { t: target.clone(), dist, pitch };
     const pts = areaWorld(b.area), xs = pts.map((q) => q.x), zs = pts.map((q) => q.z), w = Math.max(...xs) - Math.min(...xs), h = Math.max(...zs) - Math.min(...zs);
-    const c = new THREE.Vector3((Math.max(...xs) + Math.min(...xs)) / 2, 0, (Math.max(...zs) + Math.min(...zs)) / 2), r = Math.max(w, h) / 2 + 6, fit = Math.max(18, r * (innerWidth < innerHeight ? 3.6 : 2.5));
+    const c = new THREE.Vector3((Math.max(...xs) + Math.min(...xs)) / 2, 0, (Math.max(...zs) + Math.min(...zs)) / 2), r = Math.max(w, h) / 2 + 6, fit = Math.max(18, r * (innerWidth < innerHeight ? 4.2 : 3.0));
 
     lock = reinforcing ? null : { c, d: fit }; goal = { t: c, dist: reinforcing ? fit * 1.8 : fit, pitch: 1.15 }; yaw = viewRot();
   }
@@ -530,15 +530,36 @@ function syncBadges() {
   const layer = $('#badges'); layer.innerHTML = ''; badgeEls.clear();
   for (const b of badges) { const d = document.createElement('div'); d.className = 'bdg ' + b.cls; d.textContent = b.text; layer.appendChild(d); badgeEls.set(String(b.area), d); }
 }
-/** Focus on the battle: everything outside the contested area is blurred and dimmed, and the area's edge glows. */
+/** Focus on the battle. The whole table is drawn blurred and dimmed by the browser; a second canvas draws the contested area again, sharp, with its pieces (so nothing inside is cut),
+ *  and the area's exact edge glows. */
+const canvas2 = document.getElementById('gl2') as HTMLCanvasElement;
+let renderer2: THREE.WebGLRenderer | null = null, focusMesh: THREE.Mesh | null = null, focusFor = -1;
+function focusGeometry(id: number) {
+  const poly = MAP.areas.find((a) => a.id === id)!.polygon, shape = new THREE.Shape(poly.map(([x, y]) => new THREE.Vector2(x / S - MW / (2 * S), -(y / S - MH / (2 * S))))), geo = new THREE.ShapeGeometry(shape), pos = geo.getAttribute('position'), uv: number[] = [];
+  for (let k = 0; k < pos.count; k++) uv.push(((pos.getX(k) + MW / (2 * S)) * S) / MW, 1 - ((-pos.getY(k) + MH / (2 * S)) * S) / MH);
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); return geo;
+}
+const inPoly = (x: number, z: number, pts: THREE.Vector3[]) => { let c = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { if ((pts[i].z > z) !== (pts[j].z > z) && x < ((pts[j].x - pts[i].x) * (z - pts[i].z)) / (pts[j].z - pts[i].z) + pts[i].x) c = !c; } return c; };
+/** Second pass: only the battle area and what stands in it, on a transparent canvas laid over the blurred one. */
+function renderFocus() {
+  const b = g.battle, on = !!b && !reinforcing;
+  canvas.classList.toggle('blurred', on); canvas2.style.display = on ? 'block' : 'none';
+  if (!on) return;
+  if (!renderer2) { renderer2 = new THREE.WebGLRenderer({ canvas: canvas2, antialias: true, alpha: true }); renderer2.setPixelRatio(Math.min(2, devicePixelRatio)); }
+  const r = canvas.getBoundingClientRect(); if (canvas2.width !== Math.round(r.width * renderer2.getPixelRatio()) || canvas2.height !== Math.round(r.height * renderer2.getPixelRatio())) renderer2.setSize(r.width, r.height, false);
+  if (!focusMesh || focusFor !== b!.area) { focusMesh?.geometry.dispose(); focusMesh = new THREE.Mesh(focusGeometry(b!.area), new THREE.MeshStandardMaterial({ roughness: 0.9 })); focusMesh.rotation.x = -Math.PI / 2; focusMesh.position.y = 0.002; focusFor = b!.area; scene.add(focusMesh); }
+  (focusMesh.material as THREE.MeshStandardMaterial).map = (board.material as THREE.MeshStandardMaterial).map; (focusMesh.material as THREE.MeshStandardMaterial).needsUpdate = true;
+  const poly = areaWorld(b!.area), hidden: THREE.Object3D[] = [], bg = scene.background;
+  const hide = (o: THREE.Object3D) => { if (o.visible) { o.visible = false; hidden.push(o); } };
+  hide(board); hide(table); for (const [id, m] of overlays) if (id !== b!.area) hide(m);
+  for (const grp of [pieces, markers]) for (const o of grp.children) if (!inPoly(o.position.x, o.position.z, poly)) hide(o);
+  focusMesh.visible = true; scene.background = null; renderer2.render(scene, cam); scene.background = bg; focusMesh.visible = false; for (const o of hidden) o.visible = true;
+}
 function placeFocus() {
-  const f = document.getElementById('focus')!, sv = document.getElementById('glow') as unknown as SVGSVGElement, b = g.battle;
-  if (!b || reinforcing) { f.style.display = 'none'; sv.style.display = 'none'; return; }
-  const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(), pts = areaWorld(b.area).map((q) => { v.set(q.x, 0.4, q.z).project(cam); return [(v.x * 0.5 + 0.5) * r.width, (-v.y * 0.5 + 0.5) * r.height] as [number, number]; });
-  const cx = pts.reduce((a, q) => a + q[0], 0) / pts.length, cy = pts.reduce((a, q) => a + q[1], 0) / pts.length, k = 1.04, big = pts.map(([x, y]) => [cx + (x - cx) * k, cy + (y - cy) * k]);
-  const d = 'M' + big.map((q) => q.map((n) => n.toFixed(1)).join(' ')).join('L') + 'Z';
-  f.style.display = 'block'; f.style.clipPath = `path(evenodd, 'M0 0H${r.width}V${r.height}H0Z ${d}')`;
-  sv.style.display = 'block'; sv.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`); const pg = sv.firstElementChild!; pg.setAttribute('points', big.map((q) => q.join(',')).join(' ')); pg.setAttribute('class', b.stage === 'setup' ? 'gl set' : 'gl fire');
+  const sv = document.getElementById('glow') as unknown as SVGSVGElement, b = g.battle;
+  if (!b || reinforcing) { sv.style.display = 'none'; return; }
+  const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(), pts = areaWorld(b.area).map((q) => { v.set(q.x, 0.01, q.z).project(cam); return [(v.x * 0.5 + 0.5) * r.width, (-v.y * 0.5 + 0.5) * r.height] as [number, number]; });
+  sv.style.display = 'block'; sv.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`); const pg = sv.firstElementChild!; pg.setAttribute('points', pts.map((q) => q.map((n) => n.toFixed(1)).join(',')).join(' ')); pg.setAttribute('class', b.stage === 'setup' ? 'gl set' : 'gl fire');
 }
 /** Decisions made on the table: small bubbles over the side that has to choose. Their buttons are bound like any other. */
 function placeBubbles() {
@@ -1065,7 +1086,7 @@ function frame() {
   if (canvas.width !== Math.round(r.width * renderer.getPixelRatio())) { renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; cam.updateProjectionMatrix(); }
   if (goal) { target.lerp(goal.t, 0.1); dist += (goal.dist - dist) * 0.1; pitch += (goal.pitch - pitch) * 0.1; if (target.distanceTo(goal.t) < 0.05 && Math.abs(dist - goal.dist) < 0.1) goal = null; }
   if (lock && !goal) target.copy(lock.c);
-  placeCam(); renderer.render(scene, cam); placeBadges();
+  placeCam(); renderer.render(scene, cam); renderFocus(); placeBadges();
 }
 frame();
 loadChitArt().catch((e) => console.error(e)).finally(() => { auto(); refresh(); });
