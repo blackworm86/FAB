@@ -36,6 +36,8 @@ export interface Opts { scenario: 'tournament' | 'campaign'; fuel: boolean; airb
 export interface Game {
   /** Set when hidden blocks are split between seats: setReady does not start combat by itself (see split.ts). */
   deferBegin?: boolean;
+  /** Sides that have finished their part of a phase both sides work in (Reinforcement, Admin); the Phasing Player ends the step once the other side is done. */
+  done?: Side[];
   turn: number; lastTurn: number; phasing: Side; phase: Phase; units: Unit[]; chits: Chit[]; control: Record<number, Side>;
   fieldWorks: number[]; fwOwner: Record<number, Side>; riverAssault: number[]; blown: string[]; contestedAtMoveStart: number[]; fought: number[];
   markers: { german: Record<string, number>; allied: Record<string, number> }; stratMoves: number; riverCross: string[]; blowTried: number[]; entered: Record<number, { id: string; river: boolean; blown: boolean }[]>;
@@ -779,7 +781,9 @@ function supplyPhase(g: Game) {
   g.units.forEach((x) => { if (x.side === g.phasing) x.bcross = false; });
   g.units.forEach((u) => { u.exploit = false; u.adjOnly = false; if (u.side === other(g.phasing)) dropReserve(g, u); });
 }
+export function setDone(g: Game, side: Side, on = true) { const d = (g.done ?? []).filter((x) => x !== side); if (on) d.push(side); g.done = d; }
 export function endPhase(g: Game) {
+  g.done = [];
   settleUp(g);
   if (g.over) return;
   if (g.recover.length) throw new Error('choose the assets to recover first (4.1a)');

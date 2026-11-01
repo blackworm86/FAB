@@ -363,6 +363,7 @@ const BTN_ICON: [RegExp, string][] = [[/blow|bridge.*bridge/i, 'xbold'], [/repai
 const iconify = (html: string) => html.replace(/<button class="([^"]*)" (data-do="[^"]+") ([^>]*)>([^<]*)<\/button>/g, (m, cls, d, rest, text) => { const ic = BTN_ICON.find(([re]) => re.test(text))?.[1]; return ic ? `<button class="${cls} ab" ${d} ${rest}>${ico(ic)}<span>${text}</span></button>` : m; });
 /** The selected chit: a slim bar with its picture, a one-line instruction, an info toggle and the actions as icon buttons. */
 function chitBar(c: E.Chit): string {
+  if (!mine(c.side)) return `<div class="c-dispatch chitbar"><div class="cbhead"><img class="cbimg" alt="" src="${chitImg(c)}"><div class="cbt"><b>${esc(c.name)}</b><small>The other side's piece: you can only look</small></div><button class="ico" data-ui="${reg(() => { selChit = null; })}" aria-label="Put away" title="Put away">${ico('close')}</button></div><div class="inspect slimcard"><p>${esc((RULE[c.kind] ?? ['', ''])[1])}</p></div></div>`;
   const tg = tgt, body = chitPanel(c), [kind] = RULE[c.kind] ?? [c.kind];
   const chips = tg?.chips.map((x) => `<button class="pc ${c.side}" data-do="${reg(x.fn)}" title="${esc(x.label)}"><img alt="" src="${x.img}"><small>${esc(x.label)}</small></button>`).join('') ?? '';
   return `<div class="c-dispatch chitbar"><div class="cbhead"><img class="cbimg" alt="" src="${chitImg(c)}"><div class="cbt"><b>${esc(c.name)}</b><small>${esc(tg?.hint || kind)}</small></div>
@@ -440,6 +441,7 @@ window.addEventListener('keydown', (e) => {
 const tfAreas = () => [...E.areas.keys()].filter((a) => g.control[a] === 'allied' && !E.contested(g, a) && E.inSupply(g, 'allied', a));
 function arrOpts(): { area: number; sa: boolean }[] {
   if (!selArr || g.phase !== 'reinforcement') return [];
+  { const au = g.units.find((x) => x.id === selArr); if (au && !mine(au.side)) return []; const ac = g.chits.find((x) => x.id === selArr); if (ac && !mine(ac.side)) return []; }
   return g.pendingArrivals.includes(selArr) ? E.arrivalOptions(g, selArr) : g.tfNew.includes(selArr) ? tfAreas().map((area) => ({ area, sa: false })) : [];
 }
 
@@ -504,7 +506,7 @@ function click(e: PointerEvent) {
   if (selUnit && area != null && optsFor(selUnit).some((o) => o.area === area)) { previewArea = area; refresh(); return; }
   if ((g.phase === 'combat' || g.phase === 'btCombat') && area != null && fightable().includes(area)) { selArea = selArea === area ? null : area; selUnit = null; previewArea = null; return refresh(); }
   const uu = unit ? g.units.find((x) => x.id === unit) : null;
-  if (uu && seen(uu)) { selUnit = unit!; selArea = uu.area; } else { selArea = area; selUnit = null; }
+  if (uu && seen(uu) && (mine(uu.side) || !['movement', 'strategic', 'reaction', 'btMove'].includes(g.phase))) { selUnit = unit!; selArea = uu.area; } else { selArea = area; selUnit = null; }
   previewArea = null; hoverArea = null; refresh();
 }
 canvas.addEventListener('pointermove', (e) => {
@@ -781,6 +783,12 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
     if (sel != null) return { label: `Fight ${areaName(sel)}`, fn: () => { selUnit = null; battleFx = []; rollFx = []; E.startBattle(g, sel, g.phase === 'btCombat'); } };
     if (must.length) return { label: 'Select a battle', fn: () => undefined, dis: true };
   }
+  if (online.active && !online.both() && (g.phase === 'admin' || g.phase === 'reinforcement')) {            // both sides work in these steps: the other side says it is done, the Phasing Player ends the step
+    const me = online.mySide(); if (!me) return null;
+    if (me !== g.phasing) { const on = !!g.done?.includes(me); return { label: on ? 'Done · tap to undo' : 'Done', fn: () => act(() => E.setDone(g, me, !on)) }; }
+    const wait = !g.done?.includes(other(me));
+    return { label: wait ? `Waiting for ${nm(other(me))}` : `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`, fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; }), dis: wait || !!g.recover.length };
+  }
   return { label: `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`, fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; }), dis: !!E.mustFight(g).length || !!g.recover.length };
 }
 const recoverSel: Record<string, string | null> = {};
@@ -863,7 +871,7 @@ const unitFace = (u: E.Unit) => svgUri(u.garrison ? garrisonArt(u) : labelSvg(u)
 const b3 = (face: string, side: E.Side | 'british', chit = false) => `<span class="b3 ${side} ${chit ? 'flat' : ''}" aria-hidden="true"><i class="f"><img alt="" draggable="false" src="${face}"></i><i class="r"></i><i class="t"></i></span>`;
 const sideOfUnit = (u: E.Unit) => (u.side === 'german' ? 'german' : BRIT.has(u.name) ? 'british' : 'allied');
 function tray() {
-  const us = g.pendingArrivals.map((id) => g.units.find((x) => x.id === id)!), tf = g.tfNew.map((id) => E.chit(g, id));
+  const us = g.pendingArrivals.map((id) => g.units.find((x) => x.id === id)!).filter((u) => mine(u.side)), tf = g.tfNew.map((id) => E.chit(g, id)).filter((c) => mine(c.side));
   if (!us.length && !tf.length) return '';
   return `<div class="arrtray" role="group" aria-label="Arriving reinforcements"><span class="why">Drag a block to a highlighted entry area, or click it to see them.</span>${us.map((u) => `<button class="arr ${u.id === selArr ? 'sel' : ''}" data-arr="${u.id}" title="${esc(u.name)}">${b3(unitFace(u), sideOfUnit(u), !!u.garrison)}<small>${esc(u.name)}</small></button>`).join('')}${tf.map((c) => `<button class="arr ${c.id === selArr ? 'sel' : ''}" data-arr="${c.id}" title="Task Force">${b3(svgUri(garrisonChit('Task Force', `${c.turn}-*`, false)), 'allied', true)}<small>Task Force</small></button>`).join('')}</div>`;
 }
@@ -1106,7 +1114,7 @@ let ctlKey = '', tgtKey = '';
 function refresh() {
   if (online.mode === 'remote') setTimeout(driveSplit, 0);
   { const key = `${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
-    if (key !== tgtKey) { tgtKey = key; tgt = reinforcing ? reinforceTargets() : decisionTargets() ?? (selChit ? targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: unitFace, areaName }) : null); } }
+    if (key !== tgtKey) { tgtKey = key; tgt = reinforcing ? reinforceTargets() : decisionTargets() ?? (selChit && mine(g.chits.find((x) => x.id === selChit)?.side ?? 'german') ? targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: unitFace, areaName }) : null); } }
   if (tint === 'control') { const k = JSON.stringify(g.control) + E.contestedAreas(g).join(); if (k !== ctlKey) { ctlKey = k; paintBoard(); } }
   syncView(); syncBattleCam(); drawPieces(); paintAreas(); drawRoute(); badges = g.battle ? [] : badgeList(); syncBadges(); syncMoveMarks(); render();
   if (!rollView) { const cv = $('#dice'); if (cv && cv.style.display !== 'none') { clearDice(); cv.style.display = 'none'; } }
