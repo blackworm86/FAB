@@ -622,7 +622,8 @@ function endRoll() { rollView = null; clearDice(); ($('#dice') as HTMLElement).s
 const chitUri = new Map<string, string>();
 const chitImg = (c: E.Chit) => { let u = chitUri.get(c.id); if (!u) { u = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(chitSvg(c)); chitUri.set(c.id, u); } return u; };
 const card = (c: E.Chit, r = 0, why: string | null = null) => `<div tabindex="0" role="button" class="card2 ${c.side} ${why ? 'bad' : ''} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" style="--r:${r}deg" title="${esc(why ?? c.name + ' · ' + c.ech)}" aria-label="${esc(c.name)}"><img alt="" draggable="false" src="${chitImg(c)}"></div>`;
-const overlapFor = (n: number) => { const cw = innerWidth < 860 ? 78 : 104, avail = innerWidth - 56; const sq = Math.ceil((n * cw - avail) / (n - 1)); return n > 1 ? (innerWidth < 520 ? Math.min(Math.max(8, sq), 22) : Math.max(12, Math.min(cw - (innerWidth < 860 ? 38 : 14), sq))) : 0; };   // phones: always keep ~42px of each card tappable and let the hand scroll
+/** How much neighbouring cards overlap so the whole hand fits: each card keeps at least 34 px (46 on phones) visible, and the hand scrolls when even that does not fit. */
+const overlapFor = (n: number) => { const cw = innerWidth >= 900 ? 72 : 62, avail = innerWidth - 40, visible = n > 1 ? Math.min(cw, Math.max(innerWidth < 900 ? 46 : 34, (avail - cw) / (n - 1))) : cw; return n > 1 ? Math.round(cw - visible) : 0; };
 const handStyle = (n: number) => `style="--ov:${overlapFor(n)}px"`;
 const fan = (cs: string[]) => cs.map((h, i) => h.replace('--r:0deg', `--r:${((i - (cs.length - 1) / 2) * Math.min(5, 40 / cs.length)).toFixed(1)}deg`)).join('');
 /** Place every asset that may legally join, artillery first, for both sides. */

@@ -293,3 +293,5 @@ button.go .ic, button.plain .ic, .row button .ic { width: 18px; height: 18px; ve
 .homein .card { padding: 8px 10px !important; } .homein .card h2 { font-size: 16px !important; margin: 0 !important; } .homein button, .homein input, .homein select { min-height: 38px !important; } .matchrow { padding: 3px 0 !important; } .matchrow .open { padding: 5px 8px !important; } .matchrow .open b { font-size: 15px !important; } .tile { min-height: 56px !important; } .tile b { font-size: 22px !important; } .sheetbox { padding: 8px !important; gap: 6px !important; }
 .mapbubble { padding: 4px 8px; font-size: 12px; } .mapbubble b { font-size: 16px; } .fx { padding: 4px 9px 4px 8px; } .fx b { font-size: 16px; } .fx .ic { width: 22px; height: 22px; } .legend { font-size: 10.5px; padding: 4px 6px; }
 @media (min-width: 521px) { .c-bar.t { height: 48px !important; } }
+@media (min-width: 900px) { .dock .card2, .card2 { width: 72px !important; height: 72px !important; } .c-hand { height: 96px !important; } }
+.c-hand { justify-content: safe center; }
