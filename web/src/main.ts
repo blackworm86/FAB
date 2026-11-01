@@ -5,7 +5,7 @@ import * as E from '../../engine/src';
 import { labelSvg } from './art';
 import { chitSvg, mapMarkerSvg, loadChitArt, garrisonChit } from './chits';
 import { History } from './history';
-import { online, startOnline, push, sit, setDevSeat, auth, lobby, publishReveals, DEV, TABLE, HAS_TABLE, LOCAL_ONLY, type DevSeat, type Match } from './online';
+import { online, startOnline, push, sit, setDevSeat, auth, lobby, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, type DevSeat, type Match } from './online';
 import { GAMES, gameInfo } from './games';
 import { ICONS, ico } from './icons';
 import { esc, nm } from './util';
@@ -464,8 +464,8 @@ function placeBadges() {
 
 /* ---------- battle state shared with the view ---------- */
 interface RollView { title: string; groups: (DiceGroup & { parts: [string, number][]; hits: number })[]; pos: { x: number; y: number; group: number; v: number }[] | null }
-let menuTab = 'Game';
-let rollView: RollView | null = null, modal: 'menu' | 'boxes' | 'lobby' | 'rules' | 'layers' | null = null, handSide: E.Side | null = null;
+let menuTab = 'Players';
+let rollView: RollView | null = null, modal: 'menu' | 'boxes' | 'rules' | 'layers' | null = null, handSide: E.Side | null = null;
 const STAGE_NAME: Record<string, string> = { attArty: 'artillery', defArty: 'artillery', defFire: 'Defensive fire', offFire: 'Offensive fire' };
 function rollStage(b: E.Battle) {
   if (!allowed()) return say(notYou());
@@ -769,57 +769,68 @@ function legend() {
   const items = tint === 'control' ? [[CONTROL_COL.allied, 'Allied', 'control'], [CONTROL_COL.german, 'German', 'control'], [CONTROL_COL.contested, 'Contested', 'both sides present']] : tint === 'tdn' ? TDN_COL.map((c, i) => [c, `TDN ${i}`, (i ? `attackers −${i} to hit` : 'no modifier')]) : [[ZONE_COL[5], 'Zone 5', '5th Panzer Army'], [ZONE_COL[6], 'Zone 6', '6th Panzer Army'], [ZONE_COL[7], 'Zone 7', '7th Army']];
   return `<div class="legend" aria-label="Overlay legend"><b>${tint === 'tdn' ? 'Terrain defence' : tint === 'control' ? 'Area control' : 'Army zones'}</b>${items.map(([c, a, b]) => `<span><i style="background:${hex(c as number)}"></i>${a} <small>${b}</small></span>`).join('')}</div>`;
 }
-/* ---------- lobby ---------- */
-let matches: Match[] = [], form = { game: 'bulge', title: '', side: 'german' as E.Side | '', scenario: 'tournament' as E.Opts['scenario'], fuel: true }, lobbyMsg = '';
+/* ---------- home: sign in, your games, a new game, join ---------- */
+let matches: Match[] = [], form = { game: 'bulge', title: '', side: 'german' as E.Side | '', scenario: 'tournament' as E.Opts['scenario'], fuel: true }, homeMsg = '', creating = false;
 const inviteLink = (id: string) => `${location.origin}${location.pathname}?table=${id}`;
+const homeUrl = () => location.pathname;
 async function share(id: string, title: string) {
   const url = inviteLink(id);
-  try { if (navigator.share) await navigator.share({ title: `FAB · ${title}`, text: 'Join my game of FAB', url }); else { await navigator.clipboard.writeText(url); lobbyMsg = 'Invite link copied.'; } } catch { lobbyMsg = url; }
+  try { if (navigator.share) await navigator.share({ title: `FAB · ${title}`, text: 'Join my game of FAB', url }); else { await navigator.clipboard.writeText(url); say('Invite link copied'); } } catch { homeMsg = url; }
   render();
 }
 async function dropMatch(m: { id: string; title: string; owner: string }) {
   const own = m.owner === online.uid || online.admin;
   if (!confirm(own ? `Delete "${m.title}" for everyone? This cannot be undone.` : `Remove "${m.title}" from your games?`)) return;
   await (own ? lobby.remove(m.id) : lobby.leave(m.id));
-  if (m.id === TABLE) location.search = '';
+  if (m.id === TABLE) location.href = homeUrl();
 }
 async function createGame() {
   const info = gameInfo(form.game); if (!info?.ready) return;
   const opts: E.Opts = { scenario: form.scenario, fuel: form.fuel }, title = form.title.trim() || `${info.name} · ${new Date().toLocaleDateString()}`;
-  lobbyMsg = 'Creating…'; render();
+  homeMsg = 'Creating…'; render();
   const id = await lobby.create({ game: form.game, title, opts }, form.side || null, JSON.stringify(E.newGame(undefined, opts)));
-  if (id.startsWith('!')) { lobbyMsg = id.slice(1); return render(); }
-  location.search = `?table=${id}`;
+  if (id.startsWith('!')) { homeMsg = id.slice(1); return render(); }
+  location.href = `${homeUrl()}?table=${id}`;
 }
 function joinByCode(v: string) {
-  const m = v.trim().match(/[?&]table=([\w-]+)/)?.[1] ?? v.trim(); if (!/^[\w-]{3,40}$/.test(m)) { lobbyMsg = 'Paste the invite link or the game code.'; return render(); }
-  location.search = `?table=${m}`;
+  const m = v.trim().match(/[?&]table=([\w-]+)/)?.[1] ?? v.trim(); if (!/^[\w-]{3,40}$/.test(m)) { homeMsg = 'Paste the invite link or the game code.'; return render(); }
+  location.href = `${homeUrl()}?table=${m}`;
 }
-function lobbyHtml() {
+const stateOf = (m: Match) => (m.germanName && m.alliedName ? 'In play' : 'Waiting for an opponent');
+/** The first screen: never on top of a game. Signed out it is just the sign-in; signed in it is your games, a new game and a way to join one. */
+function homeHtml() {
   const a = online.account, signed = !!a && !a.guest, info = gameInfo(form.game);
-  const games = GAMES.map((x) => `<button class="gamecard ${x.id === form.game ? 'sel' : ''}" ${x.ready ? '' : 'disabled'} data-do="${reg(() => { if (x.ready) form.game = x.id; })}"><b>${esc(x.name)}</b><small>${esc(x.vol)}${x.ready ? '' : ' · coming soon'}</small><span>${esc(x.blurb)}</span></button>`).join('');
-  const mine = matches.map((m) => `<div class="matchrow"><div><b>${esc(m.title)}</b><small>${esc(gameInfo(m.game)?.name ?? m.game)} · German ${esc(m.germanName || 'open seat')} · Allied ${esc(m.alliedName || 'open seat')}</small></div><div class="row">${btn('Open', () => { location.search = `?table=${m.id}`; }, 'primary')}${btn(`${ico('share')} Invite`, () => { void share(m.id, m.title); })}${btn(`${ico('close')}<span class="bl">${m.owner === online.uid || online.admin ? 'Delete' : 'Leave'}</span>`, () => { void dropMatch(m); }, 'ico danger', false, m.owner === online.uid || online.admin ? 'Delete this game for everyone' : 'Remove this game from your list')}</div></div>`).join('') || '<p class="hint">You have no games yet. Create one below.</p>';
-  return `<div class="homepage"><div class="homein">
-    <header><h1>Fast Action Battles</h1><p>Series-rules tabletop wargames, played online.</p>${HAS_TABLE ? btn(`${ico('back')} Back to the game`, () => { modal = null; }, 'plain') : ''}</header>
-    <section class="card"><h2>Account</h2>${accountHtml()}${signed ? '' : '<p class="hint">Guests can watch a game from its link. Sign in to create or play.</p>'}</section>
-    ${signed ? `<section class="card"><h2>My games</h2>${mine}</section>
-    <section class="card"><h2>New game</h2><h4>1 · Choose a game</h4><div class="gamegrid">${games}</div>
-      <h4>2 · Set it up</h4><div class="authform"><input placeholder="Name (optional)" value="${esc(form.title)}" data-sel="${regv((x) => { form.title = x; })}"></div>
-      <div class="row"><select data-sel="${regv((x) => { form.scenario = x as E.Opts['scenario']; })}"><option value="tournament" ${form.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${form.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
-      <select data-sel="${regv((x) => { form.side = x as E.Side | ''; })}"><option value="german" ${form.side === 'german' ? 'selected' : ''}>I play German</option><option value="allied" ${form.side === 'allied' ? 'selected' : ''}>I play Allied</option><option value="" ${form.side === '' ? 'selected' : ''}>Leave both seats open</option></select>
-      <label><input type="checkbox" ${form.fuel ? 'checked' : ''} data-sel="${regv((x) => { form.fuel = x === 'on'; })}"> German fuel rule</label></div>
-      <h4>3 · Create, then invite</h4><div class="row">${btn('Create game', () => { void createGame(); }, 'primary', !info?.ready)}</div></section>
-    <section class="card"><h2>Join a game</h2><div class="row authform"><input id="join" class="grow" placeholder="Paste an invite link or code">${btn('Join', () => { joinByCode(($('#join') as HTMLInputElement).value); })}</div></section>` : ''}
-    ${lobbyMsg ? `<p class="hint"><b>${esc(lobbyMsg)}</b></p>` : ''}${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}
-    <details class="card"><summary>Other ways to play</summary><div class="row">${btn('Hot-seat on this device', () => { location.search = '?local=1'; })}${HAS_TABLE ? '' : btn('Shared test table', () => { location.search = '?table=main'; })}</div></details>
+  const head = `<header><h1>Fast Action Battles</h1><p>Board-game battles with the series rules, played online.</p></header>`;
+  if (!online.ready) return `<div class="homepage"><div class="homein">${head}<p class="hint">Connecting…</p></div></div>`;
+  if (online.mode !== 'remote' || !online.hasAccounts) return `<div class="homepage"><div class="homein">${head}<section class="card"><p class="hint">Online play is not set up on this site.${online.error ? ' ' + esc(online.error) : ''}</p></section></div></div>`;
+  if (!signed) return `<div class="homepage"><div class="homein">${head}<section class="card"><h2>Sign in</h2>${sessionStorage.getItem('fab-next') ? '<p class="hint">You will go straight back to the game you were invited to.</p>' : '<p class="hint">To create a game or join one. Anyone can watch a game from its link.</p>'}${accountHtml()}</section>${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}</div></div>`;
+  const mine = matches.map((m) => `<div class="matchrow"><button class="open" data-do="${reg(() => { location.href = `${homeUrl()}?table=${m.id}`; })}"><b>${esc(m.title)}</b><small>${esc(gameInfo(m.game)?.name ?? m.game)} · ${esc(stateOf(m))}</small><small>German ${esc(m.germanName || 'open seat')} · Allied ${esc(m.alliedName || 'open seat')}</small></button><div class="row">${btn(`${ico('share')}`, () => { void share(m.id, m.title); }, 'ico', false, 'Invite a player')}${btn(`${ico('close')}`, () => { void dropMatch(m); }, 'ico danger', false, m.owner === online.uid || online.admin ? 'Delete this game for everyone' : 'Remove from my list')}</div></div>`).join('') || '<p class="hint">No games yet.</p>';
+  const side = (v: E.Side | '', label: string) => chip(label, form.side === v, () => { form.side = v; });
+  const create = creating ? `<div class="newgame"><div class="authform"><input placeholder="Game name (optional)" value="${esc(form.title)}" data-sel="${regv((x) => { form.title = x; })}"></div>
+      <h4>You play</h4><div class="chips">${side('german', 'German')}${side('allied', 'Allied')}${side('', 'Decide later')}</div>
+      <h4>Scenario</h4><div class="chips">${chip('Tournament · 5 turns', form.scenario === 'tournament', () => { form.scenario = 'tournament'; })}${chip('Campaign · 9 turns', form.scenario === 'campaign', () => { form.scenario = 'campaign'; })}${chip('German fuel rule', form.fuel, () => { form.fuel = !form.fuel; })}</div>
+      <div class="row">${btn('Create game', () => { void createGame(); }, 'primary', !info?.ready)}${btn('Cancel', () => { creating = false; })}</div></div>` : `<div class="row">${btn(`${ico('plus')} New game`, () => { creating = true; }, 'primary')}</div>`;
+  return `<div class="homepage"><div class="homein">${head}
+    <section class="card"><div class="lh"><h2>Your games</h2><span class="who">${esc(a!.name || a!.email)} <button class="plain" data-auth="out">Sign out</button></span></div>${mine}${create}</section>
+    <section class="card"><h2>Join with an invite</h2><div class="row authform"><input id="join" class="grow" placeholder="Paste the invite link or code">${btn('Join', () => { joinByCode(($('#join') as HTMLInputElement).value); })}</div></section>
+    ${homeMsg ? `<p class="hint"><b>${esc(homeMsg)}</b></p>` : ''}${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}
   </div></div>`;
+}
+/** A slim bar over the table when you are not seated, or while you wait for an opponent. */
+function seatBar() {
+  if (online.mode !== 'remote' || !online.hasAccounts) return '';
+  const a = online.account, me = online.mySide(), s = online.seats, title = matches.find((m) => m.id === TABLE)?.title ?? 'a game of FAB';
+  if (!a || a.guest) return `<div class="seatbar"><span>You are watching.</span>${btn('Sign in to play', () => { try { sessionStorage.setItem('fab-next', TABLE); } catch { /* private mode */ } location.href = homeUrl(); }, 'primary')}</div>`;
+  if (!me) { const free = (['german', 'allied'] as E.Side[]).filter((x) => !s[x]); return `<div class="seatbar"><span>${free.length ? 'Take a seat:' : 'Both seats are taken. You are watching.'}</span>${free.map((x) => btn(`Play ${nm(x)}`, () => { void sit(x); }, 'primary')).join('')}</div>`; }
+  if (!s.german || !s.allied) return `<div class="seatbar"><span>Waiting for your opponent.</span>${btn(`${ico('share')} Invite`, () => { void share(TABLE, title); }, 'primary')}</div>`;
+  return '';
 }
 /** Sign-in panel (Firebase only): Google, or email and password; guests can watch but not play. */
 function accountHtml() {
   if (!online.hasAccounts) return '';
   const a = online.account;
   if (a && !a.guest) return `<h4>Account</h4><p class="hint">Signed in as <b>${esc(a.name || a.email)}</b>${a.email ? ' · ' + esc(a.email) : ''}${a.admin ? ' · <b>admin</b>' : ''}</p><div class="row"><button data-auth="out">Sign out</button></div>`;
-  return `<h4>Sign in to play</h4><p class="hint">You are watching as a guest.</p><div class="row"><button class="primary" data-auth="google">Continue with Google</button></div>
+  return `<div class="row"><button class="primary" data-auth="google">Continue with Google</button></div>
     <div class="authform"><input id="a-name" placeholder="Name (to register)" autocomplete="name"><input id="a-mail" type="email" placeholder="Email" autocomplete="email"><input id="a-pass" type="password" placeholder="Password (6+ characters)" autocomplete="current-password"></div>
     <div class="row"><button data-auth="in">Sign in</button><button data-auth="reg">Register</button><button data-auth="reset">Forgot password</button></div>`;
 }
@@ -848,36 +859,47 @@ function layersHtml() {
 function modalHtml() {
   if (modal === 'layers') return layersHtml();
   if (modal === 'rules') return rulesHtml();
-  if (modal === 'lobby') return lobbyHtml();
   if (modal === 'boxes') return piecesHtml();
   if (modal === 'menu') {
     const seat = (sd: E.Side) => online.seats[sd] ? (online.seats[sd] === online.uid ? 'you' : esc((sd === 'german' ? online.seats.germanName : online.seats.alliedName) || 'taken')) : 'free';
-    const tabs = ['Game', 'Log', 'Settings', ...(online.admin ? ['Admin'] : [])];
-    if (!tabs.includes(menuTab)) menuTab = 'Game';
+    const tabs = ['Players', 'Log', 'Settings', ...(online.admin ? ['Admin'] : [])];
+    if (!tabs.includes(menuTab)) menuTab = 'Players';
     const body = menuTab === 'Log' ? `<div class="log">${[...g.log].reverse().slice(0, 120).map((l) => `<div>${esc(l)}</div>`).join('')}</div>`
       : menuTab === 'Settings' ? `<h4>Map</h4><div class="row">${btn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${btn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Map art</h4><div class="row"><select data-sel="${regv((x) => setArt(x as 'vector' | 'scan'))}"><option value="vector" ${art === 'vector' ? 'selected' : ''}>Vector layers (traced)</option><option value="scan" ${art === 'scan' ? 'selected' : ''}>Original scan</option></select></div>
         ${online.active && !online.admin && !online.both() ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as 'tournament' | 'campaign'; })}"><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
         <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Restart', () => { if (!confirm('Restart and lose the current game?')) return; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'danger')}</div>`}`
       : menuTab === 'Admin' ? `<div class="row">${btn('Update rules', () => { modal = 'rules'; })}${btn('Free German seat', () => { void auth.freeSeat('german'); })}${btn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div>`
-      : online.mode === 'remote' ? `<h4>Players</h4><p class="hint">German: <b>${seat('german')}</b> · Allied: <b>${seat('allied')}</b>${online.canWrite ? '' : ' · you can only watch'}</p>${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}
-          <div class="row">${btn('Sit as German', () => { void sit('german'); }, '', !online.canWrite || !!online.account?.guest)}${btn('Sit as Allied', () => { void sit('allied'); }, '', !online.canWrite || !!online.account?.guest)}${btn('Leave my seat', () => { void sit(null); })}</div>
-          ${TABLE !== 'main' ? `<h4>Game</h4><div class="row">${btn(`${ico('close')} End game`, () => { const m = matches.find((x) => x.id === TABLE); void dropMatch(m ?? { id: TABLE, title: TABLE, owner: '' }); }, 'danger', !online.account || online.account.guest)}</div><h4>Invite</h4><div class="row">${btn(`${ico('share')} Share invite link`, () => { void share(TABLE, TABLE); }, 'primary')}</div>` : ''}${online.account?.guest ? '<p class="hint">Sign in from the lobby to take a seat.</p>' : ''}`
-      : online.mode === 'local' ? '<p class="hint">Developer table. The Seat button in the top bar switches between German, Allied, both and watching; turn rules are enforced for the seat you hold.</p>' : '<p class="hint">Hot-seat game on this device.</p>';
+      : online.mode === 'remote' ? (() => {
+        const a = online.account, signed = !!a && !a.guest, me = online.mySide(), title = matches.find((m) => m.id === TABLE)?.title ?? TABLE, m = matches.find((x) => x.id === TABLE), own = !!m && (m.owner === online.uid || online.admin);
+        const row = (sd: E.Side) => { const who = online.seats[sd] ? (online.seats[sd] === online.uid ? 'you' : esc((sd === 'german' ? online.seats.germanName : online.seats.alliedName) || 'taken')) : 'free';
+          return `<div class="seatrow"><b class="${sd}">${nm(sd)}</b><span>${who}</span>${online.seats[sd] === online.uid ? btn('Leave seat', () => { void sit(null); }) : !online.seats[sd] && signed && !me ? btn('Take seat', () => { void sit(sd); }, 'primary') : ''}</div>`; };
+        return `<h4>Players</h4>${row('german')}${row('allied')}${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}
+          <div class="row">${btn(`${ico('share')} Invite a player`, () => { void share(TABLE, title); })}</div>
+          <p class="hint">${signed ? `Signed in as <b>${esc(a!.name || a!.email)}</b>` : 'You are watching as a guest.'}</p>
+          ${own && TABLE !== 'main' ? `<div class="row">${btn(`${ico('close')} Delete this game`, () => { void dropMatch(m ?? { id: TABLE, title: TABLE, owner: '' }); }, 'danger')}</div>` : ''}`; })()
+      : '<p class="hint">Developer table. The Seat button in the top bar switches between German, Allied, both and watching; turn rules are enforced for the seat you hold.</p>';
     return `<div class="modal"><div class="sheet"><h3>Game <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
       <div class="tabs">${tabs.map((t) => `<button class="${t === menuTab ? 'on' : ''}" data-do="${reg(() => { menuTab = t; })}">${t}</button>`).join('')}</div>${body}
-      <div class="row sheetfoot">${btn(`${ico('back')} Lobby`, () => { if (online.mode === 'remote') modal = 'lobby'; else location.href = location.pathname; })}${btn('Pieces', () => { modal = 'boxes'; })}</div></div></div>`;
+      <div class="row sheetfoot">${btn(`${ico('back')} Leave game`, () => { location.href = homeUrl(); })}</div></div></div>`;
   }
   return '';
 }
+const inGame = () => HAS_TABLE || DEV_FAKE || online.mode === 'local';
 function render() {
   if (document.activeElement?.closest?.('.authform')) return;                                         // do not wipe what is being typed
   acts = {}; actv = {}; n = 0;
+  canvas.style.display = inGame() ? '' : 'none';
+  if (!inGame()) { $('#ui').innerHTML = homeHtml(); bind($('#ui')); return; }
+  if (rollView && !g.battle) endRoll();                                                                   // dice left on screen after the battle is over
   const p = primary(), b = g.battle;
   const alert = g.pendingBlow ? (() => { const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!, path = g.pendingBlow!.path; return `<div class="c-ledger"><h3>${nm(other(u.side))}: bridge?</h3><p class="hint">${esc(u.name)} tries to cross into ${esc(areaName(path[path.length - 1]))}. Attempt to blow the bridge? It works on a roll of 1–5.</p><div class="row end">${btn('Let them cross', () => E.resolveBlow(g, false))}${btn('Attempt to blow it', () => E.resolveBlow(g, true), 'primary')}</div></div>`; })() : '';
   const dockMain = alert || ledger() || handCards();
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = topBar() + `<div class="stage">${b ? battleTable() : dispatch()}${legend()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
+  $('#ui').innerHTML = topBar() + `<div class="stage">${seatBar()}${b ? battleTable() : dispatch()}${legend()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
   const ui = $('#ui');
+  bind(ui, keepH, keepA);
+}
+function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
   { const h = ui.querySelector<HTMLElement>('.c-hand'), a = ui.querySelector<HTMLElement>('.arrtray'); if (h) h.scrollLeft = keepH; if (a) a.scrollLeft = keepA; }
   ui.querySelectorAll<HTMLElement>('[data-ui]').forEach((e) => (e.onclick = () => { acts[e.dataset.ui!]?.(); render(); }));            // view-only choices: allowed for everyone, never touch the game
   ui.querySelectorAll<HTMLElement>('[data-do]').forEach((e) => (e.onclick = () => act(acts[e.dataset.do!])));
@@ -930,17 +952,18 @@ function frame() {
 }
 frame();
 loadChitArt().catch((e) => console.error(e)).finally(() => { auto(); refresh(); });
-let lobbyOpened = false, lobbyUid = '';
+let lobbyUid = '';
 const onNet = (): void => {
-  if (online.mode !== 'remote' || !online.hasAccounts || LOCAL_ONLY) return;
-  if (!lobbyOpened && !HAS_TABLE) { lobbyOpened = true; modal = 'lobby'; }
+  if (online.mode !== 'remote' || !online.hasAccounts) return;
   if (lobbyUid !== online.uid) { lobbyUid = online.uid; lobby.watch((m) => { matches = m; render(); }); }
+  const next = (() => { try { return sessionStorage.getItem('fab-next'); } catch { return null; } })();
+  if (next && !HAS_TABLE && online.account && !online.account.guest) { try { sessionStorage.removeItem('fab-next'); } catch { /* private mode */ } location.href = `${homeUrl()}?table=${next}`; }     // back to the invite that sent you to sign in
 };
 void startOnline((rg) => { const was = g.battle, n0 = was?.rolls.length ?? 0, st0 = was?.stage, pre = was ? snap(g) : null; applyingRemote = true; g = rg;
   const nb = g.battle; const rolled = !!(was && nb && nb.area === was.area && nb.rolls.length > n0); if (pre) noteFx(pre, g, rolled); if (was && nb && nb.area === was.area && nb.rolls.length > n0 && st0 && STAGE_NAME[st0]) {      // the other player rolled: show their dice here too
     const side = st0 === 'attArty' || st0 === 'offFire' ? nb.attacker : other(nb.attacker);
     rollView = { title: `${nm(side)} ${STAGE_NAME[st0]}`, pos: null, groups: nb.rolls.slice(n0).map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: [] })) };
-    if (rollView.groups.length) { const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block'; throwDice(cv, rollView.groups, (p) => { if (rollView) { rollView.pos = p; render(); showFx(pendingFx); pendingFx = []; } }); } else rollView = null;
+    if (rollView.groups.length) { const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block'; throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; render(); showFx(pendingFx); pendingFx = []; setTimeout(() => { if (rollView === rv) endRoll(); }, 4000); } }); } else rollView = null;       // the other player's dice clear themselves
   } selUnit = selChit = selArr = null; previewArea = hoverArea = null; hist.clear(); try { save(); } finally { applyingRemote = false; } refresh(); }, () => { onNet(); render(); }, () => g, say);
 /** Every drawn symbol and counter as SVG, for the editable sheets (docs/maps/vector/fab-*.svg). */
 function sheets() {
@@ -952,4 +975,4 @@ function sheets() {
   for (const m of ['X', 'FW', 'RA', 'RB', 'DIS', 'REC', 'E', 'B', 'P', 'R5', 'R6', 'R7', 'A7', 'A56', 'GI', 'G', 'AIR', 'AS']) add('markers', m, m, mapMarkerSvg(m));
   return out;
 }
-Object.assign(window, { __fab: { iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets, setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
+Object.assign(window, { __fab: { online, setMatches: (m: Match[]) => { matches = m; }, iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets, setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });

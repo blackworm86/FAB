@@ -15,14 +15,14 @@ The game is a static site (`web/`, built with Vite). Online play stores one tabl
 
 ## 3. Playing
 - Open `.../?table=my-game` on two machines (any name; the default table is `main`). Each player takes a seat in the menu (☰). Anyone else watches.
-- A player with no Firebase variables set (for example a local `npm run dev`) plays hot-seat.
+- With no Firebase variables set (for example a local `npm run dev`) the site shows the home page without games; add `?dev=1` for a local development table.
 
 ## 4. Developer seat switch
 Add `?dev=1` (or run `npm run dev`) to get the **Seat** button in the top bar. It cycles **Both, German, Allied, Watching**, enforces the turn rules for the seat you pick, and shows `YOU` in the header, so one machine can check two-player control and, later, what each side may see. With a Firebase table the state document is only writable by a seated user, so for dev use the emulator or run without Firebase variables.
 
 ## Local development
 ```bash
-cd web && cp .env.example .env.local   # optional; leave empty for hot-seat
+cd web && cp .env.example .env.local   # optional; without it only the dev table (?dev=1) works
 npm ci && npm run dev
 ```
 

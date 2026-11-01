@@ -22,4 +22,8 @@ FAB is a series: every game shares the same core rules (the chit boxes and selec
 - Dice come from the stored seed, so a player who reads the state could predict rolls; move the roll to the server when that matters.
 
 ## Lobby and matches
-`web/src/games.ts` lists the series titles (Bulge ready; Sicily, Golan '73 pending). Signed-in players create a game in the lobby: `matches/{id}` (record), `tables/{id}/docs/seats`, `tables/{id}/docs/state`. The invite link is `?table={id}`; sitting adds the player to `members`. `?local=1` is hot-seat. Battle set-up: each seat handles only its own assets, both press Ready (`setReady`), the attacker may `cancelBattle` until a Special Action is spent; each fire step is rolled by the side that owns it.
+`web/src/games.ts` lists the series titles (Bulge ready; Sicily, Golan '73 pending). Signed-in players create a game in the lobby: `matches/{id}` (record), `tables/{id}/docs/seats`, `tables/{id}/docs/state`. The invite link is `?table={id}`; sitting adds the player to `members`. Battle set-up: each seat handles only its own assets, both press Ready (`setReady`), the attacker may `cancelBattle` until a Special Action is spent; each fire step is rolled by the side that owns it.
+
+
+## Screens
+Home (`?` with no table) is its own page: sign in, your games, new game, join with an invite. A game opens at `?table={id}`; a slim bar over the table offers the free seat(s) or the invite link, and Menu has Players, Log, Settings, Admin and Leave game. There is no hot-seat mode; `?dev=1` plays a local table for development only.

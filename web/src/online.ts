@@ -34,13 +34,13 @@ export interface Store {
 const params = new URLSearchParams(location.search);
 export const DEV = import.meta.env.DEV || params.has('dev') || (() => { try { return localStorage.getItem('fab-dev') === '1'; } catch { return false; } })();
 export const TABLE = params.get('table') || 'main';
-export const HAS_TABLE = params.has('table'), LOCAL_ONLY = params.has('local');
+export const HAS_TABLE = params.has('table'), DEV_FAKE = DEV && params.has('fake');
 export type DevSeat = 'german' | 'allied' | 'both' | 'watch';
 
 export const online = {
   /** 'off' = hot-seat, 'local' = seats enforced on this machine only (dev), 'remote' = shared through a store. */
   mode: 'off' as 'off' | 'local' | 'remote', uid: '', seats: {} as Seats, rev: 0, canWrite: true, error: '', store: '' as string,
-  devSeat: 'both' as DevSeat, split: false, enemyAlias: new Map<string, string>(), account: null as Account | null, admin: false, hasAccounts: false,
+  ready: false, devSeat: 'both' as DevSeat, split: false, enemyAlias: new Map<string, string>(), account: null as Account | null, admin: false, hasAccounts: false,
   mySide(): Side | null {
     if (DEV && this.mode !== 'off') return this.devSeat === 'german' || this.devSeat === 'allied' ? this.devSeat : null;
     return this.seats.german === this.uid && this.uid ? 'german' : this.seats.allied === this.uid && this.uid ? 'allied' : null;
@@ -70,11 +70,10 @@ function conflictOr(e: unknown) {
 
 export async function startOnline(remote: (g: Game) => void, changed: () => void, current: () => Game, say: (m: string) => void = () => {}) {
   onRemote = remote; onChange = changed; notify = say;
-  if (LOCAL_ONLY) { if (DEV) { online.mode = 'local'; changed(); } return; }
   try { const fake = DEV ? params.get('fake') : null; store = fake === 'german' || fake === 'allied' ? (await import('./store-fake')).fakeSplitStore(fake) : await firebaseStore(TABLE); } catch (e) { online.error = String(e); store = null; }
   { const fk = DEV ? params.get('fake') : null; if (store && (fk === 'german' || fk === 'allied')) online.devSeat = fk; }          // a stand-in referee plays one seat per tab
-  if (!store) { if (DEV) { online.mode = 'local'; changed(); } return; }
-  online.mode = 'remote'; online.uid = store.uid; online.canWrite = store.canWrite;
+  if (!store) { if (DEV) online.mode = 'local'; online.ready = true; changed(); return; }
+  online.ready = true; online.mode = 'remote'; online.uid = store.uid; online.canWrite = store.canWrite;
   if (store.account) { online.hasAccounts = true; const sync = (a: Account) => { online.account = a; online.uid = a.uid; online.admin = a.admin; onChange(); }; sync(store.account()); store.onAccount?.(sync); }
   store.watchSeats((s) => { online.seats = s; onChange(); if (online.split) rebuild(); }, fail);
   online.split = !!store.split;
