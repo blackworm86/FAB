@@ -173,15 +173,30 @@ function outlineRibbon(id: number, d: number, w: number, color: number) {
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx);
   return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.92, side: THREE.DoubleSide, depthWrite: false }));
 }
-/** The battle on the table: the area's own outline, glowing, and each side's assigned assets as cardboard counters in a row behind its blocks. */
-const glow: THREE.MeshBasicMaterial[] = [];
+const dotTex = new Map<string, THREE.CanvasTexture>();
+/** A small round marker lying on the table: a red cross to take an asset back, a gold target for the point unit. */
+function disc(kind: 'x' | 'point', size: number) {
+  let t = dotTex.get(kind);
+  if (!t) { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d')!; x.fillStyle = kind === 'x' ? '#c0392b' : '#e7b04a'; x.beginPath(); x.arc(64, 64, 60, 0, 7); x.fill(); x.lineWidth = 8; x.strokeStyle = '#fff'; x.stroke();
+    x.strokeStyle = kind === 'x' ? '#fff' : '#1a1608'; x.lineWidth = 14; x.lineCap = 'round'; x.beginPath();
+    if (kind === 'x') { x.moveTo(40, 40); x.lineTo(88, 88); x.moveTo(88, 40); x.lineTo(40, 88); } else { x.arc(64, 64, 26, 0, 7); x.moveTo(64, 22); x.lineTo(64, 40); x.moveTo(64, 88); x.lineTo(64, 106); x.moveTo(22, 64); x.lineTo(40, 64); x.moveTo(88, 64); x.lineTo(106, 64); }
+    x.stroke(); t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; dotTex.set(kind, t); }
+  const m = new THREE.Mesh(new THREE.CircleGeometry(size, 28), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false })); m.rotation.x = -Math.PI / 2; return m;
+}
+/** The battle on the table: each side's assigned assets as cardboard counters in a row behind its blocks, with a red cross to take one back before the battle starts. */
 function drawBattleTable(b: E.Battle) {
-  const col = b.stage === 'setup' ? 0xffd37a : 0xff7a6a; glow.length = 0;
-  for (const [d, w, o] of [[-0.55, 1.1, 0.18], [-0.3, 0.6, 0.35], [-0.12, 0.24, 0.95]] as const) { const m = outlineRibbon(b.area, d, w, col); (m.material as THREE.MeshBasicMaterial).opacity = o; (m.material as THREE.MeshBasicMaterial).blending = THREE.AdditiveBlending; glow.push(m.material as THREE.MeshBasicMaterial); markers.add(m); }
   const base = toWorld(...POLE.get(b.area)!);
   for (const sd of ['german', 'allied'] as E.Side[]) {
     const ids = [...b.assets[sd], ...(b.air[sd] ? [b.air[sd]!.id] : [])], dir = sd === 'german' ? 1 : -1;
-    ids.forEach((id, i) => { const m = chit3d(E.chit(g, id)); m.userData.chit = id; m.position.set(base.x + (i - (ids.length - 1) / 2) * 1.7, 0.06, base.z + dir * 3.0); pieces.add(m); });
+    ids.forEach((id, i) => {
+      const m = chit3d(E.chit(g, id)), x = base.x + (i - (ids.length - 1) / 2) * 1.9, z = base.z + dir * 3.0; m.userData.chit = id; m.position.set(x, 0.06, z); pieces.add(m);
+      if (b.stage === 'setup' && mine(sd)) { const d = disc('x', 0.42); d.position.set(x + 0.8, 0.2, z - 0.8); d.userData.chit = id; pieces.add(d); }
+      if (tgt?.units.has(id)) { const ring = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.25, 40), new THREE.MeshBasicMaterial({ color: 0x37d67a, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.14, z); markers.add(ring); }
+    });
+  }
+  for (const [uid, sd] of [[b.attPoint, b.attacker], [b.defPoint, other(b.attacker)]] as const) {                  // the point unit carries a gold target
+    const o = pieces.children.find((x) => x.userData.unit === uid); const u = g.units.find((x) => x.id === uid); if (!o || !u || !seen(u)) continue; void sd;
+    const d = disc('point', 0.45); d.position.set(o.position.x + 0.55, o.position.y > 0.6 ? 1.75 : 0.95, o.position.z - 0.55); markers.add(d);
   }
 }
 function drawPieces() {
@@ -217,7 +232,7 @@ function drawPieces() {
     if (lay.tight && order.length > 1) { taken.set(a.id, lay.saved); const col = place(true); if (!col.tight) lay = col; else { taken.set(a.id, lay.saved); lay = place(false); } }
     order.forEach((u, n) => {
       const hid = !seen(u), m = block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
-      const flat = cont && !hid && !u.garrison;                                                           // revealed blocks lie flat, label up, while the area is contested
+      const flat = cont && !hid && !u.garrison && u.up === a.id;                                                           // revealed blocks lie flat, label up, while the area is contested
       m.position.x = p.x; m.position.z = p.z;
       if (flat) { m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, viewRot(), 0); m.position.y = 0.4; }
       if (tgt?.units.has(u.id)) { const ring = new THREE.Mesh(new THREE.RingGeometry(1.15, 1.45, 40), new THREE.MeshBasicMaterial({ color: 0x37d67a, transparent: true, opacity: 0.95, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(p.x, 0.09, p.z); markers.add(ring); const glow = new THREE.Mesh(new THREE.CircleGeometry(1.15, 40), new THREE.MeshBasicMaterial({ color: 0x37d67a, transparent: true, opacity: 0.28 })); glow.rotation.x = -Math.PI / 2; glow.position.set(p.x, 0.085, p.z); markers.add(glow); }
@@ -471,6 +486,7 @@ function click(e: PointerEvent) {
   if (rb?.stage === 'retreat' && area != null && E.retreatOptions(g, rb).includes(area)) return act(() => E.chooseRetreat(g, rb, area));
   if (g.battle && !g.pendingBlow) {                                                                         // a battle is on the table: tapping a block makes it that side's point unit
     const b = g.battle, u = unit ? g.units.find((x) => x.id === unit) : null, { chit: tapped } = pick(e);
+    { const fn = tgt?.units.get(tapped ?? unit ?? ''); if (fn && b.stage === 'attFirst') return act(fn); }
     if (b.stage === 'setup' && tapped) { const c = E.chit(g, tapped); if (mine(c.side)) act(() => E.unassign(g, b, tapped)); else say('Those are the other player\'s assets.'); return; }
     if (b.stage === 'setup' && u && seen(u) && mine(u.side) && !u.garrison && !(u.side === b.attacker && u.disorder)) act(() => E.setPoint(g, b, u.side, u.id));
     return;
@@ -514,14 +530,47 @@ function syncBadges() {
   const layer = $('#badges'); layer.innerHTML = ''; badgeEls.clear();
   for (const b of badges) { const d = document.createElement('div'); d.className = 'bdg ' + b.cls; d.textContent = b.text; layer.appendChild(d); badgeEls.set(String(b.area), d); }
 }
+/** Focus on the battle: everything outside the contested area is blurred and dimmed, and the area's edge glows. */
+function placeFocus() {
+  const f = document.getElementById('focus')!, sv = document.getElementById('glow') as unknown as SVGSVGElement, b = g.battle;
+  if (!b || reinforcing) { f.style.display = 'none'; sv.style.display = 'none'; return; }
+  const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(), pts = areaWorld(b.area).map((q) => { v.set(q.x, 0.4, q.z).project(cam); return [(v.x * 0.5 + 0.5) * r.width, (-v.y * 0.5 + 0.5) * r.height] as [number, number]; });
+  const cx = pts.reduce((a, q) => a + q[0], 0) / pts.length, cy = pts.reduce((a, q) => a + q[1], 0) / pts.length, k = 1.04, big = pts.map(([x, y]) => [cx + (x - cx) * k, cy + (y - cy) * k]);
+  const d = 'M' + big.map((q) => q.map((n) => n.toFixed(1)).join(' ')).join('L') + 'Z';
+  f.style.display = 'block'; f.style.clipPath = `path(evenodd, 'M0 0H${r.width}V${r.height}H0Z ${d}')`;
+  sv.style.display = 'block'; sv.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`); const pg = sv.firstElementChild!; pg.setAttribute('points', big.map((q) => q.join(',')).join(' ')); pg.setAttribute('class', b.stage === 'setup' ? 'gl set' : 'gl fire');
+}
+/** Decisions made on the table: small bubbles over the side that has to choose. Their buttons are bound like any other. */
+function placeBubbles() {
+  const r = canvas.getBoundingClientRect(), v = new THREE.Vector3();
+  document.querySelectorAll<HTMLElement>('#ui .mapbubble').forEach((e) => { v.set(+e.dataset.wx!, 1.8, +e.dataset.wz!).project(cam); e.style.transform = `translate(${(v.x * 0.5 + 0.5) * r.width}px, ${(-v.y * 0.5 + 0.5) * r.height}px) translate(-50%, -100%)`; e.style.display = v.z < 1 ? '' : 'none'; });
+}
+/** The first loss of a failed attack (6.41a) is chosen on the table: the point unit or one battle asset lights up. */
+function decisionTargets(): Tgt | null {
+  const b = g.battle; if (!b || b.stage !== 'attFirst' || !allowed()) return null;
+  const t: Tgt = { units: new Map(), areas: new Map(), pick: new Map(), color: new Map(), chips: [], buttons: [], modes: [], any: null, hint: '' };
+  t.units.set(b.attPoint, () => E.chooseFirstLoss(g, b, b.attPoint));
+  for (const id of b.assets[b.attacker].filter((x) => E.isBattleAsset(E.chit(g, x)))) t.units.set(id, () => E.chooseFirstLoss(g, b, id));
+  return t;
+}
+/** The choice the battle is waiting for, as a bubble over the deciding side's row. */
+function decisionBubble(): string {
+  const b = g.battle; if (!b || rollView || !['attChoice', 'defChoice', 'attFirst'].includes(b.stage)) return '';
+  const who = b.stage === 'defChoice' ? other(b.attacker) : b.attacker, base = toWorld(...POLE.get(b.area)!), at = `data-wx="${base.x}" data-wz="${base.z + (who === 'german' ? 1 : -1) * 0.8}"`;
+  if (!allowed()) return `<div class="mapbubble wait" ${at}><b>${nm(who)} decides…</b></div>`;
+  if (b.stage === 'attFirst') return `<div class="mapbubble" ${at}><b>${b.pending} hit${b.pending > 1 ? 's' : ''}</b><span>Tap the point unit or an asset to take the first loss</span></div>`;
+  const arty = b.pendingKind === 'arty';
+  return `<div class="mapbubble" ${at}><b>${b.pending} hit${b.pending > 1 ? 's' : ''}</b><div class="row">${btn(`${ico('xbold')}<span>Take losses</span>`, () => E.defenderChoice(g, b, false), 'ab', false, 'Stand and take the step losses')}${btn(`${ico(arty ? 'disorder' : 'back')}<span>${arty ? 'Disperse' : 'Retreat'}</span>`, () => E.defenderChoice(g, b, true), 'ab primary', false, arty ? 'Disorder all defenders to absorb 1 hit' : 'Retreat (absorbs 1 hit, units disordered)')}</div></div>`;
+}
 function placeBadges() {
-  { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(); fxLayer.place((area) => { const p = center(area); v.set(p.x, 3, p.z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height, visible: v.z < 1 }; }); }
+  { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(); fxLayer.place((area, unit) => { const o = unit ? pieces.children.find((x) => x.userData.unit === unit) : undefined, p = o ? o.position : center(area); v.set(p.x, o ? 1.6 : 3, p.z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width + (o ? 34 : 0), y: (-v.y * 0.5 + 0.5) * r.height, visible: v.z < 1 }; }); }
+  placeFocus(); placeBubbles();
   const r = canvas.getBoundingClientRect(), v = new THREE.Vector3();
   for (const [k, d] of badgeEls) { const p = d.classList.contains('tint') ? toWorld(...(MAP.areas.find((x) => x.id === +k)!.label)).add(new THREE.Vector3(0, 0, 2.3)) : center(+k); v.set(p.x, 2.2, p.z - 4).project(cam); d.style.display = v.z < 1 ? '' : 'none'; d.style.transform = `translate(${(v.x * 0.5 + 0.5) * r.width}px, ${(-v.y * 0.5 + 0.5) * r.height}px) translate(-50%, -50%)`; }
 }
 
 /* ---------- battle state shared with the view ---------- */
-interface RollView { title: string; groups: (DiceGroup & { parts: [string, number][]; hits: number })[]; pos: { x: number; y: number; group: number; v: number }[] | null }
+interface RollView { remote?: boolean; title: string; groups: (DiceGroup & { parts: [string, number][]; hits: number })[]; pos: { x: number; y: number; group: number; v: number }[] | null }
 let menuTab = 'Players';
 let rollView: RollView | null = null, modal: 'menu' | 'boxes' | 'rules' | 'layers' | null = null, handSide: E.Side | null = null;
 const STAGE_NAME: Record<string, string> = { attArty: 'artillery', defArty: 'artillery', defFire: 'Defensive fire', offFire: 'Offensive fire' };
@@ -813,13 +862,10 @@ function ledger() {
   if (rollView) {
     const rv = rollView, hits = rv.groups.reduce((a, x) => a + x.hits, 0), labels = (rv.pos ?? []).map((p) => { const hit = isHit(p.v, rv.groups[p.group].sn); return `<div class="lbl ${hit ? 'hit' : 'miss'}" style="left:${p.x}px;top:${p.y}px">${hit ? 'HIT!' : 'MISS'}</div>`; }).join('');
     return `<div class="labels">${labels}</div><div class="c-ledger tight"><div class="lh"><h3>${esc(rv.title)}</h3><b class="tot ${hits ? 'hit' : 'miss'}">${rv.pos ? `${hits} hit${hits === 1 ? '' : 's'}` : '…'}</b></div>${rv.pos ? rollFx.map(fxRow).join('') : ''}${rv.groups.map((x) => `<div class="ln2"><span class="who">${esc(x.label)}</span><span class="sn">SN ${x.sn}</span><span class="cnt">${x.dice.length}${ico('dice')}</span><b class="${x.hits ? 'hit' : 'miss'}">${x.hits}</b></div>`).join('')}
-      <div class="row end"><button class="primary" data-do="${reg(() => endRoll())}" ${rv.pos ? '' : 'disabled'}>Continue${ico('next')}</button></div></div>`;
+      ${rv.remote ? '' : `<div class="row end"><button class="primary" data-do="${reg(() => endRoll())}" ${rv.pos ? '' : 'disabled'}>Continue${ico('next')}</button></div>`}</div>`;
   }
   if (b.stage === 'done') return `<div class="c-ledger tight"><div class="lh"><h3>Battle over</h3></div><p class="resline">${esc(b.result ?? '')}</p>${battleFx.map(fxRow).join('')}</div>`;
-  if (b.stage === 'retreat' && b.retreat) { const u = g.units.find((x) => x.id === b.retreat!.queue[0])!; return `<div class="c-ledger"><h3>${esc(u.name)} retreats</h3><p class="hint">The block becomes disordered.</p><div class="row">${E.retreatOptions(g, b).map((a) => btn(esc(areaName(a)), () => E.chooseRetreat(g, b, a), 'primary')).join('')}</div></div>`; }
-  if (b.stage === 'attFirst') { const att = b.attacker, opts = [{ k: b.attPoint, n: `${g.units.find((u) => u.id === b.attPoint)!.name} (point unit, loses a step)` }, ...b.assets[att].filter((id) => E.isBattleAsset(E.chit(g, id))).map((id) => ({ k: id, n: `${E.chit(g, id).name} (asset is eliminated)` }))]; return `<div class="c-ledger"><h3>${b.pending} hit(s) on the attackers</h3><p class="hint">The first hit falls on the point unit or on one battle asset (6.41a). Which one?</p><div class="row">${opts.map((o) => btn(esc(o.n), () => E.chooseFirstLoss(g, b, o.k))).join('')}</div></div>`; }
-  if (b.stage === 'attChoice') return `<div class="c-ledger"><h3>${b.pending} hit(s) on the attackers</h3><p class="hint">Abort: all attackers disordered, no losses. Or take the losses.</p><div class="row end">${btn('Abort attack', () => E.attackerChoice(g, b, true))}${btn('Take losses', () => E.attackerChoice(g, b, false), 'primary')}</div></div>`;
-  if (b.stage === 'defChoice') return `<div class="c-ledger"><h3>${b.pending} hit(s) on the defenders</h3><p class="hint">${b.pendingKind === 'arty' ? 'Disorder all defenders to absorb 1 hit, or take every hit.' : 'Retreat (absorbs 1 hit, units disordered) or stand and take the hits.'}</p><div class="row end">${btn('Take losses', () => E.defenderChoice(g, b, false))}${btn(b.pendingKind === 'arty' ? 'Disorder (absorb 1)' : 'Retreat', () => E.defenderChoice(g, b, true), 'primary')}</div></div>`;
+  if (b.stage === 'retreat' && b.retreat) return '';                                                    // the lit areas on the table are the choice
   if (STAGE_NAME[b.stage]) {                                                                           // fire step: who rolls, what, against which number and why
     const sd = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker), fl = E.fireList(g, b, sd, b.stage.endsWith('Arty') ? 'arty' : 'ground'), mineStep = !online.active || online.both() || online.mySide() === sd;
     const lines = fl.map((f) => `<div class="fl"><span class="who">${esc(f.who)}</span><span class="cnt">${f.dice}${ico('dice')}</span><b class="sn">SN ${f.sn}</b><span class="chips2">${modChips(f.parts)}</span></div>`).join('') || '<p class="hint">Nothing can fire.</p>';
@@ -965,7 +1011,7 @@ function renderInner() {
   const alert = g.pendingBlow ? (() => { const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!, path = g.pendingBlow!.path; return `<div class="c-ledger"><h3>${nm(other(u.side))}: bridge?</h3><p class="hint">${esc(u.name)} tries to cross into ${esc(areaName(path[path.length - 1]))}. Attempt to blow the bridge? It works on a roll of 1–5.</p><div class="row end">${btn('Let them cross', () => E.resolveBlow(g, false))}${btn('Attempt to blow it', () => E.resolveBlow(g, true), 'primary')}</div></div>`; })() : '';
   const dockMain = alert || ledger() || handCards();
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = topBar() + `<div class="stage">${seatBar()}${b ? battleTable() : dispatch()}${legend()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
+  $('#ui').innerHTML = topBar() + `<div class="stage">${seatBar()}${b ? battleTable() : dispatch()}${decisionBubble()}${legend()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p && allowed() ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
   const ui = $('#ui');
   bind(ui, keepH, keepA);
 }
@@ -1007,10 +1053,10 @@ function driveSplit() {
 let ctlKey = '', tgtKey = '';
 function refresh() {
   if (online.mode === 'remote') setTimeout(driveSplit, 0);
-  { const key = `${reinforcing}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
-    if (key !== tgtKey) { tgtKey = key; tgt = reinforcing ? reinforceTargets() : selChit ? targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: unitFace, areaName }) : null; } }
+  { const key = `${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
+    if (key !== tgtKey) { tgtKey = key; tgt = reinforcing ? reinforceTargets() : decisionTargets() ?? (selChit ? targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: unitFace, areaName }) : null); } }
   if (tint === 'control') { const k = JSON.stringify(g.control) + E.contestedAreas(g).join(); if (k !== ctlKey) { ctlKey = k; paintBoard(); } }
-  syncView(); syncBattleCam(); drawPieces(); paintAreas(); drawRoute(); badges = badgeList(); syncBadges(); render();
+  syncView(); syncBattleCam(); drawPieces(); paintAreas(); drawRoute(); badges = g.battle ? [] : badgeList(); syncBadges(); render();
   if (!rollView) { const cv = $('#dice'); if (cv && cv.style.display !== 'none') { clearDice(); cv.style.display = 'none'; } }
 }
 function frame() {
@@ -1019,7 +1065,6 @@ function frame() {
   if (canvas.width !== Math.round(r.width * renderer.getPixelRatio())) { renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; cam.updateProjectionMatrix(); }
   if (goal) { target.lerp(goal.t, 0.1); dist += (goal.dist - dist) * 0.1; pitch += (goal.pitch - pitch) * 0.1; if (target.distanceTo(goal.t) < 0.05 && Math.abs(dist - goal.dist) < 0.1) goal = null; }
   if (lock && !goal) target.copy(lock.c);
-  if (glow.length) { const k = 0.8 + 0.2 * Math.sin(performance.now() / 380); glow[0].opacity = 0.18 * k; glow[1].opacity = 0.35 * k; }
   placeCam(); renderer.render(scene, cam); placeBadges();
 }
 frame();
@@ -1034,7 +1079,7 @@ const onNet = (): void => {
 void startOnline((rg) => { const was = g.battle, n0 = was?.rolls.length ?? 0, st0 = was?.stage, pre = was ? snap(g) : null; applyingRemote = true; g = rg;
   const nb = g.battle; const rolled = !!(was && nb && nb.area === was.area && nb.rolls.length > n0); if (pre) noteFx(pre, g, rolled); if (was && nb && nb.area === was.area && nb.rolls.length > n0 && st0 && STAGE_NAME[st0]) {      // the other player rolled: show their dice here too
     const side = st0 === 'attArty' || st0 === 'offFire' ? nb.attacker : other(nb.attacker);
-    rollView = { title: `${nm(side)} ${STAGE_NAME[st0]}`, pos: null, groups: nb.rolls.slice(n0).map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: [] })) };
+    rollView = { remote: true, title: `${nm(side)} ${STAGE_NAME[st0]}`, pos: null, groups: nb.rolls.slice(n0).map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: [] })) };
     if (rollView.groups.length) { const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block'; throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; render(); showFx(pendingFx); pendingFx = []; setTimeout(() => { if (rollView === rv) endRoll(); }, 4000); } }); } else rollView = null;       // the other player's dice clear themselves
   } selUnit = selChit = selArr = null; previewArea = hoverArea = null; hist.clear(); try { save(); } finally { applyingRemote = false; } refresh(); }, () => { onNet(); syncView(); render(); }, say, () => { try { sessionStorage.setItem('fab-notice', 'That game was deleted by its creator.'); } catch { /* private mode */ } location.href = homeUrl(); });       // the table is gone: nobody stays inside it
 /** Every drawn symbol and counter as SVG, for the editable sheets (docs/maps/vector/fab-*.svg). */
