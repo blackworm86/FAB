@@ -183,6 +183,8 @@ function disc(kind: 'x' | 'point', size: number) {
     x.stroke(); t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; dotTex.set(kind, t); }
   const m = new THREE.Mesh(new THREE.CircleGeometry(size, 28), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false })); m.rotation.x = -Math.PI / 2; return m;
 }
+/** The same marker as a sprite: it always faces the camera, so the player can read it from any angle. */
+function discSprite(kind: 'x' | 'point', size: number) { disc(kind, size); const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTex.get(kind)!, transparent: true, depthTest: false })); sp.scale.set(size * 2, size * 2, 1); sp.renderOrder = 6; return sp; }
 /** The battle on the table: each side's assigned assets as cardboard counters in a row behind its blocks, with a red cross to take one back before the battle starts. */
 function drawBattleTable(b: E.Battle, spot: (id: number, x: number, z: number, r: number) => { x: number; z: number }) {
   const base = toWorld(...POLE.get(b.area)!);
@@ -199,7 +201,7 @@ function drawBattleTable(b: E.Battle, spot: (id: number, x: number, z: number, r
 function drawPointMarks(b: E.Battle) {
   for (const [uid, sd] of [[b.attPoint, b.attacker], [b.defPoint, other(b.attacker)]] as const) {                  // the point unit carries a gold target
     const o = pieces.children.find((x) => x.userData.unit === uid); const u = g.units.find((x) => x.id === uid); if (!o || !u || !seen(u)) continue; void sd;
-    const d = disc('point', 0.45); d.position.set(o.position.x, o.position.y > 0.6 ? 1.72 : 0.9, o.position.z); d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
+    const d = discSprite('point', 0.5); d.position.set(o.position.x, o.position.y > 0.6 ? 2.1 : 0.9, o.position.z); d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
   }
 }
 function drawPieces() {
