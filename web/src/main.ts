@@ -457,13 +457,14 @@ const clampDist = (d: number) => (lock ? Math.min(lock.d * 1.7, Math.max(lock.d 
 function areaWorld(id: number) { return MAP.areas.find((a) => a.id === id)!.polygon.map(([x, y]) => toWorld(x, y)); }
 function syncBattleCam() {
   const b = g.battle; let key = b ? `${b.area}:${b.stage === 'setup' ? 's' : 'f'}` : '';
-  if (b && reinforcing) key += 'r';
+  const wide = reinforcing || b?.stage === 'retreat';
+  if (b && wide) key += 'r';
   if (b && key !== frameKey) {
     if (!inBattle) saved = { t: target.clone(), dist, pitch };
     const pts = areaWorld(b.area), xs = pts.map((q) => q.x), zs = pts.map((q) => q.z), w = Math.max(...xs) - Math.min(...xs), h = Math.max(...zs) - Math.min(...zs);
     const c = new THREE.Vector3((Math.max(...xs) + Math.min(...xs)) / 2, 0, (Math.max(...zs) + Math.min(...zs)) / 2), r = Math.max(w, h) / 2 + 6, fit = Math.max(18, r * (innerWidth < innerHeight ? 4.2 : 3.0));
 
-    lock = reinforcing ? null : { c, d: fit }; goal = { t: c, dist: reinforcing ? fit * 1.8 : fit, pitch: 1.15 }; yaw = viewRot();
+    lock = wide ? null : { c, d: fit }; goal = { t: c, dist: wide ? fit * 1.8 : fit, pitch: 1.15 }; yaw = viewRot();
   }
   if (!b) { reinforcing = false; lock = null; if (inBattle && saved) goal = saved; }
   frameKey = key; inBattle = !!b;
@@ -546,7 +547,7 @@ function focusGeometry(id: number) {
 const inPoly = (x: number, z: number, pts: THREE.Vector3[]) => { let c = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { if ((pts[i].z > z) !== (pts[j].z > z) && x < ((pts[j].x - pts[i].x) * (z - pts[i].z)) / (pts[j].z - pts[i].z) + pts[i].x) c = !c; } return c; };
 /** Second pass: only the battle area and what stands in it, on a transparent canvas laid over the blurred one. */
 function renderFocus() {
-  const b = g.battle, on = !!b && !reinforcing;
+  const b = g.battle, on = !!b && !reinforcing && b.stage !== 'retreat';              // choosing where to retreat needs the neighbouring areas sharp
   canvas.classList.toggle('blurred', on); canvas2.style.display = on ? 'block' : 'none';
   if (!on) return;
   if (!renderer2) { renderer2 = new THREE.WebGLRenderer({ canvas: canvas2, antialias: true, alpha: true }); renderer2.setPixelRatio(Math.min(2, devicePixelRatio)); }
@@ -561,7 +562,7 @@ function renderFocus() {
 }
 function placeFocus() {
   const sv = document.getElementById('glow') as unknown as SVGSVGElement, b = g.battle;
-  if (!b || reinforcing) { sv.style.display = 'none'; return; }
+  if (!b || reinforcing || b.stage === 'retreat') { sv.style.display = 'none'; return; }
   const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(), pts = areaWorld(b.area).map((q) => { v.set(q.x, 0.01, q.z).project(cam); return [(v.x * 0.5 + 0.5) * r.width, (-v.y * 0.5 + 0.5) * r.height] as [number, number]; });
   sv.style.display = 'block'; sv.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`); const pg = sv.firstElementChild!; pg.setAttribute('points', pts.map((q) => q.map((n) => n.toFixed(1)).join(',')).join(' ')); pg.setAttribute('class', b.stage === 'setup' ? 'gl set' : 'gl fire');
 }
