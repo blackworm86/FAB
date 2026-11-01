@@ -64,3 +64,28 @@ export function initSplit(full: Game, saltGerman: string, saltAllied: string): {
   const step1 = toPublic(full, 'german', saltGerman, new Map());
   return { pub: toPublic(JSON.parse(step1) as Game, 'allied', saltAllied, new Map()), german, allied };
 }
+
+/** One seat's side of the split protocol: everything online.ts needs, with no network in it, so two seats can be played against each other in a test. */
+export class SplitSeat {
+  priv: Priv | null = null;
+  reveals: Reveals = {};
+  enemyAlias = new Map<string, string>();
+  constructor(public side: Side) {}
+  /** The game this seat plays on, from the shared copy (remembers the aliases of what the other side revealed). */
+  open(pub: Game): Game { const r = compose(pub, this.side, this.priv, this.reveals); this.enemyAlias = r.enemyAlias; return r.game; }
+  /** What to write after a move: the shared copy, and this seat's private details when they changed. */
+  save(g: Game): { pub: string; priv?: Priv } {
+    if (!this.priv) throw new Error('private details not loaded yet');
+    const pub = toPublic(g, this.side, this.priv.salt, this.enemyAlias), secrets = secretsOf(g, this.side);
+    if (JSON.stringify(secrets) === JSON.stringify(this.priv.secrets)) return { pub };
+    this.priv = { salt: this.priv.salt, secrets }; return { pub, priv: this.priv };
+  }
+  /** The reveals this seat has to publish now (battle area once both are ready, an Intelligence target); they count as published from here on. */
+  due(g: Game): Reveals {
+    if (!this.priv) return {};
+    let want: Reveals = {};
+    const b = g.battle; if (b && b.stage === 'setup' && (b.ready?.length ?? 0) === 2) want = { ...want, ...revealsIn(g, this.side, b.area, this.priv.salt) };
+    if (g.revealed && g.units.find((u) => u.id === g.revealed)?.side === this.side) want = { ...want, ...revealOf(g, g.revealed, this.priv.salt) };
+    const fresh = freshReveals(this.reveals, want); this.reveals = { ...this.reveals, ...fresh }; return fresh;
+  }
+}

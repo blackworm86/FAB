@@ -8,6 +8,10 @@ import { History } from './history';
 import { online, startOnline, push, sit, setDevSeat, auth, lobby, publishReveals, DEV, TABLE, HAS_TABLE, LOCAL_ONLY, type DevSeat, type Match } from './online';
 import { GAMES, gameInfo } from './games';
 import { ICONS, ico } from './icons';
+import { esc, nm } from './util';
+import { drawItems as drawAreaItems, drawEntry } from './board-art';
+import { targetsFor, type Tgt } from './chit-play';
+import { snap, diffFx, FxLayer, fxRow, FX_SAMPLES, type Fx } from './fx';
 import { RULE } from './rules-text';
 import rulesText from '../../firestore.rules?raw';
 import { throwDice, clearDice, isHit, type DiceGroup } from './dice3d';
@@ -225,33 +229,6 @@ const viewSide = (): E.Side => (online.active && !online.both() && online.mySide
 const fogSide = (): E.Side | 'spectator' | null => (online.active && !online.both() ? online.mySide() ?? 'spectator' : null);
 const seen = (u: E.Unit) => E.visibleTo(g, u, fogSide());
 const viewRot = () => (viewSide() === 'allied' ? Math.PI : 0);
-/** One area's printed items around (0, 0) = the area's label point, upright for the viewer. */
-function drawItems(c: CanvasRenderingContext2D, a: MapArea, withName: boolean) {
-  const ar = E.areas.get(a.id)!, t = ar.tdn;
-  const showShape = layers.numbers || layers.tdn;
-  if (showShape) {
-    c.lineWidth = 1.6; const col = layers.tdn ? t : -1;
-    c.beginPath();
-    if (col === 0 || col === -1) { c.arc(0, -3, 13, 0, 7); c.fillStyle = col === 0 ? '#f4e3a4' : '#ece6cc'; c.strokeStyle = '#8a7a3a'; }
-    else if (col === 1) { c.roundRect(-14, -15, 28, 24, 3); c.fillStyle = '#c9a24f'; c.strokeStyle = '#6b5420'; }
-    else if (col === 2) { [[-15, -3], [-7, -15], [7, -15], [15, -3], [7, 9], [-7, 9]].forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fillStyle = '#8a8f86'; c.strokeStyle = '#2d3330'; }
-    else { c.moveTo(-15, -14); c.lineTo(15, -14); c.lineTo(0, 12); c.closePath(); c.fillStyle = '#4a5028'; c.strokeStyle = '#1d2110'; }
-    c.fill(); c.stroke();
-    c.font = '700 16px "Arial Narrow", Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.fillStyle = col === 3 ? '#fff' : col === 2 ? '#111' : '#1a1608';
-    c.fillText(String(layers.numbers ? a.id : t), 0, col === 3 ? -3 : 0);
-  }
-  if (layers.vp) {                                                                                   // the symbols are the editable files in public/icons
-    const v = ar.vp, put = (img: HTMLImageElement, x: number, y: number) => { if (img.naturalWidth) c.drawImage(img, x - 13, y - 13, 26, 26); };
-    for (let i = 0; i < v.allied; i++) put(vpIcons.allied, (i - (v.allied - 1) / 2) * 24, -40);
-    for (let i = 0; i < v.german; i++) put(vpIcons.german, 0, -40 - i * 20);
-    if (v.mutual) put(vpIcons.mutual, 0, -40);
-  }
-  if (layers.names && withName) { c.font = 'italic 600 16px "Arial Narrow", Arial, sans-serif'; c.textAlign = 'center'; c.lineWidth = 3.2; c.strokeStyle = '#bcc0ab'; c.strokeText(ar.name, 0, 26); c.fillStyle = '#1c2216'; c.fillText(ar.name, 0, 26); }
-}
-/** Entry-zone letters are printed on the map as well; they turn with the viewer. */
-function drawEntry(c: CanvasRenderingContext2D, e: MapEntry) {
-  const ge = e.side === 'german'; c.font = '700 19px Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.lineWidth = 3; c.strokeStyle = ge ? '#ffffffcc' : '#14502a'; c.strokeText(e.letter, 0, 6); c.fillStyle = ge ? '#111' : '#fff'; c.fillText(e.letter, 0, 6);
-}
 function paintBoard() {
   if (art !== 'vector' || !baseImg.naturalWidth || !linesImg.naturalWidth) return;
   const c = boardCv.getContext('2d')!, k = 2; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, boardCv.width, boardCv.height);
@@ -264,7 +241,7 @@ function paintBoard() {
   c.drawImage(linesImg, 0, 0, boardCv.width, boardCv.height);
   {
     c.save(); c.scale(k, k);
-    for (const a of MAP.areas) { c.save(); c.translate(a.label[0], a.label[1]); c.rotate(viewRot()); drawItems(c, a, true); c.restore(); }
+    for (const a of MAP.areas) { c.save(); c.translate(a.label[0], a.label[1]); c.rotate(viewRot()); drawAreaItems(c, a, layers, vpIcons, true); c.restore(); }
     if (layers.numbers) for (const e of MAP.entries) { c.save(); c.translate(e.x, e.y); c.rotate(viewRot()); drawEntry(c, e); c.restore(); }
     c.restore();
   }
@@ -319,79 +296,20 @@ function inside(x: number, y: number, poly: [number, number][]) { let c = false;
 let acts: Record<string, () => void> = {}, actv: Record<string, (v: string) => void> = {}, n = 0;
 const reg = (f: () => void) => { const k = 'a' + n++; acts[k] = f; return k; };
 const regv = (f: (v: string) => void) => { const k = 'v' + n++; actv[k] = f; return k; };
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 const btn = (label: string, f: () => void, cls = '', dis = false, title = '') => `<button class="${cls}" data-do="${reg(f)}" ${dis ? 'disabled' : ''} title="${esc(title)}">${label}</button>`;
 const pips = (u: E.Unit) => Array.from({ length: u.str }, () => `<i class="pip ${E.quality(u)}"></i>`).join('');
 const ABBR: Record<string, string> = { artillery: 'Arty', rocket_artillery: 'Rkt', engineer: 'Eng', armor_asset: 'Armor', infantry_asset: 'Inf', task_force: 'TF', fuel: 'Fuel', command_staff: 'Staff', sa_block: 'SA', replacement_inf: 'Repl inf', replacement_arm: 'Repl arm',
   rebuild_or_replace_inf: 'Rebuild inf', rebuild_or_replace_arm: 'Rebuild arm', event_arriving_regiment: 'Regt', special_action_event: 'SA event', air_mission: 'Air', event_release: 'Release', event_greif_bridge: 'Greif bridge', event_greif_interdict: 'Greif interdict', event_bodenplatte: 'Bodenplatte', event_delayed_response: 'Delayed' };
 const chitLabel = (c: E.Chit) => `${ABBR[c.kind] ?? c.kind}${['fuel', 'sa_block', 'special_action_event', 'air_mission', 'replacement_inf', 'replacement_arm', 'event_delayed_response'].includes(c.kind) || c.name.length > 14 ? '' : ' ' + c.name}${c.turn !== 'S' && E.isEvent(c) ? ' T' + c.turn : ''}`;
 /* ---------- playing a chit: the blocks or areas it can be used on light up, and a tap applies it ---------- */
-interface Tgt { units: Map<string, () => void>; areas: Map<number, () => void>; pick: Map<number, () => void>; color: Map<number, number>; chips: { label: string; img: string; fn: () => void }[]; buttons: { icon: string; label: string; fn: () => void; title?: string }[]; modes: { id: string; icon: string; label: string }[]; any: ((a: number) => (() => void) | null) | null; hint: string }
-const works = (fn: (t: E.Game) => void) => { try { const t = structuredClone(g); fn(t); return true; } catch { return false; } };
 let tgt: Tgt | null = null, infoOpen = false, tgtMode = '';
-const BRIDGE_KEY = (a: number, t: number) => (a < t ? `${a}-${t}` : `${t}-${a}`);
-/** What a chit can be used on, so the board itself can offer it: blocks and areas light up, and a tap applies it. Areas that only need a further choice (an engineer's area, a Greif bridge) are "pick" targets. */
-function targetsFor(c: E.Chit | null): Tgt | null {
-  if (!c || g.phase !== 'admin' || c.box !== 'available') return null;
-  const t: Tgt = { units: new Map(), areas: new Map(), pick: new Map(), color: new Map(), chips: [], buttons: [], modes: [], any: null, hint: '' }, a = selArea;
-  const k = c.kind;
-  if (k.startsWith('replacement') || k === 'event_arriving_regiment' || k.startsWith('rebuild')) {
-    for (const u of g.units.filter((x) => E.eligibleForStep(c, x))) {
-      if (u.area == null) t.chips.push({ label: u.name, img: unitFace(u), fn: () => E.playReplacement(g, c.id, u.id) });
-      else t.units.set(u.id, () => E.playReplacement(g, c.id, u.id));
-    }
-    t.hint = t.units.size ? 'Tap a glowing block to add a step' : t.chips.length ? 'Tap a unit to bring back' : '';
-  } else if (k === 'special_action_event' || k === 'sa_block') {
-    for (const u of g.units.filter((x) => x.side === c.side && x.area != null && !x.garrison)) if (works((tg) => E.qualityReplacement(tg, u.id))) t.units.set(u.id, () => E.qualityReplacement(g, u.id));
-    for (const ar of E.areas.keys()) if (g.control[ar] === c.side && works((tg) => E.rally(tg, c.side, ar))) t.areas.set(ar, () => E.rally(g, c.side, ar));
-    t.hint = 'Tap a glowing block (quality replacement) or area (rally)';
-  } else if (k === 'engineer') {
-    const capable = (ar: number) => E.bridgeTargets(g, c.side, ar).length || E.repairTargets(g, c.side, ar).length || E.roadblockAreas(g, c.side).includes(ar) || works((tg) => E.fieldWorksFor(tg, c.id, ar));
-    for (const ar of E.areas.keys()) if (capable(ar)) t.pick.set(ar, () => { selArea = ar; });
-    if (a != null && t.pick.has(a)) {
-      const bt = E.bridgeTargets(g, c.side, a), rt = E.repairTargets(g, c.side, a);
-      for (const n of bt) { t.areas.set(n, () => E.blowBridges(g, c.id, a, [n])); t.color.set(n, 0xff4d4d); }
-      for (const n of rt) { t.areas.set(n, () => E.repairBridge(g, c.id, a, n)); t.color.set(n, 0x37d67a); }
-      if (works((tg) => E.fieldWorksFor(tg, c.id, a))) t.buttons.push({ icon: 'gear', label: 'Field works', fn: () => E.fieldWorksFor(g, c.id, a), title: 'Build field works here' });
-      if (E.roadblockAreas(g, c.side).includes(a)) t.buttons.push({ icon: 'flag', label: 'Roadblock', fn: () => E.roadblock(g, c.id, a, false), title: '4.34 Roadblock' }, { icon: 'engineer', label: 'Defended', fn: () => E.roadblock(g, c.id, a, true), title: '4.35 Defended roadblock (the engineer stays)' });
-      t.hint = `${areaName(a)}: tap a red neighbour to blow its bridge${rt.length ? ', a green one to repair' : ''}`;
-    } else t.hint = 'Tap a glowing area where the engineer works';
-  } else if (k === 'command_staff') {
-    const own = g.units.filter((x) => x.side === c.side && x.area != null && !x.garrison), foe = g.units.filter((x) => x.side !== c.side && x.area != null && !x.garrison);
-    const sets: Record<string, { icon: string; label: string; units?: [string, () => void][]; areas?: [number, () => void][] }> = {};
-    if (c.side === 'german') sets.boundary = { icon: 'next', label: 'Boundary crossing (14.62a)', units: own.filter((x) => works((tg) => E.staffBoundary(tg, c.id, x.id))).map((x) => [x.id, () => E.staffBoundary(g, c.id, x.id)]) };
-    else sets.pool = { icon: 'task_force', label: 'Pooled assets (14.62b)', areas: [...E.areas.keys()].filter((ar) => works((tg) => E.staffPool(tg, c.id, ar))).map((ar) => [ar, () => E.staffPool(g, c.id, ar)]) };
-    sets.intel = { icon: 'info', label: 'Intelligence gathering (8.32)', units: foe.filter((x) => works((tg) => E.staffIntel(tg, c.id, x.id))).map((x) => [x.id, () => E.staffIntel(g, c.id, x.id)]) };
-    sets.repl = { icon: 'infantry_asset', label: 'Replacements found', units: own.filter((x) => x.cls === 'infantry' && x.str < x.max && works((tg) => E.staffReplacement(tg, c.id, x.id))).map((x) => [x.id, () => E.staffReplacement(g, c.id, x.id)]) };
-    sets.reserve = { icon: 'sa_block', label: 'Reserves made available (8.33)', units: own.filter((x) => E.canReserve(g, x)).map((x) => [x.id, () => E.staffReserve(g, c.id, x.id)]) };
-    for (const [id, v] of Object.entries(sets)) if (v.units?.length || v.areas?.length) t.modes.push({ id, icon: v.icon, label: v.label });
-    if (!t.modes.some((m) => m.id === tgtMode)) tgtMode = t.modes[0]?.id ?? '';
-    const cur = sets[tgtMode]; cur?.units?.forEach(([id, fn]) => t.units.set(id, fn)); cur?.areas?.forEach(([ar, fn]) => t.areas.set(ar, fn));
-    t.hint = cur ? cur.label : 'Nothing to do with this staff chit now';
-  } else if (k === 'event_greif_bridge') {
-    const valid = (ar: number) => E.neighbors(ar).filter((n) => E.connection(ar, n)!.river && !g.blown.includes(BRIDGE_KEY(ar, n)) && !g.greif[BRIDGE_KEY(ar, n)]);
-    for (const ar of E.areas.keys()) { const v = valid(ar); if (v.length === 1) t.areas.set(ar, () => E.playGreifBridge(g, c.id, ar, v[0])); else if (v.length > 1) t.pick.set(ar, () => { selArea = ar; }); }
-    if (a != null && valid(a).length > 1) for (const n of valid(a)) { t.areas.set(n, () => E.playGreifBridge(g, c.id, a, n)); t.color.set(n, 0x37d67a); }
-    t.hint = a != null && valid(a).length > 1 ? `Tap the neighbour across the river from ${areaName(a)}` : 'Tap a glowing area: the bridge is placed on its river boundary';
-  } else if (k === 'event_greif_interdict') {
-    for (const x of g.units.filter((u) => u.side === 'allied' && u.area != null && !u.garrison)) if (works((tg) => E.playInterdict(tg, c.id, x.id))) t.units.set(x.id, () => E.playInterdict(g, c.id, x.id));
-    t.hint = 'Tap a glowing Allied block to interdict it';
-  } else if (k === 'air_mission') {
-    t.any = (ar) => (works((tg) => E.playInterdiction(tg, c.id, ar)) ? () => E.playInterdiction(g, c.id, ar) : null); t.hint = 'Tap any area to interdict it (Germans pay +1 MP to enter and leave)';
-  } else if (k === 'event_release') {
-    for (const ar of [4, 6] as const) t.areas.set(ar, () => E.releaseUnit(g, c.id, ar)); t.hint = 'Tap the entry area';
-  } else if (c.name === 'v.d. Heydte' && E.heydteWindow(g, c)) {
-    for (const ar of [31, 52] as const) t.areas.set(ar, () => E.heydteDrop(g, c.id, ar)); t.hint = 'Tap a drop zone: Hohes Venn or Stoumont';
-  } else return null;
-  return t;
-}
 const abtn = (icon: string, label: string, fn: () => void, cls = '', dis = false, title = '') => btn(`${ico(icon)}<span>${esc(label)}</span>`, fn, 'ab ' + cls, dis, title || label);
 const BTN_ICON: [RegExp, string][] = [[/blow|bridge.*bridge/i, 'xbold'], [/repair/i, 'engineer'], [/field works|fortify/i, 'gear'], [/roadblock|rally/i, 'flag'], [/interdict/i, 'warn'], [/alternate/i, 'swap'], [/pool/i, 'task_force'], [/intelligence/i, 'info'], [/reserve/i, 'sa_block'], [/replacement/i, 'infantry_asset'], [/drop|enter|place|boundary/i, 'next'], [/strike/i, 'air_mission']];
 /** Give a chit action its icon so the buttons read at a glance; the text stays as the label. */
 const iconify = (html: string) => html.replace(/<button class="([^"]*)" (data-do="[^"]+") ([^>]*)>([^<]*)<\/button>/g, (m, cls, d, rest, text) => { const ic = BTN_ICON.find(([re]) => re.test(text))?.[1]; return ic ? `<button class="${cls} ab" ${d} ${rest}>${ico(ic)}<span>${text}</span></button>` : m; });
 /** The selected chit: a slim bar with its picture, a one-line instruction, an info toggle and the actions as icon buttons. */
 function chitBar(c: E.Chit): string {
-  const tg = targetsFor(c), body = chitPanel(c), [kind] = RULE[c.kind] ?? [c.kind];
+  const tg = tgt, body = chitPanel(c), [kind] = RULE[c.kind] ?? [c.kind];
   const chips = tg?.chips.map((x) => `<button class="pc ${c.side}" data-do="${reg(x.fn)}" title="${esc(x.label)}"><img alt="" src="${x.img}"><small>${esc(x.label)}</small></button>`).join('') ?? '';
   return `<div class="c-dispatch chitbar"><div class="cbhead"><img class="cbimg" alt="" src="${chitImg(c)}"><div class="cbt"><b>${esc(c.name)}</b><small>${esc(tg?.hint || kind)}</small></div>
     <button class="ico" data-ui="${reg(() => { infoOpen = !infoOpen; })}" aria-pressed="${infoOpen}" aria-label="What it does" title="What it does">${ico('info')}</button><button class="ico" data-ui="${reg(() => { selChit = null; })}" aria-label="Put away" title="Put away">${ico('close')}</button></div>
@@ -446,39 +364,17 @@ const allowed = () => !online.active || modal === 'menu' || online.both() || (on
 const mine = (s: E.Side) => !online.active || online.both() || online.mySide() === s;
 const notYou = () => online.mySide() == null ? 'You are watching. Take a seat in the menu to play.' : `Wait for the ${nm(actorNow() as E.Side)} player.`;
 /* ---------- what a hit did: step losses, eliminations, retreats, field works ---------- */
-type Fx = { area: number; icon: string; head: string; text: string; cls: 'loss' | 'elim' | 'dis' | 'fw' | 'ret' | 'cap' };
 let battleFx: Fx[] = [], rollFx: Fx[] = [];
-const snap = (x: E.Game) => ({ u: new Map(x.units.map((u) => [u.id, { str: u.str, area: u.area, dis: u.disorder, name: u.name }])), c: new Map(x.chits.map((c) => [c.id, c.box])), fw: [...x.fieldWorks], ctl: { ...x.control }, area: x.battle?.area ?? null });
-function diffFx(a: ReturnType<typeof snap>, x: E.Game): Fx[] {
-  const out: Fx[] = [], ba = x.battle?.area ?? a.area;
-  for (const u of x.units) {
-    const o = a.u.get(u.id); if (!o) continue;
-    if (u.area == null && o.area != null) out.push({ area: o.area, icon: 'xbold', head: 'ELIMINATED', text: o.name, cls: 'elim' });
-    else if (u.str < o.str) out.push({ area: u.area ?? o.area ?? 0, icon: 'burst', head: `−${o.str - u.str} STEP`, text: `${u.name} ${u.str}/${o.str}`, cls: 'loss' });
-    if (u.area != null && o.area != null && u.area !== o.area) out.push({ area: u.area, icon: 'back', head: 'RETREATS', text: `${u.name} → ${E.areas.get(u.area)!.name}`, cls: 'ret' });
-    if (u.area != null && u.disorder > o.dis) out.push({ area: u.area, icon: 'disorder', head: 'DISORDERED', text: u.name, cls: 'dis' });
-  }
-  for (const c of x.chits) if (ba != null && a.c.get(c.id) === 'map' && c.box === 'eliminated') out.push({ area: ba, icon: 'xbold', head: 'ASSET LOST', text: c.name, cls: 'elim' });
-  for (const f of new Set(a.fw)) if (!x.fieldWorks.includes(f)) out.push({ area: f, icon: 'nogear', head: 'FIELD WORKS REMOVED', text: E.areas.get(f)!.name, cls: 'fw' });
-  for (const [k, v] of Object.entries(x.control)) if (a.ctl[+k] !== v) out.push({ area: +k, icon: 'flag', head: `${nm(v as E.Side).toUpperCase()} CONTROL`, text: E.areas.get(+k)!.name, cls: 'cap' });
-  const seenFx = new Set<string>();
-  return out.filter((f) => { const k = `${f.head}|${f.text}|${f.area}`; if (seenFx.has(k)) return false; seenFx.add(k); return true; });
-}
-const fxEls: { el: HTMLElement; area: number; born: number; k: number }[] = [];
-let lastFxAt = new Map<string, number>();
-function showFx(list: Fx[]) {
-  const now = performance.now(); list = list.filter((f) => { const k = `${f.head}|${f.text}|${f.area}`, t = lastFxAt.get(k) ?? -1e9; if (now - t < 1500) return false; lastFxAt.set(k, now); return true; });      // the same effect is never shown twice in a row
-  let layer = document.getElementById('fx'); if (!layer) { layer = document.createElement('div'); layer.id = 'fx'; document.body.appendChild(layer); }
-  list.forEach((f, i) => { const el = document.createElement('div'); el.className = `fx ${f.cls}`; el.style.animationDelay = `${i * 0.18}s`; el.innerHTML = `${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small>`; layer!.appendChild(el); fxEls.push({ el, area: f.area, born: performance.now() + i * 180, k: fxEls.filter((x) => x.area === f.area).length }); });
-}
 /** Record and show what changed between two states. */
-let pendingFx: Fx[] = [];
+const fxLayer = new FxLayer(), showFx = (l: Fx[]) => fxLayer.show(l);
+let pendingFx: Fx[] = [], rollNoted = false;
 function noteFx(a: ReturnType<typeof snap>, x: E.Game, fresh?: boolean) { const d = diffFx(a, x); if (!d.length) return; battleFx.push(...d); if (fresh) { rollFx = d; pendingFx = d; } else showFx(d); }       // after a roll the effects wait for the dice to settle
 function act(f: () => void, after = '') {
   if (!allowed()) return say(notYou());
   const before = g.battle ? snap(g) : null;
   const r = hist.run(g, () => { f(); auto(); });
-  g = r.game; if (r.error) say(r.error.message); else { note = after; if (before) noteFx(before, g); }
+  g = r.game; if (r.error) say(r.error.message); else { note = after; if (before && !rollNoted) noteFx(before, g); }       // a roll already noted its own effects, to show them once the dice have settled
+  rollNoted = false;
   save(); refresh();
 }
 function undo() { if (!allowed()) return say(notYou()); const p = hist.undo(); if (!p) return; g = p; selUnit = selChit = selArr = previewArea = hoverArea = null; note = ''; save(); refresh(); }
@@ -560,16 +456,8 @@ function syncBadges() {
   const layer = $('#badges'); layer.innerHTML = ''; badgeEls.clear();
   for (const b of badges) { const d = document.createElement('div'); d.className = 'bdg ' + b.cls; d.textContent = b.text; layer.appendChild(d); badgeEls.set(String(b.area), d); }
 }
-function placeFx() {
-  const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(), now = performance.now();
-  for (let i = fxEls.length - 1; i >= 0; i--) {
-    const f = fxEls[i]; if (now - f.born > 7000) { f.el.remove(); fxEls.splice(i, 1); continue; }
-    const p = center(f.area); v.set(p.x, 3, p.z).project(cam); f.el.style.display = v.z < 1 && now >= f.born ? '' : 'none';
-    f.el.style.transform = `translate(${(v.x * 0.5 + 0.5) * r.width}px, ${(-v.y * 0.5 + 0.5) * r.height - f.k * 58}px) translate(-50%, -100%)`;
-  }
-}
 function placeBadges() {
-  placeFx();
+  { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(); fxLayer.place((area) => { const p = center(area); v.set(p.x, 3, p.z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height, visible: v.z < 1 }; }); }
   const r = canvas.getBoundingClientRect(), v = new THREE.Vector3();
   for (const [k, d] of badgeEls) { const p = d.classList.contains('tint') ? toWorld(...(MAP.areas.find((x) => x.id === +k)!.label)).add(new THREE.Vector3(0, 0, 2.3)) : center(+k); v.set(p.x, 2.2, p.z - 4).project(cam); d.style.display = v.z < 1 ? '' : 'none'; d.style.transform = `translate(${(v.x * 0.5 + 0.5) * r.width}px, ${(-v.y * 0.5 + 0.5) * r.height}px) translate(-50%, -50%)`; }
 }
@@ -582,7 +470,7 @@ const STAGE_NAME: Record<string, string> = { attArty: 'artillery', defArty: 'art
 function rollStage(b: E.Battle) {
   if (!allowed()) return say(notYou());
   const side = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker), kind = b.stage.endsWith('Arty') ? 'arty' : 'ground', fl = E.fireList(g, b, side, kind), n0 = b.rolls.length, stage = b.stage;
-  const before = snap(g); E.roll_step(g, b); rollFx = []; noteFx(before, g, true); save();
+  const before = snap(g); E.roll_step(g, b); rollFx = []; noteFx(before, g, true); rollNoted = true; save();
   const fresh = b.rolls.slice(n0);
   rollView = { title: `${side === 'german' ? 'German' : 'Allied'} ${STAGE_NAME[stage]}`, pos: null, groups: fresh.map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: fl.find((f) => f.who === r.who)?.parts ?? [] })) };
   if (!rollView.groups.length) { rollView = null; return refresh(); }
@@ -677,7 +565,6 @@ function drag(ev: PointerEvent, el: HTMLElement) {
 }
 
 /* ---------- views ---------- */
-const nm = (s: E.Side) => (s === 'german' ? 'German' : 'Allied');
 function topBar() {
   const v = E.victory(g), tr = E.TRACK[g.turn - 1], i = g.phasing === 'german' ? 0 : 1, at = STEP_OF[g.phase];
   return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game" aria-label="Menu, log and new game">${ico('menu')}</button><div class="c-crumbs">${STEPS.map((s, k) => `<span class="${k === at ? 'on' : k < at ? 'done' : ''}">${s}</span>`).join('')}</div>
@@ -948,7 +835,6 @@ function rulesHtml() {
     <h4>Single line</h4><textarea readonly rows="4" style="width:100%;font:12px monospace">${esc(rulesOne())}</textarea></div></div>`;
 }
 /** A Success Number modifier as a small icon chip: the sign and size are the data, the full reason is the tooltip. */
-const fxRow = (f: Fx) => `<div class="fxrow ${f.cls}">${ico(f.icon)}<b>${esc(f.head)}</b><span>${esc(f.text)}</span></div>`;
 const modIcon = (why: string) => /base/i.test(why) ? 'target' : /armor|infantry|class/i.test(why) ? 'armor_asset' : /green|veteran|elite|quality/i.test(why) ? 'star' : /terrain|tdn/i.test(why) ? 'tree' : /field/i.test(why) ? 'gear' : /river/i.test(why) ? 'wave' : /disorder/i.test(why) ? 'disorder' : /supply/i.test(why) ? 'warn' : /air|asset|artillery/i.test(why) ? 'air_mission' : 'info';
 const modChips = (parts: [string, number][]) => parts.map(([w, v]) => `<span class="m2 ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}" title="${esc(w)}">${ico(modIcon(w))}${v > 0 ? '+' : v < 0 ? '−' : ''}${v ? Math.abs(v) : ''}</span>`).join('');
 const chip = (label: string, on: boolean, f: () => void, title = '') => `<button class="chip ${on ? 'on' : ''}" aria-pressed="${on}" data-ui="${reg(f)}" title="${esc(title)}">${on ? ico('check') : ''}${label}</button>`;
@@ -1031,7 +917,7 @@ let ctlKey = '', tgtKey = '';
 function refresh() {
   if (online.split) setTimeout(driveSplit, 0);
   { const key = `${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
-    if (key !== tgtKey) { tgtKey = key; tgt = selChit ? targetsFor(g.chits.find((x) => x.id === selChit) ?? null) : null; } }
+    if (key !== tgtKey) { tgtKey = key; tgt = selChit ? targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: unitFace, areaName }) : null; } }
   if (tint === 'control') { const k = JSON.stringify(g.control) + E.contestedAreas(g).join(); if (k !== ctlKey) { ctlKey = k; paintBoard(); } }
   syncView(); syncBattleCam(); drawPieces(); paintAreas(); drawRoute(); badges = badgeList(); syncBadges(); render();
   if (!rollView) { const cv = $('#dice'); if (cv && cv.style.display !== 'none') { clearDice(); cv.style.display = 'none'; } }
@@ -1067,7 +953,4 @@ function sheets() {
   for (const m of ['X', 'FW', 'RA', 'RB', 'DIS', 'REC', 'E', 'B', 'P', 'R5', 'R6', 'R7', 'A7', 'A56', 'GI', 'G', 'AIR', 'AS']) add('markers', m, m, mapMarkerSvg(m));
   return out;
 }
-const FX_SAMPLES: Fx[] = [
-  { area: 0, icon: 'burst', head: '−1 STEP', text: '212 VG 2/3', cls: 'loss' }, { area: 0, icon: 'xbold', head: 'ELIMINATED', text: '560 VG', cls: 'elim' }, { area: 0, icon: 'xbold', head: 'ASSET LOST', text: 'Arty 405th', cls: 'elim' },
-  { area: 0, icon: 'disorder', head: 'DISORDERED', text: 'Peiper', cls: 'dis' }, { area: 0, icon: 'back', head: 'RETREATS', text: '4 Inf → Weiswampach', cls: 'ret' }, { area: 0, icon: 'nogear', head: 'FIELD WORKS REMOVED', text: 'Weiswampach', cls: 'fw' }, { area: 0, icon: 'flag', head: 'GERMAN CONTROL', text: 'Echternach', cls: 'cap' }];
 Object.assign(window, { __fab: { iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets, setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });

@@ -2,7 +2,7 @@
  *  The store is Firebase (GitHub Pages deploy).
  *  The rules engine is deterministic from the saved state (dice come from the stored seed), so every client simply loads the newest state;
  *  the seat decides who may act. With neither store the game is hot-seat, and in dev mode a seat switch lets one machine play both sides. */
-import { compose, toPublic, secretsOf, revealsIn, revealOf, freshReveals, type Game, type Side, type Priv, type Reveals } from '../../engine/src';
+import { SplitSeat, type Game, type Side, type Priv, type Reveals } from '../../engine/src';
 import { firebaseStore } from './store-firebase';
 
 export interface Seats { german?: string | null; allied?: string | null; germanName?: string | null; alliedName?: string | null }
@@ -49,13 +49,13 @@ export const online = {
   both() { return this.mode === 'off' || (DEV && this.devSeat === 'both'); },
   get active() { return this.mode !== 'off'; },
 };
-let priv: Priv | null = null, reveals: Reveals = {}, pubDoc: StateDoc | null = null;
-let rebuildLater = false;
+let seat: SplitSeat | null = null, pubDoc: StateDoc | null = null, rebuildLater = false;
+const mySeat = () => { const side = online.mySide(); if (!side) return (seat = null); if (!seat || seat.side !== side) { const old = seat; seat = new SplitSeat(side); if (old) { seat.priv = null; } } return seat; };
 function rebuild() {
   if (writing) { rebuildLater = true; return; }       // a save is in flight: apply what arrived as soon as it ends
-  if (!pubDoc) return; const side = online.mySide(), g0 = JSON.parse(pubDoc.json) as Game;
-  if (!side) { onRemote(g0); return; }
-  const { game, enemyAlias } = compose(g0, side, priv, reveals); online.enemyAlias = enemyAlias; onRemote(game);
+  if (!pubDoc) return; const sp = mySeat(), g0 = JSON.parse(pubDoc.json) as Game;
+  if (!sp) { onRemote(g0); return; }
+  const game = sp.open(g0); online.enemyAlias = sp.enemyAlias; onRemote(game);
 }
 let store: Store | null = null, lastJson = '', writing = false, queued: Game | null = null, onChange: () => void = () => {}, onRemote: (g: Game) => void = () => {};
 const slim = (g: Game) => JSON.stringify({ ...g, log: g.log.slice(-120) });
@@ -80,7 +80,7 @@ export async function startOnline(remote: (g: Game) => void, changed: () => void
   online.split = !!store.split;
   if (online.split) {
     // hidden blocks split between seats: rebuild the game this seat plays on from the shared copy, its private details and the reveals
-    store.watchPriv?.((p) => { priv = p; rebuild(); }); store.watchReveals?.((r) => { reveals = r; rebuild(); });
+    store.watchPriv?.((p) => { const sp = mySeat(); if (sp) sp.priv = p; rebuild(); }); store.watchReveals?.((r) => { const sp = mySeat(); if (sp) sp.reveals = r; rebuild(); });
     store.watchState((d) => { if (!d) return; if (d.rev >= online.rev) pubDoc = d; if (d.json === lastJson || d.rev < online.rev) return; online.rev = d.rev; lastJson = d.json; rebuild(); }, fail);
     return;
   }
@@ -124,23 +124,19 @@ export const lobby = {
 
 /** Split tables: write this seat's private details when they changed, then the shared copy with this seat's hidden blocks hidden again. */
 async function pushSplit(g: Game) {
-  const side = online.mySide(); if (online.mode !== 'remote' || !store || !side || !priv) return;
-  const json = toPublic(g, side, priv.salt, online.enemyAlias); if (json === lastJson) return;
+  const sp = mySeat(); if (online.mode !== 'remote' || !store || !sp?.priv) return;
+  const out = sp.save(g); if (out.pub === lastJson) return;
   if (writing) { queued = g; return; }
   writing = true;
   try {
-    const sec = secretsOf(g, side); if (JSON.stringify(sec) !== JSON.stringify(priv.secrets)) { priv = { salt: priv.salt, secrets: sec }; await store.setPriv?.(priv); }
-    lastJson = json; online.rev += 1; pubDoc = { rev: online.rev, json, by: online.uid }; await store.setState(pubDoc);
+    if (out.priv) await store.setPriv?.(out.priv);
+    lastJson = out.pub; online.rev += 1; pubDoc = { rev: online.rev, json: out.pub, by: online.uid }; await store.setState(pubDoc);
   } catch (e) { conflictOr(e); }
   writing = false; if (rebuildLater) { rebuildLater = false; rebuild(); }
   if (queued) { const q = queued; queued = null; void pushSplit(q); }
 }
 /** The owner's client publishes the details of its blocks the other side may now see: the battle area once both are ready, and an Intelligence Gathering target. */
 export async function publishReveals(g: Game) {
-  const side = online.mySide(); if (!online.split || !store || !side || !priv) return;
-  let r: Reveals = {};
-  const b = g.battle; if (b && b.stage === 'setup' && (b.ready?.length ?? 0) === 2) r = { ...r, ...revealsIn(g, side, b.area, priv.salt) };
-  if (g.revealed && g.units.find((u) => u.id === g.revealed)?.side === side) r = { ...r, ...revealOf(g, g.revealed, priv.salt) };
-  const fresh = freshReveals(reveals, r); if (!Object.keys(fresh).length) return;
-  reveals = { ...reveals, ...fresh }; await store.mergeReveals?.(fresh);
+  const sp = mySeat(); if (!online.split || !store || !sp) return;
+  const fresh = sp.due(g); if (Object.keys(fresh).length) await store.mergeReveals?.(fresh);
 }
