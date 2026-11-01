@@ -393,10 +393,20 @@ function arrOpts(): { area: number; sa: boolean }[] {
 
 /* ---------- camera focus ---------- */
 type Goal = { t: THREE.Vector3; dist: number; pitch: number } | null; let goal: Goal = null, saved: Goal = null, inBattle = false;
+/** Reinforcing a battle by Special Action (the defender): neighbouring blocks that may join light up and a tap moves one in. */
+let reinforcing = false;
+function reinforceTargets(): Tgt | null {
+  const b = g.battle; if (!reinforcing || !b || b.stage !== 'setup') return null;
+  const t: Tgt = { units: new Map(), areas: new Map(), pick: new Map(), color: new Map(), chips: [], buttons: [], modes: [], any: null, hint: 'Tap a glowing neighbouring block to bring it in' }, def = other(b.attacker);
+  for (const u of g.units.filter((x) => x.side === def && x.area != null && x.area !== b.area)) { try { const c = structuredClone(g); E.defenderReinforceSA(c, c.battle!, u.id); t.units.set(u.id, () => { reinforcing = false; E.defenderReinforceSA(g, b, u.id); }); } catch { /* not a legal reinforcement */ } }
+  return t;
+}
 let frameKey = '';
 function syncBattleCam() {
-  const b = g.battle, key = b ? `${b.area}:${b.stage === 'setup' ? 's' : 'f'}` : '';                 // re-centre when a battle opens and when its rolling starts
-  if (b && key !== frameKey) { if (!inBattle) saved = { t: target.clone(), dist, pitch }; const p = toWorld(...POLE.get(b.area)!); goal = { t: new THREE.Vector3(p.x, 0, p.z - 1.6 * (viewSide() === 'allied' ? -1 : 1)), dist: innerWidth < 700 ? 15 : 17, pitch: 1.0 }; }
+  const b = g.battle; let key = b ? `${b.area}:${b.stage === 'setup' ? 's' : 'f'}` : '';                 // re-centre when a battle opens and when its rolling starts
+  if (b && reinforcing) key = key + 'r';
+  if (b && key !== frameKey) { if (!inBattle) saved = { t: target.clone(), dist, pitch }; const p = toWorld(...POLE.get(b.area)!); goal = { t: new THREE.Vector3(p.x, 0, p.z - 1.6 * (viewSide() === 'allied' ? -1 : 1)), dist: (innerWidth < 700 ? 15 : 17) + (reinforcing ? 12 : 0), pitch: 1.0 }; }
+  if (!b) reinforcing = false;
   if (!b && inBattle && saved) goal = saved;
   frameKey = key; inBattle = !!b;
 }
@@ -411,6 +421,7 @@ function confirmMove() {
 }
 function click(e: PointerEvent) {
   const { unit, area } = pick(e);
+  if (reinforcing && g.battle) { const fn = unit ? tgt?.units.get(unit) : undefined; if (fn) return act(fn); reinforcing = false; return refresh(); }
   { const c0 = selChit ? g.chits.find((x) => x.id === selChit) : null, tg = c0 && g.phase === 'admin' ? tgt : null;
     if (tg) {
       const fnU = unit ? tg.units.get(unit) : undefined, fnA = area != null ? tg.areas.get(area) ?? tg.any?.(area) ?? undefined : undefined;
@@ -578,6 +589,7 @@ function prompt() {
 }
 function promptText() {
   const b = g.battle;
+  if (reinforcing && b) return '<b>Tap a glowing neighbouring block</b> to bring it in, or tap the map to cancel.';
   if (online.active && !allowed() && !g.over) return online.mySide() == null ? '<b>Watching.</b> Take a seat in the menu.' : `<b>Waiting for the ${nm(actorNow() as E.Side)} player…</b>`;
   if (note && !b && hist.length) return `${esc(note)} <button data-do="${reg(() => undo())}">Undo</button>`;
   if (g.over) return `<b>${esc(g.over)}</b>`;
@@ -740,7 +752,7 @@ function battleTable() {
     return `<div class="c-side ${s} ${mine(s) ? 'mine' : 'theirs'}"><h4 title="${nm(s)} ${s === att ? 'attacking' : 'defending'}"><span class="tag">${s === 'german' ? 'GE' : 'AL'}</span>${ico(s === att ? 'next' : 'shield')}<span class="nm">${nm(s)}</span>${online.active && !online.both() ? `<small>${mine(s) ? 'you' : 'foe'}</small>` : ''}</h4>
       <div class="c-body"><div class="c-row">${us.map((u) => `<div tabindex="0" role="button" class="blk ${s} ${u.id === pt && seen(u) ? 'pt' : ''} ${air && b.air[s]!.mode === 'support' && b.air[s]!.unit === u.id ? 'air' : ''}" data-unit="${u.id}" data-side="${s}" data-tag="${s === 'german' ? 'G' : 'A'}" title="${seen(u) ? esc(u.name) + (u.id === pt ? ' (point unit)' : '') : 'Hidden block'}" aria-label="${seen(u) ? esc(u.name) : 'Hidden block'}">${b3(seen(u) ? unitFace(u) : blankFace(u.side), sideOfUnit(u), !!u.garrison)}</div>`).join('')}</div>
       <div class="c-slots">${setup || arty.length ? `<div class="slot" data-side="${s}" data-zone="arty"><span class="lab" title="Artillery ${arty.length} of ${lim.arty}">${ico('artillery')}${arty.length}/${lim.arty}</span>${arty.map(mini).join('') || ico('plus')}</div>` : ''}${setup || rest.length ? `<div class="slot" data-side="${s}" data-zone="asset"><span class="lab" title="Battle assets and events">${ico('armor_asset')}</span>${rest.map(mini).join('') || ico('plus')}</div>` : ''}</div></div>
-      ${sa ? `<div class="row">${btn('Retreat (SA)', () => E.defenderRetreatSA(g, b), '', !mine(s) || !!b.assets[s].length || us.some((u) => u.garrison) || !us.length)}</div>` : ''}</div>`;
+      ${sa ? `<div class="row">${btn(`${ico('back')}<span class="bl">Retreat</span>`, () => E.defenderRetreatSA(g, b), 'ico', !mine(s) || !!b.assets[s].length || us.some((u) => u.garrison) || !us.length, 'Retreat before combat (uses a Special Action)')}${ubtn(`${ico('plus')}<span class="bl">Reinforce</span>`, () => { reinforcing = !reinforcing; refresh(); }, `ico ${reinforcing ? 'on' : ''}`, !mine(s), 'Bring in a neighbouring block (uses a Special Action)')}</div>` : ''}</div>`;
   };
   const covered = E.unitsIn(g, b.area).some((u) => !seen(u)), al = stats(b, 'allied'), ge = stats(b, 'german'), tot = al.mean + ge.mean || 1;
   return `<div class="c-table ${rollView ? 'rolling' : ''}"><div class="c-title">${g.fought.length + fightable().length > 1 ? `<small class="cnt" title="Battle ${g.fought.length + 1} of ${g.fought.length + fightable().length}">${Math.min(g.fought.length + 1, g.fought.length + fightable().length)}/${g.fought.length + fightable().length}</small>` : ''}${b.bt ? '<small class="cnt" title="Breakthrough combat">BT</small>' : ''}<b>${esc(L.name)}</b><span class="chp" title="Terrain defence number ${L.tdn}: attackers −${L.tdn} to hit">${ico('tree')}${L.tdn}</span>${g.fieldWorks.includes(b.area) ? `<span class="chp" title="Field works">${ico('gear')}</span>` : ''}${b.riverAssault ? `<span class="chp" title="River assault">${ico('wave')}</span>` : ''}</div>${side('allied')}
@@ -945,8 +957,8 @@ function driveSplit() {
 let ctlKey = '', tgtKey = '';
 function refresh() {
   if (online.mode === 'remote') setTimeout(driveSplit, 0);
-  { const key = `${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
-    if (key !== tgtKey) { tgtKey = key; tgt = selChit ? targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: unitFace, areaName }) : null; } }
+  { const key = `${reinforcing}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
+    if (key !== tgtKey) { tgtKey = key; tgt = reinforcing ? reinforceTargets() : selChit ? targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: unitFace, areaName }) : null; } }
   if (tint === 'control') { const k = JSON.stringify(g.control) + E.contestedAreas(g).join(); if (k !== ctlKey) { ctlKey = k; paintBoard(); } }
   syncView(); syncBattleCam(); drawPieces(); paintAreas(); drawRoute(); badges = badgeList(); syncBadges(); render();
   if (!rollView) { const cv = $('#dice'); if (cv && cv.style.display !== 'none') { clearDice(); cv.style.display = 'none'; } }
