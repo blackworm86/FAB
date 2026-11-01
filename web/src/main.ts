@@ -189,7 +189,8 @@ function discSprite(kind: 'x' | 'point', size: number) { disc(kind, size); const
 function drawBattleTable(b: E.Battle, spot: (id: number, x: number, z: number, r: number) => { x: number; z: number }) {
   const base = toWorld(...POLE.get(b.area)!);
   for (const sd of ['german', 'allied'] as E.Side[]) {
-    const ids = [...b.assets[sd], ...(b.air[sd] ? [b.air[sd]!.id] : [])], dir = sd === 'german' ? 1 : -1;
+    const live = sd === b.attacker ? ['setup', 'attArty'] : ['setup', 'attArty', 'defArty'], spent = (arty: boolean) => arty && !live.includes(b.stage);
+    const all = [...b.assets[sd], ...(b.air[sd] ? [b.air[sd]!.id] : [])], ids = all.filter((id) => { const c = E.chit(g, id); return !spent(E.isArty(c) || (c.kind === 'air_mission' && b.air[sd]?.mode === 'arty')); }), dir = sd === 'german' ? 1 : -1;     // artillery leaves the table once it has fired
     ids.forEach((id, i) => {
       const m = chit3d(E.chit(g, id)), at = spot(b.area, base.x + (i - (ids.length - 1) / 2) * 1.9, base.z + dir * 2.2, 0.8), x = at.x, z = at.z; m.userData.chit = id; m.position.set(x, 0.06, z); pieces.add(m);
       if (b.stage === 'setup' && mine(sd)) { const d = disc('x', 0.42); d.position.set(x + 0.5, 0.2, z - 0.5); d.userData.chit = id; pieces.add(d); }
@@ -201,7 +202,7 @@ function drawBattleTable(b: E.Battle, spot: (id: number, x: number, z: number, r
 function drawPointMarks(b: E.Battle) {
   for (const [uid, sd] of [[b.attPoint, b.attacker], [b.defPoint, other(b.attacker)]] as const) {                  // the point unit carries a gold target
     const o = pieces.children.find((x) => x.userData.unit === uid); const u = g.units.find((x) => x.id === uid); if (!o || !u || !seen(u)) continue; void sd;
-    const d = discSprite('point', 0.26), c = viewSide() === 'allied' ? -1 : 1; d.position.set(o.position.x + 0.58 * c, o.position.y > 0.6 ? 1.95 : 0.9, o.position.z - 0.58 * c);                 // a back corner of the block, clear of its pips and symbol d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
+    const d = discSprite('point', 0.26), c = viewSide() === 'allied' ? -1 : 1; d.position.set(o.position.x + 0.58 * c, o.position.y > 0.6 ? 1.95 : 0.9, o.position.z - 0.58 * c); d.userData.anchor = uid; markers.add(d);                 // a back corner of the block, clear of its pips and symbol d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
   }
 }
 function drawPieces() {
@@ -245,7 +246,7 @@ function drawPieces() {
       m.userData.unit = u.id; if (u.id === selUnit || (g.battle && !hid && (u.id === g.battle.attPoint || u.id === g.battle.defPoint))) { const o = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xffb347 })); m.add(o); }
       pieces.add(m);
       const tags: [string, string][] = []; const top = flat ? 0.85 : 1.66; let stackY = u.garrison ? 0.3 : top;
-      if (u.disorder && !u.garrison) { const k = tag(u.disorder === 1 ? 'DIS' : 'REC', u.disorder === 1 ? '#8a1f1f' : '#a8741a', CHIT); k.position.set(m.position.x, top, m.position.z); markers.add(k); stackY = top + 0.14; }
+      if (u.disorder && !u.garrison) { const k = tag(u.disorder === 1 ? 'DIS' : 'REC', u.disorder === 1 ? '#8a1f1f' : '#a8741a', CHIT * 0.62), dc = viewSide() === 'allied' ? -1 : 1; k.position.set(m.position.x - 0.52 * dc, top, m.position.z + 0.52 * dc); markers.add(k); stackY = top + 0.14; }
       if (u.reserve) tags.push([u.side === 'german' ? ({ z5: 'R5', z6: 'R6', z7: 'R7' } as Record<string, string>)[u.reserve] ?? 'R5' : u.reserve === 'z7' ? 'A7' : 'A56', '#2d6cb0']); if (u.exploit) tags.push(['E', '#d9741c']); if (u.unsupplied && !u.garrison) tags.push(['S', '#b8312f']); if (u.interdict) tags.push(['GI', '#8a2f9c']); if (u.bcross) tags.push(['B', '#8a6a1c']);
       tags.forEach(([t, c], i) => { const k = tag(t, c, CHIT); k.position.set(m.position.x + i * 0.12, stackY + i * 0.14, m.position.z - i * 0.08); k.rotation.y = (i % 2 ? 0.12 : -0.08); markers.add(k); });
     });
@@ -559,7 +560,7 @@ function renderFocus() {
   const poly = areaWorld(b!.area), hidden: THREE.Object3D[] = [], bg = scene.background;
   const hide = (o: THREE.Object3D) => { if (o.visible) { o.visible = false; hidden.push(o); } };
   hide(board); hide(table); for (const [id, m] of overlays) if (id !== b!.area) hide(m);
-  for (const grp of [pieces, markers]) for (const o of grp.children) if (!inPoly(o.position.x, o.position.z, poly)) hide(o);
+  for (const grp of [pieces, markers]) for (const o of grp.children) { const a = o.userData.anchor ? pieces.children.find((x) => x.userData.unit === o.userData.anchor) : null, q = a ?? o; if (!inPoly(q.position.x, q.position.z, poly)) hide(o); }      // a marker follows the piece it belongs to
   focusMesh.visible = true; scene.background = null; renderer2.render(scene, cam); scene.background = bg; focusMesh.visible = false; for (const o of hidden) o.visible = true;
 }
 function placeFocus() {
@@ -1120,4 +1121,4 @@ function sheets() {
   for (const m of ['X', 'FW', 'RA', 'RB', 'DIS', 'REC', 'E', 'B', 'P', 'R5', 'R6', 'R7', 'A7', 'A56', 'GI', 'G', 'AIR', 'AS']) add('markers', m, m, mapMarkerSvg(m));
   return out;
 }
-Object.assign(window, { __fab: { online, setMatches: (m: Match[]) => { matches = m; }, iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets, setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
+Object.assign(window, { __fab: { sprites: () => markers.children.filter((o) => (o as THREE.Sprite).isSprite).map((o) => o.position.toArray().map((n) => +n.toFixed(1)).join(',') + ' a=' + o.userData.anchor), online, setMatches: (m: Match[]) => { matches = m; }, iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets, setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
