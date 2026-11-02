@@ -72,6 +72,16 @@ function marker(name: string): string | null {
   return null;
 }
 
+/** 8.1: the reusable Special Action is a wooden block with a Special Action label (not a counter). The label art can be replaced by the
+ *  drawings in docs/maps/vector/blank/special-action-blocks.svg (put them in SA_LABEL below as SVG strings). */
+export const SA_LABEL: Partial<Record<'german' | 'allied', string>> = {};
+export function saBlockSvg(side: 'german' | 'allied') {
+  if (SA_LABEL[side]) return SA_LABEL[side]!;
+  const bg = side === 'german' ? '#b7bbc1' : '#8fa83f', ink = '#141414';
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160"><rect width="160" height="160" fill="${bg}"/><rect x="7" y="7" width="146" height="146" fill="none" stroke="${ink}" stroke-width="2" opacity=".35"/>
+    ${side === 'german' ? cross(80, 44, 22) : star(80, 44, 24, '#fff')}${txt('Special', 80, 98, 30, { w: 'b', anchor: 'middle', fill: ink, max: 128 })}${txt('Action', 80, 130, 30, { w: 'b', anchor: 'middle', fill: ink, max: 128 })}${txt('reusable', 80, 150, 15, { anchor: 'middle', fill: ink, max: 120 })}</svg>`;
+}
+
 /** The printed marker art by short code used on the map: X blown bridge, FW field works, RA river assault, RB road block, DIS disordered, REC recovering. */
 export const mapMarkerSvg = (code: string): string | null => {
   if (MARKER_ART[code]) return `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160"><image href="${MARKER_ART[code]}" width="160" height="160"/></svg>`;
@@ -90,6 +100,7 @@ export const mapMarkerSvg = (code: string): string | null => {
 
 export type Counter = { id?: string; kind: string; name: string; side: 'german' | 'allied' | 'none'; ech: string; turn?: number | 'S' | null; q?: string | null };
 export function chitSvg(c: Chit | Counter): string {
+  if (c.kind === 'sa_block') return saBlockSvg(c.side === 'german' ? 'german' : 'allied');
   const k = c.kind, name = c.name, ech = ECH[c.ech] ?? '#bbb', side = c.side === 'german' ? 'german' : 'allied', t = (c as Counter).turn ?? null, q = c.q ?? undefined;
   const dot = (cx: number, cy: number) => { if (!q) return ''; const [f, ring] = QDOT[q]; return `${ring ? `<circle cx="${cx}" cy="${cy}" r="10.5" fill="${ring}"/>` : ''}<circle cx="${cx}" cy="${cy}" r="${ring ? 8 : 7.5}" fill="${f}"/>`; };
   const unit = (sym: string, fill = ech, bg?: string[]) => `${open(side, (c.ech === 'br_xxx' ? BRIT : bg) as never)}${turn(t, 14, 36, 33)}${dot(CX, 17)}${square(fill)}${sym}${txt(name, CX, 143, 23, { anchor: 'middle', max: 104 })}</svg>`;

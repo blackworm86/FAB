@@ -3,7 +3,7 @@
 import * as E from '../../engine/src';
 
 export interface TgtCtx { area: number | null; mode: string; setArea: (a: number) => void; setMode: (m: string) => void; face: (u: E.Unit) => string; areaName: (a: number) => string }
-export interface Tgt { units: Map<string, () => void>; areas: Map<number, () => void>; pick: Map<number, () => void>; color: Map<number, number>; chips: { label: string; img: string; fn: () => void }[]; buttons: { icon: string; label: string; fn: () => void; title?: string }[]; modes: { id: string; icon: string; label: string }[]; any: ((a: number) => (() => void) | null) | null; hint: string }
+export interface Tgt { units: Map<string, () => void>; areas: Map<number, () => void>; pick: Map<number, () => void>; color: Map<number, number>; chips: { label: string; img: string; fn: () => void }[]; buttons: { icon: string; label: string; fn: () => void; title?: string }[]; modes: { id: string; icon: string; label: string }[]; focus?: boolean; any: ((a: number) => (() => void) | null) | null; hint: string }
 const BRIDGE_KEY = (a: number, t: number) => (a < t ? `${a}-${t}` : `${t}-${a}`);
 /** What a chit can be used on, so the board itself can offer it: blocks and areas light up, and a tap applies it. Areas that only need a further choice (an engineer's area, a Greif bridge) are "pick" targets. */
 export function targetsFor(G: () => E.Game, c: E.Chit | null, ctx: TgtCtx): Tgt | null {
@@ -22,16 +22,20 @@ export function targetsFor(G: () => E.Game, c: E.Chit | null, ctx: TgtCtx): Tgt 
     for (const ar of E.areas.keys()) if (G().control[ar] === c.side && works((tg) => E.rally(tg, c.side, ar))) t.areas.set(ar, () => E.rally(G(), c.side, ar));
     t.hint = 'Tap a glowing block (quality replacement) or area (rally)';
   } else if (k === 'engineer') {
-    const capable = (ar: number) => E.bridgeTargets(G(), c.side, ar).length || E.repairTargets(G(), c.side, ar).length || E.roadblockAreas(G(), c.side).includes(ar) || works((tg) => E.fieldWorksFor(tg, c.id, ar));
-    for (const ar of E.areas.keys()) if (capable(ar)) t.pick.set(ar, () => { ctx.setArea(ar); });
+    const zone = (ar: number) => E.assetZoneOk(G(), c, ar), rbs = E.roadblockAreas(G(), c.side);
+    const capable = (ar: number) => zone(ar) && (E.bridgeTargets(G(), c.side, ar).length > 0 || E.repairTargets(G(), c.side, ar).length > 0 || rbs.includes(ar) || works((tg) => E.fieldWorksFor(tg, c.id, ar)));
+    for (const ar of E.areas.keys()) if (capable(ar)) t.pick.set(ar, () => { ctx.setArea(ar); ctx.setMode(''); });
     if (a != null && t.pick.has(a)) {
       const bt = E.bridgeTargets(G(), c.side, a), rt = E.repairTargets(G(), c.side, a);
-      for (const n of bt) { t.areas.set(n, () => E.blowBridges(G(), c.id, a, [n])); t.color.set(n, 0xff4d4d); }
+      t.focus = true; t.color.set(a, 0x4aa3ff);                                                     // the chosen area and its bridges only; other areas stay tappable but unlit
+      const sel = ctx.mode.startsWith('b:') ? ctx.mode.slice(2).split(',').filter(Boolean).map(Number).filter((n) => bt.includes(n)) : [];
+      for (const n of bt) { t.pick.set(n, () => { const s = sel.includes(n) ? sel.filter((x) => x !== n) : [...sel, n].slice(-2); ctx.setMode('b:' + s.join(',')); }); t.color.set(n, sel.includes(n) ? 0xff2a2a : 0xff9a8a); }
       for (const n of rt) { t.areas.set(n, () => E.repairBridge(G(), c.id, a, n)); t.color.set(n, 0x37d67a); }
-      if (works((tg) => E.fieldWorksFor(tg, c.id, a))) t.buttons.push({ icon: 'gear', label: 'Field works', fn: () => E.fieldWorksFor(G(), c.id, a), title: 'Build field works here' });
-      if (E.roadblockAreas(G(), c.side).includes(a)) t.buttons.push({ icon: 'flag', label: 'Roadblock', fn: () => E.roadblock(G(), c.id, a, false), title: '4.34 Roadblock' }, { icon: 'engineer', label: 'Defended', fn: () => E.roadblock(G(), c.id, a, true), title: '4.35 Defended roadblock (the engineer stays)' });
-      t.hint = `${ctx.areaName(a)}: tap a red neighbour to blow its bridge${rt.length ? ', a green one to repair' : ''}`;
-    } else t.hint = 'Tap a glowing area where the engineer works';
+      if (sel.length) t.buttons.push({ icon: 'xbold', label: `Blow ${sel.length} bridge${sel.length > 1 ? 's' : ''}`, fn: () => E.blowBridges(G(), c.id, a, sel), title: '4.31: up to two bridges from the same area' });
+      if (works((tg) => E.fieldWorksFor(tg, c.id, a))) t.buttons.push({ icon: 'gear', label: 'Field works', fn: () => E.fieldWorksFor(G(), c.id, a), title: '4.33 Build field works here' });
+      if (rbs.includes(a)) t.buttons.push({ icon: 'flag', label: 'Roadblock', fn: () => E.roadblock(G(), c.id, a, false), title: '4.34 Roadblock' }, { icon: 'engineer', label: 'Defended roadblock', fn: () => E.roadblock(G(), c.id, a, true), title: '4.35 The engineer chit itself stays in the area as a defended roadblock' });
+      t.hint = `${ctx.areaName(a)}: ${bt.length ? `tap ${bt.length > 1 ? 'one or two' : 'the'} red neighbour${bt.length > 1 ? 's' : ''} to mark the bridge${bt.length > 1 ? 's' : ''} to blow` : ''}${rt.length ? `${bt.length ? ', ' : ''}a green one to repair` : ''}${!bt.length && !rt.length ? 'choose what to build' : ''}`;
+    } else t.hint = 'Tap a glowing area where the engineer works (its own army zone)';
   } else if (k === 'command_staff') {
     const own = G().units.filter((x) => x.side === c.side && x.area != null && !x.garrison), foe = G().units.filter((x) => x.side !== c.side && x.area != null && !x.garrison);
     const sets: Record<string, { icon: string; label: string; units?: [string, () => void][]; areas?: [number, () => void][] }> = {};

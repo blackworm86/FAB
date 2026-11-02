@@ -44,7 +44,7 @@ describe('M2 game flow', () => {
     const g = newGame(3);
     for (const a of mustFight(g)) runBattle(g, a, false);
     while (g.turn === 1) endPhase(g);
-    expect(g.turn).toBe(2); expect(g.phase).toBe('reinforcement');
+    expect(g.turn).toBe(2); expect(g.phase).toBe('reinforcement'); autoRecover(g);           // 4.1a recovery and the 16.12 artillery choice come first
     expect(boxOf(g, 'german', 'available').some((c) => c.kind === 'sa_block')).toBe(true);
     const cupGe = boxOf(g, 'german', 'cup').length, cupAl = boxOf(g, 'allied', 'cup').length;
     expect(g.pendingArrivals.length).toBeGreaterThan(0); const arm = g.units.find((u) => u.name === '7 Arm')!; expect(g.pendingArrivals).toContain(arm.id);

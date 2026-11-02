@@ -317,3 +317,6 @@ button.go .ic, button.plain .ic, .row button .ic { width: 18px; height: 18px; ve
 .lbd > div { flex: 1; min-width: 0; } .lbd b { display: block; } .lbd small { display: block; opacity: .75; margin-bottom: 4px; } .lbd.area { display: block; }
 .lbrow { display: flex; flex-wrap: wrap; gap: 4px; } .lbrow .lbt img { width: 48px; height: 48px; }
 @media (max-width: 700px) { .sbx { max-height: 55%; } .lbgrid { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); } .lbt img { width: 52px; height: 52px; } .lbd > img { width: 76px; height: 76px; } }
+/* 8.1 the reusable Special Action is a wooden block, not a counter */
+.card2.wood { border-radius: 4px; box-shadow: 0 5px 0 #6d7176, 0 6px 0 #4c4f52, 0 12px 18px #000b; } .card2.wood.allied { box-shadow: 0 5px 0 #4b6e37, 0 6px 0 #34502a, 0 12px 18px #000b; }
+ul.rl { margin: 4px 0; padding-left: 16px; } ul.rl li { margin: 2px 0; } .inspect p, .slimcard p { margin: 3px 0; }
