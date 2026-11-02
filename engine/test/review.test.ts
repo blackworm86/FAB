@@ -43,3 +43,11 @@ describe('4.35 defended roadblock uses the engineer chit', () => {
     throw new Error('no roadblock area found');
   });
 });
+
+describe('19.1 starting VP (24.13: contested set-up areas are Allied-controlled)', () => {
+  it('the Allies start with 11: Monschau, Udenbreth, Bucholz, Bleialf, Lutzkampen and six yellow stars', () => {
+    const g = E.newGame(1), v = E.victory(g);
+    for (const a of [9, 10, 11, 12, 27, 33, 47, 51, 55, 75, 77]) expect(g.control[a]).toBe('allied');
+    expect(v).toEqual({ german: 0, allied: 11, net: -11 });
+  });
+});
