@@ -252,13 +252,11 @@ function drawPieces() {
       const tags: [string, string][] = []; const top = flat ? 0.85 : 1.66;
       if (u.disorder && !u.garrison) tags.push([u.disorder === 1 ? 'DIS' : 'REC', u.disorder === 1 ? '#8a1f1f' : '#a8741a']);
       if (u.reserve) tags.push([u.side === 'german' ? ({ z5: 'R5', z6: 'R6', z7: 'R7' } as Record<string, string>)[u.reserve] ?? 'R5' : u.reserve === 'z7' ? 'A7' : 'A56', '#2d6cb0']); if (u.exploit) tags.push(['E', '#d9741c']); if (u.unsupplied && !u.garrison) tags.push(['OOS', '#b8312f']); if (u.interdict) tags.push(['GI', '#8a2f9c']); if (u.bcross) tags.push(['B', '#8a6a1c']);
-      const dc = viewSide() === 'allied' ? -1 : 1;          // status markers sit small on the block's corners, like disordered/recovering, so the unit stays readable
-      const dis = tags[0]?.[0] === 'DIS' || tags[0]?.[0] === 'REC';          // disordered/recovering on the block's front-left corner; the other status markers lie beside the block, never over its label
-      tags.forEach(([t, c], i) => {
-        const side = dis ? i - 1 : i, k = tag(t, c, CHIT * (dis && i === 0 ? 0.62 : 0.5));
-        if (dis && i === 0) k.position.set(m.position.x - 0.52 * dc, u.garrison ? 0.3 : top, m.position.z + 0.52 * dc);
-        else k.position.set(m.position.x + (u.garrison ? 1.05 : 1.2) * dc, 0.04, m.position.z + (-0.55 + side * 0.78) * dc);
-        markers.add(k);
+      const dc = viewSide() === 'allied' ? -1 : 1;
+      tags.forEach(([t, c], i) => {               // status markers float in a row above the block, tilted toward the player (animated in frame())
+        const k = tag(t, c, CHIT * 0.6), x0 = (i - (tags.length - 1) / 2) * 0.95;
+        k.rotation.order = 'YXZ'; k.rotation.set(0.95, viewRot(), 0); k.userData.float = { y: top + 1.0, ph: i * 1.1 + m.position.x * 0.3 };
+        k.position.set(m.position.x + x0 * dc, top + 1.0, m.position.z); markers.add(k);
       });
     });
   }
@@ -1258,12 +1256,14 @@ function refresh() {
   syncView(); syncBattleCam(); drawPieces(); paintAreas(); drawRoute(); badges = g.battle ? [] : badgeList(); syncBadges(); syncMoveMarks(); render();
   if (!rollView) { const cv = $('#dice'); if (cv && cv.style.display !== 'none') { clearDice(); cv.style.display = 'none'; } }
 }
+const CALM = matchMedia('(prefers-reduced-motion: reduce)').matches;                               // no floating motion for players who asked for less motion
 function frame() {
   requestAnimationFrame(frame);
   const r = canvas.getBoundingClientRect();
   if (canvas.width !== Math.round(r.width * renderer.getPixelRatio())) { renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; cam.updateProjectionMatrix(); }
   if (goal) { const k = goal.fast ? 0.28 : 0.1; target.lerp(goal.t, k); dist += (goal.dist - dist) * k; pitch += (goal.pitch - pitch) * k; if (target.distanceTo(goal.t) < 0.05 && Math.abs(dist - goal.dist) < 0.1) goal = null; }
   if (lock && !goal) target.copy(lock.c);
+  if (!CALM) { const t = performance.now() / 1000; for (const k of markers.children) { const f = k.userData.float; if (f) { k.position.y = f.y + Math.sin(t * 1.6 + f.ph) * 0.07; k.rotation.y = viewRot() + Math.sin(t * 0.9 + f.ph) * 0.22; } } }   // a slow 4 s bob and 7 s sway, each marker out of step
   placeCam(); runAnims(); renderer.render(scene, cam); renderFocus(); placeBadges();
 }
 SBU.initSandboxUi({
