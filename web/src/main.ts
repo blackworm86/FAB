@@ -471,7 +471,7 @@ setChatListener((m: ChatMsg[]) => {                                             
   const fresh = chatKnown < 0 ? [] : m.filter((x) => x.t > chatKnown && x.uid !== online.uid); chatKnown = Math.max(chatKnown, m.at(-1)?.t ?? 0);
   if (chatOpen) { markSeen(); const l = document.getElementById('chat-list'); if (l && document.activeElement?.id === 'chat-in') { l.innerHTML = chatRows(); l.scrollTop = l.scrollHeight; } } else if (fresh.length) { const x = fresh.at(-1)!; say(`${nm(x.side)}: ${x.text}`); }
 });
-async function chatSend(text: string) { const e = await sendChat(text); if (e) say(e); else { chatDraft = ''; const i = document.getElementById('chat-in') as HTMLInputElement | null; if (i) i.value = ''; } }
+async function chatSend(text: string) { const e = await sendChat(text); if (e) { say(/permission/i.test(e) ? 'Chat not allowed by the database: the game\'s security rules need publishing (Admin > Update rules).' : e); render(); } else { chatDraft = ''; const i = document.getElementById('chat-in') as HTMLInputElement | null; if (i) i.value = ''; } }
 function chatBtn() { if (!chatOn()) return ''; const n = unread(); return `<button class="ico chatbtn ${chatOpen ? 'on' : ''}" data-ui="${reg(() => { chatOpen = !chatOpen; if (chatOpen) markSeen(); })}" title="Chat" aria-label="Chat${n ? `, ${n} new` : ''}">${ico('chat')}${n ? `<i class="unread">${n > 9 ? '9+' : n}</i>` : ''}<span class="bl">Chat</span></button>`; }
 function chatRows() {
   const time = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
