@@ -49,7 +49,7 @@ export function throwDice(cv: HTMLCanvasElement, groups: DiceGroup[], done: (pos
   const w = cv.clientWidth || 1280, h = cv.clientHeight || 720, r = new THREE.WebGLRenderer({ canvas: cv, alpha: true, antialias: true });
   r.setSize(w, h, false); r.setPixelRatio(Math.min(2, devicePixelRatio)); r.shadowMap.enabled = true;
   const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(28, w / h, 0.1, 100); cam.position.set(0, 12, 8.6).multiplyScalar(Math.max(1, 1.25 / (w / h), (() => { const L = layoutOf(groups.reduce((a, g) => a + g.dice.length, 0), w / h); return (((L.per - 1) * 2.3 + 3) * L.k) / (2 * Math.tan(14 * Math.PI / 180) * (w / h) * 14.8); })())); cam.lookAt(0, 0, 0.6);
-  if (h < 400) cam.position.multiplyScalar(0.62);                                              // the small tray: come closer so the dice fill it
+  if (h < 400) { const per = layoutOf(groups.reduce((t, g) => t + g.dice.length, 0), w / h).per; cam.position.multiplyScalar(Math.min(1, (w < 500 ? 0.11 * Math.max(3, per) + 0.15 : 0.207 * Math.max(3, per)))); }     // the small tray: as close as the widest row allows                                              // the small tray: come closer so the dice fill it
   scene.add(new THREE.HemisphereLight(0xffffff, 0x445544, 0.9)); const sun = new THREE.DirectionalLight(0xffffff, 1.2); sun.position.set(-4, 9, 5); sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9 }); scene.add(sun);
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: 0.4 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
