@@ -45,6 +45,7 @@ export interface Game {
   roadblocks: Record<number, Side>; interdicted: Record<number, string>; pooled: number | null; airSupply: { area: number; side: Side; id: string; stamp: number } | null; revealed: string | null; arrived: string[]; pendingArrivals: string[];
   recover: Side[];
   battle: Battle | null; seed: number; rolls: number; log: string[]; over?: string;
+  force?: number[];   /** sandbox: die results to use before the seeded ones */
 }
 type RawUnit = { id: string; name: string; side: string; echelon?: string; symbol?: string; cls?: string; steps?: number; quality_by_step?: Quality[]; start_area?: number; arrival_turn?: number; entry?: string[]; kind?: string };
 const ENTRY = entryJson as Record<string, { side: string; area: number }>;
@@ -63,7 +64,8 @@ export const contestedAreas = (g: Game) => [...areas.keys()].filter((a) => conte
 export const newlyContested = (g: Game) => contestedAreas(g).filter((a) => !g.contestedAtMoveStart.includes(a));
 export const chit = (g: Game, id: string) => g.chits.find((c) => c.id === id)!;
 export const boxOf = (g: Game, side: Side, box: Chit['box']) => g.chits.filter((c) => c.side === side && c.box === box);
-const roll = (g: Game) => d10(rng(g.seed * 7919 + g.rolls++));
+/** Dice come from the game's seed; a test table can queue exact results in `force` (the sandbox). */
+const roll = (g: Game) => (g.force?.length ? (g.rolls++, g.force.shift()!) : d10(rng(g.seed * 7919 + g.rolls++)));
 const say = (g: Game, s: string) => { g.log.push(`T${g.turn} ${g.phasing === 'german' ? 'GE' : 'AL'} ${g.phase}: ${s}`); if (g.log.length > 400) g.log.splice(0, g.log.length - 300); };   // the log only has to be read, so it stays short
 const AIRBORNE = new Set(['82', '101', '517']);                                                // 18.5
 const ARMY = (u: Unit): number | undefined => (u.ech ? ZONE[u.ech] : undefined);

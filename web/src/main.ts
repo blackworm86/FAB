@@ -5,7 +5,8 @@ import * as E from '../../engine/src';
 import { labelSvg } from './art';
 import { chitSvg, mapMarkerSvg, loadChitArt, garrisonChit } from './chits';
 import { History } from './history';
-import { online, startOnline, push, sit, setDevSeat, auth, lobby, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, type DevSeat, type Match } from './online';
+import * as SB from './sandbox';
+import { online, startOnline, push, sit, setDevSeat, auth, lobby, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, SANDBOX, type DevSeat, type Match } from './online';
 import { gameInfo } from './games';
 import { ICONS, ico } from './icons';
 import { esc, nm } from './util';
@@ -63,7 +64,7 @@ const $ = (s: string) => document.querySelector(s) as HTMLElement;
 const areaName = (a: number) => E.areas.get(a)!.name;
 
 /* ---------- state ---------- */
-const KEY = TABLE === 'main' ? 'fab-demo2' : `fab-demo2-${TABLE}`;
+const KEY = SANDBOX ? 'fab-sandbox' : TABLE === 'main' ? 'fab-demo2' : `fab-demo2-${TABLE}`;
 function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif && x.roadblocks && x.pendingArrivals && x.fwOwner && Array.isArray(x.recover) ? x : null; } catch { return null; } }
 let g: E.Game = load() ?? E.newGame();
 let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, previewArea: number | null = null, hoverArea: number | null = null, newOpts: E.Opts = { scenario: 'tournament', fuel: true };
@@ -401,7 +402,7 @@ function idle(): boolean {                                                // pha
     default: return false;
   }
 }
-function auto() { for (let i = 0; i < 12 && !g.over && !g.battle && !g.pendingBlow && idle(); i++) { try { E.endPhase(g); } catch { break; } } }
+function auto() { if (SANDBOX && !sbAuto) return; for (let i = 0; i < 12 && !g.over && !g.battle && !g.pendingBlow && idle(); i++) { try { E.endPhase(g); } catch { break; } } }
 let toast = '', toastT = 0;
 const say = (t: string) => { toast = t; clearTimeout(toastT); toastT = window.setTimeout(() => { toast = ''; render(); }, 2800); };
 let dragTargets: number[] = [];
@@ -485,6 +486,7 @@ function confirmMove() {
 }
 function click(e: PointerEvent) {
   const { unit, area } = pick(e);
+  if (SANDBOX && sbPlace) { const id = sbPlace; if (area == null) return; sbPlace = null; return sbx(() => SB.place(g, id, area)); }
   if (reinforcing && g.battle) { const fn = unit ? tgt?.units.get(unit) : undefined; if (fn) return act(fn); reinforcing = false; return refresh(); }
   { const c0 = selChit ? g.chits.find((x) => x.id === selChit) : null, tg = c0 && g.phase === 'admin' ? tgt : null;
     if (tg) {
@@ -733,7 +735,7 @@ function drag(ev: PointerEvent, el: HTMLElement) {
 /* ---------- views ---------- */
 function topBar() {
   const v = E.victory(g), tr = E.TRACK[g.turn - 1], i = g.phasing === 'german' ? 0 : 1, at = STEP_OF[g.phase];
-  return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game" aria-label="Menu, log and new game">${ico('menu')}</button><div class="c-crumbs">${STEPS.map((s, k) => `<span class="${k === at ? 'on' : k < at ? 'done' : ''}">${s}</span>`).join('')}</div>
+  return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game" aria-label="Menu, log and new game">${ico('menu')}</button>${SANDBOX ? sandboxBtns() : ''}<div class="c-crumbs">${STEPS.map((s, k) => `<span class="${k === at ? 'on' : k < at ? 'done' : ''}">${s}</span>`).join('')}</div>
     <button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="Map overlay: terrain defence / army zones / off" aria-label="Map overlay">${ico('layers')}<span class="bl">Overlay</span></button><button class="ico" data-home title="Reset the camera" aria-label="Reset the camera">${ico('home')}<span class="bl">View</span></button><button class="ico" data-undo title="${hist.length ? 'Undo: ' + esc(note || 'last action') + ' (Ctrl+Z)' : 'Nothing to undo yet. Undo is available until a die is rolled.'}" aria-label="Undo" ${hist.length ? '' : 'disabled'}>${ico('undo')}<span class="bl">Undo</span></button><div class="c-stat"><span>TURN<b>${g.turn}</b></span><span>PLAYING<b class="${g.phasing}">${nm(g.phasing).toUpperCase()}</b></span>${online.active && online.mode === 'remote' ? `<span class="syncdot ${/NOT SAVED/.test(online.sync) ? 'bad' : /saving|connecting/.test(online.sync) ? 'wait' : 'ok'}" title="${esc(online.sync)}" aria-label="${esc(online.sync)}"></span>` : ''}${online.active ? `<span>YOU<b class="${online.mySide() ?? ''}">${online.both() ? 'BOTH' : (online.mySide() ?? 'WATCHING').toUpperCase()}</b></span>` : ''}${DEV ? `<button class="ico dev" data-seat title="Developer: switch seat (German, Allied, both, watching)" aria-label="Switch seat">${ico('swap')}<span class="bl">Seat</span></button>` : ''}<span>NET VP<b>${v.net > 0 ? 'GE +' + v.net : v.net < 0 ? 'AL +' + -v.net : '0'}</b></span><span title="Draws this phase (German / Allied)">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span><button class="ico" data-modal="boxes" title="Pieces: boxes, arrivals" aria-label="Pieces">${ico('boxes')}</button></div></div>`;
 }
 function prompt() {
@@ -980,7 +982,7 @@ function homeHtml() {
       <div class="chips">${chip('5', form.scenario === 'tournament', () => { form.scenario = 'tournament'; }, 'Tournament, 5 turns', 'calendar')}${chip('9', form.scenario === 'campaign', () => { form.scenario = 'campaign'; }, 'Campaign, 9 turns', 'calendar')}${chip('', form.fuel, () => { form.fuel = !form.fuel; }, 'German fuel rule', 'fuel')}</div>
       <div class="row">${btn(`${ico('check')}<span>Create</span>`, () => { void createGame(); }, 'primary', !info?.ready)}</div></div>` : '';
   return `<div class="homepage"><div class="homein">
-    <header class="hbar"><div><h1>Fast Action Battles</h1><p>${esc(info?.name ?? '')} · ${esc(info?.vol ?? '')}</p></div><div class="who"><span class="avatar" title="${esc(a!.name || a!.email)}">${esc((a!.name || a!.email || '?').slice(0, 1).toUpperCase())}</span>${online.admin ? ubtn(ico('lock'), () => { modal = 'rules'; }, 'ico', false, 'Admin: update the database rules') : ''}<button class="ico" data-auth="out" title="Sign out" aria-label="Sign out">${ico('logout')}</button></div></header>
+    <header class="hbar"><div><h1>Fast Action Battles</h1><p>${esc(info?.name ?? '')} · ${esc(info?.vol ?? '')}</p></div><div class="who"><span class="avatar" title="${esc(a!.name || a!.email)}">${esc((a!.name || a!.email || '?').slice(0, 1).toUpperCase())}</span>${online.admin ? ubtn(ico('wand'), () => { location.href = `${homeUrl()}?sandbox=1`; }, 'ico', false, 'Admin: sandbox test table') + ubtn(ico('lock'), () => { modal = 'rules'; }, 'ico', false, 'Admin: update the database rules') : ''}<button class="ico" data-auth="out" title="Sign out" aria-label="Sign out">${ico('logout')}</button></div></header>
     <section class="card"><div class="lh"><h2>${ico('users')} Games</h2>${creating ? '' : ubtn(`${ico('plus')}<span>New</span>`, () => { creating = true; }, 'primary', false, 'Start a new game')}</div>${create}${mine}</section>
     <section class="card joincard"><div class="row authform"><input id="join" class="grow" placeholder="Invite link or code" aria-label="Invite link or code">${ubtn(`${ico('next')}<span>Join</span>`, () => { joinByCode(($('#join') as HTMLInputElement).value); }, 'primary', false, 'Join a game with an invite')}</div></section>
     ${homeMsg ? `<p class="hint"><b>${esc(homeMsg)}</b></p>` : ''}${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}
@@ -1041,7 +1043,7 @@ function modalHtml() {
       : menuTab === 'Settings' ? `<h4>Map</h4><div class="row">${ubtn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${ubtn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Map art</h4><div class="row"><select data-sel="${regv((x) => setArt(x as 'vector' | 'scan'))}"><option value="vector" ${art === 'vector' ? 'selected' : ''}>Vector layers (traced)</option><option value="scan" ${art === 'scan' ? 'selected' : ''}>Original scan</option></select></div>
         ${online.active && !online.admin && !online.both() ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as 'tournament' | 'campaign'; })}"><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
         <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Restart', () => { if (!confirm('Restart and lose the current game?')) return; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'danger')}</div>`}`
-      : menuTab === 'Admin' ? `<div class="row">${ubtn('Update rules', () => { modal = 'rules'; })}${ubtn('Free German seat', () => { void auth.freeSeat('german'); })}${ubtn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div>`
+      : menuTab === 'Admin' ? `<div class="row">${ubtn(`${ico('wand')} Sandbox`, () => { location.href = `${homeUrl()}?sandbox=1`; })}${ubtn('Update rules', () => { modal = 'rules'; })}${ubtn('Free German seat', () => { void auth.freeSeat('german'); })}${ubtn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div>`
       : online.mode === 'remote' ? (() => {
         const a = online.account, signed = !!a && !a.guest, me = online.mySide(), title = matches.find((m) => m.id === TABLE)?.title ?? TABLE, m = matches.find((x) => x.id === TABLE), own = !!m && (m.owner === online.uid || online.admin);
         const row = (sd: E.Side) => { const who = online.seats[sd] ? (online.seats[sd] === online.uid ? 'you' : esc((sd === 'german' ? online.seats.germanName : online.seats.alliedName) || 'taken')) : 'free';
@@ -1058,7 +1060,83 @@ function modalHtml() {
   }
   return '';
 }
-const inGame = () => HAS_TABLE || DEV_FAKE || online.mode === 'local';
+/* ---------- admin sandbox (?sandbox=1): free edits, seat switch, notes and the test report ---------- */
+let sbOpen = true, sbTab = 'Turn', sbPlace: string | null = null, sbAuto = false, sbPick = '', sbAddSide: E.Side = 'german', sbChitSide: E.Side = 'german', sbFilter = '', sbDraft = '';
+const sbJump = { turn: g.turn, side: g.phasing, phase: g.phase };
+let sbNotes = SB.loadNotes();
+/** A sandbox edit: no turn or seat checks, no automatic phase skipping, still undoable. */
+function sbx(f: () => void) { const r = hist.run(g, f); g = r.game; if (r.error) say(r.error.message); save(); refresh(); }
+const sbtn = (label: string, f: () => void, cls = '', title = '') => ubtn(label, () => sbx(f), cls, false, title);
+const sbSel = (opts: [string, string][], cur: string, f: (v: string) => void) => `<select data-sel="${regv((v) => { f(v); render(); })}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+const sbChk = (label: string, on: boolean, f: (v: boolean) => void) => `<label class="sbchk"><input type="checkbox" ${on ? 'checked' : ''} data-sel="${regv((v) => sbx(() => f(v === 'on')))}"> ${esc(label)}</label>`;
+const SEATS: [DevSeat, string][] = [['both', 'Both'], ['german', 'German'], ['allied', 'Allied'], ['watch', 'Watch']];
+function sandboxBtns() {
+  return ubtn(`${ico('wand')}<span class="bl">Sandbox</span>`, () => { sbOpen = !sbOpen; }, 'ico ' + (sbOpen ? 'on' : ''), false, 'Sandbox tools')
+    + ubtn(`<b class="sbseat ${online.devSeat}">${SEATS.find((x) => x[0] === online.devSeat)![1]}</b>`, () => { const i = SEATS.findIndex((x) => x[0] === online.devSeat); setDevSeat(SEATS[(i + 1) % SEATS.length][0]); selUnit = selChit = selArr = null; previewArea = null; refresh(); }, 'ico', false, 'Seat: who you play as (tap to switch)');
+}
+function sbTarget(): SB.Target {
+  const u = selUnit ? g.units.find((x) => x.id === selUnit) : null; if (u) return { kind: 'unit', id: u.id, label: `${u.name} (${u.side}, ${u.id})` };
+  const c = selChit ? g.chits.find((x) => x.id === selChit) : null; if (c) return { kind: 'chit', id: c.id, label: `${c.name} (${c.side}, ${c.id}, ${c.box})` };
+  if (selArea != null) return { kind: 'area', id: String(selArea), label: `${areaName(selArea)} (${selArea})` };
+  if (g.battle) return { kind: 'battle', id: String(g.battle.area), label: `battle in ${areaName(g.battle.area)}` };
+  return { kind: 'phase', id: g.phase, label: `turn ${g.turn}, ${g.phasing} ${g.phase}` };
+}
+function sbTurn() {
+  const turns = Array.from({ length: g.lastTurn }, (_, i) => [String(i + 1), `Turn ${i + 1}`] as [string, string]);
+  return `<h4>Jump to</h4><div class="row">${sbSel(turns, String(sbJump.turn), (v) => { sbJump.turn = +v; })}${sbSel([['german', 'German'], ['allied', 'Allied']], sbJump.side, (v) => { sbJump.side = v as E.Side; })}</div>
+    <div class="row">${sbSel(SB.PHASES, sbJump.phase, (v) => { sbJump.phase = v as E.Phase; })}${sbtn(`${ico('next')} Go`, () => SB.jump(g, sbJump.turn, sbJump.side, sbJump.phase), 'primary', 'Start of that phase: battles, moves and per-phase marks cleared')}</div>
+    <p class="hint">Now: turn ${g.turn}, ${nm(g.phasing)}, ${esc(SB.PHASES.find((x) => x[0] === g.phase)?.[1] ?? g.phase)}${g.battle ? `, battle in ${esc(areaName(g.battle.area))} (${g.battle.stage})` : ''}.</p>
+    <h4>Seat</h4><div class="chips">${SEATS.map(([k, l]) => ubtn(l, () => { setDevSeat(k); selUnit = selChit = selArr = null; previewArea = null; refresh(); }, online.devSeat === k ? 'on' : '')).join('')}</div>
+    <label class="sbchk"><input type="checkbox" ${sbAuto ? 'checked' : ''} data-sel="${regv((v) => { sbAuto = v === 'on'; render(); })}"> Skip empty phases like a real game</label>
+    <h4>Dice</h4><div class="row authform"><input id="sb-dice" class="grow" placeholder="Next results, e.g. 1 1 9" aria-label="Next die results">${sbtn('Queue', () => { const v = (($('#sb-dice') as HTMLInputElement)?.value ?? '').split(/[^0-9]+/).filter(Boolean).map(Number).map((x) => (x === 0 ? 10 : x)).filter((x) => x >= 1 && x <= 10); g.force = [...(g.force ?? []), ...v]; })}</div>
+    <p class="hint">${g.force?.length ? `Queued: <b>${g.force.join(' ')}</b> ${sbtn('Clear', () => { g.force = []; })}` : 'No dice queued: rolls come from the seed.'}</p>
+    <h4>Table</h4><div class="row">${sbtn(`${ico('trash')} Clear map`, () => SB.clearMap(g), '', 'Every block off the map')}${ubtn('New 5-turn', () => { g = E.newGame(undefined, { scenario: 'tournament', fuel: true }); hist.clear(); save(); refresh(); })}${ubtn('New campaign', () => { g = E.newGame(undefined, { scenario: 'campaign', fuel: true }); hist.clear(); save(); refresh(); })}</div>`;
+}
+function sbPieces() {
+  const out: string[] = [];
+  if (sbPlace) { const u = g.units.find((x) => x.id === sbPlace); out.push(`<p class="hint sbgo"><b>Tap an area to place ${esc(u?.name ?? '')}.</b> ${ubtn('Cancel', () => { sbPlace = null; })}</p>`); }
+  const u = selUnit ? g.units.find((x) => x.id === selUnit) : null;
+  if (u) {
+    const res: [string, string][] = [['', 'No reserve'], ...(u.side === 'german' ? ['z5', 'z6', 'z7'] : ['z56', 'z7']).map((z) => [z, `Reserve ${z.slice(1)}`] as [string, string])];
+    out.push(`<h4>${esc(u.name)}</h4><p class="hint">${nm(u.side)} ${u.cls}, ${esc(u.q.join('/'))}, id ${esc(u.id)}${u.area != null ? `, in ${esc(areaName(u.area))}` : ', off the map'}</p>
+      <div class="row">${sbtn(ico('minus'), () => { u.str = Math.max(1, u.str - 1); }, 'ico', 'One step less')}<b>${u.str} / ${u.max} steps</b>${sbtn(ico('plus'), () => { u.str = Math.min(u.max, u.str + 1); }, 'ico', 'One step more')}
+      ${sbSel([['0', 'Good order'], ['1', 'Disordered'], ['2', 'Recovering']], String(u.disorder), (v) => sbx(() => { u.disorder = +v as 0 | 1 | 2; }))}${sbSel(res, u.reserve ?? '', (v) => sbx(() => { u.reserve = v || null; }))}</div>
+      <div class="row">${sbChk('Out of supply', u.unsupplied, (v) => { u.unsupplied = v; })}${sbChk('Moved', u.moved, (v) => { u.moved = v; })}${sbChk('Exploitation', u.exploit, (v) => { u.exploit = v; })}${sbChk('Face-up', u.up != null && u.up === u.area, (v) => { u.up = v && u.area != null ? u.area : undefined; })}</div>
+      <div class="row">${ubtn(`${ico('next')} Move to…`, () => { sbPlace = u.id; }, '', false, 'Then tap an area')}${u.area != null ? sbtn(`${ico('trash')} Off the map`, () => SB.lift(g, u.id)) : ''}${ubtn(ico('close'), () => { selUnit = null; refresh(); }, 'ico', false, 'Deselect')}</div>`);
+  } else if (selArea != null) {
+    const a = selArea;
+    out.push(`<h4>${esc(areaName(a))} (${a})</h4><div class="row">${sbSel([['', 'Nobody holds it'], ['german', 'German control'], ['allied', 'Allied control']], g.control[a] ?? '', (v) => sbx(() => { if (v) g.control[a] = v as E.Side; else delete g.control[a]; }))}
+      ${sbChk('Field works', g.fieldWorks.includes(a), (v) => { g.fieldWorks = g.fieldWorks.filter((x) => x !== a); if (v) { g.fieldWorks.push(a); g.fwOwner[a] = g.control[a] ?? 'allied'; } })}${sbChk('River assault', g.riverAssault.includes(a), (v) => { g.riverAssault = g.riverAssault.filter((x) => x !== a); if (v) g.riverAssault.push(a); })}</div>
+      <div class="row">${E.contested(g, a) && !g.battle ? sbtn(`${ico('burst')} Battle here`, () => { E.startBattle(g, a); }, 'primary', 'Start a battle now, whatever the phase') : ''}${ubtn(ico('close'), () => { selArea = null; refresh(); }, 'ico', false, 'Deselect')}</div>
+      <div class="chips">${E.unitsIn(g, a).map((x) => `<button class="${x.side}" data-u="${esc(x.id)}">${esc(x.name)} ${x.str}/${x.max}</button>`).join('')}</div>`);
+  } else out.push('<p class="hint">Tap a block or an area to edit it.</p>');
+  const off = g.units.filter((x) => x.area == null && x.side === sbAddSide).sort((x, y) => x.name.localeCompare(y.name));
+  if (!off.some((x) => x.id === sbPick)) sbPick = off[0]?.id ?? '';
+  out.push(`<h4>Add a block</h4><div class="row">${sbSel([['german', 'German'], ['allied', 'Allied']], sbAddSide, (v) => { sbAddSide = v as E.Side; })}${off.length ? sbSel(off.map((x) => [x.id, `${x.name}${x.garrison ? ' (garrison)' : ''}${x.arrival ? ` t${x.arrival}` : ''}`]), sbPick, (v) => { sbPick = v; }) + ubtn(`${ico('plus')} Place`, () => { sbPlace = sbPick; }, 'primary', false, 'Then tap an area') : '<span class="hint">All on the map</span>'}</div>`);
+  return out.join('');
+}
+function sbChits() {
+  const f = sbFilter.toLowerCase(), list = g.chits.filter((c) => c.side === sbChitSide && (!f || `${c.name} ${c.kind} ${c.id}`.toLowerCase().includes(f)));
+  const boxes = SB.BOXES.map((b) => [b, b] as [string, string]);
+  return `<div class="row authform">${sbSel([['german', 'German'], ['allied', 'Allied']], sbChitSide, (v) => { sbChitSide = v as E.Side; })}<input class="grow" placeholder="Filter" value="${esc(sbFilter)}" data-sel="${regv((v) => { sbFilter = v; render(); })}"></div>
+    <div class="row">${sbtn('All shown → available', () => { for (const c of list) if (c.box !== 'map') c.box = 'available'; })}${sbtn('All shown → cup', () => { for (const c of list) if (c.box !== 'map') c.box = 'cup'; })}</div>
+    <div class="sblist">${list.map((c) => `<div class="sbrow"><button class="sbname" data-ui="${reg(() => { selChit = c.id; selUnit = null; refresh(); })}" title="Select (to comment on it)">${esc(c.name)}${c.turn != null ? ` <small>t${c.turn}</small>` : ''}</button>${sbSel(boxes, c.box, (v) => sbx(() => { c.box = v as E.Chit['box']; }))}</div>`).join('')}</div>`;
+}
+function sbNotesHtml() {
+  const t = sbTarget();
+  return `<p class="hint">Comment on: <b>${esc(t.kind)} · ${esc(t.label)}</b><br>Select a block, chit or area first to comment on it; otherwise the note goes on the current phase or battle.</p>
+    <div class="authform"><textarea id="sb-note" rows="3" placeholder="What is wrong, what you expected">${esc(sbDraft)}</textarea></div>
+    <div class="row">${ubtn(`${ico('plus')} Add note`, () => { const v = (($('#sb-note') as HTMLTextAreaElement)?.value ?? sbDraft).trim(); if (!v) return say('Write the note first.'); sbNotes.push(SB.makeNote(g, t, v, online.devSeat)); const w = SB.saveNotes(sbNotes); sbDraft = ''; say(w || 'Note added, with a snapshot of the game.'); }, 'primary')}
+      ${ubtn(`${ico('share')} Download report (${sbNotes.length})`, () => SB.report(sbNotes, g, location.origin + location.pathname), '', !sbNotes.length)}
+      ${ubtn(`${ico('trash')} Clear`, () => { if (confirm('Delete all notes?')) { sbNotes = []; SB.saveNotes(sbNotes); } }, '', !sbNotes.length)}</div>
+    <div class="sblist">${[...sbNotes].reverse().map((x) => `<div class="sbnote"><small>T${x.turn} ${esc(x.phasing)} ${esc(x.phase)}${x.battle ? ' · battle' : ''} · ${esc(x.target.kind)} ${esc(x.target.label)}</small><p>${esc(x.text)}</p><div class="row">
+      ${x.state ? ubtn('Back to this moment', () => { g = JSON.parse(x.state!); hist.clear(); save(); refresh(); }, '', false, 'Load the game as it was when the note was written') : ''}${ubtn(ico('trash'), () => { sbNotes = sbNotes.filter((y) => y.id !== x.id); SB.saveNotes(sbNotes); }, 'ico', false, 'Delete note')}</div></div>`).join('')}</div>`;
+}
+function sandboxPanel() {
+  const tabs = ['Turn', 'Pieces', 'Chits', 'Notes'], body = sbTab === 'Pieces' ? sbPieces() : sbTab === 'Chits' ? sbChits() : sbTab === 'Notes' ? sbNotesHtml() : sbTurn();
+  return `<div class="sbx"><div class="tabs">${tabs.map((t) => `<button class="${t === sbTab ? 'on' : ''}" data-ui="${reg(() => { sbTab = t; })}">${t === 'Notes' ? `Notes (${sbNotes.length})` : t}</button>`).join('')}${ubtn(ico('close'), () => { sbOpen = false; }, 'ico', false, 'Hide the sandbox tools')}</div>${body}</div>`;
+}
+const inGame = () => HAS_TABLE || DEV_FAKE || SANDBOX || online.mode === 'local';
 /** Draw the interface; if something in it throws, say so on screen instead of leaving a stale picture. */
 function render() { syncView(); try { renderInner(); } catch (e) { console.error(e); $('#ui').innerHTML = `<div class="seatbar err"><span>Display problem: ${esc(String((e as Error)?.message ?? e))}</span>${ubtn('Reload', () => location.reload(), 'primary')}</div>`; bind($('#ui')); } }
 function renderInner() {
@@ -1066,12 +1144,13 @@ function renderInner() {
   acts = {}; actv = {}; n = 0;
   canvas.style.display = inGame() ? '' : 'none';
   if (!inGame()) { $('#ui').innerHTML = (modal === 'rules' ? rulesHtml() : '') + homeHtml(); bind($('#ui')); return; }
+  if (SANDBOX && !(online.admin || (DEV && online.ready))) { canvas.style.display = 'none'; $('#ui').innerHTML = `<div class="homepage"><div class="homein"><section class="card"><h2>${ico('lock')} Sandbox</h2><p class="hint">${online.ready ? 'The sandbox is for admins. Sign in with an admin account on the home page.' : 'Checking your account…'}</p><div class="row">${ubtn(`${ico('back')} Home`, () => { location.href = homeUrl(); })}</div></section></div></div>`; bind($('#ui')); return; }
   if (rollView && !g.battle) endRoll();                                                                   // dice left on screen after the battle is over
   const p = primary(), b = g.battle;
   const alert = g.pendingBlow ? (() => { const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!, path = g.pendingBlow!.path; return `<div class="c-ledger"><h3>${nm(other(u.side))}: bridge?</h3><p class="hint">${esc(u.name)} tries to cross into ${esc(areaName(path[path.length - 1]))}. Attempt to blow the bridge? It works on a roll of 1–5.</p><div class="row end">${btn('Let them cross', () => E.resolveBlow(g, false))}${btn('Attempt to blow it', () => E.resolveBlow(g, true), 'primary')}</div></div>`; })() : '';
   const dockMain = alert || ledger() || handCards();
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = topBar() + `<div class="stage">${seatBar()}${b ? battleTable() : dispatch()}${decisionBubble()}${legend()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p && allowed() ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
+  $('#ui').innerHTML = topBar() + `<div class="stage">${SANDBOX && sbOpen ? sandboxPanel() : ''}${seatBar()}${b ? battleTable() : dispatch()}${decisionBubble()}${legend()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p && allowed() ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
   const ui = $('#ui');
   bind(ui, keepH, keepA);
 }
@@ -1081,6 +1160,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
   ui.querySelectorAll<HTMLElement>('[data-do]').forEach((e) => (e.onclick = () => { if (inGame()) act(acts[e.dataset.do!]); else { acts[e.dataset.do!]?.(); render(); } }));        // on the home page nothing is a game move
   ui.querySelectorAll<HTMLElement>('[data-modal]').forEach((e) => (e.onclick = () => { modal = (e.dataset.modal || null) as typeof modal; render(); }));
   ui.querySelectorAll<HTMLElement>('[data-sel]').forEach((e) => (e.onchange = () => { const f = actv[e.dataset.sel!]; if (f) { f(e instanceof HTMLInputElement && e.type === 'checkbox' ? (e.checked ? 'on' : 'off') : (e as HTMLSelectElement).value); save(); } }));
+  ui.querySelectorAll<HTMLTextAreaElement>('#sb-note').forEach((e) => (e.oninput = () => { sbDraft = e.value; }));
   ui.querySelectorAll<HTMLElement>('[data-arr]').forEach((e) => (e.onpointerdown = (ev) => dragArrival(ev, e)));
   ui.querySelectorAll<HTMLElement>('[data-arr]').forEach((e) => (e.onclick = () => { selArr = selArr === e.dataset.arr ? null : e.dataset.arr!; refresh(); frameArrival(); }));
   ui.querySelectorAll<HTMLElement>('[data-auth]').forEach((e) => (e.onclick = () => {

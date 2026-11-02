@@ -35,6 +35,8 @@ const params = new URLSearchParams(location.search);
 export const DEV = import.meta.env.DEV || params.has('dev') || (() => { try { return localStorage.getItem('fab-dev') === '1'; } catch { return false; } })();
 export const TABLE = params.get('table') || 'main';
 export const HAS_TABLE = params.has('table'), DEV_FAKE = DEV && params.has('fake');
+/** The admin sandbox (`?sandbox`): a private test table in this browser; the account is only read to check that it is an admin. */
+export const SANDBOX = params.has('sandbox');
 export type DevSeat = 'german' | 'allied' | 'both' | 'watch';
 
 export const online = {
@@ -42,11 +44,11 @@ export const online = {
   mode: 'off' as 'off' | 'local' | 'remote', uid: '', seats: {} as Seats, rev: 0, error: '', sync: 'connecting' as string, ready: false,
   devSeat: 'both' as DevSeat, enemyAlias: new Map<string, string>(), account: null as Account | null, admin: false, hasAccounts: false,
   mySide(): Side | null {
-    if (DEV && this.mode !== 'off') return this.devSeat === 'german' || this.devSeat === 'allied' ? this.devSeat : null;
+    if ((DEV || SANDBOX) && this.mode !== 'off') return this.devSeat === 'german' || this.devSeat === 'allied' ? this.devSeat : null;
     return this.seats.german === this.uid && this.uid ? 'german' : this.seats.allied === this.uid && this.uid ? 'allied' : null;
   },
   /** True when this client may act for whoever's turn it is (the development "both" seat). */
-  both() { return this.mode === 'off' || (DEV && this.devSeat === 'both'); },
+  both() { return this.mode === 'off' || ((DEV || SANDBOX) && this.devSeat === 'both'); },
   get active() { return this.mode !== 'off'; },
 };
 
@@ -73,6 +75,10 @@ export async function startOnline(remote: (g: Game) => void, changed: () => void
     if (store && (fake === 'german' || fake === 'allied')) online.devSeat = fake;                  // a stand-in store plays one seat per tab
   } catch (e) { online.error = String(e); store = null; }
   if (!store) { if (DEV) online.mode = 'local'; online.ready = true; changed(); return; }
+  if (SANDBOX) {                                                                                   // only the account: the game stays in this browser
+    const sync = (a: Account) => { online.account = a; online.uid = a.uid; online.admin = a.admin; onChange(); }; sync(store.account()); store.onAccount(sync);
+    online.mode = 'local'; online.ready = true; online.hasAccounts = true; changed(); return;
+  }
   online.ready = true; online.mode = 'remote'; online.uid = store.uid; online.hasAccounts = true;
   const sync = (a: Account) => { online.account = a; online.uid = a.uid; online.admin = a.admin; onChange(); }; sync(store.account()); store.onAccount(sync);
   store.watchSeats((s) => { online.seats = s; onChange(); rebuild(); }, fail);
