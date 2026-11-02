@@ -314,6 +314,7 @@ function paintAreas() {
     if (tgt) { if (tgt.areas.has(id) || (tgt.any && false)) { c = tgt.color.get(id) ?? 0x37d67a; o = 0.5; } else if (tgt.pick.has(id) && (!tgt.focus || tgt.color.has(id))) { c = tgt.color.get(id) ?? 0xe7b04a; o = 0.45; } }
     const ar = arrOpts().find((x) => x.area === id); if (ar) { c = ar.sa ? 0xff8a3d : 0x37d67a; o = 0.45; }
     if (g.battle?.stage === 'retreat' && E.retreatOptions(g, g.battle).includes(id)) { c = 0x37d67a; o = 0.5; }
+    if (g.inPlay && !g.inPlay.includes(id)) { c = 0x000000; o = 0.62; }                                   // 24.33 outside the Introductory map sheet
     mat.color.setHex(c); mat.opacity = o;
   }
 }
@@ -341,7 +342,7 @@ function pick(e: PointerEvent) {
   const hitPiece = ray.intersectObjects(pieces.children, false)[0];
   const hitBoard = ray.intersectObject(board)[0];
   let area: number | null = null;
-  if (hitBoard) { const px = (hitBoard.point.x + MW / (2 * S)) * S, py = (hitBoard.point.z + MH / (2 * S)) * S; area = MAP.areas.find((a) => inside(px, py, a.polygon))?.id ?? null; }
+  if (hitBoard) { const px = (hitBoard.point.x + MW / (2 * S)) * S, py = (hitBoard.point.z + MH / (2 * S)) * S; area = MAP.areas.find((a) => inside(px, py, a.polygon))?.id ?? null; if (area != null && g.inPlay && !g.inPlay.includes(area)) area = null; }
   return { unit: hitPiece?.object.userData.unit as string | undefined, chit: hitPiece?.object.userData.chit as string | undefined, area };
 }
 function inside(x: number, y: number, poly: [number, number][]) { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; }
@@ -785,7 +786,7 @@ function drag(ev: PointerEvent, el: HTMLElement) {
 
 /* ---------- views ---------- */
 function topBar() {
-  const v = E.victory(g), tr = E.TRACK[g.turn - 1], i = g.phasing === 'german' ? 0 : 1, at = STEP_OF[g.phase];
+  const v = E.victory(g), tr = (g.track ?? E.TRACK)[g.turn - 1], i = g.phasing === 'german' ? 0 : 1, at = STEP_OF[g.phase];
   return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game" aria-label="Menu, log and new game">${ico('menu')}</button>${SANDBOX ? sandboxBtns() : ''}<div class="c-crumbs">${STEPS.map((s, k) => `<span class="${k === at ? 'on' : k < at ? 'done' : ''}">${s}</span>`).join('')}</div>
     <button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="Map overlay: terrain defence / army zones / off" aria-label="Map overlay">${ico('layers')}<span class="bl">Overlay</span></button><button class="ico" data-home title="Reset the camera" aria-label="Reset the camera">${ico('home')}<span class="bl">View</span></button><button class="ico" data-undo title="${hist.length ? 'Undo: ' + esc(note || 'last action') + ' (Ctrl+Z)' : 'Nothing to undo yet. Undo is available until a die is rolled.'}" aria-label="Undo" ${hist.length ? '' : 'disabled'}>${ico('undo')}<span class="bl">Undo</span></button><div class="c-stat"><span>TURN<b>${g.turn}</b></span><span>PLAYING<b class="${g.phasing}">${nm(g.phasing).toUpperCase()}</b></span>${online.active && online.mode === 'remote' ? `<span class="syncdot ${/NOT SAVED/.test(online.sync) ? 'bad' : /saving|connecting/.test(online.sync) ? 'wait' : 'ok'}" title="${esc(online.sync)}" aria-label="${esc(online.sync)}"></span>` : ''}${online.active ? `<span>YOU<b class="${online.mySide() ?? ''}">${online.both() ? 'BOTH' : (online.mySide() ?? 'WATCHING').toUpperCase()}</b></span>` : ''}${DEV || SANDBOX ? `<button class="ico dev" data-seat title="Developer: switch seat (German, Allied, both, watching)" aria-label="Switch seat">${ico('swap')}<span class="bl">Seat</span></button>` : ''}<span>NET VP<b>${v.net > 0 ? 'GE +' + v.net : v.net < 0 ? 'AL +' + -v.net : '0'}</b></span>${g.phase === 'admin' || g.phase === 'reinforcement' ? `<span title="Chits drawn this turn (German / Allied)">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span>` : ''}<button class="ico" data-modal="boxes" title="Pieces: boxes, arrivals" aria-label="Pieces">${ico('boxes')}</button></div></div>`;
 }
@@ -1044,7 +1045,7 @@ function homeHtml() {
   const create = creating ? `<div class="sheetbox"><div class="lh"><h3>${ico('plus')} New game</h3>${ubtn(ico('close'), () => { creating = false; }, 'ico', false, 'Cancel')}</div>
       <div class="authform"><input placeholder="Name (optional)" value="${esc(form.title)}" data-sel="${regv((x) => { form.title = x; })}"></div>
       <div class="tiles">${tile('german', 'German', 'GE')}${tile('allied', 'Allied', 'AL')}${tile('', 'Later', '?')}</div>
-      <div class="chips">${chip('5', form.scenario === 'tournament', () => { form.scenario = 'tournament'; }, 'Tournament, 5 turns', 'calendar')}${chip('9', form.scenario === 'campaign', () => { form.scenario = 'campaign'; }, 'Campaign, 9 turns', 'calendar')}${chip('', form.fuel, () => { form.fuel = !form.fuel; }, 'German fuel rule', 'fuel')}</div>
+      <div class="chips">${chip('5', form.scenario === 'tournament', () => { form.scenario = 'tournament'; }, 'Tournament, 5 turns', 'calendar')}${chip('9', form.scenario === 'campaign', () => { form.scenario = 'campaign'; }, 'Campaign, 9 turns', 'calendar')}${chip('3', form.scenario === 'intro', () => { form.scenario = 'intro'; }, 'Nuts! Introductory, 3 turns, Bastogne', 'star')}${chip('', form.fuel, () => { form.fuel = !form.fuel; }, 'German fuel rule', 'fuel')}</div>
       <div class="row">${btn(`${ico('check')}<span>Create</span>`, () => { void createGame(); }, 'primary', !info?.ready)}</div></div>` : '';
   return `<div class="homepage"><div class="homein">
     <header class="hbar"><div><h1>Fast Action Battles</h1><p>${esc(info?.name ?? '')} · ${esc(info?.vol ?? '')}</p></div><div class="who"><span class="avatar" title="${esc(a!.name || a!.email)}">${esc((a!.name || a!.email || '?').slice(0, 1).toUpperCase())}</span>${online.admin ? ubtn(ico('wand'), () => { location.href = `${homeUrl()}?sandbox=1`; }, 'ico', false, 'Admin: sandbox test table') + ubtn(ico('lock'), () => { modal = 'rules'; }, 'ico', false, 'Admin: update the database rules') : ''}<button class="ico" data-auth="out" title="Sign out" aria-label="Sign out">${ico('logout')}</button></div></header>
@@ -1106,7 +1107,7 @@ function modalHtml() {
     if (!tabs.includes(menuTab)) menuTab = 'Players';
     const body = menuTab === 'Log' ? `<div class="log">${[...g.log].reverse().slice(0, 120).map((l) => `<div>${esc(l)}</div>`).join('')}</div>`
       : menuTab === 'Settings' ? `<h4>Map</h4><div class="row">${ubtn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${ubtn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Map art</h4><div class="row"><select data-sel="${regv((x) => setArt(x as 'vector' | 'scan'))}"><option value="vector" ${art === 'vector' ? 'selected' : ''}>Vector layers (traced)</option><option value="scan" ${art === 'scan' ? 'selected' : ''}>Original scan</option></select></div>
-        ${online.active && !online.admin && !online.both() ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as 'tournament' | 'campaign'; })}"><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
+        ${online.active && !online.admin && !online.both() ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as E.Opts['scenario']; })}"><option value="intro" ${newOpts.scenario === 'intro' ? 'selected' : ''}>Nuts! introductory (3 turns)</option><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
         <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Restart', () => { if (!confirm('Restart and lose the current game?')) return; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'danger')}</div>`}`
       : menuTab === 'Admin' ? `<div class="row">${ubtn(`${ico('wand')} Sandbox`, () => { location.href = `${homeUrl()}?sandbox=1`; })}${ubtn('Update rules', () => { modal = 'rules'; })}${ubtn('Free German seat', () => { void auth.freeSeat('german'); })}${ubtn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div>`
       : online.mode === 'remote' ? (() => {
@@ -1158,7 +1159,7 @@ function sbReset(opts: Partial<E.Opts>) {
   save(); refresh();
 }
 function sandboxBtns() {
-  return ubtn(`${ico('wand')}<span class="bl">Sandbox</span>`, () => { sbOpen = !sbOpen; }, 'ico ' + (sbOpen ? 'on' : ''), false, 'Sandbox tools') + ubtn(`${ico('undo')}<span class="bl">Reset</span>`, () => sbReset({ scenario: g.lastTurn > 5 ? 'campaign' : 'tournament' }), 'ico', false, 'Reset: a new game from the first turn (same scenario)');
+  return ubtn(`${ico('wand')}<span class="bl">Sandbox</span>`, () => { sbOpen = !sbOpen; }, 'ico ' + (sbOpen ? 'on' : ''), false, 'Sandbox tools') + ubtn(`${ico('undo')}<span class="bl">Reset</span>`, () => sbReset({ scenario: g.opts.scenario }), 'ico', false, 'Reset: a new game from the first turn (same scenario)');
 }
 function sbTarget(): SB.Target {
   const u = selUnit ? g.units.find((x) => x.id === selUnit) : null; if (u) return { kind: 'unit', id: u.id, label: `${u.name} (${u.side}, ${u.id})` };
@@ -1177,7 +1178,7 @@ function sbTurn() {
     <label class="sbchk"><input type="checkbox" ${sbAuto ? 'checked' : ''} data-sel="${regv((v) => { sbAuto = v === 'on'; render(); })}"> Skip empty phases like a real game</label>
     <h4>Dice</h4><div class="row authform"><input id="sb-dice" class="grow" placeholder="Next results, e.g. 1 1 9" aria-label="Next die results">${sbtn('Queue', () => { const v = (($('#sb-dice') as HTMLInputElement)?.value ?? '').split(/[^0-9]+/).filter(Boolean).map(Number).map((x) => (x === 0 ? 10 : x)).filter((x) => x >= 1 && x <= 10); g.force = [...(g.force ?? []), ...v]; })}</div>
     <p class="hint">${g.force?.length ? `Queued: <b>${g.force.join(' ')}</b> ${sbtn('Clear', () => { g.force = []; })}` : 'No dice queued: rolls come from the seed.'}</p>
-    <h4>Table</h4><div class="row">${sbtn(`${ico('trash')} Clear map`, () => SB.clearMap(g), '', 'Every block off the map')}${ubtn(`${ico('undo')} Reset: 5-turn game`, () => sbReset({ scenario: 'tournament' }))}${ubtn(`${ico('undo')} Reset: campaign`, () => sbReset({ scenario: 'campaign' }))}</div>`;
+    <h4>Table</h4><div class="row">${sbtn(`${ico('trash')} Clear map`, () => SB.clearMap(g), '', 'Every block off the map')}${ubtn(`${ico('undo')} Reset: Nuts!`, () => sbReset({ scenario: 'intro' }))}${ubtn(`${ico('undo')} Reset: 5-turn game`, () => sbReset({ scenario: 'tournament' }))}${ubtn(`${ico('undo')} Reset: campaign`, () => sbReset({ scenario: 'campaign' }))}</div>`;
 }
 /* The piece library: every block and chit with its printed art, a search box and filters. */
 let lbSide: 'all' | E.Side = 'all', lbType = 'all', lbWhere = 'all';
@@ -1298,6 +1299,7 @@ function driveSplit() {
 }
 let ctlKey = '', tgtKey = '';
 function refresh() {
+  E.setPlayArea(g.inPlay);
   hotseatSync();
   if (online.mode === 'remote') setTimeout(driveSplit, 0);
   { const key = `${online.devSeat}|${online.mySide()}|${g.battle?.attPoint}|${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed

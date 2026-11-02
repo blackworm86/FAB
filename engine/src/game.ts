@@ -1,7 +1,7 @@
 import unitsJson from '../../data/bulge/units.json';
 import entryJson from '../../data/bulge/entry_areas.json';
 import scenJson from '../../data/bulge/scenarios.json';
-import { areas, connection, edgeKey, neighbors, zoneOf } from './map';
+import { areas, connection, edgeKey, neighbors, allNeighbors, setPlayArea, zoneOf } from './map';
 import { d10, rng, succeeds } from './dice';
 import { moraleSn, successNumber, type Quality, type Shooter } from './combat';
 import { reachable } from './movement';
@@ -35,7 +35,7 @@ export interface Battle {
   pending: number; pendingKind?: 'arty' | 'ground'; engFw: boolean; rolls: Roll[]; result?: string; exploit: boolean; unitHit: Record<Side, boolean>; mark: number; hit?: Record<Side, string[]>;
   ready?: Side[]; locked?: boolean;
 }
-export interface Opts { scenario: 'tournament' | 'campaign'; fuel: boolean; airborne?: boolean; advArty?: boolean }
+export interface Opts { scenario: 'tournament' | 'campaign' | 'intro'; fuel: boolean; airborne?: boolean; advArty?: boolean }
 export interface Game {
   /** Set when hidden blocks are split between seats: setReady does not start combat by itself (see split.ts). */
   deferBegin?: boolean;
@@ -49,6 +49,8 @@ export interface Game {
   recover: Side[];
   battle: Battle | null; seed: number; rolls: number; log: string[]; over?: string;
   force?: number[];
+  inPlay?: number[];   /** 24.33 the Introductory scenario plays on its own map sheet: only these areas */
+  track?: { ge: number[]; al: number[]; sd: number[] | null }[];   /** draws per turn when the scenario has its own track */
   artyPick?: boolean;
   checks?: Check[];   /** morale checks rolled outside battles (supply, Greif interdict), newest last, so the table can show the dice */   /** 16.12: the German player must choose which used artillery asset is eliminated */   /** sandbox: die results to use before the seeded ones */
 }
@@ -76,6 +78,27 @@ const AIRBORNE = new Set(['82', '101', '517']);                                 
 const ARMY = (u: Unit): number | undefined => (u.ech ? ZONE[u.ech] : undefined);
 
 /* ================= setup ================= */
+/** 24.3 Introductory scenario "Nuts!": its map sheet, forces, chits and draws (Play Book back page and the scenario map sheet). */
+const INTRO_AREAS = [12, 13, 14, 15, 19, 20, 21, 22, 36, 37, 38, 39, 45, 46, 47, 48, 63, 64];
+const EDGE_INTRO: number[] = [];
+const INTRO_UNITS: Record<string, number> = { '116 Pz': 12, '560 VG': 12, Lehr: 13, '276 VG': 15, '5 FJ': 19, '26 VG': 20, '2 Pz': 21, '112/28': 12, '109/28': 19, '110/28': 21, 'CCR/9': 37 };
+/** Chits in play: turn 1 ones start Available; later ones enter the cup on their turn (drawn per the sheet's turn track). */
+const INTRO_CHITS: Record<string, number> = { 'L47.0': 1, 'L46.0': 1, 'L36.0': 1, 'L31.0': 1, 'L33.0': 1, 'R17.0': 1, 'R17.1': 1, 'R15.0': 2, 'L35.0': 3, 'R48.0': 3,
+  'L79.0': 2, 'L65.0': 2, 'L88.0': 2, 'L62.0': 2, 'L71.0': 2, 'R71.0': 2, 'SA-allied': 2, 'L83.0': 3 };
+function introSetup(g: Game) {
+  g.inPlay = [...INTRO_AREAS]; g.lastTurn = 3;
+  g.track = [{ ge: [0, 0], al: [0, 0], sd: null }, { ge: [4, 1], al: [3, 0], sd: null }, { ge: [3, 0], al: [3, 0], sd: null }];
+  for (const u of g.units) {
+    if (u.garrison) { if (u.area !== 38 && u.area !== 47) u.area = null, u.str = 0; continue; }
+    if (u.name === '10 Arm') { u.area = null; u.arrival = 2; u.entry = ['#46']; u.str = u.max; continue; }       // 24.35 arrives at full strength into Martelange
+    u.area = INTRO_UNITS[u.name] ?? null; u.str = u.max; if (u.area == null) u.arrival = undefined;
+  }
+  g.units = g.units.filter((u) => u.area != null || u.arrival != null);
+  g.chits = g.chits.filter((c) => INTRO_CHITS[c.id] != null);
+  for (const c of g.chits) { const t = INTRO_CHITS[c.id]; c.turn = t; c.box = t === 1 ? 'available' : 'future'; }
+  g.fieldWorks = [12, 19, 21]; g.riverAssault = [21]; g.blown = [edgeKey(13, 21), edgeKey(13, 20)];
+  g.markers = { german: { z5: 1, z6: 0, z7: 1 }, allied: { z56: 1, z7: 0 } };
+}
 export function newGame(seed = Date.now() % 1e9, opts: Partial<Opts> = {}): Game {
   const o: Opts = { scenario: 'tournament', fuel: true, ...opts }, sc = scenJson.tournament, last = o.scenario === 'campaign' ? 9 : 5;
   const units: Unit[] = [];
@@ -90,14 +113,16 @@ export function newGame(seed = Date.now() % 1e9, opts: Partial<Opts> = {}): Game
   const g: Game = { turn: 1, lastTurn: last, phasing: 'german', phase: 'combat', units, chits: buildChits(last), control: {}, fieldWorks: [...sc.fieldWorks], fwOwner: {}, riverAssault: [...sc.riverAssault], blown: [...sc.blownBridges],
     contestedAtMoveStart: [], fought: [], markers: { german: { z5: 2, z6: 2, z7: 1 }, allied: { z56: 3, z7: 2 } }, stratMoves: 0, riverCross: [], blowTried: [], entered: {}, pendingBlow: null, greif: {}, greifTried: [], fwBuilt: [], tfNew: [],
     elimLarge: [], captured: [], fuelAdded: false, opts: o, roadblocks: {}, interdicted: {}, pooled: null, airSupply: null, revealed: null, arrived: [], pendingArrivals: [], recover: [], battle: null, seed, rolls: 0, log: [] };
+  if (o.scenario === 'intro') introSetup(g);
+  setPlayArea(g.inPlay);
   for (const fa of g.fieldWorks) g.fwOwner[fa] = units.some((u) => u.side === 'allied' && u.area === fa) ? 'allied' : 'german';
-  const peiper = units.find((u) => u.name === 'Peiper')!; peiper.reserve = 'z6'; g.markers.german.z6--;
+  if (o.scenario !== 'intro') { const peiper = units.find((u) => u.name === 'Peiper')!; peiper.reserve = 'z6'; g.markers.german.z6--; }
   const ger = new Set(units.filter((u) => u.side === 'german' && u.area).map((u) => u.area!));
   const todo = units.filter((u) => u.side === 'allied' && u.area).map((u) => u.area!), seen = new Set(todo);
   while (todo.length) for (const n of neighbors(todo.pop()!)) if (!seen.has(n) && !ger.has(n)) { seen.add(n); todo.push(n); }
   for (const a of areas.keys()) g.control[a] = seen.has(a) ? 'allied' : 'german';
   for (const a of [1, 2, 3, 4, 5, 6, 7, 8, 14, 15]) if (!units.some((u) => u.side === 'allied' && u.area === a)) g.control[a] = 'german';
-  say(g, `${o.scenario === 'campaign' ? 'Campaign' : 'Tournament'} scenario set up. All contested areas must be fought this phase.`);
+  say(g, `${o.scenario === 'campaign' ? 'Campaign' : o.scenario === 'intro' ? 'Introductory (Nuts!)' : 'Tournament'} scenario set up. All contested areas must be fought this phase.`);
   return g;
 }
 
@@ -113,10 +138,12 @@ function updateControl(g: Game, a: number) {
     else if (r <= 5) { const f = g.chits.find((c) => c.kind === 'fuel' && c.box === 'used') ?? g.chits.find((c) => c.kind === 'fuel' && c.box === 'cup'); if (f) { f.box = 'available'; say(g, `captured fuel at ${areas.get(a)!.name} (rolled ${r}): a fuel asset is available again`); } }
   }
 }
-const sources = (side: Side) => new Set(Object.values(ENTRY).filter((e) => sideOf(e.side) === side).map((e) => e.area));
+const sources = (g: Game, side: Side) => g.inPlay ? new Set(g.inPlay.filter((a) => allNeighbors(a).some((n) => !g.inPlay!.includes(n)) || EDGE_INTRO.includes(a)))      // 24.36 any area at the edge of the play area
+  : new Set(Object.values(ENTRY).filter((e) => sideOf(e.side) === side).map((e) => e.area));
 export function inSupply(g: Game, side: Side, start: number) {
+  setPlayArea(g.inPlay);
   if (g.airSupply?.side === side && g.airSupply.area === start) return true;                // 17.2 Air Supply Mission
-  const src = sources(side), enemy = other(side);
+  const src = sources(g, side), enemy = other(side);
   const blocked = (a: number) => !unitsIn(g, a).length && neighbors(a).some((n) => g.control[n] === enemy && unitsIn(g, n, enemy).length && !unitsIn(g, n, side).length);
   const seen = new Set([start]), todo = [start];
   while (todo.length) {
@@ -181,8 +208,8 @@ function reinforcementPhase(g: Game) {
   g.arrived = [];
   g.recover = []; g.artyPick = false;
   for (const side of ['german', 'allied'] as Side[]) {
-    const sa = g.chits.find((c) => c.kind === 'sa_block' && c.side === side && c.turn === 2 && g.turn >= 2)!;
-    if (g.turn >= 2) {
+    const sa = g.chits.find((c) => c.kind === 'sa_block' && c.side === side && c.turn === 2 && g.turn >= 2);
+    if (g.turn >= 2 && sa) {
       if (sa.box === 'available') { if (boxOf(g, side, 'used').some((c) => isAsset(c))) { g.recover.push(side); continue; } }   // 4.1a unused reusable SA: the player brings one asset back first
       else sa.box = 'available';
     }
@@ -220,6 +247,7 @@ const fuelChits = (g: Game) => boxOf(g, 'german', 'available').filter((c) => c.k
 export interface Opt { area: number; cost: number; fuel: boolean; mustStop: boolean; path: number[] }
 const markerAreas = (g: Game, owner: Side) => Object.keys(g.roadblocks).map(Number).filter((a) => g.roadblocks[a] === owner && !unitsIn(g, a).length);
 export function moveOptions(g: Game, id: string): Opt[] {
+  setPlayArea(g.inPlay);
   const u = g.units.find((x) => x.id === id)!;
   if (u.area == null || u.garrison || u.moved) return [];
   const mover = g.phase === 'reaction' ? other(g.phasing) : g.phasing;
@@ -710,6 +738,7 @@ function finishDef(g: Game, b: Battle, kind: 'arty' | 'ground', retreated: boole
 }
 /** Where a retreating block may go: adjacent, friendly-controlled, free of enemies, room for one more block (6.5). */
 export function retreatOptions(g: Game, b: Battle): number[] {
+  setPlayArea(g.inPlay);
   const r = b.retreat; if (!r) return [];
   return neighbors(b.area).filter((n) => g.control[n] === r.side && !unitsIn(g, n, other(r.side)).length && blocks(g, n, r.side).length < 2);
 }
@@ -810,6 +839,7 @@ function supplyPhase(g: Game) {
 }
 export function setDone(g: Game, side: Side, on = true) { const d = (g.done ?? []).filter((x) => x !== side); if (on) d.push(side); g.done = d; }
 export function endPhase(g: Game) {
+  setPlayArea(g.inPlay);
   g.done = [];
   settleUp(g);
   if (g.over) return;
@@ -829,10 +859,10 @@ export function endPhase(g: Game) {
     g.units.forEach((u) => { u.exploit = false; });
     if (g.phasing === 'german') g.phasing = 'allied';
     else {
-      const v = victory(g), sd = TRACK[g.turn - 1].sd;
+      const v = victory(g), sd = g.inPlay ? null : (g.track ?? TRACK)[g.turn - 1].sd;
       say(g, `Victory check: German ${v.german}, Allied ${v.allied}, net ${v.net > 0 ? 'German +' + v.net : v.net < 0 ? 'Allied +' + -v.net : '0'}`);
       if (sd && ((v.net > 0 && v.net >= sd[0]) || (v.net < 0 && -v.net >= sd[1]))) { g.over = `Sudden death victory: ${v.net > 0 ? 'German' : 'Allied'} (net ${Math.abs(v.net)})`; return; }
-      if (g.turn >= g.lastTurn) { g.over = finalResult(g, v.net); return; }
+      if (g.turn >= g.lastTurn) { g.over = g.opts.scenario === 'intro' ? introResult(g) : finalResult(g, v.net); return; }
       g.turn++; g.phasing = 'german'; g.phase = 'reinforcement'; reinforcementPhase(g); g.units.forEach((u) => { u.moved = false; u.spent = 0; }); say(g, 'reinforcement phase'); return;
     }
     g.phase = 'admin'; drawFor(g); return;
@@ -849,9 +879,17 @@ export function endPhase(g: Game) {
   say(g, 'phase start');
 }
 function drawFor(g: Game) {
-  const i = g.phasing === 'german' ? 0 : 1, t = TRACK[g.turn - 1];
+  const i = g.phasing === 'german' ? 0 : 1, t = (g.track ?? TRACK)[g.turn - 1];
   drawChits(g, 'german', t.ge[i]); drawChits(g, 'allied', t.al[i]);
   say(g, `Admin draws: German ${t.ge[i]}, Allied ${t.al[i]}`);
+}
+/** 24.37: uncontested control of Bastogne wins outright; otherwise strength points in Bastogne, the German losing 2 per key area he does not control. */
+function introResult(g: Game) {
+  const b = 47, c = contested(g, b);
+  if (!c && unitsIn(g, b).length) { const s = unitsIn(g, b)[0].side; return `${s === 'german' ? 'German' : 'Allied'} Decisive Victory (uncontested Bastogne)`; }
+  const pts = (s: Side) => unitsIn(g, b, s).filter((u) => !u.garrison).reduce((t, u) => t + u.str, 0);
+  const ge = pts('german') - 2 * [39, 36, 48, 63, 64].filter((a) => g.control[a] !== 'german').length, al = pts('allied');
+  return `${ge > al ? 'German' : 'Allied'} Marginal Victory (German ${ge}, Allied ${al})`;
 }
 function finalResult(g: Game, net: number) {
   if (g.opts.scenario === 'campaign') return net >= 4 ? 'German Operational Victory' : net >= 1 ? 'German Marginal Victory' : net === 0 ? 'Draw' : net >= -3 ? 'Allied Marginal Victory' : 'Allied Operational Victory';
@@ -916,7 +954,7 @@ export function reroute(g: Game, unitId: string, area: number) {
 }
 
 /* ================= arrivals (4.1c) ================= */
-const listedEntries = (u: Unit) => (u.entry ?? []).map((l) => ENTRY[l]?.area).filter(Boolean) as number[];
+const listedEntries = (u: Unit) => (u.entry ?? []).map((l) => (l.startsWith('#') ? +l.slice(1) : ENTRY[l]?.area)).filter(Boolean) as number[];
 const stackFree = (g: Game, u: Unit, a: number) => g.turn === 4 && u.side === 'german' && a === ENTRY.Z.area;                // 15.3
 const entryOpen = (g: Game, u: Unit, a: number) => (g.control[a] === u.side || !unitsIn(g, a).length) && (blocks(g, a, u.side).length < 2 || stackFree(g, u, a)) && !unitsIn(g, a, other(u.side)).length;
 /** Entry areas a block that has not arrived yet may be placed in. Areas outside its listed ones cost a Special Action (8.27). */

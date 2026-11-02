@@ -11,5 +11,11 @@ const adj = new Map<number, number[]>();
 for (const c of data.connections) { (adj.get(c.a) ?? adj.set(c.a, []).get(c.a)!).push(c.b); (adj.get(c.b) ?? adj.set(c.b, []).get(c.b)!).push(c.a); }
 
 export const connection = (a: number, b: number) => edges.get(edgeKey(a, b));
-export const neighbors = (a: number) => adj.get(a) ?? [];
+/** The areas in play: all of them, or the Introductory ("Nuts!") map sheet (24.33). Set by the game being played (setPlayArea). */
+let PLAY: Set<number> | null = null;
+export const setPlayArea = (ids: number[] | null | undefined) => { PLAY = ids?.length ? new Set(ids) : null; };
+export const inPlay = (a: number) => !PLAY || PLAY.has(a);
+/** All neighbours on the full map, also outside the area of play (to find the edge of the Introductory sheet). */
+export const allNeighbors = (a: number) => adj.get(a) ?? [];
+export const neighbors = (a: number) => (PLAY ? (adj.get(a) ?? []).filter((n) => PLAY!.has(n)) : adj.get(a) ?? []);
 export const zoneOf = (a: number) => areas.get(a)!.zone;
