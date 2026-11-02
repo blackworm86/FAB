@@ -355,3 +355,7 @@ ul.rl { margin: 4px 0; padding-left: 16px; } ul.rl li { margin: 2px 0; } .inspec
 .cquick { display: flex; gap: 4px; overflow-x: auto; padding: 4px 8px; scrollbar-width: none; } .cquick button { flex: none; padding: 3px 8px; font-size: 12px; border-radius: 12px; }
 .cin { display: flex; gap: 6px; padding: 8px; border-top: 1px solid var(--line); } .cin input { flex: 1; min-width: 0; background: #1a1d14; color: inherit; border: 1px solid var(--line); padding: 8px; font: inherit; font-size: 16px; } .cwatch { padding: 8px; margin: 0; }
 @media (max-width: 700px) { .chat { left: 0; right: 0; top: auto; bottom: 0; width: auto; height: min(58vh, 58dvh); border-radius: 12px 12px 0 0; z-index: 90; } }
+/* supply: the line's explanation and the Supply Phase list */
+.sup { margin: 4px 0; display: flex; gap: 6px; align-items: flex-start; } .sup .ic { flex: none; width: 16px; height: 16px; margin-top: 2px; } .sup.ok { color: #8be0ff; } .sup.bad { color: #ff8a7a; }
+.supply .supl { display: flex; width: 100%; gap: 8px; align-items: center; padding: 5px 2px; background: none; border: 0; border-bottom: 1px solid #ffffff1a; color: inherit; text-align: left; cursor: pointer; }
+.supply .supl img { width: 34px; height: 34px; } .supply .supl span { flex: 1; display: grid; } .supply .supl small { opacity: .7; } .supply .sn { background: var(--gold); color: #111; padding: 2px 6px; white-space: nowrap; }

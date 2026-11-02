@@ -169,6 +169,9 @@ Dice roll in a small tray at the top of the screen, sized to the number of dice 
 ### Status markers on blocks
 Disordered, recovering, reserve, exploitation, out of supply, Greif interdict and boundary crossing float in a small row above their block, tilted toward the player, with a slow bob (about 4 s) and sway (about 7 s), each marker out of step. The block's label is never covered. With reduced motion turned on they stay still. Mockups: `docs/design/status-float-*.gif`.
 
+### Supply
+Map layers > Colour > Supply tints your side's areas: light blue (German) or green (Allied) where they trace supply, red where they are cut off. A selected block shows its supply line in pale blue to its source, and a line in its panel: "In supply: traces through N areas to …" or "Out of supply" with the reason. The Supply Phase opens with a list of the cut-off units, the number each needs, and a Roll supply checks button; tapping a unit centres the camera on it.
+
 ### Chat
 A speech-bubble button in the top bar (unread count in an alarm-red dot) opens the players' chat: a slim panel on the right on computers, a bottom sheet over the hand on phones. Messages show name, side colour (steel or olive edge) and time; one-tap quick lines (Your turn, Ready, One moment, Nice move, Good game) sit above the text box. A message arriving while the chat is closed shows as a short banner. Watchers read but see "only the two players can write"; there is no chat in the sandbox or hotseat.
 

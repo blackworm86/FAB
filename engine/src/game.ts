@@ -52,6 +52,7 @@ export interface Game {
   inPlay?: number[];   /** 24.33 the Introductory scenario plays on its own map sheet: only these areas */
   track?: { ge: number[]; al: number[]; sd: number[] | null }[];   /** draws per turn when the scenario has its own track */
   artyPick?: boolean;
+  supplyPending?: boolean;   /** 9.4 the out-of-supply checks of this Supply Phase are still to be rolled */
   checks?: Check[];   /** morale checks rolled outside battles (supply, Greif interdict), newest last, so the table can show the dice */   /** 16.12: the German player must choose which used artillery asset is eliminated */   /** sandbox: die results to use before the seeded ones */
 }
 type RawUnit = { id: string; name: string; side: string; echelon?: string; symbol?: string; cls?: string; steps?: number; quality_by_step?: Quality[]; start_area?: number; arrival_turn?: number; entry?: string[]; kind?: string };
@@ -827,6 +828,19 @@ function supplyPhase(g: Game) {
   for (const a of areas.keys()) updateControl(g, a);
   for (const u of g.units.filter((x) => x.area != null && !x.garrison)) u.unsupplied = !inSupply(g, u.side, u.area!);
   for (const u of g.units.filter((x) => x.area != null && !x.unsupplied && x.disorder)) u.disorder = u.disorder === 2 ? 0 : 2;
+  g.riverAssault = []; g.fieldWorks = g.fieldWorks.filter((a) => !contested(g, a));
+  g.roadblocks = {}; g.pooled = null; for (const [, id] of Object.entries(g.interdicted)) chit(g, id).box = 'eliminated'; g.interdicted = {};   // 4.34, 14.62b, 17.2
+  for (const u of g.units.filter((x) => x.id.startsWith('DR-') && x.area != null)) { chit(g, u.chitId!).box = 'used'; u.area = null; say(g, `${u.name} survives and returns to the Used Box`); }   // 4.35
+  g.units.forEach((x) => { if (x.side === g.phasing) x.bcross = false; });
+  g.units.forEach((u) => { u.exploit = false; u.adjOnly = false; if (u.side === other(g.phasing)) dropReserve(g, u); });
+  g.supplyPending = true;                                                                              // the player rolls the checks (rollSupply); endPhase rolls them if nobody did
+}
+/** 9.4 the units of the Phasing Player that must roll an out-of-supply morale check now, with the number each needs. */
+export function supplyChecks(g: Game) {
+  return g.units.filter((x) => x.area != null && x.side === g.phasing && x.unsupplied && !x.garrison).map((u) => ({ unit: u, sn: moraleSn(quality(u), u.disorder > 0, !(g.opts.airborne && AIRBORNE.has(u.name))), rounds: g.turn >= 6 ? 2 : 1 }));
+}
+export function rollSupply(g: Game) {
+  if (!g.supplyPending) throw new Error('no supply checks pending'); g.supplyPending = false;
   const rounds = g.turn >= 6 ? 2 : 1;                                                                // 14.93
   for (const u of g.units.filter((x) => x.area != null && x.side === g.phasing && x.unsupplied && !x.garrison)) for (let i = 0; i < rounds && u.area != null; i++) {
     const q = quality(u), { r, ok } = check(g, u, moraleSn(q, u.disorder > 0, !(g.opts.airborne && AIRBORNE.has(u.name))), 'Out of supply morale check (9.4)');
@@ -835,16 +849,15 @@ function supplyPhase(g: Game) {
     else if ((q === 'veteran' && r === 10) || (q === 'green' && r >= 8)) { eliminate(g, u); say(g, `${u.name} surrenders (${r})`); }
     else { u.str -= 1; if (u.str <= 0) eliminate(g, u); say(g, `${u.name} unsupplied and disordered, morale failed (${r}): step loss`); }
   }
+  supplyCleanup(g);
+}
+function supplyCleanup(g: Game) {
   for (const h of g.units.filter((x) => x.heydte && x.area != null && g.turn >= 4 && x.side === g.phasing)) if (!inSupply(g, 'german', h.area!)) { const { r, ok } = check(g, h, moraleSn('veteran', false, true), 'von der Heydte out of supply (16.11)'); if (!ok) { say(g, `von der Heydte out of supply, morale failed (${r}): eliminated`); eliminate(g, h); } }
-  g.riverAssault = []; g.fieldWorks = g.fieldWorks.filter((a) => !contested(g, a));
-  g.roadblocks = {}; g.pooled = null; for (const [, id] of Object.entries(g.interdicted)) chit(g, id).box = 'eliminated'; g.interdicted = {};   // 4.34, 14.62b, 17.2
-  for (const u of g.units.filter((x) => x.id.startsWith('DR-') && x.area != null)) { chit(g, u.chitId!).box = 'used'; u.area = null; say(g, `${u.name} survives and returns to the Used Box`); }   // 4.35
-  g.units.forEach((x) => { if (x.side === g.phasing) x.bcross = false; });
-  g.units.forEach((u) => { u.exploit = false; u.adjOnly = false; if (u.side === other(g.phasing)) dropReserve(g, u); });
 }
 export function setDone(g: Game, side: Side, on = true) { const d = (g.done ?? []).filter((x) => x !== side); if (on) d.push(side); g.done = d; }
 export function endPhase(g: Game) {
   setPlayArea(g.inPlay);
+  if (g.phase === 'supply' && g.supplyPending) rollSupply(g);
   g.done = [];
   settleUp(g);
   if (g.over) return;
@@ -1017,4 +1030,29 @@ export function auditChange(prev: Game, next: Game, writer: Side | null): string
   const actor = actorOf(prev);
   if (writer && actor !== 'both' && actor !== writer && JSON.stringify({ ...next, log: [] }) !== JSON.stringify({ ...prev, log: [] })) out.push(`The ${writer === 'german' ? 'German' : 'Allied'} player changed the game while it was the ${actor === 'german' ? 'German' : 'Allied'} player's turn to act.`);
   return out;
+}
+
+/** The chain of areas a block traces supply through (9.3), source last; or null when it is cut off. Same rule as inSupply. */
+export function supplyPath(g: Game, side: Side, start: number): number[] | null {
+  setPlayArea(g.inPlay);
+  if (g.airSupply?.side === side && g.airSupply.area === start) return [start];
+  const src = sources(g, side), enemy = other(side), prev = new Map<number, number>([[start, -1]]), q = [start];
+  const blocked = (a: number) => !unitsIn(g, a).length && neighbors(a).some((n) => g.control[n] === enemy && unitsIn(g, n, enemy).length && !unitsIn(g, n, side).length);
+  while (q.length) {
+    const a = q.shift()!;
+    if (src.has(a) && g.control[a] === side) { const p = [a]; let x = a; while (prev.get(x)! >= 0) { x = prev.get(x)!; p.unshift(x); } return p; }
+    for (const n of neighbors(a)) {
+      if (prev.has(n) || g.control[n] !== side || (blocked(n) && !unitsIn(g, n, side).length)) continue;
+      if (g.blown.includes(keyOf(a, n)) && a !== start) continue;
+      prev.set(n, a); q.push(n);
+    }
+  }
+  return null;
+}
+/** Why a cut-off area has no supply, in plain words: the friendly neighbours it could not pass and the enemy that holds the way. */
+export function supplyWhy(g: Game, side: Side, start: number): string {
+  const enemy = other(side), held = neighbors(start).filter((n) => g.control[n] === enemy).map((n) => areas.get(n)!.name);
+  const blown = neighbors(start).filter((n) => g.blown.includes(keyOf(start, n))).map((n) => areas.get(n)!.name);
+  const parts = [held.length ? `held by the enemy: ${held.join(', ')}` : '', blown.length ? `blown bridge to ${blown.join(', ')}` : ''].filter(Boolean);
+  return parts.length ? `No friendly path to a supply source (${parts.join('; ')}).` : 'No friendly path to a supply source: the way out runs through enemy-held or enemy-watched areas.';
 }

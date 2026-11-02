@@ -277,7 +277,7 @@ function drawPieces() {
   for (const k of g.blown) { const [x, y] = k.split('-').map(Number), q = toWorld(...borderMid(x, y)), p = free(q.x, q.z, 0.85), t = tag('X', '#d9421f', CHIT); t.position.set(p.x, 0.07, p.z); t.rotation.y = -borderAngle(x, y); markers.add(t); }
 }
 /** Map overlays: the area tint (terrain defence or army zones) is painted into the board under the line work. */
-let tint: 'off' | 'tdn' | 'zones' | 'control' = (() => { try { const t = localStorage.getItem('fab-tint'); return t === 'tdn' || t === 'zones' || t === 'control' ? t : 'off'; } catch { return 'off'; } })();
+let tint: 'off' | 'tdn' | 'zones' | 'control' | 'supply' = (() => { try { const t = localStorage.getItem('fab-tint'); return t === 'tdn' || t === 'zones' || t === 'control' || t === 'supply' ? t : 'off'; } catch { return 'off'; } })();
 const TDN_COL = [0xf4e3a4, 0xc9a24f, 0x8a8f86, 0x4a5028], ZONE_COL: Record<number, number> = { 5: 0x3a3f46, 6: 0x951b81, 7: 0x009fe3 };   // the TDN colours are the printed TDN markers'
 const CONTROL_COL = { allied: 0x6aa84f, german: 0x8a9096, contested: 0x9b59d0 };                      // allied green, axis grey, contested violet (red and yellow are the combat highlights)
 const tintOf = (id: number) => (tint === 'tdn' ? TDN_COL[E.areas.get(id)!.tdn] : tint === 'control' ? (E.contested(g, id) ? CONTROL_COL.contested : CONTROL_COL[g.control[id] ?? 'german']) : ZONE_COL[E.areas.get(id)!.zone]);
@@ -294,7 +294,7 @@ function paintBoard() {
   if (art !== 'vector' || !baseImg.naturalWidth || !linesImg.naturalWidth) return;
   const c = boardCv.getContext('2d')!, k = 2; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, boardCv.width, boardCv.height);
   c.drawImage(baseImg, 0, 0, boardCv.width, boardCv.height);
-  if (tint !== 'off') {
+  if (tint !== 'off' && tint !== 'supply') {
     c.save(); c.scale(k, k); c.globalAlpha = 0.6;
     for (const a of MAP.areas) { c.beginPath(); a.polygon.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fillStyle = hex6(tintOf(a.id)); c.fill(); }
     c.restore();
@@ -309,6 +309,10 @@ function paintBoard() {
   boardTex.needsUpdate = true;
 }
 applyArt();
+/** Supply overlay: your own side (or the Phasing Player when you play both); computed once per refresh. */
+const supplySide = (): E.Side => online.mySide() ?? g.phasing;
+let supCache = new Map<string, boolean>(), supKey = '';
+function supOk(sd: E.Side, a: number) { const k = `${g.turn}${g.phase}${g.log.length}${JSON.stringify(g.control).length}${g.units.map((u) => u.area).join()}`; if (k !== supKey) { supKey = k; supCache = new Map(); } const kk = sd + a; let v = supCache.get(kk); if (v == null) { v = E.inSupply(g, sd, a); supCache.set(kk, v); } return v; }
 function paintAreas() {
   const strat = g.phase === 'strategic' && selUnit, opts = selUnit ? (strat ? E.stratOptions(g, selUnit).map((a) => ({ area: a, mustStop: false })) : E.moveOptions(g, selUnit)) : [];
   const fight = g.phase === 'combat' || g.phase === 'btCombat' ? E.contestedAreas(g).filter((a) => !g.fought.includes(a)) : [], must = new Set(E.mustFight(g));
@@ -322,6 +326,7 @@ function paintAreas() {
     if (tgt) { if (tgt.areas.has(id) || (tgt.any && false)) { c = tgt.color.get(id) ?? 0x37d67a; o = 0.5; } else if (tgt.pick.has(id) && (!tgt.focus || tgt.color.has(id))) { c = tgt.color.get(id) ?? 0xe7b04a; o = 0.45; } }
     const ar = arr.get(id); if (ar) { c = ar.sa ? 0xff8a3d : 0x37d67a; o = 0.45; }
     if (ret.has(id)) { c = 0x37d67a; o = 0.5; }
+    if (tint === 'supply' && !g.battle && o === 0 && !tgt) { const sd = supplySide(), mine2 = g.control[id] === sd; if (mine2) { if (supOk(sd, id)) { c = sd === 'german' ? 0x6fb7ff : 0x9bd35a; o = 0.36; } else { c = 0xd1432f; o = 0.58; } } }
     if (g.inPlay && !g.inPlay.includes(id)) { c = 0x000000; o = 0.62; }                                   // 24.33 outside the Introductory map sheet
     mat.color.setHex(c); mat.opacity = o;
   }
@@ -408,7 +413,7 @@ function idle(): boolean {                                                // pha
     case 'combat': case 'btCombat': return !fightable().length;
     case 'reaction': return !us(o).some((u) => u.reserve);
     case 'btMove': return !us(p).some((u) => (u.reserve || u.exploit) && !u.moved) && !(us(p).some((u) => u.cls === 'armor' && !u.moved) && E.saAvailable(g, p).length);
-    case 'supply': return true;
+    case 'supply': return !g.supplyPending;
     default: return false;
   }
 }
@@ -574,7 +579,14 @@ canvas.addEventListener('pointermove', (e) => {
 
 const route = new THREE.Group(); scene.add(route);
 function drawRoute() {
-  route.clear(); const to = previewArea ?? hoverArea; if (!selUnit || to == null) return;
+  route.clear();
+  if (selUnit && !g.battle && previewArea == null && hoverArea == null) {                          // the way the selected block traces supply (9.3)
+    const u = g.units.find((x) => x.id === selUnit); const p = u?.area != null && seen(u) && !u.garrison ? E.supplyPath(g, u.side, u.area) : null;
+    if (p && p.length > 1) { const pts = p.map((a) => { const c2 = center(a); return new THREE.Vector3(c2.x, 2.2, c2.z); }), mat = new THREE.MeshBasicMaterial({ color: 0x8be0ff, transparent: true, opacity: 0.85, depthTest: false });
+      const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0), 80, 0.1, 6), mat); tube.renderOrder = 9; route.add(tube);
+      pts.forEach((v, i) => { const d = new THREE.Mesh(new THREE.SphereGeometry(i === pts.length - 1 ? 0.42 : 0.24, 12, 8), mat); d.position.copy(v); d.renderOrder = 9; route.add(d); }); }
+    return;
+  } const to = previewArea ?? hoverArea; if (!selUnit || to == null) return;
   const o = optsFor(selUnit).find((x) => x.area === to); if (!o) return;
   const u = g.units.find((x) => x.id === selUnit)!, path = o.path.length ? o.path : [u.area!, to], pts = path.map((a) => { const p = center(a); return new THREE.Vector3(p.x, 0.25, p.z); });
   const mat = new THREE.MeshBasicMaterial({ color: o.fuel ? 0xe7b04a : 0x9fe870 });
@@ -873,7 +885,7 @@ function promptText() {
     case 'combat': case 'btCombat': return m ? `<b>${m} battle${m > 1 ? 's' : ''} to fight.</b> Tap a red area.` : fightable().length ? '<b>Tap a contested area</b> to fight, or end the step.' : 'No battles left.';
     case 'reaction': return `<b>${nm(other(g.phasing))} reserves</b> may react: select a reserve block.`;
     case 'btMove': return '<b>Reserve and exploitation blocks</b> may move. Select one.';
-    default: return 'Supply is checked automatically.';
+    default: return g.phase === 'supply' && g.supplyPending ? '<b>Supply check:</b> roll for the units that are cut off.' : 'Supply checked. End the phase.';
   }
 }
 function primary(): { label: string; fn: () => void; dis?: boolean } | null {
@@ -904,7 +916,7 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
     if (wait && SANDBOX && SBU.st.sbHot) return { label: `Pass to ${nm(other(me))}`, fn: () => SBU.hotPass(other(me)) };
     return { label: wait ? `Waiting for ${nm(other(me))}` : `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`, fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; }), dis: wait || !!g.recover.length || !!g.artyPick };
   }
-  return { label: `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`, fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; }), dis: !!E.mustFight(g).length || !!g.recover.length || !!g.artyPick };
+  return { label: `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`, fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; }), dis: !!E.mustFight(g).length || !!g.recover.length || !!g.artyPick || (g.phase === 'supply' && !!g.supplyPending) };
 }
 const recoverSel: Record<string, string | null> = {};
 let piecesTab: 'boxes' | 'arrivals' = 'boxes', piecesSide: E.Side | null = null, inspectId: string | null = null;
@@ -939,6 +951,12 @@ function dispatch() {
   const row = (k: string, v: string, c = '') => `<div class="r"><span>${k}</span><b class="${c}">${v}</b></div>`;
   const c = selChit ? g.chits.find((x) => x.id === selChit) : null;
   if (c && g.phase === 'admin') return chitBar(c);
+  if (g.phase === 'supply' && g.supplyPending && !rollView) {                                         // 9.4: who is cut off and what they need, then the roll
+    const list = E.supplyChecks(g), own = mine(g.phasing);
+    const rows = list.map(({ unit: x, sn, rounds }) => `<button class="supl" data-ui="${reg(() => { if (x.area != null) { const c2 = center(x.area); goal = { t: new THREE.Vector3(c2.x, 0, c2.z), dist: Math.min(dist, 30), pitch, fast: true }; } })}" title="Show on the map"><img alt="" src="${unitFace(x)}"><span><b>${esc(x.name)}</b><small>${esc(areaName(x.area!))} · ${E.quality(x)}${x.disorder ? ' · disordered' : ''}${rounds > 1 ? ' · two checks (14.93)' : ''}</small></span><b class="sn">needs ${sn} or less</b></button>`).join('');
+    return `<div class="c-dispatch supply"><h3 class="${g.phasing}">Supply check</h3><p class="hint">${list.length ? `9.4: each cut-off ${nm(g.phasing)} unit rolls morale. Fail: disordered; already disordered: a step loss (green 8+, veteran 10: surrenders).` : `Every ${nm(g.phasing)} unit is in supply.`}</p>${rows}
+      <div class="row">${btn(`${ico('dice')} ${list.length ? 'Roll supply checks' : 'Continue'}`, () => E.rollSupply(g), 'primary', !own)}${own ? '' : `<span class="hint">Waiting for the ${nm(g.phasing)} player.</span>`}</div></div>`;
+  }
   if (g.phase === 'reinforcement' && g.artyPick) {                                                     // 16.12: the German player picks the artillery lost to attrition
     const cs = E.boxOf(g, 'german', 'used').filter((c) => c.kind === 'artillery'), own = mine('german');
     return `<div class="c-dispatch recover"><h3>German artillery attrition</h3><p class="hint">16.12: ${own ? 'choose' : 'the German player chooses'} one regular artillery asset (not rocket artillery) in the Used Box. It is eliminated; the rest of the Used Box goes back to the cup.</p>
@@ -955,11 +973,12 @@ function dispatch() {
     const to = previewArea ?? hoverArea, o = to != null ? optsFor(u.id).find((x) => x.area === to) : null, n = fuelLeft(), strat = g.phase === 'strategic';
     const tags = [u.disorder === 1 ? 'disordered' : u.disorder === 2 ? 'recovering' : '', u.unsupplied ? 'unsupplied' : '', u.reserve ? 'reserve' : '', u.exploit ? 'exploit' : '', u.interdict ? 'interdicted' : ''].filter(Boolean);
     let route = '';
+    const sp = u.area != null && !u.garrison ? E.supplyPath(g, u.side, u.area) : null, supLine = u.area == null || u.garrison ? '' : sp ? `<p class="hint sup ok">${ico('fuel')} In supply: ${sp.length > 1 ? `traces through ${sp.length - 1} area${sp.length > 2 ? 's' : ''} to ${esc(areaName(sp.at(-1)!))} (blue line)` : 'it stands on a supply source'}.</p>` : `<p class="hint sup bad">${ico('warn')} Out of supply. ${esc(E.supplyWhy(g, u.side, u.area))}</p>`;
     if (o) route = `<div class="route"><h4>→ ${esc(areaName(o.area))}</h4>${strat ? row('Strategic move', 'any distance') : row('Movement', `${o.cost} MP`)}${u.side === 'german' && g.opts.fuel ? row('Fuel', o.fuel ? `−1 &nbsp;(${n} → ${n - 1})` : 'not needed', o.fuel ? 'bad' : '') : ''}${o.mustStop ? row('Stops here', 'enemy present, battle follows', 'bad') : ''}${btn('Move here', () => { previewArea = o.area; confirmMove(); }, 'primary')}</div>`;
     else if (optsFor(u.id).length) route = `<p class="hint">${optsFor(u.id).length} destination(s). Hover or click a highlighted area.</p>`;
     const can = ['movement', 'reaction', 'btMove'].includes(g.phase) && !u.garrison && !u.moved;
     const fw = can && u.area != null && !u.unsupplied && !u.disorder && !E.contested(g, u.area) && !g.fieldWorks.includes(u.area) && ((g.phase === 'movement' && u.side === g.phasing) || (g.phase === 'reaction' && u.side !== g.phasing && !!u.reserve) || (g.phase === 'btMove' && u.side === g.phasing && (!!u.reserve || u.exploit)));
-    return `<div class="c-dispatch"><h3 class="${u.side}">${esc(u.name)}</h3><div class="pipsrow">${pips(u)} <small>${u.garrison ? 'asset' : u.cls} · ${tags.join(' · ') || 'in order'}</small></div>${route}
+    return `<div class="c-dispatch"><h3 class="${u.side}">${esc(u.name)}</h3><div class="pipsrow">${pips(u)} <small>${u.garrison ? 'asset' : u.cls} · ${tags.join(' · ') || 'in order'}</small></div>${seen(u) ? supLine : ''}${route}
       <div class="row">${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve', () => E.setReserve(g, u.id, false)) : btn('Reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u))) : ''}${fw ? btn('Fortify', () => E.buildFieldWorks(g, u.id)) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn('Activate (SA)', () => pickSA(u.side, u.ech, (sa) => E.activateBreakthrough(g, u.id, sa)), '', !E.saAvailable(g, u.side, u.ech).length) : ''}</div></div>`;
   }
   return '';
@@ -1062,8 +1081,8 @@ function ledger() {
 function legend() {
   if (tint === 'off') return '';
   const hex = (n: number) => '#' + n.toString(16).padStart(6, '0');
-  const items = tint === 'control' ? [[CONTROL_COL.allied, 'Allied', 'control'], [CONTROL_COL.german, 'German', 'control'], [CONTROL_COL.contested, 'Contested', 'both sides present']] : tint === 'tdn' ? TDN_COL.map((c, i) => [c, `TDN ${i}`, (i ? `attackers −${i} to hit` : 'no modifier')]) : [[ZONE_COL[5], 'Zone 5', '5th Panzer Army'], [ZONE_COL[6], 'Zone 6', '6th Panzer Army'], [ZONE_COL[7], 'Zone 7', '7th Army']];
-  return `<div class="legend" aria-label="Overlay legend"><b>${tint === 'tdn' ? 'Terrain defence' : tint === 'control' ? 'Area control' : 'Army zones'}</b>${items.map(([c, a, b]) => `<span><i style="background:${hex(c as number)}"></i>${a} <small>${b}</small></span>`).join('')}</div>`;
+  const items = tint === 'supply' ? [[supplySide() === 'german' ? 0x6fb7ff : 0x9bd35a, 'Supplied', `${nm(supplySide())} areas`], [0xd1432f, 'Cut off', 'no path to a source']] : tint === 'control' ? [[CONTROL_COL.allied, 'Allied', 'control'], [CONTROL_COL.german, 'German', 'control'], [CONTROL_COL.contested, 'Contested', 'both sides present']] : tint === 'tdn' ? TDN_COL.map((c, i) => [c, `TDN ${i}`, (i ? `attackers −${i} to hit` : 'no modifier')]) : [[ZONE_COL[5], 'Zone 5', '5th Panzer Army'], [ZONE_COL[6], 'Zone 6', '6th Panzer Army'], [ZONE_COL[7], 'Zone 7', '7th Army']];
+  return `<div class="legend" aria-label="Overlay legend"><b>${tint === 'tdn' ? 'Terrain defence' : tint === 'control' ? 'Area control' : tint === 'supply' ? 'Supply' : 'Army zones'}</b>${items.map(([c, a, b]) => `<span><i style="background:${hex(c as number)}"></i>${a} <small>${b}</small></span>`).join('')}</div>`;
 }
 /* ---------- home: sign in, your games, a new game, join ---------- */
 let matches: Match[] = [], form = { game: 'bulge', title: '', side: 'german' as E.Side | '', scenario: 'tournament' as E.Opts['scenario'], fuel: true }, homeMsg = (() => { try { const m = sessionStorage.getItem('fab-notice') ?? ''; sessionStorage.removeItem('fab-notice'); return m; } catch { return ''; } })(), creating = false;
@@ -1156,7 +1175,7 @@ function layersHtml() {
   const lay = (k: 'numbers' | 'tdn' | 'vp' | 'names', icon: string, title: string) => chip('', layers[k], () => { layers[k] = !layers[k]; relayer(); }, title, icon);
   return `<div class="modal"><div class="sheet slim"><h3>${ico('layers')} Map <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
     <h4>Printed</h4><div class="chips">${lay('numbers', 'hash', 'Area numbers and entry letters')}${lay('tdn', 'tree', 'Terrain defence number')}${lay('vp', 'star', 'Victory points')}${lay('names', 'text', 'Place names')}</div>
-    <h4>Colour</h4><div class="chips">${tintBtn('off', '', 'close', 'No colour')}${tintBtn('tdn', '', 'tree', 'Terrain defence')}${tintBtn('zones', '', 'layers', 'Army zones')}${tintBtn('control', '', 'flag', 'Who holds each area')}</div></div></div>`;
+    <h4>Colour</h4><div class="chips">${tintBtn('off', '', 'close', 'No colour')}${tintBtn('tdn', '', 'tree', 'Terrain defence')}${tintBtn('zones', '', 'layers', 'Army zones')}${tintBtn('control', '', 'flag', 'Who holds each area')}${tintBtn('supply', '', 'fuel', 'Supply: which of your areas trace supply')}</div></div></div>`;
 }
 function modalHtml() {
   if (modal === 'layers') return layersHtml();
