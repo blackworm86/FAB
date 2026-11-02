@@ -1330,7 +1330,7 @@ for (const ev of ['pointerdown', 'pointermove', 'wheel', 'keydown', 'resize']) w
 function frame() {
   requestAnimationFrame(frame);
   pumpTextures();
-  if (!goal && !anims.length && !rollView && performance.now() - lastInput > 2000 && tick++ % 3) return;   if (fpsEl) { const now = performance.now(); fpsWorst = Math.max(fpsWorst, now - fpsLast); fpsLast = now; fpsN++; if (now - fpsT > 1000) { fpsEl.textContent = `${Math.round(fpsN * 1000 / (now - fpsT))} fps · slowest ${Math.round(fpsWorst)} ms`; fpsN = 0; fpsT = now; fpsWorst = 0; } }
+  if (!goal && !anims.length && !rollView && performance.now() - lastInput > 2000 && tick++ % 3) return;   if (fpsEl) { const now = performance.now(); fpsWorst = Math.max(fpsWorst, now - fpsLast); fpsLast = now; fpsN++; if (now - fpsT > 1000) { fpsEl.textContent = `${Math.round(fpsN * 1000 / (now - fpsT))} fps · slowest ${Math.round(fpsWorst)} ms${now - lastInput > 2000 ? ' · idle' : ''}`; fpsN = 0; fpsT = now; fpsWorst = 0; } }
     // idle: about 20 frames a second is enough for the floating markers, and spares the battery
   const r = canvas.getBoundingClientRect();
   if (canvas.width !== Math.round(r.width * renderer.getPixelRatio())) { renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; cam.updateProjectionMatrix(); }
