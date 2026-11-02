@@ -342,3 +342,6 @@ ul.rl { margin: 4px 0; padding-left: 16px; } ul.rl li { margin: 2px 0; } .inspec
 .fxlines .ln.loss, .fxlines .ln.elim { stroke: #ff7a6b; } .fxlines .dt.loss, .fxlines .dt.elim { fill: #ff7a6b; } .fxlines .ln.dis { stroke: #f4c423; } .fxlines .dt.dis { fill: #f4c423; }
 .mapbubble::after { display: none; }
 .fx { grid-template-columns: auto 1fr auto; } .fx small { grid-column: 2; } .fxx { grid-row: 1 / span 2; grid-column: 3; pointer-events: auto; width: 22px; height: 22px; min-height: 0; padding: 0; margin-left: 6px; border-radius: 50%; border: 0; background: #0007; color: #fff; font-size: 12px; cursor: pointer; }
+/* the dice roll in a small tray at the top, not over the battle; they leave before the results play on the board */
+#dice { inset: auto; left: 50%; top: 96px; transform: translateX(-50%); width: min(440px, 92vw); height: 170px; background: #0b0d08d9; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px #000a; z-index: 12; }
+@media (max-width: 700px) { #dice { top: 100px; height: 140px; } }

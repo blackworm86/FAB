@@ -451,7 +451,7 @@ function arrOpts(): { area: number; sa: boolean }[] {
 }
 
 /* ---------- camera focus ---------- */
-type Goal = { t: THREE.Vector3; dist: number; pitch: number } | null; let goal: Goal = null, saved: Goal = null, inBattle = false;
+type Goal = { t: THREE.Vector3; dist: number; pitch: number; fast?: boolean } | null; let goal: Goal = null, saved: Goal = null, inBattle = false;
 /** Reinforcing a battle by Special Action (the defender): neighbouring blocks that may join light up and a tap moves one in. */
 let reinforcing = false;
 function reinforceTargets(): Tgt | null {
@@ -474,7 +474,7 @@ function syncBattleCam() {
     const pts = areaWorld(b.area), xs = pts.map((q) => q.x), zs = pts.map((q) => q.z), w = Math.max(...xs) - Math.min(...xs), h = Math.max(...zs) - Math.min(...zs);
     const c = new THREE.Vector3((Math.max(...xs) + Math.min(...xs)) / 2, 0, (Math.max(...zs) + Math.min(...zs)) / 2), r = Math.max(w, h) / 2 + 6, fit = Math.max(18, r * (innerWidth < innerHeight ? 4.2 : 3.0));
 
-    lock = wide ? null : { c, d: fit }; goal = { t: c, dist: wide ? fit * 1.8 : fit, pitch: 1.15 }; yaw = viewRot();
+    lock = wide ? null : { c, d: fit }; goal = { t: c, dist: wide ? fit * 1.8 : fit, pitch: 1.15, fast: true }; yaw = viewRot();
   }
   if (!b) { reinforcing = false; lock = null; if (inBattle && saved) goal = saved; }
   frameKey = key; inBattle = !!b;
@@ -659,7 +659,7 @@ function rollStage(b: E.Battle) {
   if (!rollView.groups.length) { rollView = null; commitRoll(); return; }
   refresh();
   const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block';
-  throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; commitRoll(); render(); showFx(pendingFx); pendingFx = []; setTimeout(() => { if (rollView === rv) endRoll(); }, 3800); } });          // the result clears by itself; a tap on it skips the wait
+  throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; render(); afterDice(rv); } });          // the result clears by itself; a tap on it skips the wait
 }
 /** A roll is shown on the board as it was; when the dice land the result is applied: blocks that lose a step turn, what is removed fades. */
 let heldNext: E.Game | null = null;
@@ -691,8 +691,17 @@ function showChecks(cs: E.Check[]) {
   const a = cs.find((c) => c.area != null)?.area; if (a != null) { const p = center(a); goal = { t: new THREE.Vector3(p.x, 0, p.z), dist: Math.min(dist, 30), pitch }; }
   rollView = { check: true, morale: true, title: cs[0].why.replace(/ \(.*\)$/, ''), pos: null, groups: cs.map((c) => ({ label: c.who, col: 'w', sn: c.sn, dice: [c.die], hits: c.ok ? 1 : 0, parts: [] })) };
   refresh(); const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block';
-  throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; render(); setTimeout(() => { if (rollView === rv) endRoll(); }, 4200); } });
+  throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; render(); setTimeout(() => { if (rollView === rv) { hideDice(); render(); setTimeout(() => { if (rollView === rv) endRoll(); }, 2600); } }, 1300); } });
 }
+/** After the dice settle: a moment to read them, then they leave and the results play on the board (turning blocks, fading pieces, pop-ups). */
+function afterDice(rv: RollView) {
+  setTimeout(() => {
+    if (rollView !== rv) return;
+    hideDice(); commitRoll(); showFx(pendingFx); pendingFx = []; render();
+    setTimeout(() => { if (rollView === rv) endRoll(); }, 3200);
+  }, 1100);
+}
+function hideDice() { clearDice(); const cv = $('#dice') as HTMLElement | null; if (cv) cv.style.display = 'none'; }
 function endRoll() { commitRoll(); rollView = null; clearDice(); ($('#dice') as HTMLElement).style.display = 'none'; refresh(); }
 
 /* ---------- cards and drag and drop ---------- */
@@ -980,7 +989,7 @@ function ledger() {
   const b = g.battle; if ((!b || g.pendingBlow) && !rollView?.check) return '';
   if (rollView) {
     const rv = rollView, hits = rv.groups.reduce((a, x) => a + x.hits, 0), labels = (rv.pos ?? []).map((p) => { const hit = isHit(p.v, rv.groups[p.group].sn); return `<div class="lbl ${hit ? 'hit' : 'miss'}" style="left:${p.x}px;top:${p.y}px">${rv.morale ? (hit ? 'PASS' : 'FAIL') : hit ? 'HIT!' : 'MISS'}</div>`; }).join('');
-    return `<div class="labels">${labels}</div><div class="c-ledger tight" data-ui="${reg(() => { if (rollView?.pos) endRoll(); })}" title="Tap to continue"><div class="lh"><h3>${esc(rv.title)}</h3><b class="tot ${hits ? 'hit' : 'miss'}">${rv.pos ? rv.morale ? `${hits} of ${rv.groups.length} pass` : `${hits} hit${hits === 1 ? '' : 's'}` : '…'}</b></div>${rv.pos ? rollFx.map(fxRow).join('') : ''}${rv.groups.map((x) => `<div class="ln2"><span class="who">${esc(x.label)}</span><span class="sn">SN ${x.sn}</span><span class="cnt">${x.dice.length}${ico('dice')}</span><b class="${x.hits ? 'hit' : 'miss'}">${x.hits}</b></div>`).join('')}
+    return `<div class="c-ledger tight" data-ui="${reg(() => { if (rollView?.pos) endRoll(); })}" title="Tap to continue"><div class="lh"><h3>${esc(rv.title)}</h3><b class="tot ${hits ? 'hit' : 'miss'}">${rv.pos ? rv.morale ? `${hits} of ${rv.groups.length} pass` : `${hits} hit${hits === 1 ? '' : 's'}` : '…'}</b></div>${rv.pos ? rollFx.map(fxRow).join('') : ''}${rv.groups.map((x) => `<div class="ln2"><span class="who">${esc(x.label)}</span><span class="sn">SN ${x.sn}</span><span class="cnt">${x.dice.length}${ico('dice')}</span><b class="${x.hits ? 'hit' : 'miss'}">${x.hits}</b></div>`).join('')}
       </div>`;
   }
   if (!b || g.pendingBlow) return '';
@@ -1312,7 +1321,7 @@ function frame() {
   requestAnimationFrame(frame);
   const r = canvas.getBoundingClientRect();
   if (canvas.width !== Math.round(r.width * renderer.getPixelRatio())) { renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; cam.updateProjectionMatrix(); }
-  if (goal) { target.lerp(goal.t, 0.1); dist += (goal.dist - dist) * 0.1; pitch += (goal.pitch - pitch) * 0.1; if (target.distanceTo(goal.t) < 0.05 && Math.abs(dist - goal.dist) < 0.1) goal = null; }
+  if (goal) { const k = goal.fast ? 0.28 : 0.1; target.lerp(goal.t, k); dist += (goal.dist - dist) * k; pitch += (goal.pitch - pitch) * k; if (target.distanceTo(goal.t) < 0.05 && Math.abs(dist - goal.dist) < 0.1) goal = null; }
   if (lock && !goal) target.copy(lock.c);
   placeCam(); runAnims(); renderer.render(scene, cam); renderFocus(); placeBadges();
 }
@@ -1331,7 +1340,7 @@ void startOnline((rg) => { if (heldNext) commitRoll(); const prevG = g; const ck
     const side = st0 === 'attArty' || st0 === 'offFire' || st0 === 'exploit' ? nb.attacker : other(nb.attacker);
     rollView = { remote: true, morale: st0 === 'exploit', title: `${nm(side)} ${STAGE_NAME[st0]}`, pos: null, groups: nb.rolls.slice(n0).map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: [] })) };
     if (rollView.groups.length) { heldNext = g; g = prevG; }                                       // the board keeps the old state until the dice land
-    if (rollView.groups.length) { const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block'; throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; commitRoll(); render(); showFx(pendingFx); pendingFx = []; setTimeout(() => { if (rollView === rv) endRoll(); }, 4000); } }); } else rollView = null;       // the other player's dice clear themselves
+    if (rollView.groups.length) { const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block'; throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; render(); afterDice(rv); } }); } else rollView = null;       // the other player's dice clear themselves
   } selUnit = selChit = selArr = null; previewArea = hoverArea = null; hist.clear(); try { save(); } finally { applyingRemote = false; } refresh();
   { const cs = g.checks ?? [], k = cs.findIndex((c) => JSON.stringify(c) === ckLast); const fresh = ckLast === 'null' ? [] : k >= 0 ? cs.slice(k + 1) : []; if (fresh.length) showChecks(fresh); } }, () => { onNet(); syncView(); render(); }, say, () => { try { sessionStorage.setItem('fab-notice', 'That game was deleted by its creator.'); } catch { /* private mode */ } location.href = homeUrl(); });       // the table is gone: nobody stays inside it
 /** Every drawn symbol and counter as SVG, for the editable sheets (docs/maps/vector/fab-*.svg). */
