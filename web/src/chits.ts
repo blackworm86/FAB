@@ -1,7 +1,5 @@
 // Counters redrawn from the printed ones: geometry measured on the scans, lettering as outlined Roboto Condensed paths, and the illustrations
 // (fuel barrels, fighters, the Special Action arrow) cut out of the scan. 160 x 160 units like the 160 px raw counters.
-import { MARKER_ART } from './marker-art';
-import { SA_ART, SAE_ART } from './sa-art';
 import type { Chit } from '../../engine/src';
 import { ECH } from './art';
 import { GLYPHS } from './glyphs';
@@ -10,8 +8,13 @@ import { CHIT_FILES, CHIT_BOXES } from './chit-art';
 /** Image data URIs by name (the cut-outs must be inline: an SVG shown as an <img> cannot load other files), filled by loadChitArt before any chit is drawn. */
 export const CHIT_ART = { ...CHIT_BOXES } as unknown as { [K in keyof typeof CHIT_BOXES]: readonly number[] } & Record<keyof typeof CHIT_FILES, string>;
 const blobUri = (b: Blob) => new Promise<string>((ok, bad) => { const r = new FileReader(); r.onload = () => ok(r.result as string); r.onerror = () => bad(r.error); r.readAsDataURL(b); });
+/** The user's redrawn markers and Special Action art (public/chit/mk_*, sae_*, sa_*), loaded with the other pictures instead of living in the code. */
+const MARKERS = ['X', 'FW', 'RA', 'RB', 'DIS', 'REC', 'E', 'B', 'P', 'R5', 'R6', 'R7', 'A7', 'A56', 'GI', 'G', 'OOS'], SAE = ['de_5pz_3', 'de_6pz_4', 'de_6pz_6', 'us_1a_5', 'us_1a_6', 'us_3a_7'];
+const ART_FILES: Record<string, string> = { ...CHIT_FILES, ...Object.fromEntries([...MARKERS.map((m) => `mk_${m}`), ...SAE.map((x) => `sae_${x}`), 'sa_german', 'sa_allied'].map((k) => [k, `${k}.png`])) };
+const ART = CHIT_ART as unknown as Record<string, string>;
+const pic = (href: string) => `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160"><image href="${href}" width="160" height="160"/></svg>`;
 export async function loadChitArt(base = './chit/') {
-  await Promise.all(Object.entries(CHIT_FILES).map(async ([k, f]) => { const r = await fetch(base + f); if (!r.ok) throw new Error(`chit art ${f}: ${r.status}`); (CHIT_ART as Record<string, string>)[k] = await blobUri(await r.blob()); }));
+  await Promise.all(Object.entries(ART_FILES).map(async ([k, f]) => { const r = await fetch(base + f); if (!r.ok) throw new Error(`chit art ${f}: ${r.status}`); (CHIT_ART as Record<string, string>)[k] = await blobUri(await r.blob()); }));
 }
 /** For tools that read the files themselves: key -> data URI. */
 export const setChitArt = (m: Record<string, string>) => Object.assign(CHIT_ART, m);
@@ -74,10 +77,9 @@ function marker(name: string): string | null {
 }
 
 /** 8.1: the reusable Special Action is a wooden block with a Special Action label (not a counter). The label art can be replaced by the
- *  drawings in docs/maps/vector/blank/special-action-blocks.svg (put them in SA_LABEL below as SVG strings). */
-export const SA_LABEL: Partial<Record<'german' | 'allied', string>> = SA_ART;
+ *  drawings in docs/maps/vector/blank/special-action-blocks.svg (drawn art: public/chit/sa_german.png, sa_allied.png). */
 export function saBlockSvg(side: 'german' | 'allied') {
-  if (SA_LABEL[side]) return SA_LABEL[side]!;
+  if (ART[`sa_${side}`]) return pic(ART[`sa_${side}`]);
   const bg = side === 'german' ? '#b7bbc1' : '#8fa83f', ink = '#141414';
   return `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160"><rect width="160" height="160" fill="${bg}"/><rect x="7" y="7" width="146" height="146" fill="none" stroke="${ink}" stroke-width="2" opacity=".35"/>
     ${side === 'german' ? cross(80, 44, 22) : star(80, 44, 24, '#fff')}${txt('Special', 80, 98, 30, { w: 'b', anchor: 'middle', fill: ink, max: 128 })}${txt('Action', 80, 130, 30, { w: 'b', anchor: 'middle', fill: ink, max: 128 })}${txt('reusable', 80, 150, 15, { anchor: 'middle', fill: ink, max: 120 })}</svg>`;
@@ -85,7 +87,7 @@ export function saBlockSvg(side: 'german' | 'allied') {
 
 /** The printed marker art by short code used on the map: X blown bridge, FW field works, RA river assault, RB road block, DIS disordered, REC recovering. */
 export const mapMarkerSvg = (code: string): string | null => {
-  if (MARKER_ART[code]) return `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160"><image href="${MARKER_ART[code]}" width="160" height="160"/></svg>`;
+  if (ART[`mk_${code}`]) return pic(ART[`mk_${code}`]);
   const m: Record<string, string> = { X: 'Blown Bridge', FW: 'Field Works', RA: 'River Assault', RB: 'Road Block' };
   if (m[code]) return marker(m[code]);
   const counters: Record<string, Counter> = {
@@ -129,7 +131,7 @@ export function chitSvg(c: Chit | Counter): string {
   }
   if (k === 'event_bodenplatte') { const b = asBox(CHIT_ART.bodenBox); return `${open(side, ['#9fcff0', '#c4e3f7', '#78a8cc'])}${turn(t, 14, 38, 32)}${img(CHIT_ART.boden, b.x, b.y + 2, b.w, b.h)}${txt('Operation', 80, 118, 31, { w: 'b', anchor: 'middle', fill: '#fff', stroke: '#222', sw: 130, max: 128 })}${txt('Bodenplatte', 80, 148, 31, { w: 'b', anchor: 'middle', fill: '#fff', stroke: '#222', sw: 130, max: 128 })}</svg>`; }
   if (k === 'air_mission') { const b = asBox(CHIT_ART.airBox); return `${flat('#1f5db0')}<rect x="8" y="8" width="144" height="144" fill="#9fcff0" stroke="#fff" stroke-width="3"/>${turn(t, 16, 44, 32)}${txt('Allied', 98, 36, 22, { anchor: 'middle' })}${img(CHIT_ART.air, b.x + 2, b.y + 8, b.w, b.h)}${txt('Air', 14, 112, 36, { w: 'b', fill: '#fff', stroke: '#222', sw: 130 })}${txt('Mission', 14, 144, 36, { w: 'b', fill: '#fff', stroke: '#222', sw: 130, max: 130 })}</svg>`; }
-  if (k === 'special_action_event' && SAE_ART[`${c.ech}-${t}`]) return `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160"><image href="${SAE_ART[`${c.ech}-${t}`]}" width="160" height="160"/></svg>`;      // the user's redrawn counters
+  if (k === 'special_action_event' && ART[`sae_${c.ech}_${t}`]) return pic(ART[`sae_${c.ech}_${t}`]);      // the user's redrawn counters
   if (k === 'special_action_event') {
     const dark = ['#4d5b2c', '#8e2d82', '#3d6dcc'].includes(ech), f = dark ? '#fff' : '#111';
     return `${open(side)}${panel(ech)}${turn(t, 22, 52, 32)}${txt('Special', 86, 44, 26, { w: 'b', italic: true, anchor: 'middle', fill: f, max: 78 })}<image href="${CHIT_ART.saArrow}" x="18" y="52" width="130" height="72"/>${txt('Action', 86, 147, 26, { w: 'b', italic: true, anchor: 'middle', fill: f, max: 78 })}</g></svg>`;

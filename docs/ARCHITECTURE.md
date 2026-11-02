@@ -12,7 +12,7 @@ Technical reference for maintaining FAB: The Bulge and building the next games o
 | Hosting | GitHub Pages | Serves the built files only; runs no code. `.github/workflows/pages.yml` tests and publishes on every push to `main`. |
 | Shared storage | Firebase Realtime Database (free Spark plan) | Stores each game and pushes changes live to every open browser. Also Firebase Authentication (Google, email, anonymous guests). |
 
-Main client files: `main.ts` (scene, screens, input, chat panel), `online.ts` (connection, seats, saving), `store-rtdb.ts` (all database reads and writes), `sandbox.ts` + `sandbox-ui.ts` (admin test table and hotseat), `chit-play.ts` (what a chit can be played on), `chits.ts` / `art.ts` / `marker-art.ts` / `sa-art.ts` (counter art), `dice3d.ts`, `fx.ts` (effect pop-ups), `rules-text.ts` (chit descriptions).
+Main client files: `main.ts` (scene, screens, input, chat panel), `online.ts` (connection, seats, saving), `store-rtdb.ts` (all database reads and writes), `sandbox.ts` + `sandbox-ui.ts` (admin test table and hotseat), `chit-play.ts` (what a chit can be played on), `chits.ts` / `art.ts` (counter art; drawn markers and Special Action art are PNGs in `public/chit`, loaded at start), `dice3d.ts`, `fx.ts` (effect pop-ups), `rules-text.ts` (chit descriptions).
 
 ## 2. Who runs the game
 

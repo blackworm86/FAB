@@ -1314,8 +1314,11 @@ function refresh() {
   if (!rollView) { const cv = $('#dice'); if (cv && cv.style.display !== 'none') { clearDice(); cv.style.display = 'none'; } }
 }
 const CALM = matchMedia('(prefers-reduced-motion: reduce)').matches;                               // no floating motion for players who asked for less motion
+let lastInput = performance.now(), tick = 0;
+for (const ev of ['pointerdown', 'pointermove', 'wheel', 'keydown', 'resize']) window.addEventListener(ev, () => { lastInput = performance.now(); }, { passive: true });
 function frame() {
   requestAnimationFrame(frame);
+  if (!goal && !anims.length && !rollView && performance.now() - lastInput > 2000 && tick++ % 3) return;     // idle: about 20 frames a second is enough for the floating markers, and spares the battery
   const r = canvas.getBoundingClientRect();
   if (canvas.width !== Math.round(r.width * renderer.getPixelRatio())) { renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; cam.updateProjectionMatrix(); }
   if (goal) { const k = goal.fast ? 0.28 : 0.1; target.lerp(goal.t, k); dist += (goal.dist - dist) * k; pitch += (goal.pitch - pitch) * k; if (target.distanceTo(goal.t) < 0.05 && Math.abs(dist - goal.dist) < 0.1) goal = null; }
