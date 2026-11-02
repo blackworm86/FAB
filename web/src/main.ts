@@ -263,7 +263,7 @@ function drawPieces() {
     mine.forEach((m, i) => {
       const side = m.side ?? g.control[a.id], lane = cont ? (side === 'german' ? 1 : -1) : 1, size = CHIT;
       const p = inArea(a.id, base.x + (i - (mine.length - 1) / 2) * 1.5, base.z + lane * 2.3, size / 2 + 0.25);
-      const k = m.side ? owned(m.t, m.c, size, m.side) : tag(m.t, m.c, size); k.position.set(p.x, 0.02, p.z); markers.add(k);
+      const k = m.side ? owned(m.t, m.c, size, m.side) : tag(m.t, m.c, size); k.position.set(p.x, 0.02, p.z); k.userData.mark = `${m.t}:${a.id}`; markers.add(k);
     });
   }
   for (const k of Object.keys(g.greif)) { const [x, y] = k.split('-').map(Number), q = toWorld(...borderMid(x, y)), p = free(q.x, q.z - 1.3, 0.8), t = tag('G', '#8a2f9c', CHIT); t.position.set(p.x, 0.07, p.z); t.rotation.y = -borderAngle(x, y); markers.add(t); }
@@ -428,6 +428,7 @@ let pendingFx: Fx[] = [], rollNoted = false;
 function noteFx(a: ReturnType<typeof snap>, x: E.Game, fresh?: boolean) { const d = diffFx(a, x); if (!d.length) return; battleFx.push(...d); if (fresh) { rollFx = d; pendingFx = d; } else showFx(d); }       // after a roll the effects wait for the dice to settle
 function act(f: () => void, after = '') {
   if (!allowed()) return say(notYou());
+  if (heldNext) commitRoll();
   const before = g.battle ? snap(g) : null, ck0 = g.checks?.length ?? 0;
   const r = hist.run(g, () => { f(); auto(); });
   g = r.game; if (r.error) say(/pending|already/.test(r.error.message) ? `That choice is no longer open (the game is at ${g.battle?.stage ?? 'no battle'}). Refreshed.` : r.error.message); else { note = after; if (before && !rollNoted) noteFx(before, g); }       // a roll already noted its own effects, to show them once the dice have settled
@@ -574,11 +575,28 @@ function placeFocus() {
   const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(), pts = areaWorld(b.area).map((q) => { v.set(q.x, 0.01, q.z).project(cam); return [(v.x * 0.5 + 0.5) * r.width, (-v.y * 0.5 + 0.5) * r.height] as [number, number]; });
   sv.style.display = 'block'; sv.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`); const pg = sv.firstElementChild!; pg.setAttribute('points', pts.map((q) => q.map((n) => n.toFixed(1)).join(',')).join(' ')); pg.setAttribute('class', b.stage === 'setup' ? 'gl set' : 'gl fire');
 }
-/** Decisions made on the table: small bubbles over the side that has to choose. Their buttons are bound like any other. */
+/** Screen position and radius of a piece on the table (block or counter), or null when it is not drawn. */
+function pieceScreen(id: string) {
+  const o = pieces.children.find((x) => x.userData.unit === id || x.userData.chit === id); if (!o) return null;
+  const r = canvas.getBoundingClientRect(), p = o.getWorldPosition(new THREE.Vector3()), a = p.clone().project(cam), b = p.clone().add(new THREE.Vector3(0.95, 0, 0)).project(cam);
+  return { x: r.left + (a.x * 0.5 + 0.5) * r.width, y: r.top + (-a.y * 0.5 + 0.5) * r.height, rad: Math.max(14, Math.abs(b.x - a.x) * 0.5 * r.width) };
+}
+/** The leader-line layer: thin lines from a bubble to the blocks it is about, with a dashed ring on each. */
+const leaders = (() => { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.id = 'leaders'; document.body.appendChild(s); return s; })();
+const leaderSvg = (bx: number, by: number, pts: { x: number; y: number; rad: number }[], cls: string) => pts.map((p) => { const ang = Math.atan2(by - p.y, bx - p.x), ex = p.x + Math.cos(ang) * p.rad, ey = p.y + Math.sin(ang) * p.rad, mx = bx + (bx < p.x ? 18 : -18);
+  return `<path class="ln ${cls}" d="M${bx.toFixed(1)} ${by.toFixed(1)} H${mx.toFixed(1)} L${ex.toFixed(1)} ${ey.toFixed(1)}"/><circle class="rg ${cls}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${p.rad.toFixed(1)}"/><circle class="dt ${cls}" cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="3.5"/>`; }).join('');
+/** Decisions made on the table: a small bubble just off the battle area, never over its pieces, with a line to each block it is about. */
 function placeBubbles() {
-  const r = canvas.getBoundingClientRect(), v = new THREE.Vector3();
-  document.querySelectorAll<HTMLElement>('#ui .mapbubble').forEach((e) => { v.set(+e.dataset.wx!, 0.2, +e.dataset.wz!).project(cam); const w = e.offsetWidth || 200, h = e.offsetHeight || 80, x = Math.min(r.width - w / 2 - 6, Math.max(w / 2 + 6, (v.x * 0.5 + 0.5) * r.width)), y = Math.min(r.height - h - 70, Math.max(60, (-v.y * 0.5 + 0.5) * r.height));       // always on screen
-    e.style.transform = `translate(${x}px, ${y}px) translate(-50%, 0)`; e.style.display = v.z < 1 ? '' : 'none'; });
+  const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(); let svg = '';
+  document.querySelectorAll<HTMLElement>('#ui .mapbubble').forEach((e) => {
+    const a = +e.dataset.area!, pts = areaWorld(a).map((q) => { v.set(q.x, 0, q.z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height }; });
+    const minX = Math.min(...pts.map((p) => p.x)), maxX = Math.max(...pts.map((p) => p.x)), cy = pts.reduce((t, p) => t + p.y, 0) / pts.length, w = e.offsetWidth || 160, h = e.offsetHeight || 44;
+    const right = maxX + 28 + w < r.width - 8 || minX - 28 - w < 8, x = right ? Math.min(r.width - w - 8, maxX + 28) : Math.max(8, minX - 28 - w), y = Math.min(r.height - h - 70, Math.max(60, cy - h / 2));
+    const pr = (e.offsetParent as HTMLElement | null)?.getBoundingClientRect() ?? r; e.style.transform = `translate(${x + r.left - pr.left}px, ${y + r.top - pr.top}px)`;          // the bubble lives in the stage, the lines over the canvas
+    const tg = (e.dataset.tg ?? '').split(',').filter(Boolean).map(pieceScreen).filter((p): p is NonNullable<typeof p> => !!p).map((p) => ({ x: p.x - r.left, y: p.y - r.top, rad: p.rad }));
+    svg += leaderSvg(right ? x : x + w, y + h / 2, tg, 'gold');
+  });
+  leaders.innerHTML = svg; leaders.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`); leaders.style.left = r.left + 'px'; leaders.style.top = r.top + 'px'; leaders.style.width = r.width + 'px'; leaders.style.height = r.height + 'px';
 }
 /** The first loss of a failed attack (6.41a) is chosen on the table: the point unit or one battle asset lights up. */
 function decisionTargets(): Tgt | null {
@@ -591,7 +609,9 @@ function decisionTargets(): Tgt | null {
 /** The choice the battle is waiting for, as a bubble over the deciding side's row. */
 function decisionBubble(): string {
   const b = g.battle; if (!b || rollView || !['attChoice', 'defChoice', 'attFirst'].includes(b.stage)) return '';
-  const who = b.stage === 'defChoice' ? other(b.attacker) : b.attacker, poly = areaWorld(b.area), edge = viewSide() === 'allied' ? Math.min(...poly.map((q) => q.z)) - 0.8 : Math.max(...poly.map((q) => q.z)) + 0.8, base = toWorld(...POLE.get(b.area)!), at = `data-wx="${base.x}" data-wz="${edge}"`;       // just outside the area on the near side, so the pieces stay visible
+  const who = b.stage === 'defChoice' ? other(b.attacker) : b.attacker;
+  const tg = b.stage === 'attFirst' ? [b.attPoint, ...b.assets[b.attacker].filter((x) => E.isBattleAsset(E.chit(g, x)))] : E.unitsIn(g, b.area, who).map((u) => u.id).concat(b.assets[who].filter((x) => E.isBattleAsset(E.chit(g, x))));
+  const at = `data-area="${b.area}" data-tg="${tg.join(',')}"`;                                       // placed off the area by placeBubbles, with a line to each block it is about
   if (!allowed()) return `<div class="mapbubble wait" ${at}><b>${nm(who)} decides…</b></div>`;
   if (b.stage === 'attFirst') return `<div class="mapbubble" ${at}><b>${b.pending} hit${b.pending > 1 ? 's' : ''}</b><span>Tap the point unit or an asset to take the first loss</span></div>`;
   if (b.stage === 'attChoice') return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b><div class="row">${btn(`${ico('back')}`, () => E.attackerChoice(g, g.battle!, true), 'ab', false, 'Abort: all attackers disordered, no losses')}${btn(`${ico('xbold')}`, () => E.attackerChoice(g, g.battle!, false), 'ab primary', false, 'Continue and take the step losses')}</div></div>`;
@@ -617,7 +637,7 @@ function placeMoveMarks() {
 }
 function placeBadges() {
   placeMoveMarks();
-  { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(); fxLayer.place((area, unit) => { const o = unit ? pieces.children.find((x) => x.userData.unit === unit) : undefined, p = o ? o.position : center(area); v.set(p.x, o ? 1.6 : 3, p.z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width + (o ? 34 : 0), y: (-v.y * 0.5 + 0.5) * r.height, visible: v.z < 1 }; }); }
+  { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(); fxLayer.place((area, unit) => { const ps = unit ? pieceScreen(unit) : null, c = center(area); v.set(c.x, 0, c.z).project(cam); const cx = r.left + (v.x * 0.5 + 0.5) * r.width, cy = r.top + (-v.y * 0.5 + 0.5) * r.height; return ps ? { x: ps.x, y: ps.y, cx, cy, rad: ps.rad, visible: true } : { x: cx, y: cy - 30, cx: cx - 1, cy, rad: 0, visible: v.z < 1 }; }); }
   placeFocus(); placeBubbles();
   const r = canvas.getBoundingClientRect(), v = new THREE.Vector3();
   for (const [k, d] of badgeEls) { const p = d.classList.contains('tint') ? toWorld(...(MAP.areas.find((x) => x.id === +k)!.label)).add(new THREE.Vector3(0, 0, 2.3)) : center(+k); v.set(p.x, 2.2, p.z - 4).project(cam); d.style.display = v.z < 1 ? '' : 'none'; d.style.transform = `translate(${(v.x * 0.5 + 0.5) * r.width}px, ${(-v.y * 0.5 + 0.5) * r.height}px) translate(-50%, -50%)`; }
@@ -631,13 +651,38 @@ const STAGE_NAME: Record<string, string> = { exploit: 'Exploitation morale check
 function rollStage(b: E.Battle) {
   if (!allowed()) return say(notYou());
   const side = b.stage === 'attArty' || b.stage === 'offFire' || b.stage === 'exploit' ? b.attacker : other(b.attacker), kind = b.stage.endsWith('Arty') ? 'arty' : 'ground', fl = b.stage === 'exploit' ? [] : E.fireList(g, b, side, kind), n0 = b.rolls.length, stage = b.stage;
-  const before = snap(g); E.roll_step(g, b); rollFx = []; noteFx(before, g, true); rollNoted = true; save();
-  const fresh = b.rolls.slice(n0);
+  const next = structuredClone(g), before = snap(g); E.roll_step(next, next.battle!); rollFx = []; noteFx(before, next, true); rollNoted = true;
+  try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* storage off */ } void push(next);          // the result is stored at once; the board shows it when the dice land
+  const fresh = next.battle!.rolls.slice(n0); heldNext = next;
   rollView = { morale: stage === 'exploit', title: `${side === 'german' ? 'German' : 'Allied'} ${STAGE_NAME[stage]}`, pos: null, groups: fresh.map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: fl.find((f) => f.who === r.who)?.parts ?? [] })) };
-  if (!rollView.groups.length) { rollView = null; return refresh(); }
+  if (!rollView.groups.length) { rollView = null; commitRoll(); return; }
   refresh();
   const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block';
-  throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; render(); showFx(pendingFx); pendingFx = []; setTimeout(() => { if (rollView === rv) endRoll(); }, 3800); } });          // the result clears by itself; a tap on it skips the wait
+  throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; commitRoll(); render(); showFx(pendingFx); pendingFx = []; setTimeout(() => { if (rollView === rv) endRoll(); }, 3800); } });          // the result clears by itself; a tap on it skips the wait
+}
+/** A roll is shown on the board as it was; when the dice land the result is applied: blocks that lose a step turn, what is removed fades. */
+let heldNext: E.Game | null = null;
+const anims: { t0: number; dur: number; fn: (k: number) => void; end?: () => void }[] = [];
+const fades = new THREE.Group(); scene.add(fades);
+function commitRoll() {
+  const next = heldNext; if (!next) return; heldNext = null;
+  const prev = g, gone = new Set<string>();
+  for (const u of prev.units) { const n = next.units.find((x) => x.id === u.id); if (u.area != null && n && n.area == null) gone.add('u:' + u.id); }
+  for (const c of prev.chits) { const n = next.chits.find((x) => x.id === c.id); if (c.box === 'map' && n && n.box !== 'map') gone.add('c:' + c.id); }
+  for (const a of prev.fieldWorks) if (!next.fieldWorks.includes(a)) gone.add('m:FW:' + a);
+  const keyOf = (o: THREE.Object3D) => o.userData.unit ? 'u:' + o.userData.unit : o.userData.chit ? 'c:' + o.userData.chit : o.userData.mark ? 'm:' + o.userData.mark : '';
+  for (const o of [...pieces.children, ...markers.children]) if (gone.has(keyOf(o))) {          // a copy of what goes away, faded out over the new board
+    const cl = o.clone(true); cl.traverse((x) => { const m = x as THREE.Mesh; if (!m.material) return; m.material = ([] as THREE.Material[]).concat(m.material).map((mt) => { const c = mt.clone(); c.transparent = true; return c; }) as never; });
+    fades.add(cl); const mats: THREE.Material[] = []; cl.traverse((x) => { const m = x as THREE.Mesh; if (m.material) mats.push(...([] as THREE.Material[]).concat(m.material)); });
+    anims.push({ t0: performance.now(), dur: 900, fn: (k) => { mats.forEach((mt) => { mt.opacity = 1 - k; }); cl.position.y += 0.004; }, end: () => { fades.remove(cl); mats.forEach((mt) => mt.dispose()); } });
+  }
+  const turned = next.units.filter((u) => { const o = prev.units.find((x) => x.id === u.id); return o && u.area != null && u.str < o.str; }).map((u) => u.id);
+  g = next; save(); refresh();
+  for (const id of turned) anims.push({ t0: performance.now(), dur: 700, fn: (k) => { const m = pieces.children.find((o) => o.userData.unit === id); if (m) m.rotation.y = viewRot() + (1 - (1 - (1 - k) ** 3)) * Math.PI / 2; } });   // the block turns to its new strength
+}
+function runAnims() {
+  const now = performance.now();
+  for (let i = anims.length - 1; i >= 0; i--) { const a = anims[i], k = Math.min(1, (now - a.t0) / a.dur); a.fn(k); if (k >= 1) { a.end?.(); anims.splice(i, 1); } }
 }
 /** Morale checks outside a battle (supply, Greif interdict): the camera goes to the unit and the dice are thrown on screen with PASS or FAIL. */
 function showChecks(cs: E.Check[]) {
@@ -647,7 +692,7 @@ function showChecks(cs: E.Check[]) {
   refresh(); const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block';
   throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; render(); setTimeout(() => { if (rollView === rv) endRoll(); }, 4200); } });
 }
-function endRoll() { rollView = null; clearDice(); ($('#dice') as HTMLElement).style.display = 'none'; refresh(); }
+function endRoll() { commitRoll(); rollView = null; clearDice(); ($('#dice') as HTMLElement).style.display = 'none'; refresh(); }
 
 /* ---------- cards and drag and drop ---------- */
 
@@ -1255,7 +1300,7 @@ let ctlKey = '', tgtKey = '';
 function refresh() {
   hotseatSync();
   if (online.mode === 'remote') setTimeout(driveSplit, 0);
-  { const key = `${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
+  { const key = `${online.devSeat}|${online.mySide()}|${g.battle?.attPoint}|${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
     if (key !== tgtKey) { tgtKey = key; tgt = reinforcing ? reinforceTargets() : decisionTargets() ?? (selChit && mine(g.chits.find((x) => x.id === selChit)?.side ?? 'german') ? targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: unitFace, areaName }) : null); } }
   if (tint === 'control') { const k = JSON.stringify(g.control) + E.contestedAreas(g).join(); if (k !== ctlKey) { ctlKey = k; paintBoard(); } }
   syncView(); syncBattleCam(); drawPieces(); paintAreas(); drawRoute(); badges = g.battle ? [] : badgeList(); syncBadges(); syncMoveMarks(); render();
@@ -1267,7 +1312,7 @@ function frame() {
   if (canvas.width !== Math.round(r.width * renderer.getPixelRatio())) { renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; cam.updateProjectionMatrix(); }
   if (goal) { target.lerp(goal.t, 0.1); dist += (goal.dist - dist) * 0.1; pitch += (goal.pitch - pitch) * 0.1; if (target.distanceTo(goal.t) < 0.05 && Math.abs(dist - goal.dist) < 0.1) goal = null; }
   if (lock && !goal) target.copy(lock.c);
-  placeCam(); renderer.render(scene, cam); renderFocus(); placeBadges();
+  placeCam(); runAnims(); renderer.render(scene, cam); renderFocus(); placeBadges();
 }
 frame();
 loadChitArt().catch((e) => console.error(e)).finally(() => { auto(); refresh(); });
@@ -1278,12 +1323,13 @@ const onNet = (): void => {
   const next = (() => { try { return sessionStorage.getItem('fab-next'); } catch { return null; } })();
   if (next && !HAS_TABLE && online.account && !online.account.guest) { try { sessionStorage.removeItem('fab-next'); } catch { /* private mode */ } location.href = `${homeUrl()}?table=${next}`; }     // back to the invite that sent you to sign in
 };
-void startOnline((rg) => { const ckLast = JSON.stringify(g.checks?.at(-1) ?? null); const was = g.battle, n0 = was?.rolls.length ?? 0, st0 = was?.stage, pre = was ? snap(g) : null; applyingRemote = true; g = rg;
+void startOnline((rg) => { if (heldNext) commitRoll(); const prevG = g; const ckLast = JSON.stringify(g.checks?.at(-1) ?? null); const was = g.battle, n0 = was?.rolls.length ?? 0, st0 = was?.stage, pre = was ? snap(g) : null; applyingRemote = true; g = rg;
   const nb = g.battle; const rolled = !!(was && nb && nb.area === was.area && nb.rolls.length > n0); if (pre) { try { noteFx(pre, g, rolled); } catch (e) { console.error(e); } }                  // a failure while describing the changes must never stop the screen from updating
   if (was && nb && nb.area === was.area && nb.rolls.length > n0 && st0 && STAGE_NAME[st0]) {      // the other player rolled: show their dice here too
     const side = st0 === 'attArty' || st0 === 'offFire' || st0 === 'exploit' ? nb.attacker : other(nb.attacker);
     rollView = { remote: true, morale: st0 === 'exploit', title: `${nm(side)} ${STAGE_NAME[st0]}`, pos: null, groups: nb.rolls.slice(n0).map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: [] })) };
-    if (rollView.groups.length) { const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block'; throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; render(); showFx(pendingFx); pendingFx = []; setTimeout(() => { if (rollView === rv) endRoll(); }, 4000); } }); } else rollView = null;       // the other player's dice clear themselves
+    if (rollView.groups.length) { heldNext = g; g = prevG; }                                       // the board keeps the old state until the dice land
+    if (rollView.groups.length) { const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block'; throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; commitRoll(); render(); showFx(pendingFx); pendingFx = []; setTimeout(() => { if (rollView === rv) endRoll(); }, 4000); } }); } else rollView = null;       // the other player's dice clear themselves
   } selUnit = selChit = selArr = null; previewArea = hoverArea = null; hist.clear(); try { save(); } finally { applyingRemote = false; } refresh();
   { const cs = g.checks ?? [], k = cs.findIndex((c) => JSON.stringify(c) === ckLast); const fresh = ckLast === 'null' ? [] : k >= 0 ? cs.slice(k + 1) : []; if (fresh.length) showChecks(fresh); } }, () => { onNet(); syncView(); render(); }, say, () => { try { sessionStorage.setItem('fab-notice', 'That game was deleted by its creator.'); } catch { /* private mode */ } location.href = homeUrl(); });       // the table is gone: nobody stays inside it
 /** Every drawn symbol and counter as SVG, for the editable sheets (docs/maps/vector/fab-*.svg). */
@@ -1296,4 +1342,4 @@ function sheets() {
   for (const m of ['X', 'FW', 'RA', 'RB', 'DIS', 'REC', 'E', 'B', 'P', 'R5', 'R6', 'R7', 'A7', 'A56', 'GI', 'G', 'OOS', 'AIR']) add('markers', m, m, mapMarkerSvg(m));
   return out;
 }
-Object.assign(window, { __fab: { game: () => g, setGame: (x: E.Game) => { g = x; hist.clear(); save(); refresh(); }, at: (a: number) => { const p = center(a), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(p.x, 0, p.z).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, project: (x: number, y: number, z: number) => { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height }; }, online, setMatches: (m: Match[]) => { matches = m; }, iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets, setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
+Object.assign(window, { __fab: { unitAt: (id: string) => { const m = pieces.children.find((o) => o.userData.unit === id || o.userData.chit === id); if (!m) return null; const r = canvas.getBoundingClientRect(), v = m.getWorldPosition(new THREE.Vector3()).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, game: () => g, setGame: (x: E.Game) => { g = x; hist.clear(); save(); refresh(); }, at: (a: number) => { const p = center(a), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(p.x, 0, p.z).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, project: (x: number, y: number, z: number) => { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height }; }, online, setMatches: (m: Match[]) => { matches = m; }, iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets, setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
