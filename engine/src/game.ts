@@ -887,9 +887,9 @@ function drawFor(g: Game) {
   say(g, `Admin draws: German ${t.ge[i]}, Allied ${t.al[i]}`);
 }
 /** 24.37: uncontested control of Bastogne wins outright; otherwise strength points in Bastogne, the German losing 2 per key area he does not control. */
-function introResult(g: Game) {
+export function introResult(g: Game) {
   const b = 47, c = contested(g, b);
-  if (!c && unitsIn(g, b).length) { const s = unitsIn(g, b)[0].side; return `${s === 'german' ? 'German' : 'Allied'} Decisive Victory (uncontested Bastogne)`; }
+  if (!c && g.control[b]) return `${g.control[b] === 'german' ? 'German' : 'Allied'} Decisive Victory (uncontested Bastogne)`;           // control decides, even with nobody left in the town
   const pts = (s: Side) => unitsIn(g, b, s).filter((u) => !u.garrison).reduce((t, u) => t + u.str, 0);
   const ge = pts('german') - 2 * [39, 36, 48, 63, 64].filter((a) => g.control[a] !== 'german').length, al = pts('allied');
   return `${ge > al ? 'German' : 'Allied'} Marginal Victory (German ${ge}, Allied ${al})`;

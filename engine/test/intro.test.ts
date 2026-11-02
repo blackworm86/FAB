@@ -22,4 +22,17 @@ describe('24.3 Introductory scenario "Nuts!"', () => {
       expect(g.units.find((u) => u.name === '10 Arm')!.area).not.toBeNull();
     }
   });
+  it('scores the end of turn 3 (24.37)', () => {
+    const fresh = () => { const g = E.newGame(1, { scenario: 'intro' }); for (const u of g.units) if (u.area === 47) u.area = null; return g; };
+    const put = (g: E.Game, name: string, str: number) => { const u = g.units.find((x) => x.name === name)!; u.area = 47; u.str = str; };
+    let g = fresh(); put(g, '26 VG', 3); g.control[47] = 'german';                                  // German alone in Bastogne
+    expect(E.introResult(g)).toBe('German Decisive Victory (uncontested Bastogne)');
+    g = fresh(); g.control[47] = 'german';                                                         // taken and left empty: still uncontested German control
+    expect(E.introResult(g)).toBe('German Decisive Victory (uncontested Bastogne)');
+    g = fresh(); put(g, '26 VG', 3); put(g, 'CCR/9', 2); g.control[47] = 'allied';                 // contested: 3 points, minus 2 for each key area not German
+    for (const a of [39, 36, 48, 63, 64]) g.control[a] = 'german'; g.control[64] = 'allied';
+    expect(E.introResult(g)).toBe('Allied Marginal Victory (German 1, Allied 2)');
+    g.control[64] = 'german'; expect(E.introResult(g)).toBe('German Marginal Victory (German 3, Allied 2)');
+  });
 });
+

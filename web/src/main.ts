@@ -586,6 +586,7 @@ function pieceScreen(id: string) {
 }
 /** The leader-line layer: thin lines from a bubble to the blocks it is about, with a dashed ring on each. */
 const leaders = (() => { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.id = 'leaders'; document.body.appendChild(s); return s; })();
+let leaderLast = '';                                                                                    // the lines are rewritten only when they change
 const leaderSvg = (bx: number, by: number, pts: { x: number; y: number; rad: number }[], cls: string) => pts.map((p) => { const ang = Math.atan2(by - p.y, bx - p.x), ex = p.x + Math.cos(ang) * p.rad, ey = p.y + Math.sin(ang) * p.rad, mx = bx + (bx < p.x ? 18 : -18);
   return `<path class="ln ${cls}" d="M${bx.toFixed(1)} ${by.toFixed(1)} H${mx.toFixed(1)} L${ex.toFixed(1)} ${ey.toFixed(1)}"/><circle class="rg ${cls}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${p.rad.toFixed(1)}"/><circle class="dt ${cls}" cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="3.5"/>`; }).join('');
 /** Decisions made on the table: a small bubble just off the battle area, never over its pieces, with a line to each block it is about. */
@@ -599,7 +600,7 @@ function placeBubbles() {
     const tg = (e.dataset.tg ?? '').split(',').filter(Boolean).map(pieceScreen).filter((p): p is NonNullable<typeof p> => !!p).map((p) => ({ x: p.x - r.left, y: p.y - r.top, rad: p.rad }));
     svg += leaderSvg(right ? x : x + w, y + h / 2, tg, 'gold');
   });
-  leaders.innerHTML = svg; leaders.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`); leaders.style.left = r.left + 'px'; leaders.style.top = r.top + 'px'; leaders.style.width = r.width + 'px'; leaders.style.height = r.height + 'px';
+  if (svg !== leaderLast) { leaders.innerHTML = svg; leaderLast = svg; } leaders.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`); leaders.style.left = r.left + 'px'; leaders.style.top = r.top + 'px'; leaders.style.width = r.width + 'px'; leaders.style.height = r.height + 'px';
 }
 /** The first loss of a failed attack (6.41a) is chosen on the table: the point unit or one battle asset lights up. */
 function decisionTargets(): Tgt | null {
