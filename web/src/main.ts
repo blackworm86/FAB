@@ -446,6 +446,28 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !typing && !t?.matches?.('button,[role=button]') && !modal) { const go = document.querySelector<HTMLButtonElement>('#ui .go:not(:disabled)'); if (go) { e.preventDefault(); go.click(); } }
  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey && !(e.target as HTMLElement)?.matches?.('input,select')) { e.preventDefault(); undo(); } });
 const tfAreas = () => [...E.areas.keys()].filter((a) => g.control[a] === 'allied' && !E.contested(g, a) && E.inSupply(g, 'allied', a));
+/** Place an arriving block; an area outside its listed ones costs a Special Action, and the player picks which one (8.27). */
+function arrive(id: string, area: number) {
+  if (!g.pendingArrivals.includes(id)) return E.placeTaskForce(g, id, area);
+  const u = g.units.find((x) => x.id === id)!, o = E.arrivalOptions(g, id).find((x) => x.area === area);
+  if (o?.sa) pickSA(u.side, u.ech, (sa) => E.placeArrival(g, id, area, sa)); else E.placeArrival(g, id, area);
+}
+/** When more than one Special Action could pay for an action, the player chooses which (a single-use event keeps the reusable block for later, 8.1).
+ *  Runs inside an action: with one choice it pays at once, otherwise it opens the chooser and the chosen counter pays in a new action. */
+const ARMY_NAME: Record<string, string> = { de_5pz: '5th Panzer Army', de_6pz: '6th Panzer Army', de_7a: '7th Army', de_sr: 'Strategic Reserve', us_1a: 'US 1st Army', us_3a: 'US 3rd Army', us_sr: 'US reserve', br_xxx: 'British' };
+let saPick: { side: E.Side; run: (id: string) => void; cands: E.Chit[] } | null = null;
+function pickSA(side: E.Side, ech: string | undefined, run: (id?: string) => void) {
+  const seen = new Set<string>(), cands = E.saAvailable(g, side, ech).filter((c) => { const k = c.kind + c.ech; if (seen.has(k)) return false; seen.add(k); return true; });   // one choice per kind of counter
+  if (cands.length <= 1) return run(cands[0]?.id);
+  saPick = { side, run, cands };
+}
+function saPickHtml() {
+  if (!saPick) return '';
+  const p = saPick;
+  return `<div class="modal"><div class="sheet sapick"><h3>Which Special Action? <button class="ico" data-ui="${reg(() => { saPick = null; })}" aria-label="Cancel">${ico('close')}</button></h3>
+    <p class="hint">A single-use event only helps its own Higher Echelon and is eliminated; the reusable block goes to the Used Box and comes back next turn.</p>
+    <div class="pcgrid">${p.cands.map((c) => `<div class="sapc"><button class="pc ${c.side}" data-ui="${reg(() => { saPick = null; act(() => p.run(c.id)); })}" title="${esc(c.name)}">${chitPic(c)}</button><small>${esc(c.kind === 'sa_block' ? 'Reusable block' : `Event · ${ARMY_NAME[c.ech] ?? c.ech}`)}</small></div>`).join('')}</div></div></div>`;
+}
 function arrOpts(): { area: number; sa: boolean }[] {
   if (!selArr || g.phase !== 'reinforcement') return [];
   { const au = g.units.find((x) => x.id === selArr); if (au && !mine(au.side)) return []; const ac = g.chits.find((x) => x.id === selArr); if (ac && !mine(ac.side)) return []; }
@@ -459,7 +481,7 @@ let reinforcing = false;
 function reinforceTargets(): Tgt | null {
   const b = g.battle; if (!reinforcing || !b || b.stage !== 'setup') return null;
   const t: Tgt = { units: new Map(), areas: new Map(), pick: new Map(), color: new Map(), chips: [], buttons: [], modes: [], any: null, hint: 'Tap a glowing neighbouring block to bring it in' }, def = other(b.attacker);
-  for (const u of g.units.filter((x) => x.side === def && x.area != null && x.area !== b.area)) { try { const c = structuredClone(g); E.defenderReinforceSA(c, c.battle!, u.id); t.units.set(u.id, () => { reinforcing = false; E.defenderReinforceSA(g, b, u.id); }); } catch { /* not a legal reinforcement */ } }
+  for (const u of g.units.filter((x) => x.side === def && x.area != null && x.area !== b.area)) { try { const c = structuredClone(g); E.defenderReinforceSA(c, c.battle!, u.id); t.units.set(u.id, () => { reinforcing = false; pickSA(def, u.ech, (sa) => E.defenderReinforceSA(g, g.battle!, u.id, sa)); }); } catch { /* not a legal reinforcement */ } }
   return t;
 }
 let frameKey = '';
@@ -510,7 +532,7 @@ function click(e: PointerEvent) {
     return;
   }
   if (g.pendingBlow) return;
-  if (selArr && area != null && arrOpts().some((o) => o.area === area)) { const id = selArr; selArr = null; return act(() => { if (g.pendingArrivals.includes(id)) E.placeArrival(g, id, area); else E.placeTaskForce(g, id, area); }); }
+  if (selArr && area != null && arrOpts().some((o) => o.area === area)) { const id = selArr; selArr = null; return act(() => arrive(id, area)); }
   if (selUnit && area != null && optsFor(selUnit).some((o) => o.area === area)) { previewArea = area; refresh(); return; }
   if ((g.phase === 'combat' || g.phase === 'btCombat') && area != null && fightable().includes(area)) { selArea = selArea === area ? null : area; selUnit = null; previewArea = null; return refresh(); }
   const uu = unit ? g.units.find((x) => x.id === unit) : null;
@@ -846,7 +868,7 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
   const must = E.mustFight(g);
   if (g.phase === 'combat' || g.phase === 'btCombat') {                                              // the player picks the battle and starts it; nothing opens by itself
     const sel = selArea != null && fightable().includes(selArea) ? selArea : null;
-    if (sel != null) return { label: `Fight ${areaName(sel)}`, fn: () => { selUnit = null; battleFx = []; rollFx = []; E.startBattle(g, sel, g.phase === 'btCombat'); } };
+    if (sel != null) return { label: `Fight ${areaName(sel)}`, fn: () => { selUnit = null; battleFx = []; rollFx = []; if (g.phase === 'btCombat' && !E.newlyContested(g).includes(sel)) pickSA(g.phasing, undefined, (sa) => E.startBattle(g, sel, true, sa)); else E.startBattle(g, sel, g.phase === 'btCombat'); } };
     if (must.length) return null;                                                                     // the prompt says: tap a red area
   }
   if (online.active && !online.both() && (g.phase === 'admin' || g.phase === 'reinforcement')) {            // both sides work in these steps: the other side says it is done, the Phasing Player ends the step
@@ -912,7 +934,7 @@ function dispatch() {
     const can = ['movement', 'reaction', 'btMove'].includes(g.phase) && !u.garrison && !u.moved;
     const fw = can && u.area != null && !u.unsupplied && !u.disorder && !E.contested(g, u.area) && !g.fieldWorks.includes(u.area) && ((g.phase === 'movement' && u.side === g.phasing) || (g.phase === 'reaction' && u.side !== g.phasing && !!u.reserve) || (g.phase === 'btMove' && u.side === g.phasing && (!!u.reserve || u.exploit)));
     return `<div class="c-dispatch"><h3 class="${u.side}">${esc(u.name)}</h3><div class="pipsrow">${pips(u)} <small>${u.garrison ? 'asset' : u.cls} · ${tags.join(' · ') || 'in order'}</small></div>${route}
-      <div class="row">${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve', () => E.setReserve(g, u.id, false)) : btn('Reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u))) : ''}${fw ? btn('Fortify', () => E.buildFieldWorks(g, u.id)) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn('Activate (SA)', () => E.activateBreakthrough(g, u.id), '', !E.saAvailable(g, u.side, u.ech).length) : ''}</div></div>`;
+      <div class="row">${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve', () => E.setReserve(g, u.id, false)) : btn('Reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u))) : ''}${fw ? btn('Fortify', () => E.buildFieldWorks(g, u.id)) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn('Activate (SA)', () => pickSA(u.side, u.ech, (sa) => E.activateBreakthrough(g, u.id, sa)), '', !E.saAvailable(g, u.side, u.ech).length) : ''}</div></div>`;
   }
   return '';
 }
@@ -933,7 +955,7 @@ function dragArrival(ev: PointerEvent, el: HTMLElement) {
     const top = document.elementFromPoint(e.clientX, e.clientY);
     if (top !== canvas && top?.closest('.dock, .c-bar, .c-dispatch, .modal, .legend')) { say('Drop it on a highlighted entry area of the map'); return clean(); }
     const area = pick(e).area; if (area == null || !arrOpts().some((o) => o.area === area)) { say('That is not a legal entry area for this block'); return clean(); }
-    selArr = null; act(() => { if (g.pendingArrivals.includes(id)) E.placeArrival(g, id, area); else E.placeTaskForce(g, id, area); });
+    selArr = null; act(() => arrive(id, area));
   };
   window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
   window.addEventListener('pointercancel', () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); ghost?.remove(); }, { once: true });
@@ -982,7 +1004,7 @@ function battleTable() {
     const sa = setup && s !== att ? E.saAvailable(g, s).length : 0;
     return `<div class="bside ${s} ${mine(s) ? 'mine' : 'theirs'}"><h4 title="${nm(s)} ${s === att ? 'attacking' : 'defending'}"><span class="tag">${s === 'german' ? 'GE' : 'AL'}</span>${ico(s === att ? 'next' : 'shield')}${online.active && !online.both() ? `<small>${mine(s) ? 'you' : 'foe'}</small>` : ''}</h4>
       <span class="chp" title="Artillery assigned">${ico('artillery')}${arty}/${lim.arty}</span>${rest || setup ? `<span class="chp" title="Battle assets and events">${ico('armor_asset')}${rest}</span>` : ''}
-      ${sa ? `<div class="row">${btn(`${ico('back')}<span class="bl">Retreat</span>`, () => E.defenderRetreatSA(g, b), 'ico', !mine(s) || !!b.assets[s].length || us.some((u) => u.garrison) || !us.length, 'Retreat before combat (uses a Special Action)')}${ubtn(`${ico('plus')}<span class="bl">Reinforce</span>`, () => { reinforcing = !reinforcing; refresh(); }, `ico ${reinforcing ? 'on' : ''}`, !mine(s), 'Bring in a neighbouring block (uses a Special Action)')}</div>` : ''}</div>`;
+      ${sa ? `<div class="row">${btn(`${ico('back')}<span class="bl">Retreat</span>`, () => pickSA(s, us[0]?.ech, (sa) => E.defenderRetreatSA(g, g.battle!, sa)), 'ico', !mine(s) || !!b.assets[s].length || us.some((u) => u.garrison) || !us.length, 'Retreat before combat (uses a Special Action)')}${ubtn(`${ico('plus')}<span class="bl">Reinforce</span>`, () => { reinforcing = !reinforcing; refresh(); }, `ico ${reinforcing ? 'on' : ''}`, !mine(s), 'Bring in a neighbouring block (uses a Special Action)')}</div>` : ''}</div>`;
   };
   const covered = E.unitsIn(g, b.area).some((u) => !seen(u)), al = stats(b, 'allied'), ge = stats(b, 'german'), tot = al.mean + ge.mean || 1;
   return `<div class="c-table slim ${rollView ? 'rolling' : ''}">${side('allied')}<div class="bmid"><div class="c-title">${g.fought.length + fightable().length > 1 ? `<small class="cnt" title="Battle ${g.fought.length + 1} of ${g.fought.length + fightable().length}">${Math.min(g.fought.length + 1, g.fought.length + fightable().length)}/${g.fought.length + fightable().length}</small>` : ''}${b.bt ? '<small class="cnt" title="Breakthrough combat">BT</small>' : ''}<b>${esc(L.name)}</b><span class="chp" title="Terrain defence number ${L.tdn}: attackers −${L.tdn} to hit">${ico('tree')}${L.tdn}</span>${g.fieldWorks.includes(b.area) ? `<span class="chp" title="Field works">${ico('gear')}</span>` : ''}${b.riverAssault ? `<span class="chp" title="River assault">${ico('wave')}</span>` : ''}</div>
@@ -1152,7 +1174,7 @@ function renderInner() {
   const alert = g.pendingBlow ? (() => { const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!, path = g.pendingBlow!.path; return `<div class="c-ledger"><h3>${nm(other(u.side))}: bridge?</h3><p class="hint">${esc(u.name)} tries to cross into ${esc(areaName(path[path.length - 1]))}. Attempt to blow the bridge? It works on a roll of 1–5.</p><div class="row end">${btn('Let them cross', () => E.resolveBlow(g, false))}${btn('Attempt to blow it', () => E.resolveBlow(g, true), 'primary')}</div></div>`; })() : '';
   const dockMain = alert || ledger() || handCards();
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = topBar() + `<div class="stage">${SANDBOX && SBU.st.sbOpen ? SBU.sandboxPanel() : ''}${seatBar()}${b ? battleTable() : dispatch()}${decisionBubble()}${legend()}${SBU.hotCoverHtml()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p && allowed() ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
+  $('#ui').innerHTML = topBar() + `<div class="stage">${SANDBOX && SBU.st.sbOpen ? SBU.sandboxPanel() : ''}${seatBar()}${b ? battleTable() : dispatch()}${decisionBubble()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p && allowed() ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
   const ui = $('#ui');
   bind(ui, keepH, keepA);
 }

@@ -24,3 +24,14 @@ describe('8.1 the Special Action the player picks is the one spent', () => {
     E.qualityReplacement(g, u6.id, block.id); expect(block.box).toBe('used'); expect(ev.box).toBe('available');
   });
 });
+
+describe('8.21-8.27 every Special Action use spends the chosen counter', () => {
+  it('breakthrough movement with a single-use event keeps the reusable block', () => {
+    const g = E.newGame(4); g.phase = 'btMove'; g.turn = 3; g.phasing = 'german';
+    const block = g.chits.find((c) => c.kind === 'sa_block' && c.side === 'german')!, ev = g.chits.find((c) => c.kind === 'special_action_event' && c.ech === 'de_5pz')!;
+    block.box = 'available'; ev.box = 'available';
+    const u = g.units.find((x) => x.side === 'german' && x.cls === 'armor' && x.ech === 'de_5pz' && x.area != null)!; Object.assign(u, { moved: false, disorder: 0, unsupplied: false, exploit: false, reserve: null });
+    E.activateBreakthrough(g, u.id, ev.id);
+    expect(u.exploit).toBe(true); expect(ev.box).toBe('eliminated'); expect(block.box).toBe('available');
+  });
+});

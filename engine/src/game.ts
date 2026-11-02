@@ -524,13 +524,13 @@ function fixPoint(g: Game, b: Battle) {
     const n = [...us].sort((x, y) => +!!x.garrison - +!!y.garrison || y.str - x.str)[0].id; if (side === b.attacker) b.attPoint = n; else b.defPoint = n;
   }
 }
-export function startBattle(g: Game, a: number, viaSA = false): Battle {
+export function startBattle(g: Game, a: number, viaSA = false, chitId?: string): Battle {
   if (g.battle) throw new Error('a battle is already open');
   const bt = g.phase === 'btCombat';
   if ((g.phase !== 'combat' && !bt) || !contested(g, a) || g.fought.includes(a)) throw new Error('no battle here');
   const att = fighters(g, a, g.phasing, true).filter((u) => !u.garrison), def = unitsIn(g, a, other(g.phasing));
   if (!att.length) throw new Error('no attacker in good order');
-  if (bt && !newlyContested(g).includes(a)) { if (!viaSA) throw new Error('re-engaging an already contested area costs a Special Action'); spendSA(g, g.phasing, undefined, 'breakthrough combat'); }
+  if (bt && !newlyContested(g).includes(a)) { if (!viaSA) throw new Error('re-engaging an already contested area costs a Special Action'); spendSA(g, g.phasing, undefined, 'breakthrough combat', chitId); }
   const lockedAtStart = bt && !!viaSA;
   const pick = (us: Unit[]) => [...us].sort((x, y) => +!!x.garrison - +!!y.garrison || y.str - x.str)[0].id;
   const b: Battle = { area: a, attacker: g.phasing, attPoint: pick(att), defPoint: pick(def), bt, riverAssault: g.riverAssault.includes(a), stage: 'setup', queue: [], assets: { german: [], allied: [] }, air: {}, pending: 0,
@@ -781,23 +781,23 @@ function end(g: Game, b: Battle, result: string) {
 /** 6.8: the attacker may decline the exploitation opportunity (and keep the blocks hidden). */
 export function declineExploit(g: Game, b: Battle) { if (b.stage !== 'exploit') throw new Error('no exploitation pending'); b.exploitIds = undefined; b.stage = 'done'; say(g, `${b.attacker} declines the exploitation opportunity`); }
 export function closeBattle(g: Game) { if (g.battle?.stage !== 'done') throw new Error('battle not finished'); g.battle = null; settleUp(g); }
-export function defenderRetreatSA(g: Game, b: Battle) {
+export function defenderRetreatSA(g: Game, b: Battle, chitId?: string) {
   if (b.stage !== 'setup') throw new Error('only before the first roll'); const def = other(b.attacker);
   if (b.assets[def].length || b.air[def]) throw new Error('defender has assets assigned');
   const us = unitsIn(g, b.area, def).filter((u) => !u.garrison); if (!us.length || unitsIn(g, b.area, def).some((u) => u.garrison)) throw new Error('garrisons cannot retreat');
-  spendSA(g, def, us[0].ech, 'retreat before combat'); b.locked = true; us.forEach((x) => clearInterdict(g, x));
+  spendSA(g, def, us[0].ech, 'retreat before combat', chitId); b.locked = true; us.forEach((x) => clearInterdict(g, x));
   b.retreat = { side: def, queue: us.map((u) => u.id), moved: false, after: 'sa', h: 0, excess: 0 }; advanceRetreat(g, b);
 }
-export function defenderReinforceSA(g: Game, b: Battle, unitId: string) {
+export function defenderReinforceSA(g: Game, b: Battle, unitId: string, chitId?: string) {
   if (b.stage !== 'setup') throw new Error('only before the first roll'); const def = other(b.attacker), u = g.units.find((x) => x.id === unitId)!;
   if (unitsIn(g, b.area, def).some((x) => x.id.startsWith('DR-'))) throw new Error('a defended roadblock may not be reinforced (4.35)');
   if (u.side !== def || u.area == null || !neighbors(b.area).includes(u.area) || contested(g, u.area) || u.disorder || u.garrison || blocks(g, b.area, def).length >= 2) throw new Error('not a legal reinforcement');
-  spendSA(g, def, u.ech, 'reinforce a battle'); b.locked = true; clearInterdict(g, u); const from = u.area; u.area = b.area; u.from = from; updateControl(g, from); say(g, `${u.name} reinforces ${areas.get(b.area)!.name}`);
+  spendSA(g, def, u.ech, 'reinforce a battle', chitId); b.locked = true; clearInterdict(g, u); const from = u.area; u.area = b.area; u.from = from; updateControl(g, from); say(g, `${u.name} reinforces ${areas.get(b.area)!.name}`);
 }
-export function activateBreakthrough(g: Game, unitId: string) {
+export function activateBreakthrough(g: Game, unitId: string, chitId?: string) {
   const u = g.units.find((x) => x.id === unitId)!;
   if (g.phase !== 'btMove' || u.side !== g.phasing || u.cls !== 'armor' || u.unsupplied || u.disorder || u.moved || u.exploit || u.area == null) throw new Error('needs a supplied armor unit in good order');
-  spendSA(g, u.side, u.ech, 'breakthrough movement'); clearInterdict(g, u); u.exploit = true;
+  spendSA(g, u.side, u.ech, 'breakthrough movement', chitId); clearInterdict(g, u); u.exploit = true;
 }
 export function mustFight(g: Game) {
   const bt = g.phase === 'btCombat'; if (g.phase !== 'combat' && !bt) return [];
@@ -952,9 +952,9 @@ export function rerouteOptions(g: Game, unitId: string): number[] {
   const u = g.units.find((x) => x.id === unitId); if (!u || g.phase !== 'reinforcement' || !g.arrived.includes(u.id) || u.area == null || !saAvailable(g, u.side, u.ech).length) return [];
   return [...new Set(appropriateAreas(u))].filter((a) => a !== u.area && (g.control[a] === u.side || !unitsIn(g, a).length) && blocks(g, a, u.side).length < 2 && !unitsIn(g, a, other(u.side)).length);
 }
-export function reroute(g: Game, unitId: string, area: number) {
+export function reroute(g: Game, unitId: string, area: number, chitId?: string) {
   if (!rerouteOptions(g, unitId).includes(area)) throw new Error('not a legal entry area');
-  const u = g.units.find((x) => x.id === unitId)!, from = u.area!; spendSA(g, u.side, u.ech, 'reroute a reinforcement');
+  const u = g.units.find((x) => x.id === unitId)!, from = u.area!; spendSA(g, u.side, u.ech, 'reroute a reinforcement', chitId);
   u.area = area; g.control[area] = u.side; updateControl(g, from); say(g, `${u.name} rerouted to ${areas.get(area)!.name}`);
 }
 
@@ -969,9 +969,9 @@ export function arrivalOptions(g: Game, id: string): { area: number; sa: boolean
   const rest = (u.delayed || sa) ? [...new Set(appropriateAreas(u))].filter((a) => !own.includes(a) && entryOpen(g, u, a)) : [];   // 4.1c a delayed unit takes the nearest allowed area, otherwise it costs a Special Action
   return [...own.map((area) => ({ area, sa: false })), ...rest.map((area) => ({ area, sa: !u.delayed }))];
 }
-export function placeArrival(g: Game, id: string, area: number) {
+export function placeArrival(g: Game, id: string, area: number, chitId?: string) {
   const opt = arrivalOptions(g, id).find((o) => o.area === area); if (!opt) throw new Error('not a legal entry area');
-  const u = g.units.find((x) => x.id === id)!; if (opt.sa) spendSA(g, u.side, u.ech, 'reroute a reinforcement');
+  const u = g.units.find((x) => x.id === id)!; if (opt.sa) spendSA(g, u.side, u.ech, 'reroute a reinforcement', chitId);
   u.area = area; g.control[area] = u.side; g.arrived.push(id); g.pendingArrivals = g.pendingArrivals.filter((x) => x !== id); say(g, `${u.name} arrives in ${areas.get(area)!.name}`);
 }
 function autoArrive(g: Game, id: string) {

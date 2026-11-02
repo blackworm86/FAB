@@ -344,3 +344,4 @@ ul.rl { margin: 4px 0; padding-left: 16px; } ul.rl li { margin: 2px 0; } .inspec
 /* the dice roll in a small tray at the top, not over the battle; they leave before the results play on the board */
 #dice { inset: auto; left: 50%; top: 96px; transform: translateX(-50%); width: min(440px, 92vw); height: 170px; background: #0b0d08d9; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px #000a; z-index: 12; }
 @media (max-width: 700px) { #dice { top: 96px; height: 124px; } }
+.sapick .pcgrid { gap: 14px; } .sapc { display: grid; justify-items: center; gap: 4px; } .sapc .pc { width: 72px; height: 72px; } .sapc small { font-size: 11px; opacity: .8; }
