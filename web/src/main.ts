@@ -83,20 +83,23 @@ scene.add(new THREE.HemisphereLight(0xeef3ff, 0x2a2622, 1.0));
 const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(-20, 50, 32); sun.castShadow = true;
 sun.shadow.mapSize.set(4096, 4096); Object.assign(sun.shadow.camera, { left: -35, right: 35, top: 35, bottom: -35, far: 200 }); scene.add(sun);
 
-let mapTex: THREE.Texture | null = null;                                                          // the scan is only loaded on request (it is not part of the repository)
-function scanTex() { if (!mapTex) { mapTex = new THREE.TextureLoader().load('./map.jpg'); mapTex.colorSpace = THREE.SRGBColorSpace; mapTex.repeat.set(MW / 2448, 1); mapTex.anisotropy = 8; } return mapTex; }
 const board = new THREE.Mesh(new THREE.PlaneGeometry(MW / S, MH / S), new THREE.MeshStandardMaterial({ map: null, roughness: 0.9 }));
 board.rotation.x = -Math.PI / 2; board.receiveShadow = true; scene.add(board);
-/** Map art: the traced vector layers (default) or the original scan. */
-let art: 'vector' | 'scan' = (() => { try { return localStorage.getItem('fab-art') === 'scan' ? 'scan' : 'vector'; } catch { return 'vector'; } })();
 /* The board texture is composed in layers: ground and forest, then the area tint (so roads and rivers stay visible), then the line work, then the printed items (numbers, TDN, VP, names), turned to face the player. */
 const boardCv = document.createElement('canvas'); boardCv.width = MW * 2; boardCv.height = MH * 2;
 const boardTex = new THREE.CanvasTexture(boardCv); boardTex.colorSpace = THREE.SRGBColorSpace; boardTex.anisotropy = 8;
 const loadImg = (src: string) => { const i = new Image(); i.onload = () => paintBoard(); i.src = src; return i; };
 const vpIcons = { allied: loadImg('./icons/vp-allied.svg'), german: loadImg('./icons/vp-german.svg'), mutual: loadImg('./icons/vp-mutual.svg') };
 const baseImg = loadImg('./map-base.svg'), linesImg = loadImg('./map-lines.svg');
-function applyArt() { const mat = board.material as THREE.MeshStandardMaterial; mat.map = art === 'scan' ? scanTex() : boardTex; mat.needsUpdate = true; if (art === 'vector') paintBoard(); }
-const setArt = (a: 'vector' | 'scan') => { art = a; try { localStorage.setItem('fab-art', a); } catch { /* private mode */ } applyArt(); };
+/** The map drawings are turned into pixels once and reused: redrawing the detailed SVG on every colour change is what made phones stall. */
+const flat = new Map<HTMLImageElement, HTMLCanvasElement>();
+function pixels(im: HTMLImageElement): CanvasImageSource {
+  const have = flat.get(im); if (have) return have;
+  const c = document.createElement('canvas'); c.width = boardCv.width; c.height = boardCv.height; const x = c.getContext('2d')!; x.drawImage(im, 0, 0, c.width, c.height);
+  if (x.getImageData(c.width >> 1, c.height >> 1, 1, 1).data[3] || im === linesImg) { if (im !== linesImg || flat.has(baseImg)) flat.set(im, c); return c; }     // a large SVG can come out blank the first time: keep the copy only once it shows
+  setTimeout(paintBoard, 120); return im;
+}
+function applyArt() { const mat = board.material as THREE.MeshStandardMaterial; mat.map = boardTex; mat.needsUpdate = true; paintBoard(); }
 const table = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({ color: 0x3b2a1d, roughness: 1 }));
 table.rotation.x = -Math.PI / 2; table.position.y = -0.02; scene.add(table);
 
@@ -109,7 +112,10 @@ for (const a of MAP.areas) {
 }
 const pieces = new THREE.Group(); scene.add(pieces);
 const labelTex = new Map<string, THREE.Texture>();
-const svgTex = (key: string, svg: string) => { if (!labelTex.has(key)) { const t = new THREE.TextureLoader().load('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; labelTex.set(key, t); } return labelTex.get(key)!; };
+/** Piece pictures are decoded a few per frame, so the first load does not freeze the phone; a texture shows as soon as its picture is ready. */
+const texQueue: [THREE.Texture, string][] = [];
+function pumpTextures() { for (let n = 0; n < 6 && texQueue.length; n++) { const [t, src] = texQueue.shift()!; const im = new Image(); im.onload = () => { t.image = im; t.needsUpdate = true; lastInput = performance.now(); }; im.src = src; } }
+const svgTex = (key: string, svg: string) => { if (!labelTex.has(key)) { const t = new THREE.Texture(); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; texQueue.push([t, 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)]); labelTex.set(key, t); } return labelTex.get(key)!; };
 const WOOD = { german: 0x8e9296, allied: 0x5d8a45 };
 const BRIT = new Set(['43 Inf', '53 Inf', 'Guards', '51 Inf']);
 
@@ -291,15 +297,15 @@ const fogSide = (): E.Side | 'spectator' | null => (online.active && !online.bot
 const seen = (u: E.Unit) => E.visibleTo(g, u, fogSide());
 const viewRot = () => (viewSide() === 'allied' ? Math.PI : 0);
 function paintBoard() {
-  if (art !== 'vector' || !baseImg.naturalWidth || !linesImg.naturalWidth) return;
+  if (!baseImg.naturalWidth || !linesImg.naturalWidth) return;
   const c = boardCv.getContext('2d')!, k = 2; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, boardCv.width, boardCv.height);
-  c.drawImage(baseImg, 0, 0, boardCv.width, boardCv.height);
+  c.drawImage(pixels(baseImg), 0, 0, boardCv.width, boardCv.height);
   if (tint !== 'off' && tint !== 'supply') {
     c.save(); c.scale(k, k); c.globalAlpha = 0.6;
     for (const a of MAP.areas) { c.beginPath(); a.polygon.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fillStyle = hex6(tintOf(a.id)); c.fill(); }
     c.restore();
   }
-  c.drawImage(linesImg, 0, 0, boardCv.width, boardCv.height);
+  c.drawImage(pixels(linesImg), 0, 0, boardCv.width, boardCv.height);
   {
     c.save(); c.scale(k, k);
     for (const a of MAP.areas) { c.save(); c.translate(a.label[0], a.label[1]); c.rotate(viewRot()); drawAreaItems(c, a, layers, vpIcons, true); c.restore(); }
@@ -1223,7 +1229,7 @@ function modalHtml() {
     const tabs = ['Players', 'Log', 'Settings', ...(online.admin ? ['Admin'] : [])];
     if (!tabs.includes(menuTab)) menuTab = 'Players';
     const body = menuTab === 'Log' ? `<div class="log">${[...g.log].reverse().slice(0, 120).map((l) => `<div>${esc(l)}</div>`).join('')}</div>`
-      : menuTab === 'Settings' ? `<h4>Map</h4><div class="row">${ubtn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${ubtn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Map art</h4><div class="row"><select data-sel="${regv((x) => setArt(x as 'vector' | 'scan'))}"><option value="vector" ${art === 'vector' ? 'selected' : ''}>Vector layers (traced)</option><option value="scan" ${art === 'scan' ? 'selected' : ''}>Original scan</option></select></div>
+      : menuTab === 'Settings' ? `<h4>Map</h4><div class="row">${ubtn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${ubtn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div>
         ${online.active && !online.admin && !online.both() ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as E.Opts['scenario']; })}"><option value="intro" ${newOpts.scenario === 'intro' ? 'selected' : ''}>Nuts! introductory (3 turns)</option><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
         <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Restart', () => { if (!confirm('Restart and lose the current game?')) return; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'danger')}</div>`}`
       : menuTab === 'Admin' ? `<div class="row">${ubtn(`${ico('wand')} Sandbox`, () => { location.href = `${homeUrl()}?sandbox=1`; })}${ubtn('Update rules', () => { modal = 'rules'; })}${ubtn('Free German seat', () => { void auth.freeSeat('german'); })}${ubtn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div>`
@@ -1323,6 +1329,7 @@ let fpsN = 0, fpsT = performance.now(), fpsWorst = 0, fpsLast = performance.now(
 for (const ev of ['pointerdown', 'pointermove', 'wheel', 'keydown', 'resize']) window.addEventListener(ev, () => { lastInput = performance.now(); }, { passive: true });
 function frame() {
   requestAnimationFrame(frame);
+  pumpTextures();
   if (!goal && !anims.length && !rollView && performance.now() - lastInput > 2000 && tick++ % 3) return;   if (fpsEl) { const now = performance.now(); fpsWorst = Math.max(fpsWorst, now - fpsLast); fpsLast = now; fpsN++; if (now - fpsT > 1000) { fpsEl.textContent = `${Math.round(fpsN * 1000 / (now - fpsT))} fps · slowest ${Math.round(fpsWorst)} ms`; fpsN = 0; fpsT = now; fpsWorst = 0; } }
     // idle: about 20 frames a second is enough for the floating markers, and spares the battery
   const r = canvas.getBoundingClientRect();
