@@ -381,3 +381,5 @@ ul.rl { margin: 4px 0; padding-left: 16px; } ul.rl li { margin: 2px 0; } .inspec
 .vcards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0; } .vcards div { border: 1px solid #3a3f2a; background: #11140c; padding: 10px; text-align: center; } .vcards b { display: block; font: 700 26px var(--sfd); }
 .vchart { width: 100%; height: auto; background: #11140c; border: 1px solid #3a3f2a; } .vend h4 { font: 700 14px var(--sfd); letter-spacing: .1em; text-transform: uppercase; color: #aaa; margin: 14px 0 4px; }
 .vbtns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 18px 0 8px; } @media (max-width: 700px) { .vban h1 { font-size: 30px; } }
+/* phones: the top bar must fit; map layers stay in Menu > Settings, the sandbox reset in its Turn tab */
+@media (max-width: 560px) { .c-bar.t [data-tint], .c-bar.t .sbreset { display: none !important; } .c-bar.t { overflow: hidden; } }

@@ -51,7 +51,7 @@ function sbReset(opts: Partial<E.Opts>) {
   save(); refresh();
 }
 export function sandboxBtns() {
-  return ubtn(`${ico('wand')}<span class="bl">Sandbox</span>`, () => { st.sbOpen = !st.sbOpen; }, 'ico ' + (st.sbOpen ? 'on' : ''), false, 'Sandbox tools') + ubtn(`${ico('undo')}<span class="bl">Reset</span>`, () => sbReset({ scenario: M.g.opts.scenario }), 'ico', false, 'Reset: a new game from the first turn (same scenario)');
+  return ubtn(`${ico('wand')}<span class="bl">Sandbox</span>`, () => { st.sbOpen = !st.sbOpen; }, 'ico ' + (st.sbOpen ? 'on' : ''), false, 'Sandbox tools') + ubtn(`${ico('undo')}<span class="bl">Reset</span>`, () => sbReset({ scenario: M.g.opts.scenario }), 'ico sbreset', false, 'Reset: a new game from the first turn (same scenario)');
 }
 function sbTarget(): SB.Target {
   const u = M.selUnit ? M.g.units.find((x) => x.id === M.selUnit) : null; if (u) return { kind: 'unit', id: u.id, label: `${u.name} (${u.side}, ${u.id})` };
