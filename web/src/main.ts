@@ -15,7 +15,7 @@ import { targetsFor, type Tgt } from './chit-play';
 import { snap, diffFx, FxLayer, fxRow, FX_SAMPLES, type Fx } from './fx';
 import { RULE, ruleHtml } from './rules-text';
 import databaseRules from '../../database.rules.json?raw';
-import { throwDice, clearDice, isHit, type DiceGroup } from './dice3d';
+import { throwDice, clearDice, type DiceGroup } from './dice3d';
 
 type MapArea = { id: number; label: [number, number]; polygon: [number, number][] };
 type MapEntry = { letter: string; x: number; y: number; side: E.Side };
@@ -988,7 +988,7 @@ function battleTable() {
 function ledger() {
   const b = g.battle; if ((!b || g.pendingBlow) && !rollView?.check) return '';
   if (rollView) {
-    const rv = rollView, hits = rv.groups.reduce((a, x) => a + x.hits, 0), labels = (rv.pos ?? []).map((p) => { const hit = isHit(p.v, rv.groups[p.group].sn); return `<div class="lbl ${hit ? 'hit' : 'miss'}" style="left:${p.x}px;top:${p.y}px">${rv.morale ? (hit ? 'PASS' : 'FAIL') : hit ? 'HIT!' : 'MISS'}</div>`; }).join('');
+    const rv = rollView, hits = rv.groups.reduce((a, x) => a + x.hits, 0);
     return `<div class="c-ledger tight" data-ui="${reg(() => { if (rollView?.pos) endRoll(); })}" title="Tap to continue"><div class="lh"><h3>${esc(rv.title)}</h3><b class="tot ${hits ? 'hit' : 'miss'}">${rv.pos ? rv.morale ? `${hits} of ${rv.groups.length} pass` : `${hits} hit${hits === 1 ? '' : 's'}` : '…'}</b></div>${rv.pos ? rollFx.map(fxRow).join('') : ''}${rv.groups.map((x) => `<div class="ln2"><span class="who">${esc(x.label)}</span><span class="sn">SN ${x.sn}</span><span class="cnt">${x.dice.length}${ico('dice')}</span><b class="${x.hits ? 'hit' : 'miss'}">${x.hits}</b></div>`).join('')}
       </div>`;
   }

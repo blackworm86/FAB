@@ -1,7 +1,7 @@
 /** Online play. Everything of one game lives in the Firebase Realtime Database under `games/{id}` (see store-rtdb.ts and database.rules.json):
  *  the shared game as many small values, each seat's private block details, and the reveals. A browser works out its own moves with the rules engine
  *  and writes only what changed. The seat decides who may act. In development (`?dev=1`) a seat switch lets one tab play both sides. */
-import { SplitSeat, type Game, type Side, type Priv, type Reveals } from '../../engine/src';
+import { setRandom, SplitSeat, type Game, type Side, type Priv, type Reveals } from '../../engine/src';
 import { rtdbStore } from './store-rtdb';
 
 export interface Seats { german?: string | null; allied?: string | null; germanName?: string | null; alliedName?: string | null }
@@ -79,6 +79,7 @@ export async function startOnline(remote: (g: Game) => void, changed: () => void
     const sync = (a: Account) => { online.account = a; online.uid = a.uid; online.admin = a.admin; onChange(); }; sync(store.account()); store.onAccount(sync);
     online.mode = 'local'; online.ready = true; online.hasAccounts = true; changed(); return;
   }
+  setRandom(() => crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32);                       // shared games: dice nobody can predict from the shared seed
   online.ready = true; online.mode = 'remote'; online.uid = store.uid; online.hasAccounts = true;
   const sync = (a: Account) => { online.account = a; online.uid = a.uid; online.admin = a.admin; onChange(); }; sync(store.account()); store.onAccount(sync);
   store.watchSeats((s) => { online.seats = s; onChange(); rebuild(); }, fail);

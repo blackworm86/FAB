@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { newGame, startBattle, mustFight, type Game } from '../src';
+import { attackerChoice, defenderChoice, chooseFirstLoss, chooseRetreat, retreatOptions, declineExploit, autoRecover, endPhase, visibleTo } from '../src';
 import { toPublic, compose, secretsOf, revealsIn, freshReveals, isPlaceholder, setReady, type Priv } from '../src';
 describe('split hidden blocks (no server)', () => {
   const SG = 'salt-g', SA = 'salt-a';
@@ -95,4 +96,18 @@ describe('entering a face-up contested area (5.22)', () => {
     g.contestedAtMoveStart = [al.area!];
     const mover = first ?? ge; const r = move(g, mover.id, al.area!); if (r === 'moved') expect(mover.up).toBe(al.area);
   });
+  it('the shared copy names no hidden block anywhere: log, checks, battle', () => {
+    const g = newGame(7);
+    while (g.phase !== 'supply' || g.turn < 2) {                                         // play into turn 2 with real battles, logs and rolls
+      for (const a of mustFight(g)) { const b = startBattle(g, a); beginCombat(g, b); for (let i = 0; i < 90 && b.stage !== 'done'; i++) { if (b.stage === 'attChoice') attackerChoice(g, b, false); else if (b.stage === 'defChoice') defenderChoice(g, b, false); else if (b.stage === 'attFirst') chooseFirstLoss(g, b, b.attPoint); else if (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]); else if (b.stage === 'exploit') declineExploit(g, b); else roll_step(g, b); } closeBattle(g); }
+      autoRecover(g); endPhase(g);
+    }
+    const hidden = g.units.filter((u) => !visibleTo(g, u, 'spectator') && u.name.length > 2);
+    expect(hidden.length).toBeGreaterThan(0);
+    for (const u of hidden) (g.checks ??= []).push({ who: u.name, why: 'Out of supply morale check (9.4)', sn: 5, die: 7, ok: false, area: u.area });   // as the Supply Phase records them
+    const pub = toPublic(JSON.parse(toPublic(g, 'german', 'salt-g', new Map())) as Game, 'allied', 'salt-a', new Map());
+    for (const u of hidden) expect(pub, u.name).not.toContain(`"${u.name}"`);
+    for (const u of hidden) expect(pub.includes(u.name + ' '), u.name).toBe(false);
+  });
 });
+

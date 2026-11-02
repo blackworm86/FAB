@@ -78,7 +78,6 @@ button.ico.on { border-color: var(--gold); color: var(--gold); }
 .arrtray { display: flex; justify-content: safe center; gap: 22px; padding: 14px 24px 10px; overflow-x: auto; background: #0b0d08e6; border-top: 1px solid var(--line); flex: none; }
 .legend { position: absolute; right: 12px; top: 12px; display: grid; gap: 4px; padding: 10px 12px; background: #0b0d08e6; border: 1px solid var(--line); font-size: 12px; }
 .toast { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); background: #a7392b; color: #fff; padding: 8px 16px; z-index: 30; box-shadow: 0 6px 18px #000a; max-width: calc(100% - 24px); }
-.labels { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
 .c-ledger { background: #0b0d08f0; border-top: 1px solid var(--line); padding: 10px 18px; overflow: auto; max-height: 44vh; flex: 0 1 auto; } .c-ledger.slim { padding: 8px 14px; }
 .c-ledger h3 { margin: 0 0 8px; font: 700 24px var(--sfd); letter-spacing: .1em; text-transform: uppercase; color: var(--gold); }
 

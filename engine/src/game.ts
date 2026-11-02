@@ -72,7 +72,10 @@ export const newlyContested = (g: Game) => contestedAreas(g).filter((a) => !g.co
 export const chit = (g: Game, id: string) => g.chits.find((c) => c.id === id)!;
 export const boxOf = (g: Game, side: Side, box: Chit['box']) => g.chits.filter((c) => c.side === side && c.box === box);
 /** Dice come from the game's seed; a test table can queue exact results in `force` (the sandbox). */
-const roll = (g: Game) => (g.force?.length ? (g.rolls++, g.force.shift()!) : d10(rng(g.seed * 7919 + g.rolls++)));
+/** Online the dice must not be predictable from the shared game, so the client plugs in a secure random source; tests and offline play use the seed. */
+let secure: (() => number) | null = null;
+export const setRandom = (f: (() => number) | null) => { secure = f; };
+const roll = (g: Game) => (g.force?.length ? (g.rolls++, g.force.shift()!) : secure ? (g.rolls++, 1 + Math.floor(secure() * 10)) : d10(rng(g.seed * 7919 + g.rolls++)));
 const say = (g: Game, s: string) => { g.log.push(`T${g.turn} ${g.phasing === 'german' ? 'GE' : 'AL'} ${g.phase}: ${s}`); if (g.log.length > 400) g.log.splice(0, g.log.length - 300); };   // the log only has to be read, so it stays short
 const AIRBORNE = new Set(['82', '101', '517']);                                                // 18.5
 const ARMY = (u: Unit): number | undefined => (u.ech ? ZONE[u.ech] : undefined);
@@ -176,7 +179,7 @@ function drawChits(g: Game, side: Side, n: number) {
     if (c.kind === 'event_delayed_response') { c.box = 'eliminated'; say(g, `${side} drew Delayed Response (no effect)`); } else { c.box = 'available'; c.drawn = g.turn * 10 + (g.phasing === 'german' ? 1 : 2); }
   }
 }
-const rngf = (g: Game) => rng(g.seed * 104729 + g.rolls++)();
+const rngf = (g: Game) => (secure ? (g.rolls++, secure()) : rng(g.seed * 104729 + g.rolls++)());
 /** 4.1b-c: the Used Box goes back to the cup (German artillery attrition first, 16.12). */
 function recycleUsed(g: Game, side: Side, artyDone = false) {
   if (side === 'german' && !artyDone) {                                                              // 16.12: the German player eliminates one regular artillery asset of his choice from the Used Box

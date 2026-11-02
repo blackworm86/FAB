@@ -24,13 +24,13 @@ export function toPublic(g: Game, side: Side, salt: string, enemyAlias: Map<stri
   const hidden = g.units.filter((u) => !visibleTo(g, u, 'spectator'));
   const pairs: [string, string][] = [], names: string[] = [];
   for (const u of hidden) { const a = u.side === side ? alias(salt, u.id) : enemyAlias.get(u.id); if (a) { pairs.push([u.id, a]); if (u.name.length > 2) names.push(u.name); } }
-  const real = new Set(pairs.map(([id]) => id));
   const copy = JSON.parse(swap(JSON.stringify(g), pairs)) as Game;
   const al = new Set(pairs.map(([, a]) => a));
   for (const u of copy.units) if (al.has(u.id)) Object.assign(u, BLANK);
   names.sort((a, b) => b.length - a.length);
-  copy.log = copy.log.slice(-120).map((l) => names.reduce((t, n) => t.split(n).join('a hidden block'), l));
-  void real;
+  const clean = (l: string) => names.reduce((t, n) => t.split(n).join('a hidden block'), l);
+  copy.log = copy.log.slice(-120).map(clean);
+  if (copy.checks) copy.checks = copy.checks.map((c) => ({ ...c, who: clean(c.who) }));                       // morale checks name their unit too
   return JSON.stringify(copy);
 }
 
