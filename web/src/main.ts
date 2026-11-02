@@ -7,7 +7,7 @@ import { chitSvg, mapMarkerSvg, loadChitArt, garrisonChit } from './chits';
 import { History } from './history';
 import * as SB from './sandbox';
 import * as SBU from './sandbox-ui';
-import { online, startOnline, push, sit, setDevSeat, auth, lobby, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, SANDBOX, type DevSeat, type Match } from './online';
+import { online, startOnline, push, sit, sendChat, setChatListener, type ChatMsg, setDevSeat, auth, lobby, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, SANDBOX, type DevSeat, type Match } from './online';
 import { gameInfo } from './games';
 import { ICONS, ico } from './icons';
 import { esc, nm } from './util';
@@ -450,6 +450,32 @@ function arrive(id: string, area: number) {
 /** When more than one Special Action could pay for an action, the player chooses which (a single-use event keeps the reusable block for later, 8.1).
  *  Runs inside an action: with one choice it pays at once, otherwise it opens the chooser and the chosen counter pays in a new action. */
 const ARMY_NAME: Record<string, string> = { de_5pz: '5th Panzer Army', de_6pz: '6th Panzer Army', de_7a: '7th Army', de_sr: 'Strategic Reserve', us_1a: 'US 1st Army', us_3a: 'US 3rd Army', us_sr: 'US reserve', br_xxx: 'British' };
+/* ---------- chat between the two players; watchers read it ---------- */
+const chatOn = () => online.mode === 'remote' || DEV_FAKE;
+let chatOpen = false, chatDraft = '', chatSeen = (() => { try { return Number(localStorage.getItem('fab-chat-seen-' + TABLE) ?? 0); } catch { return 0; } })();
+const QUICK = ['Your turn', 'Ready', 'One moment', 'Nice move', 'Good game'];
+const unread = () => online.chat.filter((m) => m.t > chatSeen && m.uid !== online.uid).length;
+const markSeen = () => { const last = online.chat.at(-1)?.t ?? 0; if (last > chatSeen) { chatSeen = last; try { localStorage.setItem('fab-chat-seen-' + TABLE, String(last)); } catch { /* private mode */ } } };
+let chatKnown = -1;
+setChatListener((m: ChatMsg[]) => {                                                                   // a short banner for a new message while the chat is closed
+  const fresh = chatKnown < 0 ? [] : m.filter((x) => x.t > chatKnown && x.uid !== online.uid); chatKnown = Math.max(chatKnown, m.at(-1)?.t ?? 0);
+  if (chatOpen) { markSeen(); const l = document.getElementById('chat-list'); if (l && document.activeElement?.id === 'chat-in') { l.innerHTML = chatRows(); l.scrollTop = l.scrollHeight; } } else if (fresh.length) { const x = fresh.at(-1)!; say(`${nm(x.side)}: ${x.text}`); }
+});
+async function chatSend(text: string) { const e = await sendChat(text); if (e) say(e); else { chatDraft = ''; const i = document.getElementById('chat-in') as HTMLInputElement | null; if (i) i.value = ''; } }
+function chatBtn() { if (!chatOn()) return ''; const n = unread(); return `<button class="ico chatbtn ${chatOpen ? 'on' : ''}" data-ui="${reg(() => { chatOpen = !chatOpen; if (chatOpen) markSeen(); })}" title="Chat" aria-label="Chat${n ? `, ${n} new` : ''}">${ico('chat')}${n ? `<i class="unread">${n > 9 ? '9+' : n}</i>` : ''}<span class="bl">Chat</span></button>`; }
+function chatRows() {
+  const time = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return online.chat.map((m) => `<div class="cm ${m.side} ${m.uid === online.uid ? 'me' : ''}"><small><b>${esc(m.name || nm(m.side))}</b> · ${nm(m.side)} · ${time(m.t)}</small><p>${esc(m.text)}</p></div>`).join('') || '<p class="hint">No messages yet.</p>';
+}
+function chatHtml() {
+  if (!chatOn() || !chatOpen) return '';
+  const me = online.mySide(), rows = chatRows();
+  return `<aside class="chat" aria-label="Chat"><div class="chead"><b>${ico('chat')} Chat</b><button class="ico" data-ui="${reg(() => { chatOpen = false; })}" aria-label="Close chat">${ico('close')}</button></div>
+    <div class="clist" id="chat-list">${rows}</div>
+    ${me ? `<div class="cquick">${QUICK.map((q) => `<button data-ui="${reg(() => { void chatSend(q); })}">${q}</button>`).join('')}</div>
+    <div class="cin authform"><input id="chat-in" maxlength="300" placeholder="Message to your opponent" value="${esc(chatDraft)}" autocomplete="off" enterkeyhint="send"><button class="primary" id="chat-send" aria-label="Send">${ico('next')}</button></div>`
+    : '<p class="hint cwatch">You are watching: only the two players can write.</p>'}</aside>`;
+}
 let auditWarn: string[] = [];                                                                         // problems found in moves written by the other browser
 let saPick: { side: E.Side; run: (id: string) => void; cands: E.Chit[] } | null = null;
 function pickSA(side: E.Side, ech: string | undefined, run: (id?: string) => void) {
@@ -817,7 +843,7 @@ function drag(ev: PointerEvent, el: HTMLElement) {
 function topBar() {
   const v = E.victory(g), tr = (g.track ?? E.TRACK)[g.turn - 1], i = g.phasing === 'german' ? 0 : 1, at = STEP_OF[g.phase];
   return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game" aria-label="Menu, log and new game">${ico('menu')}</button>${SANDBOX ? SBU.sandboxBtns() : ''}<div class="c-crumbs">${STEPS.map((s, k) => `<span class="${k === at ? 'on' : k < at ? 'done' : ''}">${s}</span>`).join('')}</div>
-    <button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="Map overlay: terrain defence / army zones / off" aria-label="Map overlay">${ico('layers')}<span class="bl">Overlay</span></button><button class="ico" data-home title="Reset the camera" aria-label="Reset the camera">${ico('home')}<span class="bl">View</span></button><button class="ico" data-undo title="${hist.length ? 'Undo: ' + esc(note || 'last action') + ' (Ctrl+Z)' : 'Nothing to undo yet. Undo is available until a die is rolled.'}" aria-label="Undo" ${hist.length ? '' : 'disabled'}>${ico('undo')}<span class="bl">Undo</span></button><div class="c-stat"><span>TURN<b>${g.turn}</b></span><span>PLAYING<b class="${g.phasing}">${nm(g.phasing).toUpperCase()}</b></span>${online.active && online.mode === 'remote' ? `<span class="syncdot ${/NOT SAVED/.test(online.sync) ? 'bad' : /saving|connecting/.test(online.sync) ? 'wait' : 'ok'}" title="${esc(online.sync)}" aria-label="${esc(online.sync)}"></span>` : ''}${online.active ? `<span>YOU<b class="${online.mySide() ?? ''}">${online.both() ? 'BOTH' : (online.mySide() ?? 'WATCHING').toUpperCase()}</b></span>` : ''}${DEV || SANDBOX ? `<button class="ico dev" data-seat title="Developer: switch seat (German, Allied, both, watching)" aria-label="Switch seat">${ico('swap')}<span class="bl">Seat</span></button>` : ''}<span>NET VP<b>${v.net > 0 ? 'GE +' + v.net : v.net < 0 ? 'AL +' + -v.net : '0'}</b></span>${g.phase === 'admin' || g.phase === 'reinforcement' ? `<span title="Chits drawn this turn (German / Allied)">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span>` : ''}<button class="ico" data-modal="boxes" title="Pieces: boxes, arrivals" aria-label="Pieces">${ico('boxes')}</button></div></div>`;
+    <button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="Map overlay: terrain defence / army zones / off" aria-label="Map overlay">${ico('layers')}<span class="bl">Overlay</span></button><button class="ico" data-home title="Reset the camera" aria-label="Reset the camera">${ico('home')}<span class="bl">View</span></button><button class="ico" data-undo title="${hist.length ? 'Undo: ' + esc(note || 'last action') + ' (Ctrl+Z)' : 'Nothing to undo yet. Undo is available until a die is rolled.'}" aria-label="Undo" ${hist.length ? '' : 'disabled'}>${ico('undo')}<span class="bl">Undo</span></button><div class="c-stat"><span>TURN<b>${g.turn}</b></span><span>PLAYING<b class="${g.phasing}">${nm(g.phasing).toUpperCase()}</b></span>${online.active && online.mode === 'remote' ? `<span class="syncdot ${/NOT SAVED/.test(online.sync) ? 'bad' : /saving|connecting/.test(online.sync) ? 'wait' : 'ok'}" title="${esc(online.sync)}" aria-label="${esc(online.sync)}"></span>` : ''}${online.active ? `<span>YOU<b class="${online.mySide() ?? ''}">${online.both() ? 'BOTH' : (online.mySide() ?? 'WATCHING').toUpperCase()}</b></span>` : ''}${DEV || SANDBOX ? `<button class="ico dev" data-seat title="Developer: switch seat (German, Allied, both, watching)" aria-label="Switch seat">${ico('swap')}<span class="bl">Seat</span></button>` : ''}<span>NET VP<b>${v.net > 0 ? 'GE +' + v.net : v.net < 0 ? 'AL +' + -v.net : '0'}</b></span>${g.phase === 'admin' || g.phase === 'reinforcement' ? `<span title="Chits drawn this turn (German / Allied)">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span>` : ''}${chatBtn()}<button class="ico" data-modal="boxes" title="Pieces: boxes, arrivals" aria-label="Pieces">${ico('boxes')}</button></div></div>`;
 }
 function prompt() {
   const chip = online.active && !online.both() && online.mySide() && !g.over ? `<span class="turnchip ${allowed() ? 'go' : 'wait'}">${nm(online.mySide()!)} · ${allowed() ? 'your move' : 'waiting'}</span> ` : '';
@@ -1169,7 +1195,7 @@ function renderInner() {
   const alert = g.pendingBlow ? (() => { const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!, path = g.pendingBlow!.path; return `<div class="c-ledger"><h3>${nm(other(u.side))}: bridge?</h3><p class="hint">${esc(u.name)} tries to cross into ${esc(areaName(path[path.length - 1]))}. Attempt to blow the bridge? It works on a roll of 1–5.</p><div class="row end">${btn('Let them cross', () => E.resolveBlow(g, false))}${btn('Attempt to blow it', () => E.resolveBlow(g, true), 'primary')}</div></div>`; })() : '';
   const dockMain = alert || ledger() || handCards();
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = topBar() + `<div class="stage">${SANDBOX && SBU.st.sbOpen ? SBU.sandboxPanel() : ''}${seatBar()}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${b ? battleTable() : dispatch()}${decisionBubble()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p && allowed() ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
+  $('#ui').innerHTML = topBar() + `<div class="stage">${SANDBOX && SBU.st.sbOpen ? SBU.sandboxPanel() : ''}${seatBar()}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${b ? battleTable() : dispatch()}${decisionBubble()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${chatHtml()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p && allowed() ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
   const ui = $('#ui');
   bind(ui, keepH, keepA);
 }
@@ -1180,6 +1206,10 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
   ui.querySelectorAll<HTMLElement>('[data-modal]').forEach((e) => (e.onclick = () => { modal = (e.dataset.modal || null) as typeof modal; render(); }));
   ui.querySelectorAll<HTMLElement>('[data-sel]').forEach((e) => (e.onchange = () => { const f = actv[e.dataset.sel!]; if (f) { f(e instanceof HTMLInputElement && e.type === 'checkbox' ? (e.checked ? 'on' : 'off') : (e as HTMLSelectElement).value); save(); } }));
   ui.querySelectorAll<HTMLInputElement>('#lb-q').forEach((e) => { const run = () => { SBU.st.sbFilter = e.value; const w = SBU.st.sbFilter.toLowerCase().split(/\s+/).filter(Boolean); ui.querySelectorAll<HTMLElement>('.lbgrid .lbt').forEach((t) => { t.style.display = w.every((x) => t.dataset.k!.includes(x)) ? '' : 'none'; }); }; e.oninput = run; run(); });
+  { const i = ui.querySelector<HTMLInputElement>('#chat-in'), b = ui.querySelector<HTMLElement>('#chat-send'), l = ui.querySelector<HTMLElement>('#chat-list');
+    if (l) l.scrollTop = l.scrollHeight;
+    if (i) { i.oninput = () => { chatDraft = i.value; }; i.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); void chatSend(i.value); } }; }
+    if (b && i) b.onclick = () => { void chatSend(i.value); }; }
   ui.querySelectorAll<HTMLTextAreaElement>('#sb-note').forEach((e) => (e.oninput = () => { SBU.st.sbDraft = e.value; }));
   ui.querySelectorAll<HTMLElement>('[data-arr]').forEach((e) => (e.onpointerdown = (ev) => dragArrival(ev, e)));
   ui.querySelectorAll<HTMLElement>('[data-arr]').forEach((e) => (e.onclick = () => { selArr = selArr === e.dataset.arr ? null : e.dataset.arr!; refresh(); frameArrival(); }));

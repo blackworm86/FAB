@@ -166,6 +166,9 @@ A decision on the table (take the hits, retreat, first loss) is a small bubble p
 ### Dice tray
 Dice roll in a small tray at the top of the screen, sized to the number of dice (phones included). Numbers turn green (hit / pass) or red (miss / fail); after a short look the tray leaves and the results play on the board: a block losing a step turns, removed pieces and field works fade.
 
+### Chat
+A speech-bubble button in the top bar (unread count in an alarm-red dot) opens the players' chat: a slim panel on the right on computers, a bottom sheet over the hand on phones. Messages show name, side colour (steel or olive edge) and time; one-tap quick lines (Your turn, Ready, One moment, Nice move, Good game) sit above the text box. A message arriving while the chat is closed shows as a short banner. Watchers read but see "only the two players can write"; there is no chat in the sandbox or hotseat.
+
 ### Rules check bar
 A red bar over the table when the other player's browser wrote something the rules do not allow (game sent back, dice changed, wrong side acting). It names the problem in plain words and has an OK button. It must never appear in honest play.
 

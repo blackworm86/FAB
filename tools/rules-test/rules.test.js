@@ -126,3 +126,28 @@ describe('the app\'s own flows (as web/src/store-rtdb.ts writes them)', () => {
   });
 });
 
+describe('chat: the two players write, everyone signed in reads', () => {
+  beforeEach(async () => { await admin((d) => set(ref(d, `games/${G}/seats/allied`), 'bob')); });
+  const msg = (uid, side, text = 'hello') => ({ uid, side, name: uid, text, t: Date.now() });
+  it('a seated player posts as themself and their own side', async () => {
+    await assertSucceeds(set(ref(user('bob'), `games/${G}/chat/m1`), msg('bob', 'allied')));
+  });
+  it('nobody posts as someone else or as the other side', async () => {
+    await assertFails(set(ref(user('bob'), `games/${G}/chat/m2`), msg('alice', 'german')));
+    await assertFails(set(ref(user('bob'), `games/${G}/chat/m3`), msg('bob', 'german')));
+  });
+  it('watchers and strangers read but cannot post', async () => {
+    await assertSucceeds(get(ref(guest(), `games/${G}/chat`)));
+    await assertFails(set(ref(user('mallory'), `games/${G}/chat/m4`), msg('mallory', 'allied')));
+    await assertFails(set(ref(guest(), `games/${G}/chat/m5`), msg('guest', 'allied')));
+  });
+  it('messages are plain, short, and cannot be edited or deleted by players', async () => {
+    await assertFails(set(ref(user('bob'), `games/${G}/chat/m6`), msg('bob', 'allied', 'x'.repeat(301))));
+    await assertFails(set(ref(user('bob'), `games/${G}/chat/m7`), { ...msg('bob', 'allied'), html: '<b>' }));
+    await assertSucceeds(set(ref(user('bob'), `games/${G}/chat/m8`), msg('bob', 'allied')));
+    await assertFails(set(ref(user('bob'), `games/${G}/chat/m8`), msg('bob', 'allied', 'edited')));
+    await assertFails(remove(ref(user('bob'), `games/${G}/chat/m8`)));
+    await assertSucceeds(remove(ref(user('root'), `games/${G}/chat/m8`)));
+  });
+});
+

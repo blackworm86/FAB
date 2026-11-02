@@ -1,4 +1,4 @@
-import type { Seats, Store, StateDoc, Account, Match } from './online';
+import type { ChatMsg, Seats, Store, StateDoc, Account, Match } from './online';
 import { initSplit, toTree, fromTree, diffTree, type Game, type Priv, type Reveals, type Side, type Tree } from '../../engine/src';
 const msg = (e: unknown) => { const c = (e as { code?: string })?.code ?? ''; const m = String((e as { message?: string })?.message ?? e); return c.includes('invalid-credential') || c.includes('wrong-password') || c.includes('user-not-found') ? 'Wrong email or password' : c.includes('email-already') ? 'That email already has an account, sign in instead' : c.includes('weak-password') ? 'The password needs at least 6 characters' : c.includes('popup-closed') ? 'Sign-in was cancelled' : c.includes('unauthorized-domain') ? 'This site is not in the Firebase authorized domains' : m; };
 
@@ -67,6 +67,8 @@ export async function rtdbStore(table: string): Promise<Store | null> {
     async setPriv(p: Priv) { const s = (await rt.get(G('seats'))).val() ?? {}, v = seatOf(s); if (v) await rt.set(G(`priv/${v}`), { salt: p.salt, secrets: enc(p.secrets) }); },
     watchReveals: (next: (r: Reveals) => void) => { rt.onValue(G('reveals'), (s) => next(dec(s.val())), () => next({})); },
     async mergeReveals(r: Reveals) { await rt.update(G('reveals'), enc(r)); },
+    watchChat: (next) => { rt.onValue(rt.query(G('chat'), rt.limitToLast(100)), (s) => { const out: ChatMsg[] = []; s.forEach((c) => { const v = c.val(); out.push({ id: c.key!, uid: v.uid, side: v.side, name: v.name, text: String(v.text ?? ''), t: v.t }); }); next(out); }, () => next([])); },
+    async sendChat(side: Side, text: string) { try { await rt.push(G('chat'), { uid: account.uid, side, name: seatName().slice(0, 60), text, t: Date.now() }); return ''; } catch (e) { return msg(e); } },
     async sit(side: Side | null) {
       if (account.guest) return 'Sign in to take a seat';
       const uid = account.uid;

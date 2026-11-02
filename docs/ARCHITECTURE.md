@@ -12,7 +12,7 @@ Technical reference for maintaining FAB: The Bulge and building the next games o
 | Hosting | GitHub Pages | Serves the built files only; runs no code. `.github/workflows/pages.yml` tests and publishes on every push to `main`. |
 | Shared storage | Firebase Realtime Database (free Spark plan) | Stores each game and pushes changes live to every open browser. Also Firebase Authentication (Google, email, anonymous guests). |
 
-Main client files: `main.ts` (scene, screens, input), `online.ts` (connection, seats, saving), `store-rtdb.ts` (all database reads and writes), `sandbox.ts` + `sandbox-ui.ts` (admin test table and hotseat), `chit-play.ts` (what a chit can be played on), `chits.ts` / `art.ts` / `marker-art.ts` / `sa-art.ts` (counter art), `dice3d.ts`, `fx.ts` (effect pop-ups), `rules-text.ts` (chit descriptions).
+Main client files: `main.ts` (scene, screens, input, chat panel), `online.ts` (connection, seats, saving), `store-rtdb.ts` (all database reads and writes), `sandbox.ts` + `sandbox-ui.ts` (admin test table and hotseat), `chit-play.ts` (what a chit can be played on), `chits.ts` / `art.ts` / `marker-art.ts` / `sa-art.ts` (counter art), `dice3d.ts`, `fx.ts` (effect pop-ups), `rules-text.ts` (chit descriptions).
 
 ## 2. Who runs the game
 
@@ -36,6 +36,7 @@ Online dice and chit draws use the browser's secure random generator (`E.setRand
 | `state` | the shared game: `f/<field>`, `units/<n>`, `chits/<n>` (JSON strings), `rev`, `by` | signed-in users (guests watch) | created by the owner; then only the two seated players (or admin); `by` must be the writer; players cannot delete it |
 | `priv/{side}` | that side's real block details and salt | that seat only | created by the owner; then that seat; never deleted by a player |
 | `reveals` | block details the other side has to see | signed-in users | the seated players |
+| `chat/{pushId}` | `uid`, `side`, `name`, `text` (≤300 chars), `t` | signed-in users (watchers read) | only the two seated players, as themselves and their own side; never edited; only an admin deletes |
 | `users/{uid}/games/{id}` | each player's game list | that user | that user |
 | `admins/{uid}` | admin flag | that user | nobody (set by hand in the console) |
 
@@ -74,7 +75,7 @@ Concurrency: in Prepare and battle set-up both players act at once. Writes carry
 |---|---|
 | `cd engine && npm test` | Rules engine: combat, movement, supply, chits, events, scenarios, hidden blocks, referee-lite (`audit.test.ts`), Special Action spending. |
 | `cd web && npm test` | Client helpers (undo history). |
-| `cd tools/rules-test && npm i && npm test` | `database.rules.json` in the Firebase emulator (needs Java): seats and factions, secrets, who may write the game, the app's own create/join/move/leave/delete writes. Run after every change to the rules. |
+| `cd tools/rules-test && npm i && npm test` | `database.rules.json` in the Firebase emulator (needs Java): seats and factions, secrets, who may write the game, the chat, the app's own create/join/move/leave/delete writes. Run after every change to the rules. |
 
 CI (`.github/workflows`) runs the engine and web tests and the build on every push. The rules tests need Java and the emulator, so they run by hand.
 

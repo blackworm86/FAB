@@ -9,6 +9,8 @@ export interface Seats { german?: string | null; allied?: string | null; germanN
 export interface Match { id: string; game: string; title: string; opts: { scenario: string; fuel: boolean; airborne?: boolean }; owner: string; members: string[]; germanName?: string; alliedName?: string; created: number }
 export interface Account { uid: string; name: string; email: string; guest: boolean; admin: boolean }
 /** The shared game as the store hands it over: a revision counter and the game as JSON. */
+/** One chat message: written only by a seated player, signed with their own account and side. */
+export interface ChatMsg { id: string; uid: string; side: Side; name?: string; text: string; t: number }
 export interface StateDoc { rev: number; json: string; by?: string }
 /** What a storage backend has to provide. */
 export interface Store {
@@ -20,6 +22,8 @@ export interface Store {
   sit(side: Side | null): Promise<string>;
   /** Each seat's private block details, and the details the other side may see (see engine/src/split.ts). */
   watchPriv(next: (p: Priv | null) => void): void; setPriv(p: Priv): Promise<void>; watchReveals(next: (r: Reveals) => void): void; mergeReveals(r: Reveals): Promise<void>;
+  /** The players' chat: the last messages, live; and sending one as the seated side. */
+  watchChat(next: (m: ChatMsg[]) => void): void; sendChat(side: Side, text: string): Promise<string>;
   /** Accounts and the lobby. */
   account(): Account; onAccount(f: (a: Account) => void): void;
   google(): Promise<string>; emailSignIn(email: string, password: string): Promise<string>; emailRegister(email: string, password: string, name: string): Promise<string>;
@@ -42,7 +46,7 @@ export type DevSeat = 'german' | 'allied' | 'both' | 'watch';
 export const online = {
   /** 'off' = not connected, 'local' = a development table on this machine, 'remote' = shared through the database. */
   mode: 'off' as 'off' | 'local' | 'remote', uid: '', seats: {} as Seats, rev: 0, error: '', sync: 'connecting' as string, ready: false,
-  lastBy: '', devSeat: 'both' as DevSeat, enemyAlias: new Map<string, string>(), account: null as Account | null, admin: false, hasAccounts: false,
+  lastBy: '', chat: [] as ChatMsg[], devSeat: 'both' as DevSeat, enemyAlias: new Map<string, string>(), account: null as Account | null, admin: false, hasAccounts: false,
   mySide(): Side | null {
     if ((DEV || SANDBOX) && this.mode !== 'off') return this.devSeat === 'german' || this.devSeat === 'allied' ? this.devSeat : null;
     return this.seats.german === this.uid && this.uid ? 'german' : this.seats.allied === this.uid && this.uid ? 'allied' : null;
@@ -54,6 +58,7 @@ export const online = {
 
 let store: Store | null = null, seat: SplitSeat | null = null, pubDoc: StateDoc | null = null, lastJson = '';
 let writing = false, queued: Game | null = null, rebuildLater = false, had = false;
+let onChat: (m: ChatMsg[]) => void = () => {};
 let onChange: () => void = () => {}, onRemote: (g: Game) => void = () => {}, notify: (m: string) => void = () => {}, onGone: () => void = () => {};
 const fail = (e: string) => { online.error = e; onChange(); };
 const mySeat = () => { const side = online.mySide(); if (!side) return (seat = null); if (!seat || seat.side !== side) seat = new SplitSeat(side); return seat; };
@@ -85,6 +90,7 @@ export async function startOnline(remote: (g: Game) => void, changed: () => void
   store.watchSeats((s) => { online.seats = s; onChange(); rebuild(); }, fail);
   store.watchPriv((p) => { const sp = mySeat(); if (sp) sp.priv = p; rebuild(); if (p && queued) { const q = queued; queued = null; void push(q); } });
   store.watchReveals((r) => { const sp = mySeat(); if (sp) sp.reveals = r; rebuild(); });
+  store.watchChat((m) => { online.chat = m; onChat(m); onChange(); });
   store.watchState((d) => {
     if (!d) { if (had) onGone(); return; }                                                         // the game was deleted
     had = true; online.sync = `received ${new Date().toLocaleTimeString()}`; onChange();
@@ -113,6 +119,9 @@ export async function publishReveals(g: Game) {
   const fresh = sp.due(g); if (Object.keys(fresh).length) await store.mergeReveals(fresh);
 }
 
+/** Send a chat line as the seated side; resolves an error message or ''. Watchers only read. */
+export async function sendChat(text: string) { const side = online.mySide(), t = text.trim().slice(0, 300); if (!store || online.mode !== 'remote' && !DEV || !side || !t) return 'Only the two players can write in the chat.'; return store.sendChat(side, t); }
+export const setChatListener = (f: (m: ChatMsg[]) => void) => { onChat = f; };
 export async function sit(side: Side | null) { if (online.mode !== 'remote' || !store) return; const e = await store.sit(side); online.error = e; onChange(); }
 export function setDevSeat(s: DevSeat) { online.devSeat = s; onChange(); }
 

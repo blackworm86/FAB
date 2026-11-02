@@ -1,6 +1,6 @@
 /** Development only: stand-in storage so two tabs of one browser can play a game with split hidden blocks without Firebase. */
 import { newGame, initSplit, type Side, type Priv, type Reveals } from '../../engine/src';
-import type { Account, Seats, Store, StateDoc } from './online';
+import type { Account, ChatMsg, Seats, Store, StateDoc } from './online';
 
 /** `?dev=1&fake=german` / `&fake=allied`: the hiding (shared copy + private details + reveals), kept in localStorage so two tabs can play it. */
 export function fakeStore(side: Side): Store {
@@ -17,6 +17,8 @@ export function fakeStore(side: Side): Store {
     watchState: (next) => on(P, () => next(get<StateDoc>(P))),
     setState: async (d) => put(P, d),
     watchPriv: (next) => on(V(side), () => next(get<Priv>(V(side)))), setPriv: async (p) => put(V(side), p),
+    watchChat: (next) => on('fab-fake-chat', () => next(get<ChatMsg[]>('fab-fake-chat') ?? [])),
+    sendChat: async (s, text) => { put('fab-fake-chat', [...(get<ChatMsg[]>('fab-fake-chat') ?? []), { id: String(Date.now()), uid: 'u-' + s, side: s, name: s, text, t: Date.now() }].slice(-100)); return ''; },
     watchReveals: (next) => on(R, () => next(get<Reveals>(R) ?? {})), mergeReveals: async (r) => put(R, { ...(get<Reveals>(R) ?? {}), ...r }),
     account: (): Account => ({ uid: 'u-' + side, name: side, email: '', guest: false, admin: false }), onAccount: () => undefined,
     google: none, emailSignIn: none, emailRegister: none, resetPassword: none, signOut: none, freeSeat: none, createMatch: async () => '!Not available in the development table', deleteMatch: none, leaveMatch: none, watchMyMatches: (next) => next([]),

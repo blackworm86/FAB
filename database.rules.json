@@ -37,9 +37,15 @@
           ".read": "auth != null",
           ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && newData.parent().child('meta').exists() && (root.child('admins').child(auth.uid).exists() || ((newData.child('german').val() === data.child('german').val() || (newData.child('german').val() === auth.uid && !data.child('german').exists()) || (data.child('german').val() === auth.uid && !newData.child('german').exists())) && (newData.child('allied').val() === data.child('allied').val() || (newData.child('allied').val() === auth.uid && !data.child('allied').exists()) || (data.child('allied').val() === auth.uid && !newData.child('allied').exists()))))",
           ".validate": "!newData.child('german').exists() || !newData.child('allied').exists() || newData.child('german').val() !== newData.child('allied').val()",
-          "german": { ".validate": "newData.isString()" },
-          "allied": { ".validate": "newData.isString()" },
-          "$other": { ".validate": false }
+          "german": {
+            ".validate": "newData.isString()"
+          },
+          "allied": {
+            ".validate": "newData.isString()"
+          },
+          "$other": {
+            ".validate": false
+          }
         },
         "seatNames": {
           ".read": "auth != null",
@@ -51,7 +57,9 @@
         "state": {
           ".read": "auth != null",
           ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && (root.child('admins').child(auth.uid).exists() || (!data.exists() && root.child('games').child($id).child('meta/owner').val() === auth.uid) || (data.exists() && newData.exists() && (root.child('games').child($id).child('seats/german').val() === auth.uid || root.child('games').child($id).child('seats/allied').val() === auth.uid)))",
-          "by": { ".validate": "newData.val() === auth.uid" }
+          "by": {
+            ".validate": "newData.val() === auth.uid"
+          }
         },
         "priv": {
           "$side": {
@@ -63,7 +71,34 @@
         "reveals": {
           ".read": "auth != null",
           ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && (root.child('games').child($id).child('seats/german').val() === auth.uid || root.child('games').child($id).child('seats/allied').val() === auth.uid || root.child('admins').child(auth.uid).exists())",
-          "$k": { ".validate": "newData.isString() && newData.val().length <= 4000" }
+          "$k": {
+            ".validate": "newData.isString() && newData.val().length <= 4000"
+          }
+        },
+        "chat": {
+          ".read": "auth != null",
+          "$msg": {
+            ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && ((!data.exists() && newData.exists() && (root.child('games').child($id).child('seats/german').val() === auth.uid || root.child('games').child($id).child('seats/allied').val() === auth.uid)) || (!newData.exists() && root.child('admins').child(auth.uid).exists()))",
+            ".validate": "newData.hasChildren(['uid', 'side', 'text', 't']) && newData.child('uid').val() === auth.uid && (newData.child('side').val() === 'german' || newData.child('side').val() === 'allied') && root.child('games').child($id).child('seats').child(newData.child('side').val()).val() === auth.uid && newData.child('text').isString() && newData.child('text').val().length >= 1 && newData.child('text').val().length <= 300 && newData.child('t').isNumber() && newData.child('t').val() <= now + 60000",
+            "name": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
+            "uid": {
+              ".validate": true
+            },
+            "side": {
+              ".validate": true
+            },
+            "text": {
+              ".validate": true
+            },
+            "t": {
+              ".validate": true
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
         }
       }
     }
