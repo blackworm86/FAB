@@ -1061,7 +1061,7 @@ function modalHtml() {
   return '';
 }
 /* ---------- admin sandbox (?sandbox=1): free edits, seat switch, notes and the test report ---------- */
-let sbOpen = true, sbTab = 'Turn', sbPlace: string | null = null, sbAuto = false, sbPick = '', sbAddSide: E.Side = 'german', sbChitSide: E.Side = 'german', sbFilter = '', sbDraft = '';
+let sbOpen = true, sbTab = 'Pieces', sbPlace: string | null = null, sbAuto = false, sbFilter = '', sbDraft = '';
 const sbJump = { turn: g.turn, side: g.phasing, phase: g.phase };
 let sbNotes = SB.loadNotes();
 /** A sandbox edit: no turn or seat checks, no automatic phase skipping, still undoable. */
@@ -1092,35 +1092,53 @@ function sbTurn() {
     <p class="hint">${g.force?.length ? `Queued: <b>${g.force.join(' ')}</b> ${sbtn('Clear', () => { g.force = []; })}` : 'No dice queued: rolls come from the seed.'}</p>
     <h4>Table</h4><div class="row">${sbtn(`${ico('trash')} Clear map`, () => SB.clearMap(g), '', 'Every block off the map')}${ubtn('New 5-turn', () => { g = E.newGame(undefined, { scenario: 'tournament', fuel: true }); hist.clear(); save(); refresh(); })}${ubtn('New campaign', () => { g = E.newGame(undefined, { scenario: 'campaign', fuel: true }); hist.clear(); save(); refresh(); })}</div>`;
 }
-function sbPieces() {
-  const out: string[] = [];
-  if (sbPlace) { const u = g.units.find((x) => x.id === sbPlace); out.push(`<p class="hint sbgo"><b>Tap an area to place ${esc(u?.name ?? '')}.</b> ${ubtn('Cancel', () => { sbPlace = null; })}</p>`); }
-  const u = selUnit ? g.units.find((x) => x.id === selUnit) : null;
+/* The piece library: every block and chit with its printed art, a search box and filters. */
+let lbSide: 'all' | E.Side = 'all', lbType = 'all', lbWhere = 'all';
+const chitType = (c: E.Chit) => (E.isAsset(c) ? 'assets' : 'events');
+const whereOfU = (u: E.Unit) => (u.area != null ? 'map' : u.str <= 0 || g.elimLarge.includes(u.id) ? 'eliminated' : 'off');
+const WHERE: [string, string][] = [['all', 'Anywhere'], ['map', 'On the map'], ['off', 'Off the map'], ['available', 'Available'], ['cup', 'Cup'], ['used', 'Used'], ['future', 'Future'], ['eliminated', 'Eliminated']];
+const fchip = (label: string, on: boolean, f: () => void) => ubtn(label, f, on ? 'on' : '');
+function sbLibrary() {
+  const blocks = lbType === 'all' || lbType === 'blocks', chitsOn = lbType !== 'blocks';
+  const us = blocks ? g.units.filter((u) => (lbSide === 'all' || u.side === lbSide) && (lbWhere === 'all' || whereOfU(u) === lbWhere)) : [];
+  const cs = chitsOn ? g.chits.filter((c) => (lbSide === 'all' || c.side === lbSide) && (lbType === 'all' || chitType(c) === lbType) && (lbWhere === 'all' || c.box === lbWhere || (lbWhere === 'off' && c.box !== 'map'))) : [];
+  const tile = (key: string, img: string, name: string, sub: string, on: boolean, f: () => void, cls: string) => `<button class="lbt ${cls} ${on ? 'on' : ''}" data-k="${esc(key.toLowerCase())}" data-ui="${reg(f)}" title="${esc(name)}"><img alt="" src="${img}"><small>${esc(name)}</small><i>${esc(sub)}</i></button>`;
+  const tiles = [...us.sort((a, b) => a.name.localeCompare(b.name)).map((u) => tile(`${u.name} ${u.code ?? ''} ${u.id} ${u.side} ${u.cls} block unit ${u.q.join(' ')}`, unitFace(u), u.name, u.area != null ? areaName(u.area) : whereOfU(u) === 'eliminated' ? 'eliminated' : u.arrival ? `turn ${u.arrival}` : 'off map', selUnit === u.id, () => { selUnit = u.id; selChit = null; selArea = u.area ?? selArea; refresh(); }, u.side)),
+    ...cs.map((c) => tile(`${c.name} ${c.kind} ${c.id} ${c.side} ${ABBR[c.kind] ?? ''} chit`, chitImg(c), c.name, `${c.box}${c.turn != null && c.box === 'future' ? ' t' + c.turn : ''}`, selChit === c.id, () => { selChit = c.id; selUnit = null; refresh(); }, c.side))];
+  return `<div class="authform lbsearch"><input id="lb-q" class="grow" placeholder="Search: name, unit, kind (e.g. Peiper, artillery, 116)" value="${esc(sbFilter)}" aria-label="Search pieces"></div>
+    <div class="chips lbf">${(['all', 'german', 'allied'] as const).map((s) => fchip(s === 'all' ? 'Both sides' : nm(s), lbSide === s, () => { lbSide = s; })).join('')}</div>
+    <div class="chips lbf">${[['all', 'All'], ['blocks', 'Blocks'], ['assets', 'Assets'], ['events', 'Events']].map(([k, l]) => fchip(l, lbType === k, () => { lbType = k; })).join('')}</div>
+    <div class="chips lbf">${WHERE.map(([k, l]) => fchip(l, lbWhere === k, () => { lbWhere = k; })).join('')}</div>
+    <div class="lbgrid">${tiles.join('') || '<p class="hint">Nothing matches.</p>'}</div>`;
+}
+/** What is selected, large, with its edits. */
+function sbDetail() {
+  const u = selUnit ? g.units.find((x) => x.id === selUnit) : null, c = !u && selChit ? g.chits.find((x) => x.id === selChit) : null;
   if (u) {
     const res: [string, string][] = [['', 'No reserve'], ...(u.side === 'german' ? ['z5', 'z6', 'z7'] : ['z56', 'z7']).map((z) => [z, `Reserve ${z.slice(1)}`] as [string, string])];
-    out.push(`<h4>${esc(u.name)}</h4><p class="hint">${nm(u.side)} ${u.cls}, ${esc(u.q.join('/'))}, id ${esc(u.id)}${u.area != null ? `, in ${esc(areaName(u.area))}` : ', off the map'}</p>
-      <div class="row">${sbtn(ico('minus'), () => { u.str = Math.max(1, u.str - 1); }, 'ico', 'One step less')}<b>${u.str} / ${u.max} steps</b>${sbtn(ico('plus'), () => { u.str = Math.min(u.max, u.str + 1); }, 'ico', 'One step more')}
-      ${sbSel([['0', 'Good order'], ['1', 'Disordered'], ['2', 'Recovering']], String(u.disorder), (v) => sbx(() => { u.disorder = +v as 0 | 1 | 2; }))}${sbSel(res, u.reserve ?? '', (v) => sbx(() => { u.reserve = v || null; }))}</div>
-      <div class="row">${sbChk('Out of supply', u.unsupplied, (v) => { u.unsupplied = v; })}${sbChk('Moved', u.moved, (v) => { u.moved = v; })}${sbChk('Exploitation', u.exploit, (v) => { u.exploit = v; })}${sbChk('Face-up', u.up != null && u.up === u.area, (v) => { u.up = v && u.area != null ? u.area : undefined; })}</div>
-      <div class="row">${ubtn(`${ico('next')} Move to…`, () => { sbPlace = u.id; }, '', false, 'Then tap an area')}${u.area != null ? sbtn(`${ico('trash')} Off the map`, () => SB.lift(g, u.id)) : ''}${ubtn(ico('close'), () => { selUnit = null; refresh(); }, 'ico', false, 'Deselect')}</div>`);
-  } else if (selArea != null) {
+    return `<div class="lbd"><img alt="" src="${unitFace(u)}"><div><b>${esc(u.name)}</b><small>${nm(u.side)} ${u.cls} · ${esc(u.q.join('/'))} · ${u.area != null ? esc(areaName(u.area)) : 'off the map'}</small>
+      <div class="row">${sbtn(ico('minus'), () => { u.str = Math.max(1, u.str - 1); }, 'ico', 'One step less')}<b>${u.str}/${u.max}</b>${sbtn(ico('plus'), () => { u.str = Math.min(u.max, u.str + 1); }, 'ico', 'One step more')}
+      ${ubtn(`${ico('next')} ${u.area != null ? 'Move' : 'Place'}`, () => { sbPlace = u.id; }, 'primary', false, 'Then tap an area')}${u.area != null ? sbtn(ico('trash'), () => SB.lift(g, u.id), 'ico', 'Take off the map') : ''}${ubtn(ico('close'), () => { selUnit = null; refresh(); }, 'ico', false, 'Deselect')}</div></div></div>
+      <div class="row">${sbSel([['0', 'Good order'], ['1', 'Disordered'], ['2', 'Recovering']], String(u.disorder), (v) => sbx(() => { u.disorder = +v as 0 | 1 | 2; }))}${sbSel(res, u.reserve ?? '', (v) => sbx(() => { u.reserve = v || null; }))}</div>
+      <div class="row">${sbChk('Out of supply', u.unsupplied, (v) => { u.unsupplied = v; })}${sbChk('Moved', u.moved, (v) => { u.moved = v; })}${sbChk('Exploitation', u.exploit, (v) => { u.exploit = v; })}${sbChk('Face-up', u.up != null && u.up === u.area, (v) => { u.up = v && u.area != null ? u.area : undefined; })}</div>`;
+  }
+  if (c) {
+    const [t, d] = RULE[c.kind] ?? [c.kind, ''];
+    return `<div class="lbd"><img alt="" src="${chitImg(c)}"><div><b>${esc(c.name)}</b><small>${nm(c.side)} · ${esc(t)} · now: ${c.box}</small>
+      <div class="chips">${SB.BOXES.filter((b) => b !== 'map' || c.box === 'map').map((b) => b === c.box ? `<button class="on" disabled>${b}</button>` : sbtn(b, () => { c.box = b; })).join('')}${ubtn(ico('close'), () => { selChit = null; refresh(); }, 'ico', false, 'Deselect')}</div></div></div>${d ? `<p class="hint">${esc(d)}</p>` : ''}`;
+  }
+  if (selArea != null) {
     const a = selArea;
-    out.push(`<h4>${esc(areaName(a))} (${a})</h4><div class="row">${sbSel([['', 'Nobody holds it'], ['german', 'German control'], ['allied', 'Allied control']], g.control[a] ?? '', (v) => sbx(() => { if (v) g.control[a] = v as E.Side; else delete g.control[a]; }))}
-      ${sbChk('Field works', g.fieldWorks.includes(a), (v) => { g.fieldWorks = g.fieldWorks.filter((x) => x !== a); if (v) { g.fieldWorks.push(a); g.fwOwner[a] = g.control[a] ?? 'allied'; } })}${sbChk('River assault', g.riverAssault.includes(a), (v) => { g.riverAssault = g.riverAssault.filter((x) => x !== a); if (v) g.riverAssault.push(a); })}</div>
-      <div class="row">${E.contested(g, a) && !g.battle ? sbtn(`${ico('burst')} Battle here`, () => { E.startBattle(g, a); }, 'primary', 'Start a battle now, whatever the phase') : ''}${ubtn(ico('close'), () => { selArea = null; refresh(); }, 'ico', false, 'Deselect')}</div>
-      <div class="chips">${E.unitsIn(g, a).map((x) => `<button class="${x.side}" data-u="${esc(x.id)}">${esc(x.name)} ${x.str}/${x.max}</button>`).join('')}</div>`);
-  } else out.push('<p class="hint">Tap a block or an area to edit it.</p>');
-  const off = g.units.filter((x) => x.area == null && x.side === sbAddSide).sort((x, y) => x.name.localeCompare(y.name));
-  if (!off.some((x) => x.id === sbPick)) sbPick = off[0]?.id ?? '';
-  out.push(`<h4>Add a block</h4><div class="row">${sbSel([['german', 'German'], ['allied', 'Allied']], sbAddSide, (v) => { sbAddSide = v as E.Side; })}${off.length ? sbSel(off.map((x) => [x.id, `${x.name}${x.garrison ? ' (garrison)' : ''}${x.arrival ? ` t${x.arrival}` : ''}`]), sbPick, (v) => { sbPick = v; }) + ubtn(`${ico('plus')} Place`, () => { sbPlace = sbPick; }, 'primary', false, 'Then tap an area') : '<span class="hint">All on the map</span>'}</div>`);
-  return out.join('');
+    return `<div class="lbd area"><div><b>${esc(areaName(a))} (${a})</b><div class="row">${sbSel([['', 'Nobody holds it'], ['german', 'German control'], ['allied', 'Allied control']], g.control[a] ?? '', (v) => sbx(() => { if (v) g.control[a] = v as E.Side; else delete g.control[a]; }))}
+      ${E.contested(g, a) && !g.battle ? sbtn(`${ico('burst')} Battle here`, () => { E.startBattle(g, a); }, 'primary') : ''}${ubtn(ico('close'), () => { selArea = null; refresh(); }, 'ico', false, 'Deselect')}</div>
+      <div class="row">${sbChk('Field works', g.fieldWorks.includes(a), (v) => { g.fieldWorks = g.fieldWorks.filter((x) => x !== a); if (v) { g.fieldWorks.push(a); g.fwOwner[a] = g.control[a] ?? 'allied'; } })}${sbChk('River assault', g.riverAssault.includes(a), (v) => { g.riverAssault = g.riverAssault.filter((x) => x !== a); if (v) g.riverAssault.push(a); })}</div>
+      <div class="lbrow">${E.unitsIn(g, a).map((x) => `<button class="lbt ${x.side}" data-u="${esc(x.id)}" title="${esc(x.name)}"><img alt="" src="${unitFace(x)}"><small>${esc(x.name)}</small></button>`).join('')}</div></div></div>`;
+  }
+  return '<p class="hint">Tap a piece below or a block or area on the map.</p>';
 }
-function sbChits() {
-  const f = sbFilter.toLowerCase(), list = g.chits.filter((c) => c.side === sbChitSide && (!f || `${c.name} ${c.kind} ${c.id}`.toLowerCase().includes(f)));
-  const boxes = SB.BOXES.map((b) => [b, b] as [string, string]);
-  return `<div class="row authform">${sbSel([['german', 'German'], ['allied', 'Allied']], sbChitSide, (v) => { sbChitSide = v as E.Side; })}<input class="grow" placeholder="Filter" value="${esc(sbFilter)}" data-sel="${regv((v) => { sbFilter = v; render(); })}"></div>
-    <div class="row">${sbtn('All shown → available', () => { for (const c of list) if (c.box !== 'map') c.box = 'available'; })}${sbtn('All shown → cup', () => { for (const c of list) if (c.box !== 'map') c.box = 'cup'; })}</div>
-    <div class="sblist">${list.map((c) => `<div class="sbrow"><button class="sbname" data-ui="${reg(() => { selChit = c.id; selUnit = null; refresh(); })}" title="Select (to comment on it)">${esc(c.name)}${c.turn != null ? ` <small>t${c.turn}</small>` : ''}</button>${sbSel(boxes, c.box, (v) => sbx(() => { c.box = v as E.Chit['box']; }))}</div>`).join('')}</div>`;
+function sbPieces() {
+  const u = sbPlace ? g.units.find((x) => x.id === sbPlace) : null;
+  return `${u ? `<p class="hint sbgo"><b>Tap an area on the map to place ${esc(u.name)}.</b> ${ubtn('Cancel', () => { sbPlace = null; })}</p>` : ''}${sbDetail()}${sbLibrary()}`;
 }
 function sbNotesHtml() {
   const t = sbTarget();
@@ -1133,7 +1151,7 @@ function sbNotesHtml() {
       ${x.state ? ubtn('Back to this moment', () => { g = JSON.parse(x.state!); hist.clear(); save(); refresh(); }, '', false, 'Load the game as it was when the note was written') : ''}${ubtn(ico('trash'), () => { sbNotes = sbNotes.filter((y) => y.id !== x.id); SB.saveNotes(sbNotes); }, 'ico', false, 'Delete note')}</div></div>`).join('')}</div>`;
 }
 function sandboxPanel() {
-  const tabs = ['Turn', 'Pieces', 'Chits', 'Notes'], body = sbTab === 'Pieces' ? sbPieces() : sbTab === 'Chits' ? sbChits() : sbTab === 'Notes' ? sbNotesHtml() : sbTurn();
+  const tabs = ['Turn', 'Pieces', 'Notes'], body = sbTab === 'Pieces' ? sbPieces() : sbTab === 'Notes' ? sbNotesHtml() : sbTurn();
   return `<div class="sbx"><div class="tabs">${tabs.map((t) => `<button class="${t === sbTab ? 'on' : ''}" data-ui="${reg(() => { sbTab = t; })}">${t === 'Notes' ? `Notes (${sbNotes.length})` : t}</button>`).join('')}${ubtn(ico('close'), () => { sbOpen = false; }, 'ico', false, 'Hide the sandbox tools')}</div>${body}</div>`;
 }
 const inGame = () => HAS_TABLE || DEV_FAKE || SANDBOX || online.mode === 'local';
@@ -1160,6 +1178,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
   ui.querySelectorAll<HTMLElement>('[data-do]').forEach((e) => (e.onclick = () => { if (inGame()) act(acts[e.dataset.do!]); else { acts[e.dataset.do!]?.(); render(); } }));        // on the home page nothing is a game move
   ui.querySelectorAll<HTMLElement>('[data-modal]').forEach((e) => (e.onclick = () => { modal = (e.dataset.modal || null) as typeof modal; render(); }));
   ui.querySelectorAll<HTMLElement>('[data-sel]').forEach((e) => (e.onchange = () => { const f = actv[e.dataset.sel!]; if (f) { f(e instanceof HTMLInputElement && e.type === 'checkbox' ? (e.checked ? 'on' : 'off') : (e as HTMLSelectElement).value); save(); } }));
+  ui.querySelectorAll<HTMLInputElement>('#lb-q').forEach((e) => { const run = () => { sbFilter = e.value; const w = sbFilter.toLowerCase().split(/\s+/).filter(Boolean); ui.querySelectorAll<HTMLElement>('.lbgrid .lbt').forEach((t) => { t.style.display = w.every((x) => t.dataset.k!.includes(x)) ? '' : 'none'; }); }; e.oninput = run; run(); });
   ui.querySelectorAll<HTMLTextAreaElement>('#sb-note').forEach((e) => (e.oninput = () => { sbDraft = e.value; }));
   ui.querySelectorAll<HTMLElement>('[data-arr]').forEach((e) => (e.onpointerdown = (ev) => dragArrival(ev, e)));
   ui.querySelectorAll<HTMLElement>('[data-arr]').forEach((e) => (e.onclick = () => { selArr = selArr === e.dataset.arr ? null : e.dataset.arr!; refresh(); frameArrival(); }));

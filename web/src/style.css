@@ -307,3 +307,13 @@ button.go .ic, button.plain .ic, .row button .ic { width: 18px; height: 18px; ve
 .sblist { max-height: 46vh; overflow: auto; } .sbrow { display: flex; gap: 4px; align-items: center; justify-content: space-between; border-bottom: 1px solid #ffffff14; padding: 2px 0; }
 .sbname { background: none; border: 0; color: inherit; text-align: left; flex: 1; cursor: pointer; padding: 2px; } .sbnote { border-bottom: 1px solid #ffffff1f; padding: 4px 0; } .sbnote p { margin: 2px 0; white-space: pre-wrap; } .sbnote small { opacity: .7; }
 .sbgo { color: var(--gold); } .sbseat { font: 700 11px var(--sfd); letter-spacing: .06em; text-transform: uppercase; } .sbseat.german { color: #c9ccd2; } .sbseat.allied { color: #b8d27a; }
+.sbx { width: min(440px, calc(100vw - 16px)); }
+.lbsearch input { width: 100%; box-sizing: border-box; padding: 6px 8px !important; font-size: 14px !important; } .lbf { display: flex; flex-wrap: wrap; gap: 3px; margin: 4px 0; } .lbf button { padding: 2px 7px; font-size: 12px; }
+.lbgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; max-height: 44vh; overflow: auto; margin-top: 6px; padding-right: 2px; }
+.lbt { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 3px; background: #ffffff0a; border: 2px solid transparent; border-radius: 4px; color: inherit; cursor: pointer; min-width: 0; }
+.lbt img { width: 64px; height: 64px; object-fit: contain; filter: drop-shadow(0 1px 2px #000a); } .lbt small { font-size: 10px; line-height: 1.1; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .lbt i { font-size: 9px; opacity: .6; font-style: normal; }
+.lbt.on { border-color: var(--gold); background: #e3b04b22; } .lbt:hover { background: #ffffff18; }
+.lbd { display: flex; gap: 10px; align-items: flex-start; padding: 6px; background: #ffffff0a; border: 1px solid var(--line); margin-bottom: 6px; } .lbd > img { width: 104px; height: 104px; object-fit: contain; flex: none; filter: drop-shadow(0 2px 3px #000b); }
+.lbd > div { flex: 1; min-width: 0; } .lbd b { display: block; } .lbd small { display: block; opacity: .75; margin-bottom: 4px; } .lbd.area { display: block; }
+.lbrow { display: flex; flex-wrap: wrap; gap: 4px; } .lbrow .lbt img { width: 48px; height: 48px; }
+@media (max-width: 700px) { .sbx { max-height: 55%; } .lbgrid { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); } .lbt img { width: 52px; height: 52px; } .lbd > img { width: 76px; height: 76px; } }
