@@ -359,3 +359,4 @@ ul.rl { margin: 4px 0; padding-left: 16px; } ul.rl li { margin: 2px 0; } .inspec
 .sup { margin: 4px 0; display: flex; gap: 6px; align-items: flex-start; } .sup .ic { flex: none; width: 16px; height: 16px; margin-top: 2px; } .sup.ok { color: #8be0ff; } .sup.bad { color: #ff8a7a; }
 .supply .supl { display: flex; width: 100%; gap: 8px; align-items: center; padding: 5px 2px; background: none; border: 0; border-bottom: 1px solid #ffffff1a; color: inherit; text-align: left; cursor: pointer; }
 .supply .supl img { width: 34px; height: 34px; } .supply .supl span { flex: 1; display: grid; } .supply .supl small { opacity: .7; } .supply .sn { background: var(--gold); color: #111; padding: 2px 6px; white-space: nowrap; }
+#fps { position: fixed; left: 6px; bottom: 6px; z-index: 200; padding: 2px 6px; background: #000c; color: #9fe870; font: 12px monospace; pointer-events: none; }

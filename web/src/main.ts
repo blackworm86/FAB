@@ -1304,6 +1304,7 @@ function driveSplit() {
 }
 let ctlKey = '', tgtKey = '';
 function refresh() {
+  { const ph = `${g.turn}${g.phasing}${g.phase}`; if (ph !== lastPhase) { lastPhase = ph; fxLayer.clear(); } }
   E.setPlayArea(g.inPlay);
   SBU.hotseatSync();
   if (online.mode === 'remote') setTimeout(driveSplit, 0);
@@ -1314,11 +1315,16 @@ function refresh() {
   if (!rollView) { const cv = $('#dice'); if (cv && cv.style.display !== 'none') { clearDice(); cv.style.display = 'none'; } }
 }
 const CALM = matchMedia('(prefers-reduced-motion: reduce)').matches;                               // no floating motion for players who asked for less motion
+let lastPhase = '';
 let lastInput = performance.now(), tick = 0;
+/** ?fps=1: a small corner counter (frames per second, slowest frame) for measuring on a real phone. */
+const fpsEl = new URLSearchParams(location.search).has('fps') ? Object.assign(document.body.appendChild(document.createElement('div')), { id: 'fps' }) : null;
+let fpsN = 0, fpsT = performance.now(), fpsWorst = 0, fpsLast = performance.now();
 for (const ev of ['pointerdown', 'pointermove', 'wheel', 'keydown', 'resize']) window.addEventListener(ev, () => { lastInput = performance.now(); }, { passive: true });
 function frame() {
   requestAnimationFrame(frame);
-  if (!goal && !anims.length && !rollView && performance.now() - lastInput > 2000 && tick++ % 3) return;     // idle: about 20 frames a second is enough for the floating markers, and spares the battery
+  if (!goal && !anims.length && !rollView && performance.now() - lastInput > 2000 && tick++ % 3) return;   if (fpsEl) { const now = performance.now(); fpsWorst = Math.max(fpsWorst, now - fpsLast); fpsLast = now; fpsN++; if (now - fpsT > 1000) { fpsEl.textContent = `${Math.round(fpsN * 1000 / (now - fpsT))} fps · slowest ${Math.round(fpsWorst)} ms`; fpsN = 0; fpsT = now; fpsWorst = 0; } }
+    // idle: about 20 frames a second is enough for the floating markers, and spares the battery
   const r = canvas.getBoundingClientRect();
   if (canvas.width !== Math.round(r.width * renderer.getPixelRatio())) { renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; cam.updateProjectionMatrix(); }
   if (goal) { const k = goal.fast ? 0.28 : 0.1; target.lerp(goal.t, k); dist += (goal.dist - dist) * k; pitch += (goal.pitch - pitch) * k; if (target.distanceTo(goal.t) < 0.05 && Math.abs(dist - goal.dist) < 0.1) goal = null; }

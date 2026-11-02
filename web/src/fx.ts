@@ -31,6 +31,8 @@ export class FxLayer {
     let layer = document.getElementById('fx'); if (!layer) { layer = document.createElement('div'); layer.id = 'fx'; document.body.appendChild(layer); }
     list.forEach((f, i) => { const el = document.createElement('div'); el.className = `fx ${f.cls}`; el.style.animationDelay = `${i * 0.18}s`; el.innerHTML = `${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small><button class="fxx" aria-label="Dismiss" title="Dismiss">✕</button>`; el.querySelector('button')!.onclick = () => { const i = this.els.findIndex((x) => x.el === el); if (i >= 0) this.els.splice(i, 1); el.remove(); }; layer!.appendChild(el); this.els.push({ el, area: f.area, unit: f.unit, born: performance.now() + i * 180, k: this.els.filter((x) => x.area === f.area).length }); });
   }
+  /** Remove every pop-up (a new phase starts: old effects no longer apply). */
+  clear() { for (const f of this.els) f.el.remove(); this.els = []; if (this.svg) this.svg.innerHTML = ''; }
   private svg: SVGSVGElement | null = null; private lastLines = '';
   /** Each pop-up sits beside its block, on the side away from the battle's centre, with a thin line to the block; nothing covers the pieces. */
   place(project: (area: number, unit?: string) => { x: number; y: number; cx: number; cy: number; rad: number; visible: boolean }) {
