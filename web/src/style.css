@@ -320,3 +320,11 @@ button.go .ic, button.plain .ic, .row button .ic { width: 18px; height: 18px; ve
 /* 8.1 the reusable Special Action is a wooden block, not a counter */
 .card2.wood { border-radius: 4px; box-shadow: 0 5px 0 #6d7176, 0 6px 0 #4c4f52, 0 12px 18px #000b; } .card2.wood.allied { box-shadow: 0 5px 0 #4b6e37, 0 6px 0 #34502a, 0 12px 18px #000b; }
 ul.rl { margin: 4px 0; padding-left: 16px; } ul.rl li { margin: 2px 0; } .inspect p, .slimcard p { margin: 3px 0; }
+/* wooden blocks everywhere off the map: hand, boxes, sandbox library (the reusable Special Action is a block, 8.1) */
+.card2.wood { background: none; box-shadow: none !important; outline-offset: 4px; display: grid; place-items: center; } .card2.wood .b3 { --s: 58px; margin: 0; filter: drop-shadow(4px 8px 8px #000b); }
+.pc .b3 { --s: 38px; margin: 4px auto; } .lbt .b3 { --s: 52px; margin: 6px 10px 6px 4px; } .lbt.on .b3 .f, .card2.wood.sel .b3 .f { outline: 2px solid var(--gold); }
+@media (max-width: 700px) { .card2.wood .b3 { --s: 44px; } .lbt .b3 { --s: 42px; } }
+/* no dark band over the map above the hand */
+.handtab, .c-hand { background: none !important; }
+.card2.wood, .card2.wood:hover { transform: none; } .card2.wood:hover .b3 { translate: 0 -10px; } .card2.wood.sel .b3 { translate: 0 -16px; } .card2.wood .b3 { --s: 62px; }
+@media (max-width: 700px) { .card2.wood .b3 { --s: 46px; } }

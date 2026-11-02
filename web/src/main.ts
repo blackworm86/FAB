@@ -653,7 +653,7 @@ function endRoll() { rollView = null; clearDice(); ($('#dice') as HTMLElement).s
 
 const chitUri = new Map<string, string>();
 const chitImg = (c: E.Chit) => { let u = chitUri.get(c.id); if (!u) { u = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(chitSvg(c)); chitUri.set(c.id, u); } return u; };
-const card = (c: E.Chit, r = 0, why: string | null = null) => `<div tabindex="0" role="button" class="card2 ${c.side} ${c.kind === 'sa_block' ? 'wood' : ''} ${why ? 'bad' : ''} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" style="--r:${r}deg" title="${esc(why ?? c.name + ' · ' + c.ech)}" aria-label="${esc(c.name)}"><img alt="" draggable="false" src="${chitImg(c)}"></div>`;
+const card = (c: E.Chit, r = 0, why: string | null = null) => `<div tabindex="0" role="button" class="card2 ${c.side} ${c.kind === 'sa_block' ? 'wood' : ''} ${why ? 'bad' : ''} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" style="--r:${r}deg" title="${esc(why ?? c.name + ' · ' + c.ech)}" aria-label="${esc(c.name)}">${chitPic(c)}</div>`;
 /** How much neighbouring cards overlap so the whole hand fits: each card keeps at least 34 px (46 on phones) visible, and the hand scrolls when even that does not fit. */
 const overlapFor = (n: number) => { const cw = innerWidth >= 900 ? 72 : 62, avail = innerWidth - 40, visible = n > 1 ? Math.min(cw, Math.max(innerWidth < 900 ? 46 : 34, (avail - cw) / (n - 1))) : cw; return n > 1 ? Math.round(cw - visible) : 0; };
 const handStyle = (n: number) => `style="--ov:${overlapFor(n)}px"`;
@@ -803,7 +803,9 @@ const recoverSel: Record<string, string | null> = {};
 let piecesTab: 'boxes' | 'arrivals' = 'boxes', piecesSide: E.Side | null = null, inspectId: string | null = null;
 /** A short reading of what a chit does, in the series' own vocabulary; the printed rule is the authority. */
 
-const pieceBtn = (c: E.Chit, f: () => void, on = false, dis = false) => `<button class="pc ${c.side} ${on ? 'on' : ''}" data-ui="${reg(f)}" ${dis ? 'disabled' : ''} title="${esc(c.name)}" aria-label="${esc(chitLabel(c))}"><img alt="" draggable="false" src="${chitImg(c)}"></button>`;
+/** A chit's picture; the reusable Special Action is a wooden block (8.1), drawn like the arriving blocks. */
+const chitPic = (c: E.Chit) => (c.kind === 'sa_block' ? b3(chitImg(c), c.side) : `<img alt="" draggable="false" src="${chitImg(c)}">`);
+const pieceBtn = (c: E.Chit, f: () => void, on = false, dis = false) => `<button class="pc ${c.side} ${on ? 'on' : ''}" data-ui="${reg(f)}" ${dis ? 'disabled' : ''} title="${esc(c.name)}" aria-label="${esc(chitLabel(c))}">${chitPic(c)}</button>`;
 const ruleCard = (c: E.Chit) => { const [t] = RULE[c.kind] ?? [c.kind, '']; return `<img class="big" alt="" src="${chitImg(c)}"><div><h4>${esc(c.name)} <small>${esc(t)}</small></h4>${ruleHtml(c.kind, E.isEvent(c))}</div>`; };
 const seatedView = () => online.active && !online.both() && !!online.mySide();
 function piecesHtml() {
@@ -1118,9 +1120,9 @@ function sbLibrary() {
   const blocks = lbType === 'all' || lbType === 'blocks', chitsOn = lbType !== 'blocks';
   const us = blocks ? g.units.filter((u) => (lbSide === 'all' || u.side === lbSide) && (lbWhere === 'all' || whereOfU(u) === lbWhere)) : [];
   const cs = chitsOn ? g.chits.filter((c) => (lbSide === 'all' || c.side === lbSide) && (lbType === 'all' || chitType(c) === lbType) && (lbWhere === 'all' || c.box === lbWhere || (lbWhere === 'off' && c.box !== 'map'))) : [];
-  const tile = (key: string, img: string, name: string, sub: string, on: boolean, f: () => void, cls: string) => `<button class="lbt ${cls} ${on ? 'on' : ''}" data-k="${esc(key.toLowerCase())}" data-ui="${reg(f)}" title="${esc(name)}"><img alt="" src="${img}"><small>${esc(name)}</small><i>${esc(sub)}</i></button>`;
-  const tiles = [...us.sort((a, b) => a.name.localeCompare(b.name)).map((u) => tile(`${u.name} ${u.code ?? ''} ${u.id} ${u.side} ${u.cls} block unit ${u.q.join(' ')}`, unitFace(u), u.name, u.area != null ? areaName(u.area) : whereOfU(u) === 'eliminated' ? 'eliminated' : u.arrival ? `turn ${u.arrival}` : 'off map', selUnit === u.id, () => { selUnit = u.id; selChit = null; selArea = u.area ?? selArea; refresh(); }, u.side)),
-    ...cs.map((c) => tile(`${c.name} ${c.kind} ${c.id} ${c.side} ${ABBR[c.kind] ?? ''} chit`, chitImg(c), c.name, `${c.box}${c.turn != null && c.box === 'future' ? ' t' + c.turn : ''}`, selChit === c.id, () => { selChit = c.id; selUnit = null; refresh(); }, c.side))];
+  const tile = (key: string, img: string, name: string, sub: string, on: boolean, f: () => void, cls: string, wood = false) => `<button class="lbt ${cls} ${on ? 'on' : ''}" data-k="${esc(key.toLowerCase())}" data-ui="${reg(f)}" title="${esc(name)}">${wood ? b3(img, cls as E.Side) : `<img alt="" src="${img}">`}<small>${esc(name)}</small><i>${esc(sub)}</i></button>`;
+  const tiles = [...us.sort((a, b) => a.name.localeCompare(b.name)).map((u) => tile(`${u.name} ${u.code ?? ''} ${u.id} ${u.side} ${u.cls} block unit ${u.q.join(' ')}`, unitFace(u), u.name, u.area != null ? areaName(u.area) : whereOfU(u) === 'eliminated' ? 'eliminated' : u.arrival ? `turn ${u.arrival}` : 'off map', selUnit === u.id, () => { selUnit = u.id; selChit = null; selArea = u.area ?? selArea; refresh(); }, u.side, !u.garrison)),
+    ...cs.map((c) => tile(`${c.name} ${c.kind} ${c.id} ${c.side} ${ABBR[c.kind] ?? ''} chit`, chitImg(c), c.name, `${c.box}${c.turn != null && c.box === 'future' ? ' t' + c.turn : ''}`, selChit === c.id, () => { selChit = c.id; selUnit = null; refresh(); }, c.side, c.kind === 'sa_block'))];
   return `<div class="authform lbsearch"><input id="lb-q" class="grow" placeholder="Search: name, unit, kind (e.g. Peiper, artillery, 116)" value="${esc(sbFilter)}" aria-label="Search pieces"></div>
     <div class="chips lbf">${(['all', 'german', 'allied'] as const).map((s) => fchip(s === 'all' ? 'Both sides' : nm(s), lbSide === s, () => { lbSide = s; })).join('')}</div>
     <div class="chips lbf">${[['all', 'All'], ['blocks', 'Blocks'], ['assets', 'Assets'], ['events', 'Events']].map(([k, l]) => fchip(l, lbType === k, () => { lbType = k; })).join('')}</div>
