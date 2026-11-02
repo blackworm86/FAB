@@ -18,10 +18,10 @@ export function targetsFor(G: () => E.Game, c: E.Chit | null, ctx: TgtCtx): Tgt 
     }
     t.hint = t.units.size ? 'Tap a glowing block to add a step' : t.chips.length ? 'Tap a unit to bring back' : '';
   } else if (k === 'special_action_event' || k === 'sa_block') {
-    const g0 = G(), anySA = E.saAvailable(g0, c.side).length > 0;                                     // the same checks as the rules, without copying the game for every block and area
-    for (const u of g0.units.filter((x) => x.side === c.side && x.area != null && !x.garrison && !x.unsupplied && x.str < x.max && E.saAvailable(g0, c.side, x.ech).length)) t.units.set(u.id, () => E.qualityReplacement(G(), u.id));
-    const shaken = (ar: number) => [ar, ...E.neighbors(ar)].some((a2) => E.blocks(g0, a2, c.side).some((u) => u.disorder && !u.unsupplied));
-    if (anySA) for (const ar of E.areas.keys()) if (E.suppliedArea(g0, c.side, ar) && shaken(ar)) t.areas.set(ar, () => E.rally(G(), c.side, ar));
+    const g0 = G(), fits = (u: E.Unit) => E.saAvailable(g0, c.side, u.ech).some((x) => x.id === c.id);         // this very counter: a single-use event only helps its own Higher Echelon (8.1)
+    for (const u of g0.units.filter((x) => x.side === c.side && x.area != null && !x.garrison && !x.unsupplied && x.str < x.max && fits(x))) t.units.set(u.id, () => E.qualityReplacement(G(), u.id, c.id));
+    const shaken = (ar: number) => [ar, ...E.neighbors(ar)].some((a2) => E.blocks(g0, a2, c.side).some((u) => u.disorder && !u.unsupplied && fits(u)));
+    for (const ar of E.areas.keys()) if (E.suppliedArea(g0, c.side, ar) && shaken(ar)) t.areas.set(ar, () => E.rally(G(), c.side, ar, c.id));
     t.hint = 'Tap a glowing block (quality replacement) or area (rally)';
   } else if (k === 'engineer') {
     const zone = (ar: number) => E.assetZoneOk(G(), c, ar), rbs = E.roadblockAreas(G(), c.side);

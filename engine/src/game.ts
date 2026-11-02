@@ -353,8 +353,10 @@ export function saAvailable(g: Game, side: Side, ech?: string) {
   const ev = boxOf(g, side, 'available').filter((c) => c.kind === 'special_action_event' && (!ech || c.ech === ech || c.ech === 'us_sr' || ech === 'us_sr'));
   return [...(blk ? [blk] : []), ...ev];
 }
-export function spendSA(g: Game, side: Side, ech?: string, why = 'Special Action') {
-  const c = saAvailable(g, side, ech)[0]; if (!c) throw new Error('no Special Action available');
+/** Spend a Special Action: the one the player chose (`chitId`), or else the first that fits (the reusable block first). */
+export function spendSA(g: Game, side: Side, ech?: string, why = 'Special Action', chitId?: string) {
+  const ok = saAvailable(g, side, ech), c = chitId ? ok.find((x) => x.id === chitId) : ok[0];
+  if (!c) throw new Error(chitId ? 'that Special Action cannot be used for this unit (8.1: an event only helps its own Higher Echelon)' : 'no Special Action available');
   c.box = c.kind === 'sa_block' ? 'used' : 'eliminated'; say(g, `${side} spends ${c.kind === 'sa_block' ? 'the reusable Special Action' : 'a Special Action event'}: ${why}`); return c;
 }
 const needAdmin = (g: Game) => { if (g.phase !== 'admin') throw new Error('only in the Admin Phase'); };
@@ -433,14 +435,14 @@ export function alternateUse(g: Game, id: string) {
   const back = boxOf(g, c.side, 'eliminated').filter(isAsset).sort((a, b) => pri.indexOf(a.kind) - pri.indexOf(b.kind)).slice(0, 2);
   back.forEach((x) => (x.box = 'cup')); c.box = 'eliminated'; say(g, `${c.name} used as alternate event: ${back.map((x) => x.name).join(', ') || 'no assets in the Eliminated Box'} back to the cup`);
 }
-export function rally(g: Game, side: Side, area: number) {
+export function rally(g: Game, side: Side, area: number, chitId?: string) {
   needAdmin(g); if (!supplied(g, side, area)) throw new Error('area must be supplied and friendly');
-  spendSA(g, side, undefined, 'Rally the troops');
-  for (const a of [area, ...neighbors(area)]) for (const u of blocks(g, a, side)) if (u.disorder && !u.unsupplied) u.disorder = 0;
+  const sa = spendSA(g, side, undefined, 'Rally the troops', chitId), only = sa.kind === 'special_action_event' && sa.ech !== 'us_sr' ? sa.ech : null;     // 8.1 a single-use event only affects its own Higher Echelon
+  for (const a of [area, ...neighbors(area)]) for (const u of blocks(g, a, side)) if (u.disorder && !u.unsupplied && (!only || u.ech === only)) u.disorder = 0;
 }
-export function qualityReplacement(g: Game, unitId: string) {
+export function qualityReplacement(g: Game, unitId: string, chitId?: string) {
   needAdmin(g); const u = g.units.find((x) => x.id === unitId)!; if (u.garrison || u.unsupplied || u.str >= u.max) throw new Error('not eligible');
-  spendSA(g, u.side, u.ech, 'Quality replacements'); u.str++; say(g, `${u.name} gains a step`);
+  spendSA(g, u.side, u.ech, 'Quality replacements', chitId); u.str++; say(g, `${u.name} gains a step`);
 }
 export function staffReplacement(g: Game, id: string, unitId: string) {
   needAdmin(g); const c = chit(g, id), u = g.units.find((x) => x.id === unitId)!;
