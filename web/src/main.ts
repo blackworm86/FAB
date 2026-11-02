@@ -249,10 +249,17 @@ function drawPieces() {
       if (tgt?.units.has(u.id)) { const ring = new THREE.Mesh(new THREE.RingGeometry(1.15, 1.45, 40), new THREE.MeshBasicMaterial({ color: 0x37d67a, transparent: true, opacity: 0.95, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(p.x, 0.09, p.z); markers.add(ring); const glow = new THREE.Mesh(new THREE.CircleGeometry(1.15, 40), new THREE.MeshBasicMaterial({ color: 0x37d67a, transparent: true, opacity: 0.28 })); glow.rotation.x = -Math.PI / 2; glow.position.set(p.x, 0.085, p.z); markers.add(glow); }
       m.userData.unit = u.id; if (u.id === selUnit || (g.battle && !hid && (u.id === g.battle.attPoint || u.id === g.battle.defPoint))) { const o = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xffb347 })); m.add(o); }
       pieces.add(m);
-      const tags: [string, string][] = []; const top = flat ? 0.85 : 1.66; let stackY = u.garrison ? 0.3 : top;
-      if (u.disorder && !u.garrison) { const k = tag(u.disorder === 1 ? 'DIS' : 'REC', u.disorder === 1 ? '#8a1f1f' : '#a8741a', CHIT * 0.62), dc = viewSide() === 'allied' ? -1 : 1; k.position.set(m.position.x - 0.52 * dc, top, m.position.z + 0.52 * dc); markers.add(k); stackY = top + 0.14; }
+      const tags: [string, string][] = []; const top = flat ? 0.85 : 1.66;
+      if (u.disorder && !u.garrison) tags.push([u.disorder === 1 ? 'DIS' : 'REC', u.disorder === 1 ? '#8a1f1f' : '#a8741a']);
       if (u.reserve) tags.push([u.side === 'german' ? ({ z5: 'R5', z6: 'R6', z7: 'R7' } as Record<string, string>)[u.reserve] ?? 'R5' : u.reserve === 'z7' ? 'A7' : 'A56', '#2d6cb0']); if (u.exploit) tags.push(['E', '#d9741c']); if (u.unsupplied && !u.garrison) tags.push(['OOS', '#b8312f']); if (u.interdict) tags.push(['GI', '#8a2f9c']); if (u.bcross) tags.push(['B', '#8a6a1c']);
-      tags.forEach(([t, c], i) => { const k = tag(t, c, CHIT); k.position.set(m.position.x + i * 0.12, stackY + i * 0.14, m.position.z - i * 0.08); k.rotation.y = viewRot() + (i % 2 ? 0.12 : -0.08); markers.add(k); });
+      const dc = viewSide() === 'allied' ? -1 : 1;          // status markers sit small on the block's corners, like disordered/recovering, so the unit stays readable
+      const dis = tags[0]?.[0] === 'DIS' || tags[0]?.[0] === 'REC';          // disordered/recovering on the block's front-left corner; the other status markers lie beside the block, never over its label
+      tags.forEach(([t, c], i) => {
+        const side = dis ? i - 1 : i, k = tag(t, c, CHIT * (dis && i === 0 ? 0.62 : 0.5));
+        if (dis && i === 0) k.position.set(m.position.x - 0.52 * dc, u.garrison ? 0.3 : top, m.position.z + 0.52 * dc);
+        else k.position.set(m.position.x + (u.garrison ? 1.05 : 1.2) * dc, 0.04, m.position.z + (-0.55 + side * 0.78) * dc);
+        markers.add(k);
+      });
     });
   }
   if (g.battle) drawPointMarks(g.battle);
