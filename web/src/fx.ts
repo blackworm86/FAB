@@ -26,7 +26,8 @@ export class FxLayer {
   private els: { el: HTMLElement; area: number; unit?: string; born: number; k: number }[] = [];
   private last = new Map<string, number>();
   show(list: Fx[]) {
-    const now = performance.now(); list = list.filter((f) => { const k = `${f.head}|${f.text}|${f.area}`, t = this.last.get(k) ?? -1e9; if (now - t < 1500) return false; this.last.set(k, now); return true; });      // the same effect is never shown twice in a row
+    const now = performance.now(); for (const [k, t] of this.last) if (now - t > 1500) this.last.delete(k);          // only recent effects are remembered
+    list = list.filter((f) => { const k = `${f.head}|${f.text}|${f.area}`, t = this.last.get(k) ?? -1e9; if (now - t < 1500) return false; this.last.set(k, now); return true; });      // the same effect is never shown twice in a row
     let layer = document.getElementById('fx'); if (!layer) { layer = document.createElement('div'); layer.id = 'fx'; document.body.appendChild(layer); }
     list.forEach((f, i) => { const el = document.createElement('div'); el.className = `fx ${f.cls}`; el.style.animationDelay = `${i * 0.18}s`; el.innerHTML = `${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small><button class="fxx" aria-label="Dismiss" title="Dismiss">✕</button>`; el.querySelector('button')!.onclick = () => { const i = this.els.findIndex((x) => x.el === el); if (i >= 0) this.els.splice(i, 1); el.remove(); }; layer!.appendChild(el); this.els.push({ el, area: f.area, unit: f.unit, born: performance.now() + i * 180, k: this.els.filter((x) => x.area === f.area).length }); });
   }

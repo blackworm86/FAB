@@ -90,9 +90,9 @@ export async function rtdbStore(table: string): Promise<Store | null> {
     async freeSeat(side: Side) { try { await rt.update(G(''), { [`seats/${side}`]: null, [`seatNames/${side}`]: null }); return ''; } catch (e) { return msg(e); } },
     async createMatch(m, side, stateJson) {
       if (account.guest) return '!Sign in to create a game';
-      const id = Math.random().toString(36).slice(2, 8), uid = account.uid, name = seatName(), P = (p: string) => `games/${id}/${p}`, created = Date.now();
+      const rnd = (n: number) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => (b % 36).toString(36)).join(''), id = rnd(10), uid = account.uid, name = seatName(), P = (p: string) => `games/${id}/${p}`, created = Date.now();
       try {
-        const rnd = () => Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2), sp = initSplit(JSON.parse(stateJson) as Game, rnd(), rnd());     // hidden blocks: each seat keeps its own details
+        const sp = initSplit(JSON.parse(stateJson) as Game, rnd(24), rnd(24));                    // the salts hide the block ids: secure random, not Math.random     // hidden blocks: each seat keeps its own details
         await rt.update(R('/'), { [P('meta')]: { title: m.title, game: m.game, opts: m.opts, owner: uid, created, split: true }, [P(`members/${uid}`)]: true, ...(side ? { [P(`seats/${side}`)]: uid } : {}), [`users/${uid}/games/${id}`]: { title: m.title, game: m.game, created } });
         if (side) await rt.set(R(P(`seatNames/${side}`)), name);                                         // the seat has to exist before its name may be written
         await rt.set(R(P('priv/german')), { salt: sp.german.salt, secrets: enc(sp.german.secrets) }); await rt.set(R(P('priv/allied')), { salt: sp.allied.salt, secrets: enc(sp.allied.secrets) });
