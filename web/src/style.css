@@ -328,3 +328,5 @@ ul.rl { margin: 4px 0; padding-left: 16px; } ul.rl li { margin: 2px 0; } .inspec
 .handtab, .c-hand { background: none !important; }
 .card2.wood, .card2.wood:hover { transform: none; } .card2.wood:hover .b3 { translate: 0 -10px; } .card2.wood.sel .b3 { translate: 0 -16px; } .card2.wood .b3 { --s: 62px; }
 @media (max-width: 700px) { .card2.wood .b3 { --s: 46px; } }
+/* a filter on the block itself flattens its 3D faces: the shadow goes on the card instead */
+.card2.wood .b3 { filter: none; } .card2.wood { filter: drop-shadow(4px 8px 8px #000b); }
