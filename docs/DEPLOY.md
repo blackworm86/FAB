@@ -7,7 +7,7 @@ The game is a static site (`web/`, built with Vite) on GitHub Pages. Firebase pr
 2. **Authentication > Sign-in method**: enable **Anonymous** (guests who only watch), **Google** (set the support email) and **Email/Password**.
 3. **Authentication > Settings > Authorized domains**: add `<your-user>.github.io`.
 4. **Build > Realtime Database**: create it (locked mode). Note its address, e.g. `https://<project>-default-rtdb.<region>.firebasedatabase.app` (the region is part of it unless the database is in the US).
-5. Publish `database.rules.json` in **Realtime Database > Rules**. After a change to that file, use the site's **Admin > Update rules** page (home page for admins): it shows the rules, a copy button and a link to the editor.
+5. Publish `database.rules.json` (and publish it again after every change; test it first with `cd tools/rules-test && npm i && npm test`, which needs Java) in **Realtime Database > Rules**. After a change to that file, use the site's **Admin > Update rules** page (home page for admins): it shows the rules, a copy button and a link to the editor.
 
 ## 2. GitHub Pages
 1. Repository **Settings > Pages > Source: GitHub Actions**.
@@ -31,7 +31,7 @@ Everything of one game is under `games/<id>`:
 
 In the shared game, every block nobody may see (6.24) is a placeholder with an opaque id and no name, strength or quality. Each browser puts its own details back, runs the rules on its own copy and writes the changes.
 
-Limits: the database rules stop a player reading the opponent's block details; they cannot check that a move was legal, so a modified browser could write a false game. The dice seed is part of the shared game, so a determined player could predict rolls. Log lines are cleaned of hidden names by text match.
+Security: `database.rules.json` lets a player take a free seat only for themself, never both sides, never someone else's seat; only the two seated players write the game (each write is signed with the writer's id); each seat alone reads its own block details. Each browser checks the other's moves and warns ("Rules check") if the game went back in time, dice changed, or the wrong side wrote. Online dice come from a secure random source. See `docs/ARCHITECTURE.md` §3–§5. A modified browser can still write a false game: only a server could stop it (roadmap, §9).
 
 ## 6. Development
 ```bash

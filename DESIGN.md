@@ -160,6 +160,15 @@ Black panel with the roll title, one row per firer: name, modifier chips (green 
 ### Badges on the map
 Pill badges in a white 2px border: green for reachable, brass for must stop or fuel, red for mandatory battle.
 
+### Choice bubbles and effect pop-ups
+A decision on the table (take the hits, retreat, first loss) is a small bubble placed just outside the battle area, never over its pieces, with a thin brass leader line and a dashed ring on every block it is about. Effects (−1 step, eliminated, disordered) sit beside their block on the side away from the battle, with a short line and a ✕ to dismiss; they clear by themselves after a few seconds.
+
+### Dice tray
+Dice roll in a small tray at the top of the screen, sized to the number of dice (phones included). Numbers turn green (hit / pass) or red (miss / fail); after a short look the tray leaves and the results play on the board: a block losing a step turns, removed pieces and field works fade.
+
+### Rules check bar
+A red bar over the table when the other player's browser wrote something the rules do not allow (game sent back, dice changed, wrong side acting). It names the problem in plain words and has an OK button. It must never appear in honest play.
+
 ## Do's and Don'ts
 
 ### Do:

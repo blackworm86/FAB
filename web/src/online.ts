@@ -42,7 +42,7 @@ export type DevSeat = 'german' | 'allied' | 'both' | 'watch';
 export const online = {
   /** 'off' = not connected, 'local' = a development table on this machine, 'remote' = shared through the database. */
   mode: 'off' as 'off' | 'local' | 'remote', uid: '', seats: {} as Seats, rev: 0, error: '', sync: 'connecting' as string, ready: false,
-  devSeat: 'both' as DevSeat, enemyAlias: new Map<string, string>(), account: null as Account | null, admin: false, hasAccounts: false,
+  lastBy: '', devSeat: 'both' as DevSeat, enemyAlias: new Map<string, string>(), account: null as Account | null, admin: false, hasAccounts: false,
   mySide(): Side | null {
     if ((DEV || SANDBOX) && this.mode !== 'off') return this.devSeat === 'german' || this.devSeat === 'allied' ? this.devSeat : null;
     return this.seats.german === this.uid && this.uid ? 'german' : this.seats.allied === this.uid && this.uid ? 'allied' : null;
@@ -88,7 +88,7 @@ export async function startOnline(remote: (g: Game) => void, changed: () => void
   store.watchState((d) => {
     if (!d) { if (had) onGone(); return; }                                                         // the game was deleted
     had = true; online.sync = `received ${new Date().toLocaleTimeString()}`; onChange();
-    online.rev = Math.max(online.rev, d.rev); pubDoc = d; if (d.json === lastJson) return; lastJson = d.json; rebuild();
+    online.rev = Math.max(online.rev, d.rev); online.lastBy = d.by ?? ''; pubDoc = d; if (d.json === lastJson) return; lastJson = d.json; rebuild();
   }, fail);
 }
 

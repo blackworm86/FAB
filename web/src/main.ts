@@ -70,7 +70,8 @@ function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (
 let g: E.Game = load() ?? E.newGame();
 let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, previewArea: number | null = null, hoverArea: number | null = null, newOpts: E.Opts = { scenario: 'tournament', fuel: true };
 let applyingRemote = false;
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(g)); } catch { /* storage off: the game still runs */ } if (!applyingRemote) void push(g); };
+const save = () => { if (heldNext) return;                                                       // a roll is on screen: its result is already saved; the board shown is older and must not be written back
+   try { localStorage.setItem(KEY, JSON.stringify(g)); } catch { /* storage off: the game still runs */ } if (!applyingRemote) void push(g); };
 
 /* ---------- three.js scene ---------- */
 const canvas = $('#gl') as HTMLCanvasElement;
@@ -412,13 +413,7 @@ const say = (t: string) => { toast = t; clearTimeout(toastT); toastT = window.se
 let dragTargets: number[] = [];
 const hist = new History<E.Game>(); let note = '', selArr: string | null = null;
 /** Who may act right now: one side, or both while each handles its own assets (admin, reinforcement, battle set-up). */
-function actorNow(): E.Side | 'both' {
-  if (g.pendingBlow) return other(g.units.find((x) => x.id === g.pendingBlow!.unit)!.side);
-  const b = g.battle;
-  if (b) return b.stage === 'setup' ? 'both' : ['defArty', 'defFire', 'defChoice', 'retreat'].includes(b.stage) ? other(b.attacker) : b.attacker;
-  if (g.phase === 'admin' || g.phase === 'reinforcement') return 'both';
-  return g.phase === 'reaction' ? other(g.phasing) : g.phasing;
-}
+const actorNow = () => E.actorOf(g);
 const allowed = () => !online.active || online.both() || (online.mySide() != null && (actorNow() === 'both' || actorNow() === online.mySide()));
 /** In a shared-screen game every side is yours; online only your own seat's pieces. */
 const mine = (s: E.Side) => !online.active || online.both() || online.mySide() === s;
@@ -455,6 +450,7 @@ function arrive(id: string, area: number) {
 /** When more than one Special Action could pay for an action, the player chooses which (a single-use event keeps the reusable block for later, 8.1).
  *  Runs inside an action: with one choice it pays at once, otherwise it opens the chooser and the chosen counter pays in a new action. */
 const ARMY_NAME: Record<string, string> = { de_5pz: '5th Panzer Army', de_6pz: '6th Panzer Army', de_7a: '7th Army', de_sr: 'Strategic Reserve', us_1a: 'US 1st Army', us_3a: 'US 3rd Army', us_sr: 'US reserve', br_xxx: 'British' };
+let auditWarn: string[] = [];                                                                         // problems found in moves written by the other browser
 let saPick: { side: E.Side; run: (id: string) => void; cands: E.Chit[] } | null = null;
 function pickSA(side: E.Side, ech: string | undefined, run: (id?: string) => void) {
   const seen = new Set<string>(), cands = E.saAvailable(g, side, ech).filter((c) => { const k = c.kind + c.ech; if (seen.has(k)) return false; seen.add(k); return true; });   // one choice per kind of counter
@@ -1173,7 +1169,7 @@ function renderInner() {
   const alert = g.pendingBlow ? (() => { const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!, path = g.pendingBlow!.path; return `<div class="c-ledger"><h3>${nm(other(u.side))}: bridge?</h3><p class="hint">${esc(u.name)} tries to cross into ${esc(areaName(path[path.length - 1]))}. Attempt to blow the bridge? It works on a roll of 1–5.</p><div class="row end">${btn('Let them cross', () => E.resolveBlow(g, false))}${btn('Attempt to blow it', () => E.resolveBlow(g, true), 'primary')}</div></div>`; })() : '';
   const dockMain = alert || ledger() || handCards();
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = topBar() + `<div class="stage">${SANDBOX && SBU.st.sbOpen ? SBU.sandboxPanel() : ''}${seatBar()}${b ? battleTable() : dispatch()}${decisionBubble()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p && allowed() ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
+  $('#ui').innerHTML = topBar() + `<div class="stage">${SANDBOX && SBU.st.sbOpen ? SBU.sandboxPanel() : ''}${seatBar()}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${b ? battleTable() : dispatch()}${decisionBubble()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p && allowed() ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
   const ui = $('#ui');
   bind(ui, keepH, keepA);
 }
@@ -1248,7 +1244,9 @@ const onNet = (): void => {
   const next = (() => { try { return sessionStorage.getItem('fab-next'); } catch { return null; } })();
   if (next && !HAS_TABLE && online.account && !online.account.guest) { try { sessionStorage.removeItem('fab-next'); } catch { /* private mode */ } location.href = `${homeUrl()}?table=${next}`; }     // back to the invite that sent you to sign in
 };
-void startOnline((rg) => { if (heldNext) commitRoll(); const prevG = g; const ckLast = JSON.stringify(g.checks?.at(-1) ?? null); const was = g.battle, n0 = was?.rolls.length ?? 0, st0 = was?.stage, pre = was ? snap(g) : null; applyingRemote = true; g = rg;
+void startOnline((rg) => { if (heldNext) commitRoll(); const prevG = g;
+  { const by = online.lastBy, w: E.Side | null = online.seats.german === by ? 'german' : online.seats.allied === by ? 'allied' : null;           // referee-lite: check what the other browser wrote
+    if (by && by !== online.uid && prevG.turn) { const p = E.auditChange(prevG, rg, w); if (p.length) { auditWarn = [...auditWarn, ...p].slice(-6); console.warn('rules check', p); } } } const ckLast = JSON.stringify(g.checks?.at(-1) ?? null); const was = g.battle, n0 = was?.rolls.length ?? 0, st0 = was?.stage, pre = was ? snap(g) : null; applyingRemote = true; g = rg;
   const nb = g.battle; const rolled = !!(was && nb && nb.area === was.area && nb.rolls.length > n0); if (pre) { try { noteFx(pre, g, rolled); } catch (e) { console.error(e); } }                  // a failure while describing the changes must never stop the screen from updating
   if (was && nb && nb.area === was.area && nb.rolls.length > n0 && st0 && STAGE_NAME[st0]) {      // the other player rolled: show their dice here too
     const side = st0 === 'attArty' || st0 === 'offFire' || st0 === 'exploit' ? nb.attacker : other(nb.attacker);

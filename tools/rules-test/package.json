@@ -1,0 +1,8 @@
+{
+  "name": "fab-rules-test",
+  "private": true,
+  "type": "module",
+  "description": "Checks database.rules.json against the Firebase Realtime Database emulator (needs Java).",
+  "scripts": { "test": "firebase emulators:exec --only database --project demo-fab \"vitest run\"" },
+  "devDependencies": { "@firebase/rules-unit-testing": "^3.0.4", "firebase": "^10.14.1", "firebase-tools": "^13.35.1", "vitest": "^2.1.8" }
+}

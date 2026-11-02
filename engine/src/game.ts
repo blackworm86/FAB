@@ -993,3 +993,28 @@ export function setPoint(g: Game, b: Battle, side: Side, unitId: string) {
   if (side === b.attacker) b.attPoint = unitId; else b.defPoint = unitId;
 }
 export function setEngFw(_g: Game, b: Battle, on: boolean) { if (b.stage !== 'setup' && b.stage !== 'offFire') throw new Error('too late'); b.engFw = !!on; }
+
+/* ================= referee-lite: checks on a move written by the other browser ================= */
+/** Who has to act now: one side, or both (Prepare phases, battle set-up). */
+export function actorOf(g: Game): Side | 'both' {
+  if (g.pendingBlow) { const u = g.units.find((x) => x.id === g.pendingBlow!.unit); return u ? other(u.side) : 'both'; }
+  const b = g.battle;
+  if (b) return b.stage === 'setup' ? 'both' : ['defArty', 'defFire', 'defChoice', 'retreat'].includes(b.stage) ? other(b.attacker) : b.attacker;
+  if (g.phase === 'admin' || g.phase === 'reinforcement') return 'both';
+  return g.phase === 'reaction' ? other(g.phasing) : g.phasing;
+}
+const PHASE_ORDER: Phase[] = ['reinforcement', 'admin', 'movement', 'strategic', 'combat', 'reaction', 'btMove', 'btCombat', 'supply'];
+const clock = (g: Game) => g.turn * 1000 + (g.phasing === 'german' ? 0 : 500) + PHASE_ORDER.indexOf(g.phase);
+/** Without a server nobody stops a modified browser from writing a false game; each browser checks what the other one wrote and warns.
+ *  `writer` is the side whose account wrote the change (null: an admin or unknown). Returns plain-language problems, empty when all is well. */
+export function auditChange(prev: Game, next: Game, writer: Side | null): string[] {
+  const out: string[] = [];
+  if (next.turn === 1 && next.log.length < prev.log.length && clock(next) < clock(prev)) return ['The game was restarted.'];
+  if (clock(next) < clock(prev)) out.push(`The game went back from turn ${prev.turn} ${prev.phase} to turn ${next.turn} ${next.phase}.`);
+  if (next.rolls < prev.rolls) out.push('The dice counter went backwards: rolls were undone.');
+  const a = prev.battle, b = next.battle;
+  if (a && b && a.area === b.area && JSON.stringify(b.rolls.slice(0, a.rolls.length)) !== JSON.stringify(a.rolls)) out.push('Dice already rolled in this battle were changed.');
+  const actor = actorOf(prev);
+  if (writer && actor !== 'both' && actor !== writer && JSON.stringify({ ...next, log: [] }) !== JSON.stringify({ ...prev, log: [] })) out.push(`The ${writer === 'german' ? 'German' : 'Allied'} player changed the game while it was the ${actor === 'german' ? 'German' : 'Allied'} player's turn to act.`);
+  return out;
+}
