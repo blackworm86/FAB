@@ -1,0 +1,33 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;background:#0b0d08;color:#eee;font-family:sans-serif}
+.wrap{display:flex;gap:18px;padding:18px}
+.panel{position:relative;width:700px;height:370px;background:url(bubble-base.png);overflow:hidden;border:1px solid #444}
+.panel h3{position:absolute;left:10px;top:8px;margin:0;font:700 14px sans-serif;letter-spacing:.1em;color:#e3b04b;text-transform:uppercase;text-shadow:0 1px 3px #000}
+svg{position:absolute;left:0;top:0;width:700px;height:370px;pointer-events:none}
+.bub{position:absolute;display:flex;align-items:center;gap:5px;background:#0b0d08ee;border:1px solid #e3b04b;border-radius:6px;padding:4px 5px;box-shadow:0 4px 14px #000a}
+.hits{font:700 20px sans-serif;color:#e3b04b;line-height:1;text-align:center;padding:0 3px}.hits small{display:block;font-size:8px;letter-spacing:.12em}
+.b{width:30px;height:30px;display:grid;place-items:center;border:1px solid #777;border-radius:4px;font-size:16px;background:#1a1d14;color:#fff}.b.go{background:#e3b04b;color:#111;border-color:#e3b04b}
+.fx{position:absolute;display:flex;align-items:center;gap:6px;background:#7a1f17f0;border:1px solid #ff8a7a;border-radius:6px;padding:4px 5px 4px 8px;box-shadow:0 4px 14px #000a;font:700 12px sans-serif}
+.fx small{display:block;font:10px monospace;opacity:.85}.fx .x{width:18px;height:18px;display:grid;place-items:center;border-radius:50%;background:#0006;font-size:11px}
+.lab{position:absolute;font:11px sans-serif;color:#ddd;background:#000b;padding:2px 6px;border-radius:3px;max-width:200px}
+.ln{stroke:#e3b04b;stroke-width:1.6;fill:none}.ln.r{stroke:#ff8a7a}.dot{fill:#e3b04b}.dot.r{fill:#ff8a7a}
+.ring{fill:none;stroke:#e3b04b;stroke-width:2;stroke-dasharray:4 3}.ring.r{stroke:#ff8a7a}
+</style></head><body><div class="wrap">
+
+<div class="panel"><h3>A · Leader lines</h3>
+<svg><rect class="ring" x="272" y="116" width="70" height="76" rx="3"/><path class="ln" d="M505 90 H 420 L 344 140"/><circle class="dot" cx="344" cy="140" r="4"/>
+<rect class="ring r" x="236" y="196" width="72" height="78" rx="3"/><path class="ln r" d="M150 300 H 190 L 236 250"/><circle class="dot r" cx="236" cy="250" r="4"/></svg>
+<div class="bub" style="left:505px;top:70px"><div class="hits">1<small>HIT</small></div><div class="b">✕</div><div class="b go">←</div></div>
+<div class="fx" style="left:20px;top:284px">−1 STEP<small>116 Pz · 3/4</small><span class="x">✕</span></div>
+<div class="lab" style="left:505px;top:118px">Choice floats off the area; a thin line and a dashed ring mark each block it affects.</div>
+<div class="lab" style="left:20px;top:330px">Effect: ✕ dismisses it.</div></div>
+
+<div class="panel"><h3>B · Pinned tags</h3>
+<svg><rect class="ring" x="272" y="116" width="70" height="76" rx="3"/><path d="M352 146 l-8 6 l8 6z" fill="#e3b04b"/>
+<rect class="ring r" x="236" y="196" width="72" height="78" rx="3"/><path d="M228 230 l8 6 l-8 6z" fill="#ff8a7a"/></svg>
+<div class="bub" style="left:352px;top:130px"><div class="hits">1<small>HIT</small></div><div class="b">✕</div><div class="b go">←</div></div>
+<div class="fx" style="left:64px;top:220px">−1 STEP<small>116 Pz · 3/4</small><span class="x">✕</span></div>
+<div class="lab" style="left:470px;top:140px">Tag right beside the block, its caret touching it.</div>
+<div class="lab" style="left:20px;top:290px">Effects go on the free side of the block.</div></div>
+
+</div></body></html>
