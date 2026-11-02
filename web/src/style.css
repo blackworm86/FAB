@@ -360,3 +360,24 @@ ul.rl { margin: 4px 0; padding-left: 16px; } ul.rl li { margin: 2px 0; } .inspec
 .supply .supl { display: flex; width: 100%; gap: 8px; align-items: center; padding: 5px 2px; background: none; border: 0; border-bottom: 1px solid #ffffff1a; color: inherit; text-align: left; cursor: pointer; }
 .supply .supl img { width: 34px; height: 34px; } .supply .supl span { flex: 1; display: grid; } .supply .supl small { opacity: .7; } .supply .sn { background: var(--gold); color: #111; padding: 2px 6px; white-space: nowrap; }
 #fps { position: fixed; left: 6px; bottom: 6px; z-index: 200; padding: 2px 6px; background: #000c; color: #9fe870; font: 12px monospace; pointer-events: none; }
+/* victory points: strip, breakdown, end of game */
+.tops { display: grid; } .vps { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 12px; border: 0; border-bottom: 1px solid #8d906555; background: #0b0d08e8; color: #ddd; font: 12px var(--mono, monospace); cursor: pointer; width: 100%; text-align: left; }
+.vlab { font: 700 13px var(--sfd); letter-spacing: .08em; white-space: nowrap; } .vlab.ge, h4.ge, .vtot .ge, .ge { color: #c9ccd2; } .vlab.al, h4.al, .vtot .al, .al { color: #b8d27a; } .vlab.net { color: var(--gold); }
+.vtt { display: flex; gap: 3px; } .vtb { width: 40px; height: 26px; border: 1px solid #4a4f38; display: grid; place-items: center; line-height: 1; background: #14170f; } .vtb b { font: 700 11px var(--sfd); color: #bbb; } .vtb i { font-style: normal; font-size: 9px; color: #ff8a7a; } .vtb i.no { color: #666; }
+.vtb.now { border-color: var(--gold); background: #2a2410; } .vtb.now b { color: var(--gold); } .vtb.past { opacity: .45; }
+.gauge { flex: 1; position: relative; height: 12px; min-width: 90px; border-radius: 6px; background: linear-gradient(90deg, #5a7a35, #2a3320 48%, #2a2d31 52%, #6d7684); }
+.gauge .z { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: #fff8; } .gauge .sd { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #d1432f; } .gauge .sd span { position: absolute; top: 14px; left: -22px; font-size: 9px; color: #ff8a7a; white-space: nowrap; }
+.gauge .nd { position: absolute; top: -6px; width: 12px; height: 24px; margin-left: -6px; border-radius: 3px; background: var(--gold); border: 2px solid #1a1608; box-shadow: 0 2px 6px #000; transition: left .6s; }
+@media (max-width: 700px) { .vtt, .vlab.net, .vps > .vlab:first-child { display: none; } .vps { gap: 8px; height: 34px; } }
+.vsheet { width: min(780px, 96vw); } .vsheet h3 { display: flex; justify-content: space-between; align-items: center; }
+.vtot { display: flex; gap: 12px; justify-content: center; align-items: center; font: 700 32px var(--sfd); } .vtot small { display: block; font-size: 11px; color: #999; text-align: center; letter-spacing: .1em; } .vtot i { color: #666; font-style: normal; }
+.vnote { text-align: center; margin: 2px 0 8px; } .vnote b { color: var(--gold); }
+.vcols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; } @media (max-width: 700px) { .vcols { grid-template-columns: 1fr; } }
+.vrow { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #ffffff12; } .vrow b { font-family: var(--sfd); } .vrow.cut { opacity: .45; text-decoration: line-through; }
+.vkills { display: flex; flex-wrap: wrap; gap: 4px; } .vkill { width: 34px; height: 34px; filter: grayscale(.4); }
+.vtab div { padding: 3px 8px; border-left: 3px solid transparent; } .vtab .on { border-color: var(--gold); background: #2a2410; color: var(--gold); }
+.vend { position: fixed; inset: 0; z-index: 70; overflow: auto; background: radial-gradient(circle at 50% 30%, #1d2114f2, #0b0d08fc); padding: 24px 16px; } .vin { width: min(760px, 100%); margin: 0 auto; }
+.vban { text-align: center; padding: 18px; border: 1px solid var(--gold); background: linear-gradient(#2a2410, #14170f); } .vban small { letter-spacing: .3em; color: #999; } .vban h1 { margin: 6px 0; font: 700 44px var(--sfd); letter-spacing: .05em; color: var(--gold); line-height: 1; } .vban p { margin: 0; }
+.vcards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0; } .vcards div { border: 1px solid #3a3f2a; background: #11140c; padding: 10px; text-align: center; } .vcards b { display: block; font: 700 26px var(--sfd); }
+.vchart { width: 100%; height: auto; background: #11140c; border: 1px solid #3a3f2a; } .vend h4 { font: 700 14px var(--sfd); letter-spacing: .1em; text-transform: uppercase; color: #aaa; margin: 14px 0 4px; }
+.vbtns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 18px 0 8px; } @media (max-width: 700px) { .vban h1 { font-size: 30px; } }

@@ -175,6 +175,9 @@ Map layers > Colour > Supply tints your side's areas: light blue (German) or gre
 ### Route arrows
 Movement is a flat, tapered operations arrow (shadow, dark rim, light core, notched head, tail fading in), coloured by kind: brass = normal, orange = uses fuel, steel = minimum move, red with a white break = across a blown bridge, violet = strategic move. Supply is a quiet dotted lifeline of light-blue beads with a ring on each area and a glowing source; it shows when a block is selected and no destination is hovered. Mockup: `docs/design/route-style-v2.png`.
 
+### Victory points
+A strip under the top bar: the turn track (each turn's sudden-death numbers in red, the current turn in brass), the Allied and German totals around a gauge whose brass needle shows the net score, with red lines where either side wins outright this turn; on phones only the gauge and totals. Tapping it opens the breakdown: totals, each side's objective areas (cut-off ones struck through), destroyed big units, the victory table. When the game ends a full panel shows the result, summary cards, a net-VP-by-turn chart, the breakdown and View map / New game / Home; "Result" in the bottom line reopens it. Not shown in Nuts!, which is decided in Bastogne.
+
 ### Chat
 A speech-bubble button in the top bar (unread count in an alarm-red dot) opens the players' chat: a slim panel on the right on computers, a bottom sheet over the hand on phones. Messages show name, side colour (steel or olive edge) and time; one-tap quick lines (Your turn, Ready, One moment, Nice move, Good game) sit above the text box. A message arriving while the chat is closed shows as a short banner. Watchers read but see "only the two players can write"; there is no chat in the sandbox or hotseat.
 

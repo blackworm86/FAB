@@ -52,7 +52,9 @@ export interface Game {
   inPlay?: number[];   /** 24.33 the Introductory scenario plays on its own map sheet: only these areas */
   track?: { ge: number[]; al: number[]; sd: number[] | null }[];   /** draws per turn when the scenario has its own track */
   artyPick?: boolean;
-  supplyPending?: boolean;   /** 9.4 the out-of-supply checks of this Supply Phase are still to be rolled */
+  supplyPending?: boolean;
+  vpHist?: number[];   /** net VP at each turn's Victory Check (German positive), for the end-of-game chart */
+  battles?: number;   /** battles fought so far */   /** 9.4 the out-of-supply checks of this Supply Phase are still to be rolled */
   checks?: Check[];   /** morale checks rolled outside battles (supply, Greif interdict), newest last, so the table can show the dice */   /** 16.12: the German player must choose which used artillery asset is eliminated */   /** sandbox: die results to use before the seeded ones */
 }
 type RawUnit = { id: string; name: string; side: string; echelon?: string; symbol?: string; cls?: string; steps?: number; quality_by_step?: Quality[]; start_area?: number; arrival_turn?: number; entry?: string[]; kind?: string };
@@ -775,7 +777,7 @@ function end(g: Game, b: Battle, result: string) {
   for (const side of ['german', 'allied'] as Side[]) for (const id of b.assets[side]) { const c = chit(g, id); if (c.box === 'map') c.box = 'used'; }
   for (const side of ['german', 'allied'] as Side[]) { const a = b.air[side]; if (a) chit(g, a.id).box = 'eliminated'; }      // air missions are single-use
   g.fought.push(b.area); for (const n of [b.area, ...neighbors(b.area)]) updateControl(g, n);
-  say(g, `${areas.get(b.area)!.name}: ${result}`);
+  say(g, `${areas.get(b.area)!.name}: ${result}`); g.battles = (g.battles ?? 0) + 1;
   const cand = b.exploit && !b.bt && !b.riverAssault ? unitsIn(g, b.area, b.attacker).filter((x) => x.cls === 'armor' && !x.garrison).map((x) => x.id) : [];      // 6.8: never from river assaults or Breakthrough combat
   if (cand.length) { b.stage = 'exploit'; b.exploitIds = cand; say(g, `exploitation opportunity: ${b.attacker} may roll a morale check for ${cand.length} armor-class unit(s) (6.8)`); }
 }
@@ -878,6 +880,7 @@ export function endPhase(g: Game) {
     if (g.phasing === 'german') g.phasing = 'allied';
     else {
       const v = victory(g), sd = g.inPlay ? null : (g.track ?? TRACK)[g.turn - 1].sd;
+      (g.vpHist ??= [])[g.turn - 1] = v.net;
       say(g, `Victory check: German ${v.german}, Allied ${v.allied}, net ${v.net > 0 ? 'German +' + v.net : v.net < 0 ? 'Allied +' + -v.net : '0'}`);
       if (sd && ((v.net > 0 && v.net >= sd[0]) || (v.net < 0 && -v.net >= sd[1]))) { g.over = `Sudden death victory: ${v.net > 0 ? 'German' : 'Allied'} (net ${Math.abs(v.net)})`; return; }
       if (g.turn >= g.lastTurn) { g.over = g.opts.scenario === 'intro' ? introResult(g) : finalResult(g, v.net); return; }
@@ -908,6 +911,12 @@ export function introResult(g: Game) {
   const pts = (s: Side) => unitsIn(g, b, s).filter((u) => !u.garrison).reduce((t, u) => t + u.str, 0);
   const ge = pts('german') - 2 * [39, 36, 48, 63, 64].filter((a) => g.control[a] !== 'german').length, al = pts('allied');
   return `${ge > al ? 'German' : 'Allied'} Marginal Victory (German ${ge}, Allied ${al})`;
+}
+/** The scenario's victory table: [condition, result]; the end of the game picks the matching row. */
+export function victoryTable(g: Game): [string, string][] {
+  if (g.opts.scenario === 'campaign') return [['4+ German VP', 'German Operational Victory'], ['1–3 German VP', 'German Marginal Victory'], ['0', 'Draw'], ['1–3 Allied VP', 'Allied Marginal Victory'], ['4+ Allied VP', 'Allied Operational Victory']];
+  if (g.opts.scenario === 'intro') return [['Uncontested Bastogne', 'Decisive Victory'], ['More strength in Bastogne (Germans −2 per key area not held; tie: Allies)', 'Marginal Victory']];
+  return [['4+ German VP', 'German Operational Victory'], ['2–3 German VP', 'German Marginal Victory'], ['0–1 German VP', 'Allied Marginal Victory'], ['1+ Allied VP', 'Allied Operational Victory']];
 }
 function finalResult(g: Game, net: number) {
   if (g.opts.scenario === 'campaign') return net >= 4 ? 'German Operational Victory' : net >= 1 ? 'German Marginal Victory' : net === 0 ? 'Draw' : net >= -3 ? 'Allied Marginal Victory' : 'Allied Operational Victory';
