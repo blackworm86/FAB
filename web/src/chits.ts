@@ -1,7 +1,7 @@
 // Counters redrawn from the printed ones: geometry measured on the scans, lettering as outlined Roboto Condensed paths, and the illustrations
 // (fuel barrels, fighters, the Special Action arrow) cut out of the scan. 160 x 160 units like the 160 px raw counters.
 import { MARKER_ART } from './marker-art';
-import { SA_ART } from './sa-art';
+import { SA_ART, SAE_ART } from './sa-art';
 import type { Chit } from '../../engine/src';
 import { ECH } from './art';
 import { GLYPHS } from './glyphs';
@@ -129,6 +129,7 @@ export function chitSvg(c: Chit | Counter): string {
   }
   if (k === 'event_bodenplatte') { const b = asBox(CHIT_ART.bodenBox); return `${open(side, ['#9fcff0', '#c4e3f7', '#78a8cc'])}${turn(t, 14, 38, 32)}${img(CHIT_ART.boden, b.x, b.y + 2, b.w, b.h)}${txt('Operation', 80, 118, 31, { w: 'b', anchor: 'middle', fill: '#fff', stroke: '#222', sw: 130, max: 128 })}${txt('Bodenplatte', 80, 148, 31, { w: 'b', anchor: 'middle', fill: '#fff', stroke: '#222', sw: 130, max: 128 })}</svg>`; }
   if (k === 'air_mission') { const b = asBox(CHIT_ART.airBox); return `${flat('#1f5db0')}<rect x="8" y="8" width="144" height="144" fill="#9fcff0" stroke="#fff" stroke-width="3"/>${turn(t, 16, 44, 32)}${txt('Allied', 98, 36, 22, { anchor: 'middle' })}${img(CHIT_ART.air, b.x + 2, b.y + 8, b.w, b.h)}${txt('Air', 14, 112, 36, { w: 'b', fill: '#fff', stroke: '#222', sw: 130 })}${txt('Mission', 14, 144, 36, { w: 'b', fill: '#fff', stroke: '#222', sw: 130, max: 130 })}</svg>`; }
+  if (k === 'special_action_event' && SAE_ART[`${c.ech}-${t}`]) return `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160"><image href="${SAE_ART[`${c.ech}-${t}`]}" width="160" height="160"/></svg>`;      // the user's redrawn counters
   if (k === 'special_action_event') {
     const dark = ['#4d5b2c', '#8e2d82', '#3d6dcc'].includes(ech), f = dark ? '#fff' : '#111';
     return `${open(side)}${panel(ech)}${turn(t, 22, 52, 32)}${txt('Special', 86, 44, 26, { w: 'b', italic: true, anchor: 'middle', fill: f, max: 78 })}<image href="${CHIT_ART.saArrow}" x="18" y="52" width="130" height="72"/>${txt('Action', 86, 147, 26, { w: 'b', italic: true, anchor: 'middle', fill: f, max: 78 })}</g></svg>`;
