@@ -129,7 +129,7 @@ export function victory(g: Game) {
   let ge = 0, al = 0;
   for (const a of areas.values()) {
     const v = a.vp; if (!v.german && !v.allied && !v.mutual) continue;
-    const c = g.control[a.id]; if (!inSupply(g, c, a.id)) continue;
+    const c = g.control[a.id]; if (!c || !inSupply(g, c, a.id)) continue;                         // nobody holds it (possible in the sandbox)
     if (c === 'allied') al += v.allied + (v.mutual ? 1 : 0); else ge += v.german + (v.mutual ? 1 : 0);
   }
   for (const id of g.elimLarge) { const u = g.units.find((x) => x.id === id)!; if (u.side === 'allied') ge++; else al++; }

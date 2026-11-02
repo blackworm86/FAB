@@ -29,8 +29,8 @@ export function lift(g: E.Game, id: string) {
   const u = g.units.find((x) => x.id === id)!, was = u.area; u.area = null; recontrol(g, was);
   g.log.push(`T${g.turn} [sandbox] ${u.name} taken off the map`);
 }
-/** Every block off the map: a bare board to build a test position on. */
-export function clearMap(g: E.Game) { g.battle = null; g.pendingBlow = null; for (const u of g.units) u.area = null; g.control = {}; g.fieldWorks = []; g.riverAssault = []; g.log.push(`T${g.turn} [sandbox] map cleared`); }
+/** Every block off the map: a bare board to build a test position on. Area control stays as it was (it can be set per area). */
+export function clearMap(g: E.Game) { g.battle = null; g.pendingBlow = null; for (const u of g.units) u.area = null; g.fieldWorks = []; g.riverAssault = []; g.log.push(`T${g.turn} [sandbox] map cleared`); }
 
 /* ---------- notes ---------- */
 export interface Target { kind: 'unit' | 'chit' | 'area' | 'battle' | 'phase'; id: string; label: string }

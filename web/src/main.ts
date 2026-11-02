@@ -1138,7 +1138,7 @@ function sandboxPanel() {
 }
 const inGame = () => HAS_TABLE || DEV_FAKE || SANDBOX || online.mode === 'local';
 /** Draw the interface; if something in it throws, say so on screen instead of leaving a stale picture. */
-function render() { syncView(); try { renderInner(); } catch (e) { console.error(e); $('#ui').innerHTML = `<div class="seatbar err"><span>Display problem: ${esc(String((e as Error)?.message ?? e))}</span>${ubtn('Reload', () => location.reload(), 'primary')}</div>`; bind($('#ui')); } }
+function render() { syncView(); try { renderInner(); } catch (e) { console.error(e); $('#ui').innerHTML = `<div class="seatbar err"><span>Display problem: ${esc(String((e as Error)?.message ?? e))}</span>${ubtn('Reload', () => location.reload(), 'primary')}${SANDBOX ? ubtn('Undo last edit', () => { const p = hist.undo(); if (p) { g = p; save(); refresh(); } }) + ubtn('New sandbox game', () => { g = E.newGame(); hist.clear(); save(); refresh(); }) : ''}</div>`; bind($('#ui')); } }
 function renderInner() {
   if (document.activeElement?.closest?.('.authform')) return;                                         // do not wipe what is being typed
   acts = {}; actv = {}; n = 0;
