@@ -1,6 +1,7 @@
 // Counters redrawn from the printed ones: geometry measured on the scans, lettering as outlined Roboto Condensed paths, and the illustrations
 // (fuel barrels, fighters, the Special Action arrow) cut out of the scan. 160 x 160 units like the 160 px raw counters.
 import { MARKER_ART } from './marker-art';
+import { SA_ART } from './sa-art';
 import type { Chit } from '../../engine/src';
 import { ECH } from './art';
 import { GLYPHS } from './glyphs';
@@ -74,7 +75,7 @@ function marker(name: string): string | null {
 
 /** 8.1: the reusable Special Action is a wooden block with a Special Action label (not a counter). The label art can be replaced by the
  *  drawings in docs/maps/vector/blank/special-action-blocks.svg (put them in SA_LABEL below as SVG strings). */
-export const SA_LABEL: Partial<Record<'german' | 'allied', string>> = {};
+export const SA_LABEL: Partial<Record<'german' | 'allied', string>> = SA_ART;
 export function saBlockSvg(side: 'german' | 'allied') {
   if (SA_LABEL[side]) return SA_LABEL[side]!;
   const bg = side === 'german' ? '#b7bbc1' : '#8fa83f', ink = '#141414';
