@@ -50,7 +50,13 @@ export async function rtdbStore(table: string): Promise<Store | null> {
     /** Write only what changed; the server counts the revision. */
     async setState(d: StateDoc) {
       const tree = toTree(JSON.parse(d.json) as Game), diff = diffTree(lastTree, tree); if (!Object.keys(diff).length) return;
-      await rt.update(G('state'), { ...diff, rev: rt.increment(1), by: account.uid });
+      const logKey = 'f/log', mine = diff[logKey], before: string[] = lastTree?.f.log ? JSON.parse(lastTree.f.log) : [];
+      delete diff[logKey];
+      if (Object.keys(diff).length) await rt.update(G('state'), { ...diff, rev: rt.increment(1), by: account.uid });
+      if (mine) {                                                                                       // both players may act at once: add our new lines to the log as it is now, never overwrite theirs
+        const ours: string[] = JSON.parse(mine), last = before.at(-1), at = last == null ? -1 : ours.lastIndexOf(last), fresh = at >= 0 ? ours.slice(at + 1) : ours.slice(-20);
+        await rt.runTransaction(G('state/f/log'), (cur: string | null) => { const now: string[] = cur ? JSON.parse(cur) : []; const add = fresh.filter((l) => !now.slice(-40).includes(l)); return add.length ? JSON.stringify([...now, ...add].slice(-400)) : undefined; });
+      }
     },
     watchSeats: watchSeatNodes,
     watchPriv: (next: (p: Priv | null) => void) => {
