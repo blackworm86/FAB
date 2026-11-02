@@ -330,3 +330,8 @@ ul.rl { margin: 4px 0; padding-left: 16px; } ul.rl li { margin: 2px 0; } .inspec
 @media (max-width: 700px) { .card2.wood .b3 { --s: 46px; } }
 /* a filter on the block itself flattens its 3D faces: the shadow goes on the card instead */
 .card2.wood .b3 { filter: none; } .card2.wood { filter: drop-shadow(4px 8px 8px #000b); }
+/* hotseat: the screen between two players */
+.hotcover { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; background: #0b0d08f5; backdrop-filter: blur(14px); padding: 16px; }
+.hotcover > div { text-align: center; max-width: 420px; } .hotcover small { letter-spacing: .2em; text-transform: uppercase; opacity: .6; }
+.hotcover h2 { margin: 6px 0 10px; font: 700 40px var(--sfd); letter-spacing: .06em; text-transform: uppercase; } .hotcover h2.german { color: #c9ccd2; } .hotcover h2.allied { color: #b8d27a; }
+.hotcover p { opacity: .8; margin: 0 0 18px; } .hotcover button { font-size: 18px; padding: 12px 20px; }

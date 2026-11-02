@@ -403,7 +403,7 @@ function idle(): boolean {                                                // pha
     default: return false;
   }
 }
-function auto() { if (SANDBOX && !sbAuto) return; for (let i = 0; i < 12 && !g.over && !g.battle && !g.pendingBlow && idle(); i++) { try { E.endPhase(g); } catch { break; } } }
+function auto() { if (SANDBOX && !sbAuto && !sbHot) return; for (let i = 0; i < 12 && !g.over && !g.battle && !g.pendingBlow && idle(); i++) { try { E.endPhase(g); } catch { break; } } }
 let toast = '', toastT = 0;
 const say = (t: string) => { toast = t; clearTimeout(toastT); toastT = window.setTimeout(() => { toast = ''; render(); }, 2800); };
 let dragTargets: number[] = [];
@@ -795,6 +795,7 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
     const me = online.mySide(); if (!me) return null;
     if (me !== g.phasing) { const on = !!g.done?.includes(me); return { label: on ? 'Done · tap to undo' : 'Done', fn: () => act(() => E.setDone(g, me, !on)) }; }
     const wait = !g.done?.includes(other(me));
+    if (wait && SANDBOX && sbHot) return { label: `Pass to ${nm(other(me))}`, fn: () => hotPass(other(me)) };
     return { label: wait ? `Waiting for ${nm(other(me))}` : `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`, fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; }), dis: wait || !!g.recover.length || !!g.artyPick };
   }
   return { label: `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`, fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; }), dis: !!E.mustFight(g).length || !!g.recover.length || !!g.artyPick };
@@ -1080,6 +1081,7 @@ function modalHtml() {
   return '';
 }
 /* ---------- admin sandbox (?sandbox=1): free edits, seat switch, notes and the test report ---------- */
+let sbHot = (() => { try { return localStorage.getItem('fab-hotseat') === '1'; } catch { return false; } })(), hotCover: E.Side | null = null;
 let sbOpen = true, sbTab = 'Pieces', sbPlace: string | null = null, sbAuto = false, sbFilter = '', sbDraft = '';
 const sbJump = { turn: g.turn, side: g.phasing, phase: g.phase };
 let sbNotes = SB.loadNotes();
@@ -1089,8 +1091,29 @@ const sbtn = (label: string, f: () => void, cls = '', title = '') => ubtn(label,
 const sbSel = (opts: [string, string][], cur: string, f: (v: string) => void) => `<select data-sel="${regv((v) => { f(v); render(); })}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
 const sbChk = (label: string, on: boolean, f: (v: boolean) => void) => `<label class="sbchk"><input type="checkbox" ${on ? 'checked' : ''} data-sel="${regv((v) => sbx(() => f(v === 'on')))}"> ${esc(label)}</label>`;
 const SEATS: [DevSeat, string][] = [['both', 'Both'], ['german', 'German'], ['allied', 'Allied'], ['watch', 'Watch']];
+/** Hotseat: one screen, two players. The seat follows whoever has to act; between players a cover hides the hidden blocks until the next player taps. */
+function hotWant(): E.Side | null {
+  if (!SANDBOX || !sbHot || g.over) return null;
+  const a = actorNow(), cur = online.mySide(); if (a !== 'both') return a;
+  const b = g.battle;
+  if (b?.stage === 'setup') return cur && b.ready?.includes(cur) && !b.ready.includes(other(cur)) ? other(cur) : cur ?? g.phasing;
+  if (cur && cur !== g.phasing && g.done?.includes(cur)) return g.phasing;                       // the other side said Done: back to the Phasing Player
+  return cur ?? g.phasing;
+}
+function hotseatSync() { if (rollView) return; const w = hotWant(); if (w && w !== online.mySide() && !hotCover) { hotCover = w; selUnit = selChit = selArr = null; previewArea = null; } }
+const hotPass = (to: E.Side) => { hotCover = to; selUnit = selChit = selArr = null; previewArea = null; render(); };
+function hotCoverHtml() {
+  if (!hotCover) return '';
+  return `<div class="hotcover"><div><small>Hotseat</small><h2 class="${hotCover}">${nm(hotCover)} player</h2><p>Pass the device. The other side's hidden blocks are covered until you tap.</p><button class="primary" data-ui="${reg(() => { setDevSeat(hotCover!); hotCover = null; refresh(); })}">${ico('next')} I am the ${nm(hotCover)} player</button></div></div>`;
+}
+function sbReset(opts: Partial<E.Opts>) {
+  if (!confirm('Reset the sandbox and start a new game from the first turn?')) return;
+  g = E.newGame(undefined, { fuel: true, ...opts }); hist.clear(); sbPlace = null; selUnit = selChit = selArr = null; selArea = null; previewArea = null; rollView = null;
+  if (sbHot) { setDevSeat(g.phasing); hotCover = g.phasing; }
+  save(); refresh();
+}
 function sandboxBtns() {
-  return ubtn(`${ico('wand')}<span class="bl">Sandbox</span>`, () => { sbOpen = !sbOpen; }, 'ico ' + (sbOpen ? 'on' : ''), false, 'Sandbox tools');
+  return ubtn(`${ico('wand')}<span class="bl">Sandbox</span>`, () => { sbOpen = !sbOpen; }, 'ico ' + (sbOpen ? 'on' : ''), false, 'Sandbox tools') + ubtn(`${ico('undo')}<span class="bl">Reset</span>`, () => sbReset({ scenario: g.lastTurn > 5 ? 'campaign' : 'tournament' }), 'ico', false, 'Reset: a new game from the first turn (same scenario)');
 }
 function sbTarget(): SB.Target {
   const u = selUnit ? g.units.find((x) => x.id === selUnit) : null; if (u) return { kind: 'unit', id: u.id, label: `${u.name} (${u.side}, ${u.id})` };
@@ -1104,11 +1127,12 @@ function sbTurn() {
   return `<h4>Jump to</h4><div class="row">${sbSel(turns, String(sbJump.turn), (v) => { sbJump.turn = +v; })}${sbSel([['german', 'German'], ['allied', 'Allied']], sbJump.side, (v) => { sbJump.side = v as E.Side; })}</div>
     <div class="row">${sbSel(SB.PHASES, sbJump.phase, (v) => { sbJump.phase = v as E.Phase; })}${sbtn(`${ico('next')} Go`, () => SB.jump(g, sbJump.turn, sbJump.side, sbJump.phase), 'primary', 'Start of that phase: battles, moves and per-phase marks cleared')}</div>
     <p class="hint">Now: turn ${g.turn}, ${nm(g.phasing)}, ${esc(SB.PHASES.find((x) => x[0] === g.phase)?.[1] ?? g.phase)}${g.battle ? `, battle in ${esc(areaName(g.battle.area))} (${g.battle.stage})` : ''}.</p>
+    <h4>Hotseat</h4><label class="sbchk"><input type="checkbox" ${sbHot ? 'checked' : ''} data-sel="${regv((v) => { sbHot = v === 'on'; try { localStorage.setItem('fab-hotseat', sbHot ? '1' : '0'); } catch { /* private mode */ } if (sbHot) { sbAuto = true; hotCover = hotWant() ?? g.phasing; } render(); })}"> Two players on this screen: the seat follows whoever acts, with a cover between players</label>
     <h4>Seat</h4><div class="chips">${SEATS.map(([k, l]) => ubtn(l, () => { setDevSeat(k); selUnit = selChit = selArr = null; previewArea = null; refresh(); }, online.devSeat === k ? 'on' : '')).join('')}</div>
     <label class="sbchk"><input type="checkbox" ${sbAuto ? 'checked' : ''} data-sel="${regv((v) => { sbAuto = v === 'on'; render(); })}"> Skip empty phases like a real game</label>
     <h4>Dice</h4><div class="row authform"><input id="sb-dice" class="grow" placeholder="Next results, e.g. 1 1 9" aria-label="Next die results">${sbtn('Queue', () => { const v = (($('#sb-dice') as HTMLInputElement)?.value ?? '').split(/[^0-9]+/).filter(Boolean).map(Number).map((x) => (x === 0 ? 10 : x)).filter((x) => x >= 1 && x <= 10); g.force = [...(g.force ?? []), ...v]; })}</div>
     <p class="hint">${g.force?.length ? `Queued: <b>${g.force.join(' ')}</b> ${sbtn('Clear', () => { g.force = []; })}` : 'No dice queued: rolls come from the seed.'}</p>
-    <h4>Table</h4><div class="row">${sbtn(`${ico('trash')} Clear map`, () => SB.clearMap(g), '', 'Every block off the map')}${ubtn('New 5-turn', () => { g = E.newGame(undefined, { scenario: 'tournament', fuel: true }); hist.clear(); save(); refresh(); })}${ubtn('New campaign', () => { g = E.newGame(undefined, { scenario: 'campaign', fuel: true }); hist.clear(); save(); refresh(); })}</div>`;
+    <h4>Table</h4><div class="row">${sbtn(`${ico('trash')} Clear map`, () => SB.clearMap(g), '', 'Every block off the map')}${ubtn(`${ico('undo')} Reset: 5-turn game`, () => sbReset({ scenario: 'tournament' }))}${ubtn(`${ico('undo')} Reset: campaign`, () => sbReset({ scenario: 'campaign' }))}</div>`;
 }
 /* The piece library: every block and chit with its printed art, a search box and filters. */
 let lbSide: 'all' | E.Side = 'all', lbType = 'all', lbWhere = 'all';
@@ -1186,7 +1210,7 @@ function renderInner() {
   const alert = g.pendingBlow ? (() => { const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!, path = g.pendingBlow!.path; return `<div class="c-ledger"><h3>${nm(other(u.side))}: bridge?</h3><p class="hint">${esc(u.name)} tries to cross into ${esc(areaName(path[path.length - 1]))}. Attempt to blow the bridge? It works on a roll of 1–5.</p><div class="row end">${btn('Let them cross', () => E.resolveBlow(g, false))}${btn('Attempt to blow it', () => E.resolveBlow(g, true), 'primary')}</div></div>`; })() : '';
   const dockMain = alert || ledger() || handCards();
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = topBar() + `<div class="stage">${SANDBOX && sbOpen ? sandboxPanel() : ''}${seatBar()}${b ? battleTable() : dispatch()}${decisionBubble()}${legend()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p && allowed() ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
+  $('#ui').innerHTML = topBar() + `<div class="stage">${SANDBOX && sbOpen ? sandboxPanel() : ''}${seatBar()}${b ? battleTable() : dispatch()}${decisionBubble()}${legend()}${hotCoverHtml()}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p && allowed() ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
   const ui = $('#ui');
   bind(ui, keepH, keepA);
 }
@@ -1229,6 +1253,7 @@ function driveSplit() {
 }
 let ctlKey = '', tgtKey = '';
 function refresh() {
+  hotseatSync();
   if (online.mode === 'remote') setTimeout(driveSplit, 0);
   { const key = `${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
     if (key !== tgtKey) { tgtKey = key; tgt = reinforcing ? reinforceTargets() : decisionTargets() ?? (selChit && mine(g.chits.find((x) => x.id === selChit)?.side ?? 'german') ? targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: unitFace, areaName }) : null); } }
