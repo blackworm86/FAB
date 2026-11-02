@@ -578,20 +578,58 @@ canvas.addEventListener('pointermove', (e) => {
 });
 
 const route = new THREE.Group(); scene.add(route);
+/* ---------- routes on the map: movement arrows by kind of move, the supply lifeline (docs/design/route-style-v2.png) ---------- */
+function pathPts(path: number[]) { const raw = path.map((a) => { const c = center(a); return new THREE.Vector3(c.x, 0, c.z); }); if (raw.length === 2) raw.splice(1, 0, raw[0].clone().lerp(raw[1], 0.5).add(new THREE.Vector3(0.6, 0, -0.6))); return new THREE.CatmullRomCurve3(raw, false, 'centripetal', 0.5).getSpacedPoints(Math.max(40, path.length * 30)); }
+/** A flat band along the points; width and colour/alpha change along the way (t = 0 at the tail, 1 at the head). */
+function band(pts: THREE.Vector3[], w: (t: number) => number, col: (t: number) => [number, number, number, number], y: number, order: number) {
+  const pos: number[] = [], cl: number[] = [], idx: number[] = [];
+  pts.forEach((p, i) => { const t = i / (pts.length - 1), a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], d = new THREE.Vector3().subVectors(b, a).setY(0).normalize(), n = new THREE.Vector3(-d.z, 0, d.x).multiplyScalar(w(t) / 2), c = col(t);
+    pos.push(p.x + n.x, y, p.z + n.z, p.x - n.x, y, p.z - n.z); cl.push(...c, ...c); if (i) { const k = i * 2; idx.push(k - 2, k - 1, k, k, k - 1, k + 1); } });
+  const g2 = new THREE.BufferGeometry(); g2.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g2.setAttribute('color', new THREE.Float32BufferAttribute(cl, 4)); g2.setIndex(idx);
+  const m = new THREE.Mesh(g2, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthTest: false, side: THREE.DoubleSide })); m.renderOrder = order; return m;
+}
+function quad(v: THREE.Vector3[], c: [number, number, number, number], y: number, order: number) {
+  const g2 = new THREE.BufferGeometry(); g2.setAttribute('position', new THREE.Float32BufferAttribute(v.flatMap((p) => [p.x, y, p.z]), 3)); g2.setIndex(v.length === 4 ? [0, 1, 3, 1, 2, 3] : [0, 1, 2]);
+  const m = new THREE.Mesh(g2, new THREE.MeshBasicMaterial({ color: new THREE.Color(c[0], c[1], c[2]), transparent: true, opacity: c[3], depthTest: false, side: THREE.DoubleSide })); m.renderOrder = order; return m;
+}
+const rgb = (h: number, a = 1): [number, number, number, number] => { const c = new THREE.Color(h); return [c.r, c.g, c.b, a]; };
+type MoveKind = 'normal' | 'fuel' | 'minimum' | 'blown' | 'strat';
+const MOVE_COL: Record<MoveKind, [number, number]> = { normal: [0xf0b43c, 0x6b4708], fuel: [0xff7a1f, 0x6a2a00], minimum: [0xc9ccd2, 0x3a3d44], blown: [0xff4b3e, 0x5c0f0a], strat: [0xb48cff, 0x2f1a5c] };
+/** Movement: a tapered operations arrow with a soft shadow, a dark rim, a light core and a notched head; the tail fades in. */
+function moveArrow(path: number[], kind: MoveKind, blownAt = -1) {
+  const pts = pathPts(path), [main, rim] = MOVE_COL[kind], n = pts.length, hl = Math.min(n - 2, 14), body = pts.slice(0, n - hl + 2), tip = pts[n - 1], base = pts[n - hl], d = new THREE.Vector3().subVectors(tip, base).setY(0).normalize(), nn = new THREE.Vector3(-d.z, 0, d.x);
+  const W = (t: number) => 0.32 + t * 0.5, fade = (t: number) => Math.min(1, 0.15 + t * 2.2), sh = new THREE.Vector3(0.18, 0, 0.26);
+  route.add(band(body.map((p) => p.clone().add(sh)), (t) => W(t) + 0.35, (t) => [0, 0, 0, 0.28 * fade(t)], 0.04, 7));
+  route.add(band(body, (t) => W(t) + 0.26, (t) => rgb(rim, 0.95 * fade(t)), 0.05, 8));
+  route.add(band(body, W, (t) => rgb(main, fade(t)), 0.06, 9));
+  route.add(band(body, (t) => W(t) * 0.28, (t) => [1, 1, 1, 0.35 * fade(t)], 0.07, 10));
+  const hw = 1.25, notch = base.clone().addScaledVector(d, 0.45), o3 = (v: THREE.Vector3, o: number) => v.clone().add(new THREE.Vector3(o, 0, o));
+  const H = (o: number, grow: number, c: [number, number, number, number], y: number, ord: number) => route.add(quad([o3(tip.clone().addScaledVector(d, grow), o), o3(base.clone().addScaledVector(nn, hw + grow), o), o3(notch, o), o3(base.clone().addScaledVector(nn, -hw - grow), o)], c, y, ord));
+  H(0.2, 0.2, [0, 0, 0, 0.28], 0.04, 7); H(0, 0.16, rgb(rim, 0.95), 0.05, 8); H(0, 0, rgb(main, 1), 0.06, 9);
+  if (kind === 'blown' && blownAt >= 0) {                                             // a white break where the arrow crosses the blown bridge
+    const k = Math.min(n - 2, Math.round((blownAt + 0.5) / (path.length - 1) * (n - 1))), mid = pts[k], dd = new THREE.Vector3().subVectors(pts[k + 1], mid).setY(0).normalize(), m2 = new THREE.Vector3(-dd.z, 0, dd.x);
+    for (const s2 of [-1, 1]) route.add(quad([mid.clone().addScaledVector(dd, s2 * 0.25).addScaledVector(m2, 0.9), mid.clone().addScaledVector(dd, s2 * 0.45).addScaledVector(m2, 0.9), mid.clone().addScaledVector(dd, s2 * 0.45).addScaledVector(m2, -0.9), mid.clone().addScaledVector(dd, s2 * 0.25).addScaledVector(m2, -0.9)], [1, 1, 1, 0.95], 0.08, 11));
+  }
+}
+/** Supply: a calm dotted lifeline, beads at even steps, a ring on every area it passes and a glowing source. */
+function supplyLine(path: number[]) {
+  const pts = pathPts(path), blue = 0x7fd6ff, deep = 0x0d3a52;
+  const disc = (x: number, z: number, r1: number, r2: number, c: [number, number, number, number], y: number, o: number) => { const m = new THREE.Mesh(r1 ? new THREE.RingGeometry(r1, r2, 40) : new THREE.CircleGeometry(r2, 24), new THREE.MeshBasicMaterial({ color: new THREE.Color(c[0], c[1], c[2]), transparent: true, opacity: c[3], depthTest: false, side: THREE.DoubleSide })); m.rotation.x = -Math.PI / 2; m.position.set(x, y, z); m.renderOrder = o; route.add(m); };
+  route.add(band(pts, () => 0.5, () => rgb(blue, 0.14), 0.04, 7));
+  for (let i = 0; i < pts.length; i += 6) { disc(pts[i].x, pts[i].z, 0, 0.2, rgb(deep, 0.9), 0.05, 8); disc(pts[i].x, pts[i].z, 0, 0.13, rgb(blue, 1), 0.06, 9); }
+  path.forEach((a, i) => { const c = center(a);
+    if (i === path.length - 1) { disc(c.x, c.z, 0, 1.25, rgb(blue, 0.18), 0.045, 7); disc(c.x, c.z, 0.78, 0.98, rgb(deep, 0.9), 0.05, 8); disc(c.x, c.z, 0.82, 0.94, rgb(blue, 1), 0.06, 9); disc(c.x, c.z, 0, 0.34, rgb(blue, 1), 0.06, 9); }
+    else if (i) { disc(c.x, c.z, 0.36, 0.5, rgb(deep, 0.9), 0.05, 8); disc(c.x, c.z, 0.39, 0.47, rgb(blue, 1), 0.06, 9); } });
+}
 function drawRoute() {
-  route.clear();
-  if (selUnit && !g.battle && previewArea == null && hoverArea == null) {                          // the way the selected block traces supply (9.3)
-    const u = g.units.find((x) => x.id === selUnit); const p = u?.area != null && seen(u) && !u.garrison ? E.supplyPath(g, u.side, u.area) : null;
-    if (p && p.length > 1) { const pts = p.map((a) => { const c2 = center(a); return new THREE.Vector3(c2.x, 2.2, c2.z); }), mat = new THREE.MeshBasicMaterial({ color: 0x8be0ff, transparent: true, opacity: 0.85, depthTest: false });
-      const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0), 80, 0.1, 6), mat); tube.renderOrder = 9; route.add(tube);
-      pts.forEach((v, i) => { const d = new THREE.Mesh(new THREE.SphereGeometry(i === pts.length - 1 ? 0.42 : 0.24, 12, 8), mat); d.position.copy(v); d.renderOrder = 9; route.add(d); }); }
-    return;
-  } const to = previewArea ?? hoverArea; if (!selUnit || to == null) return;
+  route.clear(); if (!selUnit || g.battle) return;
+  const u = g.units.find((x) => x.id === selUnit); if (!u || u.area == null) return;
+  const to = previewArea ?? hoverArea;
+  if (to == null) { const p = seen(u) && !u.garrison ? E.supplyPath(g, u.side, u.area) : null; if (p && p.length > 1) supplyLine(p); return; }   // no destination chosen: the way the block traces supply (9.3)
   const o = optsFor(selUnit).find((x) => x.area === to); if (!o) return;
-  const u = g.units.find((x) => x.id === selUnit)!, path = o.path.length ? o.path : [u.area!, to], pts = path.map((a) => { const p = center(a); return new THREE.Vector3(p.x, 0.25, p.z); });
-  const mat = new THREE.MeshBasicMaterial({ color: o.fuel ? 0xe7b04a : 0x9fe870 });
-  route.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0), 64, 0.13, 6), mat));
-  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.9, 12), mat); tip.position.copy(pts[pts.length - 1]).setY(0.9); tip.rotation.x = Math.PI; route.add(tip);
+  const path = o.path.length ? o.path : [u.area, to], bk = (a: number, b: number) => (a < b ? `${a}-${b}` : `${b}-${a}`), bi = path.findIndex((a, i) => i > 0 && g.blown.includes(bk(path[i - 1], a)));
+  const kind: MoveKind = g.phase === 'strategic' ? 'strat' : bi > 0 ? 'blown' : o.fuel && u.side === 'german' && g.opts.fuel ? 'fuel' : (u.unsupplied || u.disorder || u.adjOnly) && path.length === 2 ? 'minimum' : 'normal';
+  moveArrow(path, kind, bi - 1);
 }
 type Badge = { area: number; text: string; cls: string };
 let badges: Badge[] = [];

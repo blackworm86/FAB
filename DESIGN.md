@@ -172,6 +172,9 @@ Disordered, recovering, reserve, exploitation, out of supply, Greif interdict an
 ### Supply
 Map layers > Colour > Supply tints your side's areas: light blue (German) or green (Allied) where they trace supply, red where they are cut off. A selected block shows its supply line in pale blue to its source, and a line in its panel: "In supply: traces through N areas to …" or "Out of supply" with the reason. The Supply Phase opens with a list of the cut-off units, the number each needs, and a Roll supply checks button; tapping a unit centres the camera on it.
 
+### Route arrows
+Movement is a flat, tapered operations arrow (shadow, dark rim, light core, notched head, tail fading in), coloured by kind: brass = normal, orange = uses fuel, steel = minimum move, red with a white break = across a blown bridge, violet = strategic move. Supply is a quiet dotted lifeline of light-blue beads with a ring on each area and a glowing source; it shows when a block is selected and no destination is hovered. Mockup: `docs/design/route-style-v2.png`.
+
 ### Chat
 A speech-bubble button in the top bar (unread count in an alarm-red dot) opens the players' chat: a slim panel on the right on computers, a bottom sheet over the hand on phones. Messages show name, side colour (steel or olive edge) and time; one-tap quick lines (Your turn, Ready, One moment, Nice move, Good game) sit above the text box. A message arriving while the chat is closed shows as a short banner. Watchers read but see "only the two players can write"; there is no chat in the sandbox or hotseat.
 
