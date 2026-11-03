@@ -422,3 +422,11 @@ img.cb { border-radius: 7%; box-shadow: 0 1px 0 #e3dccb, 0 2px 0 #b9b2a0, 0 3px 
 .dundo { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; max-width: 34ch; padding: 6px 12px; font: 13px var(--mono, monospace); text-transform: none; letter-spacing: 0; }
 .dundo span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .dundo .ic { width: 16px; height: 16px; flex: none; } .dundo:disabled { opacity: .75; }
 @media (max-width: 700px) { .dundo { max-width: 52vw; } .dchip { min-height: 34px; padding-inline: 10px; font-size: 12px; } }
+@media (max-width: 700px) {
+  .c-bar.b .c-prompt { flex: 1 0 100%; }
+  .c-bar.b .dundo { flex: 1 1 0; min-width: 0; max-width: none; min-height: 44px; }
+  .c-bar.b .dundo span { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.2; }
+  .c-bar.b .go { margin-left: auto; }
+  .dchips { gap: 6px; }
+}
+.mapbubble button.ab span { font: 600 12px var(--sfd); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
