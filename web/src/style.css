@@ -486,3 +486,6 @@ img.cb { border-radius: 7%; box-shadow: 0 1px 0 #e3dccb, 0 2px 0 #b9b2a0, 0 3px 
   .vbtns button { flex: 1 1 0; min-width: 0; padding-inline: 8px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
 @media (max-width: 700px) { .homepage button { min-height: 44px !important; } .homepage .chips .chip { flex: 1 1 calc(50% - 4px); justify-content: center; } }
+/* the action feed never sits on a panel: with a panel open it moves to the top (computers) or waits (phones) */
+.stage:has(.c-dispatch, .c-ledger) .feed { bottom: auto; top: 8px; }
+@media (max-width: 700px) { .stage:has(.c-dispatch, .c-ledger) .feed { display: none; } }
