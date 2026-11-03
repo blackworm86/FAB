@@ -759,6 +759,7 @@ function advanceRetreat(g: Game, b: Battle) {
     b.stage = 'retreat'; return;
   }
   b.retreat = undefined;
+  if (r.after === 'sa' && unitsIn(g, b.area, r.side).length) { b.stage = 'setup'; say(g, `the units retreat; ${unitsIn(g, b.area, r.side).map((u) => u.name).join(', ')} stay and still fight`); return; }   // a garrison or defended roadblock cannot retreat: the battle goes on against it
   if (r.after === 'sa') { b.exploit = true; b.queue = []; return end(g, b, 'Defender retreated (Special Action): exploitation opportunity'); }
   finishDef(g, b, r.after, r.moved, r.excess);
 }
@@ -786,9 +787,9 @@ export function declineExploit(g: Game, b: Battle) { if (b.stage !== 'exploit') 
 export function closeBattle(g: Game) { if (g.battle?.stage !== 'done') throw new Error('battle not finished'); g.battle = null; settleUp(g); }
 export function defenderRetreatSA(g: Game, b: Battle, chitId?: string) {
   if (b.stage !== 'setup') throw new Error('only before the first roll'); const def = other(b.attacker);
-  if (b.assets[def].length || b.air[def]) throw new Error('defender has assets assigned');
-  const us = unitsIn(g, b.area, def).filter((u) => !u.garrison); if (!us.length || unitsIn(g, b.area, def).some((u) => u.garrison)) throw new Error('garrisons cannot retreat');
-  spendSA(g, def, us[0].ech, 'retreat before combat', chitId); b.locked = true; us.forEach((x) => clearInterdict(g, x));
+  const us = unitsIn(g, b.area, def).filter((u) => !u.garrison); if (!us.length) throw new Error('only units retreat: garrisons and defended roadblocks stay (16.21, 4.35)');
+  spendSA(g, def, us[0].ech, 'retreat before combat', chitId);
+  for (const id of [...b.assets[def], ...(b.air[def] ? [b.air[def]!.id] : [])]) unassign(g, b, id);               // assets already assigned go back to the Available Box b.locked = true; us.forEach((x) => clearInterdict(g, x));
   b.retreat = { side: def, queue: us.map((u) => u.id), moved: false, after: 'sa', h: 0, excess: 0 }; advanceRetreat(g, b);
 }
 export function defenderReinforceSA(g: Game, b: Battle, unitId: string, chitId?: string) {

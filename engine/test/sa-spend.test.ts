@@ -35,3 +35,19 @@ describe('8.21-8.27 every Special Action use spends the chosen counter', () => {
     expect(u.exploit).toBe(true); expect(ev.box).toBe('eliminated'); expect(block.box).toBe('available');
   });
 });
+
+describe('8.24 retreat before combat', () => {
+  const setup = () => { const g = E.newGame(1), b = E.startBattle(g, 10), sa = g.chits.find((c) => c.kind === 'sa_block' && c.side === 'allied')!; sa.box = 'available'; return { g, b, sa }; };
+  it('works with defender assets already assigned: they go back to Available', () => {
+    const { g, b, sa } = setup(); const art = g.chits.find((c) => c.side === 'allied' && c.kind === 'artillery' && c.box !== 'map')!; art.box = 'available';
+    if (!E.canAssign(g, b, 'allied', art)) E.assign(g, b, art.id);
+    E.defenderRetreatSA(g, b, sa.id); while (b.stage === 'retreat') E.chooseRetreat(g, b, E.retreatOptions(g, b)[0]);
+    expect(sa.box).toBe('used'); expect(art.box).toBe('available'); expect(b.stage).toBe('done'); expect(b.exploit).toBe(true);
+  });
+  it('a garrison stays and the battle goes on against it', () => {
+    const g = E.newGame(1), area = 23, gar = g.units.find((u) => u.garrison && u.area === area)!; const ger = g.units.find((u) => u.side === 'german' && u.area === 11)!, al = g.units.find((u) => u.side === 'allied' && u.area === 11)!;
+    ger.area = area; al.area = area; g.contestedAtMoveStart = []; const sa = g.chits.find((c) => c.kind === 'sa_block' && c.side === 'allied')!; sa.box = 'available';
+    const b = E.startBattle(g, area); E.defenderRetreatSA(g, b, sa.id); while (b.stage === 'retreat') E.chooseRetreat(g, b, E.retreatOptions(g, b)[0]);
+    expect(al.area).not.toBe(area); expect(gar.area).toBe(area); expect(b.stage).toBe('setup'); expect(al.disorder).toBe(0);
+  });
+});
