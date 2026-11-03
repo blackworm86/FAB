@@ -9,7 +9,9 @@ export function fakeStore(side: Side): Store {
   const seats: Seats = { german: 'u-german', allied: 'u-allied', germanName: 'German (dev)', alliedName: 'Allied (dev)' };
   const get = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) ?? 'null') as T | null; } catch { return null; } };
   const put = (k: string, v: unknown) => { localStorage.setItem(k, JSON.stringify(v)); window.dispatchEvent(new StorageEvent('storage', { key: k })); };
-  if (!get(P)) { const sp = initSplit(newGame(5, { scenario: 'tournament', fuel: true }), 'sg', 'sa'); put(V('german'), sp.german); put(V('allied'), sp.allied); put(P, { rev: 1, json: sp.pub }); }
+  const scen = new URLSearchParams(location.search).get('scen') as 'tournament' | 'campaign' | 'intro' | 'cold' | null;      // ?dev=1&fake=german&scen=cold: a two-seat test table of that scenario
+  const stored = get<{ json: string }>(P), storedScen = stored ? (JSON.parse(stored.json) as { opts?: { scenario?: string } }).opts?.scenario : null;
+  if (!stored || (scen && storedScen !== scen)) { localStorage.removeItem(R); const sp = initSplit(newGame(5, { scenario: scen ?? 'tournament', fuel: true }), 'sg', 'sa'); put(V('german'), sp.german); put(V('allied'), sp.allied); put(P, { rev: 1, json: sp.pub }); }
   const on = (k: string, f: () => void) => { f(); window.addEventListener('storage', (e) => { if (e.key === k) f(); }); };
   return {
     uid: 'u-' + side,

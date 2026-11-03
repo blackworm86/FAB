@@ -35,7 +35,7 @@ export interface Battle {
   pending: number; pendingKind?: 'arty' | 'ground'; engFw: boolean; rolls: Roll[]; result?: string; exploit: boolean; unitHit: Record<Side, boolean>; mark: number; hit?: Record<Side, string[]>;
   ready?: Side[]; locked?: boolean;
 }
-export interface Opts { scenario: 'tournament' | 'campaign' | 'intro'; fuel: boolean; airborne?: boolean; advArty?: boolean }
+export interface Opts { scenario: 'tournament' | 'campaign' | 'intro' | 'cold'; fuel: boolean; airborne?: boolean; advArty?: boolean }
 export interface Game {
   /** Set when hidden blocks are split between seats: setReady does not start combat by itself (see split.ts). */
   deferBegin?: boolean;
@@ -50,6 +50,7 @@ export interface Game {
   battle: Battle | null; seed: number; rolls: number; log: string[]; over?: string;
   force?: number[];
   inPlay?: number[];   /** 24.33 the Introductory scenario plays on its own map sheet: only these areas */
+  supplyOnly?: number[];   /** P500 Cold Shoulder: Zone 5 areas both sides may trace supply through but nobody may enter */
   track?: { ge: number[]; al: number[]; sd: number[] | null }[];   /** draws per turn when the scenario has its own track */
   artyPick?: boolean;
   supplyPending?: boolean;
@@ -61,7 +62,7 @@ type RawUnit = { id: string; name: string; side: string; echelon?: string; symbo
 const ENTRY = entryJson as Record<string, { side: string; area: number }>;
 /** 14.21-14.23: the entry areas a Higher Echelon may use when its own are blocked or a Special Action reroutes it. */
 const APPROPRIATE: Record<string, string> = { de_5pz: 'XYZ', de_6pz: 'YZ', de_7a: 'XY', de_sr: 'YZ', us_1a: 'ABCDEFGHJ', us_3a: 'KLM', us_sr: 'FGHJ', br_xxx: 'CDEFGH' };
-const appropriateAreas = (u: Unit) => [...(APPROPRIATE[u.ech ?? ''] ?? '')].map((l) => ENTRY[l]?.area).filter((a): a is number => a != null);
+const appropriateAreas = (u: Unit, g?: Game) => [...(APPROPRIATE[u.ech ?? ''] ?? '')].map((l) => ENTRY[l]?.area).filter((a): a is number => a != null && (!g?.inPlay || g.inPlay.includes(a)));
 export const other = (s: Side): Side => (s === 'german' ? 'allied' : 'german');
 const sideOf = (s: string): Side => (s === 'german' ? 'german' : 'allied');
 const keyOf = edgeKey;
@@ -106,8 +107,57 @@ function introSetup(g: Game) {
   g.fieldWorks = [12, 19, 21]; g.riverAssault = [21]; g.blown = [edgeKey(13, 21), edgeKey(13, 20)];
   g.markers = { german: { z5: 1, z6: 0, z7: 1 }, allied: { z56: 1, z7: 0 } };
 }
+/* P500 "Cold Shoulder" (Bonus Scenario sheet, docs/scenarios/FAB_BonusScen_ColdShoulder.pdf): Zone 6 only, turns 1-9. */
+const COLD_UNITS: Record<string, number | null> = { Peiper: 5, '1SS(-)': 6, '150 Pz': 6, '12SS': 7, '326 VG': 8, '12 VG': 9, '277 VG': 9, '3 FJ': 10,
+  '2SS': null, '9SS': null, '3 PG': null, '246 VG': null, '10SS': null, '17SS': null,                                       // German reinforcements / released divisions
+  '99 Inf': 9, '14 Cav': 10, 'CCB/9': 25, '102 Cav': 27, '2 Inf': 27,
+  '1 Inf': null, '7 Arm': null, '9 Inf': null, '30 Inf': null, '3 Arm': null, '84 Inf': null, '75 Inf': null, '43 Inf': null, '4 Cav': null, Guards: null };
+/** P.5 entry areas where the sheet differs from the campaign data ("Enter at AC", "CE", "DE"). */
+const COLD_ENTRY: Record<string, string[]> = { '1 Inf': ['A', 'C'], '7 Arm': ['A', 'C'], '84 Inf': ['C', 'E'], '75 Inf': ['C', 'E'], '4 Cav': ['C', 'E'], '43 Inf': ['D', 'E'], Guards: ['D', 'E'] };
+/** P.4 / P.5 chits by turn (1 = in the Available Box at start; later turns enter the cup, Task Forces go to Available). */
+const COLD_CHITS: Record<string, number> = {
+  // German, 6th Panzer Army
+  'L26.0': 1, 'R17.0': 1, 'R17.1': 1, 'R17.2': 1, 'L12.0': 1, 'L13.0': 1, 'L25.0': 1, 'L14.0': 1, 'L15.0': 1, 'L16.0': 1,      // T1 engineer, 3 fuel, 3 rocket, 3 artillery
+  'L22.0': 2, 'L24.0': 2, 'L11.0': 2, 'L17.0': 2, 'SA-german': 2,                                                     // T2 2 armor, v.d. Heydte, inf replacement, reusable SA
+  'L49.0': 3, 'R16.0': 3, 'R26.0': 3,                                                                                 // T3 HQ, Greif Bridge, Greif Interdict
+  'R38.0': 4,                                                                                                          // T4 6th Pz Army SA
+  'L23.0': 5, 'R12.0': 5, 'L19.0': 5,                                                                                 // T5 armor, 10th SS released, armor replacement
+  'L21.0': 6, 'R39.0': 6, 'L18.0': 6,                                                                                 // T6 elite armor, SA, non-elite inf replacement
+  'R22.0': 7, 'R23.0': 8, 'R13.0': 8,                                                                                 // T7-8 Delayed Response x2, 17th SS PzGr released
+  // Allied, 1st Army
+  'L63.0': 2, 'L65.0': 2, 'L61.0': 2, 'L62.0': 2, 'L64.0': 2, 'R71.0': 2, 'SA-allied': 2,                              // T2 2 engineers, 3 artillery, Task Force, reusable SA
+  'L83.0': 3, 'L98.0': 3, 'R33.0': 3, 'R35.0': 3, 'L48.0': 3,                                                         // T3 engineer, HQ, Delayed Response, Regiment 1st Inf, inf replacement
+  'L81.0': 4, 'L74.0': 4, 'R82.0': 4, 'R34.0': 4, 'R36.0': 4,                                                         // T4 armor, artillery, Task Force, Delayed Response, Regiment
+  'R46.0': 5, 'R37.0': 5,                                                                                              // T5 1st Army SA, Regiment
+  'L82.0': 6, 'L84.0': 6, 'L53.0': 6, 'R41.0': 6, 'L67.0': 6, 'L57.0': 6,                                              // T6 infantry, engineer, British armor, Air Mission, arm + inf replacements
+  'L86.0': 7, 'L75.0': 7, 'L76.0': 7, 'L51.0': 7, 'R42.0': 7, 'R42.1': 7, 'R42.2': 7, 'L68.0': 7,                     // T7 armor, 2 artillery, British artillery, 3 Air Missions, arm replacement
+  'L78.0': 8, 'R52.0': 8, 'R52.1': 8, 'L59.0': 8,                                                                     // T8 artillery, 2 Air Missions, inf replacement
+  'R62.0': 9, 'L77.0': 9,                                                                                              // T9 Air Mission, arm replacement
+};
+/** Chit draws: the sheet gives two rows per side; like the map's Turn Track (TRACK) they are [German player turn, Allied player turn].
+ *  Check: the campaign track has Allied T2 = [7, 0] and the sheet's Allied second row starts 0 at T2 as well (no Allied draw in their own first turn). */
+const COLD_TRACK = [[0, 0, 0, 0], [5, 2, 4, 0], [5, 2, 4, 1], [4, 2, 4, 1], [4, 2, 4, 1], [4, 2, 5, 2], [3, 2, 5, 3], [3, 1, 6, 3], [2, 1, 6, 4]]
+  .map(([a, b, c, d]) => ({ ge: [a, b], al: [c, d], sd: null }));
+export const isZone = (a: number, z: number) => areas.get(a)?.zone === z;
+function coldSetup(g: Game) {
+  g.lastTurn = 9; g.track = COLD_TRACK;
+  g.inPlay = [...areas.keys()].filter((a) => isZone(a, 6)); g.supplyOnly = [...areas.keys()].filter((a) => isZone(a, 5));       // P.3 / P.6
+  for (const u of g.units) {
+    if (u.garrison) { if (u.area !== 32) u.area = null, u.str = 0; continue; }                                        // the garrison asset in Spa
+    if (!(u.name in COLD_UNITS)) { u.area = null; u.arrival = undefined; u.str = 0; continue; }
+    const at = COLD_UNITS[u.name]; if (at != null) { u.area = at; u.arrival = undefined; } else u.area = null;
+    if (COLD_ENTRY[u.name]) u.entry = COLD_ENTRY[u.name];
+  }
+  g.units = g.units.filter((u) => u.area != null || u.arrival != null || u.name === '10SS' || u.name === '17SS');
+  g.chits = g.chits.filter((c) => COLD_CHITS[c.id] != null);
+  for (const c of g.chits) { const t = COLD_CHITS[c.id]; c.turn = t === 1 ? 'S' : t; c.box = t === 1 ? 'available' : 'future'; }
+  g.fieldWorks = [9, 10, 27]; g.riverAssault = []; g.blown = [];
+  g.markers = { german: { z5: 0, z6: 2, z7: 0 }, allied: { z56: 2, z7: 0 } };                                           // 2 Zone 6 reserve markers (one goes on Peiper), 2 Allied Zone 5/6
+}
+/** P.7: German-controlled Zone 6 areas (at the end of turn 9: 11+ German victory, 10 draw, 9 or less Allied victory). */
+export const coldAreas = (g: Game) => [...areas.keys()].filter((a) => isZone(a, 6) && g.control[a] === 'german').length;
 export function newGame(seed = Date.now() % 1e9, opts: Partial<Opts> = {}): Game {
-  const o: Opts = { scenario: 'tournament', fuel: true, ...opts }, sc = scenJson.tournament, last = o.scenario === 'campaign' ? 9 : 5;
+  const o: Opts = { scenario: 'tournament', fuel: true, ...opts }, sc = scenJson.tournament, last = o.scenario === 'campaign' || o.scenario === 'cold' ? 9 : 5;
   const units: Unit[] = [];
   for (const r of unitsJson as RawUnit[]) {
     if (r.kind) continue;
@@ -120,16 +170,15 @@ export function newGame(seed = Date.now() % 1e9, opts: Partial<Opts> = {}): Game
   const g: Game = { turn: 1, lastTurn: last, phasing: 'german', phase: 'combat', units, chits: buildChits(last), control: {}, fieldWorks: [...sc.fieldWorks], fwOwner: {}, riverAssault: [...sc.riverAssault], blown: [...sc.blownBridges],
     contestedAtMoveStart: [], fought: [], markers: { german: { z5: 2, z6: 2, z7: 1 }, allied: { z56: 3, z7: 2 } }, stratMoves: 0, riverCross: [], blowTried: [], entered: {}, pendingBlow: null, greif: {}, greifTried: [], fwBuilt: [], tfNew: [],
     elimLarge: [], captured: [], fuelAdded: false, opts: o, roadblocks: {}, interdicted: {}, pooled: null, airSupply: null, revealed: null, arrived: [], pendingArrivals: [], recover: [], battle: null, seed, rolls: 0, log: [] };
+  let frontZ5: Record<number, Side> = {};
+  if (o.scenario === 'cold') { setPlayArea(null); frontZ5 = campaignControl(units); coldSetup(g); }               // Zone 5 keeps the campaign front line (P.3: Allied west of it)
   if (o.scenario === 'intro') introSetup(g);
   setPlayArea(g.inPlay);
   for (const fa of g.fieldWorks) g.fwOwner[fa] = units.some((u) => u.side === 'allied' && u.area === fa) ? 'allied' : 'german';
   if (o.scenario !== 'intro') { const peiper = units.find((u) => u.name === 'Peiper')!; peiper.reserve = 'z6'; g.markers.german.z6--; }
-  const ger = new Set(units.filter((u) => u.side === 'german' && u.area).map((u) => u.area!));
-  const todo = units.filter((u) => u.side === 'allied' && u.area).map((u) => u.area!), seen = new Set(todo);
-  while (todo.length) for (const n of neighbors(todo.pop()!)) if (!seen.has(n) && !ger.has(n)) { seen.add(n); todo.push(n); }
-  for (const a of areas.keys()) g.control[a] = seen.has(a) ? 'allied' : 'german';
-  for (const a of [1, 2, 3, 4, 5, 6, 7, 8, 14, 15]) if (!units.some((u) => u.side === 'allied' && u.area === a)) g.control[a] = 'german';
-  say(g, `${o.scenario === 'campaign' ? 'Campaign' : o.scenario === 'intro' ? 'Introductory (Nuts!)' : 'Tournament'} scenario set up. All contested areas must be fought this phase.`);
+  g.control = campaignControl(g.units);
+  if (o.scenario === 'cold') for (const a of g.supplyOnly!) g.control[a] = frontZ5[a];
+  say(g, `${SCEN_NAME[o.scenario]} scenario set up. All contested areas must be fought this phase.`);
   return g;
 }
 
@@ -145,18 +194,30 @@ function updateControl(g: Game, a: number) {
     else if (r <= 5) { const f = g.chits.find((c) => c.kind === 'fuel' && c.box === 'used') ?? g.chits.find((c) => c.kind === 'fuel' && c.box === 'cup'); if (f) { f.box = 'available'; say(g, `captured fuel at ${areas.get(a)!.name} (rolled ${r}): a fuel asset is available again`); } }
   }
 }
-const sources = (g: Game, side: Side) => g.inPlay ? new Set(g.inPlay.filter((a) => allNeighbors(a).some((n) => !g.inPlay!.includes(n)) || EDGE_INTRO.includes(a)))      // 24.36 any area at the edge of the play area
-  : new Set(Object.values(ENTRY).filter((e) => sideOf(e.side) === side).map((e) => e.area));
+/** Area control from a deployment: the Allies hold their areas and everything west of the front (reachable without crossing a German area); the Germans the rest (P.3, 24.x). */
+function campaignControl(units: Unit[]): Record<number, Side> {
+  const ger = new Set(units.filter((u) => u.side === 'german' && u.area).map((u) => u.area!)), out: Record<number, Side> = {};
+  const todo = units.filter((u) => u.side === 'allied' && u.area).map((u) => u.area!), seen = new Set(todo);
+  while (todo.length) for (const n of neighbors(todo.pop()!)) if (!seen.has(n) && !ger.has(n)) { seen.add(n); todo.push(n); }
+  for (const a of areas.keys()) out[a] = seen.has(a) ? 'allied' : 'german';
+  for (const a of [1, 2, 3, 4, 5, 6, 7, 8, 14, 15]) if (!units.some((u) => u.side === 'allied' && u.area === a)) out[a] = 'german';
+  return out;
+}
+export const SCEN_NAME: Record<Opts['scenario'], string> = { tournament: 'Tournament', campaign: 'Campaign', intro: 'Introductory (Nuts!)', cold: 'Cold Shoulder' };
+/** Neighbours a supply line may use: the play area, plus Cold Shoulder's supply-only Zone 5 (P.6). */
+const supN = (g: Game, a: number) => (g.supplyOnly ? allNeighbors(a).filter((n) => g.inPlay!.includes(n) || g.supplyOnly!.includes(n)) : neighbors(a));
+const sources = (g: Game, side: Side) => g.inPlay && g.opts.scenario === 'intro' ? new Set(g.inPlay.filter((a) => allNeighbors(a).some((n) => !g.inPlay!.includes(n)) || EDGE_INTRO.includes(a)))      // 24.36 any area at the edge of the play area
+  : new Set(Object.values(ENTRY).filter((e) => sideOf(e.side) === side && (!g.supplyOnly || g.inPlay!.includes(e.area) || g.supplyOnly.includes(e.area))).map((e) => e.area));
 export function inSupply(g: Game, side: Side, start: number) {
   setPlayArea(g.inPlay);
   if (g.airSupply?.side === side && g.airSupply.area === start) return true;                // 17.2 Air Supply Mission
   const src = sources(g, side), enemy = other(side);
-  const blocked = (a: number) => !unitsIn(g, a).length && neighbors(a).some((n) => g.control[n] === enemy && unitsIn(g, n, enemy).length && !unitsIn(g, n, side).length);
+  const blocked = (a: number) => !unitsIn(g, a).length && supN(g, a).some((n) => g.control[n] === enemy && unitsIn(g, n, enemy).length && !unitsIn(g, n, side).length);
   const seen = new Set([start]), todo = [start];
   while (todo.length) {
     const a = todo.pop()!;
     if (src.has(a) && g.control[a] === side) return true;
-    for (const n of neighbors(a)) {
+    for (const n of supN(g, a)) {
       if (seen.has(n) || g.control[n] !== side || (blocked(n) && !unitsIn(g, n, side).length)) continue;
       if (g.blown.includes(keyOf(a, n)) && a !== start) continue;
       seen.add(n); todo.push(n);
@@ -186,12 +247,17 @@ function drawChits(g: Game, side: Side, n: number) {
 const rngf = (g: Game) => (secure ? (g.rolls++, secure()) : rng(g.seed * 104729 + g.rolls++)());
 /** 4.1b-c: the Used Box goes back to the cup (German artillery attrition first, 16.12). */
 function recycleUsed(g: Game, side: Side, artyDone = false) {
-  if (side === 'german' && !artyDone) {                                                              // 16.12: the German player eliminates one regular artillery asset of his choice from the Used Box
+  if (side === 'german' && !artyDone && !(g.opts.scenario === 'cold' && g.turn < 5)) {            // 16.12 (Cold Shoulder P.6: turns 5+): the German player eliminates one regular artillery asset of his choice from the Used Box
     const arts = boxOf(g, side, 'used').filter((c) => c.kind === 'artillery');
     if (arts.length > 1) { g.artyPick = true; say(g, 'German artillery attrition: the German player chooses which artillery asset in the Used Box is eliminated (16.12)'); return; }
     if (arts.length === 1) { arts[0].box = 'eliminated'; say(g, `German artillery attrition: ${arts[0].name} eliminated, the only one in the Used Box (16.12)`); }
   }
-  boxOf(g, side, 'used').forEach((c) => (c.box = c.kind === 'sa_block' ? 'available' : 'cup'));
+  for (const c of boxOf(g, side, 'used')) {
+    if (g.opts.scenario === 'cold' && (c.kind === 'sa_block' || c.kind === 'command_staff')) {              // P.6: reusable SAs and HQ assets wait one more turn in the Used Box
+      if (c.held == null) { c.held = g.turn; continue; } c.held = undefined;
+    }
+    c.box = c.kind === 'sa_block' ? 'available' : 'cup';
+  }
 }
 /** 16.12: the German player's choice of the artillery asset lost to attrition; the rest of the Used Box then goes to the cup. */
 export function chooseArtyLoss(g: Game, id: string) {
@@ -218,7 +284,7 @@ function reinforcementPhase(g: Game) {
     const sa = g.chits.find((c) => c.kind === 'sa_block' && c.side === side && c.turn === 2 && g.turn >= 2);
     if (g.turn >= 2 && sa) {
       if (sa.box === 'available') { if (boxOf(g, side, 'used').some((c) => isAsset(c))) { g.recover.push(side); continue; } }   // 4.1a unused reusable SA: the player brings one asset back first
-      else sa.box = 'available';
+      else if (!(g.opts.scenario === 'cold' && sa.box === 'used')) sa.box = 'available';                 // Cold Shoulder: a used one waits a turn (recycleUsed)
     }
     recycleUsed(g, side);
   }
@@ -420,7 +486,7 @@ export function playReplacement(g: Game, id: string, unitId: string) {
   needAdmin(g); const c = chit(g, id), u = g.units.find((x) => x.id === unitId)!;
   if (c.box !== 'available' || !eligibleForStep(c, u)) throw new Error('that unit is not eligible');
   if (u.area == null) {                                                                                     // 17.23: back into play with one step in a free friendly entry area
-    const to = [...listedEntries(u), ...appropriateAreas(u)].find((a) => entryOpen(g, u, a)); if (to == null) throw new Error('no free entry area for it right now');
+    const to = [...listedEntries(u), ...appropriateAreas(u, g)].find((a) => entryOpen(g, u, a)); if (to == null) throw new Error('no free entry area for it right now');
     u.str = 1; u.area = to; u.disorder = 0; u.unsupplied = false; g.control[to] = u.side; g.elimLarge = g.elimLarge.filter((x) => x !== u.id); c.box = 'eliminated';
     return say(g, `${c.name}: ${u.name} returns in ${areas.get(to)!.name} with 1 step`, c.side);
   }
@@ -461,6 +527,7 @@ export function staffReserve(g: Game, id: string, unitId: string) {
 export function releaseUnit(g: Game, id: string, area: 4 | 6) {
   needAdmin(g); const c = chit(g, id); if (c.kind !== 'event_release' || c.box !== 'available') throw new Error('not available');
   const nm: Record<string, string> = { '11th': '11 Pz', '10th': '10SS', '17th': '17SS', '6th': '6SS' }, u = g.units.find((x) => x.name === nm[c.name.split(' ')[0]])!;
+  if (g.inPlay && !g.inPlay.includes(area)) throw new Error('that entry area is not in play');
   if (u.area != null || blocks(g, area, 'german').length >= 2 || (g.control[area] !== 'german' && unitsIn(g, area).length)) throw new Error('entry area blocked');
   u.area = area; g.control[area] = 'german'; c.box = 'eliminated'; say(g, `${u.name} released and enters in ${areas.get(area)!.name}`, 'german');
 }
@@ -886,10 +953,11 @@ export function endPhase(g: Game) {
     if (g.phasing === 'german') g.phasing = 'allied';
     else {
       const v = victory(g), sd = g.inPlay ? null : (g.track ?? TRACK)[g.turn - 1].sd;
-      (g.vpHist ??= [])[g.turn - 1] = v.net;
-      say(g, `Victory check: German ${v.german}, Allied ${v.allied}, net ${v.net > 0 ? 'German +' + v.net : v.net < 0 ? 'Allied +' + -v.net : '0'}`);
+      (g.vpHist ??= [])[g.turn - 1] = g.opts.scenario === 'cold' ? coldAreas(g) : v.net;
+      if (g.opts.scenario === 'cold') say(g, `Victory check: the Germans control ${coldAreas(g)} Zone 6 areas (11+ German victory, 10 draw, 9 or less Allied victory)`);
+      else say(g, `Victory check: German ${v.german}, Allied ${v.allied}, net ${v.net > 0 ? 'German +' + v.net : v.net < 0 ? 'Allied +' + -v.net : '0'}`);
       if (sd && ((v.net > 0 && v.net >= sd[0]) || (v.net < 0 && -v.net >= sd[1]))) { g.over = `Sudden death victory: ${v.net > 0 ? 'German' : 'Allied'} (net ${Math.abs(v.net)})`; return; }
-      if (g.turn >= g.lastTurn) { g.over = g.opts.scenario === 'intro' ? introResult(g) : finalResult(g, v.net); return; }
+      if (g.turn >= g.lastTurn) { g.over = g.opts.scenario === 'intro' ? introResult(g) : g.opts.scenario === 'cold' ? coldResult(g) : finalResult(g, v.net); return; }
       g.turn++; g.phasing = 'german'; g.phase = 'reinforcement'; reinforcementPhase(g); g.units.forEach((u) => { u.moved = false; u.spent = 0; }); say(g, 'reinforcement phase'); return;
     }
     g.phase = 'admin'; drawFor(g); return;
@@ -918,9 +986,12 @@ export function introResult(g: Game) {
   const ge = pts('german') - 2 * [39, 36, 48, 63, 64].filter((a) => g.control[a] !== 'german').length, al = pts('allied');
   return `${ge > al ? 'German' : 'Allied'} Marginal Victory (German ${ge}, Allied ${al})`;
 }
+/** P.7 Cold Shoulder: German-controlled Zone 6 areas at the end of turn 9. */
+export function coldResult(g: Game) { const n = coldAreas(g); return `${n >= 11 ? 'German Victory' : n === 10 ? 'Draw' : 'Allied Victory'} (${n} Zone 6 areas German)`; }
 /** The scenario's victory table: [condition, result]; the end of the game picks the matching row. */
 export function victoryTable(g: Game): [string, string][] {
   if (g.opts.scenario === 'campaign') return [['4+ German VP', 'German Operational Victory'], ['1–3 German VP', 'German Marginal Victory'], ['0', 'Draw'], ['1–3 Allied VP', 'Allied Marginal Victory'], ['4+ Allied VP', 'Allied Operational Victory']];
+  if (g.opts.scenario === 'cold') return [['11+ Zone 6 areas German', 'German Victory'], ['10 areas', 'Draw'], ['9 or less areas', 'Allied Victory']];
   if (g.opts.scenario === 'intro') return [['Uncontested Bastogne', 'Decisive Victory'], ['More strength in Bastogne (Germans −2 per key area not held; tie: Allies)', 'Marginal Victory']];
   return [['4+ German VP', 'German Operational Victory'], ['2–3 German VP', 'German Marginal Victory'], ['0–1 German VP', 'Allied Marginal Victory'], ['1+ Allied VP', 'Allied Operational Victory']];
 }
@@ -978,7 +1049,7 @@ export function playAirSupply(g: Game, id: string, area: number) {
 /** 8.27 Reroute a reinforcing unit (Reinforcement Phase, one Special Action). */
 export function rerouteOptions(g: Game, unitId: string): number[] {
   const u = g.units.find((x) => x.id === unitId); if (!u || g.phase !== 'reinforcement' || !g.arrived.includes(u.id) || u.area == null || !saAvailable(g, u.side, u.ech).length) return [];
-  return [...new Set(appropriateAreas(u))].filter((a) => a !== u.area && (g.control[a] === u.side || !unitsIn(g, a).length) && blocks(g, a, u.side).length < 2 && !unitsIn(g, a, other(u.side)).length);
+  return [...new Set(appropriateAreas(u, g))].filter((a) => a !== u.area && (g.control[a] === u.side || !unitsIn(g, a).length) && blocks(g, a, u.side).length < 2 && !unitsIn(g, a, other(u.side)).length);
 }
 export function reroute(g: Game, unitId: string, area: number, chitId?: string) {
   if (!rerouteOptions(g, unitId).includes(area)) throw new Error('not a legal entry area');
@@ -989,12 +1060,12 @@ export function reroute(g: Game, unitId: string, area: number, chitId?: string) 
 /* ================= arrivals (4.1c) ================= */
 const listedEntries = (u: Unit) => (u.entry ?? []).map((l) => (l.startsWith('#') ? +l.slice(1) : ENTRY[l]?.area)).filter(Boolean) as number[];
 const stackFree = (g: Game, u: Unit, a: number) => g.turn === 4 && u.side === 'german' && a === ENTRY.Z.area;                // 15.3
-const entryOpen = (g: Game, u: Unit, a: number) => (g.control[a] === u.side || !unitsIn(g, a).length) && (blocks(g, a, u.side).length < 2 || stackFree(g, u, a)) && !unitsIn(g, a, other(u.side)).length;
+const entryOpen = (g: Game, u: Unit, a: number) => (!g.inPlay || g.inPlay.includes(a)) && (g.control[a] === u.side || !unitsIn(g, a).length) && (blocks(g, a, u.side).length < 2 || stackFree(g, u, a)) && !unitsIn(g, a, other(u.side)).length;
 /** Entry areas a block that has not arrived yet may be placed in. Areas outside its listed ones cost a Special Action (8.27). */
 export function arrivalOptions(g: Game, id: string): { area: number; sa: boolean }[] {
   const u = g.units.find((x) => x.id === id); if (!u || !g.pendingArrivals.includes(id)) return [];
   const own = listedEntries(u).filter((a) => entryOpen(g, u, a)), sa = saAvailable(g, u.side, u.ech).length > 0;
-  const rest = (u.delayed || sa) ? [...new Set(appropriateAreas(u))].filter((a) => !own.includes(a) && entryOpen(g, u, a)) : [];   // 4.1c a delayed unit takes the nearest allowed area, otherwise it costs a Special Action
+  const rest = (u.delayed || sa) ? [...new Set(appropriateAreas(u, g))].filter((a) => !own.includes(a) && entryOpen(g, u, a)) : [];   // 4.1c a delayed unit takes the nearest allowed area, otherwise it costs a Special Action
   return [...own.map((area) => ({ area, sa: false })), ...rest.map((area) => ({ area, sa: !u.delayed }))];
 }
 export function placeArrival(g: Game, id: string, area: number, chitId?: string) {
@@ -1053,11 +1124,11 @@ export function supplyPath(g: Game, side: Side, start: number): number[] | null 
   setPlayArea(g.inPlay);
   if (g.airSupply?.side === side && g.airSupply.area === start) return [start];
   const src = sources(g, side), enemy = other(side), prev = new Map<number, number>([[start, -1]]), q = [start];
-  const blocked = (a: number) => !unitsIn(g, a).length && neighbors(a).some((n) => g.control[n] === enemy && unitsIn(g, n, enemy).length && !unitsIn(g, n, side).length);
+  const blocked = (a: number) => !unitsIn(g, a).length && supN(g, a).some((n) => g.control[n] === enemy && unitsIn(g, n, enemy).length && !unitsIn(g, n, side).length);
   while (q.length) {
     const a = q.shift()!;
     if (src.has(a) && g.control[a] === side) { const p = [a]; let x = a; while (prev.get(x)! >= 0) { x = prev.get(x)!; p.unshift(x); } return p; }
-    for (const n of neighbors(a)) {
+    for (const n of supN(g, a)) {
       if (prev.has(n) || g.control[n] !== side || (blocked(n) && !unitsIn(g, n, side).length)) continue;
       if (g.blown.includes(keyOf(a, n)) && a !== start) continue;
       prev.set(n, a); q.push(n);
