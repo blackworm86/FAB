@@ -486,9 +486,9 @@ let feed: { t: number; text: string; side: string }[] = [], feedLen = -1;
 function feedHtml(): string {
   const n = g.log.length; if (feedLen < 0 || n < feedLen) feedLen = n;                       // a new or rewound game shows nothing old
   for (const l of g.log.slice(feedLen)) { if (/\[sandbox\]/.test(l)) continue; const text = l.replace(/^T\d+ /, ''); feed.push({ t: Date.now(), text, side: /^(GE|German)/.test(text) ? 'german' : /^(AL|Allied)/.test(text) ? 'allied' : '' }); }
-  feedLen = n; const now = Date.now(); feed = feed.filter((f) => now - f.t < 9000).slice(-3);
+  feedLen = n; const now = Date.now(); feed = feed.filter((f) => now - f.t < 9000).slice(-3); if (g.battle) return '';         // the battle has its own report
   if (feed.length) setTimeout(() => { if (feed.some((f) => Date.now() - f.t >= 9000)) render(); }, 9100);
-  return feed.length ? `<div class="feed" aria-live="polite">${feed.map((f) => `<div class="fl2 ${f.side}" style="animation-delay:${-(now - f.t) / 1000}s">${esc(f.text)}</div>`).join('')}</div>` : '';
+  return feed.length ? `<div class="feed ${g.phase === 'admin' || g.phase === 'reinforcement' ? 'top' : ''}" aria-live="polite">${feed.map((f) => `<div class="fl2 ${f.side}" style="animation-delay:${-(now - f.t) / 1000}s">${esc(f.text)}</div>`).join('')}</div>` : '';
 }
 let chatOpen = false, chatDraft = '', chatSeen = (() => { try { return Number(localStorage.getItem('fab-chat-seen-' + TABLE) ?? 0); } catch { return 0; } })();
 const QUICK = ['Your turn', 'Ready', 'One moment', 'Nice move', 'Good game'];
@@ -1093,7 +1093,8 @@ function dispatch() {
   if (g.phase === 'reinforcement' && g.recover.length) return `<div class="c-dispatch recover"><h3>Unused Special Action</h3><p class="hint">Each side may bring one asset back from the Used Box (4.1a).</p>${g.recover.map((sd) => {
     const cs = E.boxOf(g, sd, 'used').filter((c) => E.isAsset(c)), pick = recoverSel[sd] ? cs.find((c) => c.id === recoverSel[sd]) : null, own = mine(sd);
     return `<h4 class="${sd}">${nm(sd)}</h4><div class="pcgrid">${cs.map((c) => pieceBtn(c, () => { recoverSel[sd] = recoverSel[sd] === c.id ? null : c.id; }, recoverSel[sd] === c.id, !own)).join('') || '<small>Nothing in the Used Box</small>'}</div>
-      ${pick ? `<div class="inspect">${ruleCard(pick)}</div>` : ''}<div class="row">${btn(pick ? `Bring back ${esc(pick.name)}` : 'Choose an asset', () => { E.recoverAsset(g, sd, pick!.id); recoverSel[sd] = null; }, 'primary', !pick || !own)}${btn('None', () => E.recoverAsset(g, sd, null), '', !own)}</div>`;
+      <div class="row">${btn(pick ? `Bring back ${esc(pick.name)}` : 'Choose an asset', () => { E.recoverAsset(g, sd, pick!.id); recoverSel[sd] = null; }, 'primary', !pick || !own)}${btn('None', () => E.recoverAsset(g, sd, null), '', !own)}</div>
+      ${pick ? `<details class="rdet"><summary><b>${esc(pick.name)}</b> · ${esc((RULE[pick.kind] ?? [pick.kind])[0])} <span>What it does</span></summary>${ruleHtml(pick.kind, E.isEvent(pick))}</details>` : ''}`;
   }).join('')}</div>`;
   if (g.phase === 'btCombat' && !selUnit && selArea == null) { const air = E.boxOf(g, g.phasing, 'available').filter((x) => x.kind === 'air_mission'), as = E.airSupplyAreas(g, g.phasing); if (air.length && as.length && !g.airSupply) return `<div class="c-dispatch"><h3>Air supply</h3><p class="hint">Before the Supply Phase an Air Mission can supply one cut-off area (17.2).</p><div class="row">${as.map((ar) => btn(esc(areaName(ar)), () => E.playAirSupply(g, air[0].id, ar))).join('')}</div></div>`; }
   const u = selUnit ? g.units.find((x) => x.id === selUnit) : null;

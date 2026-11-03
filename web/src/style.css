@@ -443,3 +443,8 @@ img.cb { border-radius: 7%; box-shadow: 0 1px 0 #e3dccb, 0 2px 0 #b9b2a0, 0 3px 
 .feed .fl2.german { border-left-color: var(--ge); } .feed .fl2.allied { border-left-color: var(--al); }
 @keyframes feedfade { 0% { opacity: 0; transform: translateY(6px); } 4% { opacity: 1; transform: none; } 80% { opacity: 1; } 100% { opacity: 0; } }
 @media (max-width: 700px) { .feed { left: 6px; bottom: 6px; } .feed .fl2 { font-size: 11.5px; padding: 3px 8px; } }
+.rdet { margin-top: 8px; border: 1px solid #8d906555; padding: 6px 10px; font-size: 13px; } .rdet summary { cursor: pointer; list-style: none; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; } .rdet summary::-webkit-details-marker { display: none; }
+.rdet summary span { margin-left: auto; color: var(--gold); font: 600 12px var(--sfd); letter-spacing: .08em; text-transform: uppercase; } .rdet[open] summary span::after { content: " ▴"; } .rdet:not([open]) summary span::after { content: " ▾"; }
+.feed.top { bottom: auto; top: 8px; }
+.mmx { width: 13px; height: 13px; border-width: 2px; bottom: -5px; } .mmx.fw { right: -8px; } .mmx.rs { left: -8px; }
+@media (max-width: 700px) { .mapbubble.fighttag { display: none !important; } }
