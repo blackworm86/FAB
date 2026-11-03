@@ -494,3 +494,4 @@ img.cb { border-radius: 7%; box-shadow: 0 1px 0 #e3dccb, 0 2px 0 #b9b2a0, 0 3px 
   .modal .inspect .big img.cb { width: 48px !important; height: 48px !important; } .modal .inspect .big .b3 { --s: 44px; }
   .modal .inspect h4 { min-height: 48px; } .modal .inspect ul.rl { clear: both; }
 }
+@media (max-width: 700px) { body:has(#ui .c-table) #fx { display: none; } }      /* phones: the battle panel lists the same effects without covering the blocks */
