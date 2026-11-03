@@ -12,7 +12,6 @@ Keep the layer names and order. Then run `python3 web/scripts/import_map.py`; it
 - `fuel-chit.svg` → `mk_FUEL.png` (the German Fuel asset).
 
 ## Still to redraw
-- Unit blocks: `fab-blocks.svg` (current art) and `blank/blank-blocks.svg` (empty template).
-- Chits: `blank/chit-templates-assets-battle.svg`, `-assets-other.svg`, `-events.svg`: the old graphic beside an empty square. Send the filled sheet back and say which it is.
+- Unit blocks (`fab-blocks.svg` is the current art) and the chits not listed above. Ask for fresh templates when you are ready: each shows the old graphic beside an empty square.
 
 Older sheets, blank templates and PDFs were removed once their art was confirmed; they stay in the git history.
