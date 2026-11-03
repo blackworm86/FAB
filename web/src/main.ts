@@ -200,6 +200,22 @@ function discSprite(kind: 'x' | 'point', size: number) { disc(kind, size); const
 /** Battle formation (docs/design): the battle area is shown as an ordered table, not squeezed into the polygon. Each side faces the other across the
  *  middle line: its blocks in the front row, its assets in the row behind; rows wrap at 5 and stay centred. The rest of the map is blurred, so the
  *  formation may reach past the area border. */
+/** How far the battle formation reaches from the area's pole (cm), on the deeper side. */
+function formationReach(b: E.Battle) {
+  return Math.max(...(['german', 'allied'] as E.Side[]).map((sd) => { const u = Math.max(1, Math.ceil(E.unitsIn(g, b.area, sd).length / 5)), n = b.assets[sd].length + (b.air[sd] ? 1 : 0), a = Math.ceil(n / 5); return 1.35 + u * 1.9 + (a ? 0.5 + a * 1.7 : 0); }), 5 * 1.95 / 2 + 1);
+}
+/** Panels over the battle (header at the top, report and hand at the bottom): the view is shifted so the battle sits in the clear band between them. */
+let viewShift = 0, clearRatio = 1;
+function fitBattleView() {
+  const r = canvas.getBoundingClientRect(); let shift = 0, clear = r.height;
+  if (g.battle) {
+    const top = document.querySelector('#ui .c-table')?.getBoundingClientRect(), low = Array.from(document.querySelectorAll('#ui .dock > .c-ledger, #ui .dock .c-hand, #ui .dock .handtab, #ui .c-bar.b')).map((e) => e.getBoundingClientRect()).filter((q) => q.height && q.left < r.left + r.width / 2 && q.right > r.left + r.width / 2);
+    const tc = top ? Math.max(0, top.bottom - r.top) : 0, bc = low.length ? Math.max(0, r.bottom - Math.min(...low.map((q) => q.top))) : 0;
+    shift = Math.round((bc - tc) / 2); clear = Math.max(120, r.height - tc - bc);
+  }
+  if (shift !== viewShift) { viewShift = shift; if (shift) cam.setViewOffset(r.width, r.height, 0, shift, r.width, r.height); else cam.clearViewOffset(); }
+  return clear / r.height;
+}
 function battleSpot(b: E.Battle, sd: E.Side, kind: 'unit' | 'asset', i: number, n: number) {
   const base = toWorld(...POLE.get(b.area)!), dir = sd === 'german' ? 1 : -1, per = 5, row = Math.floor(i / per), inRow = Math.min(per, n - row * per), col = i % per;
   const units = E.unitsIn(g, b.area, sd).length, unitRows = Math.max(1, Math.ceil(units / per));
@@ -587,13 +603,14 @@ function syncBattleCam() {
   const b = g.battle; let key = b ? `${b.area}:${b.stage === 'setup' ? 's' : 'f'}` : '';
   const wide = reinforcing || b?.stage === 'retreat';
   if (b && wide) key += 'r';
+  if (b && !wide) key += ':' + Math.round(clearRatio * 5);      // refit when the panels around the battle grow or shrink
   if (b && key !== frameKey) {
     if (!inBattle) saved = { t: target.clone(), dist, pitch };
     const pts = areaWorld(b.area), xs = pts.map((q) => q.x), zs = pts.map((q) => q.z), w = Math.max(...xs) - Math.min(...xs), h = Math.max(...zs) - Math.min(...zs);
-    const c = new THREE.Vector3((Math.max(...xs) + Math.min(...xs)) / 2, 0, (Math.max(...zs) + Math.min(...zs)) / 2), r = Math.max(Math.max(w, h) / 2 + 6, 1.35 + 2 * 1.9 + 1.2 + 4), fit = Math.max(18, r * (innerWidth < innerHeight ? 4.2 : 3.0));
+    const c = new THREE.Vector3((Math.max(...xs) + Math.min(...xs)) / 2, 0, (Math.max(...zs) + Math.min(...zs)) / 2), r = Math.max(Math.max(w, h) / 2 + 3, formationReach(b) + 2.5); let fit = Math.max(16, r * (innerWidth < innerHeight ? 3.0 : 2.6));
 
     if (!wide) { const pl = toWorld(...POLE.get(b.area)!); c.set(pl.x, 0, pl.z); }                                  // the battle formation is centred on the area's pole
-    if (!wide && b.stage !== 'setup' && innerWidth < 700) { const k = 4.5, yr = viewRot(); c.x -= Math.sin(yr) * k; c.z += Math.cos(yr) * k; }   // phones: the fire report covers the lower screen, so the table sits higher
+    if (!wide) fit = fit / Math.max(0.55, Math.min(1, clearRatio * 1.25));      // only the band between the panels shows the battle
     lock = wide ? null : { c, d: fit }; goal = { t: c, dist: wide ? fit * 1.8 : fit, pitch: 1.15, fast: true }; yaw = viewRot();
   }
   if (!b) { reinforcing = false; lock = null; if (inBattle && saved) goal = saved; }
@@ -1519,6 +1536,7 @@ function frame() {
   if (goal) { const k = goal.fast ? 0.28 : 0.1; target.lerp(goal.t, k); dist += (goal.dist - dist) * k; pitch += (goal.pitch - pitch) * k; if (target.distanceTo(goal.t) < 0.05 && Math.abs(dist - goal.dist) < 0.1) goal = null; }
   if (lock && !goal) target.copy(lock.c);
   if (!CALM) { const t = performance.now() / 1000; for (const k of markers.children) { const f = k.userData.float; if (f) { k.position.y = f.y + Math.sin(t * 1.6 + f.ph) * 0.07; k.rotation.y = viewRot() + Math.sin(t * 0.9 + f.ph) * 0.22; } } }   // a slow 4 s bob and 7 s sway, each marker out of step
+  { const old = Math.round(clearRatio * 5); clearRatio = fitBattleView(); if (g.battle && Math.round(clearRatio * 5) !== old) syncBattleCam(); }
   placeCam(); runAnims(); renderer.render(scene, cam); renderFocus(); placeBadges();
 }
 SBU.initSandboxUi({
