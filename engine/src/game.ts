@@ -588,9 +588,11 @@ export function unassign(g: Game, b: Battle, id: string) {
 }
 /* --- fire --- */
 export interface Fire { key: string; who: string; shooter: Shooter; dice: number; sn: number; parts: [string, number][]; isAsset: boolean }
+/** 6.33: the attacker's engineer will remove the enemy field works before offensive fire (chosen, field works there, engineer still in the battle). */
+export const engRemovesFw = (g: Game, b: Battle) => b.engFw && g.fieldWorks.includes(b.area) && (g.fwOwner[b.area] ?? other(b.attacker)) !== b.attacker && b.assets[b.attacker].some((id) => chit(g, id).kind === 'engineer');
 export function fireList(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground'): Fire[] {
   const att = side === b.attacker, tp = point(g, b, other(side)); if (!tp) return [];
-  const out: Fire[] = [], tgt = { pointCls: tp.cls, pointQuality: quality(tp), fieldWorks: att && g.fieldWorks.includes(b.area) && (g.fwOwner[b.area] ?? other(side)) === other(side), riverAssaultMarker: !att && b.riverAssault };
+  const out: Fire[] = [], tgt = { pointCls: tp.cls, pointQuality: quality(tp), fieldWorks: att && g.fieldWorks.includes(b.area) && (g.fwOwner[b.area] ?? other(side)) === other(side) && !(kind === 'ground' && engRemovesFw(g, b)), riverAssaultMarker: !att && b.riverAssault };
   const set = { attacker: att, tdn: areas.get(b.area)!.tdn, riverAssault: att && b.riverAssault, advArty: g.opts.advArty };
   const add = (key: string, who: string, shooter: Shooter, isAsset: boolean) => { const r = successNumber(shooter, tgt, set); out.push({ key, who, shooter, dice: shooter.dice, sn: r.sn, parts: r.parts, isAsset }); };
   if (kind === 'arty') {
@@ -598,13 +600,13 @@ export function fireList(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground'
     const a = b.air[side]; if (a?.mode === 'arty') add(a.id, 'Air Mission (artillery)', { kind: 'artillery', cls: 'infantry', dice: 1 }, true);
   } else {
     for (const u of fighters(g, b.area, side, att)) { if (u.paradrop === 'partial') continue; const sup = b.air[side]?.mode === 'support' && b.air[side]!.unit === u.id; add(u.id, u.name, { kind: u.garrison ? 'battle' : 'unit', cls: u.cls, quality: quality(u), dice: u.str, disordered: u.disorder > 0, unsupplied: u.unsupplied, airSupport: sup }, !!u.garrison); }
-    for (const id of b.assets[side]) { const c = chit(g, id); if (!isBattleAsset(c) || (att && b.engFw && c.kind === 'engineer' && g.fieldWorks.includes(b.area))) continue; add(id, c.name, { kind: 'battle', cls: chitClass(c), quality: c.q, dice: 1 }, true); }
+    for (const id of b.assets[side]) { const c = chit(g, id); if (!isBattleAsset(c) || (att && kind === 'ground' && c.kind === 'engineer' && engRemovesFw(g, b))) continue; add(id, c.name, { kind: 'battle', cls: chitClass(c), quality: c.q, dice: 1 }, true); }
   }
   return out;
 }
-function doFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground') {
+function doFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground', engBusy = false) {
   let total = 0;
-  for (const f of fireList(g, b, side, kind)) { const dice = Array.from({ length: f.dice }, () => roll(g)), hits = dice.filter((d) => succeeds(d, f.sn)).length; total += hits; b.rolls.push({ who: f.who, sn: f.sn, dice, hits, kind }); }
+  for (const f of fireList(g, b, side, kind).filter((x) => !(engBusy && b.assets[side].includes(x.key) && chit(g, x.key).kind === 'engineer'))) { const dice = Array.from({ length: f.dice }, () => roll(g)), hits = dice.filter((d) => succeeds(d, f.sn)).length; total += hits; b.rolls.push({ who: f.who, sn: f.sn, dice, hits, kind }); }
   say(g, `${areas.get(b.area)!.name}: ${side} ${kind === 'arty' ? 'artillery' : 'ground fire'} ${total} hit(s)`);
   return total;
 }
@@ -678,8 +680,9 @@ export function roll_step(g: Game, b: Battle) {
   if (st === 'attArty') { const h = doFire(g, b, b.attacker, 'arty'); return hitDefender(g, b, h, 'arty'); }
   if (st === 'defArty' || st === 'defFire') { const h = doFire(g, b, other(b.attacker), st === 'defArty' ? 'arty' : 'ground'); return hitAttacker(g, b, h); }
   if (st === 'offFire') {
-    if (b.engFw && g.fieldWorks.includes(b.area) && b.assets[b.attacker].some((id) => chit(g, id).kind === 'engineer')) { g.fieldWorks = g.fieldWorks.filter((x) => x !== b.area); say(g, 'engineer removes the field works (6.33)'); }
-    const h = doFire(g, b, b.attacker, 'ground'); return hitDefender(g, b, h, 'ground');
+    const eng = engRemovesFw(g, b);                                                                    // 6.33: after artillery and defensive fire, before the attackers fire; the engineer does not fire
+    if (eng) { g.fieldWorks = g.fieldWorks.filter((x) => x !== b.area); say(g, 'engineer removes the field works (6.33)'); }
+    const h = doFire(g, b, b.attacker, 'ground', eng); return hitDefender(g, b, h, 'ground');
   }
   throw new Error('nothing to roll');
 }
@@ -1017,7 +1020,7 @@ export function setPoint(g: Game, b: Battle, side: Side, unitId: string) {
   if (side === b.attacker && u.disorder) throw new Error('a disordered unit cannot be the attacking point unit');
   if (side === b.attacker) b.attPoint = unitId; else b.defPoint = unitId;
 }
-export function setEngFw(_g: Game, b: Battle, on: boolean) { if (b.stage !== 'setup' && b.stage !== 'offFire') throw new Error('too late'); b.engFw = !!on; }
+export function setEngFw(_g: Game, b: Battle, on: boolean) { if (!['setup', 'attArty', 'defArty', 'defFire', 'offFire'].includes(b.stage)) throw new Error('too late: the field works are removed before offensive fire (6.33)'); b.engFw = !!on; }
 
 /* ================= referee-lite: checks on a move written by the other browser ================= */
 /** Who has to act now: one side, or both (Prepare phases, battle set-up). */

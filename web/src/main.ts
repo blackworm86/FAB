@@ -1237,9 +1237,9 @@ function battleTable() {
 }
 /** 6.33: an attacking engineer in a battle with enemy field works either fires or removes them; two plain buttons, chosen at set-up (or before offensive fire). */
 function engChoice(b: E.Battle): string {
-  if (!b.assets[b.attacker].some((id) => E.chit(g, id).kind === 'engineer') || !g.fieldWorks.includes(b.area) || (b.stage !== 'setup' && b.stage !== 'offFire')) return '';
-  const own = mine(b.attacker), pickB = (on: boolean, label: string) => `<button class="${b.engFw === on ? 'on' : ''}" ${own ? `data-do="${reg(() => E.setEngFw(g, b, on))}"` : 'disabled'} aria-pressed="${b.engFw === on}">${label}</button>`;
-  return `<div class="engch"><b>Engineer (6.33)</b> · the defenders sit in field works. Choose before the first roll:<div class="row">${pickB(false, 'Fire with the ground units')}${pickB(true, 'Remove the field works')}</div></div>`;
+  if (!b.assets[b.attacker].some((id) => E.chit(g, id).kind === 'engineer') || !g.fieldWorks.includes(b.area) || (g.fwOwner[b.area] ?? other(b.attacker)) === b.attacker || !['setup', 'attArty', 'defArty', 'defFire', 'offFire'].includes(b.stage)) return '';
+  const own = mine(b.attacker), pickB = (on: boolean, label: string) => `<button class="${b.engFw === on ? 'on' : ''}" ${own ? `data-do="${reg(() => E.setEngFw(g, g.battle!, on))}"` : 'disabled'} aria-pressed="${b.engFw === on}">${label}</button>`;
+  return `<div class="engch"><b>Engineer (6.33)</b> · the defenders sit in field works. If the engineer survives artillery and defensive fire, it can remove them just before your units fire (no −1 then), instead of firing itself. Choose before offensive fire:<div class="row">${pickB(false, 'Fire with the ground units')}${pickB(true, 'Remove the field works')}</div></div>`;
 }
 let refusal = '';      // the last refused battle chit, shown in the set-up panel
 function ledger() {
