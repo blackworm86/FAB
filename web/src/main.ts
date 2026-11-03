@@ -1307,6 +1307,13 @@ function layersHtml() {
     <h4>Printed</h4><div class="chips">${lay('numbers', 'hash', 'Area numbers and entry letters')}${lay('tdn', 'tree', 'Terrain defence number')}${lay('vp', 'star', 'Victory points')}${lay('names', 'text', 'Place names')}</div>
     <h4>Colour</h4><div class="chips">${tintBtn('off', '', 'close', 'No colour')}${tintBtn('tdn', '', 'tree', 'Terrain defence')}${tintBtn('zones', '', 'layers', 'Army zones')}${tintBtn('control', '', 'flag', 'Who holds each area')}${tintBtn('supply', '', 'fuel', 'Supply: which of your areas trace supply')}</div><h4>Camera</h4><div class="row"><button data-home>${ico('home')} Reset the camera</button></div></div></div>`;
 }
+/** The game log, newest first, grouped by turn; each line tinted by the side it concerns. */
+function logHtml() {
+  const groups: { turn: string; lines: string[] }[] = [];
+  for (const l of g.log) { const m = /^T(\d+) /.exec(l), t = m ? m[1] : '0', text = m ? l.slice(m[0].length) : l; if (groups.at(-1)?.turn !== t) groups.push({ turn: t, lines: [] }); groups.at(-1)!.lines.push(text); }
+  const side = (x: string) => (/^(GE|German)\b/.test(x) ? 'german' : /^(AL|Allied)\b/.test(x) ? 'allied' : '');
+  return `<div class="log">${groups.reverse().map((gr) => `<h5>${gr.turn === '0' ? 'Set-up' : `Turn ${gr.turn}`}</h5>${[...gr.lines].reverse().map((x) => `<div class="ll ${side(x)}">${esc(x)}</div>`).join('')}`).join('') || '<p class="hint">Nothing yet.</p>'}</div>`;
+}
 function modalHtml() {
   if (modal === 'layers') return layersHtml();
   if (modal === 'rules') return rulesHtml();
@@ -1314,8 +1321,8 @@ function modalHtml() {
   if (modal === 'menu') {
     const tabs = ['Players', 'Log', 'Settings', ...(online.admin ? ['Admin'] : [])];
     if (!tabs.includes(menuTab)) menuTab = 'Players';
-    const body = menuTab === 'Log' ? `<div class="log">${[...g.log].reverse().slice(0, 120).map((l) => `<div>${esc(l)}</div>`).join('')}</div>`
-      : menuTab === 'Settings' ? `<h4>Map</h4><div class="row">${ubtn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${ubtn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Opponent</h4><div class="row">${ubtn(`${ico(followFoe ? 'check' : 'minus')} Point the camera at the other player's moves`, () => { followFoe = !followFoe; try { localStorage.setItem('fab-follow', followFoe ? '1' : '0'); } catch { /* private mode */ } }, followFoe ? 'on' : '')}</div>
+    const body = menuTab === 'Log' ? logHtml()
+      : menuTab === 'Settings' ? `<h4>Map</h4><div class="row">${ubtn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${ubtn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Opponent</h4><div class="row">${ubtn(`<span class="sw ${followFoe ? 'on' : ''}">${followFoe ? 'ON' : 'OFF'}</span> Point the camera at the other player's moves`, () => { followFoe = !followFoe; try { localStorage.setItem('fab-follow', followFoe ? '1' : '0'); } catch { /* private mode */ } }, followFoe ? 'on' : '')}</div>
         ${online.active && !online.admin && !online.both() ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as E.Opts['scenario']; })}"><option value="intro" ${newOpts.scenario === 'intro' ? 'selected' : ''}>Nuts! introductory (3 turns)</option><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
         <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Restart', () => { if (!confirm('Restart and lose the current game?')) return; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'danger')}</div>`}`
       : menuTab === 'Admin' ? `<div class="row">${ubtn(`${ico('wand')} Sandbox`, () => { location.href = `${homeUrl()}?sandbox=1`; })}${ubtn('Update rules', () => { modal = 'rules'; })}${ubtn('Free German seat', () => { void auth.freeSeat('german'); })}${ubtn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div>`
@@ -1329,8 +1336,8 @@ function modalHtml() {
           <p class="hint">${signed ? `Signed in as <b>${esc(a!.name || a!.email)}</b>` : 'You are watching as a guest.'}</p>
           ${own && TABLE !== 'main' ? `<div class="row">${ubtn(`${ico('close')} Delete this game`, () => { void dropMatch(m ?? { id: TABLE, title: TABLE, owner: '' }); }, 'danger')}</div>` : ''}`; })()
       : '<p class="hint">Developer table. The Seat button in the top bar switches between German, Allied, both and watching; turn rules are enforced for the seat you hold.</p>';
-    return `<div class="modal"><div class="sheet"><h3>Game <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
-      <div class="tabs">${tabs.map((t) => `<button class="${t === menuTab ? 'on' : ''}" data-ui="${reg(() => { menuTab = t; })}" title="${t}" aria-label="${t}">${ico(({ Players: 'users', Log: 'list', Settings: 'sliders', Admin: 'lock' } as Record<string, string>)[t] ?? 'info')}</button>`).join('')}</div>${body}
+    return `<div class="modal"><div class="sheet menu"><h3>Game <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
+      <div class="tabs">${tabs.map((t) => `<button class="${t === menuTab ? 'on' : ''}" data-ui="${reg(() => { menuTab = t; })}" title="${t}" aria-label="${t}">${ico(({ Players: 'users', Log: 'list', Settings: 'sliders', Admin: 'lock' } as Record<string, string>)[t] ?? 'info')}<span>${t}</span></button>`).join('')}</div><div class="mbody">${body}</div>
       <div class="row sheetfoot">${ubtn(`${ico('back')}<span>Leave game</span>`, () => { location.href = homeUrl(); })}</div></div></div>`;
   }
   return '';

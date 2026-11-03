@@ -7,6 +7,7 @@ export function initTouch(root: HTMLElement) {
   root.addEventListener('touchstart', (e) => {
     const t0 = e.target as HTMLElement, s = t0.closest<HTMLElement>('.modal > .sheet') ?? (t0.closest('.chead') ? t0.closest<HTMLElement>('.chat') : null); if (!s || !phone() || s.scrollTop > 0) { sheet = null; return; }
     if ((e.target as HTMLElement).closest('input, select, textarea, .pcgrid, .chips')) { sheet = null; return; }
+    for (let el: HTMLElement | null = e.target as HTMLElement; el && el !== s; el = el.parentElement) if (el.scrollTop > 0) { sheet = null; return; }      // an inner list scrolled down: the swipe scrolls it back up
     sheet = s; y0 = e.touches[0].clientY; dy = 0;
   }, { passive: true });
   root.addEventListener('touchmove', (e) => {

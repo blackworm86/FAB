@@ -470,3 +470,11 @@ img.cb { border-radius: 7%; box-shadow: 0 1px 0 #e3dccb, 0 2px 0 #b9b2a0, 0 3px 
   .chat .chead { padding-top: 14px; position: relative; } .chat .chead::before { content: ""; position: absolute; top: 5px; left: 50%; width: 40px; height: 4px; margin-left: -20px; border-radius: 2px; background: #8d9065aa; }
   .cquick button { min-height: 36px; padding: 4px 12px; font-size: 13px; }
 }
+/* menu: labelled tabs, steady height, readable log */
+.tabs button span { display: block; font: 600 11px var(--sfd); letter-spacing: .1em; text-transform: uppercase; margin-top: 2px; }
+.sheet.menu { display: flex; flex-direction: column; } .sheet.menu .mbody { flex: 1; min-height: 0; overflow: auto; }
+@media (max-width: 700px) { .sheet.menu { height: 82vh; max-height: 82vh !important; } }
+.sheet.menu .log { max-height: none; font-size: 12.5px; line-height: 1.35; color: var(--ink); }
+.log h5 { position: sticky; top: 0; margin: 0; padding: 6px 0 4px; background: #0b0d08; font: 700 12px var(--sfd); letter-spacing: .12em; text-transform: uppercase; color: var(--gold); border-bottom: 1px solid #8d906544; }
+.log .ll { padding: 4px 0 4px 8px; border-left: 3px solid #8d906555; margin: 3px 0; } .log .ll.german { border-left-color: var(--ge); } .log .ll.allied { border-left-color: var(--al); }
+.sw { display: inline-block; min-width: 38px; padding: 2px 6px; border-radius: 10px; background: #333; color: #ccc; font: 700 11px var(--sfd); letter-spacing: .08em; text-align: center; } .sw.on { background: var(--gold); color: #1a1608; }
