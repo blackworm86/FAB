@@ -60,7 +60,7 @@ German engineers work in their own army's zone (14.52); an army without its engi
 • Fail: it may only stay or move one area, and may not build field works or go in reserve.
 • Pass: no effect. Either way the event is then eliminated.
 • If the unit's next move is by a friendly Special Action (8.21, 8.23, 8.24), the marker is removed with no effect.`],
-  event_bodenplatte: ['Operation Bodenplatte', `Admin Phase (17.14): roll one die for each Air Mission in the Allied Available Box: 1 = eliminated, 2-5 = back to the cup, 6-10 = no effect.`],
+  event_bodenplatte: ['Operation Bodenplatte', `Admin Phase (17.14): roll one die for each Air Mission in the Allied Available Box: 1-5 = no effect, 6-9 = delayed (back to the cup), 10 = eliminated (Player Aid D; the Play Book numbers the die the other way round, with a typo).`],
   event_delayed_response: ['Delayed Response', `No effect (17.34): when drawn it goes straight to the Eliminated Box, and it still counts as one of your draws. It cannot be used for the alternate use (4.21).`],
   air_mission: ['Allied Air Mission', `One of three missions (17.21), then it goes to the Eliminated Box. It may be played on unsupplied areas.
 • Combat support: the battle's one event; either fires as artillery (outside the artillery limit), or gives +2 to one Allied unit's Success Number. It cannot take a step-loss.
