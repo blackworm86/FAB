@@ -27,3 +27,17 @@ describe('6.33 engineer removes enemy field works', () => {
     void boxOf;
   });
 });
+
+import { attackerChoice } from '../src';
+describe('6.41b abort', () => {
+  it('surviving assigned assets go to the Used Box, not the Eliminated Box', () => {
+    const g = newGame(4, { scenario: 'campaign', fuel: true }); g.phase = 'combat'; g.phasing = 'german'; g.turn = 2;
+    const area = mustFight(g)[0]; const b = startBattle(g, area);
+    const art = g.chits.find((c) => c.side === 'german' && c.kind === 'artillery' && (() => { c.box = 'available'; try { assign(g, b, c.id); return true; } catch { c.box = 'cup'; return false; } })())!;
+    expect(art).toBeTruthy(); expect(art.box).not.toBe('eliminated');
+    b.stage = 'attChoice'; b.pending = 2;
+    attackerChoice(g, b, true);
+    expect(art.box).toBe('used');
+    expect(g.units.filter((u) => u.area === area && u.side === 'german' && !u.garrison).every((u) => u.disorder === 1)).toBe(true);
+  });
+});
