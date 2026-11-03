@@ -436,3 +436,10 @@ img.cb { border-radius: 7%; box-shadow: 0 1px 0 #e3dccb, 0 2px 0 #b9b2a0, 0 3px 
 @media (max-width: 700px) { .c-table .bsarow small { flex: 1 0 100%; text-align: center; } }
 .c-table.slim:has(.bsarow) { flex-wrap: wrap; } .c-table.slim .bsarow { order: 9; }
 .c-table.slim > .bside { flex: 0 0 auto; } .c-table.slim > .bmid { flex: 1 1 auto; }
+.mm { overflow: visible; } .mmx { position: absolute; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid #0b0d08; bottom: -3px; } .mmx.fw { background: var(--gold); right: -5px; } .mmx.rs { background: #5aa9e6; left: -5px; }
+.mapbubble.fighttag { padding: 4px !important; } .mapbubble.fighttag .go { min-height: 40px; padding: 6px 14px; font-size: 14px; box-shadow: none; } .mapbubble.fighttag .go .ic { margin: 0 4px 0 0; }
+.feed { position: absolute; left: 12px; bottom: 10px; z-index: 6; display: grid; gap: 4px; pointer-events: none; max-width: min(460px, calc(100% - 24px)); }
+.feed .fl2 { background: #0b0d08e0; border-left: 3px solid #8d9065; padding: 4px 10px; font-size: 12.5px; line-height: 1.3; color: var(--ink); animation: feedfade 9s linear forwards; }
+.feed .fl2.german { border-left-color: var(--ge); } .feed .fl2.allied { border-left-color: var(--al); }
+@keyframes feedfade { 0% { opacity: 0; transform: translateY(6px); } 4% { opacity: 1; transform: none; } 80% { opacity: 1; } 100% { opacity: 0; } }
+@media (max-width: 700px) { .feed { left: 6px; bottom: 6px; } .feed .fl2 { font-size: 11.5px; padding: 3px 8px; } }
