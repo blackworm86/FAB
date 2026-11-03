@@ -61,9 +61,10 @@ export function targetsFor(G: () => E.Game, c: E.Chit | null, ctx: TgtCtx): Tgt 
   } else if (k === 'air_mission') {
     t.any = (ar) => (works((tg) => E.playInterdiction(tg, c.id, ar)) ? () => E.playInterdiction(G(), c.id, ar) : null); t.hint = 'Tap any area to interdict it (Germans pay +1 MP to enter and leave)';
   } else if (k === 'event_release') {
-    for (const ar of [4, 6] as const) t.areas.set(ar, () => E.releaseUnit(G(), c.id, ar)); t.hint = 'Tap the entry area';
+    for (const ar of [4, 6] as const) if (works((tg) => E.releaseUnit(tg, c.id, ar))) t.areas.set(ar, () => E.releaseUnit(G(), c.id, ar));      // only entry areas that can take it
+    t.hint = t.areas.size ? 'Tap the entry area' : 'Entry areas Y and Z are full: the division cannot enter now';
   } else if (c.name === 'v.d. Heydte' && E.heydteWindow(G(), c)) {
-    for (const ar of [31, 52] as const) t.areas.set(ar, () => E.heydteDrop(G(), c.id, ar)); t.hint = 'Tap a drop zone: Hohes Venn or Stoumont';
+    for (const ar of [31, 52] as const) if (works((tg) => E.heydteDrop(tg, c.id, ar))) t.areas.set(ar, () => E.heydteDrop(G(), c.id, ar)); t.hint = 'Tap a drop zone: Hohes Venn or Stoumont';
   } else return null;
   return t;
 }

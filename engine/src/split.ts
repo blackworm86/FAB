@@ -93,6 +93,8 @@ export class SplitSeat {
     const pub = toPublic(g, this.side, this.priv, this.enemyAlias);
     return changed ? { pub, priv: this.priv, ...(gone.length ? { gone } : {}) } : { pub };
   }
+  /** True when one of this seat's revealed blocks is hidden again, so its reveal must be withdrawn (the other seat's move may have hidden it). */
+  stale(g: Game): boolean { const want = this.wanted(g); return Object.entries(this.reveals).some(([a, r]) => !(a in want) && g.units.some((u) => u.id === r.id && u.side === this.side)); }
   /** The reveals this seat has to publish now (battle area once both are ready, an Intelligence target); they count as published from here on. */
   due(g: Game): Reveals {
     if (!this.priv) return {};

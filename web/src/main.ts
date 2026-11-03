@@ -392,7 +392,7 @@ function chitBar(c: E.Chit): string {
   const chips = tg?.chips.map((x) => `<button class="pc ${c.side}" data-do="${reg(x.fn)}" title="${esc(x.label)}">${x.img}<small>${esc(x.label)}</small></button>`).join('') ?? '';
   return `<div class="c-dispatch chitbar ${infoOpen ? 'open' : ''}"><div class="cbhead"><span class="cbimg">${chitPic(c)}</span><div class="cbt"><b>${esc(c.name)}</b><small>${esc(tg?.hint || kind)}</small></div>
     <button class="ico" data-ui="${reg(() => { infoOpen = !infoOpen; })}" aria-pressed="${infoOpen}" aria-label="What it does" title="What it does">${ico('info')}</button><button class="ico" data-ui="${reg(() => { selChit = null; })}" aria-label="Put away" title="Put away">${ico('close')}</button></div>
-    ${infoOpen ? `<div class="inspect slimcard">${ruleHtml(c.kind, E.isEvent(c))}</div>` : ''}${tg && tg.modes.length > 1 ? `<div class="modes" role="group" aria-label="What to do">${tg.modes.map((m) => `<button class="ico ${m.id === tgtMode ? 'on' : ''}" data-ui="${reg(() => { tgtMode = m.id; refresh(); })}" title="${esc(m.label)}" aria-label="${esc(m.label)}">${ico(m.icon)}</button>`).join('')}</div>` : ''}${chips ? `<div class="cbchips">${chips}</div>` : ''}${tg?.buttons.length ? `<div class="row">${tg.buttons.map((b) => abtn(b.icon, b.label, b.fn, '', false, b.title)).join('')}</div>` : ''}${iconify(body)}</div>`;
+    ${infoOpen ? `<div class="inspect slimcard">${ruleHtml(c.kind, E.isEvent(c))}</div>` : ''}${tg && tg.modes.length > 1 ? `<div class="modes" role="group" aria-label="What to do">${tg.modes.map((m) => `<button class="ico ${m.id === tgtMode ? 'on' : ''}" data-ui="${reg(() => { tgtMode = m.id; refresh(); })}" title="${esc(m.label)}" aria-label="${esc(m.label)}">${ico(m.icon)}<span>${esc(m.label)}</span></button>`).join('')}</div>` : ''}${chips ? `<div class="cbchips">${chips}</div>` : ''}${tg?.buttons.length ? `<div class="row">${tg.buttons.map((b) => abtn(b.icon, b.label, b.fn, '', false, b.title)).join('')}</div>` : ''}${iconify(body)}</div>`;
 }
 function chitPanel(c: E.Chit): string {
   const a = selArea, out: string[] = [];
@@ -448,7 +448,7 @@ function act(f: () => void, after = '') {
   if (!allowed()) return say(notYou());
   if (heldNext) commitRoll();
   const before = g.battle ? snap(g) : null, ck0 = g.checks?.length ?? 0;
-  const r = hist.run(g, () => { f(); auto(); }, (a, b) => after || (b.log.slice(a.log.length).at(-1) ?? '').replace(/^T\d+ (\[\w+\] )?/, '').slice(0, 60), lockOf);
+  const r = hist.run(g, () => { f(); auto(); }, (a, b) => after || (b.log.slice(a.log.length).at(-1) ?? '').replace(/^T\d+ (\[\w+\] )?((GE|AL) \w+: )?/, '').slice(0, 60), lockOf);
   g = r.game; if (r.error) say(/pending|already/.test(r.error.message) ? `That choice is no longer open (the game is at ${g.battle?.stage ?? 'no battle'}). Refreshed.` : r.error.message); else { note = after; if (before && !rollNoted) noteFx(before, g); }       // a roll already noted its own effects, to show them once the dice have settled
   rollNoted = false;
   save(); refresh();
@@ -551,7 +551,7 @@ function reinforceTargets(): Tgt | null {
 let frameKey = '';
 /** The battle camera: held on the contested area (fitted to it), where the player can still zoom and orbit but not pan away. */
 let lock: { c: THREE.Vector3; d: number } | null = null;
-const clampDist = (d: number) => (lock ? Math.min(lock.d * 1.7, Math.max(lock.d * 0.45, d)) : Math.min(110, Math.max(7, d)));
+const clampDist = (d: number) => (lock ? Math.min(lock.d * 1.7, Math.max(lock.d * 0.45, d)) : Math.min(innerWidth < 700 ? 64 : 110, Math.max(7, d)));      // phones: never so far out that the map leaves a black band
 function areaWorld(id: number) { return MAP.areas.find((a) => a.id === id)!.polygon.map(([x, y]) => toWorld(x, y)); }
 function syncBattleCam() {
   const b = g.battle; let key = b ? `${b.area}:${b.stage === 'setup' ? 's' : 'f'}` : '';
@@ -579,12 +579,13 @@ function confirmMove() {
 function click(e: PointerEvent) {
   const { unit, area } = pick(e);
   if (SANDBOX && SBU.st.sbPlace) { const id = SBU.st.sbPlace; if (area == null) return; SBU.st.sbPlace = null; return SBU.sbx(() => SB.place(g, id, area)); }
-  if (reinforcing && g.battle) { const fn = unit ? tgt?.units.get(unit) : undefined; if (fn) return act(fn); reinforcing = false; return refresh(); }
+  if (reinforcing && g.battle) { const fn = unit ? tgt?.units.get(unit) : undefined; if (fn) return act(fn); reinforcing = false; if (unit) say('That block cannot reinforce this battle (8.23: good order, an adjacent uncontested area, and a Special Action for its Higher Echelon).'); return refresh(); }
   { const c0 = selChit ? g.chits.find((x) => x.id === selChit) : null, tg = c0 && g.phase === 'admin' ? tgt : null;
     if (tg) {
       const fnU = unit ? tg.units.get(unit) : undefined, fnA = area != null ? tg.areas.get(area) ?? tg.any?.(area) ?? undefined : undefined;
       if (fnU || fnA) { return act((fnU ?? fnA)!); }
       const pk = area != null ? tg.pick.get(area) : undefined; if (pk) { pk(); return refresh(); }
+      if (area != null && (tg.areas.size || tg.units.size || tg.any)) { say(tg.hint || 'That is not a target for this chit: tap a glowing area or block.'); return; }      // a tap that does nothing says why
     } }
   const rb = g.battle;
   if (rb?.stage === 'retreat' && area != null && E.retreatOptions(g, rb).includes(area)) return act(() => E.chooseRetreat(g, rb, area));
@@ -1085,8 +1086,8 @@ function dispatch() {
   if (g.phase === 'supply' && g.supplyPending && !rollView) {                                         // 9.4: who is cut off and what they need, then the roll
     const list = E.supplyChecks(g), own = mine(g.phasing);
     const rows = list.map(({ unit: x, sn, rounds }) => `<button class="supl" data-ui="${reg(() => { if (x.area != null) { const c2 = center(x.area); goal = { t: new THREE.Vector3(c2.x, 0, c2.z), dist: Math.min(dist, 30), pitch, fast: true }; } })}" title="Show on the map">${unitPic(x)}<span><b>${esc(x.name)}</b><small>${esc(areaName(x.area!))} · ${E.quality(x)}${x.disorder ? ' · disordered' : ''}${rounds > 1 ? ' · two checks (14.93)' : ''}</small></span><b class="sn">needs ${sn} or less</b></button>`).join('');
-    return `<div class="c-dispatch supply"><h3 class="${g.phasing}">Supply check</h3><p class="hint">${list.length ? `9.4: each cut-off ${nm(g.phasing)} unit rolls morale. Fail: disordered; already disordered: a step loss (green 8+, veteran 10: surrenders).` : `Every ${nm(g.phasing)} unit is in supply.`}</p>${rows}
-      <div class="row">${own ? btn(`${ico('dice')} ${list.length ? 'Roll supply checks' : 'Continue'}`, () => E.rollSupply(g), 'primary') : `<span class="hint">Waiting for the ${nm(g.phasing)} player to roll.</span>`}</div></div>`;
+    return `<div class="c-dispatch supply"><h3 class="${g.phasing}">Supply check</h3><p class="hint">${list.length ? `9.4: each cut-off ${nm(g.phasing)} unit rolls morale. Fail: disordered; already disordered: a step loss (green 8+, veteran 10: surrenders).` : `Every ${nm(g.phasing)} unit is in supply.`}</p>
+      <div class="row">${own ? btn(`${ico('dice')} ${list.length ? `Roll ${list.length} supply check${list.length > 1 ? 's' : ''}` : 'Continue'}`, () => E.rollSupply(g), 'primary') : `<span class="hint">Waiting for the ${nm(g.phasing)} player to roll.</span>`}</div><div class="suplist">${rows}</div></div>`;
   }
   if (g.phase === 'reinforcement' && g.artyPick) {                                                     // 16.12: the German player picks the artillery lost to attrition
     const cs = E.boxOf(g, 'german', 'used').filter((c) => c.kind === 'artillery'), own = mine('german');
@@ -1117,12 +1118,13 @@ function dispatch() {
 }
 const svgUri = (svg: string) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 /** Fly the camera over the legal entry areas of the selected arriving block. */
-function frameArrival() { const all = arrOpts(), o = all.some((x) => !x.sa) ? all.filter((x) => !x.sa) : all; if (selArr && o.length) { const pts = o.map((x) => center(x.area)), cx = pts.reduce((a, p) => a + p.x, 0) / pts.length, cz = pts.reduce((a, p) => a + p.z, 0) / pts.length, r = Math.max(...pts.map((p) => Math.hypot(p.x - cx, p.z - cz))); goal = { t: new THREE.Vector3(cx, 0, cz), dist: Math.min(70, Math.max(24, r * 2.3 + 10)), pitch: 1.15 }; } }
+function frameArrival() { const all = arrOpts(), o = all.some((x) => !x.sa) ? all.filter((x) => !x.sa) : all; if (selArr && o.length) { const pts = o.map((x) => center(x.area)), cx = pts.reduce((a, p) => a + p.x, 0) / pts.length, cz = pts.reduce((a, p) => a + p.z, 0) / pts.length, r = Math.max(...pts.map((p) => Math.hypot(p.x - cx, p.z - cz))); goal = { t: new THREE.Vector3(cx, 0, cz), dist: Math.min(innerWidth < 700 ? 52 : 70, Math.max(24, r * 2.3 + 10)), pitch: 1.15 }; } }
 /** Drag an arriving block from the tray onto an entry area of the map. A click without moving still just selects it. */
 function dragArrival(ev: PointerEvent, el: HTMLElement) {
   if (ev.button !== 0) return;
   const id = el.dataset.arr!, x0 = ev.clientX, y0 = ev.clientY; let ghost: HTMLElement | null = null;
   const mv = (e: PointerEvent) => {
+    if (!ghost && ev.pointerType !== 'mouse' && Math.abs(e.clientX - x0) > 8 && Math.abs(e.clientX - x0) > Math.abs(e.clientY - y0)) { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); return; }      // a sideways swipe scrolls the tray, it is not a drag
     if (!ghost && Math.hypot(e.clientX - x0, e.clientY - y0) > 8) { ghost = el.querySelector('.b3')!.cloneNode(true) as HTMLElement; ghost.classList.add('ghost'); document.body.appendChild(ghost); if (selArr !== id) { selArr = id; paintAreas(); badges = badgeList(); syncBadges(); frameArrival(); } }                 // no re-render here: replacing the dragged element would cut a touch drag short
     if (ghost) { ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px'; }
   };
@@ -1364,7 +1366,7 @@ function renderInner() {
   const dockMain = alert || ledger() || handCards();
   const keepD = document.querySelector<HTMLElement>('#ui .c-dispatch')?.scrollTop ?? 0;           // a panel being read keeps its place when the screen updates
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = `<div class="tops">${topBar()}${vpStrip(g, reg(() => { scoreOpen = true; }))}</div>` + `<div class="stage">${SANDBOX && SBU.st.sbOpen ? SBU.sandboxPanel() : ''}${seatBar()}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} Final map`, () => { endHidden = true; }) + ubtn(`${ico('plus')} New game`, () => { if (SANDBOX) { SBU.sbReset({ ...g.opts }); endHidden = false; } else location.href = homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${undoBtn()}${p && allowed() ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
+  $('#ui').innerHTML = `<div class="tops">${topBar()}${vpStrip(g, reg(() => { scoreOpen = true; }))}</div>` + `<div class="stage">${SANDBOX && SBU.st.sbOpen ? SBU.sandboxPanel() : ''}${seatBar()}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} Final map`, () => { endHidden = true; }) + ubtn(`${ico('plus')} New game`, () => { if (SANDBOX) { SBU.sbReset({ ...g.opts }); endHidden = false; } else location.href = homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${undoBtn()}${p && allowed() && p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p && allowed() ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
   const ui = $('#ui');
   { const d = ui.querySelector<HTMLElement>('.c-dispatch'); if (d) d.scrollTop = keepD; }
   bind(ui, keepH, keepA);

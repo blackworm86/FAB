@@ -141,3 +141,15 @@ describe('a revealed block hidden again is not traceable (playtest: Peiper staye
     expect(pub.log.at(-1)).toBe('T1 AL supply: a hidden block eliminated');
   });
 });
+
+describe('withdrawing a reveal is not a move', () => {
+  it('the referee check ignores a hidden block that only got a new opaque id', async () => {
+    const { auditChange } = await import('../src');
+    const g = newGame(5); g.phase = 'movement'; g.phasing = 'german';
+    const prev = JSON.parse(toPublic(g, 'allied', 'sa', new Map())) as Game;
+    const next = JSON.parse(JSON.stringify(prev)) as Game; const h = next.units.find((u) => u.name === 'Hidden block')!; h.id = 'hNEWALIAS';
+    expect(auditChange(prev, next, 'allied')).toEqual([]);
+    next.units.find((u) => u.name === 'Hidden block')!.area = 999;                     // a real move by the wrong side is still flagged
+    expect(auditChange(prev, next, 'allied').length).toBe(1);
+  });
+});

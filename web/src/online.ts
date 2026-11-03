@@ -69,6 +69,7 @@ function rebuild() {
   if (!pubDoc) return; const sp = mySeat(), g0 = JSON.parse(pubDoc.json) as Game;
   if (!sp) { onRemote(g0); return; }
   const game = sp.open(g0); online.enemyAlias = sp.enemyAlias; onRemote(game);
+  if (sp.priv && sp.stale(game)) void push(game);          // the other seat's move hid one of our revealed blocks: withdraw its reveal now, not at our next move
 }
 const savedLater = () => { writing = false; if (rebuildLater) { rebuildLater = false; rebuild(); } if (queued) { const q = queued; queued = null; void push(q); } };
 

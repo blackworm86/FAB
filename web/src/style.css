@@ -499,3 +499,8 @@ img.cb { border-radius: 7%; box-shadow: 0 1px 0 #e3dccb, 0 2px 0 #b9b2a0, 0 3px 
   .c-bar.b .dchips { flex: 1 0 100%; }
   .c-bar.b .go { font-size: 14px; padding-inline: 12px; white-space: normal; text-align: center; line-height: 1.15; max-width: 60%; }
 }
+.modes { flex-wrap: wrap; } .modes .ico { width: auto; height: auto; min-height: 44px; padding: 4px 10px; gap: 6px; } .modes .ico span { font: 600 12px var(--sfd); letter-spacing: .06em; text-transform: uppercase; text-align: left; line-height: 1.15; }
+@media (max-width: 700px) { .modes .ico { flex: 1 1 calc(50% - 6px); justify-content: flex-start; } }
+.c-dispatch.supply .suplist { max-height: min(38vh, 320px); overflow-y: auto; margin-top: 6px; } @media (max-width: 700px) { .c-dispatch.supply .suplist { max-height: 26vh; } }      /* the roll button stays in sight above a long list */
+.gowait { font: 600 13px var(--sfd); letter-spacing: .08em; text-transform: uppercase; color: #b3ad8b; padding: 8px 4px; }
+@media (max-width: 700px) { .arrtray { -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); } }      /* more blocks to the right: swipe */

@@ -6,7 +6,9 @@ interface Change { key: string; id?: string; old: string | undefined; now: strin
 interface Entry { label: string; changes: Change[] }
 const LISTS = ['units', 'chits'];          // arrays of objects with an `id`: diffed per element
 const SKIP = new Set(['log']);             // append-only text: never undone (a line notes the undo)
-const js = (v: unknown) => (v === undefined ? undefined : JSON.stringify(v));
+/** JSON with object keys sorted: a game that went through the shared copy comes back with the same values in another key order. */
+const norm = (v: unknown): unknown => (Array.isArray(v) ? v.map(norm) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v as object).sort().filter((k) => (v as Record<string, unknown>)[k] !== undefined).map((k) => [k, norm((v as Record<string, unknown>)[k])])) : v);
+const js = (v: unknown) => (v === undefined ? undefined : JSON.stringify(norm(v)));
 
 function parts(g: Rec) {
   const m = new Map<string, string | undefined>();

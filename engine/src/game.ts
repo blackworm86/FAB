@@ -957,7 +957,7 @@ export function staffPool(g: Game, id: string, area: number) {
 export function staffIntel(g: Game, id: string, unitId: string) {
   const c = staff(g, id), u = g.units.find((x) => x.id === unitId)!;
   if (u.side === c.side || u.area == null || u.garrison) throw new Error('choose an enemy block on the map');
-  g.revealed = u.id; c.box = 'used'; say(g, `Intelligence: ${u.name} in ${areas.get(u.area)!.name} is revealed (${u.str}/${u.max} steps, ${quality(u)})`, c.side);
+  g.revealed = u.id; c.box = 'used'; say(g, `Intelligence: the enemy block in ${areas.get(u.area)!.name} is revealed until the end of the Admin Phase (8.32)`, c.side);      // online the player only holds a stand-in: its owner publishes the real details
 }
 /** 17.2 Interdiction Mission (Allied air mission, Admin Phase). */
 export function playInterdiction(g: Game, id: string, area: number) {
@@ -1040,7 +1040,8 @@ export function auditChange(prev: Game, next: Game, writer: Side | null): string
   const a = prev.battle, b = next.battle;
   if (a && b && a.area === b.area && JSON.stringify(b.rolls.slice(0, a.rolls.length)) !== JSON.stringify(a.rolls)) out.push('Dice already rolled in this battle were changed.');
   const actor = actorOf(prev);
-  if (writer && actor !== 'both' && actor !== writer && JSON.stringify({ ...next, log: [] }) !== JSON.stringify({ ...prev, log: [] })) out.push(`The ${writer === 'german' ? 'German' : 'Allied'} player changed the game while it was the ${actor === 'german' ? 'German' : 'Allied'} player's turn to act.`);
+  const hid = (u?: Unit) => !!u && u.name === 'Hidden block', bare = (g: Game, o: Game) => JSON.stringify({ ...g, log: [], revealed: null, units: g.units.map((u, i) => (hid(u) || hid(o.units[i]) ? { side: u.side, area: u.area } : u)) });   // a hidden block re-coded or hidden again is not a move
+  if (writer && actor !== 'both' && actor !== writer && bare(next, prev) !== bare(prev, next)) out.push(`The ${writer === 'german' ? 'German' : 'Allied'} player changed the game while it was the ${actor === 'german' ? 'German' : 'Allied'} player's turn to act.`);
   return out;
 }
 
