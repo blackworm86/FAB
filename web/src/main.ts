@@ -17,6 +17,7 @@ import { targetsFor, type Tgt } from './chit-play';
 import { snap, diffFx, FxLayer, fxRow, FX_SAMPLES, type Fx } from './fx';
 import { RULE, ruleHtml } from './rules-text';
 import databaseRules from '../../database.rules.json?raw';
+import { initTouch } from './touch';
 import { throwDice, clearDice, type DiceGroup } from './dice3d';
 
 type MapArea = { id: number; label: [number, number]; polygon: [number, number][] };
@@ -1432,6 +1433,7 @@ SBU.initSandboxUi({
   get rollView() { return rollView; }, set rollView(v) { rollView = v as RollView | null; },
   ABBR, actorNow, areaName, b3, chitImg, unitFace, unitPic, chitPic, hist, refresh, render, save, say, reg, regv, ubtn,
 });
+initTouch(document.body);
 frame();
 loadChitArt().catch((e) => console.error(e)).finally(() => { auto(); refresh(); });
 let lobbyUid = '';
