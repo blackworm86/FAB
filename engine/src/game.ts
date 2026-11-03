@@ -969,8 +969,8 @@ export function playInterdiction(g: Game, id: string, area: number) {
 export function airSupplyAreas(g: Game, side: Side) { return [...new Set(g.units.filter((u) => u.side === side && u.area != null && !u.garrison && !inSupply(g, side, u.area)).map((u) => u.area!))]; }
 export function playAirSupply(g: Game, id: string, area: number) {
   const c = chit(g, id);
-  if (g.phase !== 'btCombat' || g.battle || c.kind !== 'air_mission' || c.box !== 'available' || c.side !== g.phasing || g.airSupply || !airSupplyAreas(g, c.side).includes(area)) throw new Error('needs an Air Mission, the end of the turn, and an unsupplied area');
-  g.airSupply = { area, side: c.side, id, stamp: g.turn * 2 + (g.phasing === 'german' ? 0 : 1) }; c.box = 'map'; say(g, `Air Supply mission over ${areas.get(area)!.name}`, c.side);
+  if (g.phase !== 'supply' || g.battle || c.kind !== 'air_mission' || c.box !== 'available' || c.side !== g.phasing || g.airSupply || !airSupplyAreas(g, c.side).includes(area)) throw new Error('needs an Air Mission, the end of the turn, and an unsupplied area');
+  g.airSupply = { area, side: c.side, id, stamp: g.turn * 2 + (g.phasing === 'german' ? 0 : 1) }; c.box = 'map'; for (const u of unitsIn(g, area, c.side)) u.unsupplied = false; say(g, `Air Supply mission over ${areas.get(area)!.name}`, c.side);
 }
 /** 8.27 Reroute a reinforcing unit (Reinforcement Phase, one Special Action). */
 export function rerouteOptions(g: Game, unitId: string): number[] {

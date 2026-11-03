@@ -58,7 +58,7 @@ describe('M3 rules', () => {
     g.control[u.area!] = 'allied';
     g.units.filter((x) => x.side === 'german').forEach((x) => { x.area = null; });
     for (const n of areas.keys()) if (n !== u.area) g.control[n] = 'german';        // cut off
-    g.phase = 'btCombat'; g.phasing = 'allied'; g.units.forEach((x) => (x.moved = false));
+    g.phase = 'supply'; g.phasing = 'allied'; g.units.forEach((x) => (x.moved = false));
     const opts = airSupplyAreas(g, 'allied');
     if (opts.includes(u.area!)) { playAirSupply(g, air.id, u.area!); expect(inSupply(g, 'allied', u.area!)).toBe(true); endPhase(g); expect(u.unsupplied).toBe(false); g.turn++; g.phase = 'btCombat'; g.phasing = 'german'; endPhase(g); expect(g.airSupply).toBeNull(); expect(air.box).toBe('eliminated'); }
   });
