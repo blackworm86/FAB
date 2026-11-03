@@ -485,3 +485,4 @@ img.cb { border-radius: 7%; box-shadow: 0 1px 0 #e3dccb, 0 2px 0 #b9b2a0, 0 3px 
   .vbtns { position: sticky; bottom: 0; margin: 12px -16px 0; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: #0b0d08f5; border-top: 1px solid #8d906555; flex-wrap: nowrap; }
   .vbtns button { flex: 1 1 0; min-width: 0; padding-inline: 8px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
+@media (max-width: 700px) { .homepage button { min-height: 44px !important; } .homepage .chips .chip { flex: 1 1 calc(50% - 4px); justify-content: center; } }
