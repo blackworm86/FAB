@@ -445,13 +445,23 @@ function act(f: () => void, after = '') {
   if (!allowed()) return say(notYou());
   if (heldNext) commitRoll();
   const before = g.battle ? snap(g) : null, ck0 = g.checks?.length ?? 0;
-  const r = hist.run(g, () => { f(); auto(); });
+  const r = hist.run(g, () => { f(); auto(); }, (a, b) => after || (b.log.slice(a.log.length).at(-1) ?? '').replace(/^T\d+ (\[\w+\] )?/, '').slice(0, 60), lockOf);
   g = r.game; if (r.error) say(/pending|already/.test(r.error.message) ? `That choice is no longer open (the game is at ${g.battle?.stage ?? 'no battle'}). Refreshed.` : r.error.message); else { note = after; if (before && !rollNoted) noteFx(before, g); }       // a roll already noted its own effects, to show them once the dice have settled
   rollNoted = false;
   save(); refresh();
   if (!r.error) showChecks((g.checks ?? []).slice(ck0));
 }
-function undo() { if (!allowed()) return say(notYou()); const p = hist.undo(); if (!p) return; g = p; selUnit = selChit = selArr = previewArea = hoverArea = null; note = ''; save(); refresh(); }
+/** What an action showed that cannot be taken back (undo locks there). */
+function lockOf(a: E.Game, b: E.Game): string {
+  const up = (x: E.Game) => x.units.filter((u) => u.up != null).length, cup = (x: E.Game) => x.chits.filter((c) => c.box === 'cup').length;
+  if (b.revealed && b.revealed !== a.revealed) return 'a block was revealed';
+  if (up(b) > up(a)) return 'blocks revealed';
+  if (cup(b) < cup(a)) return 'chits drawn';
+  if (b.blown.length > a.blown.length) return 'bridge blown';
+  if (b.turn !== a.turn || b.phase !== a.phase || b.phasing !== a.phasing) return 'new phase';
+  return '';
+}
+function undo() { if (!allowed()) return say(notYou()); const lbl = hist.label, r = hist.undo(g); if (!r.game) return say(r.why ?? 'Nothing to undo'); const p = r.game; p.log.push(`T${p.turn} ${nm(online.mySide() ?? p.phasing)} undid ${lbl ? '“' + lbl + '”' : 'an action'}`); g = p; selUnit = selChit = selArr = previewArea = hoverArea = null; note = ''; save(); refresh(); }
 window.addEventListener('keydown', (e) => {
   const t = e.target as HTMLElement | null, typing = !!t?.matches?.('input,select,textarea');
   if (e.key === 'Escape') { if (modal) { modal = null; render(); } else if (selUnit || selArr || selChit) { selUnit = selArr = selChit = null; previewArea = null; refresh(); } return; }
@@ -573,7 +583,7 @@ function click(e: PointerEvent) {
   }
   if (g.pendingBlow) return;
   if (selArr && area != null && arrOpts().some((o) => o.area === area)) { const id = selArr; selArr = null; return act(() => arrive(id, area)); }
-  if (selUnit && area != null && optsFor(selUnit).some((o) => o.area === area)) { previewArea = area; refresh(); return; }
+  if (selUnit && area != null && optsFor(selUnit).some((o) => o.area === area)) { previewArea = area; return confirmMove(); }      // two taps: block, then where it goes (Undo takes it back)
   if ((g.phase === 'combat' || g.phase === 'btCombat') && area != null && fightable().includes(area)) { selArea = selArea === area ? null : area; selUnit = null; previewArea = null; return refresh(); }
   const uu = unit ? g.units.find((x) => x.id === unit) : null;
   if (uu && seen(uu) && (mine(uu.side) || !['movement', 'strategic', 'reaction', 'btMove'].includes(g.phase))) { selUnit = unit!; selArea = uu.area; } else { selArea = area; selUnit = null; }
@@ -920,7 +930,7 @@ function drag(ev: PointerEvent, el: HTMLElement) {
 function topBar() {
   const v = E.victory(g), tr = (g.track ?? E.TRACK)[g.turn - 1], i = g.phasing === 'german' ? 0 : 1, at = STEP_OF[g.phase];
   return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game" aria-label="Menu, log and new game">${ico('menu')}</button>${SANDBOX ? SBU.sandboxBtns() : ''}<div class="c-crumbs">${STEPS.map((s, k) => `<span class="${k === at ? 'on' : k < at ? 'done' : ''}">${s}</span>`).join('')}</div>
-    <button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="Map overlay: terrain defence / army zones / off" aria-label="Map overlay">${ico('layers')}<span class="bl">Overlay</span></button><button class="ico" data-home title="Reset the camera" aria-label="Reset the camera">${ico('home')}<span class="bl">View</span></button><button class="ico" data-undo title="${hist.length ? 'Undo: ' + esc(note || 'last action') + ' (Ctrl+Z)' : 'Nothing to undo yet. Undo is available until a die is rolled.'}" aria-label="Undo" ${hist.length ? '' : 'disabled'}>${ico('undo')}<span class="bl">Undo</span></button><div class="c-stat"><span>TURN<b>${g.turn}</b></span><span>PLAYING<b class="${g.phasing}">${nm(g.phasing).toUpperCase()}</b></span>${online.active && online.mode === 'remote' ? `<span class="syncdot ${/NOT SAVED/.test(online.sync) ? 'bad' : /saving|connecting/.test(online.sync) ? 'wait' : 'ok'}" title="${esc(online.sync)}" aria-label="${esc(online.sync)}"></span>` : ''}${online.active ? `<span>YOU<b class="${online.mySide() ?? ''}">${online.both() ? 'BOTH' : (online.mySide() ?? 'WATCHING').toUpperCase()}</b></span>` : ''}${DEV || SANDBOX ? `<button class="ico dev" data-seat title="Developer: switch seat (German, Allied, both, watching)" aria-label="Switch seat">${ico('swap')}<span class="bl">Seat</span></button>` : ''}${g.phase === 'admin' || g.phase === 'reinforcement' ? `<span title="Chits drawn this turn (German / Allied)">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span>` : ''}${chatBtn()}<button class="ico" data-modal="boxes" title="Pieces: boxes, arrivals" aria-label="Pieces">${ico('boxes')}</button></div></div>`;
+    <div class="c-stat"><span class="tp" title="Turn ${g.turn}, ${nm(g.phasing)} player turn">T${g.turn} · <b class="${g.phasing}">${nm(g.phasing).toUpperCase()}</b><i class="ph"> · ${STEPS[at].toUpperCase()}</i></span>${online.active && online.mode === 'remote' ? `<span class="syncdot ${/NOT SAVED/.test(online.sync) ? 'bad' : /saving|connecting/.test(online.sync) ? 'wait' : 'ok'}" title="${esc(online.sync)}" aria-label="${esc(online.sync)}"></span>` : ''}${online.active ? `<span>YOU<b class="${online.mySide() ?? ''}">${online.both() ? 'BOTH' : (online.mySide() ?? 'WATCHING').toUpperCase()}</b></span>` : ''}${DEV || SANDBOX ? `<button class="ico dev" data-seat title="Developer: switch seat (German, Allied, both, watching)" aria-label="Switch seat">${ico('swap')}<span class="bl">Seat</span></button>` : ''}${g.phase === 'admin' || g.phase === 'reinforcement' ? `<span title="Chits drawn this turn (German / Allied)">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span>` : ''}${chatBtn()}<button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="View: map layers, colours, reset the camera" aria-label="View">${ico('eye')}<span class="bl">View</span></button><button class="ico" data-modal="boxes" title="Pieces: boxes, arrivals" aria-label="Pieces">${ico('boxes')}<span class="bl">Pieces</span></button></div></div>`;
 }
 function prompt() {
   const chip = online.active && !online.both() && online.mySide() && !g.over ? `<span class="turnchip ${allowed() ? 'go' : 'wait'}">${nm(online.mySide()!)} · ${allowed() ? 'your move' : 'waiting'}</span> ` : '';
@@ -930,7 +940,6 @@ function promptText() {
   const b = g.battle;
   if (reinforcing && b) return '<b>Tap a glowing neighbouring block</b> to bring it in, or tap the map to cancel.';
   if (online.active && !allowed() && !g.over) return online.mySide() == null ? '<b>Watching.</b> Take a seat in the menu.' : `<b>Waiting for the ${nm(actorNow() as E.Side)} player…</b>`;
-  if (note && !b && hist.length) return `${esc(note)} <button data-do="${reg(() => undo())}">Undo</button>`;
   if (g.over) return `<b>${esc(g.over)}</b> <button data-ui="${reg(() => { endHidden = false; })}">Result</button>`;
   if (g.pendingBlow) return `<b>${nm(other(g.units.find((x) => x.id === g.pendingBlow!.unit)!.side))}</b>: attempt to blow the bridge?`;
   if (b?.stage === 'retreat') return '<b>Choose the retreat area.</b>';
@@ -940,7 +949,7 @@ function promptText() {
   switch (g.phase) {
     case 'reinforcement': return '<b>Pick a new block</b>, then a lit entry area.';
     case 'admin': return '<b>Tap a card</b> to play it, or end the step.';
-    case 'movement': return selUnit ? 'Tap a <b>green</b> area, then <b>Move here</b>. <b>Orange</b>: must stop.' : '<b>Tap one of your blocks</b> to move it.';
+    case 'movement': return selUnit ? 'Tap a <b>green</b> area to move there. <b>Orange</b>: must stop there. Wrong move? <b>Undo</b>.' : '<b>Tap one of your blocks</b> to move it, or <b>Can move</b> to go through them.';
     case 'strategic': return '<b>Tap a reserve block</b>, then a green area.';
     case 'combat': case 'btCombat': return m ? `<b>${m} battle${m > 1 ? 's' : ''} to fight.</b> Tap a red area.` : fightable().length ? '<b>Tap a contested area</b> to fight, or end the step.' : 'No battles left.';
     case 'reaction': return `<b>${nm(other(g.phasing))} reserves</b> may react: select a reserve block.`;
@@ -977,6 +986,44 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
     return { label: wait ? `Waiting for ${nm(other(me))}` : `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`, fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; }), dis: wait || !!g.recover.length || !!g.artyPick };
   }
   return { label: `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`, fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; }), dis: !!E.mustFight(g).length || !!g.recover.length || !!g.artyPick || (g.phase === 'supply' && !!g.supplyPending) };
+}
+/* ---------- the actions dock: shortcuts with counts, labelled undo ---------- */
+const lookAt = (a: number) => { const p = center(a); goal = { t: new THREE.Vector3(p.x, 0, p.z), dist: Math.min(dist, 30), pitch }; };
+let canMoveKey = '', canMoveIds: string[] = [];
+/** My blocks that can still move in this step (cached until the game changes). */
+function canMove(): string[] {
+  const k = `${g.turn}${g.phase}${g.phasing}${g.log.length}${hist.length}${online.devSeat}`; if (k === canMoveKey) return canMoveIds; canMoveKey = k;
+  canMoveIds = ['movement', 'reaction', 'btMove'].includes(g.phase) ? g.units.filter((u) => u.area != null && !u.moved && !u.garrison && mine(u.side) && E.moveOptions(g, u.id).length).map((u) => u.id) : [];
+  return canMoveIds;
+}
+/** The next item after the current one, round and round. */
+const nextOf = <T,>(list: T[], cur: T | null) => list[(list.indexOf(cur as T) + 1) % list.length];
+function dockChips(): string {
+  if (g.over || !allowed()) return '';
+  const out: string[] = [], c = (label: string, n: number | null, hot: boolean, fn: (() => void) | null, title = '') => out.push(`<button class="dchip ${hot ? 'hot' : ''}" ${fn ? `data-ui="${reg(fn)}"` : 'disabled'} title="${esc(title || label)}">${esc(label)}${n != null ? `<b>${n}</b>` : ''}</button>`);
+  if (g.battle) return '';
+  if (g.phase === 'admin' || g.phase === 'reinforcement') {
+    const live = g.chits.filter((x) => x.box === 'available' && mine(x.side) && usableNow(x));
+    if (live.length) c('Playable chits', live.length, true, () => { selChit = nextOf(live.map((x) => x.id), selChit); }, 'Tap to pick the next chit that can be played now');
+    if (g.recover.length) c('Recover an asset', null, true, null, 'Choose the asset to bring back (shown above)');
+    if (g.artyPick) c('Artillery attrition', 1, true, null, 'Choose the used artillery asset to eliminate (16.12)');
+    if (online.active && !online.both()) { const o = other(online.mySide() ?? g.phasing); c(`${nm(o)}: ${g.done?.includes(o) ? 'done ✓' : 'working…'}`, null, false, null); }
+  }
+  const mv = canMove();
+  if (mv.length) c('Can move', mv.length, true, () => { selUnit = nextOf(mv, selUnit); const u = g.units.find((x) => x.id === selUnit)!; selArea = u.area; previewArea = null; lookAt(u.area!); }, 'Tap to select the next block that can still move');
+  if (g.phase === 'combat' || g.phase === 'btCombat') {
+    const must = E.mustFight(g), all = fightable();
+    if (must.length) c('Must fight', must.length, true, () => { selArea = nextOf(must, selArea); lookAt(selArea!); });
+    else if (all.length) c('Battles', all.length, false, () => { selArea = nextOf(all, selArea); lookAt(selArea!); });
+  }
+  if (g.phase === 'supply' && g.supplyPending) c('Supply checks to roll', null, true, null);
+  return out.length ? `<div class="dchips">${out.join('')}</div>` : '';
+}
+function undoBtn(): string {
+  if (!allowed() || g.over) return '';
+  const can = hist.length > 0, txt = can ? `Undo: ${hist.label || 'last action'}` : hist.lock ? `Locked: ${hist.lock}` : '';
+  if (!txt) return '';
+  return `<button class="dundo" ${can ? `data-undo` : 'disabled'} title="${esc(can ? txt + ' (Ctrl+Z)' : 'Undo is locked once dice are rolled or something hidden is shown')}">${ico(can ? 'undo' : 'lock')}<span>${esc(txt)}</span></button>`;
 }
 const recoverSel: Record<string, string | null> = {};
 let piecesTab: 'boxes' | 'arrivals' = 'boxes', piecesSide: E.Side | null = null, inspectId: string | null = null;
@@ -1235,9 +1282,9 @@ const relayer = () => { saveLayers(); paintBoard(); };
 function layersHtml() {
   const tintBtn = (v: typeof tint, label: string, icon: string, title: string) => chip(label, tint === v, () => { tint = v; relayer(); }, title, icon);
   const lay = (k: 'numbers' | 'tdn' | 'vp' | 'names', icon: string, title: string) => chip('', layers[k], () => { layers[k] = !layers[k]; relayer(); }, title, icon);
-  return `<div class="modal"><div class="sheet slim"><h3>${ico('layers')} Map <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
+  return `<div class="modal"><div class="sheet slim"><h3>${ico('eye')} View <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
     <h4>Printed</h4><div class="chips">${lay('numbers', 'hash', 'Area numbers and entry letters')}${lay('tdn', 'tree', 'Terrain defence number')}${lay('vp', 'star', 'Victory points')}${lay('names', 'text', 'Place names')}</div>
-    <h4>Colour</h4><div class="chips">${tintBtn('off', '', 'close', 'No colour')}${tintBtn('tdn', '', 'tree', 'Terrain defence')}${tintBtn('zones', '', 'layers', 'Army zones')}${tintBtn('control', '', 'flag', 'Who holds each area')}${tintBtn('supply', '', 'fuel', 'Supply: which of your areas trace supply')}</div></div></div>`;
+    <h4>Colour</h4><div class="chips">${tintBtn('off', '', 'close', 'No colour')}${tintBtn('tdn', '', 'tree', 'Terrain defence')}${tintBtn('zones', '', 'layers', 'Army zones')}${tintBtn('control', '', 'flag', 'Who holds each area')}${tintBtn('supply', '', 'fuel', 'Supply: which of your areas trace supply')}</div><h4>Camera</h4><div class="row"><button data-home>${ico('home')} Reset the camera</button></div></div></div>`;
 }
 function modalHtml() {
   if (modal === 'layers') return layersHtml();
@@ -1269,7 +1316,7 @@ function modalHtml() {
 }
 const inGame = () => HAS_TABLE || DEV_FAKE || SANDBOX || online.mode === 'local';
 /** Draw the interface; if something in it throws, say so on screen instead of leaving a stale picture. */
-function render() { syncView(); try { renderInner(); } catch (e) { console.error(e); $('#ui').innerHTML = `<div class="seatbar err"><span>Display problem: ${esc(String((e as Error)?.message ?? e))}</span>${ubtn('Reload', () => location.reload(), 'primary')}${SANDBOX ? ubtn('Undo last edit', () => { const p = hist.undo(); if (p) { g = p; save(); refresh(); } }) + ubtn('New sandbox game', () => { g = E.newGame(); hist.clear(); save(); refresh(); }) : ''}</div>`; bind($('#ui')); } }
+function render() { syncView(); try { renderInner(); } catch (e) { console.error(e); $('#ui').innerHTML = `<div class="seatbar err"><span>Display problem: ${esc(String((e as Error)?.message ?? e))}</span>${ubtn('Reload', () => location.reload(), 'primary')}${SANDBOX ? ubtn('Undo last edit', () => { const p = hist.undo(g).game; if (p) { g = p; save(); refresh(); } }) + ubtn('New sandbox game', () => { g = E.newGame(); hist.clear(); save(); refresh(); }) : ''}</div>`; bind($('#ui')); } }
 function renderInner() {
   if (document.activeElement?.closest?.('.authform')) return;                                         // do not wipe what is being typed
   acts = {}; actv = {}; n = 0;
@@ -1282,7 +1329,7 @@ function renderInner() {
   const dockMain = alert || ledger() || handCards();
   const keepD = document.querySelector<HTMLElement>('#ui .c-dispatch')?.scrollTop ?? 0;           // a panel being read keeps its place when the screen updates
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = `<div class="tops">${topBar()}${vpStrip(g, reg(() => { scoreOpen = true; }))}</div>` + `<div class="stage">${SANDBOX && SBU.st.sbOpen ? SBU.sandboxPanel() : ''}${seatBar()}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${b ? battleTable() : dispatch()}${decisionBubble()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} View the final map`, () => { endHidden = true; }) + ubtn(`${ico('plus')} New game`, () => { location.href = SANDBOX ? `${homeUrl()}?sandbox=1` : homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p && allowed() ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
+  $('#ui').innerHTML = `<div class="tops">${topBar()}${vpStrip(g, reg(() => { scoreOpen = true; }))}</div>` + `<div class="stage">${SANDBOX && SBU.st.sbOpen ? SBU.sandboxPanel() : ''}${seatBar()}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${b ? battleTable() : dispatch()}${decisionBubble()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} View the final map`, () => { endHidden = true; }) + ubtn(`${ico('plus')} New game`, () => { location.href = SANDBOX ? `${homeUrl()}?sandbox=1` : homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${undoBtn()}${p && allowed() ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
   const ui = $('#ui');
   { const d = ui.querySelector<HTMLElement>('.c-dispatch'); if (d) d.scrollTop = keepD; }
   bind(ui, keepH, keepA);
@@ -1383,7 +1430,7 @@ void startOnline((rg) => { if (heldNext) commitRoll(); const prevG = g;
     rollView = { remote: true, morale: st0 === 'exploit', title: `${nm(side)} ${STAGE_NAME[st0]}`, pos: null, groups: nb.rolls.slice(n0).map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: [] })) };
     if (rollView.groups.length) { heldNext = g; g = prevG; }                                       // the board keeps the old state until the dice land
     if (rollView.groups.length) { const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block'; throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; render(); afterDice(rv); } }); } else rollView = null;       // the other player's dice clear themselves
-  } selUnit = selChit = selArr = null; previewArea = hoverArea = null; hist.clear(); try { save(); } finally { applyingRemote = false; } refresh();
+  } selUnit = selChit = selArr = null; previewArea = hoverArea = null; hist.remote(prevG, g, lockOf); try { save(); } finally { applyingRemote = false; } refresh();
   { const cs = g.checks ?? [], k = cs.findIndex((c) => JSON.stringify(c) === ckLast); const fresh = ckLast === 'null' ? [] : k >= 0 ? cs.slice(k + 1) : []; if (fresh.length) showChecks(fresh); } }, () => { onNet(); syncView(); render(); }, say, () => { try { sessionStorage.setItem('fab-notice', 'That game was deleted by its creator.'); } catch { /* private mode */ } location.href = homeUrl(); });       // the table is gone: nobody stays inside it
 /** Every drawn symbol and counter as SVG, for the editable sheets (docs/maps/vector/fab-*.svg). */
 function sheets() {
