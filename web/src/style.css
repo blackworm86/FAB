@@ -399,3 +399,5 @@ img.cb { border-radius: 7%; box-shadow: 0 1px 0 #e3dccb, 0 2px 0 #b9b2a0, 0 3px 
 .lbrow .b3 { --s: 38px; margin: 4px 10px 4px 2px; } .lbt img.cb { width: 64px; height: 64px; }
 .vkill .b3 { --s: 28px; margin: 2px 8px 2px 2px; filter: grayscale(.4); } .vkill img.cb { width: 32px; height: 32px; }
 .pc img.cb { width: 100%; height: 100%; } .pc .b3 { --s: 34px; margin: 6px auto; }
+/* the chit's full description reads top to bottom (it was split into side-by-side columns) and scrolls on small screens */
+.inspect.slimcard { display: block; }

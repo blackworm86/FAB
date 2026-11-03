@@ -45,7 +45,7 @@ export function vpSheet(g: E.Game, face: (u: E.Unit) => string, close: string, i
 export function endPanel(g: E.Game, face: (u: E.Unit) => string, actions: string) {
   const v = E.victory(g), hist = g.vpHist ?? [], lost = (s: E.Side) => g.elimLarge.filter((id) => g.units.find((u) => u.id === id)?.side === s).length;
   const sudden = /Sudden/.test(g.over ?? ''), title = (g.over ?? '').replace(/^Sudden death victory: (\w+).*/, '$1 Sudden Death Victory');
-  const W = 720, H = 120, n = Math.max(g.lastTurn, 2), x = (i: number) => 24 + (i * (W - 48)) / (n - 1), y = (net: number) => H / 2 - Math.max(-12, Math.min(12, net)) * 3.6;
+  const W = innerWidth < 600 ? 360 : 720, H = innerWidth < 600 ? 140 : 120, n = Math.max(g.lastTurn, 2), x = (i: number) => 24 + (i * (W - 48)) / (n - 1), y = (net: number) => H / 2 - Math.max(-12, Math.min(12, net)) * 3.6;
   const pts = hist.map((net, i) => (net == null ? '' : `${x(i).toFixed(0)},${y(net).toFixed(0)}`)).filter(Boolean).join(' ');
   const chart = `<svg class="vchart" viewBox="0 0 ${W} ${H + 16}" role="img" aria-label="Net VP by turn"><line x1="0" y1="${H / 2}" x2="${W}" y2="${H / 2}" stroke="#ffffff33"/>
     ${track(g).map((t, i) => (t.sd ? `<line x1="${x(i) - 10}" x2="${x(i) + 10}" y1="${y(t.sd[0])}" y2="${y(t.sd[0])}" stroke="#d1432f"/><line x1="${x(i) - 10}" x2="${x(i) + 10}" y1="${y(-t.sd[1])}" y2="${y(-t.sd[1])}" stroke="#d1432f"/>` : '')).join('')}
