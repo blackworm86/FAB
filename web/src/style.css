@@ -478,3 +478,4 @@ img.cb { border-radius: 7%; box-shadow: 0 1px 0 #e3dccb, 0 2px 0 #b9b2a0, 0 3px 
 .log h5 { position: sticky; top: 0; margin: 0; padding: 6px 0 4px; background: #0b0d08; font: 700 12px var(--sfd); letter-spacing: .12em; text-transform: uppercase; color: var(--gold); border-bottom: 1px solid #8d906544; }
 .log .ll { padding: 4px 0 4px 8px; border-left: 3px solid #8d906555; margin: 3px 0; } .log .ll.german { border-left-color: var(--ge); } .log .ll.allied { border-left-color: var(--al); }
 .sw { display: inline-block; min-width: 38px; padding: 2px 6px; border-radius: 10px; background: #333; color: #ccc; font: 700 11px var(--sfd); letter-spacing: .08em; text-align: center; } .sw.on { background: var(--gold); color: #1a1608; }
+@media (max-width: 700px) { .stage .modal { position: fixed; inset: 0; z-index: 120; } }
