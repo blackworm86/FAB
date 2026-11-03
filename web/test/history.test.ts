@@ -30,4 +30,10 @@ describe('undo', () => {
     const r = h.run(g0, () => { g0.x = 99; throw new Error('illegal'); });
     expect(r.error?.message).toBe('illegal'); expect(r.game.x).toBe(1); expect(h.length).toBe(0);
   });
+  it('is not fooled by the same piece coming back with its keys in another order', () => {
+    const h = new History<G>(); let g = game();
+    g = h.run(g, () => { g.units[0].area = 5; }).game;
+    const back = JSON.parse(JSON.stringify(g)) as G; back.units[0] = { area: 5, id: 'a' } as G['units'][0];
+    expect(h.undo(back).game?.units[0].area).toBe(1);
+  });
 });
