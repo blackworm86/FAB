@@ -18,7 +18,6 @@ import { snap, diffFx, FxLayer, fxRow, FX_SAMPLES, type Fx } from './fx';
 import { RULE, ruleHtml } from './rules-text';
 import databaseRules from '../../database.rules.json?raw';
 import { initTouch } from './touch';
-import { buildVp3d } from './vp3d';
 import { throwDice, clearDice, type DiceGroup } from './dice3d';
 
 type MapArea = { id: number; label: [number, number]; polygon: [number, number][] };
@@ -1510,10 +1509,8 @@ let lastInput = performance.now(), tick = 0;
 const fpsEl = new URLSearchParams(location.search).has('fps') ? Object.assign(document.body.appendChild(document.createElement('div')), { id: 'fps' }) : null;
 let fpsN = 0, fpsT = performance.now(), fpsWorst = 0, fpsLast = performance.now();
 for (const ev of ['pointerdown', 'pointermove', 'wheel', 'keydown', 'resize']) window.addEventListener(ev, () => { lastInput = performance.now(); }, { passive: true });
-const VP3D = new URLSearchParams(location.search).has('vp3d'); let vp3d: ReturnType<typeof buildVp3d> | null = null;
 function frame() {
   requestAnimationFrame(frame);
-  if (VP3D) { if (!vp3d) { vp3d = buildVp3d(MAP.areas as never, toWorld, viewRot()); scene.add(vp3d.root); layers.vp = false; paintBoard(); } vp3d.update(performance.now()); lastInput = performance.now(); }
   pumpTextures();
   if (!goal && !anims.length && !rollView && performance.now() - lastInput > 2000 && tick++ % 3) return;   if (fpsEl) { const now = performance.now(); fpsWorst = Math.max(fpsWorst, now - fpsLast); fpsLast = now; fpsN++; if (now - fpsT > 1000) { fpsEl.textContent = `${Math.round(fpsN * 1000 / (now - fpsT))} fps · slowest ${Math.round(fpsWorst)} ms${now - lastInput > 2000 ? ' · idle' : ''}`; fpsN = 0; fpsT = now; fpsWorst = 0; } }
     // idle: about 20 frames a second is enough for the floating markers, and spares the battery
