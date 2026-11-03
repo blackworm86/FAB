@@ -9,7 +9,7 @@ import { CHIT_FILES, CHIT_BOXES } from './chit-art';
 export const CHIT_ART = { ...CHIT_BOXES } as unknown as { [K in keyof typeof CHIT_BOXES]: readonly number[] } & Record<keyof typeof CHIT_FILES, string>;
 const blobUri = (b: Blob) => new Promise<string>((ok, bad) => { const r = new FileReader(); r.onload = () => ok(r.result as string); r.onerror = () => bad(r.error); r.readAsDataURL(b); });
 /** The user's redrawn markers and Special Action art (public/chit/mk_*, sae_*, sa_*), loaded with the other pictures instead of living in the code. */
-const MARKERS = ['X', 'FW', 'RA', 'RB', 'DIS', 'REC', 'E', 'B', 'P', 'R5', 'R6', 'R7', 'A7', 'A56', 'GI', 'G', 'OOS'], SAE = ['de_5pz_3', 'de_6pz_4', 'de_6pz_6', 'us_1a_5', 'us_1a_6', 'us_3a_7'];
+const MARKERS = ['FUEL', 'X', 'FW', 'RA', 'RB', 'DIS', 'REC', 'E', 'B', 'P', 'R5', 'R6', 'R7', 'A7', 'A56', 'GI', 'G', 'OOS'], SAE = ['de_5pz_3', 'de_6pz_4', 'de_6pz_6', 'us_1a_5', 'us_1a_6', 'us_3a_7'];
 const ART_FILES: Record<string, string> = { ...CHIT_FILES, ...Object.fromEntries([...MARKERS.map((m) => `mk_${m}`), ...SAE.map((x) => `sae_${x}`), 'sa_german', 'sa_allied'].map((k) => [k, `${k}.png`])) };
 const ART = CHIT_ART as unknown as Record<string, string>;
 const pic = (href: string) => `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160"><image href="${href}" width="160" height="160"/></svg>`;
@@ -77,7 +77,7 @@ function marker(name: string): string | null {
 }
 
 /** 8.1: the reusable Special Action is a wooden block with a Special Action label (not a counter). The label art can be replaced by the
- *  drawings in docs/maps/vector/blank/special-action-blocks.svg (drawn art: public/chit/sa_german.png, sa_allied.png). */
+ *  drawings in docs/maps/vector/special-action-blocks.svg (drawn art: public/chit/sa_german.png, sa_allied.png). */
 export function saBlockSvg(side: 'german' | 'allied') {
   if (ART[`sa_${side}`]) return pic(ART[`sa_${side}`]);
   const bg = side === 'german' ? '#b7bbc1' : '#8fa83f', ink = '#141414';
@@ -105,7 +105,7 @@ export const mapMarkerSvg = (code: string): string | null => {
 const ART_NAME: Record<string, string> = { 'Blown Bridge': 'X', 'Field Works': 'FW', 'River Assault': 'RA', 'Road Block': 'RB', 'Disordered / Recovering': 'DIS', 'Exploitation': 'E', 'Boundary Crossing': 'B' };
 const ART_ID: Record<string, string> = { back_blown: 'X', back_roadblock: 'RB', back_recovering: 'REC', back_pooled: 'P', back_zone5_de: 'R5', back_zone6_de: 'R6', back_zone7_de: 'R7', back_zone7_al: 'A7', back_zones56_al: 'A56' };
 function redrawn(c: Chit | Counter): string | null {
-  const id = (c as Counter).id ?? '', code = c.kind === 'event_greif_interdict' ? 'GI' : c.kind === 'event_greif_bridge' ? 'G' : ART_ID[id] ?? ((c.kind === 'marker' || c.kind === 'back') ? ART_NAME[c.name] : undefined);
+  const id = (c as Counter).id ?? '', code = c.kind === 'fuel' && c.name === 'Fuel Asset' ? 'FUEL' : c.kind === 'event_greif_interdict' ? 'GI' : c.kind === 'event_greif_bridge' ? 'G' : ART_ID[id] ?? ((c.kind === 'marker' || c.kind === 'back') ? ART_NAME[c.name] : undefined);
   if (!code || !ART[`mk_${code}`]) return null;
   const t = (c as Counter).turn, num = typeof t === 'number' ? `<rect x="9" y="9" width="26" height="30" fill="#fff" opacity=".92"/>${txt(String(t), 22, 34, 28, { anchor: 'middle' })}` : '';
   return `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160"><image href="${ART[`mk_${code}`]}" width="160" height="160"/>${num}</svg>`;
