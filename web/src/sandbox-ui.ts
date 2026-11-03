@@ -44,7 +44,7 @@ export function hotCoverHtml() {
   if (!st.hotCover) return '';
   return `<div class="hotcover"><div><small>Hotseat</small><h2 class="${st.hotCover}">${nm(st.hotCover)} player</h2><p>Pass the device. The other side's hidden blocks are covered until you tap.</p><button class="primary" data-ui="${reg(() => { setDevSeat(st.hotCover!); st.hotCover = null; refresh(); })}">${ico('next')} I am the ${nm(st.hotCover)} player</button></div></div>`;
 }
-function sbReset(opts: Partial<E.Opts>) {
+export function sbReset(opts: Partial<E.Opts>) {
   if (!confirm('Reset the sandbox and start a new game from the first turn?')) return;
   M.g = E.newGame(undefined, { fuel: true, ...opts }); hist.clear(); st.sbPlace = null; M.selUnit = M.selChit = M.selArr = null; M.selArea = null; M.previewArea = null; M.rollView = null;
   if (st.sbHot) { setDevSeat(M.g.phasing); st.hotCover = M.g.phasing; }
