@@ -6,7 +6,9 @@ import { visibleTo, other, type Game, type Side, type Unit } from './game';
 import { alias } from './redact';
 
 export type UnitSecret = Pick<Unit, 'name' | 'cls' | 'q' | 'max' | 'str' | 'code' | 'symbol' | 'ech' | 'entry' | 'arrival' | 'chitId' | 'from'>;
-export interface Priv { salt: string; secrets: Record<string, UnitSecret> }
+export interface Priv { salt: string; secrets: Record<string, UnitSecret>; epoch?: Record<string, number> }
+/** A block's opaque id for this seat. It changes (new epoch) each time a revealed block is hidden again, so the other side cannot link it to what it saw. */
+export const aliasOf = (priv: Pick<Priv, 'salt' | 'epoch'>, id: string) => { const e = priv.epoch?.[id]; return alias(priv.salt, e ? `${id}#${e}` : id); };
 export type Reveal = UnitSecret & { id: string };
 export type Reveals = Record<string, Reveal>;                 // by alias
 const KEYS = ['name', 'cls', 'q', 'max', 'str', 'code', 'symbol', 'ech', 'entry', 'arrival', 'chitId', 'from'] as const;
@@ -20,15 +22,16 @@ export const secretsOf = (g: Game, side: Side): Record<string, UnitSecret> => Ob
 export const isPlaceholder = (u: Unit) => u.name === 'Hidden block';
 
 /** The shared copy: every block nobody may see is renamed with an opaque id and blanked. `enemyAlias` maps the real ids of the other side's blocks we learned about (reveals) back to their aliases. */
-export function toPublic(g: Game, side: Side, salt: string, enemyAlias: Map<string, string>): string {
+export function toPublic(g: Game, side: Side, salt: string | Pick<Priv, 'salt' | 'epoch'>, enemyAlias: Map<string, string>): string {
+  const key = typeof salt === 'string' ? { salt } : salt;
   const hidden = g.units.filter((u) => !visibleTo(g, u, 'spectator'));
   const pairs: [string, string][] = [], names: string[] = [];
-  for (const u of hidden) { const a = u.side === side ? alias(salt, u.id) : enemyAlias.get(u.id); if (a) { pairs.push([u.id, a]); if (u.name.length > 2) names.push(u.name); } }
+  for (const u of hidden) { const a = u.side === side ? aliasOf(key, u.id) : enemyAlias.get(u.id); if (a) { pairs.push([u.id, a]); if (u.name.length > 2) names.push(u.name); } }
   const copy = JSON.parse(swap(JSON.stringify(g), pairs)) as Game;
   const al = new Set(pairs.map(([, a]) => a));
   for (const u of copy.units) if (al.has(u.id)) Object.assign(u, BLANK);
   names.sort((a, b) => b.length - a.length);
-  const clean = (l: string) => names.reduce((t, n) => t.split(n).join('a hidden block'), l);
+  const esc = (n: string) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), clean = (l: string) => names.reduce((t, n) => t.replace(new RegExp(`(?<![\\w+])${esc(n)}(?![\\w])`, 'g'), 'a hidden block'), l);      // whole names only: '1 SS' must not leave part of '91 SS'
   copy.log = copy.log.slice(-120).map(clean);
   if (copy.checks) copy.checks = copy.checks.map((c) => ({ ...c, who: clean(c.who) }));                       // morale checks name their unit too
   return JSON.stringify(copy);
@@ -37,7 +40,10 @@ export function toPublic(g: Game, side: Side, salt: string, enemyAlias: Map<stri
 /** The game this seat plays on: the shared copy with this seat's own details put back, and the details of anything the other side has revealed. */
 export function compose(pub: Game, priv: Priv | null, reveals: Reveals): { game: Game; enemyAlias: Map<string, string> } {
   const enemyAlias = new Map<string, string>(), pairs: [string, string][] = [], details = new Map<string, UnitSecret>();
-  if (priv) for (const [id, s] of Object.entries(priv.secrets)) { const a = alias(priv.salt, id); pairs.push([a, id]); details.set(id, s); }
+  if (priv) for (const [id, s] of Object.entries(priv.secrets)) {
+    pairs.push([aliasOf(priv, id), id]); details.set(id, s);
+    for (let e = (priv.epoch?.[id] ?? 0) - 1; e >= 0; e--) pairs.push([aliasOf({ salt: priv.salt, epoch: { [id]: e } }, id), id]);      // the other seat may still write an older id it had not yet seen replaced
+  }
   for (const [a, r] of Object.entries(reveals)) if (!pairs.some(([x]) => x === a)) { pairs.push([a, r.id]); details.set(r.id, r); enemyAlias.set(r.id, a); }
   const present = new Set(pub.units.map((u) => u.id)), use = pairs.filter(([a]) => present.has(a));
   const game = JSON.parse(swap(JSON.stringify(pub), use)) as Game;
@@ -46,10 +52,11 @@ export function compose(pub: Game, priv: Priv | null, reveals: Reveals): { game:
 }
 
 /** The blocks of `side` standing in `area`, as reveals (for the owner's client to publish when a battle there begins). */
-export function revealsIn(g: Game, side: Side, area: number, salt: string): Reveals {
-  return Object.fromEntries(g.units.filter((u) => u.side === side && u.area === area && !u.garrison).map((u) => [alias(salt, u.id), { id: u.id, ...secretOf(u) }]));
+export function revealsIn(g: Game, side: Side, area: number, salt: string | Pick<Priv, 'salt' | 'epoch'>): Reveals {
+  const key = typeof salt === 'string' ? { salt } : salt;
+  return Object.fromEntries(g.units.filter((u) => u.side === side && u.area === area && !u.garrison).map((u) => [aliasOf(key, u.id), { id: u.id, ...secretOf(u) }]));
 }
-export function revealOf(g: Game, unitId: string, salt: string): Reveals { const u = g.units.find((x) => x.id === unitId); return u ? { [alias(salt, u.id)]: { id: u.id, ...secretOf(u) } } : {}; }
+export function revealOf(g: Game, unitId: string, salt: string | Pick<Priv, 'salt' | 'epoch'>): Reveals { const key = typeof salt === 'string' ? { salt } : salt, u = g.units.find((x) => x.id === unitId); return u ? { [aliasOf(key, u.id)]: { id: u.id, ...secretOf(u) } } : {}; }
 export { other };
 
 /** The reveals worth publishing: new blocks, and blocks whose details changed since they were last published (a block that lost a step and fights again). */
@@ -74,19 +81,30 @@ export class SplitSeat {
   /** The game this seat plays on, from the shared copy (remembers the aliases of what the other side revealed). */
   open(pub: Game): Game { const r = compose(pub, this.priv, this.reveals); this.enemyAlias = r.enemyAlias; return r.game; }
   /** What to write after a move: the shared copy, and this seat's private details when they changed. */
-  save(g: Game): { pub: string; priv?: Priv } {
+  save(g: Game): { pub: string; priv?: Priv; gone?: string[] } {
     if (!this.priv) throw new Error('private details not loaded yet');
-    const pub = toPublic(g, this.side, this.priv.salt, this.enemyAlias), secrets = secretsOf(g, this.side);
-    if (JSON.stringify(secrets) === JSON.stringify(this.priv.secrets)) return { pub };
-    this.priv = { salt: this.priv.salt, secrets }; return { pub, priv: this.priv };
+    const gone: string[] = [], epoch = { ...(this.priv.epoch ?? {}) }, want = this.wanted(g);
+    for (const [a, r] of Object.entries(this.reveals)) {                                         // a revealed block hidden again: withdraw the reveal and give it a new opaque id
+      const u = g.units.find((x) => x.id === r.id);
+      if (u && u.side === this.side && !(a in want)) { gone.push(a); delete this.reveals[a]; epoch[u.id] = (epoch[u.id] ?? 0) + 1; }
+    }
+    const secrets = secretsOf(g, this.side), changed = gone.length > 0 || JSON.stringify(secrets) !== JSON.stringify(this.priv.secrets);
+    if (changed) this.priv = { salt: this.priv.salt, secrets, epoch };
+    const pub = toPublic(g, this.side, this.priv, this.enemyAlias);
+    return changed ? { pub, priv: this.priv, ...(gone.length ? { gone } : {}) } : { pub };
   }
   /** The reveals this seat has to publish now (battle area once both are ready, an Intelligence target); they count as published from here on. */
   due(g: Game): Reveals {
     if (!this.priv) return {};
+    const fresh = freshReveals(this.reveals, this.wanted(g)); this.reveals = { ...this.reveals, ...fresh }; return fresh;
+  }
+  /** What the rules let the other side see right now: the battle area once both are ready, face-up blocks, an Intelligence target. */
+  wanted(g: Game): Reveals {
+    if (!this.priv) return {};
     let want: Reveals = {};
-    const b = g.battle; if (b && b.stage === 'setup' && (b.ready?.length ?? 0) === 2) want = { ...want, ...revealsIn(g, this.side, b.area, this.priv.salt) };
-    for (const u of g.units) if (u.side === this.side && u.up != null && u.up === u.area) want[alias(this.priv.salt, u.id)] = { id: u.id, ...secretOf(u) };            // blocks that are face-up (a battle, or entering a face-up area) are shown to the other side
-    if (g.revealed && g.units.find((u) => u.id === g.revealed)?.side === this.side) want = { ...want, ...revealOf(g, g.revealed, this.priv.salt) };
-    const fresh = freshReveals(this.reveals, want); this.reveals = { ...this.reveals, ...fresh }; return fresh;
+    const b = g.battle; if (b && b.stage === 'setup' && (b.ready?.length ?? 0) === 2) want = { ...want, ...revealsIn(g, this.side, b.area, this.priv) };
+    for (const u of g.units) if (u.side === this.side && u.up != null && u.up === u.area) want[aliasOf(this.priv, u.id)] = { id: u.id, ...secretOf(u) };            // blocks that are face-up (a battle, or entering a face-up area) are shown to the other side
+    if (g.revealed && g.units.find((u) => u.id === g.revealed)?.side === this.side) want = { ...want, ...revealOf(g, g.revealed, this.priv) };
+    return want;
   }
 }

@@ -21,7 +21,7 @@ export interface Store {
   /** Take the seat for `side` (or give up every seat when null); resolves an error message, or '' on success. */
   sit(side: Side | null): Promise<string>;
   /** Each seat's private block details, and the details the other side may see (see engine/src/split.ts). */
-  watchPriv(next: (p: Priv | null) => void): void; setPriv(p: Priv): Promise<void>; watchReveals(next: (r: Reveals) => void): void; mergeReveals(r: Reveals): Promise<void>;
+  watchPriv(next: (p: Priv | null) => void): void; setPriv(p: Priv): Promise<void>; watchReveals(next: (r: Reveals) => void): void; mergeReveals(r: Reveals): Promise<void>; dropReveals(keys: string[]): Promise<void>;
   /** The players' chat: the last messages, live; and sending one as the seated side. */
   watchChat(next: (m: ChatMsg[]) => void): void; sendChat(side: Side, text: string): Promise<string>;
   /** Accounts and the lobby. */
@@ -108,7 +108,8 @@ export async function push(g: Game) {
   try {
     if (out.priv) await store.setPriv(out.priv);
     lastJson = out.pub; pubDoc = { rev: online.rev, json: out.pub, by: online.uid }; online.sync = 'saving'; onChange();
-    await store.setState(pubDoc); online.sync = `saved ${new Date().toLocaleTimeString()}`; onChange();
+    await store.setState(pubDoc); if (out.gone?.length) await store.dropReveals(out.gone);           // a block hidden again: its old reveal goes
+    online.sync = `saved ${new Date().toLocaleTimeString()}`; onChange();
   } catch (e) { const m = String((e as { message?: string })?.message ?? e); online.sync = 'NOT SAVED: ' + m; notify('Not saved: ' + m); fail(m); }
   clearTimeout(dog); savedLater();
 }

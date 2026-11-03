@@ -20,6 +20,7 @@ export function fakeStore(side: Side): Store {
     watchChat: (next) => on('fab-fake-chat', () => next(get<ChatMsg[]>('fab-fake-chat') ?? [])),
     sendChat: async (s, text) => { put('fab-fake-chat', [...(get<ChatMsg[]>('fab-fake-chat') ?? []), { id: String(Date.now()), uid: 'u-' + s, side: s, name: s, text, t: Date.now() }].slice(-100)); return ''; },
     watchReveals: (next) => on(R, () => next(get<Reveals>(R) ?? {})), mergeReveals: async (r) => put(R, { ...(get<Reveals>(R) ?? {}), ...r }),
+    dropReveals: async (keys) => { const r = { ...(get<Reveals>(R) ?? {}) }; for (const k of keys) delete r[k]; put(R, r); },
     account: (): Account => ({ uid: 'u-' + side, name: side, email: '', guest: false, admin: false }), onAccount: () => undefined,
     google: none, emailSignIn: none, emailRegister: none, resetPassword: none, signOut: none, freeSeat: none, createMatch: async () => '!Not available in the development table', deleteMatch: none, leaveMatch: none, watchMyMatches: (next) => next([]),
   };

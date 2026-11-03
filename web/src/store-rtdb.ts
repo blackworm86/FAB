@@ -67,6 +67,7 @@ export async function rtdbStore(table: string): Promise<Store | null> {
     async setPriv(p: Priv) { const s = (await rt.get(G('seats'))).val() ?? {}, v = seatOf(s); if (v) await rt.set(G(`priv/${v}`), { salt: p.salt, secrets: enc(p.secrets) }); },
     watchReveals: (next: (r: Reveals) => void) => { rt.onValue(G('reveals'), (s) => next(dec(s.val())), () => next({})); },
     async mergeReveals(r: Reveals) { await rt.update(G('reveals'), enc(r)); },
+    async dropReveals(keys: string[]) { await rt.update(G('reveals'), Object.fromEntries(keys.map((k) => [ek(k), null]))); },
     watchChat: (next) => { rt.onValue(rt.query(G('chat'), rt.limitToLast(100)), (s) => { const out: ChatMsg[] = []; s.forEach((c) => { const v = c.val(); out.push({ id: c.key!, uid: v.uid, side: v.side, name: v.name, text: String(v.text ?? ''), t: v.t }); }); next(out); }, () => next([])); },
     async sendChat(side: Side, text: string) { try { await rt.push(G('chat'), { uid: account.uid, side, name: seatName().slice(0, 60), text, t: Date.now() }); return ''; } catch (e) { return msg(e); } },
     async sit(side: Side | null) {

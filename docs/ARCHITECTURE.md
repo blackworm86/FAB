@@ -47,6 +47,7 @@ The rules are in `database.rules.json`. **After changing them, publish them** (A
 - The shared `state` holds every block nobody may see (6.24) as a placeholder: opaque id (salted hash), no name, strength or quality. Names in the log and in morale checks are replaced by "a hidden block".
 - Each seat's real details sit in `priv/{side}`, readable only by that seat. A browser rebuilds its own game with `compose(pub, priv, reveals)`.
 - When a rule shows a block (a battle once both pressed Ready, face-up blocks, Intelligence Gathering), the owner's browser publishes its details to `reveals` (`SplitSeat.due`).
+- When that block is hidden again, the owner's browser deletes its reveal and gives it a new opaque id (`epoch` in `priv`, `SplitSeat.save`), so the other side cannot link it to what it saw. Names in the shared log are replaced as whole words only.
 - `engine/test/split.test.ts` plays into turn 2 and checks that no hidden block's name appears anywhere in the shared copy.
 
 ## 5. Referee-lite: checking the other browser (Option 1)
