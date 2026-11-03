@@ -465,3 +465,8 @@ img.cb { border-radius: 7%; box-shadow: 0 1px 0 #e3dccb, 0 2px 0 #b9b2a0, 0 3px 
   .c-bar.b .dchips { flex: 1 1 0; min-width: 0; order: 1; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; } .c-bar.b .dchips::-webkit-scrollbar { display: none; }
   .c-bar.b .dundo { order: 2; } .c-bar.b .go { order: 3; } .dchip { flex: none; }
 }
+@media (max-width: 700px) {
+  .chat { background: #0b0d08; animation: sheetup .22s ease-out; border-bottom: 0; padding-bottom: env(safe-area-inset-bottom); }
+  .chat .chead { padding-top: 14px; position: relative; } .chat .chead::before { content: ""; position: absolute; top: 5px; left: 50%; width: 40px; height: 4px; margin-left: -20px; border-radius: 2px; background: #8d9065aa; }
+  .cquick button { min-height: 36px; padding: 4px 12px; font-size: 13px; }
+}

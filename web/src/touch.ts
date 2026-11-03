@@ -5,7 +5,7 @@ export function initTouch(root: HTMLElement) {
   /* ---- swipe down to close a sheet ---- */
   let sheet: HTMLElement | null = null, y0 = 0, dy = 0;
   root.addEventListener('touchstart', (e) => {
-    const s = (e.target as HTMLElement).closest<HTMLElement>('.modal > .sheet'); if (!s || !phone() || s.scrollTop > 0) { sheet = null; return; }
+    const t0 = e.target as HTMLElement, s = t0.closest<HTMLElement>('.modal > .sheet') ?? (t0.closest('.chead') ? t0.closest<HTMLElement>('.chat') : null); if (!s || !phone() || s.scrollTop > 0) { sheet = null; return; }
     if ((e.target as HTMLElement).closest('input, select, textarea, .pcgrid, .chips')) { sheet = null; return; }
     sheet = s; y0 = e.touches[0].clientY; dy = 0;
   }, { passive: true });
@@ -15,7 +15,7 @@ export function initTouch(root: HTMLElement) {
   }, { passive: true });
   root.addEventListener('touchend', () => {
     if (!sheet) return; const s = sheet; sheet = null; s.style.transition = 'transform .18s'; 
-    if (dy > 90) { s.style.transform = 'translateY(100%)'; setTimeout(() => s.querySelector<HTMLElement>('[aria-label="Close"], [data-modal=""]')?.click(), 160); }
+    if (dy > 90) { s.style.transform = 'translateY(100%)'; setTimeout(() => s.querySelector<HTMLElement>('[aria-label="Close"], [aria-label="Close chat"], [data-modal=""]')?.click(), 160); }
     else s.style.transform = '';
   });
 

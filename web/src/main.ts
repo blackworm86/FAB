@@ -498,13 +498,13 @@ const markSeen = () => { const last = online.chat.at(-1)?.t ?? 0; if (last > cha
 let chatKnown = -1;
 setChatListener((m: ChatMsg[]) => {                                                                   // a short banner for a new message while the chat is closed
   const fresh = chatKnown < 0 ? [] : m.filter((x) => x.t > chatKnown && x.uid !== online.uid); chatKnown = Math.max(chatKnown, m.at(-1)?.t ?? 0);
-  if (chatOpen) { markSeen(); const l = document.getElementById('chat-list'); if (l && document.activeElement?.id === 'chat-in') { l.innerHTML = chatRows(); l.scrollTop = l.scrollHeight; } } else if (fresh.length) { const x = fresh.at(-1)!; say(`${nm(x.side)}: ${x.text}`); }
+  if (chatOpen) { markSeen(); const l = document.getElementById('chat-list'); if (l) { l.innerHTML = chatRows(); l.scrollTop = l.scrollHeight; } } else if (fresh.length) { const x = fresh.at(-1)!; say(`${nm(x.side)}: ${x.text}`); }
 });
 async function chatSend(text: string) { const e = await sendChat(text); if (e) { say(/permission/i.test(e) ? 'Chat not allowed by the database: the game\'s security rules need publishing (Admin > Update rules).' : e); render(); } else { chatDraft = ''; const i = document.getElementById('chat-in') as HTMLInputElement | null; if (i) i.value = ''; } }
 function chatBtn() { if (!chatOn()) return ''; const n = unread(); return `<button class="ico chatbtn ${chatOpen ? 'on' : ''}" data-ui="${reg(() => { chatOpen = !chatOpen; if (chatOpen) markSeen(); })}" title="Chat" aria-label="Chat${n ? `, ${n} new` : ''}">${ico('chat')}${n ? `<i class="unread">${n > 9 ? '9+' : n}</i>` : ''}<span class="bl">Chat</span></button>`; }
 function chatRows() {
   const time = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  return online.chat.map((m) => `<div class="cm ${m.side} ${m.uid === online.uid ? 'me' : ''}"><small><b>${esc(m.name || nm(m.side))}</b> · ${nm(m.side)} · ${time(m.t)}</small><p>${esc(m.text)}</p></div>`).join('') || '<p class="hint">No messages yet.</p>';
+  return online.chat.map((m) => `<div class="cm ${m.side} ${m.uid === online.uid ? 'me' : ''}"><small>${m.name && m.name.toLowerCase() !== m.side ? `<b>${esc(m.name)}</b> · ` : ''}${nm(m.side)} · ${time(m.t)}</small><p>${esc(m.text)}</p></div>`).join('') || '<p class="hint">No messages yet.</p>';
 }
 function chatHtml() {
   if (!chatOn() || !chatOpen) return '';
