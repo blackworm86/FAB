@@ -198,6 +198,15 @@ function disc(kind: 'x' | 'point', size: number) {
 }
 /** The same marker as a sprite: it always faces the camera, so the player can read it from any angle. */
 function discSprite(kind: 'x' | 'point', size: number) { disc(kind, size); const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTex.get(kind)!, transparent: true, depthTest: false })); sp.scale.set(size * 2, size * 2, 1); sp.renderOrder = 6; return sp; }
+/** Battle formation (docs/design): the battle area is shown as an ordered table, not squeezed into the polygon. Each side faces the other across the
+ *  middle line: its blocks in the front row, its assets in the row behind; rows wrap at 5 and stay centred. The rest of the map is blurred, so the
+ *  formation may reach past the area border. */
+function battleSpot(b: E.Battle, sd: E.Side, kind: 'unit' | 'asset', i: number, n: number) {
+  const base = toWorld(...POLE.get(b.area)!), dir = sd === 'german' ? 1 : -1, per = 5, row = Math.floor(i / per), inRow = Math.min(per, n - row * per), col = i % per;
+  const units = E.unitsIn(g, b.area, sd).length, unitRows = Math.max(1, Math.ceil(units / per));
+  const depth = kind === 'unit' ? 1.35 + row * 1.9 : 1.35 + unitRows * 1.9 + 0.5 + row * 1.7;
+  return { x: base.x + (col - (inRow - 1) / 2) * (kind === 'unit' ? 1.95 : 1.75), z: base.z + dir * depth };
+}
 /** The battle on the table: each side's assigned assets as cardboard counters in a row behind its blocks, with a red cross to take one back before the battle starts. */
 function drawBattleTable(b: E.Battle, spot: (id: number, x: number, z: number, r: number) => { x: number; z: number }) {
   const base = toWorld(...POLE.get(b.area)!);
@@ -205,7 +214,7 @@ function drawBattleTable(b: E.Battle, spot: (id: number, x: number, z: number, r
     const live = sd === b.attacker ? ['setup', 'attArty'] : ['setup', 'attArty', 'defArty'], spent = (arty: boolean) => arty && !live.includes(b.stage);
     const all = [...b.assets[sd], ...(b.air[sd] ? [b.air[sd]!.id] : [])], ids = all.filter((id) => { const c = E.chit(g, id); return !spent(E.isArty(c) || (c.kind === 'air_mission' && b.air[sd]?.mode === 'arty')); }), dir = sd === 'german' ? 1 : -1;     // artillery leaves the table once it has fired
     ids.forEach((id, i) => {
-      const m = chit3d(E.chit(g, id)), at = spot(b.area, base.x + (i - (ids.length - 1) / 2) * 1.9, base.z + dir * 2.2, 0.8), x = at.x, z = at.z; m.userData.chit = id; m.position.set(x, 0.06, z); pieces.add(m);
+      const m = chit3d(E.chit(g, id)), at = battleSpot(b, sd, 'asset', i, ids.length), x = at.x, z = at.z; void spot; m.userData.chit = id; m.position.set(x, 0.06, z); pieces.add(m);
       if (b.stage === 'setup' && mine(sd)) { const d = disc('x', 0.42); d.position.set(x + 0.5, 0.2, z - 0.5); d.userData.chit = id; pieces.add(d); }
       if (tgt?.units.has(id)) { const ring = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.25, 40), new THREE.MeshBasicMaterial({ color: 0x37d67a, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.14, z); markers.add(ring); }
     });
@@ -250,6 +259,12 @@ function drawPieces() {
     };
     let lay = place(false);
     if (lay.tight && order.length > 1) { taken.set(a.id, lay.saved); const col = place(true); if (!col.tight) lay = col; else { taken.set(a.id, lay.saved); lay = place(false); } }
+    if (cont && lay.tight && g.battle?.area !== a.id) {                                             // a crowded contested area: the two sides in facing rows (German row, Allied row), never mixed or stacked
+      taken.set(a.id, lay.saved); const pl = toWorld(...POLE.get(a.id)!);
+      lay.spots = order.map((u) => { const same = order.filter((x) => x.side === u.side), i = same.indexOf(u), per = 4, rw = Math.floor(i / per), inRow = Math.min(per, same.length - rw * per), dir = u.side === 'german' ? 1 : -1;
+        return { x: pl.x + (i % per - (inRow - 1) / 2) * 1.75, z: pl.z + dir * (1.3 + rw * 1.75) }; });
+    }
+    if (g.battle?.area === a.id) { const b = g.battle; lay.spots = order.map((u) => { const same = order.filter((x) => x.side === u.side); return battleSpot(b, u.side, 'unit', same.indexOf(u), same.length); }); }
     order.forEach((u, n) => {
       const hid = !seen(u), m = block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
       const flat = cont && !hid && !u.garrison && u.up === a.id;                                                           // revealed blocks lie flat, label up, while the area is contested
@@ -576,8 +591,10 @@ function syncBattleCam() {
   if (b && key !== frameKey) {
     if (!inBattle) saved = { t: target.clone(), dist, pitch };
     const pts = areaWorld(b.area), xs = pts.map((q) => q.x), zs = pts.map((q) => q.z), w = Math.max(...xs) - Math.min(...xs), h = Math.max(...zs) - Math.min(...zs);
-    const c = new THREE.Vector3((Math.max(...xs) + Math.min(...xs)) / 2, 0, (Math.max(...zs) + Math.min(...zs)) / 2), r = Math.max(w, h) / 2 + 6, fit = Math.max(18, r * (innerWidth < innerHeight ? 4.2 : 3.0));
+    const c = new THREE.Vector3((Math.max(...xs) + Math.min(...xs)) / 2, 0, (Math.max(...zs) + Math.min(...zs)) / 2), r = Math.max(Math.max(w, h) / 2 + 6, 1.35 + 2 * 1.9 + 1.2 + 4), fit = Math.max(18, r * (innerWidth < innerHeight ? 4.2 : 3.0));
 
+    if (!wide) { const pl = toWorld(...POLE.get(b.area)!); c.set(pl.x, 0, pl.z); }                                  // the battle formation is centred on the area's pole
+    if (!wide && b.stage !== 'setup' && innerWidth < 700) { const k = 4.5, yr = viewRot(); c.x -= Math.sin(yr) * k; c.z += Math.cos(yr) * k; }   // phones: the fire report covers the lower screen, so the table sits higher
     lock = wide ? null : { c, d: fit }; goal = { t: c, dist: wide ? fit * 1.8 : fit, pitch: 1.15, fast: true }; yaw = viewRot();
   }
   if (!b) { reinforcing = false; lock = null; if (inBattle && saved) goal = saved; }
@@ -717,7 +734,9 @@ function renderFocus() {
   const poly = areaWorld(b!.area), hidden: THREE.Object3D[] = [], bg = scene.background;
   const hide = (o: THREE.Object3D) => { if (o.visible) { o.visible = false; hidden.push(o); } };
   hide(board); hide(table); for (const [id, m] of overlays) if (id !== b!.area) hide(m);
-  for (const grp of [pieces, markers]) for (const o of grp.children) { const a = o.userData.anchor ? pieces.children.find((x) => x.userData.unit === o.userData.anchor) : null, q = a ?? o; if (!inPoly(q.position.x, q.position.z, poly)) hide(o); }      // a marker follows the piece it belongs to
+  for (const grp of [pieces, markers]) for (const o of grp.children) { const a = o.userData.anchor ? pieces.children.find((x) => x.userData.unit === o.userData.anchor) : null, q = a ?? o, uid = (q.userData.unit ?? q.userData.anchor) as string | undefined, cid = q.userData.chit as string | undefined;
+    const ofBattle = (uid && g.units.find((u) => u.id === uid)?.area === b!.area) || (cid && (b!.assets.german.includes(cid) || b!.assets.allied.includes(cid) || b!.air.german?.id === cid || b!.air.allied?.id === cid));      // the battle formation may reach past the border: keep it sharp
+    if (!ofBattle && !inPoly(q.position.x, q.position.z, poly)) hide(o); }      // a marker follows the piece it belongs to
   focusMesh.visible = true; scene.background = null; renderer2.render(scene, cam); scene.background = bg; focusMesh.visible = false; for (const o of hidden) o.visible = true;
 }
 function placeFocus() {

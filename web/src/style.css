@@ -538,3 +538,8 @@ body.guide-short .gx, body:not(.guide-short) .gs { display: none !important; }
   .c-bar.b .go { max-width: 54vw; white-space: nowrap; font-size: 13px !important; padding-inline: 12px !important; letter-spacing: .06em; }
 }
 @media (min-width: 701px) { .c-bar.b .guidebtn { margin-left: auto; } }
+body:has(.hotcover) #leaders, body:has(.hotcover) #fx, body:has(.hotcover) #marks, body:has(.hotcover) #badges, body:has(.hotcover) #dice { display: none !important; }      /* the pass-the-device cover hides everything drawn over the map */
+/* battle report: a side panel on wide screens so the battle table stays in view; shorter on phones */
+.dock { position: relative; }
+@media (min-width: 1000px) { .dock > .c-ledger { position: absolute; right: 12px; bottom: calc(100% + 8px); width: min(470px, 36vw); max-height: 62vh; border: 1px solid var(--line); z-index: 6; } }
+@media (max-width: 700px) { .dock > .c-ledger { max-height: 34vh; } }
