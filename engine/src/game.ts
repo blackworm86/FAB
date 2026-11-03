@@ -79,7 +79,8 @@ export const boxOf = (g: Game, side: Side, box: Chit['box']) => g.chits.filter((
 let secure: (() => number) | null = null;
 export const setRandom = (f: (() => number) | null) => { secure = f; };
 const roll = (g: Game) => (g.force?.length ? (g.rolls++, g.force.shift()!) : secure ? (g.rolls++, 1 + Math.floor(secure() * 10)) : d10(rng(g.seed * 7919 + g.rolls++)));
-const say = (g: Game, s: string) => { g.log.push(`T${g.turn} ${g.phasing === 'german' ? 'GE' : 'AL'} ${g.phase}: ${s}`); if (g.log.length > 400) g.log.splice(0, g.log.length - 300); };   // the log only has to be read, so it stays short
+/** A log line, labelled with the side that acted (in Prepare and Reinforcement both sides act). */
+const say = (g: Game, s: string, side: Side = g.phasing) => { g.log.push(`T${g.turn} ${side === 'german' ? 'GE' : 'AL'} ${g.phase}: ${s}`); if (g.log.length > 400) g.log.splice(0, g.log.length - 300); };   // the log only has to be read, so it stays short
 const AIRBORNE = new Set(['82', '101', '517']);                                                // 18.5
 const ARMY = (u: Unit): number | undefined => (u.ech ? ZONE[u.ech] : undefined);
 
@@ -179,7 +180,7 @@ function drawChits(g: Game, side: Side, n: number) {
   for (let i = 0; i < n; i++) {
     const cup = boxOf(g, side, 'cup'); if (!cup.length) return;
     const c = cup[Math.floor(rngf(g) * cup.length)];
-    if (c.kind === 'event_delayed_response') { c.box = 'eliminated'; say(g, `${side} drew Delayed Response (no effect)`); } else { c.box = 'available'; c.drawn = g.turn * 10 + (g.phasing === 'german' ? 1 : 2); }
+    if (c.kind === 'event_delayed_response') { c.box = 'eliminated'; say(g, `${side} drew Delayed Response (no effect)`, side); } else { c.box = 'available'; c.drawn = g.turn * 10 + (g.phasing === 'german' ? 1 : 2); }
   }
 }
 const rngf = (g: Game) => (secure ? (g.rolls++, secure()) : rng(g.seed * 104729 + g.rolls++)());
@@ -196,7 +197,7 @@ function recycleUsed(g: Game, side: Side, artyDone = false) {
 export function chooseArtyLoss(g: Game, id: string) {
   if (!g.artyPick) throw new Error('no artillery attrition pending');
   const c = chit(g, id); if (c.side !== 'german' || c.kind !== 'artillery' || c.box !== 'used') throw new Error('pick a regular German artillery asset in the Used Box (not rocket artillery)');
-  c.box = 'eliminated'; g.artyPick = false; say(g, `German artillery attrition: ${c.name} eliminated (16.12)`); recycleUsed(g, 'german', true);
+  c.box = 'eliminated'; g.artyPick = false; say(g, `German artillery attrition: ${c.name} eliminated (16.12)`, 'german'); recycleUsed(g, 'german', true);
 }
 /** 4.1a: with the reusable Special Action unused, move one asset of the player's choice from the Used Box to the Available Box (or none). */
 export function recoverAsset(g: Game, side: Side, id: string | null) {
@@ -233,7 +234,7 @@ export function placeTaskForce(g: Game, id: string, area: number) {
   if (g.control[area] !== 'allied' || contested(g, area) || !inSupply(g, 'allied', area)) throw new Error('needs a supplied, friendly-controlled, uncontested area');
   c.box = 'map'; g.tfNew = g.tfNew.filter((x) => x !== id);
   g.units.push({ id: `TF-${id}`, name: `Task Force (${areas.get(area)!.name})`, side: 'allied', cls: 'infantry', q: ['green'], max: 1, str: 1, area, garrison: true, disorder: 0, unsupplied: false, moved: true, reserve: null, exploit: false, ech: 'us_sr', chitId: id });
-  say(g, `Task Force placed in ${areas.get(area)!.name}`);
+  say(g, `Task Force placed in ${areas.get(area)!.name}`, 'allied');
 }
 
 /* ================= reserves ================= */
@@ -360,7 +361,7 @@ export function saAvailable(g: Game, side: Side, ech?: string) {
 export function spendSA(g: Game, side: Side, ech?: string, why = 'Special Action', chitId?: string) {
   const ok = saAvailable(g, side, ech), c = chitId ? ok.find((x) => x.id === chitId) : ok[0];
   if (!c) throw new Error(chitId ? 'that Special Action cannot be used for this unit (8.1: an event only helps its own Higher Echelon)' : 'no Special Action available');
-  c.box = c.kind === 'sa_block' ? 'used' : 'eliminated'; say(g, `${side} spends ${c.kind === 'sa_block' ? 'the reusable Special Action' : 'a Special Action event'}: ${why}`); return c;
+  c.box = c.kind === 'sa_block' ? 'used' : 'eliminated'; say(g, `${side} spends ${c.kind === 'sa_block' ? 'the reusable Special Action' : 'a Special Action event'}: ${why}`, side); return c;
 }
 const needAdmin = (g: Game) => { if (g.phase !== 'admin') throw new Error('only in the Admin Phase'); };
 export const suppliedArea = (g: Game, side: Side, a: number) => g.control[a] === side && inSupply(g, side, a) && !contested(g, a);
@@ -384,7 +385,7 @@ export function blowBridges(g: Game, id: string, area: number, targets: number[]
     if (g.greif[k]) { if (g.greifTried.includes(k)) { say(g, 'the Greif-held bridge was already tried this Admin Phase'); continue; } const r = roll(g); g.greifTried.push(k); if (r > 5) { say(g, `engineer fails to blow the Greif-held bridge (rolled ${r})`); continue; } say(g, `engineer blows the Greif-held bridge (rolled ${r})`); }
     g.blown.push(k); dropGreif(g, k);
   }
-  say(g, `${c.name} works on ${targets.length} bridge(s) from ${areas.get(area)!.name}`);
+  say(g, `${c.name} works on ${targets.length} bridge(s) from ${areas.get(area)!.name}`, c.side);
 }
 export function repairTargets(g: Game, side: Side, area: number) {
   if (!supplied(g, side, area)) return [];
@@ -393,13 +394,13 @@ export function repairTargets(g: Game, side: Side, area: number) {
 export function repairBridge(g: Game, id: string, area: number, to: number) {
   needAdmin(g); const c = chit(g, id);
   if (c.kind !== 'engineer' || c.box !== 'available' || !assetZoneOk(g, c, area) || !repairTargets(g, c.side, area).includes(to)) throw new Error('not a legal repair');
-  g.blown = g.blown.filter((k) => k !== keyOf(area, to)); c.box = 'used'; say(g, `${c.name} repairs the bridge ${areas.get(area)!.name}–${areas.get(to)!.name}`);
+  g.blown = g.blown.filter((k) => k !== keyOf(area, to)); c.box = 'used'; say(g, `${c.name} repairs the bridge ${areas.get(area)!.name}–${areas.get(to)!.name}`, c.side);
 }
 export function fieldWorksFor(g: Game, id: string, area: number) {
   needAdmin(g); const c = chit(g, id);
   const same = blocks(g, area, c.side).some((u) => u.ech === c.ech || c.ech === 'us_sr' || u.ech === 'us_sr');
   if (c.kind !== 'engineer' || c.box !== 'available' || !supplied(g, c.side, area) || !same || g.fieldWorks.includes(area) || !assetZoneOk(g, c, area)) throw new Error('needs a supplied, uncontested area holding a unit of the engineer\'s echelon');
-  g.fieldWorks.push(area); g.fwOwner[area] = c.side; c.box = 'used'; say(g, `${c.name} builds field works in ${areas.get(area)!.name}`);
+  g.fieldWorks.push(area); g.fwOwner[area] = c.side; c.box = 'used'; say(g, `${c.name} builds field works in ${areas.get(area)!.name}`, c.side);
 }
 function addStep(u: Unit, elite: boolean) {
   const nq = u.q[u.str]; if (u.str >= u.max || u.unsupplied || (!elite && nq === 'elite')) throw new Error('that unit cannot receive a step');
@@ -421,22 +422,23 @@ export function playReplacement(g: Game, id: string, unitId: string) {
   if (u.area == null) {                                                                                     // 17.23: back into play with one step in a free friendly entry area
     const to = [...listedEntries(u), ...appropriateAreas(u)].find((a) => entryOpen(g, u, a)); if (to == null) throw new Error('no free entry area for it right now');
     u.str = 1; u.area = to; u.disorder = 0; u.unsupplied = false; g.control[to] = u.side; g.elimLarge = g.elimLarge.filter((x) => x !== u.id); c.box = 'eliminated';
-    return say(g, `${c.name}: ${u.name} returns in ${areas.get(to)!.name} with 1 step`);
+    return say(g, `${c.name}: ${u.name} returns in ${areas.get(to)!.name} with 1 step`, c.side);
   }
-  addStep(u, c.kind === 'event_arriving_regiment'); c.box = 'eliminated'; say(g, `${c.name}: ${u.name} gains a step (${u.str}/${u.max})`);
+  addStep(u, c.kind === 'event_arriving_regiment'); c.box = 'eliminated'; say(g, `${c.name}: ${u.name} gains a step (${u.str}/${u.max})`, c.side);
 }
 export function playRebuild(g: Game, id: string, unitId: string, area: number) {
   needAdmin(g); const c = chit(g, id), u = g.units.find((x) => x.id === unitId)!;
   const arm = c.kind === 'rebuild_or_replace_arm';
   if (!c.kind.startsWith('rebuild') || c.box !== 'available' || u.area != null || u.max !== 1 || u.side !== c.side || u.q[0] === 'elite' || (arm !== (u.cls === 'armor')) || g.control[area] !== c.side || !(areas.get(area)!.vp.allied || areas.get(area)!.vp.mutual || areas.get(area)!.vp.german)) throw new Error('cannot return that unit there');
-  u.area = area; u.str = 1; c.box = 'eliminated'; say(g, `${u.name} returns to ${areas.get(area)!.name}`);
+  u.area = area; u.str = 1; c.box = 'eliminated'; say(g, `${u.name} returns to ${areas.get(area)!.name}`, c.side);
 }
 export function alternateUse(g: Game, id: string) {
   needAdmin(g); const c = chit(g, id);
   if (c.box !== 'available' || isAsset(c) || c.kind === 'sa_block') throw new Error('not an event');
   const pri = ['engineer', 'artillery', 'rocket_artillery', 'armor_asset', 'infantry_asset', 'fuel'];
   const back = boxOf(g, c.side, 'eliminated').filter(isAsset).sort((a, b) => pri.indexOf(a.kind) - pri.indexOf(b.kind)).slice(0, 2);
-  back.forEach((x) => (x.box = 'cup')); c.box = 'eliminated'; say(g, `${c.name} used as alternate event: ${back.map((x) => x.name).join(', ') || 'no assets in the Eliminated Box'} back to the cup`);
+  if (!back.length) throw new Error('no assets in the Eliminated Box to bring back (4.21)');
+  back.forEach((x) => (x.box = 'cup')); c.box = 'eliminated'; say(g, `${c.name} used as alternate event: ${back.map((x) => x.name).join(', ')} back to the cup`, c.side);
 }
 export function rally(g: Game, side: Side, area: number, chitId?: string) {
   needAdmin(g); if (!supplied(g, side, area)) throw new Error('area must be supplied and friendly');
@@ -445,12 +447,12 @@ export function rally(g: Game, side: Side, area: number, chitId?: string) {
 }
 export function qualityReplacement(g: Game, unitId: string, chitId?: string) {
   needAdmin(g); const u = g.units.find((x) => x.id === unitId)!; if (u.garrison || u.unsupplied || u.str >= u.max) throw new Error('not eligible');
-  spendSA(g, u.side, u.ech, 'Quality replacements', chitId); u.str++; say(g, `${u.name} gains a step`);
+  spendSA(g, u.side, u.ech, 'Quality replacements', chitId); u.str++; say(g, `${u.name} gains a step`, u.side);
 }
 export function staffReplacement(g: Game, id: string, unitId: string) {
   needAdmin(g); const c = chit(g, id), u = g.units.find((x) => x.id === unitId)!;
   if (c.kind !== 'command_staff' || c.box !== 'available' || u.side !== c.side || u.cls !== 'infantry' || u.area == null || u.garrison) throw new Error('not eligible');
-  addStep(u, false); c.box = 'used'; say(g, `Command staff: ${u.name} gains a step`);
+  addStep(u, false); c.box = 'used'; say(g, `Command staff: ${u.name} gains a step`, c.side);
 }
 export function staffReserve(g: Game, id: string, unitId: string) {
   needAdmin(g); const c = chit(g, id); if (c.kind !== 'command_staff' || c.box !== 'available') throw new Error('not available');
@@ -460,7 +462,7 @@ export function releaseUnit(g: Game, id: string, area: 4 | 6) {
   needAdmin(g); const c = chit(g, id); if (c.kind !== 'event_release' || c.box !== 'available') throw new Error('not available');
   const nm: Record<string, string> = { '11th': '11 Pz', '10th': '10SS', '17th': '17SS', '6th': '6SS' }, u = g.units.find((x) => x.name === nm[c.name.split(' ')[0]])!;
   if (u.area != null || blocks(g, area, 'german').length >= 2 || (g.control[area] !== 'german' && unitsIn(g, area).length)) throw new Error('entry area blocked');
-  u.area = area; g.control[area] = 'german'; c.box = 'eliminated'; say(g, `${u.name} released and enters in ${areas.get(area)!.name}`);
+  u.area = area; g.control[area] = 'german'; c.box = 'eliminated'; say(g, `${u.name} released and enters in ${areas.get(area)!.name}`, 'german');
 }
 
 
@@ -468,12 +470,12 @@ export function releaseUnit(g: Game, id: string, area: 4 | 6) {
 export function playGreifBridge(g: Game, id: string, a: number, b: number) {
   needAdmin(g); const c = chit(g, id), k = keyOf(a, b), cn = connection(a, b);
   if (c.kind !== 'event_greif_bridge' || c.box !== 'available' || !cn?.river || g.blown.includes(k) || g.greif[k]) throw new Error('needs an intact bridge on a river boundary');
-  g.greif[k] = id; c.box = 'map'; say(g, `Greif Team Bridge placed on ${areas.get(a)!.name}–${areas.get(b)!.name}`);
+  g.greif[k] = id; c.box = 'map'; say(g, `Greif Team Bridge placed on ${areas.get(a)!.name}–${areas.get(b)!.name}`, 'german');
 }
 export function playInterdict(g: Game, id: string, unitId: string) {
   needAdmin(g); const c = chit(g, id), u = g.units.find((x) => x.id === unitId)!;
   if (c.kind !== 'event_greif_interdict' || c.box !== 'available' || u.side !== 'allied' || u.area == null || u.garrison || u.interdict) throw new Error('needs an Allied block without an interdict marker');
-  u.interdict = id; c.box = 'map'; say(g, `Greif Team Interdict placed on ${u.name}`);
+  u.interdict = id; c.box = 'map'; say(g, `Greif Team Interdict placed on ${u.name}`, 'german');
 }
 function check(g: Game, u: Unit, sn: number, why: string) {
   const die = roll(g), ok = succeeds(die, sn); (g.checks ??= []).push({ who: u.name, why, sn, die, ok, area: u.area }); if (g.checks.length > 30) g.checks.splice(0, g.checks.length - 30);
@@ -935,7 +937,7 @@ export function roadblock(g: Game, id: string, area: number, defended: boolean) 
     g.units.push({ id: `DR-${id}`, name: `${c.name} (defended roadblock)`, side: c.side, cls: 'infantry', q: ['green'], max: 1, str: 1, area, garrison: true, disorder: 0, unsupplied: false, moved: true, reserve: null, exploit: false, ech: c.ech, chitId: id });
     c.box = 'map';
   } else { g.roadblocks[area] = c.side; c.box = 'used'; }
-  say(g, `${c.name} makes a ${defended ? 'defended ' : ''}roadblock in ${areas.get(area)!.name}`);
+  say(g, `${c.name} makes a ${defended ? 'defended ' : ''}roadblock in ${areas.get(area)!.name}`, c.side);
 }
 export function roadblockAreas(g: Game, side: Side) { return [...areas.keys()].filter((a) => vacantSupplied(g, side, a) && !g.roadblocks[a]); }
 const staff = (g: Game, id: string) => { needAdmin(g); const c = chit(g, id); if (c.kind !== 'command_staff' || c.box !== 'available') throw new Error('command staff not available'); return c; };
@@ -943,32 +945,32 @@ const staff = (g: Game, id: string) => { needAdmin(g); const c = chit(g, id); if
 export function staffBoundary(g: Game, id: string, unitId: string) {
   const c = staff(g, id), u = g.units.find((x) => x.id === unitId)!;
   if (c.side !== 'german' || u.side !== 'german' || u.area == null || u.garrison || ARMY(u) == null) throw new Error('needs a German unit of an army');
-  u.bcross = true; c.box = 'used'; say(g, `Command staff: ${u.name} may leave its army zone for free`);
+  u.bcross = true; c.box = 'used'; say(g, `Command staff: ${u.name} may leave its army zone for free`, c.side);
 }
 /** 14.62b (Americans only) */
 export function staffPool(g: Game, id: string, area: number) {
   const c = staff(g, id);
   if (c.side !== 'allied' || !areas.has(area)) throw new Error('Americans only');
-  g.pooled = area; c.box = 'used'; say(g, `Command staff: assets pooled for the battle in ${areas.get(area)!.name}`);
+  g.pooled = area; c.box = 'used'; say(g, `Command staff: assets pooled for the battle in ${areas.get(area)!.name}`, c.side);
 }
 /** 8.32 */
 export function staffIntel(g: Game, id: string, unitId: string) {
   const c = staff(g, id), u = g.units.find((x) => x.id === unitId)!;
   if (u.side === c.side || u.area == null || u.garrison) throw new Error('choose an enemy block on the map');
-  g.revealed = u.id; c.box = 'used'; say(g, `Intelligence: ${u.name} in ${areas.get(u.area)!.name} is revealed (${u.str}/${u.max} steps, ${quality(u)})`);
+  g.revealed = u.id; c.box = 'used'; say(g, `Intelligence: ${u.name} in ${areas.get(u.area)!.name} is revealed (${u.str}/${u.max} steps, ${quality(u)})`, c.side);
 }
 /** 17.2 Interdiction Mission (Allied air mission, Admin Phase). */
 export function playInterdiction(g: Game, id: string, area: number) {
   needAdmin(g); const c = chit(g, id);
   if (c.kind !== 'air_mission' || c.box !== 'available' || !areas.has(area) || g.interdicted[area]) throw new Error('needs an Air Mission in the Available Box and a free area');
-  g.interdicted[area] = id; c.box = 'map'; say(g, `Interdiction mission over ${areas.get(area)!.name}`);
+  g.interdicted[area] = id; c.box = 'map'; say(g, `Interdiction mission over ${areas.get(area)!.name}`, c.side);
 }
 /** 17.2 Air Supply Mission: one unsupplied area, played during a Supply Phase (here: the step before it runs). */
 export function airSupplyAreas(g: Game, side: Side) { return [...new Set(g.units.filter((u) => u.side === side && u.area != null && !u.garrison && !inSupply(g, side, u.area)).map((u) => u.area!))]; }
 export function playAirSupply(g: Game, id: string, area: number) {
   const c = chit(g, id);
   if (g.phase !== 'btCombat' || g.battle || c.kind !== 'air_mission' || c.box !== 'available' || c.side !== g.phasing || g.airSupply || !airSupplyAreas(g, c.side).includes(area)) throw new Error('needs an Air Mission, the end of the turn, and an unsupplied area');
-  g.airSupply = { area, side: c.side, id, stamp: g.turn * 2 + (g.phasing === 'german' ? 0 : 1) }; c.box = 'map'; say(g, `Air Supply mission over ${areas.get(area)!.name}`);
+  g.airSupply = { area, side: c.side, id, stamp: g.turn * 2 + (g.phasing === 'german' ? 0 : 1) }; c.box = 'map'; say(g, `Air Supply mission over ${areas.get(area)!.name}`, c.side);
 }
 /** 8.27 Reroute a reinforcing unit (Reinforcement Phase, one Special Action). */
 export function rerouteOptions(g: Game, unitId: string): number[] {
@@ -978,7 +980,7 @@ export function rerouteOptions(g: Game, unitId: string): number[] {
 export function reroute(g: Game, unitId: string, area: number, chitId?: string) {
   if (!rerouteOptions(g, unitId).includes(area)) throw new Error('not a legal entry area');
   const u = g.units.find((x) => x.id === unitId)!, from = u.area!; spendSA(g, u.side, u.ech, 'reroute a reinforcement', chitId);
-  u.area = area; g.control[area] = u.side; updateControl(g, from); say(g, `${u.name} rerouted to ${areas.get(area)!.name}`);
+  u.area = area; g.control[area] = u.side; updateControl(g, from); say(g, `${u.name} rerouted to ${areas.get(area)!.name}`, u.side);
 }
 
 /* ================= arrivals (4.1c) ================= */
@@ -995,13 +997,13 @@ export function arrivalOptions(g: Game, id: string): { area: number; sa: boolean
 export function placeArrival(g: Game, id: string, area: number, chitId?: string) {
   const opt = arrivalOptions(g, id).find((o) => o.area === area); if (!opt) throw new Error('not a legal entry area');
   const u = g.units.find((x) => x.id === id)!; if (opt.sa) spendSA(g, u.side, u.ech, 'reroute a reinforcement', chitId);
-  u.area = area; g.control[area] = u.side; g.arrived.push(id); g.pendingArrivals = g.pendingArrivals.filter((x) => x !== id); say(g, `${u.name} arrives in ${areas.get(area)!.name}`);
+  u.area = area; g.control[area] = u.side; g.arrived.push(id); g.pendingArrivals = g.pendingArrivals.filter((x) => x !== id); say(g, `${u.name} arrives in ${areas.get(area)!.name}`, u.side);
 }
 function autoArrive(g: Game, id: string) {
   const u = g.units.find((x) => x.id === id)!, opts = listedEntries(u), to = opts.find((a) => g.control[a] === u.side && (blocks(g, a, u.side).length < 2 || stackFree(g, u, a))) ?? opts.find((a) => !unitsIn(g, a).length);
   g.pendingArrivals = g.pendingArrivals.filter((x) => x !== id);
   if (to == null) { u.arrival = g.turn + 1; u.delayed = true; say(g, `${u.name} delayed one turn (entry blocked)`); return; }
-  u.area = to; g.control[to] = u.side; g.arrived.push(id); say(g, `${u.name} arrives in ${areas.get(to)!.name}`);
+  u.area = to; g.control[to] = u.side; g.arrived.push(id); say(g, `${u.name} arrives in ${areas.get(to)!.name}`, u.side);
 }
 
 /** Test hooks for rules that have no public entry point. */

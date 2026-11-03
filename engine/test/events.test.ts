@@ -75,3 +75,13 @@ describe('Bulge events', () => {
     expect(() => buildFieldWorks(g, u.id)).toThrow(); void setReserve; void canReserve; void boxOf; void chit;
   });
 });
+
+import { alternateUse as altUse, newGame as ng2 } from '../src';
+describe('alternate event use (4.21)', () => {
+  it('is refused when the Eliminated Box holds no asset, so the event is not wasted', () => {
+    const g = ng2(5); g.phase = 'admin';
+    const ev = g.chits.find((c) => c.side === 'german' && c.kind.startsWith('event_') && c.kind !== 'event_delayed_response')!; ev.box = 'available';
+    for (const c of g.chits) if (c.side === 'german' && c.box === 'eliminated') c.box = 'cup';
+    expect(() => altUse(g, ev.id)).toThrow(/no assets/); expect(ev.box).toBe('available');
+  });
+});
