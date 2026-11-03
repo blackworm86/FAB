@@ -101,8 +101,18 @@ export const mapMarkerSvg = (code: string): string | null => {
   return counters[code] ? chitSvg(counters[code]) : null;
 };
 
+/** The user's redrawn art for a counter, if there is one: map markers (by name or back id) and the Greif Team chits (with the turn number the art leaves out). */
+const ART_NAME: Record<string, string> = { 'Blown Bridge': 'X', 'Field Works': 'FW', 'River Assault': 'RA', 'Road Block': 'RB', 'Disordered / Recovering': 'DIS', 'Exploitation': 'E', 'Boundary Crossing': 'B' };
+const ART_ID: Record<string, string> = { back_blown: 'X', back_roadblock: 'RB', back_recovering: 'REC', back_pooled: 'P', back_zone5_de: 'R5', back_zone6_de: 'R6', back_zone7_de: 'R7', back_zone7_al: 'A7', back_zones56_al: 'A56' };
+function redrawn(c: Chit | Counter): string | null {
+  const id = (c as Counter).id ?? '', code = c.kind === 'event_greif_interdict' ? 'GI' : c.kind === 'event_greif_bridge' ? 'G' : ART_ID[id] ?? ((c.kind === 'marker' || c.kind === 'back') ? ART_NAME[c.name] : undefined);
+  if (!code || !ART[`mk_${code}`]) return null;
+  const t = (c as Counter).turn, num = typeof t === 'number' ? `<rect x="9" y="9" width="26" height="30" fill="#fff" opacity=".92"/>${txt(String(t), 22, 34, 28, { anchor: 'middle' })}` : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160"><image href="${ART[`mk_${code}`]}" width="160" height="160"/>${num}</svg>`;
+}
 export type Counter = { id?: string; kind: string; name: string; side: 'german' | 'allied' | 'none'; ech: string; turn?: number | 'S' | null; q?: string | null };
 export function chitSvg(c: Chit | Counter): string {
+  const drawn = redrawn(c); if (drawn) return drawn;                                               // the user's redrawn art wins over the code-drawn counter
   if (c.kind === 'sa_block') return saBlockSvg(c.side === 'german' ? 'german' : 'allied');
   const k = c.kind, name = c.name, ech = ECH[c.ech] ?? '#bbb', side = c.side === 'german' ? 'german' : 'allied', t = (c as Counter).turn ?? null, q = c.q ?? undefined;
   const dot = (cx: number, cy: number) => { if (!q) return ''; const [f, ring] = QDOT[q]; return `${ring ? `<circle cx="${cx}" cy="${cy}" r="10.5" fill="${ring}"/>` : ''}<circle cx="${cx}" cy="${cy}" r="${ring ? 8 : 7.5}" fill="${f}"/>`; };
