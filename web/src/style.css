@@ -401,3 +401,6 @@ img.cb { border-radius: 7%; box-shadow: 0 1px 0 #e3dccb, 0 2px 0 #b9b2a0, 0 3px 
 .pc img.cb { width: 100%; height: 100%; } .pc .b3 { --s: 34px; margin: 6px auto; }
 /* the chit's full description reads top to bottom (it was split into side-by-side columns) and scrolls on small screens */
 .inspect.slimcard { display: block; }
+/* chit bar: the header stays put while the description scrolls; more room while it is open; a fade says there is more */
+.chitbar .cbhead { position: sticky; top: -8px; z-index: 1; background: #0b0d08; padding: 6px 0; margin-top: -6px; }
+.chitbar.open { max-height: 70% !important; -webkit-mask-image: linear-gradient(#000 calc(100% - 22px), #0008); mask-image: linear-gradient(#000 calc(100% - 22px), #0008); overscroll-behavior: contain; }
