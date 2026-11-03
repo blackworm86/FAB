@@ -515,3 +515,26 @@ img.cb { border-radius: 7%; box-shadow: 0 1px 0 #e3dccb, 0 2px 0 #b9b2a0, 0 3px 
 .c-table.slim:has(.engch, .refuse) { flex-wrap: wrap; } .c-table.slim .engch, .c-table.slim .refuse { order: 10; }
 .otag { position: absolute; left: 0; top: 0; z-index: 4; pointer-events: none; font: 700 11px var(--sfd); letter-spacing: .08em; padding: 2px 7px; border-radius: 4px; white-space: nowrap; box-shadow: 0 2px 6px #000a; }
 .otag.sa { background: #ff8a3d; color: #1a1608; } .otag.fight { background: #ffc542; color: #1a1608; } .otag.off { background: #222c; color: #ccc; border: 1px dashed #999; }
+/* explanations: full / short (Settings or the guide button) */
+body.guide-short .gx, body:not(.guide-short) .gs { display: none !important; }
+.c-bar.b .guidebtn { min-width: 36px; min-height: 36px; padding: 4px; opacity: .7; } .c-bar.b .guidebtn.on { opacity: 1; color: var(--gold); border-color: var(--gold); }
+.c-bar.b .guidebtn .ic { width: 18px; height: 18px; }
+@media (max-width: 700px) {
+  /* one action row: shortcuts scroll on the left, undo + main button on the right; the prompt sits above */
+  .c-bar.b { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-areas: "p p p g" "c c u go"; align-items: center; gap: 6px 6px; }
+  .c-bar.b .c-prompt { grid-area: p; } .c-bar.b .guidebtn { grid-area: g; align-self: start; }
+  .c-bar.b .dchips { grid-area: c; flex: none; order: 0; flex-wrap: nowrap; overflow-x: auto; min-width: 0; }
+  .c-bar.b .dundo { grid-area: u; order: 0; max-width: 34vw; flex: none; } .c-bar.b .go, .c-bar.b .gowait { grid-area: go; order: 0; margin-left: 0; max-width: 46vw; }
+  body.guide-short .c-bar.b .dundo span { display: none; } body.guide-short .c-bar.b .dundo { padding: 0 10px; }
+  body.guide-short .c-bar.b .c-prompt { -webkit-line-clamp: 1; }
+  .c-bar.b .dchip { min-height: 38px; padding: 2px 10px; }
+}
+/* side marks in lists: a coloured side tag, not a coloured edge */
+.log .ll, .feed .fl2 { border-left: 0; padding-left: 0; } .feed .fl2 { padding: 4px 10px; }
+.stag { font: 700 11px var(--sfd); letter-spacing: .08em; padding: 0 5px; border-radius: 3px; margin-right: 4px; } .stag.german { background: var(--ge); color: #111; } .stag.allied { background: var(--al); color: #111; }
+.log .ll { border-bottom: 1px solid #8d906522; padding-block: 5px; margin: 0; }
+@media (max-width: 700px) {
+  .c-bar.b .guidebtn { justify-self: end; width: 36px; }
+  .c-bar.b .go { max-width: 54vw; white-space: nowrap; font-size: 13px !important; padding-inline: 12px !important; letter-spacing: .06em; }
+}
+@media (min-width: 701px) { .c-bar.b .guidebtn { margin-left: auto; } }

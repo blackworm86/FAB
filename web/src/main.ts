@@ -395,7 +395,7 @@ function chitBar(c: E.Chit): string {
   if (!mine(c.side)) return `<div class="c-dispatch chitbar ${infoOpen ? 'open' : ''}"><div class="cbhead"><span class="cbimg">${chitPic(c)}</span><div class="cbt"><b>${esc(c.name)}</b><small>The other side's piece: you can only look</small></div><button class="ico" data-ui="${reg(() => { selChit = null; })}" aria-label="Put away" title="Put away">${ico('close')}</button></div><div class="inspect slimcard">${ruleHtml(c.kind, E.isEvent(c))}</div></div>`;
   const tg = tgt, body = chitPanel(c), [kind] = RULE[c.kind] ?? [c.kind];
   const chips = tg?.chips.map((x) => `<button class="pc ${c.side}" data-do="${reg(x.fn)}" title="${esc(x.label)}">${x.img}<small>${esc(x.label)}</small></button>`).join('') ?? '';
-  return `<div class="c-dispatch chitbar ${infoOpen ? 'open' : ''}"><div class="cbhead"><span class="cbimg">${chitPic(c)}</span><div class="cbt"><b>${esc(c.name)}</b><small>${esc(tg?.hint || kind)}</small></div>
+  return `<div class="c-dispatch chitbar ${infoOpen ? 'open' : ''}"><div class="cbhead"><span class="cbimg">${chitPic(c)}</span><div class="cbt"><b>${esc(c.name)}</b><small>${tg?.hint ? gx(esc(tg.hint), esc(kind)) : esc(kind)}</small></div>
     <button class="ico" data-ui="${reg(() => { infoOpen = !infoOpen; })}" aria-pressed="${infoOpen}" aria-label="What it does" title="What it does">${ico('info')}</button><button class="ico" data-ui="${reg(() => { selChit = null; })}" aria-label="Put away" title="Put away">${ico('close')}</button></div>
     ${infoOpen ? `<div class="inspect slimcard">${ruleHtml(c.kind, E.isEvent(c))}</div>` : ''}${tg && tg.modes.length > 1 ? `<div class="modes" role="group" aria-label="What to do">${tg.modes.map((m) => `<button class="ico ${m.id === tgtMode ? 'on' : ''}" data-ui="${reg(() => { tgtMode = m.id; refresh(); })}" title="${esc(m.label)}" aria-label="${esc(m.label)}">${ico(m.icon)}<span>${esc(m.label)}</span></button>`).join('')}</div>` : ''}${chips ? `<div class="cbchips">${chips}</div>` : ''}${tg?.buttons.length ? `<div class="row">${tg.buttons.map((b) => abtn(b.icon, b.label, b.fn, '', false, b.title)).join('')}</div>` : ''}${iconify(body)}</div>`;
 }
@@ -409,7 +409,7 @@ function chitPanel(c: E.Chit): string {
     if (!el.length) out.push('<p class="hint">No reduced, supplied unit of the right class and Higher Echelon.</p>');
     if (c.kind.startsWith('rebuild')) g.units.filter((x) => x.area == null && x.max === 1 && x.side === c.side && x.q[0] !== 'elite' && !x.garrison && (c.kind.endsWith('arm') === (x.cls === 'armor')) && x.str === 0).forEach((x) => out.push(a == null ? '<p class="hint">Select an objective area to return an eliminated unit.</p>' : btn(`Return ${esc(x.name)} to ${esc(areaName(a))}`, () => E.playRebuild(g, c.id, x.id, a))));
   } else if (c.kind === 'event_bodenplatte') { out.push(btn(`Strike Allied air missions (${E.boxOf(g, 'allied', 'available').filter((x) => x.kind === 'air_mission').length} in the Available Box)`, () => E.playBodenplatte(g, c.id), 'primary')); }
-  else if (c.kind === 'fuel') out.push('<p class="hint">Fuel is spent automatically when a German unit moves more than 3 MP or strategic-moves.</p>');
+  else if (c.kind === 'fuel') out.push('<p class="hint gx">Fuel is spent automatically when a German unit moves more than 3 MP or strategic-moves.</p>');
   if (E.isEvent(c) && c.kind !== 'sa_block' && c.kind !== 'event_delayed_response' && E.boxOf(g, c.side, 'eliminated').some(E.isAsset)) out.push(btn('Alternate use', () => E.alternateUse(g, c.id), '', false, '4.21: return 2 assets to the cup instead'));
   return head + `<div class="row">${out.join('')}</div>`;
 }
@@ -497,7 +497,7 @@ function feedHtml(): string {
   for (const l of g.log.slice(feedLen)) { if (/\[sandbox\]/.test(l)) continue; const text = l.replace(/^T\d+ /, ''); feed.push({ t: Date.now(), text, side: /^(GE|German)/.test(text) ? 'german' : /^(AL|Allied)/.test(text) ? 'allied' : '' }); }
   feedLen = n; const now = Date.now(); feed = feed.filter((f) => now - f.t < 9000).slice(-3); if (g.battle) return '';         // the battle has its own report
   if (feed.length) setTimeout(() => { if (feed.some((f) => Date.now() - f.t >= 9000)) render(); }, 9100);
-  return feed.length ? `<div class="feed ${g.phase === 'admin' || g.phase === 'reinforcement' ? 'top' : ''}" aria-live="polite">${feed.map((f) => `<div class="fl2 ${f.side}" style="animation-delay:${-(now - f.t) / 1000}s">${esc(f.text)}</div>`).join('')}</div>` : '';
+  return feed.length ? `<div class="feed ${g.phase === 'admin' || g.phase === 'reinforcement' ? 'top' : ''}" aria-live="polite">${feed.map((f) => `<div class="fl2 ${f.side}" style="animation-delay:${-(now - f.t) / 1000}s">${sideTag(f.text)}</div>`).join('')}</div>` : '';
 }
 let chatOpen = false, chatDraft = '', chatSeen = (() => { try { return Number(localStorage.getItem('fab-chat-seen-' + TABLE) ?? 0); } catch { return 0; } })();
 const QUICK = ['Your turn', 'Ready', 'One moment', 'Nice move', 'Good game'];
@@ -537,14 +537,14 @@ function airPickHtml() {
   if (!airPick || airPick.step !== 'choose' || !g.battle) return '';
   const p = airPick;
   return `<div class="modal"><div class="sheet slim"><h3>${ico('air_mission')} Air Mission <button class="ico" data-ui="${reg(() => { airPick = null; })}" aria-label="Cancel">${ico('close')}</button></h3>
-    <p class="hint">Combat support (17.21): it is this battle's one event, and it can never take a step loss.</p>
+    <p class="hint gx">Combat support (17.21): it is this battle's one event, and it can never take a step loss.</p>
     <div class="row">${btn(`${ico('artillery')} Extra artillery`, () => { airPick = null; E.assign(g, g.battle!, p.id, 'arty'); }, 'primary', false, 'Fires like an artillery asset, outside the artillery limit')}${ubtn(`${ico('plus')} +2 to one unit`, () => { airPick = { ...p, step: 'unit' }; }, '', false, 'Then tap one of your blocks in this battle: +2 to its Success Number')}</div></div></div>`;
 }
 function saPickHtml() {
   if (!saPick) return '';
   const p = saPick;
   return `<div class="modal"><div class="sheet sapick"><h3>Which Special Action? <button class="ico" data-ui="${reg(() => { saPick = null; })}" aria-label="Cancel">${ico('close')}</button></h3>
-    <p class="hint">A single-use event only helps its own Higher Echelon and is eliminated; the reusable block goes to the Used Box and comes back next turn.</p>
+    <p class="hint gx">A single-use event only helps its own Higher Echelon and is eliminated; the reusable block goes to the Used Box and comes back next turn.</p>
     <div class="pcgrid">${p.cands.map((c) => `<div class="sapc"><button class="pc ${c.side}" data-ui="${reg(() => { saPick = null; act(() => p.run(c.id)); })}" title="${esc(c.name)}">${chitPic(c)}</button><small>${esc(c.kind === 'sa_block' ? 'Reusable block' : `Event · ${ARMY_NAME[c.ech] ?? c.ech}`)}</small></div>`).join('')}</div></div></div>`;
 }
 function arrOpts(): { area: number; sa: boolean }[] {
@@ -993,6 +993,11 @@ function prompt() {
   const chip = online.active && !online.both() && online.mySide() && !g.over ? `<span class="turnchip ${allowed() ? 'go' : 'wait'}">${nm(online.mySide()!)} · ${allowed() ? 'your move' : 'waiting'}</span> ` : '';
   return chip + promptText();
 }
+/** Explanations: full for learning, short for experienced players (Menu > Settings, or the guide button in the bottom bar). `gx` = explanation only, `gs` = short form only. */
+let guide: 'full' | 'short' = (() => { try { return localStorage.getItem('fab-guide') === 'full' ? 'full' : 'short'; } catch { return 'short'; } })();
+const setGuide = (v: 'full' | 'short') => { guide = v; try { localStorage.setItem('fab-guide', v); } catch { /* private mode */ } document.body.classList.toggle('guide-short', v === 'short'); };
+document.body.classList.toggle('guide-short', guide === 'short');
+const gx = (long: string, short = '') => `${short ? `<span class="gs">${short}</span>` : ''}<span class="gx">${long}</span>`;
 function promptText() {
   const b = g.battle;
   if (reinforcing && b) return '<b>Tap a glowing neighbouring block</b> to bring it in, or tap the map to cancel.';
@@ -1006,14 +1011,14 @@ function promptText() {
   const m = E.mustFight(g).length;
   switch (g.phase) {
     case 'reinforcement': return '<b>Pick a new block</b>, then a lit entry area.';
-    case 'admin': return selChit && tgt?.hint ? `<b>${esc(tgt.hint)}</b>${tgt.areas.size + tgt.units.size > 0 ? ` · ${tgt.areas.size + tgt.units.size} target${tgt.areas.size + tgt.units.size > 1 ? 's' : ''} lit on the map` : ''}` : '<b>Tap a card</b> to play it, or end the step.';
-    case 'movement': return selUnit ? 'Tap a <b>green</b> area to move there. <b>Orange</b>: must stop there. Wrong move? <b>Undo</b>.' : '<b>Tap one of your blocks</b> to move it, or <b>Can move</b> to go through them.';
+    case 'admin': return selChit && tgt?.hint ? `<b>${esc(tgt.hint)}</b>${tgt.areas.size + tgt.units.size > 0 ? ` · ${tgt.areas.size + tgt.units.size} lit` : ''}` : `<b>Tap a card</b>${gx(' to play it, or end the step.')}`;
+    case 'movement': return selUnit ? `Tap a <b>green</b> area${gx(' to move there. <b>Orange</b>: must stop there. Wrong move? <b>Undo</b>.', ' · <b>orange</b> = stop')}` : `<b>Tap one of your blocks</b>${gx(' to move it, or <b>Can move</b> to go through them.', ' to move it.')}`;
     case 'strategic': return '<b>Tap a reserve block</b>, then a green area.';
-    case 'combat': case 'btCombat': if (g.phase === 'btCombat' && !m && E.contestedAreas(g).some((a) => !g.fought.includes(a) && !E.newlyContested(g).includes(a))) return '<b>Breakthrough combat.</b> Newly contested areas are free; areas already contested before movement need a Special Action (orange tags).';
+    case 'combat': case 'btCombat': if (g.phase === 'btCombat' && !m && E.contestedAreas(g).some((a) => !g.fought.includes(a) && !E.newlyContested(g).includes(a))) return gx('<b>Breakthrough combat.</b> Newly contested areas are free; areas already contested before movement need a Special Action (orange tags).', '<b>Breakthrough combat:</b> orange = needs SA');
       return m ? `<b>${m} battle${m > 1 ? 's' : ''} to fight.</b> Tap a red area.` : fightable().length ? '<b>Tap a contested area</b> to fight, or end the step.' : 'No battles left.';
     case 'reaction': return `<b>${nm(other(g.phasing))} reserves</b> may react: select a reserve block.`;
-    case 'btMove': return btArmor().length ? '<b>Breakthrough movement.</b> Reserve and exploiting blocks may move; armor that has not moved can move one area for a Special Action (orange tags).' : '<b>Reserve and exploitation blocks</b> may move. Select one.';
-    default: return g.phase === 'supply' && g.supplyPending ? '<b>Supply check:</b> roll for the units that are cut off.' : 'Supply checked. End the phase.';
+    case 'btMove': return btArmor().length ? gx('<b>Breakthrough movement.</b> Reserve and exploiting blocks may move; armor that has not moved can move one area for a Special Action (orange tags).', '<b>Breakthrough:</b> orange = SA move') : `<b>Reserve and exploitation blocks</b> may move.${gx(' Select one.')}`;
+    default: return g.phase === 'supply' && g.supplyPending ? `<b>Supply check</b>${gx(': roll for the units that are cut off.')}` : 'Supply checked. End the phase.';
   }
 }
 function primary(): { label: string; fn: () => void; dis?: boolean } | null {
@@ -1068,6 +1073,7 @@ function dockChips(): string {
     if (g.artyPick) c('Artillery attrition', 1, true, null, 'Choose the used artillery asset to eliminate (16.12)');
     if (online.active && !online.both()) { const o = other(online.mySide() ?? g.phasing); c(`${nm(o)}: ${g.done?.includes(o) ? 'done ✓' : 'working…'}`, null, false, null); }
   }
+  { const bt = btArmor(); if (bt.length) c('Breakthrough (SA)', bt.length, true, () => { selUnit = nextOf(bt, selUnit); const u = g.units.find((x) => x.id === selUnit)!; selArea = u.area; previewArea = null; lookAt(u.area!); }, '8.21: armor that has not moved may move one area for a Special Action'); }
   const mv = canMove();
   if (mv.length) c('Can move', mv.length, true, () => { selUnit = nextOf(mv, selUnit); const u = g.units.find((x) => x.id === selUnit)!; selArea = u.area; previewArea = null; lookAt(u.area!); }, 'Tap to select the next block that can still move');
   { const mineU = g.units.filter((u) => u.area != null && mine(u.side) && seen(u)), fw = mineU.filter(fwOk).map((u) => u.id), rs = mineU.filter(rsOk).map((u) => u.id);
@@ -1079,10 +1085,8 @@ function dockChips(): string {
     if (must.length) c('Must fight', must.length, true, () => { selArea = nextOf(must, selArea); lookAt(selArea!); });
     else if (all.length) c('Battles', all.length, false, () => { selArea = nextOf(all, selArea); lookAt(selArea!); });
   }
-  { const bt = btArmor(); if (bt.length) c('Breakthrough (SA)', bt.length, true, () => { selUnit = nextOf(bt, selUnit); const u = g.units.find((x) => x.id === selUnit)!; selArea = u.area; previewArea = null; lookAt(u.area!); }, '8.21: armor that has not moved may move one area for a Special Action'); }
   if (g.phase === 'btMove' || g.phase === 'btCombat') { const n = E.saAvailable(g, g.phasing).length; if (n && mine(g.phasing)) c('Special Actions', n, false, null, 'Special Actions you can spend now'); }
   if (g.phase === 'supply' && g.supplyPending && mine(g.phasing) && !g.airSupply && E.boxOf(g, g.phasing, 'available').some((x) => x.kind === 'air_mission') && E.airSupplyAreas(g, g.phasing).length) c('Air supply available', null, true, null, '17.21: an Air Mission can supply one cut-off area (in the Supply check panel)');
-  if (g.phase === 'supply' && g.supplyPending) c('Supply checks to roll', null, true, null);
   return out.length ? `<div class="dchips">${out.join('')}</div>` : '';
 }
 function undoBtn(): string {
@@ -1108,7 +1112,7 @@ function piecesHtml() {
   if (piecesTab === 'boxes') {
     const sec = (title: string, bx: E.Chit['box']) => { const cs = E.boxOf(g, sd, bx); return `<h4>${title} <small>${cs.length}</small></h4><div class="pcgrid">${cs.map((c) => pieceBtn(c, () => { inspectId = inspectId === c.id ? null : c.id; }, inspectId === c.id)).join('') || '<small class="none">none</small>'}</div>`; };
     const pick = inspectId ? g.chits.find((c) => c.id === inspectId && c.side === sd) : null;
-    body = `${pick ? `<div class="inspect">${ruleCard(pick)}</div>` : '<p class="hint">Tap a piece to read what it does.</p>'}<h4>Cup <small>${E.boxOf(g, sd, 'cup').length} chits, drawn at random</small></h4>${sec('Available', 'available')}${sec('Used', 'used')}${sec('Eliminated', 'eliminated')}`;
+    body = `${pick ? `<div class="inspect">${ruleCard(pick)}</div>` : '<p class="hint gx">Tap a piece to read what it does.</p>'}<h4>Cup <small>${E.boxOf(g, sd, 'cup').length} chits, drawn at random</small></h4>${sec('Available', 'available')}${sec('Used', 'used')}${sec('Eliminated', 'eliminated')}`;
   } else {
     const rows: string[] = [];
     for (let t = 1; t <= g.lastTurn; t++) {
@@ -1128,9 +1132,9 @@ function dispatch() {
   if (c && g.phase === 'admin') return chitBar(c);
   if (g.phase === 'supply' && g.supplyPending && !rollView) {                                         // 9.4: who is cut off and what they need, then the roll
     const list = E.supplyChecks(g), own = mine(g.phasing), air = E.boxOf(g, g.phasing, 'available').filter((x) => x.kind === 'air_mission'), as = own && air.length && !g.airSupply ? E.airSupplyAreas(g, g.phasing) : [];
-    const airRow = as.length ? `<div class="airsup"><b>${ico('air_mission')} Air supply (17.21)</b><span class="hint">Spend an Air Mission to supply one cut-off area until the next Supply Phase:</span><div class="row">${as.map((ar) => btn(esc(areaName(ar)), () => E.playAirSupply(g, air[0].id, ar))).join('')}</div></div>` : '';
+    const airRow = as.length ? `<div class="airsup"><b>${ico('air_mission')} Air supply (17.21)</b><span class="hint gx">Spend an Air Mission to supply one cut-off area until the next Supply Phase:</span><div class="row">${as.map((ar) => btn(esc(areaName(ar)), () => E.playAirSupply(g, air[0].id, ar))).join('')}</div></div>` : '';
     const rows = list.map(({ unit: x, sn, rounds }) => `<button class="supl" data-ui="${reg(() => { if (x.area != null) { const c2 = center(x.area); goal = { t: new THREE.Vector3(c2.x, 0, c2.z), dist: Math.min(dist, 30), pitch, fast: true }; } })}" title="Show on the map">${unitPic(x)}<span><b>${esc(x.name)}</b><small>${esc(areaName(x.area!))} · ${E.quality(x)}${x.disorder ? ' · disordered' : ''}${rounds > 1 ? ' · two checks (14.93)' : ''}</small></span><b class="sn">needs ${sn} or less</b></button>`).join('');
-    return `<div class="c-dispatch supply"><h3 class="${g.phasing}">Supply check</h3><p class="hint">${list.length ? `9.4: each cut-off ${nm(g.phasing)} unit rolls morale. Fail: disordered; already disordered: a step loss (green 8+, veteran 10: surrenders).` : `Every ${nm(g.phasing)} unit is in supply.`}</p>${airRow}
+    return `<div class="c-dispatch supply"><h3 class="${g.phasing}">Supply check</h3><p class="hint gx">${list.length ? `9.4: each cut-off ${nm(g.phasing)} unit rolls morale. Fail: disordered; already disordered: a step loss (green 8+, veteran 10: surrenders).` : `Every ${nm(g.phasing)} unit is in supply.`}</p>${airRow}
       <div class="row">${own ? btn(`${ico('dice')} ${list.length ? `Roll ${list.length} supply check${list.length > 1 ? 's' : ''}` : 'Continue'}`, () => E.rollSupply(g), 'primary') : `<span class="hint">Waiting for the ${nm(g.phasing)} player to roll.</span>`}</div><div class="suplist">${rows}</div></div>`;
   }
   if (g.phase === 'reinforcement' && g.artyPick) {                                                     // 16.12: the German player picks the artillery lost to attrition
@@ -1138,7 +1142,7 @@ function dispatch() {
     return `<div class="c-dispatch recover"><h3>German artillery attrition</h3><p class="hint">16.12: ${own ? 'choose' : 'the German player chooses'} one regular artillery asset (not rocket artillery) in the Used Box. It is eliminated; the rest of the Used Box goes back to the cup.</p>
       <div class="pcgrid">${cs.map((c) => pieceBtn(c, () => act(() => E.chooseArtyLoss(g, c.id)), false, !own)).join('')}</div></div>`;
   }
-  if (g.phase === 'reinforcement' && g.recover.length) return `<div class="c-dispatch recover"><h3>Unused Special Action</h3><p class="hint">Each side may bring one asset back from the Used Box (4.1a).</p>${g.recover.map((sd) => {
+  if (g.phase === 'reinforcement' && g.recover.length) return `<div class="c-dispatch recover"><h3>Unused Special Action</h3><p class="hint gx">Each side may bring one asset back from the Used Box (4.1a).</p>${g.recover.map((sd) => {
     const cs = E.boxOf(g, sd, 'used').filter((c) => E.isAsset(c)), pick = recoverSel[sd] ? cs.find((c) => c.id === recoverSel[sd]) : null, own = mine(sd);
     return `<h4 class="${sd}">${nm(sd)}</h4><div class="pcgrid">${cs.map((c) => pieceBtn(c, () => { recoverSel[sd] = recoverSel[sd] === c.id ? null : c.id; }, recoverSel[sd] === c.id, !own)).join('') || '<small>Nothing in the Used Box</small>'}</div>
       <div class="row">${btn(pick ? `Bring back ${esc(pick.name)}` : 'Choose an asset', () => { E.recoverAsset(g, sd, pick!.id); recoverSel[sd] = null; }, 'primary', !pick || !own)}${btn('None', () => E.recoverAsset(g, sd, null), '', !own)}</div>
@@ -1149,14 +1153,14 @@ function dispatch() {
     const to = previewArea ?? hoverArea, o = to != null ? optsFor(u.id).find((x) => x.area === to) : null, n = fuelLeft(), strat = g.phase === 'strategic';
     const tags = [u.disorder === 1 ? 'disordered' : u.disorder === 2 ? 'recovering' : '', u.unsupplied ? 'unsupplied' : '', u.reserve ? 'reserve' : '', u.exploit ? 'exploit' : '', u.interdict ? 'interdicted' : ''].filter(Boolean);
     let route = '';
-    const sp = u.area != null && !u.garrison ? E.supplyPath(g, u.side, u.area) : null, supLine = u.area == null || u.garrison ? '' : sp ? `<p class="hint sup ok">${ico('fuel')} In supply: ${sp.length > 1 ? `traces through ${sp.length - 1} area${sp.length > 2 ? 's' : ''} to ${esc(areaName(sp.at(-1)!))} (blue line)` : 'it stands on a supply source'}.</p>` : `<p class="hint sup bad">${ico('warn')} Out of supply. ${esc(E.supplyWhy(g, u.side, u.area))}</p>`;
+    const sp = u.area != null && !u.garrison ? E.supplyPath(g, u.side, u.area) : null, supLine = u.area == null || u.garrison ? '' : sp ? `<p class="hint sup ok gx">${ico('fuel')} In supply: ${sp.length > 1 ? `traces through ${sp.length - 1} area${sp.length > 2 ? 's' : ''} to ${esc(areaName(sp.at(-1)!))} (blue line)` : 'it stands on a supply source'}.</p>` : `<p class="hint sup bad">${ico('warn')} Out of supply. ${esc(E.supplyWhy(g, u.side, u.area))}</p>`;
     if (o) route = `<div class="route"><h4>→ ${esc(areaName(o.area))}</h4>${strat ? row('Strategic move', 'any distance') : row('Movement', `${o.cost} MP`)}${u.side === 'german' && g.opts.fuel ? row('Fuel', o.fuel ? `−1 &nbsp;(${n} → ${n - 1})` : 'not needed', o.fuel ? 'bad' : '') : ''}${o.mustStop ? row('Stops here', 'enemy present, battle follows', 'bad') : ''}${btn('Move here', () => { previewArea = o.area; confirmMove(); }, 'primary')}</div>`;
-    else if (optsFor(u.id).length) route = `<p class="hint">${optsFor(u.id).length} destination(s). Hover or click a highlighted area.</p>`;
+    else if (optsFor(u.id).length) route = `<p class="hint gx">${optsFor(u.id).length} destination(s). Hover or click a highlighted area.</p>`;
     const can = ['movement', 'reaction', 'btMove'].includes(g.phase) && !u.garrison && !u.moved;
     const fw = can && u.area != null && !u.unsupplied && !u.disorder && !E.contested(g, u.area) && !g.fieldWorks.includes(u.area) && ((g.phase === 'movement' && u.side === g.phasing) || (g.phase === 'reaction' && u.side !== g.phasing && !!u.reserve) || (g.phase === 'btMove' && u.side === g.phasing && (!!u.reserve || u.exploit)));
     const noFuel = u.side === 'german' && g.opts.fuel && ['movement', 'strategic', 'btMove', 'reaction'].includes(g.phase) && mine(u.side) && !u.garrison && !E.boxOf(g, 'german', 'available').some((x) => x.kind === 'fuel');
-    const warns = (noFuel ? `<div class="warnbox">${ico('fuel')}<span><b>No fuel left.</b> German blocks may move at most 3 MP this turn and cannot use strategic movement (16.13).</span></div>` : '')
-      + (u.interdict && mine(u.side) && ['movement', 'reaction', 'btMove', 'admin'].includes(g.phase) ? `<div class="warnbox bad">${ico('warn')}<span><b>Greif Interdict on this block.</b> Moving it, building field works or taking a reserve marker triggers a morale check (+2). Fail: it may only stay or move one area (17.11).</span></div>` : '');
+    const warns = (noFuel ? `<div class="warnbox">${ico('fuel')}<span><b>No fuel left</b>${gx('. German blocks may move at most 3 MP this turn and cannot use strategic movement (16.13).', ': 3 MP max, no strategic move.')}</span></div>` : '')
+      + (u.interdict && mine(u.side) && ['movement', 'reaction', 'btMove', 'admin'].includes(g.phase) ? `<div class="warnbox bad">${ico('warn')}<span><b>Greif Interdict</b>${gx(' on this block. Moving it, building field works or taking a reserve marker triggers a morale check (+2). Fail: it may only stay or move one area (17.11).', ': moving triggers a morale check (+2).')}</span></div>` : '');
     return `<div class="c-dispatch">${warns}<h3 class="${u.side}">${esc(u.name)}</h3><div class="pipsrow">${pips(u)} <small>${u.garrison ? 'asset' : u.cls} · ${tags.join(' · ') || 'in order'}</small></div>${seen(u) ? supLine : ''}${route}
       <div class="row">${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve', () => E.setReserve(g, u.id, false)) : btn('Reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u))) : ''}${fw ? btn('Fortify', () => E.buildFieldWorks(g, u.id)) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn('Activate (SA)', () => pickSA(u.side, u.ech, (sa) => E.activateBreakthrough(g, u.id, sa)), '', !E.saAvailable(g, u.side, u.ech).length) : ''}</div></div>`;
   }
@@ -1230,7 +1234,7 @@ function battleTable() {
       <span class="chp" title="Artillery assigned">${ico('artillery')}${arty}/${lim.arty}</span>${rest || setup ? `<span class="chp" title="Battle assets and events">${ico('armor_asset')}${rest}</span>` : ''}
       </div>`;
   };
-  const saRow = (() => { const s = other(att), us = E.unitsIn(g, b.area, s); if (!setup || !E.saAvailable(g, s).length) return ''; return `<div class="bsarow"><small>${nm(s)} Special Action</small>${btn(`${ico('back')}<span class="bsa">Retreat (SA)</span>`, () => pickSA(s, us[0]?.ech, (sa) => E.defenderRetreatSA(g, g.battle!, sa)), 'ico', !mine(s) || !us.some((u) => !u.garrison), 'Retreat before combat (8.24): uses a Special Action; your units leave without disorder, garrisons stay; the attacker gets an exploitation chance')}${ubtn(`${ico('plus')}<span class="bsa">Reinforce (SA)</span>`, () => { reinforcing = !reinforcing; refresh(); }, `ico ${reinforcing ? 'on' : ''}`, !mine(s), 'Bring in a neighbouring block (uses a Special Action)')}</div>`; })();
+  const saRow = (() => { const s = other(att), us = E.unitsIn(g, b.area, s); if (!setup || !E.saAvailable(g, s).length) return ''; return `<div class="bsarow"><small class="gx">${nm(s)} Special Action</small>${btn(`${ico('back')}<span class="bsa">Retreat (SA)</span>`, () => pickSA(s, us[0]?.ech, (sa) => E.defenderRetreatSA(g, g.battle!, sa)), 'ico', !mine(s) || !us.some((u) => !u.garrison), 'Retreat before combat (8.24): uses a Special Action; your units leave without disorder, garrisons stay; the attacker gets an exploitation chance')}${ubtn(`${ico('plus')}<span class="bsa">Reinforce (SA)</span>`, () => { reinforcing = !reinforcing; refresh(); }, `ico ${reinforcing ? 'on' : ''}`, !mine(s), 'Bring in a neighbouring block (uses a Special Action)')}</div>`; })();
   const covered = E.unitsIn(g, b.area).some((u) => !seen(u)), al = stats(b, 'allied'), ge = stats(b, 'german'), tot = al.mean + ge.mean || 1;
   return `<div class="c-table slim ${rollView ? 'rolling' : ''}">${side('allied')}<div class="bmid"><div class="c-title">${g.fought.length + fightable().length > 1 ? `<small class="cnt" title="Battle ${g.fought.length + 1} of ${g.fought.length + fightable().length}">${Math.min(g.fought.length + 1, g.fought.length + fightable().length)}/${g.fought.length + fightable().length}</small>` : ''}${b.bt ? '<small class="cnt" title="Breakthrough combat">BT</small>' : ''}<b>${esc(L.name)}</b><span class="chp" title="Terrain defence number ${L.tdn}: attackers −${L.tdn} to hit">${ico('tree')}${L.tdn}</span>${g.fieldWorks.includes(b.area) ? `<span class="chp" title="Field works">${ico('gear')}</span>` : ''}${b.riverAssault ? `<span class="chp" title="River assault">${ico('wave')}</span>` : ''}</div>
     <div class="c-vs">${covered ? '<div class="big">?<span>:</span>?</div>' : `<div class="big" title="Expected hits per combat round: Allied : German">${al.mean.toFixed(1)}<span>:</span>${ge.mean.toFixed(1)}</div><div class="gauge"><i style="width:${(al.mean / tot) * 100}%"></i></div>`}</div></div>${side('german')}${saRow}${setup ? engChoice(b) : ''}${setup && refusal ? `<div class="refuse">${ico('xbold')}<span><b>Not allowed:</b> ${esc(refusal)}</span></div>` : ''}</div>`;
@@ -1239,7 +1243,7 @@ function battleTable() {
 function engChoice(b: E.Battle): string {
   if (!b.assets[b.attacker].some((id) => E.chit(g, id).kind === 'engineer') || !g.fieldWorks.includes(b.area) || (g.fwOwner[b.area] ?? other(b.attacker)) === b.attacker || !['setup', 'attArty', 'defArty', 'defFire', 'offFire'].includes(b.stage)) return '';
   const own = mine(b.attacker), pickB = (on: boolean, label: string) => `<button class="${b.engFw === on ? 'on' : ''}" ${own ? `data-do="${reg(() => E.setEngFw(g, g.battle!, on))}"` : 'disabled'} aria-pressed="${b.engFw === on}">${label}</button>`;
-  return `<div class="engch"><b>Engineer (6.33)</b> · the defenders sit in field works. If the engineer survives artillery and defensive fire, it can remove them just before your units fire (no −1 then), instead of firing itself. Choose before offensive fire:<div class="row">${pickB(false, 'Fire with the ground units')}${pickB(true, 'Remove the field works')}</div></div>`;
+  return `<div class="engch"><b>Engineer (6.33)</b>${gx(' · the defenders sit in field works. If the engineer survives artillery and defensive fire, it can remove them just before your units fire (no −1 then), instead of firing itself. Choose before offensive fire:', ' vs field works:')}<div class="row">${pickB(false, 'Fire with the ground units')}${pickB(true, 'Remove the field works')}</div></div>`;
 }
 let refusal = '';      // the last refused battle chit, shown in the set-up panel
 function ledger() {
@@ -1252,7 +1256,7 @@ function ledger() {
   if (!b || g.pendingBlow) return '';
   if (b.stage === 'exploit') {                                                                         // 6.8: the attacker rolls a morale check for each armor-class unit, or declines
     const us = (b.exploitIds ?? []).map((id) => g.units.find((x) => x.id === id)!).filter((u) => u.area === b.area), mineStep = !online.active || online.both() || online.mySide() === b.attacker;
-    return `<div class="c-ledger tight"><div class="lh"><h3 class="${b.attacker}">Exploitation!</h3></div><p class="resline">${esc(b.result ?? '')}</p><p class="hint">6.8: each attacking armor-class unit makes a morale check. A pass marks it for exploitation: it may move again in the Breakthrough Phase.</p>
+    return `<div class="c-ledger tight"><div class="lh"><h3 class="${b.attacker}">Exploitation!</h3></div><p class="resline">${esc(b.result ?? '')}</p><p class="hint gx">6.8: each attacking armor-class unit makes a morale check. A pass marks it for exploitation: it may move again in the Breakthrough Phase.</p>
       ${us.map((u) => `<div class="fl"><span class="who">${esc(seen(u) ? u.name : 'Hidden block')}</span><span class="cnt">1${ico('dice')}</span><b class="sn">needs ${E.exploitSn(g, u)} or less</b></div>`).join('')}
       ${mineStep ? `<div class="row">${btn('Decline (stay hidden)', () => E.declineExploit(g, b), '', false, '6.8: you may decline the opportunity and keep the blocks hidden')}</div>` : `<p class="hint">Waiting for the ${nm(b.attacker)} player to roll.</p>`}</div>`;
   }
@@ -1365,11 +1369,13 @@ function layersHtml() {
     <h4>Colour</h4><div class="chips">${tintBtn('off', '', 'close', 'No colour')}${tintBtn('tdn', '', 'tree', 'Terrain defence')}${tintBtn('zones', '', 'layers', 'Army zones')}${tintBtn('control', '', 'flag', 'Who holds each area')}${tintBtn('supply', '', 'fuel', 'Supply: which of your areas trace supply')}</div><h4>Camera</h4><div class="row"><button data-home>${ico('home')} Reset the camera</button></div></div></div>`;
 }
 /** The game log, newest first, grouped by turn; each line tinted by the side it concerns. */
+/** A log line with its side prefix (GE / AL) as a coloured tag: side shown by colour and name. */
+const sideTag = (x: string) => { const m = /^(GE|AL)\b ?/.exec(x); return m ? `<b class="stag ${m[1] === 'GE' ? 'german' : 'allied'}">${m[1]}</b> ${esc(x.slice(m[0].length))}` : esc(x); };
 function logHtml() {
   const groups: { turn: string; lines: string[] }[] = [];
   for (const l of g.log) { const m = /^T(\d+) /.exec(l), t = m ? m[1] : '0', text = m ? l.slice(m[0].length) : l; if (groups.at(-1)?.turn !== t) groups.push({ turn: t, lines: [] }); groups.at(-1)!.lines.push(text); }
   const side = (x: string) => (/^(GE|German)\b/.test(x) ? 'german' : /^(AL|Allied)\b/.test(x) ? 'allied' : '');
-  return `<div class="log">${groups.reverse().map((gr) => `<h5>${gr.turn === '0' ? 'Set-up' : `Turn ${gr.turn}`}</h5>${[...gr.lines].reverse().map((x) => `<div class="ll ${side(x)}">${esc(x)}</div>`).join('')}`).join('') || '<p class="hint">Nothing yet.</p>'}</div>`;
+  return `<div class="log">${groups.reverse().map((gr) => `<h5>${gr.turn === '0' ? 'Set-up' : `Turn ${gr.turn}`}</h5>${[...gr.lines].reverse().map((x) => `<div class="ll ${side(x)}">${sideTag(x)}</div>`).join('')}`).join('') || '<p class="hint">Nothing yet.</p>'}</div>`;
 }
 function modalHtml() {
   if (modal === 'layers') return layersHtml();
@@ -1379,7 +1385,7 @@ function modalHtml() {
     const tabs = ['Players', 'Log', 'Settings', ...(online.admin ? ['Admin'] : [])];
     if (!tabs.includes(menuTab)) menuTab = 'Players';
     const body = menuTab === 'Log' ? logHtml()
-      : menuTab === 'Settings' ? `<h4>Map</h4><div class="row">${ubtn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${ubtn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Opponent</h4><div class="row">${ubtn(`<span class="sw ${followFoe ? 'on' : ''}">${followFoe ? 'ON' : 'OFF'}</span> Point the camera at the other player's moves`, () => { followFoe = !followFoe; try { localStorage.setItem('fab-follow', followFoe ? '1' : '0'); } catch { /* private mode */ } }, followFoe ? 'on' : '')}</div>
+      : menuTab === 'Settings' ? `<h4>Map</h4><div class="row">${ubtn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${ubtn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Explanations</h4><div class="row">${ubtn(`<span class="sw ${guide === 'full' ? 'on' : ''}">${guide === 'full' ? 'FULL' : 'SHORT'}</span> Explain each option and rule`, () => setGuide(guide === 'full' ? 'short' : 'full'), guide === 'full' ? 'on' : '')}</div><h4>Opponent</h4><div class="row">${ubtn(`<span class="sw ${followFoe ? 'on' : ''}">${followFoe ? 'ON' : 'OFF'}</span> Point the camera at the other player's moves`, () => { followFoe = !followFoe; try { localStorage.setItem('fab-follow', followFoe ? '1' : '0'); } catch { /* private mode */ } }, followFoe ? 'on' : '')}</div>
         ${online.active && !online.admin && !online.both() ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as E.Opts['scenario']; })}"><option value="intro" ${newOpts.scenario === 'intro' ? 'selected' : ''}>Nuts! introductory (3 turns)</option><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option></select>
         <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label><label><input type="checkbox" ${newOpts.airborne ? 'checked' : ''} data-sel="${regv((x) => { newOpts.airborne = x === 'on'; })}"> 18.5 airborne ignore supply −1</label><label><input type="checkbox" ${newOpts.advArty ? 'checked' : ''} data-sel="${regv((x) => { newOpts.advArty = x === 'on'; })}"> 18.6 advanced artillery</label>${btn('Restart', () => { if (!confirm('Restart and lose the current game?')) return; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'danger')}</div>`}`
       : menuTab === 'Admin' ? `<div class="row">${ubtn(`${ico('wand')} Sandbox`, () => { location.href = `${homeUrl()}?sandbox=1`; })}${ubtn('Update rules', () => { modal = 'rules'; })}${ubtn('Free German seat', () => { void auth.freeSeat('german'); })}${ubtn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div>`
@@ -1419,7 +1425,7 @@ function renderInner() {
   const dockMain = alert || ledger() || handCards();
   const keepD = document.querySelector<HTMLElement>('#ui .c-dispatch')?.scrollTop ?? 0;           // a panel being read keeps its place when the screen updates
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = `<div class="tops">${topBar()}${vpStrip(g, reg(() => { scoreOpen = true; }))}</div>` + `<div class="stage">${SANDBOX && SBU.st.sbOpen ? SBU.sandboxPanel() : ''}${seatBar()}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${airPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} Final map`, () => { endHidden = true; }) + ubtn(`${ico('plus')} New game`, () => { if (SANDBOX) { SBU.sbReset({ ...g.opts }); endHidden = false; } else location.href = homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${undoBtn()}${p && allowed() && p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p && allowed() ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
+  $('#ui').innerHTML = `<div class="tops">${topBar()}${vpStrip(g, reg(() => { scoreOpen = true; }))}</div>` + `<div class="stage">${SANDBOX && SBU.st.sbOpen ? SBU.sandboxPanel() : ''}${seatBar()}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${airPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} Final map`, () => { endHidden = true; }) + ubtn(`${ico('plus')} New game`, () => { if (SANDBOX) { SBU.sbReset({ ...g.opts }); endHidden = false; } else location.href = homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}</button>${undoBtn()}${p && allowed() && p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p && allowed() ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
   const ui = $('#ui');
   { const d = ui.querySelector<HTMLElement>('.c-dispatch'); if (d) d.scrollTop = keepD; }
   bind(ui, keepH, keepA);
