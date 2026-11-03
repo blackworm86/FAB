@@ -430,3 +430,9 @@ img.cb { border-radius: 7%; box-shadow: 0 1px 0 #e3dccb, 0 2px 0 #b9b2a0, 0 3px 
   .dchips { gap: 6px; }
 }
 .mapbubble button.ab span { font: 600 12px var(--sfd); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+.c-table .bsarow { flex: 1 0 100%; grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; padding-top: 6px; border-top: 1px solid #8d906533; margin-top: 4px; }
+.c-table .bsarow small { font: 600 11px var(--sfd); letter-spacing: .1em; text-transform: uppercase; color: #b3ad8b; }
+.c-table .bsarow button { min-height: 36px; padding: 2px 10px; width: auto; }
+@media (max-width: 700px) { .c-table .bsarow small { flex: 1 0 100%; text-align: center; } }
+.c-table.slim:has(.bsarow) { flex-wrap: wrap; } .c-table.slim .bsarow { order: 9; }
+.c-table.slim > .bside { flex: 0 0 auto; } .c-table.slim > .bmid { flex: 1 1 auto; }
