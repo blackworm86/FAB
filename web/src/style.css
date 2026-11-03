@@ -507,3 +507,11 @@ img.cb { border-radius: 7%; box-shadow: 0 1px 0 #e3dccb, 0 2px 0 #b9b2a0, 0 3px 
 .airsup { display: grid; gap: 4px; padding: 8px; margin: 6px 0; border: 1px solid var(--gold); background: #e7b04a14; } .airsup .row { flex-wrap: wrap; gap: 6px; }
 @media (max-width: 700px) { .stage > .c-dispatch:not(.chitbar):not(.supply) { max-height: 40vh; overflow-y: auto; } }
 .toast { z-index: 130; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); } @media (max-width: 700px) { .toast { bottom: auto; top: 110px; } }
+.warnbox { display: flex; gap: 8px; align-items: flex-start; border: 1px solid var(--gold); background: #e7b04a1a; padding: 7px 9px; margin: 0 0 8px; font-size: 13px; line-height: 1.35; } .warnbox b { color: var(--gold); } .warnbox .ic { flex: none; width: 18px; height: 18px; color: var(--gold); }
+.warnbox.bad { border-color: #d1432f; background: #d1432f1f; } .warnbox.bad b, .warnbox.bad .ic { color: #ef7a55; }
+.c-table .engch, .c-table .refuse { flex: 1 0 100%; grid-column: 1 / -1; font-size: 13px; border-top: 1px solid #8d906533; padding-top: 6px; margin-top: 4px; }
+.engch b { color: var(--gold); } .engch .row { display: flex; gap: 6px; margin-top: 6px; } .engch .row button { flex: 1; min-height: 40px; font: 600 12px var(--sfd); letter-spacing: .06em; text-transform: uppercase; } .engch .row button.on { background: var(--gold); color: #1a1608; border-color: var(--gold); }
+.c-table .refuse { display: flex; gap: 8px; align-items: flex-start; color: #ef9a7a; } .refuse b { color: #ef7a55; } .refuse .ic { flex: none; width: 16px; height: 16px; }
+.c-table.slim:has(.engch, .refuse) { flex-wrap: wrap; } .c-table.slim .engch, .c-table.slim .refuse { order: 10; }
+.otag { position: absolute; left: 0; top: 0; z-index: 4; pointer-events: none; font: 700 11px var(--sfd); letter-spacing: .08em; padding: 2px 7px; border-radius: 4px; white-space: nowrap; box-shadow: 0 2px 6px #000a; }
+.otag.sa { background: #ff8a3d; color: #1a1608; } .otag.fight { background: #ffc542; color: #1a1608; } .otag.off { background: #222c; color: #ccc; border: 1px dashed #999; }
