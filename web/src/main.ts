@@ -131,8 +131,8 @@ function block(u: E.Unit, hidden = false) {
   const w = 1.6, h = 1.6, d = 0.8;                                    // 16 x 16 x 8 mm block
   const wood = new THREE.MeshStandardMaterial({ color: BRIT.has(u.name) ? 0x3f6fb8 : WOOD[u.side], roughness: 0.75 });
   if (u.garrison) {
-    const chit = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new THREE.BoxGeometry(1.43, 0.18, 1.43), [chit, chit, new THREE.MeshStandardMaterial({ map: svgTex(u.id, garrisonArt(u)) }), chit, chit, chit]); // 9/16 in chit
-    m.position.y = 0.09; m.castShadow = true; return m;
+    const chit = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new RoundedBoxGeometry(1.43, 0.12, 1.43, 2, 0.1), [chit, chit, new THREE.MeshStandardMaterial({ map: svgTex(u.id, garrisonArt(u)), roughness: 0.7 }), chit, chit, chit]);      // a counter, like the other chits // 9/16 in chit
+    m.position.y = 0.06; m.castShadow = true; m.rotation.y = viewRot(); return m;
   }
   const face = hidden ? wood : new THREE.MeshStandardMaterial({ map: svgTex(`${u.id}-${u.str}`, labelSvg(u)), roughness: 0.6 });   // upright blocks show their blank back to the enemy
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [wood, wood, wood, wood, face, wood]); m.rotation.y = viewRot();
@@ -386,10 +386,10 @@ const BTN_ICON: [RegExp, string][] = [[/blow|bridge.*bridge/i, 'xbold'], [/repai
 const iconify = (html: string) => html.replace(/<button class="([^"]*)" (data-do="[^"]+") ([^>]*)>([^<]*)<\/button>/g, (m, cls, d, rest, text) => { const ic = BTN_ICON.find(([re]) => re.test(text))?.[1]; return ic ? `<button class="${cls} ab" ${d} ${rest}>${ico(ic)}<span>${text}</span></button>` : m; });
 /** The selected chit: a slim bar with its picture, a one-line instruction, an info toggle and the actions as icon buttons. */
 function chitBar(c: E.Chit): string {
-  if (!mine(c.side)) return `<div class="c-dispatch chitbar"><div class="cbhead"><img class="cbimg" alt="" src="${chitImg(c)}"><div class="cbt"><b>${esc(c.name)}</b><small>The other side's piece: you can only look</small></div><button class="ico" data-ui="${reg(() => { selChit = null; })}" aria-label="Put away" title="Put away">${ico('close')}</button></div><div class="inspect slimcard">${ruleHtml(c.kind, E.isEvent(c))}</div></div>`;
+  if (!mine(c.side)) return `<div class="c-dispatch chitbar"><div class="cbhead"><span class="cbimg">${chitPic(c)}</span><div class="cbt"><b>${esc(c.name)}</b><small>The other side's piece: you can only look</small></div><button class="ico" data-ui="${reg(() => { selChit = null; })}" aria-label="Put away" title="Put away">${ico('close')}</button></div><div class="inspect slimcard">${ruleHtml(c.kind, E.isEvent(c))}</div></div>`;
   const tg = tgt, body = chitPanel(c), [kind] = RULE[c.kind] ?? [c.kind];
-  const chips = tg?.chips.map((x) => `<button class="pc ${c.side}" data-do="${reg(x.fn)}" title="${esc(x.label)}"><img alt="" src="${x.img}"><small>${esc(x.label)}</small></button>`).join('') ?? '';
-  return `<div class="c-dispatch chitbar"><div class="cbhead"><img class="cbimg" alt="" src="${chitImg(c)}"><div class="cbt"><b>${esc(c.name)}</b><small>${esc(tg?.hint || kind)}</small></div>
+  const chips = tg?.chips.map((x) => `<button class="pc ${c.side}" data-do="${reg(x.fn)}" title="${esc(x.label)}">${x.img}<small>${esc(x.label)}</small></button>`).join('') ?? '';
+  return `<div class="c-dispatch chitbar"><div class="cbhead"><span class="cbimg">${chitPic(c)}</span><div class="cbt"><b>${esc(c.name)}</b><small>${esc(tg?.hint || kind)}</small></div>
     <button class="ico" data-ui="${reg(() => { infoOpen = !infoOpen; })}" aria-pressed="${infoOpen}" aria-label="What it does" title="What it does">${ico('info')}</button><button class="ico" data-ui="${reg(() => { selChit = null; })}" aria-label="Put away" title="Put away">${ico('close')}</button></div>
     ${infoOpen ? `<div class="inspect slimcard">${ruleHtml(c.kind, E.isEvent(c))}</div>` : ''}${tg && tg.modes.length > 1 ? `<div class="modes" role="group" aria-label="What to do">${tg.modes.map((m) => `<button class="ico ${m.id === tgtMode ? 'on' : ''}" data-ui="${reg(() => { tgtMode = m.id; refresh(); })}" title="${esc(m.label)}" aria-label="${esc(m.label)}">${ico(m.icon)}</button>`).join('')}</div>` : ''}${chips ? `<div class="cbchips">${chips}</div>` : ''}${tg?.buttons.length ? `<div class="row">${tg.buttons.map((b) => abtn(b.icon, b.label, b.fn, '', false, b.title)).join('')}</div>` : ''}${iconify(body)}</div>`;
 }
@@ -701,10 +701,11 @@ function placeBubbles() {
   document.querySelectorAll<HTMLElement>('#ui .mapbubble').forEach((e) => {
     const a = +e.dataset.area!, pts = areaWorld(a).map((q) => { v.set(q.x, 0, q.z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height }; });
     const minX = Math.min(...pts.map((p) => p.x)), maxX = Math.max(...pts.map((p) => p.x)), cy = pts.reduce((t, p) => t + p.y, 0) / pts.length, w = e.offsetWidth || 160, h = e.offsetHeight || 44;
-    const right = maxX + 28 + w < r.width - 8 || minX - 28 - w < 8, x = right ? Math.min(r.width - w - 8, maxX + 28) : Math.max(8, minX - 28 - w), y = Math.min(r.height - h - 70, Math.max(60, cy - h / 2));
+    const fitsR = maxX + 28 + w < r.width - 8, fitsL = minX - 28 - w > 8, below = !fitsR && !fitsL, maxY = Math.max(...pts.map((p) => p.y));       // phones: no room beside the area, so the bubble goes under it
+    const right = fitsR || !fitsL, x = below ? Math.max(8, Math.min(r.width - w - 8, (minX + maxX) / 2 - w / 2)) : right ? Math.min(r.width - w - 8, maxX + 28) : Math.max(8, minX - 28 - w), y = below ? Math.min(r.height - h - 70, maxY + 18) : Math.min(r.height - h - 70, Math.max(60, cy - h / 2));
     const pr = (e.offsetParent as HTMLElement | null)?.getBoundingClientRect() ?? r; e.style.transform = `translate(${x + r.left - pr.left}px, ${y + r.top - pr.top}px)`;          // the bubble lives in the stage, the lines over the canvas
     const tg = (e.dataset.tg ?? '').split(',').filter(Boolean).map(pieceScreen).filter((p): p is NonNullable<typeof p> => !!p).map((p) => ({ x: p.x - r.left, y: p.y - r.top, rad: p.rad }));
-    svg += leaderSvg(right ? x : x + w, y + h / 2, tg, 'gold');
+    svg += below ? leaderSvg(x + w / 2, y, tg, 'gold') : leaderSvg(right ? x : x + w, y + h / 2, tg, 'gold');
   });
   if (svg !== leaderLast) { leaders.innerHTML = svg; leaderLast = svg; } leaders.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`); leaders.style.left = r.left + 'px'; leaders.style.top = r.top + 'px'; leaders.style.width = r.width + 'px'; leaders.style.height = r.height + 'px';
 }
@@ -817,7 +818,20 @@ function endRoll() { commitRoll(); rollView = null; clearDice(); ($('#dice') as 
 
 const chitUri = new Map<string, string>();
 const chitImg = (c: E.Chit) => { let u = chitUri.get(c.id); if (!u) { u = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(chitSvg(c)); chitUri.set(c.id, u); } return u; };
-const card = (c: E.Chit, r = 0, why: string | null = null) => `<div tabindex="0" role="button" class="card2 ${c.side} ${c.kind === 'sa_block' ? 'wood' : ''} ${why ? 'bad' : ''} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" style="--r:${r}deg" title="${esc(why ?? c.name + ' · ' + c.ech)}" aria-label="${esc(c.name)}">${chitPic(c)}</div>`;
+/** Can this chit be played right now (its phase, its targets)? Cards that can glow; worked out once per game change. */
+let liveKey = '', liveSet = new Set<string>();
+function usableNow(c: E.Chit): boolean {
+  const k = `${g.turn}${g.phasing}${g.phase}${g.log.length}${g.battle?.stage}${online.devSeat}`; if (k !== liveKey) { liveKey = k; liveSet = new Set(); const b = g.battle;
+    for (const x of g.chits) { if (x.box !== 'available' || !mine(x.side)) continue;
+      let ok = false;
+      if (b) ok = b.stage === 'setup' && (E.isArty(x) || E.isBattleAsset(x) || x.kind === 'air_mission') && !E.canAssign(g, b, x.side, x);
+      else if (g.phase === 'admin') { const t = targetsFor(() => g, x, { area: null, mode: '', setArea: () => {}, setMode: () => {}, face: (u) => unitPic(u), areaName }); ok = !!t && (t.units.size + t.areas.size + t.pick.size + t.chips.length + t.modes.length > 0 || !!t.any); }
+      else if (x.kind === 'sa_block' || x.kind === 'special_action_event') ok = g.phase === 'btMove' || g.phase === 'btCombat';
+      else if (x.kind === 'air_mission') ok = g.phase === 'supply' && E.airSupplyAreas(g, x.side).length > 0;
+      if (ok) liveSet.add(x.id); } }
+  return liveSet.has(c.id);
+}
+const card = (c: E.Chit, r = 0, why: string | null = null) => `<div tabindex="0" role="button" class="card2 ${c.side} ${c.kind === 'sa_block' ? 'wood' : ''} ${why ? 'bad' : usableNow(c) ? 'live' : ''} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" style="--r:${r}deg" title="${esc(why ?? c.name + ' · ' + c.ech)}" aria-label="${esc(c.name)}">${chitPic(c)}</div>`;
 /** How much neighbouring cards overlap so the whole hand fits: each card keeps at least 34 px (46 on phones) visible, and the hand scrolls when even that does not fit. */
 const overlapFor = (n: number) => { const cw = innerWidth >= 900 ? 72 : 62, avail = innerWidth - 40, visible = n > 1 ? Math.min(cw, Math.max(innerWidth < 900 ? 46 : 34, (avail - cw) / (n - 1))) : cw; return n > 1 ? Math.round(cw - visible) : 0; };
 const handStyle = (n: number) => `style="--ov:${overlapFor(n)}px"`;
@@ -831,7 +845,7 @@ function autoFill(b: E.Battle) {
 /** Where a dragged chit may be dropped: exactly the areas it can be used in (its zone, its rules), from the same dry runs as a tap. */
 function chitTargets(c: E.Chit): number[] {
   if (g.phase !== 'admin' || c.box !== 'available' || !mine(c.side)) return [];
-  const t = targetsFor(() => g, c, { area: null, mode: '', setArea: () => {}, setMode: () => {}, face: unitFace, areaName });
+  const t = targetsFor(() => g, c, { area: null, mode: '', setArea: () => {}, setMode: () => {}, face: (u) => unitPic(u), areaName });
   if (!t) return [];
   const out = new Set<number>([...t.areas.keys(), ...t.pick.keys()]);
   for (const id of t.units.keys()) { const a = g.units.find((x) => x.id === id)?.area; if (a != null) out.add(a); }
@@ -969,9 +983,11 @@ let piecesTab: 'boxes' | 'arrivals' = 'boxes', piecesSide: E.Side | null = null,
 /** A short reading of what a chit does, in the series' own vocabulary; the printed rule is the authority. */
 
 /** A chit's picture; the reusable Special Action is a wooden block (8.1), drawn like the arriving blocks. */
-const chitPic = (c: E.Chit) => (c.kind === 'sa_block' ? b3(chitImg(c), c.side) : `<img alt="" draggable="false" src="${chitImg(c)}">`);
-const pieceBtn = (c: E.Chit, f: () => void, on = false, dis = false) => `<button class="pc ${c.side} ${on ? 'on' : ''}" data-ui="${reg(f)}" ${dis ? 'disabled' : ''} title="${esc(c.name)}" aria-label="${esc(chitLabel(c))}">${chitPic(c)}</button>`;
-const ruleCard = (c: E.Chit) => { const [t] = RULE[c.kind] ?? [c.kind, '']; return `<img class="big" alt="" src="${chitImg(c)}"><div><h4>${esc(c.name)} <small>${esc(t)}</small></h4>${ruleHtml(c.kind, E.isEvent(c))}</div>`; };
+/** Every piece is drawn the same way everywhere: blocks (and the reusable Special Action) as 3D wooden blocks, chits, garrisons and Task Forces as cardboard counters. */
+const chitPic = (c: E.Chit) => (c.kind === 'sa_block' ? b3(chitImg(c), c.side) : `<img class="cb" alt="" draggable="false" src="${chitImg(c)}">`);
+const unitPic = (u: E.Unit) => (u.garrison ? `<img class="cb" alt="" draggable="false" src="${unitFace(u)}">` : b3(unitFace(u), sideOfUnit(u)));
+const pieceBtn = (c: E.Chit, f: () => void, on = false, dis = false) => `<button class="pc ${c.side} ${on ? 'on' : ''} ${c.box === 'available' && usableNow(c) ? 'live' : ''}" data-ui="${reg(f)}" ${dis ? 'disabled' : ''} title="${esc(c.name)}" aria-label="${esc(chitLabel(c))}">${chitPic(c)}</button>`;
+const ruleCard = (c: E.Chit) => { const [t] = RULE[c.kind] ?? [c.kind, '']; return `<span class="big">${chitPic(c)}</span><div><h4>${esc(c.name)} <small>${esc(t)}</small></h4>${ruleHtml(c.kind, E.isEvent(c))}</div>`; };
 const seatedView = () => online.active && !online.both() && !!online.mySide();
 function piecesHtml() {
   const sd = piecesSide ?? viewSide(), tabs = chip('', piecesTab === 'boxes', () => { piecesTab = 'boxes'; }, 'Pieces in the boxes', 'boxes') + chip('', piecesTab === 'arrivals', () => { piecesTab = 'arrivals'; }, 'Arrivals by turn', 'calendar') + '<span class="sp"></span>' + (['german', 'allied'] as E.Side[]).sort((x, y) => +(y === viewSide()) - +(x === viewSide())).map((x) => chip(x === 'german' ? 'GE' : 'AL', sd === x, () => { piecesSide = x; inspectId = null; }, seatedView() ? (x === viewSide() ? 'My pieces' : 'Opponent\'s pieces') : nm(x) + ' pieces')).join('');
@@ -985,7 +1001,7 @@ function piecesHtml() {
     for (let t = 1; t <= g.lastTurn; t++) {
       const us = g.units.filter((u) => u.side === sd && u.arrival === t), cs = g.chits.filter((c) => c.side === sd && c.turn === t);
       if (!us.length && !cs.length) continue;
-      rows.push(`<div class="oob ${t === g.turn ? 'now' : t < g.turn ? 'past' : ''}"><h4>Turn ${t}${t === g.turn ? ' · now' : ''}</h4><div class="oobrow">${us.map((u) => `<div class="oobu" title="${esc(u.name)}"><img alt="" src="${unitFace(u)}"><small>${esc(u.name)}</small><small class="en">${u.entry ? 'Entry ' + u.entry.join('/') : ''}</small></div>`).join('')}${cs.map((c) => pieceBtn(c, () => { inspectId = inspectId === c.id ? null : c.id; }, inspectId === c.id)).join('')}</div></div>`);
+      rows.push(`<div class="oob ${t === g.turn ? 'now' : t < g.turn ? 'past' : ''}"><h4>Turn ${t}${t === g.turn ? ' · now' : ''}</h4><div class="oobrow">${us.map((u) => `<div class="oobu" title="${esc(u.name)}">${unitPic(u)}<small>${esc(u.name)}</small><small class="en">${u.entry ? 'Entry ' + u.entry.join('/') : ''}</small></div>`).join('')}${cs.map((c) => pieceBtn(c, () => { inspectId = inspectId === c.id ? null : c.id; }, inspectId === c.id)).join('')}</div></div>`);
     }
     const pick = inspectId ? g.chits.find((c) => c.id === inspectId && c.side === sd) : null;
     body = `${pick ? `<div class="inspect">${ruleCard(pick)}</div>` : ''}${rows.join('')}`;
@@ -999,7 +1015,7 @@ function dispatch() {
   if (c && g.phase === 'admin') return chitBar(c);
   if (g.phase === 'supply' && g.supplyPending && !rollView) {                                         // 9.4: who is cut off and what they need, then the roll
     const list = E.supplyChecks(g), own = mine(g.phasing);
-    const rows = list.map(({ unit: x, sn, rounds }) => `<button class="supl" data-ui="${reg(() => { if (x.area != null) { const c2 = center(x.area); goal = { t: new THREE.Vector3(c2.x, 0, c2.z), dist: Math.min(dist, 30), pitch, fast: true }; } })}" title="Show on the map"><img alt="" src="${unitFace(x)}"><span><b>${esc(x.name)}</b><small>${esc(areaName(x.area!))} · ${E.quality(x)}${x.disorder ? ' · disordered' : ''}${rounds > 1 ? ' · two checks (14.93)' : ''}</small></span><b class="sn">needs ${sn} or less</b></button>`).join('');
+    const rows = list.map(({ unit: x, sn, rounds }) => `<button class="supl" data-ui="${reg(() => { if (x.area != null) { const c2 = center(x.area); goal = { t: new THREE.Vector3(c2.x, 0, c2.z), dist: Math.min(dist, 30), pitch, fast: true }; } })}" title="Show on the map">${unitPic(x)}<span><b>${esc(x.name)}</b><small>${esc(areaName(x.area!))} · ${E.quality(x)}${x.disorder ? ' · disordered' : ''}${rounds > 1 ? ' · two checks (14.93)' : ''}</small></span><b class="sn">needs ${sn} or less</b></button>`).join('');
     return `<div class="c-dispatch supply"><h3 class="${g.phasing}">Supply check</h3><p class="hint">${list.length ? `9.4: each cut-off ${nm(g.phasing)} unit rolls morale. Fail: disordered; already disordered: a step loss (green 8+, veteran 10: surrenders).` : `Every ${nm(g.phasing)} unit is in supply.`}</p>${rows}
       <div class="row">${btn(`${ico('dice')} ${list.length ? 'Roll supply checks' : 'Continue'}`, () => E.rollSupply(g), 'primary', !own)}${own ? '' : `<span class="hint">Waiting for the ${nm(g.phasing)} player.</span>`}</div></div>`;
   }
@@ -1066,7 +1082,7 @@ function cardTip() {
   const c = handInspect ? g.chits.find((x) => x.id === handInspect) : null, b = g.battle;
   if (!c || !b) return '<div class="cardtip"><span>Tap a card to read its rule.</span></div>';
   const [t, d] = RULE[c.kind] ?? [c.kind, ''], why = E.canAssign(g, b, c.side, c);
-  return `<div class="cardtip"><img alt="" src="${chitImg(c)}"><div><b>${esc(c.name)} <small>${esc(t)}</small></b><span>${esc(d.split("\n")[0])}</span>${why ? `<em>Cannot join: ${esc(why)}</em>` : '<em class="ok">Can join this battle</em>'}</div></div>`;
+  return `<div class="cardtip">${chitPic(c)}<div><b>${esc(c.name)} <small>${esc(t)}</small></b><span>${esc(d.split("\n")[0])}</span>${why ? `<em>Cannot join: ${esc(why)}</em>` : '<em class="ok">Can join this battle</em>'}</div></div>`;
 }
 function handCards() {
   const b = g.battle;
@@ -1265,7 +1281,7 @@ function renderInner() {
   const alert = g.pendingBlow ? (() => { const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!, path = g.pendingBlow!.path; return `<div class="c-ledger"><h3>${nm(other(u.side))}: bridge?</h3><p class="hint">${esc(u.name)} tries to cross into ${esc(areaName(path[path.length - 1]))}. Attempt to blow the bridge? It works on a roll of 1–5.</p><div class="row end">${btn('Let them cross', () => E.resolveBlow(g, false))}${btn('Attempt to blow it', () => E.resolveBlow(g, true), 'primary')}</div></div>`; })() : '';
   const dockMain = alert || ledger() || handCards();
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = `<div class="tops">${topBar()}${vpStrip(g, reg(() => { scoreOpen = true; }))}</div>` + `<div class="stage">${SANDBOX && SBU.st.sbOpen ? SBU.sandboxPanel() : ''}${seatBar()}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${b ? battleTable() : dispatch()}${decisionBubble()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitFace, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitFace, ubtn(`${ico('layers')} View the final map`, () => { endHidden = true; }) + ubtn(`${ico('plus')} New game`, () => { location.href = SANDBOX ? `${homeUrl()}?sandbox=1` : homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p && allowed() ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
+  $('#ui').innerHTML = `<div class="tops">${topBar()}${vpStrip(g, reg(() => { scoreOpen = true; }))}</div>` + `<div class="stage">${SANDBOX && SBU.st.sbOpen ? SBU.sandboxPanel() : ''}${seatBar()}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${b ? battleTable() : dispatch()}${decisionBubble()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} View the final map`, () => { endHidden = true; }) + ubtn(`${ico('plus')} New game`, () => { location.href = SANDBOX ? `${homeUrl()}?sandbox=1` : homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div>${p && allowed() ? `<button class="go" data-do="${reg(p.fn)}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}</div></div>` + modalHtml();
   const ui = $('#ui');
   bind(ui, keepH, keepA);
 }
@@ -1317,7 +1333,7 @@ function refresh() {
   SBU.hotseatSync();
   if (online.mode === 'remote') setTimeout(driveSplit, 0);
   { const key = `${online.devSeat}|${online.mySide()}|${g.battle?.attPoint}|${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
-    if (key !== tgtKey) { tgtKey = key; tgt = reinforcing ? reinforceTargets() : decisionTargets() ?? (selChit && mine(g.chits.find((x) => x.id === selChit)?.side ?? 'german') ? targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: unitFace, areaName }) : null); } }
+    if (key !== tgtKey) { tgtKey = key; tgt = reinforcing ? reinforceTargets() : decisionTargets() ?? (selChit && mine(g.chits.find((x) => x.id === selChit)?.side ?? 'german') ? targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: (u) => unitPic(u), areaName }) : null); } }
   if (tint === 'control') { const k = JSON.stringify(g.control) + E.contestedAreas(g).join(); if (k !== ctlKey) { ctlKey = k; paintBoard(); } }
   syncView(); syncBattleCam(); drawPieces(); paintAreas(); drawRoute(); badges = g.battle ? [] : badgeList(); syncBadges(); syncMoveMarks(); render();
   if (!rollView) { const cv = $('#dice'); if (cv && cv.style.display !== 'none') { clearDice(); cv.style.display = 'none'; } }
@@ -1345,7 +1361,7 @@ SBU.initSandboxUi({
   get g() { return g; }, set g(v) { g = v; }, get selUnit() { return selUnit; }, set selUnit(v) { selUnit = v; }, get selChit() { return selChit; }, set selChit(v) { selChit = v; },
   get selArr() { return selArr; }, set selArr(v) { selArr = v; }, get selArea() { return selArea; }, set selArea(v) { selArea = v; }, get previewArea() { return previewArea; }, set previewArea(v) { previewArea = v; },
   get rollView() { return rollView; }, set rollView(v) { rollView = v as RollView | null; },
-  ABBR, actorNow, areaName, b3, chitImg, unitFace, hist, refresh, render, save, say, reg, regv, ubtn,
+  ABBR, actorNow, areaName, b3, chitImg, unitFace, unitPic, chitPic, hist, refresh, render, save, say, reg, regv, ubtn,
 });
 frame();
 loadChitArt().catch((e) => console.error(e)).finally(() => { auto(); refresh(); });

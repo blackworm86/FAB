@@ -38,14 +38,16 @@ export class FxLayer {
   place(project: (area: number, unit?: string) => { x: number; y: number; cx: number; cy: number; rad: number; visible: boolean }) {
     const now = performance.now(), layer = document.getElementById('fx'); if (!layer) return;
     if (!this.svg) { this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); this.svg.setAttribute('class', 'fxlines'); layer.prepend(this.svg); }
-    let lines = ''; const used: { x: number; y: number; w: number; h: number }[] = [];
+    let lines = ''; const used: { x: number; y: number; w: number; h: number }[] = Array.from(document.querySelectorAll<HTMLElement>('.mapbubble')).map((b) => { const r = b.getBoundingClientRect(); return { x: r.left - 6, y: r.top - 6, w: r.width + 12, h: r.height + 12 }; });   // never over a choice bubble
     for (let i = this.els.length - 1; i >= 0; i--) {
       const f = this.els[i]; if (now - f.born > 9000) { f.el.remove(); this.els.splice(i, 1); continue; }
       const p = project(f.area, f.unit), show = p.visible && now >= f.born; f.el.style.display = show ? '' : 'none'; if (!show) continue;
       const w = f.el.offsetWidth || 150, h = f.el.offsetHeight || 40, dir = p.x >= p.cx ? 1 : -1;
       let x = dir > 0 ? p.x + p.rad + 34 : p.x - p.rad - 34 - w, y = p.y - h / 2 - 26;
       x = Math.max(6, Math.min(innerWidth - w - 6, x));
-      while (used.some((u) => x < u.x + u.w && x + w > u.x && y < u.y + u.h + 4 && y + h + 4 > u.y)) y += h + 6;                  // stacked, never on top of each other
+      const hit = (yy: number) => used.some((u) => x < u.x + u.w && x + w > u.x && yy < u.y + u.h + 4 && yy + h + 4 > u.y), y0 = y;
+      while (hit(y) && y < innerHeight - h - 90) y += h + 6;                  // stacked, never on top of each other or of a choice bubble
+      if (hit(y)) { y = y0; while (hit(y) && y > 60) y -= h + 6; }           // no room below: look above
       used.push({ x, y, w, h }); f.el.style.transform = `translate(${x}px, ${y}px)`;
       const bx = dir > 0 ? x : x + w, by = y + h / 2, ang = Math.atan2(by - p.y, bx - p.x), ex = p.x + Math.cos(ang) * p.rad, ey = p.y + Math.sin(ang) * p.rad;
       if (f.unit) lines += `<path class="ln ${f.el.classList[1]}" d="M${bx.toFixed(1)} ${by.toFixed(1)} L${ex.toFixed(1)} ${ey.toFixed(1)}"/><circle class="dt ${f.el.classList[1]}" cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="3.5"/>`;

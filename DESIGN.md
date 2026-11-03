@@ -178,6 +178,9 @@ Movement is a flat, tapered operations arrow (shadow, dark rim, light core, notc
 ### Victory points
 A strip under the top bar: the turn track (each turn's sudden-death numbers in red, the current turn in brass), the Allied and German totals around a gauge whose brass needle shows the net score, with red lines where either side wins outright this turn; on phones only the gauge and totals. Tapping it opens the breakdown: totals, each side's objective areas (cut-off ones struck through), destroyed big units, the victory table. When the game ends a full panel shows the result, summary cards, a net-VP-by-turn chart, the breakdown and View map / New game / Home; "Result" in the bottom line reopens it. Not shown in Nuts!, which is decided in Bastogne.
 
+### Pieces everywhere
+Wooden blocks (units and the reusable Special Action) are always drawn as 3D blocks; chits, garrisons and Task Forces always as cardboard counters with rounded corners and an edge, in the hand, the piece boxes, panels, the sandbox library, the supply list and the score sheets, and on the map. A chit that can be played in the current phase glows softly (hand and Available box).
+
 ### Chat
 A speech-bubble button in the top bar (unread count in an alarm-red dot) opens the players' chat: a slim panel on the right on computers, a bottom sheet over the hand on phones. Messages show name, side colour (steel or olive edge) and time; one-tap quick lines (Your turn, Ready, One moment, Nice move, Good game) sit above the text box. A message arriving while the chat is closed shows as a short banner. Watchers read but see "only the two players can write"; there is no chat in the sandbox or hotseat.
 

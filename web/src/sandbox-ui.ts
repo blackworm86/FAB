@@ -11,11 +11,11 @@ import type { History } from './history';
 export interface SbCtx {
   g: E.Game; selUnit: string | null; selChit: string | null; selArr: string | null; selArea: number | null; previewArea: number | null; rollView: unknown;
   ABBR: Record<string, string>; actorNow: () => E.Side | 'both'; areaName: (a: number) => string; b3: (face: string, side: E.Side | 'british', chit?: boolean) => string;
-  chitImg: (c: E.Chit) => string; unitFace: (u: E.Unit) => string; hist: History<E.Game>; refresh: () => void; render: () => void; save: () => void; say: (t: string) => void;
+  chitImg: (c: E.Chit) => string; unitFace: (u: E.Unit) => string; unitPic: (u: E.Unit) => string; chitPic: (c: E.Chit) => string; hist: History<E.Game>; refresh: () => void; render: () => void; save: () => void; say: (t: string) => void;
   reg: (f: () => void) => string; regv: (f: (v: string) => void) => string; ubtn: (label: string, f: () => void, cls?: string, dis?: boolean, title?: string) => string;
 }
-let M: SbCtx; let ABBR: SbCtx['ABBR'], actorNow: SbCtx['actorNow'], areaName: SbCtx['areaName'], b3: SbCtx['b3'], chitImg: SbCtx['chitImg'], unitFace: SbCtx['unitFace'], hist: SbCtx['hist'], refresh: SbCtx['refresh'], render: SbCtx['render'], save: SbCtx['save'], say: SbCtx['say'], reg: SbCtx['reg'], regv: SbCtx['regv'], ubtn: SbCtx['ubtn'];
-export function initSandboxUi(ctx: SbCtx) { M = ctx; ({ ABBR, actorNow, areaName, b3, chitImg, unitFace, hist, refresh, render, save, say, reg, regv, ubtn } = ctx); sbJump = { turn: M.g.turn, side: M.g.phasing, phase: M.g.phase }; }
+let M: SbCtx; let unitPic: SbCtx['unitPic'], chitPic: SbCtx['chitPic'], ABBR: SbCtx['ABBR'], actorNow: SbCtx['actorNow'], areaName: SbCtx['areaName'], b3: SbCtx['b3'], chitImg: SbCtx['chitImg'], unitFace: SbCtx['unitFace'], hist: SbCtx['hist'], refresh: SbCtx['refresh'], render: SbCtx['render'], save: SbCtx['save'], say: SbCtx['say'], reg: SbCtx['reg'], regv: SbCtx['regv'], ubtn: SbCtx['ubtn'];
+export function initSandboxUi(ctx: SbCtx) { M = ctx; ({ unitPic, chitPic, ABBR, actorNow, areaName, b3, chitImg, unitFace, hist, refresh, render, save, say, reg, regv, ubtn } = ctx); sbJump = { turn: M.g.turn, side: M.g.phasing, phase: M.g.phase }; }
 const other = E.other;
 const $ = (q: string) => document.querySelector(q) as HTMLElement;
 /* admin sandbox (?sandbox=1): free edits, seat switch, notes and the test report ---------- */
@@ -82,7 +82,7 @@ function sbLibrary() {
   const blocks = lbType === 'all' || lbType === 'blocks', chitsOn = lbType !== 'blocks';
   const us = blocks ? M.g.units.filter((u) => (lbSide === 'all' || u.side === lbSide) && (lbWhere === 'all' || whereOfU(u) === lbWhere)) : [];
   const cs = chitsOn ? M.g.chits.filter((c) => (lbSide === 'all' || c.side === lbSide) && (lbType === 'all' || chitType(c) === lbType) && (lbWhere === 'all' || c.box === lbWhere || (lbWhere === 'off' && c.box !== 'map'))) : [];
-  const tile = (key: string, img: string, name: string, sub: string, on: boolean, f: () => void, cls: string, wood = false) => `<button class="lbt ${cls} ${on ? 'on' : ''}" data-k="${esc(key.toLowerCase())}" data-ui="${reg(f)}" title="${esc(name)}">${wood ? b3(img, cls as E.Side) : `<img alt="" src="${img}">`}<small>${esc(name)}</small><i>${esc(sub)}</i></button>`;
+  const tile = (key: string, img: string, name: string, sub: string, on: boolean, f: () => void, cls: string, wood = false) => `<button class="lbt ${cls} ${on ? 'on' : ''}" data-k="${esc(key.toLowerCase())}" data-ui="${reg(f)}" title="${esc(name)}">${wood ? b3(img, cls as E.Side) : `<img class="cb" alt="" src="${img}">`}<small>${esc(name)}</small><i>${esc(sub)}</i></button>`;
   const tiles = [...us.sort((a, b) => a.name.localeCompare(b.name)).map((u) => tile(`${u.name} ${u.code ?? ''} ${u.id} ${u.side} ${u.cls} block unit ${u.q.join(' ')}`, unitFace(u), u.name, u.area != null ? areaName(u.area) : whereOfU(u) === 'eliminated' ? 'eliminated' : u.arrival ? `turn ${u.arrival}` : 'off map', M.selUnit === u.id, () => { M.selUnit = u.id; M.selChit = null; M.selArea = u.area ?? M.selArea; refresh(); }, u.side, !u.garrison)),
     ...cs.map((c) => tile(`${c.name} ${c.kind} ${c.id} ${c.side} ${ABBR[c.kind] ?? ''} chit`, chitImg(c), c.name, `${c.box}${c.turn != null && c.box === 'future' ? ' t' + c.turn : ''}`, M.selChit === c.id, () => { M.selChit = c.id; M.selUnit = null; refresh(); }, c.side, c.kind === 'sa_block'))];
   return `<div class="authform lbsearch"><input id="lb-q" class="grow" placeholder="Search: name, unit, kind (e.g. Peiper, artillery, 116)" value="${esc(st.sbFilter)}" aria-label="Search pieces"></div>
@@ -96,7 +96,7 @@ function sbDetail() {
   const u = M.selUnit ? M.g.units.find((x) => x.id === M.selUnit) : null, c = !u && M.selChit ? M.g.chits.find((x) => x.id === M.selChit) : null;
   if (u) {
     const res: [string, string][] = [['', 'No reserve'], ...(u.side === 'german' ? ['z5', 'z6', 'z7'] : ['z56', 'z7']).map((z) => [z, `Reserve ${z.slice(1)}`] as [string, string])];
-    return `<div class="lbd"><img alt="" src="${unitFace(u)}"><div><b>${esc(u.name)}</b><small>${nm(u.side)} ${u.cls} · ${esc(u.q.join('/'))} · ${u.area != null ? esc(areaName(u.area)) : 'off the map'}</small>
+    return `<div class="lbd">${unitPic(u)}<div><b>${esc(u.name)}</b><small>${nm(u.side)} ${u.cls} · ${esc(u.q.join('/'))} · ${u.area != null ? esc(areaName(u.area)) : 'off the map'}</small>
       <div class="row">${sbtn(ico('minus'), () => { u.str = Math.max(1, u.str - 1); }, 'ico', 'One step less')}<b>${u.str}/${u.max}</b>${sbtn(ico('plus'), () => { u.str = Math.min(u.max, u.str + 1); }, 'ico', 'One step more')}
       ${ubtn(`${ico('next')} ${u.area != null ? 'Move' : 'Place'}`, () => { st.sbPlace = u.id; }, 'primary', false, 'Then tap an area')}${u.area != null ? sbtn(ico('trash'), () => SB.lift(M.g, u.id), 'ico', 'Take off the map') : ''}${ubtn(ico('close'), () => { M.selUnit = null; refresh(); }, 'ico', false, 'Deselect')}</div></div></div>
       <div class="row">${sbSel([['0', 'Good order'], ['1', 'Disordered'], ['2', 'Recovering']], String(u.disorder), (v) => sbx(() => { u.disorder = +v as 0 | 1 | 2; }))}${sbSel(res, u.reserve ?? '', (v) => sbx(() => { u.reserve = v || null; }))}</div>
@@ -104,7 +104,7 @@ function sbDetail() {
   }
   if (c) {
     const [t, d] = RULE[c.kind] ?? [c.kind, ''];
-    return `<div class="lbd"><img alt="" src="${chitImg(c)}"><div><b>${esc(c.name)}</b><small>${nm(c.side)} · ${esc(t)} · now: ${c.box}</small>
+    return `<div class="lbd">${chitPic(c)}<div><b>${esc(c.name)}</b><small>${nm(c.side)} · ${esc(t)} · now: ${c.box}</small>
       <div class="chips">${SB.BOXES.filter((b) => b !== 'map' || c.box === 'map').map((b) => b === c.box ? `<button class="on" disabled>${b}</button>` : sbtn(b, () => { c.box = b; })).join('')}${ubtn(ico('close'), () => { M.selChit = null; refresh(); }, 'ico', false, 'Deselect')}</div></div></div>${d ? `<div class="hint">${ruleHtml(c.kind, E.isEvent(c))}</div>` : ''}`;
   }
   if (M.selArea != null) {
@@ -112,7 +112,7 @@ function sbDetail() {
     return `<div class="lbd area"><div><b>${esc(areaName(a))} (${a})</b><div class="row">${sbSel([['', 'Nobody holds it'], ['german', 'German control'], ['allied', 'Allied control']], M.g.control[a] ?? '', (v) => sbx(() => { if (v) M.g.control[a] = v as E.Side; else delete M.g.control[a]; }))}
       ${E.contested(M.g, a) && !M.g.battle ? sbtn(`${ico('burst')} Battle here`, () => { E.startBattle(M.g, a); }, 'primary') : ''}${ubtn(ico('close'), () => { M.selArea = null; refresh(); }, 'ico', false, 'Deselect')}</div>
       <div class="row">${sbChk('Field works', M.g.fieldWorks.includes(a), (v) => { M.g.fieldWorks = M.g.fieldWorks.filter((x) => x !== a); if (v) { M.g.fieldWorks.push(a); M.g.fwOwner[a] = M.g.control[a] ?? 'allied'; } })}${sbChk('River assault', M.g.riverAssault.includes(a), (v) => { M.g.riverAssault = M.g.riverAssault.filter((x) => x !== a); if (v) M.g.riverAssault.push(a); })}</div>
-      <div class="lbrow">${E.unitsIn(M.g, a).map((x) => `<button class="lbt ${x.side}" data-u="${esc(x.id)}" title="${esc(x.name)}"><img alt="" src="${unitFace(x)}"><small>${esc(x.name)}</small></button>`).join('')}</div></div></div>`;
+      <div class="lbrow">${E.unitsIn(M.g, a).map((x) => `<button class="lbt ${x.side}" data-u="${esc(x.id)}" title="${esc(x.name)}">${unitPic(x)}<small>${esc(x.name)}</small></button>`).join('')}</div></div></div>`;
   }
   return '<p class="hint">Tap a piece below or a block or area on the map.</p>';
 }

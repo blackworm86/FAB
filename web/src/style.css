@@ -383,3 +383,19 @@ ul.rl { margin: 4px 0; padding-left: 16px; } ul.rl li { margin: 2px 0; } .inspec
 .vbtns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 18px 0 8px; } @media (max-width: 700px) { .vban h1 { font-size: 30px; } }
 /* phones: the top bar must fit; map layers stay in Menu > Settings, the sandbox reset in its Turn tab */
 @media (max-width: 560px) { .c-bar.t [data-tint], .c-bar.t .sbreset { display: none !important; } .c-bar.t { overflow: hidden; } }
+/* chits that can be played now glow softly */
+.card2.live:not(.wood) img, .pc.live img, .card2.live.wood .b3 .f { box-shadow: 0 0 0 2px #ffe08aaa, 0 0 14px 4px #ffd25a88; animation: liveglow 2.4s ease-in-out infinite; }
+@keyframes liveglow { 50% { box-shadow: 0 0 0 2px #ffe08a55, 0 0 8px 2px #ffd25a44; } }
+@media (prefers-reduced-motion: reduce) { .card2.live img, .pc.live img { animation: none; } }
+/* one look for every piece: cardboard counters (rounded, with an edge) and 3D wooden blocks, in every window */
+img.cb { border-radius: 7%; box-shadow: 0 1px 0 #e3dccb, 0 2px 0 #b9b2a0, 0 3px 0 #8a8472, 0 6px 10px #0009; }
+.card2:not(.wood) img { border-radius: 7%; }
+.cbimg { display: grid; place-items: center; width: 56px; height: 56px; flex: none; } .cbimg img.cb { width: 100%; height: 100%; } .cbimg .b3 { --s: 32px; margin: 0; }
+.inspect .big { display: grid; place-items: center; flex: none; } .inspect .big img.cb { width: 72px; height: 72px; } .inspect .big .b3 { --s: 56px; }
+.cardtip > img.cb { width: 56px; height: 56px; flex: none; } .cardtip > .b3 { --s: 44px; flex: none; }
+.oobu .b3 { --s: 44px; margin: 6px auto 4px; } .oobu img.cb { width: 46px; height: 46px; }
+.supl .b3 { --s: 24px; margin: 4px 12px 4px 4px; } .supl img.cb { width: 34px; height: 34px; }
+.lbd > .b3 { --s: 78px; margin: 8px 18px 8px 4px; } .lbd > img.cb { width: 96px; height: 96px; flex: none; }
+.lbrow .b3 { --s: 38px; margin: 4px 10px 4px 2px; } .lbt img.cb { width: 64px; height: 64px; }
+.vkill .b3 { --s: 28px; margin: 2px 8px 2px 2px; filter: grayscale(.4); } .vkill img.cb { width: 32px; height: 32px; }
+.pc img.cb { width: 100%; height: 100%; } .pc .b3 { --s: 34px; margin: 6px auto; }
