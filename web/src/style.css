@@ -602,3 +602,4 @@ body:has(.hotcover) #leaders, body:has(.hotcover) #fx, body:has(.hotcover) #mark
 .homepage .createrow button { flex: 1; justify-content: center; min-height: 48px; font-size: 16px; }
 .matchrow .mrules { display: block; color: #b3ad8b; font-size: 11.5px; margin-top: 2px; }
 .oob.past { opacity: .5; } .oob.past h4::after { content: " · arrived"; font-weight: 400; }
+.homepage .fuelrow { flex: 1 0 100%; margin-top: 2px; } .homepage .fuelrow .orow { width: 100%; text-align: left; }
