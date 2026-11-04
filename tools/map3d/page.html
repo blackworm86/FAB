@@ -18,6 +18,7 @@ html, body { height: 100%; } body { background: var(--ink); color: var(--fg); fo
 .grp > span { font: 600 11px var(--disp); letter-spacing: .14em; text-transform: uppercase; color: var(--mute); }
 .seg { display: flex; border: 1px solid var(--line); }
 .seg button, .tog { background: transparent; color: var(--fg); border: 0; font: 600 13px var(--disp); letter-spacing: .08em; text-transform: uppercase; padding: 8px 11px; min-height: 36px; cursor: pointer; }
+.seg button { white-space: nowrap; }
 .seg button + button { border-left: 1px solid var(--line); }
 .seg button[aria-pressed="true"] { background: var(--gold); color: var(--ink); }
 .tog { border: 1px solid var(--line); display: flex; gap: 7px; align-items: center; }
@@ -39,7 +40,7 @@ input[type=range] { width: 120px; height: 36px; margin: 0; accent-color: var(--g
   #more { display: flex; } .grp > span.lk { display: none; }
   .seg button, .tog { padding: 7px 10px; font-size: 12.5px; min-height: 40px; } input[type=range] { width: 130px; }
 }
-@media (max-width: 360px) { .seg button, .tog { padding: 7px 8px; font-size: 11.5px; white-space: nowrap; } .bar { gap: 8px 6px; } }
+@media (max-width: 360px) { #more .mt { display: none; } #more::after { font-size: 13px; } #more { min-width: 42px; justify-content: center; } .seg button, .tog { padding: 7px 8px; font-size: 11.5px; white-space: nowrap; } .bar { gap: 8px 6px; } }
 @media (max-height: 500px) { .hint { top: calc(12px + env(safe-area-inset-top, 0px)); left: auto; right: max(16px, env(safe-area-inset-right, 0px)); transform: none; max-width: 42%; } .bar .opt { flex-basis: auto; } }
 </style>
 
@@ -47,7 +48,7 @@ input[type=range] { width: 120px; height: 36px; margin: 0; accent-color: var(--g
 <div class="plate"><h1>Ardennes Relief</h1><p><span class="long">Mockup · St. Vith – Malmedy · real elevation bent onto the game map. </span><b>Drag</b> to move, <b>pinch<span class="long"> / wheel</span></b> to zoom, <b>two fingers<span class="long"> / right-drag</span></b> to tilt.</p></div>
 <div class="hint" id="hint">Tap the green <b>106 Inf</b> block in St. Vith to see its moves</div>
 <div class="bar" id="bar">
-  <div class="grp"><span class="lk">Look</span><div class="seg" id="look"><button id="lk-paint" data-v="1" aria-pressed="true">Low-poly</button><button id="lk-board" data-v="0" aria-pressed="false">Game board</button></div><button class="tog" id="more" aria-expanded="false" aria-controls="bar">Options</button></div>
+  <div class="grp"><span class="lk">Look</span><div class="seg" id="look"><button id="lk-paint" data-v="1" aria-pressed="true">Low-poly</button><button id="lk-iso" data-v="2" aria-pressed="false">Contours</button><button id="lk-board" data-v="0" aria-pressed="false">Board</button></div><button class="tog" id="more" aria-expanded="false" aria-controls="bar" aria-label="Options"><span class="mt">Options</span></button></div>
   <div class="grp opt"><span>Facets</span><div class="seg" id="fac"><button id="fc-s" data-v="2" aria-pressed="false">Small</button><button id="fc-m" data-v="3" aria-pressed="true">Medium</button><button id="fc-l" data-v="5" aria-pressed="false">Large</button></div></div>
   <div class="grp opt"><span>Relief</span><input id="z" type="range" min="0" max="6" step="0.5" value="4" aria-label="Relief height"><output id="zv">×4</output></div>
   <div class="grp opt tg"><button class="tog" id="cont" aria-pressed="true">Contours</button><button class="tog" id="trees" aria-pressed="true">Trees</button><button class="tog" id="flat" aria-pressed="true">Flatten on select</button></div>
@@ -81,29 +82,34 @@ scene.add(new THREE.AmbientLight(0xffffff, 0.62)); const dl = new THREE.Directio
 const loadTex = (src) => { const t = new THREE.TextureLoader().load(src); t.anisotropy = renderer.capabilities.getMaxAnisotropy(); return t; };
 const hlCv = document.createElement('canvas'); hlCv.width = MW * 2; hlCv.height = MH * 2; const hlTex = new THREE.CanvasTexture(hlCv);
 const U = { tP: { value: loadTex('__PRINTED__') }, tO: { value: loadTex('__OVERLAY__') }, tH: { value: hlTex }, uMode: { value: 1 }, uHl: { value: 0 }, uZ: { value: 4 }, uSun: { value: SUN }, uLo: { value: meta.lo }, uCont: { value: 1 } };
-const mat = new THREE.ShaderMaterial({ uniforms: U, extensions: { derivatives: true },
+const mat = new THREE.ShaderMaterial({ uniforms: U, transparent: true, extensions: { derivatives: true },
   vertexShader: `attribute vec3 fcol; uniform float uZ,uLo; varying vec3 vCol; varying vec2 vUv; varying vec3 vW; varying float vM;
     void main(){ vec3 p=position; vM=p.y*80.+uLo; p.y*=uZ; vUv=uv; vCol=fcol; vec4 w=modelMatrix*vec4(p,1.); vW=w.xyz; gl_Position=projectionMatrix*viewMatrix*w; }`,
   fragmentShader: `uniform sampler2D tP,tO,tH; uniform float uMode,uHl,uCont; uniform vec3 uSun; varying vec3 vCol; varying vec2 vUv; varying vec3 vW; varying float vM;
     float iso(float step,float w){ float c=vM/step, d=abs(fract(c+.5)-.5)/max(fwidth(c),1e-4); return 1.-clamp(d-w,0.,1.); }
-    void main(){ vec3 n=normalize(cross(dFdx(vW),dFdy(vW))); if(n.y<0.) n=-n;
-      vec3 base = uMode<.5 ? texture2D(tP,vUv).rgb : vCol;
+    void main(){
+      if(uMode>1.5){                                            /* contour lines only: the surface itself is invisible, only the game layer is drawn on it */
+        vec4 h=texture2D(tH,vUv), o=texture2D(tO,vUv); float a=max(o.a,h.a*uHl); if(a<.06) discard;
+        gl_FragColor=vec4(mix(h.rgb,o.rgb,o.a/max(a,1e-3)),max(o.a,h.a*uHl*.85)); return; }   /* lit areas stay see-through so the contours show */
+      vec3 n=normalize(cross(dFdx(vW),dFdy(vW))); if(n.y<0.) n=-n;
+      vec3 base = uMode<.5 ? mix(texture2D(tP,vUv).rgb,vec3(.95,.96,.98),.45) : vCol;   /* the printed board under a layer of snow */
       float l=1.+.75*(max(dot(n,uSun),0.)-uSun.y);           /* flat ground keeps its colour; slopes to the sun lighter, away darker */
       base*=clamp(l,.5,1.3);
-      base=mix(base,vec3(.36,.25,.15),max(iso(25.,.15)*.30,iso(100.,.7)*.62)*uCont);   /* contours every 25 m, index line every 100 m */
+      base=mix(base,vec3(.30,.36,.45),max(iso(25.,.15)*.32,iso(100.,.7)*.6)*uCont);   /* contours every 25 m, index line every 100 m */
       vec4 h=texture2D(tH,vUv); base=mix(base,h.rgb,h.a*uHl);
       vec4 o=texture2D(tO,vUv); base=mix(base,o.rgb,o.a);     /* borders, roads, rivers, numbers and names always on top */
       gl_FragColor=vec4(base,1.); }` });
 
 // painted palette: fields in a soft patchwork, woods, water, high moor
-const PAL = { field: [[0.66, 0.70, 0.52], [0.71, 0.72, 0.55], [0.62, 0.67, 0.49], [0.74, 0.70, 0.56]], wood: [[0.27, 0.40, 0.26], [0.24, 0.36, 0.23], [0.30, 0.43, 0.28]], water: [0.29, 0.52, 0.74], moor: [0.69, 0.63, 0.50], paved: [0.78, 0.74, 0.65] };
+// winter, December 1944: snow on the fields, dark snow-dusted forest floor, grey slush in the towns
+const PAL = { field: [[0.93, 0.95, 0.97], [0.90, 0.93, 0.96], [0.95, 0.96, 0.98], [0.88, 0.91, 0.95]], wood: [[0.42, 0.48, 0.47], [0.38, 0.44, 0.43], [0.46, 0.52, 0.51]], water: [0.29, 0.52, 0.74], moor: [0.97, 0.98, 0.99], paved: [0.74, 0.74, 0.75] };
 const paved = (x, y) => D.towns.some(([tx, ty]) => Math.hypot(x - tx, y - ty) < 9) || D.cities.some((c) => c.cells.some(([cx, cy]) => Math.abs(x - cx) < 4 && Math.abs(y - cy) < 4));
 let terrain = null;
-function buildTerrain(step) {
+function buildTerrain(step, smooth) {
   if (terrain) { scene.remove(terrain); terrain.geometry.dispose(); }
   const cell = ST * step, nx = Math.floor(MW / cell), ny = Math.floor(MH / cell), P = [];
   for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) {               // jitter inner vertices so the facets look hand-cut, not gridded
-    const edge = i === 0 || j === 0 || i === nx || j === ny, jx = edge ? 0 : (hash(i, j) - 0.5) * 0.7 * cell, jy = edge ? 0 : (hash(j + 9, i) - 0.5) * 0.7 * cell;
+    const edge = smooth || i === 0 || j === 0 || i === nx || j === ny, jx = edge ? 0 : (hash(i, j) - 0.5) * 0.7 * cell, jy = edge ? 0 : (hash(j + 9, i) - 0.5) * 0.7 * cell;
     const x = X0 + Math.min(i * cell, MW) + jx, y = Y0 + Math.min(j * cell, MH) + jy; P.push([x, y, hAt(x, y)]);
   }
   const pos = [], uv = [], col = [];
@@ -142,25 +148,27 @@ for (const c of D.cities) {                                       // a city: its
   for (let k = 0; k < 16; k++) { const a = rnd() * 6.283, r = far + 4 + rnd() * 7; houseSpots.push([c.c[0] + Math.cos(a) * r, c.c[1] + Math.sin(a) * r, -a, 2.6, 2.2 + rnd(), 3.4]); }
 }
 const treeGeo = new THREE.ConeGeometry(2.1, 6, 5); treeGeo.translate(0, 3, 0);
-const trees = new THREE.InstancedMesh(treeGeo, new THREE.MeshLambertMaterial({ flatShading: true }), treeSpots.length);
-treeSpots.forEach((t, k) => trees.setColorAt(k, new THREE.Color().setRGB(0.18 + t[3] * 0.08, 0.33 + t[3] * 0.1, 0.19 + t[3] * 0.05)));
+const capGeo = new THREE.ConeGeometry(1.25, 3.0, 5); capGeo.translate(0, 4.6, 0);   // snow on the upper branches
+const trees = new THREE.InstancedMesh(treeGeo, new THREE.MeshLambertMaterial({}), treeSpots.length);
+treeSpots.forEach((t, k) => trees.setColorAt(k, new THREE.Color().setRGB(0.13 + t[3] * 0.06, 0.24 + t[3] * 0.08, 0.18 + t[3] * 0.05)));
+const caps = new THREE.InstancedMesh(capGeo, new THREE.MeshLambertMaterial({ color: 0xf1f4f8 }), treeSpots.length);
 const houseGeo = new THREE.BoxGeometry(1, 1, 1); houseGeo.translate(0, 0.5, 0);
 const roofGeo = new THREE.CylinderGeometry(0, 0.7072, 0.45, 4, 1); roofGeo.rotateY(Math.PI / 4); roofGeo.translate(0, 1 + 0.225, 0);   // pyramid roof sitting on a unit box
-const houses = new THREE.InstancedMesh(houseGeo, new THREE.MeshLambertMaterial({ color: 0xe9e0cc, flatShading: true }), houseSpots.length);
-const roofs = new THREE.InstancedMesh(roofGeo, new THREE.MeshLambertMaterial({ flatShading: true }), houseSpots.length);
-houseSpots.forEach((h, k) => roofs.setColorAt(k, new THREE.Color(rnd() < .75 ? 0x9a4a35 : 0x5d5f66)));
+const houses = new THREE.InstancedMesh(houseGeo, new THREE.MeshLambertMaterial({ color: 0xe9e0cc }), houseSpots.length);
+const roofs = new THREE.InstancedMesh(roofGeo, new THREE.MeshLambertMaterial({}), houseSpots.length);
+houseSpots.forEach((h, k) => roofs.setColorAt(k, new THREE.Color(rnd() < .8 ? 0xf3f5f8 : 0x8a8f99)));   // snow on most roofs
 const towerGeo = new THREE.BoxGeometry(2, 7, 2); towerGeo.translate(0, 3.5, 0); const spireGeo = new THREE.ConeGeometry(1.5, 4, 4); spireGeo.rotateY(Math.PI / 4); spireGeo.translate(0, 9, 0);
-const towers = new THREE.InstancedMesh(towerGeo, new THREE.MeshLambertMaterial({ color: 0xd8cdb4, flatShading: true }), churches.length);
-const spires = new THREE.InstancedMesh(spireGeo, new THREE.MeshLambertMaterial({ color: 0x4f5a5c, flatShading: true }), churches.length);
-props.add(trees, houses, roofs, towers, spires);
+const towers = new THREE.InstancedMesh(towerGeo, new THREE.MeshLambertMaterial({ color: 0xd8cdb4 }), churches.length);
+const spires = new THREE.InstancedMesh(spireGeo, new THREE.MeshLambertMaterial({ color: 0x4f5a5c }), churches.length);
+props.add(trees, caps, houses, roofs, towers, spires);
 const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v3 = new THREE.Vector3(), sc = new THREE.Vector3();
 function placeProps(z) {
   const k = Math.min(1, z / 2 + 0.25);                                        // props shrink with the relief, so a flat board is not a forest of spikes
-  treeSpots.forEach((t, i) => { m4.compose(v3.set(t[0] - CX, hAt(t[0], t[1]) * z - 0.3, t[1] - CY), q.identity(), sc.setScalar(t[2] * k)); trees.setMatrixAt(i, m4); });
+  treeSpots.forEach((t, i) => { m4.compose(v3.set(t[0] - CX, hAt(t[0], t[1]) * z - 0.3, t[1] - CY), q.identity(), sc.setScalar(t[2] * k)); trees.setMatrixAt(i, m4); caps.setMatrixAt(i, m4); });
   const s = Math.max(k, 0.6);                                                 // buildings stay readable even on a flat board
   houseSpots.forEach((h, i) => { const r = 1.6, g = Math.min(hAt(h[0] - r, h[1] - r), hAt(h[0] + r, h[1] - r), hAt(h[0] - r, h[1] + r), hAt(h[0] + r, h[1] + r)); m4.compose(v3.set(h[0] - CX, g * z - 0.2, h[1] - CY), q.setFromEuler(e.set(0, h[2], 0)), sc.set(h[3], h[4] * s, h[5])); houses.setMatrixAt(i, m4); roofs.setMatrixAt(i, m4); });
   churches.forEach((c, i) => { m4.compose(v3.set(c[0] - CX, hAt(c[0], c[1]) * z - 0.2, c[1] - CY), q.identity(), sc.set(c[2], c[2] * s, c[2])); towers.setMatrixAt(i, m4); spires.setMatrixAt(i, m4); });
-  for (const o of [trees, houses, roofs, towers, spires]) o.instanceMatrix.needsUpdate = true;
+  for (const o of [trees, caps, houses, roofs, towers, spires]) o.instanceMatrix.needsUpdate = true;
 }
 
 // game layer: a few blocks, as in the app
@@ -183,17 +191,34 @@ const MOVES = { go: [10, 22, 24], stop: [11, 12, 25] };
   poly(AREA[23]); x.save(); x.clip(); x.lineWidth = 10; x.strokeStyle = 'rgba(255,214,90,1)'; x.stroke(); x.restore();   // the block's own area: a bright gold edge, no fill
   hlTex.needsUpdate = true; })();
 
+// contour lines in 3D (marching squares on the 2 px height grid): every 25 m, brighter every 100 m, tinted from valley blue to summit white
+const iso = (() => {
+  const pos = [], col = [], hv = (i, j) => HB[j * C + i] / 65535 * (meta.hi - meta.lo) + meta.lo, wy = (m) => (m - meta.lo) / M_PER_PX;
+  const lowC = new THREE.Color(0x86a3c2), highC = new THREE.Color(0xf4f7fb), tmp = new THREE.Color();
+  for (let L = Math.ceil(meta.lo / 25) * 25; L < meta.hi; L += 25) {
+    const major = L % 100 === 0; tmp.copy(lowC).lerp(highC, (L - meta.lo) / (meta.hi - meta.lo)); if (!major) tmp.multiplyScalar(0.8);
+    for (let j = 0; j < R - 1; j++) for (let i = 0; i < C - 1; i++) {
+      const v = [hv(i, j), hv(i + 1, j), hv(i + 1, j + 1), hv(i, j + 1)], cx = [i, i + 1, i + 1, i], cy = [j, j, j + 1, j + 1], pts = [];
+      for (let e = 0; e < 4; e++) { const a = v[e], b = v[(e + 1) % 4]; if ((a < L) !== (b < L)) { const t = (L - a) / (b - a), f = (e + 1) % 4; pts.push([X0 + (cx[e] + (cx[f] - cx[e]) * t) * ST - CX, Y0 + (cy[e] + (cy[f] - cy[e]) * t) * ST - CY]); } }
+      for (let k = 0; k + 1 < pts.length; k += 2) { for (const q of [pts[k], pts[k + 1]]) { pos.push(q[0], wy(L), q[1]); col.push(tmp.r, tmp.g, tmp.b); } }
+    }
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  const m = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ vertexColors: true })); m.visible = false; scene.add(m); return m;
+})();
+
 // state and controls
 const S = { look: 1, cont: true, step: 3, z: 4, props: true, flat: true, choosing: false, zNow: 4 };
 const bar = document.getElementById('bar'), hint = document.getElementById('hint'), more = document.getElementById('more');
 more.addEventListener('click', () => { const o = bar.classList.toggle('open'); more.setAttribute('aria-expanded', String(o)); resize(); });
 const seg = (id, f) => document.getElementById(id).addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (!b) return; for (const o of b.parentNode.children) o.setAttribute('aria-pressed', String(o === b)); f(+b.dataset.v); });
-seg('look', (v) => { S.look = v; U.uMode.value = v; });
-seg('fac', (v) => { S.step = v; buildTerrain(v); });
+seg('look', (v) => { const was = S.look; S.look = v; U.uMode.value = v; iso.visible = v === 2; plinth.material.color.set(v === 2 ? 0x1c2026 : 0x2a2d20); if ((was === 2) !== (v === 2)) buildTerrain(S.step, v === 2); treeVis(); });
+seg('fac', (v) => { S.step = v; buildTerrain(v, S.look === 2); });
 const zIn = document.getElementById('z'), zOut = document.getElementById('zv');
 zIn.addEventListener('input', () => { S.z = +zIn.value; zOut.textContent = S.z ? '×' + S.z : 'flat'; });
 const tog = (id, k, f) => { const b = document.getElementById(id); b.addEventListener('click', () => { S[k] = !S[k]; b.setAttribute('aria-pressed', String(S[k])); f && f(); }); };
-tog('trees', 'props', () => { trees.visible = S.props; });
+const treeVis = () => { trees.visible = caps.visible = S.props && S.look !== 2; };
+tog('trees', 'props', treeVis);
 tog('cont', 'cont', () => { U.uCont.value = S.cont ? 1 : 0; });
 tog('flat', 'flat');
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(); let down = null;
@@ -213,7 +238,7 @@ const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const want = S.choosing && S.flat ? S.z * 0.2 : S.z;                       // flatten while choosing: the relief settles so the lit areas read clearly
   S.zNow += reduce ? want - S.zNow : (want - S.zNow) * 0.12; if (Math.abs(want - S.zNow) < 0.002) S.zNow = want;
   U.uZ.value = S.zNow; U.uHl.value += ((S.choosing ? 1 : 0) - U.uHl.value) * (reduce ? 1 : 0.15);
-  if (Math.abs(S.zNow - last) > 1e-4) { placeBlocks(S.zNow); last = S.zNow; }
+  if (Math.abs(S.zNow - last) > 1e-4) { placeBlocks(S.zNow); iso.scale.y = S.zNow; last = S.zNow; }
   if (Math.abs(S.zNow - lastP) > 0.02) { placeProps(S.zNow); lastP = S.zNow; }
   ctl.update(); renderer.render(scene, cam); requestAnimationFrame(loop);
 })();
