@@ -8,7 +8,7 @@ import { History } from './history';
 import * as SB from './sandbox';
 import { vpStrip, vpSheet, endPanel } from './score';
 import * as SBU from './sandbox-ui';
-import { online, startOnline, push, sit, sendChat, setChatListener, type ChatMsg, setDevSeat, auth, lobby, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, SANDBOX, type DevSeat, type Match } from './online';
+import { online, startOnline, push, sit, sendChat, setChatListener, type ChatMsg, setDevSeat, auth, lobby, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, SANDBOX, TUTORIAL, type DevSeat, type Match } from './online';
 import { gameInfo } from './games';
 import { ICONS, ico } from './icons';
 import { esc, nm } from './util';
@@ -19,6 +19,7 @@ import { RULE, ruleHtml } from './rules-text';
 import databaseRules from '../../database.rules.json?raw';
 import { initTouch } from './touch';
 import { throwDice, clearDice, type DiceGroup } from './dice3d';
+import { initTutorial } from './tutorial';
 
 type MapArea = { id: number; label: [number, number]; polygon: [number, number][] };
 type MapEntry = { letter: string; x: number; y: number; side: E.Side };
@@ -67,7 +68,8 @@ const $ = (s: string) => document.querySelector(s) as HTMLElement;
 const areaName = (a: number) => E.areas.get(a)!.name;
 
 /* ---------- state ---------- */
-const KEY = SANDBOX ? 'fab-sandbox' : TABLE === 'main' ? 'fab-demo2' : `fab-demo2-${TABLE}`;
+let tut: ReturnType<typeof initTutorial> | null = null;
+const KEY = TUTORIAL ? 'fab-tutorial' : SANDBOX ? 'fab-sandbox' : TABLE === 'main' ? 'fab-demo2' : `fab-demo2-${TABLE}`;
 function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif && x.roadblocks && x.pendingArrivals && x.fwOwner && Array.isArray(x.recover) ? x : null; } catch { return null; } }
 let g: E.Game = load() ?? E.newGame();
 let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, previewArea: number | null = null, hoverArea: number | null = null, newOpts: E.Opts = { scenario: 'tournament', fuel: true };
@@ -637,7 +639,8 @@ function confirmMove() {
   act(() => { if (g.phase === 'strategic') E.stratMove(g, id, to); else E.move(g, id, to); }, `${u.name}: ${areaName(from)} → ${areaName(to)}`);
 }
 function click(e: PointerEvent) {
-  const { unit, area } = pick(e);
+  let { unit, area } = pick(e);
+  if (tut) { const t = tut.gate(unit, area); if (t === false) return; if (t.unit) unit = t.unit; if (t.area != null) area = t.area; }
   if (SANDBOX && SBU.st.sbPlace) { const id = SBU.st.sbPlace; if (area == null) return; SBU.st.sbPlace = null; return SBU.sbx(() => SB.place(g, id, area)); }
   if (reinforcing && g.battle) { const fn = unit ? tgt?.units.get(unit) : undefined; if (fn) return act(fn); reinforcing = false; if (unit) say('That block cannot reinforce this battle (8.23: good order, an adjacent uncontested area, and a Special Action for its Higher Echelon).'); return refresh(); }
   { const c0 = selChit ? g.chits.find((x) => x.id === selChit) : null, tg = c0 && g.phase === 'admin' ? tgt : null;
@@ -1324,6 +1327,7 @@ function legend() {
 }
 /* ---------- home: sign in, your games, a new game, join ---------- */
 let matches: Match[] = [], form = { game: 'bulge', title: '', side: 'german' as E.Side | '', scenario: 'tournament' as E.Opts['scenario'], fuel: true, rules: {} as Partial<E.Opts> }, homeMsg = (() => { try { const m = sessionStorage.getItem('fab-notice') ?? ''; sessionStorage.removeItem('fab-notice'); return m; } catch { return ''; } })(), creating = false;
+{ try { const sc = sessionStorage.getItem('fab-new'); sessionStorage.removeItem('fab-new'); if (sc === 'intro' || sc === 'campaign') { form.scenario = sc; form.side = 'german'; creating = true; } } catch { /* private mode */ } }   // the tutorial's last buttons open a new game
 const inviteLink = (id: string) => `${location.origin}${location.pathname}?table=${id}`;
 const homeUrl = () => location.pathname;
 async function share(id: string, title: string) {
@@ -1367,12 +1371,14 @@ function joinByCode(v: string) {
 }
 const stateOf = (m: Match) => (m.germanName && m.alliedName ? 'In play' : 'Waiting for an opponent');
 /** The first screen: never on top of a game. Signed out it is just the sign-in; signed in it is your games, a new game and a way to join one. */
+const tutUrl = () => `${homeUrl()}?tutorial=1`;
+const tutCard = () => `<section class="card tutcard"><div class="lh"><h2>${ico('info')} Learn to play</h2>${ubtn(`${ico('next')}<span>Tutorial</span>`, () => { location.href = tutUrl(); }, 'primary', false, 'An interactive tutorial on the Play Book examples')}</div><p class="hint">Ten short lessons on the Play Book's examples: a whole turn, step by step. Works offline.</p></section>`;
 function homeHtml() {
   const a = online.account, signed = !!a && !a.guest, info = gameInfo(form.game);
-  const head = `<header><h1>Fast Action Battles</h1><p>Board-game battles with the series rules, played online.</p></header>`;
+  const head = `<header><h1>Fast Action Battles</h1><p>Board-game battles with the series rules, played online.</p></header>`, learn = tutCard();
   if (!online.ready) return `<div class="homepage"><div class="homein">${head}<p class="hint">Connecting…</p></div></div>`;
-  if (online.mode !== 'remote' || !online.hasAccounts) return `<div class="homepage"><div class="homein">${head}<section class="card"><p class="hint">Online play is not set up on this site.${online.error ? ' ' + esc(online.error) : ''}</p></section></div></div>`;
-  if (!signed) return `<div class="homepage"><div class="homein">${head}<section class="card"><h2>Sign in</h2>${sessionStorage.getItem('fab-next') ? '<p class="hint">You will go straight back to the game you were invited to.</p>' : '<p class="hint">To create a game or join one. Anyone can watch a game from its link.</p>'}${accountHtml()}</section>${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}</div></div>`;
+  if (online.mode !== 'remote' || !online.hasAccounts) return `<div class="homepage"><div class="homein">${head}<section class="card"><p class="hint">Online play is not set up on this site.${online.error ? ' ' + esc(online.error) : ''}</p></section>${learn}</div></div>`;
+  if (!signed) return `<div class="homepage"><div class="homein">${head}<section class="card"><h2>Sign in</h2>${sessionStorage.getItem('fab-next') ? '<p class="hint">You will go straight back to the game you were invited to.</p>' : '<p class="hint">To create a game or join one. Anyone can watch a game from its link.</p>'}${accountHtml()}</section>${learn}${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}</div></div>`;
   const mine = matches.map((m) => `<div class="matchrow"><button class="open" data-do="${reg(() => { location.href = `${homeUrl()}?table=${m.id}`; })}"><b>${esc(m.title)}</b><small class="seats"><span class="st ${m.germanName && m.alliedName ? 'live' : 'wait'}" title="${esc(stateOf(m))}"></span><b>GE</b> ${esc(m.germanName || '—')} <b>AL</b> ${esc(m.alliedName || '—')}</small><small class="mrules">${SCEN_NAME[(m.opts as Partial<E.Opts> | undefined)?.scenario ?? 'tournament'] ?? ''}${(m.opts as Partial<E.Opts> | undefined)?.fuel === false ? ' · no fuel rule' : ''}${optOn(m.opts as Partial<E.Opts>).length ? ` · optional ${optOn(m.opts as Partial<E.Opts>).map((r) => r.rule).join(', ')}` : ''}</small></button><div class="row">${btn(`${ico('share')}`, () => { void share(m.id, m.title); }, 'ico', false, 'Invite a player')}${btn(`${ico('trash')}`, () => { void dropMatch(m); }, 'ico danger', false, m.owner === online.uid || online.admin ? 'Delete this game for everyone' : 'Remove from my list')}</div></div>`).join('') || '<p class="hint">No games yet.</p>';
   const tile = (v: E.Side | '', label: string, tag: string) => `<button class="tile ${form.side === v ? 'on' : ''} ${v}" aria-pressed="${form.side === v}" data-ui="${reg(() => { form.side = v; })}" title="${label}"><b>${tag}</b><small>${label}</small></button>`;
   const create = creating ? `<div class="sheetbox"><div class="lh"><h3>${ico('plus')} New game</h3>${ubtn(ico('close'), () => { creating = false; }, 'ico', false, 'Cancel')}</div>
@@ -1383,7 +1389,7 @@ function homeHtml() {
   return `<div class="homepage"><div class="homein">
     <header class="hbar"><div><h1>Fast Action Battles</h1><p>${esc(info?.name ?? '')} · ${esc(info?.vol ?? '')}</p></div><div class="who"><span class="avatar" title="${esc(a!.name || a!.email)}">${esc((a!.name || a!.email || '?').slice(0, 1).toUpperCase())}</span>${online.admin ? ubtn(ico('wand'), () => { location.href = `${homeUrl()}?sandbox=1`; }, 'ico', false, 'Admin: sandbox test table') + ubtn(ico('lock'), () => { modal = 'rules'; }, 'ico', false, 'Admin: update the database rules') : ''}<button class="ico" data-auth="out" title="Sign out" aria-label="Sign out">${ico('logout')}</button></div></header>
     <section class="card"><div class="lh"><h2>${ico('users')} Games</h2>${creating ? '' : ubtn(`${ico('plus')}<span>New</span>`, () => { creating = true; }, 'primary', false, 'Start a new game')}</div>${create}${mine}</section>
-    <section class="card joincard"><div class="row authform"><input id="join" class="grow" placeholder="Invite link or code" aria-label="Invite link or code">${ubtn(`${ico('next')}<span>Join</span>`, () => { joinByCode(($('#join') as HTMLInputElement).value); }, 'primary', false, 'Join a game with an invite')}</div></section>
+    ${learn}<section class="card joincard"><div class="row authform"><input id="join" class="grow" placeholder="Invite link or code" aria-label="Invite link or code">${ubtn(`${ico('next')}<span>Join</span>`, () => { joinByCode(($('#join') as HTMLInputElement).value); }, 'primary', false, 'Join a game with an invite')}</div></section>
     ${homeMsg ? `<p class="hint"><b>${esc(homeMsg)}</b></p>` : ''}${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}
   </div></div>`;
 }
@@ -1448,7 +1454,7 @@ function modalHtml() {
     const tabs = ['Players', 'Log', 'Settings', ...(online.admin ? ['Admin'] : [])];
     if (!tabs.includes(menuTab)) menuTab = 'Players';
     const body = menuTab === 'Log' ? logHtml()
-      : menuTab === 'Settings' ? `<h4>Rules in use</h4><p>${rulesInUse(g.opts)}</p><h4>Map</h4><div class="row">${ubtn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${ubtn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Explanations</h4><div class="row">${ubtn(`<span class="sw ${guide === 'full' ? 'on' : ''}">${guide === 'full' ? 'FULL' : 'SHORT'}</span> Explain each option and rule`, () => setGuide(guide === 'full' ? 'short' : 'full'), guide === 'full' ? 'on' : '')}</div><h4>Opponent</h4><div class="row">${ubtn(`<span class="sw ${followFoe ? 'on' : ''}">${followFoe ? 'ON' : 'OFF'}</span> Point the camera at the other player's moves`, () => { followFoe = !followFoe; try { localStorage.setItem('fab-follow', followFoe ? '1' : '0'); } catch { /* private mode */ } }, followFoe ? 'on' : '')}</div>
+      : menuTab === 'Settings' ? `<h4>Rules in use</h4><p>${rulesInUse(g.opts)}</p><h4>Learn</h4><div class="row">${ubtn(`${ico('info')} Tutorial`, () => { location.href = tutUrl(); })}</div><h4>Map</h4><div class="row">${ubtn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${ubtn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Explanations</h4><div class="row">${ubtn(`<span class="sw ${guide === 'full' ? 'on' : ''}">${guide === 'full' ? 'FULL' : 'SHORT'}</span> Explain each option and rule`, () => setGuide(guide === 'full' ? 'short' : 'full'), guide === 'full' ? 'on' : '')}</div><h4>Opponent</h4><div class="row">${ubtn(`<span class="sw ${followFoe ? 'on' : ''}">${followFoe ? 'ON' : 'OFF'}</span> Point the camera at the other player's moves`, () => { followFoe = !followFoe; try { localStorage.setItem('fab-follow', followFoe ? '1' : '0'); } catch { /* private mode */ } }, followFoe ? 'on' : '')}</div>
         ${online.active && !online.admin && !online.both() ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as E.Opts['scenario']; })}"><option value="intro" ${newOpts.scenario === 'intro' ? 'selected' : ''}>Nuts! introductory (3 turns)</option><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option><option value="cold" ${newOpts.scenario === 'cold' ? 'selected' : ''}>Cold Shoulder (bonus, 9 turns)</option></select>
         <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label></div>${optChooser(newOpts)}<div class="row">${btn('Restart', () => { if (!confirm('Restart and lose the current game?')) return; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'danger')}</div>`}`
       : menuTab === 'Admin' ? `<div class="row">${ubtn(`${ico('wand')} Sandbox`, () => { location.href = `${homeUrl()}?sandbox=1`; })}${ubtn('Update rules', () => { modal = 'rules'; })}${ubtn('Free German seat', () => { void auth.freeSeat('german'); })}${ubtn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div>`
@@ -1468,7 +1474,7 @@ function modalHtml() {
   }
   return '';
 }
-const inGame = () => HAS_TABLE || DEV_FAKE || SANDBOX || online.mode === 'local';
+const inGame = () => HAS_TABLE || DEV_FAKE || SANDBOX || TUTORIAL || online.mode === 'local';
 /** Draw the interface; if something in it throws, say so on screen instead of leaving a stale picture. */
 /* A tap must land on the button it started on: while a finger or mouse is down on the interface, redraws wait (playtest: Ready/Roll/Done taps were lost). */
 let pressing = false, renderWaiting = false;
@@ -1573,6 +1579,17 @@ SBU.initSandboxUi({
   ABBR, actorNow, areaName, b3, chitImg, unitFace, unitPic, chitPic, hist, refresh, render, save, say, reg, regv, ubtn, optChooser,
 });
 initTouch(document.body);
+const toScreen = (p: THREE.Vector3) => { const r = canvas.getBoundingClientRect(), v = p.clone().project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; };
+tut = TUTORIAL ? initTutorial({
+  game: () => g, act,
+  load: (x) => { if (heldNext) commitRoll(); rollView = null; hideDice(); g = x; hist.clear(); selUnit = selChit = selArr = null; selArea = previewArea = hoverArea = null; modal = null; scoreOpen = false; reinforcing = false; battleFx = []; rollFx = []; tgtKey = ''; save(); refresh(); },
+  unitScreen: (id) => pieceScreen(id), areaScreen: (a) => { const c = center(a); return toScreen(new THREE.Vector3(c.x, 0, c.z)); },
+  lookAt: (a) => { const p = center(a); goal = { t: new THREE.Vector3(p.x, 0, p.z), dist: Math.min(dist, innerWidth < 700 ? 34 : 30), pitch }; },
+  select: (id) => { if (g.pendingArrivals.includes(id)) selArr = id; else { selUnit = id; selArea = g.units.find((u) => u.id === id)?.area ?? null; } refresh(); },
+  toast: (t) => say(t), busy: () => !!rollView || !!heldNext,
+  guide: () => guide, setGuide: (v) => { setGuide(v); render(); },
+  home: (sc) => { try { if (sc) sessionStorage.setItem('fab-new', sc); } catch { /* private mode */ } location.href = homeUrl(); },
+}) : null;
 frame();
 loadChitArt().catch((e) => console.error(e)).finally(() => { auto(); refresh(); });
 let lobbyUid = '';

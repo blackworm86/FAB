@@ -10,7 +10,7 @@ export interface Step {
   title: string; text: string; rule?: string;
   target?: Target;
   /** Done when this holds. `q` asks the screen (a CSS selector is present); missing = the Next button. */
-  done?: (g: G, q: (sel: string) => boolean) => boolean;
+  done?: (g: G, q: (sel: string, text?: string) => boolean) => boolean;
   /** Done as soon as the target is tapped (things that change no game state: selecting a block, opening a picker). */
   tap?: boolean;
   /** Skip the step when this holds on arrival (a choice the game did not ask for). */
@@ -22,6 +22,8 @@ export interface Step {
   auto?: (g: G) => void;
   /** The player's action in engine terms: replayed by Back and by the tests. */
   act?: (g: G) => void;
+  /** The step is the Undo button: replays restore the game from before the previous action. */
+  undo?: boolean;
 }
 export interface Lesson { topic: string; ref: string; setup: () => G; steps: Step[] }
 
@@ -125,10 +127,10 @@ const L2: Lesson = { topic: 'Prepare: chits', ref: '23.2', setup: () => {
   avail(g, ['L63.0', 'L88.0', 'L65.0', 'L62.0']);
   return g;
 }, steps: [
-  { title: 'Your hand', text: 'The Prepare step: both players draw chits (the German nine this turn) and may play them. <b>Glowing cards can be played now. Tap Greif Team Bridge.</b>', rule: '23.2 Admin Phase', target: { el: ['.card2[data-chit="R15.0"]', '.handtab button'], label: 'Greif Team Bridge' }, done: (_g, q) => q('.chitbar') },
+  { title: 'Your hand', text: 'The Prepare step: both players draw chits (the German nine this turn) and may play them. <b>Glowing cards can be played now. Tap Greif Team Bridge.</b>', rule: '23.2 Admin Phase', target: { el: ['.card2[data-chit="R15.0"]', '.handtab button'], label: 'Greif Team Bridge' }, done: (_g, q) => q('.chitbar', 'Greif') },
   { title: 'Greif Team Bridge', text: 'German commandos in American uniform hold a bridge: the Allies then need a <b>1</b> to blow it. <b>Tap Marnach.</b>', rule: '17.12 Greif Team Bridge', target: { area: 21 }, look: 21, tap: true, done: (g) => !!g.greif[GREIF] },
   { title: 'The river border', text: '<b>Tap Lullange</b>, across the river: the team takes the Marnach–Lullange bridge.', target: { area: 37 }, look: 37, done: (g) => !!g.greif[GREIF], act: (g) => E.playGreifBridge(g, 'R15.0', 21, 37) },
-  { title: 'Replacements', text: 'The 12th VG lost a step in Udenbreth on Turn 1. <b>Tap Non-Elite Infantry Replacement.</b>', target: { el: ['.card2[data-chit="L17.0"]', '.handtab button'], label: 'Non-Elite Infantry Replacement' }, done: (g, q) => q('.chitbar') || U(g, '12 VG').str === 3 },
+  { title: 'Replacements', text: 'The 12th VG lost a step in Udenbreth on Turn 1. <b>Tap Non-Elite Infantry Replacement.</b>', target: { el: ['.card2[data-chit="L17.0"]', '.handtab button'], label: 'Non-Elite Infantry Replacement' }, done: (g, q) => q('.chitbar', 'Non-Elite') || U(g, '12 VG').str === 3 },
   { title: 'The 12th VG', text: '<b>Tap the 12th VG in Udenbreth</b>: it gains a step. The chit\'s colour shows its army (6th Panzer).', rule: '13.0 Replacements', target: { unit: '12 VG' }, look: 9, done: (g) => U(g, '12 VG').str === 3, act: (g) => E.playReplacement(g, 'L17.0', U(g, '12 VG').id) },
   { title: 'The Allied side', text: 'The Allies drew seven: Delayed Response (no effect, discarded) and engineers. The <b>35th</b> in Ligneuville blows the bridges to St. Vith and Malmedy; the <b>168th</b> in Vielsalm those to Malmedy and Baraque de Fraiture. Watch the blown-bridge markers.', rule: '15.3 Blowing bridges', look: 24, auto: (g) => {
     const dr = g.chits.find((c) => c.side === 'allied' && /Delayed/.test(c.name) && c.box === 'available'); if (dr) dr.box = 'eliminated';
@@ -148,7 +150,7 @@ const L3: Lesson = { topic: 'Movement', ref: '23.3', setup: () => {
 }, steps: [
   tapUnit('26 VG', 'Select a block', '<b>Tap the infantry block in Prüm.</b> The areas it can reach turn green; orange means it must stop there.', '5.3 Movement'),
   moveTo('26 VG', 5, 'Army zones', '<b>Tap Losheim.</b> The road costs 1 MP, plus 2 MP for leaving its own army zone (5th Panzer, Zone 5): it must stop there.', '5.33 Army boundaries'),
-  { title: 'Undo', text: 'Moves can be taken back until something is revealed or rolled. <b>Tap Undo.</b>', target: { el: '[data-undo]', label: 'Undo' }, done: (g) => area('26 VG', g) === 4 },
+  { title: 'Undo', text: 'Moves can be taken back until something is revealed or rolled. <b>Tap Undo.</b>', target: { el: '[data-undo]', label: 'Undo' }, undo: true, done: (g) => area('26 VG', g) === 4 },
   tapUnit('26 VG', 'Again', '<b>Tap the infantry again.</b>'),
   moveTo('26 VG', 11, 'The Schnee Eifel', '<b>Tap Bleialf.</b> The Schnee Eifel ridge is a restricted border: crossing it takes the whole allowance. Armour may not cross it at all.', '5.34 Restricted boundaries'),
   tapUnit('116 Pz', 'Armour', '<b>Tap the armour block in Prüm.</b>'),
@@ -179,7 +181,7 @@ const L4: Lesson = { topic: 'Strategic movement', ref: '23.4', setup: () => {
 /* ---------------- Lesson 5 · Combat (23.5) ---------------- */
 const L5: Lesson = { topic: 'Combat', ref: '23.5', setup: () => {
   const g = table(2, 'german', 'combat', { '18 VG': 23, '106 Inf': 23, 'Garrison St. Vith': 23, 'CCB/9': 25, '62 VG': 11 });
-  g.control[23] = 'allied'; sa(g, 'allied'); return g;
+  g.control[23] = 'allied'; U(g, '106 Inf').str = 1; sa(g, 'allied'); return g;
 }, steps: [
   { title: 'Choose a battle', text: 'The 18th VG has entered St. Vith, held by the 106th Infantry and the town garrison. <b>Tap St. Vith.</b>', rule: '23.5 Combat Phase', target: { area: 23 }, look: 23, tap: true, done: (g) => !!g.battle },
   { title: 'Fight', text: '<b>Tap Fight St. Vith.</b> One round of combat follows, step by step.', target: GO, done: (g) => !!g.battle, act: fightAt(23) },
@@ -195,7 +197,7 @@ const L5: Lesson = { topic: 'Combat', ref: '23.5', setup: () => {
 /* ---------------- Lesson 6 · Combat with exploitation (23.6) ---------------- */
 const L6: Lesson = { topic: 'Exploitation', ref: '23.6', setup: () => {
   const g = table(2, 'german', 'combat', { '116 Pz': 22, '112/28': 22, Lehr: 13 });
-  g.control[22] = 'allied'; avail(g, ['L31.0', 'L33.0', 'L62.0']); return g;
+  g.control[22] = 'allied'; for (const a of [3, 12, 13, 21]) g.control[a] = 'german'; avail(g, ['L31.0', 'L33.0', 'L62.0']); return g;
 }, steps: [
   { title: 'Weiswampach', text: 'The 116th Panzer crossed into Weiswampach against the 112/28th. <b>Tap Weiswampach</b>, then Fight.', rule: '23.6 Combat with exploitation', target: { area: 22 }, look: 22, tap: true, done: (g) => !!g.battle },
   { title: 'Fight', text: '<b>Tap Fight Weiswampach.</b>', target: GO, done: (g) => !!g.battle, act: fightAt(22) },
@@ -253,7 +255,7 @@ const L7: Lesson = { topic: 'Breakthrough', ref: '23.7', setup: () => {
 
 /* ---------------- Lesson 8 · Supply (23.8) ---------------- */
 const L8: Lesson = { topic: 'Supply', ref: '23.8', setup: () => {
-  const g = table(3, 'german', 'btCombat', { Peiper: 51, '18 VG': 34, 'CCB/9': 34, '1SS(-)': 33, '3 FJ': 25, '62 VG': 24, '1 Inf': 53, '106 Inf': 11 });
+  const g = table(3, 'german', 'btCombat', { Peiper: 51, '18 VG': 34, 'CCB/9': 34, '1SS(-)': 33, '3 FJ': 25, '62 VG': 24, '1 Inf': 53 });
   for (const a of [5, 6, 10, 23, 24, 25, 33, 51, 52]) g.control[a] = 'german';
   for (const a of [34, 50, 35, 53]) g.control[a] = 'allied';
   g.blown = [E.keyOf(34, 24), E.keyOf(34, 33), E.keyOf(25, 23)];
@@ -287,4 +289,14 @@ const L9: Lesson = { topic: 'Victory', ref: '23.9–23.10', setup: () => {
   { title: 'You know the whole turn', text: 'Prepare, Move, Fight, Breakthrough, Supply, for each side, then the Victory Check. Start a game: <b>Nuts!</b> is short (3 turns around Bastogne).' },
 ] };
 
+/** Play the first `upTo` steps of a lesson in engine terms (Back, and the tests). */
+export function replay(i: number, upTo: number): G {
+  const L = LESSONS[i], g0 = L.setup(); let g = g0; const before: string[] = [];
+  for (const s of L.steps.slice(0, upTo)) {
+    if (s.skip?.(g)) continue;
+    if (s.undo) { const p = before.pop(); if (p) g = JSON.parse(p); continue; }
+    s.enter?.(g); if (s.auto || s.act) before.push(JSON.stringify(g)); s.auto?.(g); s.act?.(g);
+  }
+  return g;
+}
 export const LESSONS: Lesson[] = [L0, L1, L2, L3, L4, L5, L6, L7, L8, L9];

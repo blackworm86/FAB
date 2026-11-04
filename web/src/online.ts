@@ -41,6 +41,8 @@ export const TABLE = params.get('table') || 'main';
 export const HAS_TABLE = params.has('table'), DEV_FAKE = DEV && params.has('fake');
 /** The admin sandbox (`?sandbox`): a private test table in this browser; the account is only read to check that it is an admin. */
 export const SANDBOX = params.has('sandbox');
+/** The tutorial: a local game in this browser, nothing written online. */
+export const TUTORIAL = params.has('tutorial') && !SANDBOX && !params.has('table');
 export type DevSeat = 'german' | 'allied' | 'both' | 'watch';
 
 export const online = {
@@ -75,6 +77,7 @@ const savedLater = () => { writing = false; if (rebuildLater) { rebuildLater = f
 
 export async function startOnline(remote: (g: Game) => void, changed: () => void, say: (m: string) => void = () => {}, gone: () => void = () => {}) {
   onRemote = remote; onChange = changed; notify = say; onGone = gone;
+  if (TUTORIAL) { online.ready = true; changed(); return; }
   try {
     const fake = DEV ? params.get('fake') : null, make = async () => (fake === 'german' || fake === 'allied' ? (await import('./store-fake')).fakeStore(fake) : rtdbStore(TABLE));
     store = await Promise.race([make(), new Promise<never>((_, no) => setTimeout(() => no(new Error('Could not reach the game database. Check the database address and your connection.')), 15000))]);
