@@ -931,6 +931,7 @@ function overrun(g: Game, b: Battle) {
     b.rolls.push({ who: `Overrun ${c.name} (18.7)`, sn, dice: [r], hits: ok ? 1 : 0, kind: 'morale' });
     if (ok) { c.box = 'eliminated'; b.assets[def] = b.assets[def].filter((x) => x !== c.id); }
     say(g, `overrunning artillery: ${c.name} ${ok ? 'is destroyed' : 'escapes'} (rolled ${r}, needs ${sn} or less, 18.7)`);
+    b.result = `${b.result ?? ''}${b.result ? ' · ' : ''}${c.name} ${ok ? 'overrun and destroyed' : 'escapes the overrun'} (18.7)`;
   }
 }
 function end(g: Game, b: Battle, result: string) {
