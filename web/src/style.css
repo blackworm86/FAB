@@ -569,3 +569,4 @@ body:has(.hotcover) #leaders, body:has(.hotcover) #fx, body:has(.hotcover) #mark
 }
 @media (max-width: 700px) { .c-bar.b .turnchip { vertical-align: 1px; margin-right: 6px; } }
 @media (max-width: 700px) { .c-hand { height: 84px !important; padding-bottom: 6px !important; box-sizing: border-box; } .handtab { margin-bottom: 4px; } }
+@media (max-width: 700px) { .c-bar.b { grid-template-columns: minmax(0, 1fr) 44px 178px !important; } .c-bar.b .go, .c-bar.b .gowait { width: 178px; max-width: 178px !important; font-size: 12.5px !important; letter-spacing: .04em; padding-inline: 8px !important; } .c-ledger .engch { margin: 2px 0 8px; } }
