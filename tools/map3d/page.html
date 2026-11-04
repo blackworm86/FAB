@@ -50,6 +50,7 @@ input[type=range] { width: 120px; height: 36px; margin: 0; accent-color: var(--g
 <div class="bar" id="bar">
   <div class="grp"><span class="lk">Look</span><div class="seg" id="look"><button id="lk-paint" data-v="1" aria-pressed="true">Low-poly</button><button id="lk-iso" data-v="2" aria-pressed="false">Contours</button><button id="lk-board" data-v="0" aria-pressed="false">Board</button></div><button class="tog" id="more" aria-expanded="false" aria-controls="bar" aria-label="Options"><span class="mt">Options</span></button></div>
   <div class="grp opt"><span>Facets</span><div class="seg" id="fac"><button id="fc-s" data-v="2" aria-pressed="false">Small</button><button id="fc-m" data-v="3" aria-pressed="true">Medium</button><button id="fc-l" data-v="5" aria-pressed="false">Large</button></div></div>
+  <div class="grp opt"><span>Borders</span><div class="seg" id="bord"><button id="bd-line" data-v="0" aria-pressed="false">Line</button><button id="bd-dash" data-v="1" aria-pressed="false">Dashed</button><button id="bd-band" data-v="2" aria-pressed="true">Band</button></div></div>
   <div class="grp opt"><span>Relief</span><input id="z" type="range" min="0" max="6" step="0.5" value="4" aria-label="Relief height"><output id="zv">×4</output></div>
   <div class="grp opt tg"><button class="tog" id="cont" aria-pressed="true">Contours</button><button class="tog" id="trees" aria-pressed="true">Trees</button><button class="tog" id="flat" aria-pressed="true">Flatten on select</button></div>
 </div>
@@ -81,11 +82,16 @@ scene.add(new THREE.AmbientLight(0xffffff, 0.62)); const dl = new THREE.Directio
 
 const loadTex = (src) => { const t = new THREE.TextureLoader().load(src); t.anisotropy = renderer.capabilities.getMaxAnisotropy(); return t; };
 const hlCv = document.createElement('canvas'); hlCv.width = MW * 2; hlCv.height = MH * 2; const hlTex = new THREE.CanvasTexture(hlCv);
-const U = { tP: { value: loadTex('__PRINTED__') }, tO: { value: loadTex('__OVERLAY__') }, tH: { value: hlTex }, uMode: { value: 1 }, uHl: { value: 0 }, uZ: { value: 4 }, uSun: { value: SUN }, uLo: { value: meta.lo }, uCont: { value: 1 }, tF: { value: null } };
+const U = { tP: { value: loadTex('__PRINTED__') }, tO: { value: loadTex('__OVERLAY__') }, tH: { value: hlTex }, uMode: { value: 1 }, uHl: { value: 0 }, uZ: { value: 4 }, uSun: { value: SUN }, uLo: { value: meta.lo }, uCont: { value: 1 }, tF: { value: null }, tB: { value: loadTex('__BORDERS__') }, uBs: { value: 2 } };
 const mat = new THREE.ShaderMaterial({ uniforms: U, transparent: true, extensions: { derivatives: true },
   vertexShader: `attribute vec3 fcol; attribute vec2 grad; uniform float uZ,uLo; varying vec3 vCol; varying vec2 vUv; varying vec3 vW; varying float vM; varying vec2 vG;
     void main(){ vec3 p=position; vM=p.y*80.+uLo; vG=grad; p.y*=uZ; vUv=uv; vCol=fcol; vec4 w=modelMatrix*vec4(p,1.); vW=w.xyz; gl_Position=projectionMatrix*viewMatrix*w; }`,
-  fragmentShader: `uniform sampler2D tP,tO,tH; uniform float uMode,uHl,uCont; uniform vec3 uSun; varying vec3 vCol; varying vec2 vUv; varying vec3 vW; varying float vM; varying vec2 vG; uniform sampler2D tF; uniform float uZ;
+  fragmentShader: `uniform sampler2D tP,tO,tH; uniform float uMode,uHl,uCont; uniform vec3 uSun; varying vec3 vCol; varying vec2 vUv; varying vec3 vW; varying float vM; varying vec2 vG; uniform sampler2D tF,tB; uniform float uZ,uBs;
+    /* area borders, drawn so they cannot pass for roads (grey with a light edge): 0 dark plum line on a white halo, 1 dashed brick-red line, 2 violet band with a dark core */
+    vec3 border(vec3 c){ vec3 m=texture2D(tB,vUv).rgb;
+      if(uBs<.5){ c=mix(c,vec3(1.),m.b*.6); return mix(c,vec3(.29,.17,.37),m.r*.95); }
+      if(uBs<1.5){ c=mix(c,vec3(1.),m.b*.35); return mix(c,vec3(.55,.15,.13),m.g*.95); }
+      c=mix(c,vec3(.50,.36,.72),m.b*.42); return mix(c,vec3(.30,.18,.48),m.r*.9); }
     float iso(float step,float w){ float c=vM/step, d=abs(fract(c+.5)-.5)/max(fwidth(c),1e-4); return 1.-clamp(d-w,0.,1.); }
     void main(){
       if(uMode>1.5){                                            /* contour look: the snow map draped on a smooth relief, drawn with fine contour lines */
@@ -95,7 +101,7 @@ const mat = new THREE.ShaderMaterial({ uniforms: U, transparent: true, extension
         float c1=vM/25., f1=fwidth(c1), m1=(1.-clamp(abs(fract(c1+.5)-.5)/max(f1,1e-4),0.,1.))*smoothstep(2.5,7.,1./max(f1,1e-4));   /* 25 m: hairline, fades out where lines crowd */
         float c2=vM/100., f2=fwidth(c2), m2=(1.-clamp(abs(fract(c2+.5)-.5)/max(f2,1e-4)-.3,0.,1.))*smoothstep(2.,5.,1./max(f2,1e-4));
         base=mix(base,lc,max(m1*.32,m2*.58));
-        vec4 h=texture2D(tH,vUv); base=mix(base,h.rgb,h.a*uHl);
+        vec4 h=texture2D(tH,vUv); base=mix(base,h.rgb,h.a*uHl); base=border(base);
         vec4 o=texture2D(tO,vUv); base=mix(base,o.rgb,o.a);
         gl_FragColor=vec4(base,1.); return; }   /* lit areas stay see-through so the contours show */
       vec3 n=normalize(cross(dFdx(vW),dFdy(vW))); if(n.y<0.) n=-n;
@@ -103,7 +109,7 @@ const mat = new THREE.ShaderMaterial({ uniforms: U, transparent: true, extension
       float l=1.+.75*(max(dot(n,uSun),0.)-uSun.y);           /* flat ground keeps its colour; slopes to the sun lighter, away darker */
       base*=clamp(l,.5,1.3);
       base=mix(base,vec3(.30,.36,.45),max(iso(25.,.15)*.32,iso(100.,.7)*.6)*uCont);   /* contours every 25 m, index line every 100 m */
-      vec4 h=texture2D(tH,vUv); base=mix(base,h.rgb,h.a*uHl);
+      vec4 h=texture2D(tH,vUv); base=mix(base,h.rgb,h.a*uHl); base=border(base);
       vec4 o=texture2D(tO,vUv); base=mix(base,o.rgb,o.a);     /* borders, roads, rivers, numbers and names always on top */
       gl_FragColor=vec4(base,1.); }` });
 
@@ -214,6 +220,7 @@ const bar = document.getElementById('bar'), hint = document.getElementById('hint
 more.addEventListener('click', () => { const o = bar.classList.toggle('open'); more.setAttribute('aria-expanded', String(o)); resize(); });
 const seg = (id, f) => document.getElementById(id).addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (!b) return; for (const o of b.parentNode.children) o.setAttribute('aria-pressed', String(o === b)); f(+b.dataset.v); });
 seg('look', (v) => { const was = S.look; S.look = v; U.uMode.value = v; if ((was === 2) !== (v === 2)) buildTerrain(v === 2 ? 1 : S.step, v === 2); treeVis(); });
+seg('bord', (v) => { U.uBs.value = v; });
 seg('fac', (v) => { S.step = v; if (S.look !== 2) buildTerrain(v); });
 const zIn = document.getElementById('z'), zOut = document.getElementById('zv');
 zIn.addEventListener('input', () => { S.z = +zIn.value; zOut.textContent = S.z ? '×' + S.z : 'flat'; });
