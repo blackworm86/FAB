@@ -743,4 +743,6 @@ button.go:disabled { background: #2a2d22; color: #8d9065; box-shadow: none; opac
   .spine .thumb, .spine .tt { display: none; }
 }
 @media (max-width: 380px) { .bxs .bxsv { display: none; } .bxs { grid-template-columns: 56px minmax(0, 1fr) 30px; } }
-.bx.inset .bxart::after { content: ""; position: absolute; inset: 0 0 45% 0; background: linear-gradient(#f4f3eef2 30%, #f4f3ee00); }     /* the title sits on a pale ground, like a light map */
+     /* the title sits on a pale ground, like a light map */
+
+.bxs .bxsart svg { top: 0 !important; height: 100% !important; width: auto !important; min-width: 100%; }
