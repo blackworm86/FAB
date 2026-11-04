@@ -56,6 +56,9 @@ input[type=range] { width: 120px; height: 36px; margin: 0; accent-color: var(--g
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/lines/LineSegmentsGeometry.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/lines/LineMaterial.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/lines/LineSegments2.js"></script>
 <script>
 const D = /*DATA*/null;
 const { meta } = D, C = meta.cols, R = meta.rows, ST = meta.step, X0 = meta.x0, Y0 = meta.y0, MW = meta.w, MH = meta.h, CX = X0 + MW / 2, CY = Y0 + MH / 2;
@@ -191,20 +194,39 @@ const MOVES = { go: [10, 22, 24], stop: [11, 12, 25] };
   poly(AREA[23]); x.save(); x.clip(); x.lineWidth = 10; x.strokeStyle = 'rgba(255,214,90,1)'; x.stroke(); x.restore();   // the block's own area: a bright gold edge, no fill
   hlTex.needsUpdate = true; })();
 
-// contour lines in 3D (marching squares on the 2 px height grid): every 25 m, brighter every 100 m, tinted from valley blue to summit white
+// contour lines in 3D (marching squares on the 2 px height grid), drawn as real-width lines: every 25 m, heavier every 100 m.
+// Each piece takes the low-poly winter colours of the ground under it; a flat snow map at the foot of the model carries the same colours.
+const lineMats = [];
 const iso = (() => {
-  const pos = [], col = [], hv = (i, j) => HB[j * C + i] / 65535 * (meta.hi - meta.lo) + meta.lo, wy = (m) => (m - meta.lo) / M_PER_PX;
-  const lowC = new THREE.Color(0x86a3c2), highC = new THREE.Color(0xf4f7fb), tmp = new THREE.Color();
+  const hv = (i, j) => HB[j * C + i] / 65535 * (meta.hi - meta.lo) + meta.lo, wy = (m) => (m - meta.lo) / M_PER_PX;
+  const ISO = { field: [0.36, 0.47, 0.62], moor: [0.45, 0.55, 0.70], wood: [0.10, 0.36, 0.20], paved: [0.38, 0.38, 0.42] };
+  const sets = { minor: { pos: [], col: [], w: 1.3 }, major: { pos: [], col: [], w: 2.4 } };
   for (let L = Math.ceil(meta.lo / 25) * 25; L < meta.hi; L += 25) {
-    const major = L % 100 === 0; tmp.copy(lowC).lerp(highC, (L - meta.lo) / (meta.hi - meta.lo)); if (!major) tmp.multiplyScalar(0.8);
+    const set = L % 100 === 0 ? sets.major : sets.minor, k = set === sets.major ? 0.8 : 1;
     for (let j = 0; j < R - 1; j++) for (let i = 0; i < C - 1; i++) {
       const v = [hv(i, j), hv(i + 1, j), hv(i + 1, j + 1), hv(i, j + 1)], cx = [i, i + 1, i + 1, i], cy = [j, j, j + 1, j + 1], pts = [];
       for (let e = 0; e < 4; e++) { const a = v[e], b = v[(e + 1) % 4]; if ((a < L) !== (b < L)) { const t = (L - a) / (b - a), f = (e + 1) % 4; pts.push([X0 + (cx[e] + (cx[f] - cx[e]) * t) * ST - CX, Y0 + (cy[e] + (cy[f] - cy[e]) * t) * ST - CY]); } }
-      for (let k = 0; k + 1 < pts.length; k += 2) { for (const q of [pts[k], pts[k + 1]]) { pos.push(q[0], wy(L), q[1]); col.push(tmp.r, tmp.g, tmp.b); } }
+      for (let s = 0; s + 1 < pts.length; s += 2) {
+        const mx = (pts[s][0] + pts[s + 1][0]) / 2 + CX, my = (pts[s][1] + pts[s + 1][1]) / 2 + CY, w = (flagAt(mx, my) >> 2) / 63;
+        const c = paved(mx, my) ? ISO.paved : w > 0.45 ? ISO.wood : L > 560 ? ISO.moor : ISO.field;
+        for (const q of [pts[s], pts[s + 1]]) { set.pos.push(q[0], wy(L), q[1]); set.col.push(c[0] * k, c[1] * k, c[2] * k); } }
     }
   }
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-  const m = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ vertexColors: true })); m.visible = false; scene.add(m); return m;
+  const grp = new THREE.Group();
+  { const s = sets.minor, g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(s.pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(s.col, 3));
+    const l = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ vertexColors: true })); l.userData.iso = true; grp.add(l); }          // 25 m lines: hairlines (cheap)
+  { const s = sets.major, g = new THREE.LineSegmentsGeometry(); g.setPositions(s.pos); g.setColors(s.col);
+    const m = new THREE.LineMaterial({ vertexColors: true, linewidth: s.w }); lineMats.push(m); const l = new THREE.LineSegments2(g, m); l.userData.iso = true; grp.add(l); }   // 100 m lines: real width
+  window.__segs = [sets.minor.pos.length / 6, sets.major.pos.length / 6];
+  // the snow map at the foot: fields white, woods pale green, towns grey
+  const cv = document.createElement('canvas'); cv.width = C; cv.height = R; const x = cv.getContext('2d'), im = x.createImageData(C, R);
+  for (let j = 0; j < R; j++) for (let i = 0; i < C; i++) { const X = X0 + i * ST, Y = Y0 + j * ST, w = (FL[j * C + i] >> 2) / 63, c = paved(X, Y) ? [200, 202, 206] : w > 0.45 ? [150, 178, 160] : [241, 244, 248], o = (j * C + i) * 4;
+    im.data[o] = c[0]; im.data[o + 1] = c[1]; im.data[o + 2] = c[2]; im.data[o + 3] = 255; }
+  x.putImageData(im, 0, 0);
+  const big = document.createElement('canvas'); big.width = C * 4; big.height = R * 4; const bx = big.getContext('2d'); bx.filter = 'blur(4px)'; bx.drawImage(cv, 0, 0, big.width, big.height);   // soft edges, no pixel steps
+  const ft = new THREE.CanvasTexture(big);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(MW, MH), new THREE.MeshBasicMaterial({ map: ft })); floor.rotation.x = -Math.PI / 2; floor.position.y = 0.02; grp.add(floor);
+  grp.visible = false; scene.add(grp); return grp;
 })();
 
 // state and controls
@@ -212,12 +234,12 @@ const S = { look: 1, cont: true, step: 3, z: 4, props: true, flat: true, choosin
 const bar = document.getElementById('bar'), hint = document.getElementById('hint'), more = document.getElementById('more');
 more.addEventListener('click', () => { const o = bar.classList.toggle('open'); more.setAttribute('aria-expanded', String(o)); resize(); });
 const seg = (id, f) => document.getElementById(id).addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (!b) return; for (const o of b.parentNode.children) o.setAttribute('aria-pressed', String(o === b)); f(+b.dataset.v); });
-seg('look', (v) => { const was = S.look; S.look = v; U.uMode.value = v; iso.visible = v === 2; plinth.material.color.set(v === 2 ? 0x1c2026 : 0x2a2d20); if ((was === 2) !== (v === 2)) buildTerrain(S.step, v === 2); treeVis(); });
+seg('look', (v) => { const was = S.look; S.look = v; U.uMode.value = v; iso.visible = v === 2; if ((was === 2) !== (v === 2)) buildTerrain(S.step, v === 2); treeVis(); });
 seg('fac', (v) => { S.step = v; buildTerrain(v, S.look === 2); });
 const zIn = document.getElementById('z'), zOut = document.getElementById('zv');
 zIn.addEventListener('input', () => { S.z = +zIn.value; zOut.textContent = S.z ? '×' + S.z : 'flat'; });
 const tog = (id, k, f) => { const b = document.getElementById(id); b.addEventListener('click', () => { S[k] = !S[k]; b.setAttribute('aria-pressed', String(S[k])); f && f(); }); };
-const treeVis = () => { trees.visible = caps.visible = S.props && S.look !== 2; };
+const treeVis = () => { trees.visible = caps.visible = S.props; };
 tog('trees', 'props', treeVis);
 tog('cont', 'cont', () => { U.uCont.value = S.cont ? 1 : 0; });
 tog('flat', 'flat');
@@ -228,7 +250,7 @@ canvas.addEventListener('pointerup', (ev) => { if (!down || Math.hypot(ev.client
   const hit = ray.intersectObjects(window.blocks)[0]; S.choosing = !!hit && hit.object.userData.name === '106 Inf' && !S.choosing;
   hint.innerHTML = S.choosing ? '<b>Green</b>: can move on · <b>Orange</b>: must stop (river) · tap anywhere to cancel' : 'Tap the green <b>106 Inf</b> block in St. Vith to see its moves'; });
 
-function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); document.documentElement.style.setProperty('--barh', bar.offsetHeight + 'px'); document.documentElement.style.setProperty('--pb', document.querySelector('.plate').getBoundingClientRect().bottom + 8 + 'px'); }
+function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); for (const m of lineMats) m.resolution.set(w, h); cam.aspect = w / h; cam.updateProjectionMatrix(); document.documentElement.style.setProperty('--barh', bar.offsetHeight + 'px'); document.documentElement.style.setProperty('--pb', document.querySelector('.plate').getBoundingClientRect().bottom + 8 + 'px'); }
 addEventListener('resize', resize); resize();
 const phone = innerWidth < 600; cam.position.set(phone ? 10 : -20, phone ? 640 : 340, phone ? 480 : 360); ctl.target.set(phone ? 10 : -10, 0, phone ? 30 : 30); ctl.update();
 buildTerrain(S.step); placeProps(S.z); placeBlocks(S.z);
@@ -238,7 +260,7 @@ const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const want = S.choosing && S.flat ? S.z * 0.2 : S.z;                       // flatten while choosing: the relief settles so the lit areas read clearly
   S.zNow += reduce ? want - S.zNow : (want - S.zNow) * 0.12; if (Math.abs(want - S.zNow) < 0.002) S.zNow = want;
   U.uZ.value = S.zNow; U.uHl.value += ((S.choosing ? 1 : 0) - U.uHl.value) * (reduce ? 1 : 0.15);
-  if (Math.abs(S.zNow - last) > 1e-4) { placeBlocks(S.zNow); iso.scale.y = S.zNow; last = S.zNow; }
+  if (Math.abs(S.zNow - last) > 1e-4) { placeBlocks(S.zNow); iso.children.forEach((o) => { if (o.userData.iso) o.scale.y = S.zNow; }); last = S.zNow; }
   if (Math.abs(S.zNow - lastP) > 0.02) { placeProps(S.zNow); lastP = S.zNow; }
   ctl.update(); renderer.render(scene, cam); requestAnimationFrame(loop);
 })();
