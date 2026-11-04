@@ -1,6 +1,7 @@
 /** The 3D map: a smooth snowy relief of the real Ardennes, bent onto the game map, with contour lines, woods and 3D towns.
  *  Data is built offline by tools/map3d (fullmap.py) into public/relief/. World unit = 1 cm, like the board. */
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 type Meta = { outline: [number, number][][]; w: number; h: number; step: number; cols: number; rows: number; metres: number; towns: [number, number][]; cities: { c: [number, number]; cells: [number, number][] }[] };
 export type Relief = {
@@ -28,7 +29,8 @@ const img = (src: string) => new Promise<HTMLImageElement>((ok, bad) => { const 
 const svgImg = (svg: string) => img(URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' })));
 const group = (svg: string, id: string) => { const m = new RegExp(`<g id="${id}"[\\s\\S]*?</g>(\\s*</g>)?`).exec(svg); return m ? m[0] : ''; };
 
-export async function loadRelief(MW: number, MH: number, S: number, labels: [number, number][], base = './'): Promise<Relief> {
+/** lite (phones): a ground mesh half as fine and half the trees. */
+export async function loadRelief(MW: number, MH: number, S: number, labels: [number, number][], lite = false, base = './'): Promise<Relief> {
   const [meta, hb, wb, snow, linesSvg, entry] = await Promise.all([
     fetch(base + 'relief/relief.json').then((r) => r.json() as Promise<Meta>),
     fetch(base + 'relief/height.bin').then((r) => r.arrayBuffer()),
@@ -49,7 +51,7 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
   const h = (x: number, z: number) => { const [px, py] = toMap(x, z); return onLand(px, py) ? hMap(px, py) : 0; };
 
   // the ground: one vertex per grid cell (4 map px)
-  const geometry = new THREE.PlaneGeometry(MW / S, MH / S, C - 1, R - 1), pos = geometry.getAttribute('position') as THREE.BufferAttribute;
+  const G = lite ? 2 : 1, geometry = new THREE.PlaneGeometry(MW / S, MH / S, Math.ceil((C - 1) / G), Math.ceil((R - 1) / G)), pos = geometry.getAttribute('position') as THREE.BufferAttribute;
   for (let k = 0; k < pos.count; k++) { const [px, py] = toMap(pos.getX(k), -pos.getY(k)); pos.setZ(k, hMap(px, py)); }     // off the land the shader cuts the ground away
   geometry.computeVertexNormals(); geometry.computeBoundingSphere();
   const wp: number[] = [];
@@ -72,7 +74,7 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
   const inTown = (x: number, y: number) => towns.some(([tx, ty]) => Math.hypot(x - tx, y - ty) < 15) || [-2, 0, 2].some((a) => [-2, 0, 2].some((b) => cityCell.has(`${((x / 4) | 0) + a},${((y / 4) | 0) + b}`)));
   const nearLabel = (x: number, y: number) => labels.some(([lx, ly]) => Math.abs(x - lx) < 50 && y - ly > -36 && y - ly < 24);   // the printed number and name stay clear
   const trees: number[][] = [];
-  for (let j = 0; j < R; j++) for (let i = 0; i < C; i++) { const w = WB[j * C + i] / 255; if (w > 0.3 && rnd() < w * 0.26) { const x = i * ST + (rnd() - 0.5) * ST, y = j * ST + (rnd() - 0.5) * ST; if (!inTown(x, y) && !nearLabel(x, y)) trees.push([x, y, 0.75 + rnd() * 0.6, rnd()]); } }
+  for (let j = 0; j < R; j++) for (let i = 0; i < C; i++) { const w = WB[j * C + i] / 255; if (w > 0.3 && rnd() < w * (lite ? 0.12 : 0.26)) { const x = i * ST + (rnd() - 0.5) * ST, y = j * ST + (rnd() - 0.5) * ST; if (!inTown(x, y) && !nearLabel(x, y)) trees.push([x, y, 0.75 + rnd() * 0.6, rnd()]); } }
   const houses: number[][] = [], churches: number[][] = [];
   for (const [x, y] of towns) { churches.push([x + 1, y - 1, 1]); for (let k = 0; k < 9; k++) { const a = (k / 9) * 6.283 + rnd() * 0.4, r = 5.5 + rnd() * 3.5; houses.push([x + Math.cos(a) * r, y + Math.sin(a) * r, -a, 2.4 + rnd() * 0.6, 2 + rnd() * 0.8, 3.2 + rnd() * 0.8]); } }
   for (const c of meta.cities) {
@@ -82,14 +84,17 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
     for (let k = 0; k < 16; k++) { const a = rnd() * 6.283, r = far + 4 + rnd() * 7; houses.push([c.c[0] + Math.cos(a) * r, c.c[1] + Math.sin(a) * r, -a, 2.6, 2.2 + rnd(), 3.4]); }
   }
   const lams: THREE.MeshLambertMaterial[] = [], lam = (color: number) => { const m = new THREE.MeshLambertMaterial({ color }); lams.push(m); return m; };
-  const treeGeo = new THREE.ConeGeometry(2.1, 6, 5).translate(0, 3, 0), capGeo = new THREE.ConeGeometry(0.95, 2.2, 5).translate(0, 4.95, 0);
-  const tr = new THREE.InstancedMesh(treeGeo, lam(0xffffff), trees.length), cap = new THREE.InstancedMesh(capGeo, lam(0xf1f4f8), trees.length);
+  // one tree = one mesh: a dark cone with a snow cap (vertex colours), so each tree is drawn once, not twice
+  const paint = (g: THREE.BufferGeometry, c: number) => { const n = g.getAttribute('position').count, cc = new THREE.Color(c), a = new Float32Array(n * 3); for (let k = 0; k < n; k++) cc.toArray(a, k * 3); g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g.toNonIndexed(); };
+  const treeGeo = mergeGeometries([paint(new THREE.ConeGeometry(2.1, 6, 5).translate(0, 3, 0), 0x2a4a38), paint(new THREE.ConeGeometry(0.95, 2.2, 5).translate(0, 4.95, 0), 0xf1f4f8)])!;
+  const treeMat = lam(0xffffff); treeMat.vertexColors = true;
+  const tr = new THREE.InstancedMesh(treeGeo, treeMat, trees.length), cap = new THREE.Group();
   const hs = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), lam(0xe9e0cc), houses.length);
   const rf = new THREE.InstancedMesh(new THREE.CylinderGeometry(0, 0.7072, 0.45, 4, 1).rotateY(Math.PI / 4).translate(0, 1.225, 0), lam(0xffffff), houses.length);
   const tw = new THREE.InstancedMesh(new THREE.BoxGeometry(2, 7, 2).translate(0, 3.5, 0), lam(0xd8cdb4), churches.length), sp = new THREE.InstancedMesh(new THREE.ConeGeometry(1.5, 4, 4).rotateY(Math.PI / 4).translate(0, 9, 0), lam(0x4f5a5c), churches.length);
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3(), col = new THREE.Color(), u = P / S;
   const groundMin = (x: number, y: number, r: number) => Math.min(hMap(x - r, y - r), hMap(x + r, y - r), hMap(x - r, y + r), hMap(x + r, y + r));
-  trees.forEach((t, i) => { m4.compose(v.set(wx(t[0]), hMap(t[0], t[1]) - 0.01, wz(t[1])), q.identity(), sc.setScalar(t[2] * u)); tr.setMatrixAt(i, m4); cap.setMatrixAt(i, m4); tr.setColorAt(i, col.setRGB(0.13 + t[3] * 0.06, 0.24 + t[3] * 0.08, 0.18 + t[3] * 0.05)); });
+  trees.forEach((t, i) => { m4.compose(v.set(wx(t[0]), hMap(t[0], t[1]) - 0.01, wz(t[1])), q.identity(), sc.setScalar(t[2] * u)); tr.setMatrixAt(i, m4); });
   houses.forEach((b, i) => { m4.compose(v.set(wx(b[0]), groundMin(b[0], b[1], 1.6) - 0.01, wz(b[1])), q.setFromEuler(e.set(0, b[2], 0)), sc.set(b[3] * u, b[4] * u, b[5] * u)); hs.setMatrixAt(i, m4); rf.setMatrixAt(i, m4); rf.setColorAt(i, col.setHex(rnd() < 0.8 ? 0xf3f5f8 : 0x8a8f99)); });
   churches.forEach((c, i) => { m4.compose(v.set(wx(c[0]), groundMin(c[0], c[1], 1) - 0.01, wz(c[1])), q.identity(), sc.setScalar(c[2] * u)); tw.setMatrixAt(i, m4); sp.setMatrixAt(i, m4); });
   props.add(tr, cap, hs, rf, tw, sp);

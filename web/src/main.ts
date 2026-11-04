@@ -125,13 +125,17 @@ const areaIdTex = (() => { const d = new Uint8Array(MW * MH * 4);               
 const tintData = new Uint8Array(128 * 4), tintTex = new THREE.DataTexture(tintData, 128, 1); tintTex.needsUpdate = true;
 const relPixels = (im: HTMLImageElement) => { let c = relArt.get(im); if (!c) { c = document.createElement('canvas'); c.width = boardCv.width; c.height = boardCv.height; c.getContext('2d')!.drawImage(im, 0, 0, c.width, c.height); relArt.set(im, c); } return c; };
 const show3d = () => map3d && !!REL;
+/** Phones and small tablets: the 3D map is drawn lighter (fewer pixels, no shadows, a coarser ground, fewer trees). */
+const PHONE = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 820;
+const fullRatio = Math.min(2, devicePixelRatio);
+function tuneForMap() { const lite = PHONE && show3d(); renderer.setPixelRatio(lite ? Math.min(1.3, devicePixelRatio) : fullRatio); sun.castShadow = !lite; }
 function applyMap3d() {
-  const on = show3d(); diorama.visible = on; table.position.y = on ? -1.42 : -0.02; if (REL) REL.props.visible = on;
+  const on = show3d(); tuneForMap(); diorama.visible = on; table.position.y = on ? -1.42 : -0.02; if (REL) REL.props.visible = on;
   paintBoard(); paintAreas();
 }
 function setMap3d(on: boolean) {
   map3d = on; try { localStorage.setItem('fab-map3d', on ? '1' : '0'); } catch { /* storage off */ }
-  if (on && !REL) { if (!relLoading) { relLoading = true; say('Loading the 3D map…'); loadRelief(MW, MH, S, MAP.areas.map((x) => x.label)).then((r) => { REL = r; REL.patch(reliefMat, areaIdTex, tintTex); diorama.add(REL.props);
+  if (on && !REL) { if (!relLoading) { relLoading = true; say('Loading the 3D map…'); loadRelief(MW, MH, S, MAP.areas.map((x) => x.label), PHONE).then((r) => { REL = r; REL.patch(reliefMat, areaIdTex, tintTex); diorama.add(REL.props);
         const ground = new THREE.Mesh(REL.geometry, reliefMat); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; diorama.add(ground);
         diorama.add(new THREE.Mesh(REL.walls, new THREE.MeshStandardMaterial({ color: 0x4a3524, roughness: 0.9, side: THREE.DoubleSide }))); applyMap3d(); refresh(); }).catch(() => { relLoading = false; map3d = false; say('The 3D map could not be loaded'); }); } return; }
   applyMap3d(); refresh();
@@ -1627,6 +1631,7 @@ function frame() {
   if (lock && !goal) target.copy(lock.c);
   if (!CALM) { const t = performance.now() / 1000; for (const k of markers.children) { const f = k.userData.float; if (f) { k.position.y = f.y + ((k.userData.lift as number | undefined) ?? 0) + Math.sin(t * 1.6 + f.ph) * 0.07; k.rotation.y = viewRot() + Math.sin(t * 0.9 + f.ph) * 0.22; } } }   // a slow 4 s bob and 7 s sway, each marker out of step
   { const old = Math.round(clearRatio * 5); clearRatio = fitBattleView(); if (g.battle && Math.round(clearRatio * 5) !== old) syncBattleCam(); }
+  if (REL && PHONE) { const near = dist < 40; REL.props.children[0].visible = REL.props.children[1].visible = near; }   // phones: trees only when zoomed in (thousands of them are the heaviest part)
   placeCam(); runAnims(); settle(); renderer.render(scene, cam); renderFocus(); placeBadges();
 }
 SBU.initSandboxUi({
