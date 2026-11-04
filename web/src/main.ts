@@ -109,7 +109,11 @@ function applyArt() { const mat = board.material as THREE.MeshStandardMaterial; 
 /* ---------- 3D map (View › Map): the snowy relief with contour lines, 3D woods and towns; the 2D board stays the default ---------- */
 let map3d = (() => { try { return localStorage.getItem('fab-map3d') === '1'; } catch { return false; } })();
 let REL: Relief | null = null, relLoading = false, focusOn = false;
-const flatGeo = board.geometry, flatMat = board.material as THREE.MeshStandardMaterial, reliefMat = new THREE.MeshStandardMaterial({ map: boardTex, roughness: 0.95 });
+const reliefMat = new THREE.MeshStandardMaterial({ map: boardTex, roughness: 0.95 });
+/** The 3D map is a diorama: the relief, cut straight all round the playing area, on a dark wooden base that carries the entry strips. */
+const diorama = new THREE.Group(); diorama.visible = false; scene.add(diorama);
+const WOOD_BASE = 0x2e2117;
+{ const slab = new THREE.Mesh(new THREE.BoxGeometry(MW / S + 1.2, 1.4, MH / S + 1.2), new THREE.MeshStandardMaterial({ color: WOOD_BASE, roughness: 0.8 })); slab.position.y = -0.7 - 0.002; slab.receiveShadow = true; diorama.add(slab); }
 const relArt = new Map<HTMLImageElement, HTMLCanvasElement>();
 /** On the relief the area highlights are painted by the ground itself: a picture of the area numbers, and one colour per area. */
 const areaIdTex = (() => { const d = new Uint8Array(MW * MH * 4);                                   // filled by hand, row by row: a canvas would blend the numbers along the borders
@@ -122,12 +126,14 @@ const tintData = new Uint8Array(128 * 4), tintTex = new THREE.DataTexture(tintDa
 const relPixels = (im: HTMLImageElement) => { let c = relArt.get(im); if (!c) { c = document.createElement('canvas'); c.width = boardCv.width; c.height = boardCv.height; c.getContext('2d')!.drawImage(im, 0, 0, c.width, c.height); relArt.set(im, c); } return c; };
 const show3d = () => map3d && !!REL;
 function applyMap3d() {
-  const on = show3d(); board.geometry = on ? REL!.geometry : flatGeo; board.material = on ? reliefMat : flatMat; if (REL) REL.props.visible = on;
+  const on = show3d(); diorama.visible = on; table.position.y = on ? -1.42 : -0.02; if (REL) REL.props.visible = on;
   paintBoard(); paintAreas();
 }
 function setMap3d(on: boolean) {
   map3d = on; try { localStorage.setItem('fab-map3d', on ? '1' : '0'); } catch { /* storage off */ }
-  if (on && !REL) { if (!relLoading) { relLoading = true; say('Loading the 3D map…'); loadRelief(MW, MH, S, MAP.areas.map((x) => x.label)).then((r) => { REL = r; REL.patch(reliefMat, areaIdTex, tintTex); scene.add(REL.props); applyMap3d(); refresh(); }).catch(() => { relLoading = false; map3d = false; say('The 3D map could not be loaded'); }); } return; }
+  if (on && !REL) { if (!relLoading) { relLoading = true; say('Loading the 3D map…'); loadRelief(MW, MH, S, MAP.areas.map((x) => x.label)).then((r) => { REL = r; REL.patch(reliefMat, areaIdTex, tintTex); diorama.add(REL.props);
+        const ground = new THREE.Mesh(REL.geometry, reliefMat); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; diorama.add(ground);
+        diorama.add(new THREE.Mesh(REL.walls, new THREE.MeshStandardMaterial({ color: 0x4a3524, roughness: 0.9, side: THREE.DoubleSide }))); applyMap3d(); refresh(); }).catch(() => { relLoading = false; map3d = false; say('The 3D map could not be loaded'); }); } return; }
   applyMap3d(); refresh();
 }
 /** Everything standing on the map sits on the relief: pieces and markers are raised to the ground under them, flat route drawings follow it vertex by vertex. In the battle close-up the area is shown flat. */
@@ -385,7 +391,8 @@ function paintBoard() {
   if (!baseImg.naturalWidth || !linesImg.naturalWidth) return;
   const c = boardCv.getContext('2d')!, k = 2; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, boardCv.width, boardCv.height);
   const r3 = show3d() ? REL : null;
-  c.drawImage(r3 ? relPixels(r3.snow) : pixels(baseImg), 0, 0, boardCv.width, boardCv.height);
+  if (r3) { c.fillStyle = hex6(WOOD_BASE); c.fillRect(0, 0, boardCv.width, boardCv.height); c.drawImage(relPixels(r3.snow), 0, 0, boardCv.width, boardCv.height); c.drawImage(relPixels(r3.entry), 0, 0, boardCv.width, boardCv.height); }
+  else c.drawImage(pixels(baseImg), 0, 0, boardCv.width, boardCv.height);
   if (tint !== 'off' && tint !== 'supply') {
     c.save(); c.scale(k, k); c.globalAlpha = 0.6;
     for (const a of MAP.areas) { c.beginPath(); a.polygon.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fillStyle = hex6(tintOf(a.id)); c.fill(); }
@@ -813,7 +820,7 @@ function renderFocus() {
   (focusMesh.material as THREE.MeshStandardMaterial).map = (board.material as THREE.MeshStandardMaterial).map; (focusMesh.material as THREE.MeshStandardMaterial).needsUpdate = true;
   const poly = areaWorld(b!.area), hidden: THREE.Object3D[] = [], bg = scene.background;
   const hide = (o: THREE.Object3D) => { if (o.visible) { o.visible = false; hidden.push(o); } };
-  hide(board); hide(table); if (REL) hide(REL.props); for (const [id, m] of overlays) if (id !== b!.area || show3d()) hide(m);         // the close-up is flat: a tint draped on the relief would float above it
+  hide(board); hide(table); hide(diorama); for (const [id, m] of overlays) if (id !== b!.area || show3d()) hide(m);         // the close-up is flat: a tint draped on the relief would float above it
   for (const grp of [pieces, markers]) for (const o of grp.children) { const a = o.userData.anchor ? pieces.children.find((x) => x.userData.unit === o.userData.anchor) : null, q = a ?? o, uid = (q.userData.unit ?? q.userData.anchor) as string | undefined, cid = q.userData.chit as string | undefined;
     const ofBattle = (uid && g.units.find((u) => u.id === uid)?.area === b!.area) || (cid && (b!.assets.german.includes(cid) || b!.assets.allied.includes(cid) || b!.air.german?.id === cid || b!.air.allied?.id === cid));      // the battle formation may reach past the border: keep it sharp
     if (!ofBattle && !inPoly(q.position.x, q.position.z, poly)) hide(o); }      // a marker follows the piece it belongs to
@@ -1678,4 +1685,4 @@ function sheets() {
   for (const m of ['X', 'FW', 'RA', 'RB', 'DIS', 'REC', 'E', 'B', 'P', 'R5', 'R6', 'R7', 'A7', 'A56', 'GI', 'G', 'OOS', 'AIR']) add('markers', m, m, mapMarkerSvg(m));
   return out;
 }
-if (DEV || SANDBOX) Object.assign(window, { __fab: { unitAt: (id: string) => { const m = pieces.children.find((o) => o.userData.unit === id || o.userData.chit === id); if (!m) return null; const r = canvas.getBoundingClientRect(), v = m.getWorldPosition(new THREE.Vector3()).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, game: () => g, setGame: (x: E.Game) => { g = x; hist.clear(); save(); refresh(); }, at: (a: number) => { const p = center(a), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(p.x, 0, p.z).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, project: (x: number, y: number, z: number) => { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height }; }, online, setMatches: (m: Match[]) => { matches = m; }, iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets, setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, rel: () => ({ tris: renderer.info.render.triangles, calls: renderer.info.render.calls, trees: (REL?.props.children[0] as THREE.InstancedMesh | undefined)?.count }), board: () => boardCv.toDataURL("image/png"), layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
+if (DEV || SANDBOX) Object.assign(window, { __fab: { unitAt: (id: string) => { const m = pieces.children.find((o) => o.userData.unit === id || o.userData.chit === id); if (!m) return null; const r = canvas.getBoundingClientRect(), v = m.getWorldPosition(new THREE.Vector3()).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, game: () => g, setGame: (x: E.Game) => { g = x; hist.clear(); save(); refresh(); }, at: (a: number) => { const p = center(a), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(p.x, 0, p.z).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, project: (x: number, y: number, z: number) => { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height }; }, online, setMatches: (m: Match[]) => { matches = m; }, iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets, setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, rel: () => ({ tris: renderer.info.render.triangles, calls: renderer.info.render.calls, trees: (REL?.props.children[0] as THREE.InstancedMesh | undefined)?.count }), board: () => boardCv.toDataURL("image/png"), view: (x: number, z: number, d: number, pt: number, yw: number) => { goal = { t: new THREE.Vector3(x, 0, z), dist: d, pitch: pt, fast: true }; yaw = yw; }, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });

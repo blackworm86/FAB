@@ -2,11 +2,15 @@
  *  Data is built offline by tools/map3d (fullmap.py) into public/relief/. World unit = 1 cm, like the board. */
 import * as THREE from 'three';
 
-type Meta = { w: number; h: number; step: number; cols: number; rows: number; metres: number; towns: [number, number][]; cities: { c: [number, number]; cells: [number, number][] }[] };
+type Meta = { outline: [number, number][][]; w: number; h: number; step: number; cols: number; rows: number; metres: number; towns: [number, number][]; cities: { c: [number, number]; cells: [number, number][] }[] };
 export type Relief = {
   /** Height of the ground (cm) at world x, z. */
   h(x: number, z: number): number;
   geometry: THREE.BufferGeometry;
+  /** The cut sides of the diorama: straight walls from the base up to the ground, all round the playing area. */
+  walls: THREE.BufferGeometry;
+  /** The entry strips printed off the map (green Allied, grey German). */
+  entry: HTMLImageElement;
   props: THREE.Group;
   snow: HTMLImageElement;
   /** Lines of the printed map without towns, cities and area borders (those become 3D or are drawn apart). */
@@ -19,35 +23,44 @@ export type Relief = {
   hit(ray: THREE.Ray): THREE.Vector3 | null;
 };
 
-const RELIEF = 4;                                          // the relief is shown four times higher than real, as chosen on the mockup
+const RELIEF = 4, BASE = 0.22;                               // BASE: even the lowest valley stands this high (cm) above the wooden base                                          // the relief is shown four times higher than real, as chosen on the mockup
 const img = (src: string) => new Promise<HTMLImageElement>((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = bad; i.src = src; });
 const svgImg = (svg: string) => img(URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' })));
 const group = (svg: string, id: string) => { const m = new RegExp(`<g id="${id}"[\\s\\S]*?</g>(\\s*</g>)?`).exec(svg); return m ? m[0] : ''; };
 
 export async function loadRelief(MW: number, MH: number, S: number, labels: [number, number][], base = './'): Promise<Relief> {
-  const [meta, hb, wb, snow, linesSvg] = await Promise.all([
+  const [meta, hb, wb, snow, linesSvg, entry] = await Promise.all([
     fetch(base + 'relief/relief.json').then((r) => r.json() as Promise<Meta>),
     fetch(base + 'relief/height.bin').then((r) => r.arrayBuffer()),
     fetch(base + 'relief/woods.bin').then((r) => r.arrayBuffer()),
     img(base + 'relief/snow.png'),
     fetch(base + 'map-lines.svg').then((r) => r.text()),
+    img(base + 'relief/entry.png'),
   ]);
   const { cols: C, rows: R, step: ST } = meta, HB = new Uint16Array(hb), WB = new Uint8Array(wb);
   const K = (meta.metres / 65535) * (RELIEF / (80 * S));   // grid value → cm (1 map px ≈ 80 m on the ground)
   const grid = (gx: number, gy: number) => { gx = Math.min(Math.max(gx, 0), C - 1.001); gy = Math.min(Math.max(gy, 0), R - 1.001); const i = gx | 0, j = gy | 0, fx = gx - i, fy = gy - j, v = (a: number, b: number) => HB[b * C + a];
     return ((v(i, j) * (1 - fx) + v(i + 1, j) * fx) * (1 - fy) + (v(i, j + 1) * (1 - fx) + v(i + 1, j + 1) * fx) * fy) * K; };
-  const hMap = (px: number, py: number) => grid(px / ST, py / ST);
-  const toMap = (x: number, z: number) => [(x + MW / (2 * S)) * S, (z + MH / (2 * S)) * S] as const;
-  const h = (x: number, z: number) => { const [px, py] = toMap(x, z); return hMap(px, py); };
+  const hMap = (px: number, py: number) => grid(px / ST, py / ST) + BASE;
+  const landPx = (() => { const c = document.createElement('canvas'); c.width = meta.w; c.height = meta.h; const x = c.getContext('2d')!; x.drawImage(snow, 0, 0); const d = x.getImageData(0, 0, meta.w, meta.h).data, out = new Uint8Array(meta.w * meta.h); for (let k = 0; k < out.length; k++) out[k] = d[k * 4 + 3] > 127 ? 1 : 0; return out; })();
+  const onLand = (px: number, py: number) => px >= 0 && py >= 0 && px < meta.w && py < meta.h && landPx[(py | 0) * meta.w + (px | 0)] === 1;
   const wx = (px: number) => px / S - MW / (2 * S), wz = (py: number) => py / S - MH / (2 * S);
+  const toMap = (x: number, z: number) => [(x + MW / (2 * S)) * S, (z + MH / (2 * S)) * S] as const;
+  const h = (x: number, z: number) => { const [px, py] = toMap(x, z); return onLand(px, py) ? hMap(px, py) : 0; };
 
   // the ground: one vertex per grid cell (4 map px)
   const geometry = new THREE.PlaneGeometry(MW / S, MH / S, C - 1, R - 1), pos = geometry.getAttribute('position') as THREE.BufferAttribute;
-  for (let k = 0; k < pos.count; k++) pos.setZ(k, h(pos.getX(k), -pos.getY(k)));
+  for (let k = 0; k < pos.count; k++) { const [px, py] = toMap(pos.getX(k), -pos.getY(k)); pos.setZ(k, hMap(px, py)); }     // off the land the shader cuts the ground away
   geometry.computeVertexNormals(); geometry.computeBoundingSphere();
+  const wp: number[] = [];
+  for (const ring of meta.outline) for (let k = 0; k + 1 < ring.length; k++) {
+    const [a, b] = [ring[k], ring[k + 1]], ha = hMap(a[0], a[1]), hb2 = hMap(b[0], b[1]), A = [wx(a[0]), wz(a[1])], B = [wx(b[0]), wz(b[1])];
+    wp.push(A[0], 0, A[1], B[0], 0, B[1], B[0], hb2, B[1], A[0], 0, A[1], B[0], hb2, B[1], A[0], ha, A[1]);
+  }
+  const walls = new THREE.BufferGeometry(); walls.setAttribute('position', new THREE.Float32BufferAttribute(wp, 3)); walls.computeVertexNormals();
 
   // printed lines without towns, cities and borders; borders redrawn black on a white edge
-  const lines = await svgImg(linesSvg.replace(group(linesSvg, 'cities'), '').replace(group(linesSvg, 'towns'), '').replace(group(linesSvg, 'boundaries'), ''));
+  const lines = await svgImg(linesSvg.replace(group(linesSvg, 'cities'), '').replace(group(linesSvg, 'towns'), '').replace(group(linesSvg, 'boundaries'), '').replace(group(linesSvg, 'outline'), ''));   // the white board outline belongs to the flat map, not to the diorama
   const paths = (group(linesSvg, 'boundaries').match(/<path[^>]*\/>/g) ?? []).join('');
   const head = /<svg[^>]*>/.exec(linesSvg)![0];
   const borders = await svgImg(`${head}<g fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#fff" stroke-opacity=".6" stroke-width="7">${paths}</g><g stroke="#141416" stroke-width="2.9">${paths}</g></g></svg>`);
@@ -92,7 +105,7 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
           float c2 = vMet / 100., f2 = fwidth(c2), m2 = (1. - clamp(abs(fract(c2 + .5) - .5) / max(f2, 1e-4) - .3, 0., 1.)) * smoothstep(2., 5., 1. / max(f2, 1e-4));
           diffuseColor.rgb = mix(diffuseColor.rgb, lc, max(m1 * .32, m2 * .58));
           /* area highlights (moves, battles, tints) painted straight onto the ground, so they follow every fold of it */
-          float id = floor(texture2D(tId, vMapUv).r * 255. + .5); vec4 t = texture2D(tTint, vec2((id + .5) / 128., .5)); diffuseColor.rgb = mix(diffuseColor.rgb, t.rgb, min(1., t.a * 1.45)); }`);   // a little stronger than on the flat board, so snow and woods do not show through as spots
+          float id = floor(texture2D(tId, vMapUv).r * 255. + .5); if (id < .5) discard; vec4 t = texture2D(tTint, vec2((id + .5) / 128., .5)); diffuseColor.rgb = mix(diffuseColor.rgb, t.rgb, min(1., t.a * 1.45)); }`);   // a little stronger than on the flat board, so snow and woods do not show through as spots
     };
     mat.customProgramCacheKey = () => 'relief';
     mat.needsUpdate = true;
@@ -113,7 +126,7 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
     }
   };
 
-  const top = (meta.metres * RELIEF) / (80 * S) + 0.1;
+  const top = (meta.metres * RELIEF) / (80 * S) + BASE + 0.1;
   const hit = (ray: THREE.Ray) => {
     if (ray.direction.y >= -1e-4) return null;
     const p = new THREE.Vector3(), at = (t: number) => ray.at(t, p);
@@ -122,5 +135,5 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
     return at(t1).clone();
   };
 
-  return { h, geometry, props, snow, lines, borders, patch, hit };
+  return { h, geometry, walls, entry, props, snow, lines, borders, patch, hit };
 }
