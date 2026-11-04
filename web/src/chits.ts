@@ -136,7 +136,7 @@ export function chitSvg(c: Chit | Counter): string {
   }
   if (k === 'command_staff') return `${open(side, ['#f07a17', '#f89a47', '#c25d0a'])}<g transform="translate(0 -4)">${turn(t, 12, 51, 33)}${txt('Command', 36, 42, 25, { max: 99 })}<rect x="48" y="55" width="66" height="64" fill="none" stroke="#fff" stroke-width="4.6"/>${txt('HQ', 81, 102, 46, { w: 'b', anchor: 'middle', fill: '#fff' })}${txt('Staff Asset', 82, 150, 26, { anchor: 'middle', max: 104 })}</g></svg>`;
   if (k === 'fuel' || k === 'fuel_bid') {
-    const b = asBox(CHIT_ART.fuelBox), captured = name.startsWith('Captured'), bid = k === 'fuel_bid';
+    const b = asBox(CHIT_ART.fuelBox), captured = name.startsWith('Captured'), bid = k === 'fuel_bid' || !!(c as { bid?: boolean }).bid;
     return `${open(side, ['#f07a17', '#f89a47', '#c25d0a'])}${bid ? txt('Bid', 14, 34, 26, { w: 'b' }) : ''}${captured ? txt('Captured', 80, 24, 23, { anchor: 'middle', max: 100 }) : ''}${img(CHIT_ART.fuel, b.x + 2, b.y + 6, b.w * 1.12, b.h * 1.12)}${txt('Fuel', 100, 112, 38, { w: 'b', anchor: 'middle', fill: '#ffe100', stroke: '#111', sw: 90, max: 84 })}${txt('Asset', 83, 146, 27, { w: 'b', anchor: 'middle', max: 76 })}</svg>`;
   }
   if (k === 'event_bodenplatte') { return `${open(side, ['#9fcff0', '#c4e3f7', '#78a8cc'])}${turn(t, 14, 38, 32)}${img(CHIT_ART.boden, 13.4, 21.4, 126.9, 72.9)}${txt('Operation', 80, 118, 31, { w: 'b', anchor: 'middle', fill: '#fff', stroke: '#222', sw: 130, max: 128 })}${txt('Bodenplatte', 80, 148, 31, { w: 'b', anchor: 'middle', fill: '#fff', stroke: '#222', sw: 130, max: 128 })}</svg>`; }

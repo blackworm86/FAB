@@ -11,7 +11,7 @@ import type { History } from './history';
 export interface SbCtx {
   g: E.Game; selUnit: string | null; selChit: string | null; selArr: string | null; selArea: number | null; previewArea: number | null; rollView: unknown;
   ABBR: Record<string, string>; actorNow: () => E.Side | 'both'; areaName: (a: number) => string; b3: (face: string, side: E.Side | 'british', chit?: boolean) => string;
-  chitImg: (c: E.Chit) => string; unitFace: (u: E.Unit) => string; unitPic: (u: E.Unit) => string; chitPic: (c: E.Chit) => string; hist: History<E.Game>; refresh: () => void; render: () => void; save: () => void; say: (t: string) => void;
+  chitImg: (c: E.Chit) => string; unitFace: (u: E.Unit) => string; unitPic: (u: E.Unit) => string; chitPic: (c: E.Chit) => string; hist: History<E.Game>; optChooser: (o: Partial<E.Opts>) => string; refresh: () => void; render: () => void; save: () => void; say: (t: string) => void;
   reg: (f: () => void) => string; regv: (f: (v: string) => void) => string; ubtn: (label: string, f: () => void, cls?: string, dis?: boolean, title?: string) => string;
 }
 let M: SbCtx; let unitPic: SbCtx['unitPic'], chitPic: SbCtx['chitPic'], ABBR: SbCtx['ABBR'], actorNow: SbCtx['actorNow'], areaName: SbCtx['areaName'], b3: SbCtx['b3'], chitImg: SbCtx['chitImg'], unitFace: SbCtx['unitFace'], hist: SbCtx['hist'], refresh: SbCtx['refresh'], render: SbCtx['render'], save: SbCtx['save'], say: SbCtx['say'], reg: SbCtx['reg'], regv: SbCtx['regv'], ubtn: SbCtx['ubtn'];
@@ -19,7 +19,7 @@ export function initSandboxUi(ctx: SbCtx) { M = ctx; ({ unitPic, chitPic, ABBR, 
 const other = E.other;
 const $ = (q: string) => document.querySelector(q) as HTMLElement;
 /* admin sandbox (?sandbox=1): free edits, seat switch, notes and the test report ---------- */
-export const st = { sbHot: (() => { try { return localStorage.getItem('fab-hotseat') === '1'; } catch { return false; } })(), hotCover: null as E.Side | null, sbOpen: true, sbPlace: null as string | null, sbAuto: false, sbFilter: '', sbDraft: '' };
+export const st = { sbHot: (() => { try { return localStorage.getItem('fab-hotseat') === '1'; } catch { return false; } })(), hotCover: null as E.Side | null, sbOpen: true, sbPlace: null as string | null, sbAuto: false, sbFilter: '', sbDraft: '', rules: {} as Partial<E.Opts> };
 let sbTab = 'Pieces';
 let sbJump: { turn: number; side: E.Side; phase: E.Phase };
 let sbNotes = SB.loadNotes();
@@ -46,7 +46,7 @@ export function hotCoverHtml() {
 }
 export function sbReset(opts: Partial<E.Opts>) {
   if (!confirm('Reset the sandbox and start a new game from the first turn?')) return;
-  M.g = E.newGame(undefined, { fuel: true, ...opts }); hist.clear(); st.sbPlace = null; M.selUnit = M.selChit = M.selArr = null; M.selArea = null; M.previewArea = null; M.rollView = null;
+  M.g = E.newGame(undefined, { fuel: true, ...st.rules, ...opts }); hist.clear(); st.sbPlace = null; M.selUnit = M.selChit = M.selArr = null; M.selArea = null; M.previewArea = null; M.rollView = null;
   if (st.sbHot) { setDevSeat(M.g.phasing); st.hotCover = M.g.phasing; }
   save(); refresh();
 }
@@ -70,7 +70,7 @@ function sbTurn() {
     <label class="sbchk"><input type="checkbox" ${st.sbAuto ? 'checked' : ''} data-sel="${regv((v) => { st.sbAuto = v === 'on'; render(); })}"> Skip empty phases like a real game</label>
     <h4>Dice</h4><div class="row authform"><input id="sb-dice" class="grow" placeholder="Next results, e.g. 1 1 9" aria-label="Next die results">${sbtn('Queue', () => { const v = (($('#sb-dice') as HTMLInputElement)?.value ?? '').split(/[^0-9]+/).filter(Boolean).map(Number).map((x) => (x === 0 ? 10 : x)).filter((x) => x >= 1 && x <= 10); M.g.force = [...(M.g.force ?? []), ...v]; })}</div>
     <p class="hint">${M.g.force?.length ? `Queued: <b>${M.g.force.join(' ')}</b> ${sbtn('Clear', () => { M.g.force = []; })}` : 'No dice queued: rolls come from the seed.'}</p>
-    <h4>Table</h4><div class="row">${sbtn(`${ico('trash')} Clear map`, () => SB.clearMap(M.g), '', 'Every block off the map')}${ubtn(`${ico('undo')} Reset: Nuts!`, () => sbReset({ scenario: 'intro' }))}${ubtn(`${ico('undo')} Reset: 5-turn game`, () => sbReset({ scenario: 'tournament' }))}${ubtn(`${ico('undo')} Reset: campaign`, () => sbReset({ scenario: 'campaign' }))}${ubtn(`${ico('undo')} Reset: Cold Shoulder`, () => sbReset({ scenario: 'cold' }))}</div>`;
+    <h4>Table</h4><div class="row">${sbtn(`${ico('trash')} Clear map`, () => SB.clearMap(M.g), '', 'Every block off the map')}${ubtn(`${ico('undo')} Reset: Nuts!`, () => sbReset({ scenario: 'intro' }))}${ubtn(`${ico('undo')} Reset: 5-turn game`, () => sbReset({ scenario: 'tournament' }))}${ubtn(`${ico('undo')} Reset: campaign`, () => sbReset({ scenario: 'campaign' }))}${ubtn(`${ico('undo')} Reset: Cold Shoulder`, () => sbReset({ scenario: 'cold' }))}</div>${M.optChooser(st.rules)}`;
 }
 /* The piece library: every block and chit with its printed art, a search box and filters. */
 let lbSide: 'all' | E.Side = 'all', lbType = 'all', lbWhere = 'all';

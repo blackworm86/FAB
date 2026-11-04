@@ -55,7 +55,7 @@ export function vpSheet(g: E.Game, face: (u: E.Unit) => string, close: string, i
   const v = E.victory(g), sd = track(g)[g.turn - 1]?.sd;
   return `<div class="modal"><div class="sheet vsheet"><h3>Victory points · turn ${g.turn} <button class="ico" data-ui="${close}" aria-label="Close">${icoClose}</button></h3>
     <div class="vtot"><span class="al">${v.allied}<small>ALLIED</small></span><i>:</i><span class="ge">${v.german}<small>GERMAN</small></span></div>
-    <p class="vnote">Net <b>${netText(v.net)}</b> · ${sd ? `sudden death this turn at German +${sd[0]} or Allied +${sd[1]}` : 'no sudden death this turn'}. Areas count only when in supply (19.3).</p>
+    <p class="vnote">Net <b>${netText(v.net)}</b> · ${sd ? `sudden death this turn at German +${sd[0]} or Allied +${sd[1]}` : 'no sudden death this turn'}. Areas count only when in supply (19.3).${g.opts.bridgeLimit ? ` German bridge repairs left: <b>${g.bridgesLeft ?? 6}</b> of 6 (18.1).` : ''}</p>
     ${columns(g, face, v)}<h4>Victory table (end of turn ${g.lastTurn})</h4>${tableRows(g, null)}</div></div>`;
 }
 

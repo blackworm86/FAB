@@ -3,6 +3,13 @@ import { newGame, initSplit, type Side, type Priv, type Reveals } from '../../en
 import type { Account, ChatMsg, Seats, Store, StateDoc } from './online';
 
 /** `?dev=1&fake=german` / `&fake=allied`: the hiding (shared copy + private details + reveals), kept in localStorage so two tabs can play it. */
+/** ?dev=1&fake=german&rules=bridgeLimit,peiper,pz150&bid=2: optional rules (18) for the two-seat test table. */
+function devRules() {
+  const q = new URLSearchParams(location.search), out: Record<string, unknown> = {};
+  for (const k of (q.get('rules') ?? '').split(',').filter(Boolean)) out[k] = true;
+  const bid = Number(q.get('bid')); if (bid) out.bid = Math.max(-5, Math.min(5, bid));
+  return out;
+}
 export function fakeStore(side: Side): Store {
   const P = 'fab-fake-pub', V = (x: Side) => 'fab-fake-priv-' + x, R = 'fab-fake-reveals';
   const none = async () => '';
@@ -11,7 +18,7 @@ export function fakeStore(side: Side): Store {
   const put = (k: string, v: unknown) => { localStorage.setItem(k, JSON.stringify(v)); window.dispatchEvent(new StorageEvent('storage', { key: k })); };
   const scen = new URLSearchParams(location.search).get('scen') as 'tournament' | 'campaign' | 'intro' | 'cold' | null;      // ?dev=1&fake=german&scen=cold: a two-seat test table of that scenario
   const stored = get<{ json: string }>(P), storedScen = stored ? (JSON.parse(stored.json) as { opts?: { scenario?: string } }).opts?.scenario : null;
-  if (!stored || (scen && storedScen !== scen)) { localStorage.removeItem(R); const sp = initSplit(newGame(5, { scenario: scen ?? 'tournament', fuel: true }), 'sg', 'sa'); put(V('german'), sp.german); put(V('allied'), sp.allied); put(P, { rev: 1, json: sp.pub }); }
+  if (!stored || (scen && storedScen !== scen) || Object.entries(devRules()).some(([k, v]) => (JSON.parse(stored.json) as { opts?: Record<string, unknown> }).opts?.[k] !== v)) { localStorage.removeItem(R); const sp = initSplit(newGame(5, { scenario: scen ?? 'tournament', fuel: true, ...devRules() }), 'sg', 'sa'); put(V('german'), sp.german); put(V('allied'), sp.allied); put(P, { rev: 1, json: sp.pub }); }
   const on = (k: string, f: () => void) => { f(); window.addEventListener('storage', (e) => { if (e.key === k) f(); }); };
   return {
     uid: 'u-' + side,

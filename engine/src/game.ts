@@ -20,7 +20,7 @@ export interface Unit {
   id: string; name: string; side: Side; cls: 'armor' | 'infantry'; q: Quality[]; max: number; str: number; area: number | null; garrison?: boolean;
   disorder: 0 | 1 | 2; unsupplied: boolean; moved: boolean; reserve: string | null; exploit: boolean; from?: number;
   arrival?: number; entry?: string[]; ech?: string; symbol?: string; code?: string;
-  chitId?: string; interdict?: string; adjOnly?: boolean; spent?: number; delayed?: boolean; paradrop?: 'pending' | 'intact' | 'partial'; heydte?: boolean; bcross?: boolean;
+  chitId?: string; interdict?: string; adjOnly?: boolean; peiperFull?: boolean; spent?: number; delayed?: boolean; paradrop?: 'pending' | 'intact' | 'partial'; heydte?: boolean; bcross?: boolean;
   up?: number;   /** area where the block lies face-up after a battle (6.24); it is upright, so hidden from the enemy, whenever it is elsewhere */
 }
 /** A morale check outside a battle: who rolled, against what, and the result. */
@@ -34,8 +34,31 @@ export interface Battle {
   queue: ('attArty' | 'defArty' | 'defFire' | 'offFire')[]; assets: Record<Side, string[]>; air: Partial<Record<Side, { id: string; mode: 'arty' | 'support'; unit?: string }>>;
   pending: number; pendingKind?: 'arty' | 'ground'; engFw: boolean; rolls: Roll[]; result?: string; exploit: boolean; unitHit: Record<Side, boolean>; mark: number; hit?: Record<Side, string[]>;
   ready?: Side[]; locked?: boolean;
+  pz150?: string;   /** 18.4 the 150th's first battle: its id, cleared once the morale check is done */
+  defStart?: string[]; unabsorbed?: number; byArty?: boolean; lastDefPoint?: Unit;   /** 18.7 bookkeeping */
 }
-export interface Opts { scenario: 'tournament' | 'campaign' | 'intro' | 'cold'; fuel: boolean; airborne?: boolean; advArty?: boolean }
+/** Scenario and optional rules (Play Book 18); every optional flag missing = off. */
+export interface Opts { scenario: 'tournament' | 'campaign' | 'intro' | 'cold'; fuel: boolean; airborne?: boolean; advArty?: boolean;
+  bridgeLimit?: boolean;   /** 18.1 the Germans repair at most six bridges */
+  bid?: number;            /** 18.2 fuel bid: + extra German bid fuel assets (eliminated when used), − fuel assets moved to the Used Box at start (max 5) */
+  peiper?: boolean;        /** 18.3 KG Peiper's once-per-game full exploitation move */
+  pz150?: boolean;         /** 18.4 150th Panzer Brigade */
+  overrun?: boolean;       /** 18.7 overrunning artillery */
+  fwMaintain?: boolean;    /** 18.8 maintaining field works */
+  randomReinf?: boolean;   /** 18.9 random reinforcements */
+}
+/** The optional rules of Play Book 18, for menus and the 'rules in use' list. */
+export const OPTIONAL_RULES: { key: keyof Opts; rule: string; name: string; text: string }[] = [
+  { key: 'bridgeLimit', rule: '18.1', name: 'Bridge repair limits', text: 'The Germans may repair at most six bridges.' },
+  { key: 'bid', rule: '18.2', name: 'Bidding for sides', text: 'The agreed bid changes the German starting fuel: extra bid fuel assets (+) or fuel moved to the Used Box (−).' },
+  { key: 'peiper', rule: '18.3', name: 'KG Peiper', text: 'Once, in a Breakthrough Movement Phase up to turn 3, exploiting Peiper may use its full movement.' },
+  { key: 'pz150', rule: '18.4', name: '150th Panzer Brigade', text: 'Its first battle: it is the point unit; after artillery the American point unit checks morale (+2) or is disordered.' },
+  { key: 'airborne', rule: '18.5', name: 'American airborne units', text: '82nd, 101st and 517th ignore the −1 unsupplied morale modifier.' },
+  { key: 'advArty', rule: '18.6', name: 'Advanced artillery modifiers', text: '−1 when the target is the defender, +1 against an infantry point unit not in field works.' },
+  { key: 'overrun', rule: '18.7', name: 'Overrunning artillery', text: 'Defending artillery left behind in a vacated area may be destroyed by the attacker.' },
+  { key: 'fwMaintain', rule: '18.8', name: 'Maintaining field works', text: 'Field works in a contested area stay unless a morale check fails in the owner\'s Supply Phase.' },
+  { key: 'randomReinf', rule: '18.9', name: 'Random reinforcements', text: 'Arriving units are drawn at random from those due now and next turn.' },
+];
 export interface Game {
   /** Set when hidden blocks are split between seats: setReady does not start combat by itself (see split.ts). */
   deferBegin?: boolean;
@@ -56,6 +79,9 @@ export interface Game {
   supplyPending?: boolean;
   vpHist?: number[];   /** net VP at each turn's Victory Check (German positive), for the end-of-game chart */
   battles?: number;   /** battles fought so far */   /** 9.4 the out-of-supply checks of this Supply Phase are still to be rolled */
+  bridgesLeft?: number;   /** 18.1 German bridge repairs left */
+  peiperUsed?: boolean;   /** 18.3 used */
+  pz150Done?: boolean;    /** 18.4 the 150th has been in its first battle */
   checks?: Check[];   /** morale checks rolled outside battles (supply, Greif interdict), newest last, so the table can show the dice */   /** 16.12: the German player must choose which used artillery asset is eliminated */   /** sandbox: die results to use before the seeded ones */
 }
 type RawUnit = { id: string; name: string; side: string; echelon?: string; symbol?: string; cls?: string; steps?: number; quality_by_step?: Quality[]; start_area?: number; arrival_turn?: number; entry?: string[]; kind?: string };
@@ -65,7 +91,7 @@ const APPROPRIATE: Record<string, string> = { de_5pz: 'XYZ', de_6pz: 'YZ', de_7a
 const appropriateAreas = (u: Unit, g?: Game) => [...(APPROPRIATE[u.ech ?? ''] ?? '')].map((l) => ENTRY[l]?.area).filter((a): a is number => a != null && (!g?.inPlay || g.inPlay.includes(a)));
 export const other = (s: Side): Side => (s === 'german' ? 'allied' : 'german');
 const sideOf = (s: string): Side => (s === 'german' ? 'german' : 'allied');
-const keyOf = edgeKey;
+export const keyOf = edgeKey;
 
 export const quality = (u: Unit) => u.q[u.str - 1];
 export const unitsIn = (g: Game, a: number, side?: Side) => g.units.filter((u) => u.area === a && (!side || u.side === side));
@@ -177,6 +203,9 @@ export function newGame(seed = Date.now() % 1e9, opts: Partial<Opts> = {}): Game
   for (const fa of g.fieldWorks) g.fwOwner[fa] = units.some((u) => u.side === 'allied' && u.area === fa) ? 'allied' : 'german';
   if (o.scenario !== 'intro') { const peiper = units.find((u) => u.name === 'Peiper')!; peiper.reserve = 'z6'; g.markers.german.z6--; }
   g.control = campaignControl(g.units);
+  if (o.bridgeLimit) g.bridgesLeft = 6;                                                                   // 18.1
+  if (o.bid && o.bid > 0) for (let i = 0; i < o.bid; i++) g.chits.push({ id: `BID-${i}`, name: 'Bid Fuel Asset', kind: 'fuel', side: 'german', ech: 'german', turn: 'S', box: 'available', bid: true });   // 18.2 extra fuel, not recycled
+  if (o.bid && o.bid < 0) for (const c of boxOf(g, 'german', 'available').filter((x) => x.kind === 'fuel').slice(0, Math.min(5, -o.bid))) c.box = 'used';   // 18.2 bidding to be the Germans: fewer starting fuel assets (they recycle normally)
   if (o.scenario === 'cold') for (const a of g.supplyOnly!) g.control[a] = frontZ5[a];
   say(g, `${SCEN_NAME[o.scenario]} scenario set up. All contested areas must be fought this phase.`);
   return g;
@@ -277,6 +306,18 @@ export function autoRecover(g: Game) {
   for (const side of [...g.recover]) { const back = boxOf(g, side, 'used').filter((c) => isAsset(c)).sort((a, b) => pri.indexOf(a.kind) - pri.indexOf(b.kind))[0]; recoverAsset(g, side, back?.id ?? null); }
   if (g.artyPick) chooseArtyLoss(g, boxOf(g, 'german', 'used').find((c) => c.kind === 'artillery')!.id);
 }
+/** 18.92: for each side, the units still to arrive on or before this turn plus next turn's go in a cup; as many as are due this turn are drawn,
+ *  the rest wait for next turn. Arriving units are public (off-map blocks), so no hidden information is involved. */
+function randomizeArrivals(g: Game) {
+  for (const side of ['german', 'allied'] as Side[]) {
+    const due = g.units.filter((u) => u.side === side && u.arrival != null && u.arrival <= g.turn && u.area == null && u.str > 0 && !g.arrived.includes(u.id));
+    const cup = [...due, ...g.units.filter((u) => u.side === side && u.arrival === g.turn + 1 && u.area == null && u.str > 0)];
+    const n = due.filter((u) => u.arrival === g.turn).length; if (!n || cup.length <= n) continue;
+    const drawn: Unit[] = []; for (let i = 0; i < n; i++) { const pool = cup.filter((u) => !drawn.includes(u)); drawn.push(pool[Math.floor(rngf(g) * pool.length)]); }
+    for (const u of cup) u.arrival = drawn.includes(u) ? g.turn : g.turn + 1;
+    say(g, `random reinforcements: ${drawn.map((u) => u.name).join(', ')} arrive this turn (18.9)`, side);
+  }
+}
 function reinforcementPhase(g: Game) {
   g.arrived = [];
   g.recover = []; g.artyPick = false;
@@ -288,6 +329,7 @@ function reinforcementPhase(g: Game) {
     }
     recycleUsed(g, side);
   }
+  if (g.opts.randomReinf) randomizeArrivals(g);
   g.pendingArrivals = g.units.filter((x) => x.arrival === g.turn && x.area == null && x.str > 0).map((x) => x.id);
   g.tfNew = [];
   for (const c of g.chits.filter((x) => x.turn === g.turn && x.box === 'future')) {
@@ -329,7 +371,7 @@ export function moveOptions(g: Game, id: string): Opt[] {
   if (!ok) return [];
   const enemy = other(u.side), occ = (a: number) => ({ german: blocks(g, a, 'german').length, allied: blocks(g, a, 'allied').length });
   const garr = new Set(g.units.filter((x) => x.garrison && x.side === enemy && x.area != null && !blocks(g, x.area, enemy).length).map((x) => x.area!));
-  const one = exploit && !reserveBt;
+  const one = exploit && !reserveBt && !u.peiperFull;                                                   // 18.3 KG Peiper may use its full allowance once
   let r = reachable({ side: u.side, cls: u.cls, area: u.area, supplied: !u.unsupplied, disordered: u.disorder > 0, adjacentOnly: one || !!u.adjOnly, spent: u.spent, ownZone: one ? undefined : (ARMY(u) as 5 | 6 | 7 | undefined), boundaryPreauthorized: u.bcross },
     { occupants: occ, blownBridges: new Set(g.blown), roadblocks: new Set([...garr, ...markerAreas(g, enemy)]), controller: (a) => g.control[a],
       extraCost: (f, t) => (markerAreas(g, enemy).includes(t) ? 1 : 0) + (u.side === 'allied' && unitsIn(g, t, 'german').some((x) => x.heydte) ? 1 : 0) + (u.side === 'german' && (g.interdicted[f] || g.interdicted[t]) ? 1 : 0) });
@@ -350,8 +392,9 @@ function finishMove(g: Game, u: Unit, opt: Opt, bridgeBlown: boolean) {
   u.bcross = false;                                                                          // 14.62a the marker goes when the unit next moves
   const from = u.area!, to = opt.area, last = connection(opt.path[opt.path.length - 2], to)!, enemy = other(u.side);
   const intoEnemy = unitsIn(g, to, enemy).length > 0;
-  if (u.side === 'german' && opt.fuel && g.opts.fuel) { const f = fuelChits(g)[0]; if (f) { f.box = 'used'; say(g, `fuel asset spent for ${u.name}`); } }
+  if (u.side === 'german' && opt.fuel && g.opts.fuel) { const f = fuelChits(g).sort((x, y) => +!!y.bid - +!!x.bid)[0]; if (f) { f.box = f.bid ? 'eliminated' : 'used'; say(g, `${f.bid ? 'bid ' : ''}fuel asset spent for ${u.name}${f.bid ? ' (eliminated, 18.2)' : ''}`); } }
   const faceUp = unitsIn(g, to, enemy).some((x) => x.up === to);                              // 5.22 a unit entering a contested area whose forces are already face-up is revealed too
+  if (u.peiperFull) { u.peiperFull = false; g.peiperUsed = true; say(g, 'KG Peiper uses its full movement allowance (18.3)'); }
   u.from = from; u.area = to; if (faceUp) u.up = to; u.moved = true; u.adjOnly = false; u.spent = 0; dropReserve(g, u);
   if (u.side === 'german') for (let i = 1; i < opt.path.length; i++) { const k = keyOf(opt.path[i - 1], opt.path[i]); if (g.greif[k]) { chit(g, g.greif[k]).box = 'eliminated'; delete g.greif[k]; say(g, 'Greif Team Bridge: the bridge is taken'); } }
   const hd = unitsIn(g, to).find((x) => x.heydte);
@@ -460,7 +503,9 @@ export function repairTargets(g: Game, side: Side, area: number) {
 export function repairBridge(g: Game, id: string, area: number, to: number) {
   needAdmin(g); const c = chit(g, id);
   if (c.kind !== 'engineer' || c.box !== 'available' || !assetZoneOk(g, c, area) || !repairTargets(g, c.side, area).includes(to)) throw new Error('not a legal repair');
-  g.blown = g.blown.filter((k) => k !== keyOf(area, to)); c.box = 'used'; say(g, `${c.name} repairs the bridge ${areas.get(area)!.name}–${areas.get(to)!.name}`, c.side);
+  if (c.side === 'german' && g.opts.bridgeLimit && (g.bridgesLeft ?? 6) <= 0) throw new Error('the Germans have repaired their six bridges (18.1)');
+  if (c.side === 'german' && g.opts.bridgeLimit) g.bridgesLeft = (g.bridgesLeft ?? 6) - 1;
+  g.blown = g.blown.filter((k) => k !== keyOf(area, to)); c.box = 'used'; say(g, `${c.name} repairs the bridge ${areas.get(area)!.name}–${areas.get(to)!.name}${c.side === 'german' && g.opts.bridgeLimit ? ` (German repairs left: ${g.bridgesLeft}, 18.1)` : ''}`, c.side);
 }
 export function fieldWorksFor(g: Game, id: string, area: number) {
   needAdmin(g); const c = chit(g, id);
@@ -607,6 +652,7 @@ export function startBattle(g: Game, a: number, viaSA = false, chitId?: string):
   const pick = (us: Unit[]) => [...us].sort((x, y) => +!!x.garrison - +!!y.garrison || y.str - x.str)[0].id;
   const b: Battle = { area: a, attacker: g.phasing, attPoint: pick(att), defPoint: pick(def), bt, riverAssault: g.riverAssault.includes(a), stage: 'setup', queue: [], assets: { german: [], allied: [] }, air: {}, pending: 0,
     engFw: false, rolls: [], exploit: false, unitHit: { german: false, allied: false }, mark: g.log.length, hit: { german: [], allied: [] }, ready: [], locked: lockedAtStart };
+  { const pz = pz150In(g, b); if (pz) { if (pz.side === b.attacker) b.attPoint = pz.id; else b.defPoint = pz.id; } }
   g.battle = b; return b;
 }
 /* --- assets (6.22, 6.23, 6.31, 16.1, 16.12, 16.23, 15.2) --- */
@@ -657,8 +703,8 @@ export function unassign(g: Game, b: Battle, id: string) {
 export interface Fire { key: string; who: string; shooter: Shooter; dice: number; sn: number; parts: [string, number][]; isAsset: boolean }
 /** 6.33: the attacker's engineer will remove the enemy field works before offensive fire (chosen, field works there, engineer still in the battle). */
 export const engRemovesFw = (g: Game, b: Battle) => b.engFw && g.fieldWorks.includes(b.area) && (g.fwOwner[b.area] ?? other(b.attacker)) !== b.attacker && b.assets[b.attacker].some((id) => chit(g, id).kind === 'engineer');
-export function fireList(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground'): Fire[] {
-  const att = side === b.attacker, tp = point(g, b, other(side)); if (!tp) return [];
+export function fireList(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground', ghost?: Unit): Fire[] {
+  const att = side === b.attacker, tp = ghost ?? point(g, b, other(side)); if (!tp) return [];
   const out: Fire[] = [], tgt = { pointCls: tp.cls, pointQuality: quality(tp), fieldWorks: att && g.fieldWorks.includes(b.area) && (g.fwOwner[b.area] ?? other(side)) === other(side) && !(kind === 'ground' && engRemovesFw(g, b)), riverAssaultMarker: !att && b.riverAssault };
   const set = { attacker: att, tdn: areas.get(b.area)!.tdn, riverAssault: att && b.riverAssault, advArty: g.opts.advArty };
   const add = (key: string, who: string, shooter: Shooter, isAsset: boolean) => { const r = successNumber(shooter, tgt, set); out.push({ key, who, shooter, dice: shooter.dice, sn: r.sn, parts: r.parts, isAsset }); };
@@ -704,9 +750,27 @@ function allocate(g: Game, b: Battle, side: Side, n: number) {
   return 0;
 }
 const allGone = (g: Game, b: Battle, side: Side) => !unitsIn(g, b.area, side).length && !b.assets[side].some((id) => isBattleAsset(chit(g, id)));
+/** 18.4: the 150th Panzer Brigade's first battle, if it is in this one. */
+const pz150In = (g: Game, b: Battle) => (g.opts.pz150 && !g.pz150Done ? g.units.find((u) => u.name === '150 Pz' && u.area === b.area && u.str > 0) : undefined);
+/** 18.4: after artillery has fired on both sides, if the 150th survived, the American point unit checks morale with +2; failing, it is disordered (a defended roadblock is eliminated and an exploitation opportunity arises). */
+function pz150Check(g: Game, b: Battle) {
+  const pz = g.units.find((u) => u.id === b.pz150); b.pz150 = undefined;
+  if (!pz || pz.area !== b.area || pz.str <= 0) return say(g, '150th Panzer Brigade did not survive the artillery fire: no effect (18.4)');
+  const am = point(g, b, other(pz.side)); if (!am || am.area !== b.area) return;
+  if (am.disorder > 0) return say(g, `150th Panzer Brigade: ${am.name} is already disordered, no effect (18.4)`);
+  const { r, ok } = check(g, am, moraleSn(quality(am), false, am.unsupplied && !(g.opts.airborne && AIRBORNE.has(am.name))) + 2, '150th Panzer Brigade confusion (18.4)');
+  b.rolls.push({ who: `${am.name}: morale +2 (18.4)`, sn: moraleSn(quality(am), false, am.unsupplied) + 2, dice: [r], hits: ok ? 1 : 0, kind: 'morale' });
+  if (ok) return say(g, `150th Panzer Brigade: ${am.name} passes its morale check (rolled ${r}), no effect (18.4)`);
+  if (am.id.startsWith('DR-')) { say(g, `150th Panzer Brigade: the defended roadblock fails its morale check (rolled ${r}) and is eliminated (18.4)`); eliminate(g, am); b.exploit = pz.side === b.attacker; }
+  else { am.disorder = 1; say(g, `150th Panzer Brigade: ${am.name} fails its morale check (rolled ${r}) and is disordered (18.4)`); }
+}
 function next(g: Game, b: Battle) {
   fixPoint(g, b);
   if (!unitsIn(g, b.area, b.attacker).filter((u) => !u.garrison).length) return end(g, b, 'Attacker eliminated');
+  if (b.pz150 && (!b.queue.length || b.queue[0] === 'defFire' || b.queue[0] === 'offFire')) {
+    pz150Check(g, b); const def = other(b.attacker);
+    if (allGone(g, b, def)) { b.result = 'Defender eliminated'; b.queue = []; return end(g, b, b.result); }
+  }
   const s = b.queue.shift(); if (!s) return end(g, b, b.result ?? 'Area remains contested');
   if (s === 'attArty' || s === 'defArty') { const side = s === 'attArty' ? b.attacker : other(b.attacker); if (!fireList(g, b, side, 'arty').length) return next(g, b); }
   b.stage = s; return;
@@ -722,6 +786,8 @@ export function visibleTo(g: Game, u: Unit, side: Side | 'spectator' | null): bo
 export function beginCombat(g: Game, b: Battle) {
   if (b.stage !== 'setup') throw new Error('already started');
   for (const u of g.units) if (u.area === b.area && !u.garrison) u.up = b.area;                // 6.24 units are revealed once both point units are designated
+  { const pz = pz150In(g, b); if (pz) { if (pz.side === b.attacker) b.attPoint = pz.id; else b.defPoint = pz.id; b.pz150 = pz.id; g.pz150Done = true; say(g, '150th Panzer Brigade, first battle: it is the point unit (18.4)'); } }
+  b.defStart = unitsIn(g, b.area, other(b.attacker)).map((u) => u.id);                                // 18.7
   b.queue = ['attArty', 'defArty', 'defFire', 'offFire']; next(g, b);
 }
 /** Hot-seat shortcut stays beginCombat; online each side confirms its set-up and combat starts when both are ready. */
@@ -784,7 +850,7 @@ export function attackerChoice(g: Game, b: Battle, abort: boolean) {
   allocate(g, b, b.attacker, b.pending); b.pending = 0; next(g, b);
 }
 function hitDefender(g: Game, b: Battle, h: number, kind: 'arty' | 'ground') {
-  const def = other(b.attacker);
+  const def = other(b.attacker); { const p = point(g, b, def); if (p && p.area === b.area) b.lastDefPoint = { ...p }; }
   if (h > 0 && g.fieldWorks.includes(b.area)) { g.fieldWorks = g.fieldWorks.filter((x) => x !== b.area); h--; say(g, 'field works absorb 1 hit'); }
   b.pending = h; b.pendingKind = kind;
   const real = unitsIn(g, b.area, def).filter((u) => !u.garrison);
@@ -811,7 +877,7 @@ function finishDef(g: Game, b: Battle, kind: 'arty' | 'ground', retreated: boole
   const def = other(b.attacker);
   if (allGone(g, b, def)) {
     b.result = retreated ? 'Defender retreated' : 'Defender eliminated';
-    b.exploit = !retreated && (kind === 'arty' || excess > 0);
+    b.exploit = !retreated && (kind === 'arty' || excess > 0); b.unabsorbed = excess; b.byArty = !retreated && kind === 'arty';
     b.queue = b.queue.filter((s) => s === 'defArty');
   }
   next(g, b);
@@ -847,8 +913,30 @@ export function chooseRetreat(g: Game, b: Battle, to: number) {
   if (!retreatOptions(g, b).includes(to)) throw new Error('cannot retreat there');
   moveRetreat(g, b, g.units.find((x) => x.id === b.retreat!.queue[0])!, to); b.retreat.queue.shift(); advanceRetreat(g, b);
 }
+/** 18.7 Overrunning Artillery: the defending area is vacated; the attacker rolls one die per defending artillery asset (rocket included).
+ *  SN 1 if the defender retreated with a step surviving, 2 if its units and battle assets were destroyed, +1 per unabsorbed hit. Destroyed by
+ *  attacking artillery: the attacking units roll their ground fire as if the defender were still there; its hits count as unabsorbed. */
+function overrun(g: Game, b: Battle) {
+  const def = other(b.attacker), arts = b.assets[def].map((id) => chit(g, id)).filter((c) => isArty(c) && c.box === 'map');
+  if (!arts.length || unitsIn(g, b.area, def).length || !unitsIn(g, b.area, b.attacker).some((u) => !u.garrison)) return;
+  const survived = (b.defStart ?? []).some((id) => { const u = g.units.find((x) => x.id === id); return !!u && u.str > 0 && u.area != null && u.area !== b.area; });
+  let extra = survived ? 0 : (b.unabsorbed ?? 0);
+  if (!survived && b.byArty && b.lastDefPoint) {
+    let hits = 0; for (const f of fireList(g, b, b.attacker, 'ground', b.lastDefPoint)) { const dice = Array.from({ length: f.dice }, () => roll(g)); hits += dice.filter((d) => succeeds(d, f.sn)).length; }
+    extra = hits; say(g, `overrunning artillery: the attackers' ground fire scores ${hits} unabsorbed hit(s) (18.7)`);
+  }
+  const sn = (survived ? 1 : 2) + extra;
+  for (const c of arts) {
+    const r = roll(g), ok = succeeds(r, sn);
+    b.rolls.push({ who: `Overrun ${c.name} (18.7)`, sn, dice: [r], hits: ok ? 1 : 0, kind: 'morale' });
+    if (ok) { c.box = 'eliminated'; b.assets[def] = b.assets[def].filter((x) => x !== c.id); }
+    say(g, `overrunning artillery: ${c.name} ${ok ? 'is destroyed' : 'escapes'} (rolled ${r}, needs ${sn} or less, 18.7)`);
+  }
+}
 function end(g: Game, b: Battle, result: string) {
   b.result = result; b.stage = 'done';
+  if (g.opts.overrun) overrun(g, b);
+  b.lastDefPoint = undefined;                                                                          // a copy of a block: never left in the shared game
   for (const side of ['german', 'allied'] as Side[]) for (const id of b.assets[side]) { const c = chit(g, id); if (c.box === 'map') c.box = 'used'; }
   for (const side of ['german', 'allied'] as Side[]) { const a = b.air[side]; if (a) chit(g, a.id).box = 'eliminated'; }      // air missions are single-use
   g.fought.push(b.area); for (const n of [b.area, ...neighbors(b.area)]) updateControl(g, n);
@@ -871,6 +959,11 @@ export function defenderReinforceSA(g: Game, b: Battle, unitId: string, chitId?:
   if (unitsIn(g, b.area, def).some((x) => x.id.startsWith('DR-'))) throw new Error('a defended roadblock may not be reinforced (4.35)');
   if (u.side !== def || u.area == null || !neighbors(b.area).includes(u.area) || contested(g, u.area) || u.disorder || u.garrison || blocks(g, b.area, def).length >= 2) throw new Error('not a legal reinforcement');
   spendSA(g, def, u.ech, 'reinforce a battle', chitId); b.locked = true; clearInterdict(g, u); const from = u.area; u.area = b.area; u.from = from; updateControl(g, from); say(g, `${u.name} reinforces ${areas.get(b.area)!.name}`);
+}
+/** 18.3: Peiper, exploiting in a Breakthrough Movement Phase on or before turn 3, may move with its full allowance once per game. */
+export const peiperCan = (g: Game, u: Unit) => !!g.opts.peiper && !g.peiperUsed && g.phase === 'btMove' && g.turn <= 3 && u.name === 'Peiper' && u.exploit && !u.moved && u.area != null && u.side === g.phasing;
+export function setPeiperFull(g: Game, unitId: string, on: boolean) {
+  const u = g.units.find((x) => x.id === unitId)!; if (on && !peiperCan(g, u)) throw new Error('KG Peiper (18.3): only once, exploiting in a Breakthrough Movement Phase on or before turn 3'); u.peiperFull = on || undefined;
 }
 export function activateBreakthrough(g: Game, unitId: string, chitId?: string) {
   const u = g.units.find((x) => x.id === unitId)!;
@@ -905,7 +998,15 @@ function supplyPhase(g: Game) {
   for (const a of areas.keys()) updateControl(g, a);
   for (const u of g.units.filter((x) => x.area != null && !x.garrison)) u.unsupplied = !inSupply(g, u.side, u.area!);
   for (const u of g.units.filter((x) => x.area != null && !x.unsupplied && x.disorder)) u.disorder = u.disorder === 2 ? 0 : 2;
-  g.riverAssault = []; g.fieldWorks = g.fieldWorks.filter((a) => !contested(g, a));
+  g.riverAssault = [];
+  if (!g.opts.fwMaintain) g.fieldWorks = g.fieldWorks.filter((a) => !contested(g, a));
+  else for (const a of g.fieldWorks.filter((x) => contested(g, x) && (g.fwOwner[x] ?? g.control[x]) === g.phasing)) {        // 18.8: in the owner's own Supply Phase, one unit (the best: the player's natural choice) checks morale
+    const us = unitsIn(g, a, g.phasing).filter((u) => !u.garrison); if (!us.length) continue;
+    const sn = (u: Unit) => moraleSn(quality(u), u.disorder > 0, u.unsupplied && !(g.opts.airborne && AIRBORNE.has(u.name)));
+    const u = [...us].sort((x, y) => sn(y) - sn(x))[0], { r, ok } = check(g, u, sn(u), 'Maintaining field works (18.8)');
+    if (!ok) g.fieldWorks = g.fieldWorks.filter((x) => x !== a);
+    say(g, `field works in ${areas.get(a)!.name}: ${u.name} rolls ${r} → ${ok ? 'maintained' : 'removed'} (18.8)`);
+  }
   g.roadblocks = {}; g.pooled = null; for (const [, id] of Object.entries(g.interdicted)) chit(g, id).box = 'eliminated'; g.interdicted = {};   // 4.34, 14.62b, 17.2
   for (const u of g.units.filter((x) => x.id.startsWith('DR-') && x.area != null)) { chit(g, u.chitId!).box = 'used'; u.area = null; say(g, `${u.name} survives and returns to the Used Box`); }   // 4.35
   g.units.forEach((x) => { if (x.side === g.phasing) x.bcross = false; });
@@ -1091,6 +1192,7 @@ export function setPoint(g: Game, b: Battle, side: Side, unitId: string) {
   if (b.stage !== 'setup') throw new Error('already started'); const u = g.units.find((x) => x.id === unitId);
   if (!u || u.side !== side || u.area !== b.area || u.garrison) throw new Error('not a legal point unit');
   if (side === b.attacker && u.disorder) throw new Error('a disordered unit cannot be the attacking point unit');
+  { const pz = pz150In(g, b); if (pz && pz.side === side && pz.id !== unitId) throw new Error('150th Panzer Brigade must be the point unit in its first battle (18.4)'); }
   if (side === b.attacker) b.attPoint = unitId; else b.defPoint = unitId;
 }
 export function setEngFw(_g: Game, b: Battle, on: boolean) { if (!['setup', 'attArty', 'defArty', 'defFire', 'offFire'].includes(b.stage)) throw new Error('too late: the field works are removed before offensive fire (6.33)'); b.engFw = !!on; }
