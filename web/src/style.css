@@ -618,9 +618,9 @@ body:has(.hotcover) #leaders, body:has(.hotcover) #fx, body:has(.hotcover) #mark
 .c-ledger .engch { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .c-ledger .engch .row { margin-top: 0; flex: none; display: flex; gap: 6px; } .c-ledger .engch .row button { flex: none; min-width: 110px; min-height: 34px; }
 
 /* ---------- tutorial: coach bubble, spotlight ---------- */
-.tut-dim { position: fixed; inset: 0; z-index: 200; pointer-events: none; background: #0007; display: none; }
-.tut-ring { position: fixed; z-index: 205; display: none; border: 3px solid var(--gold); border-radius: 10px; box-shadow: 0 0 0 9999px #000a, 0 0 18px var(--gold); pointer-events: none; animation: tutp 1.4s ease-in-out infinite; }
-@keyframes tutp { 50% { box-shadow: 0 0 0 9999px #000a, 0 0 32px var(--gold); } }
+.tut-dim { position: fixed; inset: 0; z-index: 200; pointer-events: none; background: #0003; display: none; }
+.tut-ring { position: fixed; z-index: 205; display: none; border: 3px solid var(--gold); border-radius: 10px; box-shadow: 0 0 0 9999px #0002, 0 0 0 6px #e7b04a33, 0 0 18px var(--gold); pointer-events: none; animation: tutp 1.4s ease-in-out infinite; }
+@keyframes tutp { 50% { box-shadow: 0 0 0 9999px #0002, 0 0 0 10px #e7b04a22, 0 0 32px var(--gold); } }
 .tut-coach { position: fixed; z-index: 210; left: 10px; top: 92px; width: 340px; max-width: calc(100vw - 20px); background: #0b0d08f7; border: 1px solid var(--gold); color: var(--ink); font: 13.5px/1.45 var(--sf); padding: 12px 14px 10px; box-shadow: 0 10px 30px #000c; }
 @media (max-width: 699px) { .tut-coach { width: auto; } }
 .tut-coach .bar { height: 3px; background: #2a2d20; margin: -12px -14px 10px; } .tut-coach .bar i { display: block; height: 100%; background: var(--gold); transition: width .3s; }
