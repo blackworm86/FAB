@@ -11,7 +11,9 @@ export function diffFx(a: ReturnType<typeof snap>, x: E.Game): Fx[] {
     const o = a.u.get(u.id); if (!o) continue;
     if (u.area == null && o.area != null) out.push({ area: o.area, unit: u.id, icon: 'xbold', head: 'ELIMINATED', text: o.name, cls: 'elim' });
     else if (u.str < o.str) out.push({ area: u.area ?? o.area ?? 0, unit: u.id, icon: 'burst', head: `−${o.str - u.str} STEP`, text: `${u.name} ${u.str}/${o.str}`, cls: 'loss' });
-    if (u.area != null && o.area != null && u.area !== o.area) out.push({ area: u.area, unit: u.id, icon: 'back', head: 'RETREATS', text: `${u.name} → ${E.areas.get(u.area)!.name}`, cls: 'ret' });
+    if (u.area != null && o.area != null && u.area !== o.area) out.push(u.area === ba
+      ? { area: u.area, unit: u.id, icon: 'plus', head: 'REINFORCES', text: `${u.name} → ${E.areas.get(u.area)!.name}`, cls: 'ret' }      // moved into the battle (Reinforce SA), not out of it
+      : { area: u.area, unit: u.id, icon: 'back', head: 'RETREATS', text: `${u.name} → ${E.areas.get(u.area)!.name}`, cls: 'ret' });
     if (u.area != null && u.disorder > o.dis) out.push({ area: u.area, unit: u.id, icon: 'disorder', head: 'DISORDERED', text: u.name, cls: 'dis' });
   }
   for (const c of x.chits) if (ba != null && a.c.get(c.id) === 'map' && c.box === 'eliminated') out.push({ area: ba, icon: 'xbold', head: 'ASSET LOST', text: c.name, cls: 'elim' });
