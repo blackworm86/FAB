@@ -12,7 +12,7 @@ import { online, startOnline, push, sit, sendChat, setChatListener, type ChatMsg
 import { gameInfo } from './games';
 import { ICONS, ico } from './icons';
 import { esc, nm } from './util';
-import { drawItems as drawAreaItems, drawEntry } from './board-art';
+import { drawItems as drawAreaItems, drawEntry, drawRestricted } from './board-art';
 import { targetsFor, type Tgt } from './chit-play';
 import { snap, diffFx, FxLayer, fxRow, FX_SAMPLES, type Fx } from './fx';
 import { RULE, ruleHtml } from './rules-text';
@@ -329,6 +329,15 @@ const viewSide = (): E.Side => (online.active && !online.both() && online.mySide
 const fogSide = (): E.Side | 'spectator' | null => (online.active && !online.both() ? online.mySide() ?? 'spectator' : null);
 const seen = (u: E.Unit) => E.visibleTo(g, u, fogSide());
 const viewRot = () => (viewSide() === 'allied' ? Math.PI : 0);
+/** Restricted boundaries (14.1) and the border two areas share, as a polyline (vertices of one area lying on the other's outline). */
+const RESTRICTED: [number, number][] = [...E.areas.keys()].flatMap((a) => E.neighbors(a).filter((b) => b > a && E.connection(a, b)?.restricted).map((b): [number, number] => [a, b]));
+function sharedBorder(a: number, b: number): [number, number][] {
+  const A = MAP.areas.find((x) => x.id === a)!.polygon as [number, number][], B = MAP.areas.find((x) => x.id === b)!.polygon as [number, number][];
+  const near = (p: [number, number]) => { for (let i = 0, j = B.length - 1; i < B.length; j = i++) { const [ax, ay] = B[j], [bx, by] = B[i], dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((p[0] - ax) * dx + (p[1] - ay) * dy) / (dx * dx + dy * dy || 1))); if (Math.hypot(p[0] - ax - t * dx, p[1] - ay - t * dy) < 3) return true; } return false; };
+  const on = A.map(near), n = A.length; let start = on.findIndex((v, i) => v && !on[(i - 1 + n) % n]); if (start < 0) start = 0;
+  const out: [number, number][] = []; for (let k = 0; k < n; k++) { const i = (start + k) % n; if (!on[i]) break; out.push(A[i]); }
+  return out;
+}
 function paintBoard() {
   if (!baseImg.naturalWidth || !linesImg.naturalWidth) return;
   const c = boardCv.getContext('2d')!, k = 2; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, boardCv.width, boardCv.height);
@@ -341,6 +350,7 @@ function paintBoard() {
   c.drawImage(pixels(linesImg), 0, 0, boardCv.width, boardCv.height);
   {
     c.save(); c.scale(k, k);
+    for (const [a, b] of RESTRICTED) drawRestricted(c, sharedBorder(a, b));
     for (const a of MAP.areas) { c.save(); c.translate(a.label[0], a.label[1]); c.rotate(viewRot()); drawAreaItems(c, a, layers, vpIcons, true); c.restore(); }
     if (layers.numbers) for (const e of MAP.entries) { c.save(); c.translate(e.x, e.y); c.rotate(viewRot()); drawEntry(c, e); c.restore(); }
     c.restore();

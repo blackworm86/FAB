@@ -41,3 +41,19 @@ describe('6.41b abort', () => {
     expect(g.units.filter((u) => u.area === area && u.side === 'german' && !u.garrison).every((u) => u.disorder === 1)).toBe(true);
   });
 });
+
+import { retreatOptions, connection as conn2 } from '../src';
+describe('14.1 restricted boundary (Schnee Eifel, 4-11)', () => {
+  it('armor may not retreat across it; infantry may', () => {
+    expect(conn2(4, 11)?.restricted).toBe(true);
+    const g = newGame(6, { scenario: 'campaign', fuel: true });
+    const b = { area: 4, attacker: 'allied', retreat: { side: 'german', queue: [] as string[] } } as never as Parameters<typeof retreatOptions>[1];
+    for (const u of g.units) if (u.area === 11 || u.area === 4) u.area = null;
+    g.control[11] = 'german';
+    const arm = g.units.find((u) => u.side === 'german' && u.cls === 'armor')!, inf = g.units.find((u) => u.side === 'german' && u.cls === 'infantry' && !u.garrison)!;
+    arm.area = 4; inf.area = 4;
+    (b as { retreat: { queue: string[] } }).retreat.queue = [arm.id]; expect(retreatOptions(g, b)).not.toContain(11);
+    (b as { retreat: { queue: string[] } }).retreat.queue = [inf.id]; expect(retreatOptions(g, b)).toContain(11);
+  });
+  it('the Ourthe between Aywaille (53) and Esneux (59) is a river boundary', () => { expect(conn2(53, 59)?.river).toBe(true); });
+});

@@ -29,3 +29,28 @@ export function drawItems(c: CanvasRenderingContext2D, a: { id: number }, layers
 export function drawEntry(c: CanvasRenderingContext2D, e: { letter: string; side: E.Side }) {
   const ge = e.side === 'german'; c.font = '700 19px Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.lineWidth = 3; c.strokeStyle = ge ? '#ffffffcc' : '#14502a'; c.strokeText(e.letter, 0, 6); c.fillStyle = ge ? '#111' : '#fff'; c.fillText(e.letter, 0, 6);
 }
+/** 14.1 Restricted boundary (the Schnee Eifel between Prüm 4 and Bleialf 11): a ridge of hachures along the shared border, as on the printed map.
+ *  `border` is the shared border as a polyline in map pixels. */
+export function drawRestricted(c: CanvasRenderingContext2D, border: [number, number][], label = 'Schnee Eifel') {
+  if (border.length < 2) return;
+  const seg: { x: number; y: number; nx: number; ny: number; t: number }[] = []; let total = 0;
+  for (let i = 1; i < border.length; i++) total += Math.hypot(border[i][0] - border[i - 1][0], border[i][1] - border[i - 1][1]);
+  let run = 0;
+  for (let i = 1; i < border.length; i++) {
+    const [x0, y0] = border[i - 1], [x1, y1] = border[i], L = Math.hypot(x1 - x0, y1 - y0); if (!L) continue;
+    const nx = -(y1 - y0) / L, ny = (x1 - x0) / L;
+    for (let d = 0; d < L; d += 3.2) { const t = (run + d) / total; seg.push({ x: x0 + ((x1 - x0) * d) / L, y: y0 + ((y1 - y0) * d) / L, nx, ny, t }); }
+    run += L;
+  }
+  c.save(); c.lineCap = 'round'; c.strokeStyle = '#4a3a24'; c.lineWidth = 1.1;
+  seg.forEach((p, i) => {
+    const taper = Math.sin(Math.PI * Math.min(1, Math.max(0, p.t))) ** 0.6, len = (6 + (i % 2) * 3) * taper + 1.5;      // longer in the middle of the ridge
+    c.beginPath(); c.moveTo(p.x + p.nx * 2, p.y + p.ny * 2); c.lineTo(p.x + p.nx * (2 + len), p.y + p.ny * (2 + len));
+    c.moveTo(p.x - p.nx * 2, p.y - p.ny * 2); c.lineTo(p.x - p.nx * (2 + len), p.y - p.ny * (2 + len)); c.stroke();
+  });
+  const mid = border[Math.floor(border.length / 2)], prev = border[Math.max(0, Math.floor(border.length / 2) - 1)];
+  let ang = Math.atan2(mid[1] - prev[1], mid[0] - prev[0]); if (ang > Math.PI / 2) ang -= Math.PI; if (ang < -Math.PI / 2) ang += Math.PI;
+  c.translate(mid[0], mid[1]); c.rotate(ang); c.font = 'italic 700 9px "Arial Narrow", Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.lineWidth = 2.6; c.strokeStyle = '#e9e6d4'; c.strokeText(label, 0, 0); c.fillStyle = '#3a2d1a'; c.fillText(label, 0, 0);
+  c.restore();
+}

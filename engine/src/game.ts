@@ -820,7 +820,9 @@ function finishDef(g: Game, b: Battle, kind: 'arty' | 'ground', retreated: boole
 export function retreatOptions(g: Game, b: Battle): number[] {
   setPlayArea(g.inPlay);
   const r = b.retreat; if (!r) return [];
-  return neighbors(b.area).filter((n) => g.control[n] === r.side && !unitsIn(g, n, other(r.side)).length && blocks(g, n, r.side).length < 2);
+  const u = g.units.find((x) => x.id === r.queue[0]);                                        // the unit retreating now
+  return neighbors(b.area).filter((n) => g.control[n] === r.side && !unitsIn(g, n, other(r.side)).length && blocks(g, n, r.side).length < 2
+    && !(u?.cls === 'armor' && connection(b.area, n)?.restricted));                          // 14.1: armor never crosses the restricted boundary (Schnee Eifel), not even to retreat
 }
 function advanceRetreat(g: Game, b: Battle) {
   const r = b.retreat!;
@@ -884,7 +886,7 @@ export function mustFight(g: Game) {
 function retreatExcess(g: Game) {
   for (const side of ['german', 'allied'] as Side[]) for (const a of areas.keys()) {
     const us = blocks(g, a, side); while (us.length > 2) {
-      const u = us.pop()!, to = neighbors(a).find((n) => g.control[n] === side && !unitsIn(g, n, other(side)).length && blocks(g, n, side).length < 2);
+      const u = us.pop()!, to = neighbors(a).find((n) => g.control[n] === side && !unitsIn(g, n, other(side)).length && blocks(g, n, side).length < 2 && !(u.cls === 'armor' && connection(a, n)?.restricted));
       if (to == null) { u.str = 0; eliminate(g, u); } else { u.area = to; u.disorder = 1; say(g, `${u.name} retreats from overstacking to ${areas.get(to)!.name}`); }
     }
   }
