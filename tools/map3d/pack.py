@@ -20,6 +20,6 @@ C2={a['id']:a['centroid'] for a in json.load(open('/home/user/FAB/data/bulge/are
 areas=[{'id':a['id'],'c':C2[a['id']],'name':a['name'],'tdn':a['tdn'],'label':a['label'],'poly':[[round(p[0],1),round(p[1],1)] for p in a['polygon']]} for a in M['areas'] if any(x0-40<p[0]<x1+40 and y0-40<p[1]<y1+40 for p in a['polygon'])]
 b=lambda f:base64.b64encode(open(f,'rb').read()).decode()
 D={'meta':meta,'h':base64.b64encode(h.astype('<u2').tobytes()).decode(),'f':base64.b64encode(flags.tobytes()).decode(),'towns':towns,'cities':cities,'areas':areas}
-src=open('page.html').read().replace('/*DATA*/null',json.dumps(D)).replace('__PRINTED__','data:image/jpeg;base64,'+b('printed.jpg')).replace('__BORDERS__','data:image/png;base64,'+b('borders.png')).replace('__OVERLAY__','data:image/png;base64,'+b('overlay.png'))
+src=open('page.html').read().replace('/*DATA*/null',json.dumps(D)).replace('__PRINTED__','data:image/jpeg;base64,'+b('printed.jpg')).replace('__ZONES__','data:image/png;base64,'+b('zones.png')).replace('__BORDERS__','data:image/png;base64,'+b('borders.png')).replace('__OVERLAY__','data:image/png;base64,'+b('overlay.png'))
 open('ardennes-relief.html','w').write(src)
 print(len(towns),[a['id'] for a in areas],len(src)//1024,'KB')
