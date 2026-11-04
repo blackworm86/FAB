@@ -104,11 +104,15 @@ export function initTutorial(h: TutHost) {
     let x: number, y: number;
     if (W < 700) {                                                                                  // phones: under the top bar, or above the bottom bar when the target is up there
       x = 10; y = top;
-      if (r && t && 'el' in t && r.y < y + ch + 6 && r.y + r.h > y) y = Math.max(top, bot - ch);           // a button up there: the coach goes down; map targets are brought into view instead (keep())
+      if (t && !('el' in t)) y = Math.max(top, bot - ch);                                            // a block or area: the coach sits low, the map slides into the clear band above it (keep())
+      else if (r && r.y < y + ch + 6 && r.y + r.h > y) y = Math.max(top, bot - ch);                   // a button up there: the coach goes down
     } else if (!r) { x = (W - cw) / 2; y = top + 8; }
     else {
       const cands: [number, number][] = [[r.x + r.w + 18, r.y + r.h / 2 - ch / 2], [r.x - cw - 18, r.y + r.h / 2 - ch / 2], [r.x + r.w / 2 - cw / 2, r.y + r.h + 18], [r.x + r.w / 2 - cw / 2, r.y - ch - 18]];
-      const fit = cands.map(([cx, cy]) => [Math.min(W - cw - 10, Math.max(10, cx)), Math.min(bot - ch, Math.max(top, cy))] as [number, number]).find(([cx, cy]) => cx + cw < r!.x || cx > r!.x + r!.w || cy + ch < r!.y || cy > r!.y + r!.h);
+      const avoid = [{ left: r.x, top: r.y, right: r.x + r.w, bottom: r.y + r.h }, ...Array.from(document.querySelectorAll('#ui .c-ledger')).filter(visible).map((e) => e.getBoundingClientRect())];   // the target and the fire report stay readable
+      const clear = ([cx, cy]: [number, number]) => avoid.every((b) => cx + cw < b.left || cx > b.right || cy + ch < b.top || cy > b.bottom);
+      const all = cands.map(([cx, cy]) => [Math.min(W - cw - 10, Math.max(10, cx)), Math.min(bot - ch, Math.max(top, cy))] as [number, number]);
+      const fit = all.find(clear) ?? all.find(([cx, cy]) => cx + cw < r!.x || cx > r!.x + r!.w || cy + ch < r!.y || cy > r!.y + r!.h);
       [x, y] = fit ?? [10, top];
     }
     coach.style.left = `${x}px`; coach.style.top = `${y}px`; coach.style.right = W < 700 ? '10px' : '';

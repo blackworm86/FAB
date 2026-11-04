@@ -285,7 +285,7 @@ const L9: Lesson = { topic: 'Victory', ref: '23.9–23.10', setup: () => {
 }, steps: [
   { title: 'The second player turn', text: 'After the German Supply step the <b>Allies</b> play the same sequence, drawing fewer chits. Online, the top bar says whose move it is; you see <b>Waiting…</b> while the other player acts, and you can chat.', rule: '23.9 Second Player Turn' },
   { title: 'Victory check', text: 'After both player turns comes the Victory Check. <b>Open the VP sheet.</b>', rule: '23.10 Victory Check Phase', target: { el: '.vps', label: 'VP strip' }, done: (_g, q) => q('.vsheet') },
-  { title: 'Sudden death', text: 'From Turn 4, a lead equal to the turn\'s <b>Sudden Death</b> number wins at once. In the book\'s effective-defence example the Allies lead by 4 against a target of 5: one more objective would end it. Eliminated large units add to the score.' },
+  { title: 'Sudden death', text: 'From Turn 4, a lead equal to the turn\'s <b>Sudden Death</b> number (on the turn track) wins at once. Areas count only while their owner can trace supply to them, and each eliminated large enemy unit adds 1. In the book\'s effective-defence example the Allies lead by 4 against a target of 5: one more objective would end the game.' },
   { title: 'You know the whole turn', text: 'Prepare, Move, Fight, Breakthrough, Supply, for each side, then the Victory Check. Start a game: <b>Nuts!</b> is short (3 turns around Bastogne).' },
 ] };
 

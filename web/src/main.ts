@@ -1579,6 +1579,7 @@ SBU.initSandboxUi({
   ABBR, actorNow, areaName, b3, chitImg, unitFace, unitPic, chitPic, hist, refresh, render, save, say, reg, regv, ubtn, optChooser,
 });
 initTouch(document.body);
+const tutLast = new THREE.Vector3();
 const toScreen = (p: THREE.Vector3) => { const r = canvas.getBoundingClientRect(), v = p.clone().project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; };
 tut = TUTORIAL ? initTutorial({
   game: () => g, act,
@@ -1586,8 +1587,8 @@ tut = TUTORIAL ? initTutorial({
   unitScreen: (id) => pieceScreen(id), areaScreen: (a) => { const c = center(a); return toScreen(new THREE.Vector3(c.x, 0, c.z)); },
   lookAt: (a) => { const p = center(a); goal = { t: new THREE.Vector3(p.x, 0, p.z), dist: Math.min(dist, innerWidth < 700 ? 34 : 30), pitch }; },
   select: (id) => { if (g.pendingArrivals.includes(id)) selArr = id; else { selUnit = id; selArea = g.units.find((u) => u.id === id)?.area ?? null; } refresh(); },
-  moving: () => !!goal || !!lock || ptrs.size > 0,
-  pan: (dx, dy) => { const k = dist * 0.0018, c = Math.cos(yaw), sn = Math.sin(yaw); target.x -= (dx * c + dy * sn) * k; target.z -= (-dx * sn + dy * c) * k; },
+  moving: () => { const m = ptrs.size > 0 || tutLast.distanceTo(target) > 0.003; tutLast.copy(target); return m; },   // a camera glide that has stopped short (map edge) counts as still
+  pan: (dx, dy) => { goal = null; const k = dist * 0.0018, c = Math.cos(yaw), sn = Math.sin(yaw); target.x -= (dx * c + dy * sn) * k; target.z -= (-dx * sn + dy * c) * k; },
   fold: () => { if (infoOpen) { infoOpen = false; render(); } },
   toast: (t) => say(t), busy: () => !!rollView || !!heldNext,
   guide: () => guide, setGuide: (v) => { setGuide(v); render(); },
