@@ -6,6 +6,7 @@ const base=fs.readFileSync('/home/user/FAB/web/public/map-base.svg','utf8'),line
  await shot(base,'#woods','woods');
  await shot(lines,'#rivers','rivers','#rivers *{stroke:#000!important}');
  await shot(lines,'#roads','roads','#roads *{stroke:#000!important}');
- await shot(lines,'#cities,#towns','towns','#cities *,#towns *{fill:#000!important;stroke:#000!important}');
+ await shot(lines,'#cities','cities','#cities *{fill:#000!important;stroke:#000!important}');
+ await shot(lines,'#towns','townsonly','#towns *{fill:#000!important;stroke:none!important}');
  await shot(lines,'#boundaries','borders','#boundaries *{stroke:#000!important}');
  await b.close();})();
