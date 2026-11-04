@@ -613,3 +613,6 @@ body:has(.hotcover) #leaders, body:has(.hotcover) #fx, body:has(.hotcover) #mark
 /* desktop sweep fixes */
 @media (min-width: 701px) { .c-table .engch { display: flex; align-items: center; gap: 10px; justify-content: center; } .c-table .engch .row { margin-top: 0; flex: none; } .c-table .engch .row button { flex: none; min-width: 120px; min-height: 34px; } }
 .c-prompt button { min-height: 32px; padding: 4px 12px; }
+/* tablet sweep fixes */
+.supply .supl .b3 { flex: none; display: inline-block; }      /* the block picture is a span too: it must not stretch like the text column */
+.c-ledger .engch { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .c-ledger .engch .row { margin-top: 0; flex: none; display: flex; gap: 6px; } .c-ledger .engch .row button { flex: none; min-width: 110px; min-height: 34px; }
