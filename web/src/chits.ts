@@ -47,6 +47,19 @@ const QDOT: Record<string, [string, string]> = { elite: ['#d7262b', '#fff'], vet
 /** The German Balkenkreuz: black cross with flared arms and a white border. r is the half-length of an arm. */
 const cross = (x: number, y: number, r: number, fill = '#0d0d0f', edge = '#fff') => { const a = r * 0.2, b = r * 0.34, p = [[-a, -a], [-b, -r], [b, -r], [a, -a], [r, -b], [r, b], [a, a], [b, r], [-b, r], [-a, a], [-r, b], [-r, -b]].map(([u, v]) => `${(x + u).toFixed(1)} ${(y + v).toFixed(1)}`).join('L'); return `<path d="M${p}Z" fill="${edge}" stroke="${edge}" stroke-width="${(r * 0.26).toFixed(1)}" stroke-linejoin="round"/><path d="M${p}Z" fill="${fill}"/>`; };
 const star = (x: number, y: number, r: number, fill = '#fff') => `<path d="M${Array.from({ length: 10 }, (_, i) => `${(x + (i % 2 ? r * .4 : r) * Math.sin(i * Math.PI / 5)).toFixed(1)} ${(y - (i % 2 ? r * .4 : r) * Math.cos(i * Math.PI / 5)).toFixed(1)}`).join('L')}Z" fill="${fill}"/>`;
+/** A fighter in side view (nose left), redrawn as vectors for the Bodenplatte event; 200 x 64 units. Insignia limited to the fuselage cross. */
+const FIGHTER = '<g stroke="#1b1d20" stroke-width="1.6" stroke-linejoin="round">'
+  + '<path d="M44 44 L118 41 L121 46 L48 50 Z" fill="#5d636a"/>'
+  + '<path d="M16 31 Q16 22 27 21 L66 20 L98 23 L168 29 L186 32 L186 38 L150 41 L62 46 L28 49 Q16 47 16 39 Z" fill="#a3a9af"/>'
+  + '<path d="M28 41 L62 43 L150 38 L186 37 L186 38 L150 41 L62 46 L28 49 Q19 48 17 43 Z" fill="#cfd4d8" stroke="none"/>'
+  + '<path d="M70 20 L98 23 L168 29 L170 31 L98 27 L72 25 Z" fill="#6f767d" stroke="none"/>'
+  + '<path d="M64 21 Q74 9 90 12 L101 23 Z" fill="#d7e6ee"/><path d="M82 11 L84 22" fill="none"/>'
+  + '<path d="M164 30 L174 8 Q185 3 191 10 L191 35 L178 34 Z" fill="#a3a9af"/><path d="M182 6 Q188 4 191 10 L191 22 L181 21 Z" fill="#f1d23a"/>'
+  + '<path d="M158 34 L194 31 L194 36 L158 37 Z" fill="#7d838a"/>'
+  + '<path d="M16 31 Q16 22 27 21 L33 21 L33 48 L28 49 Q16 47 16 39 Z" fill="#41464c"/><path d="M18 42 L33 42 L33 48 L28 49 Q19 48 18 42 Z" fill="#c9302c"/><path d="M33 21 L38 21 L38 47 L33 48 Z" fill="#e9ecee"/>'
+  + '<ellipse cx="13" cy="35" rx="5" ry="6" fill="#e9ecee"/><path d="M11 9 L13 33 L11 61" fill="none" stroke-width="3.2"/>'
+  + '<g transform="translate(118 35)" stroke="none"><rect x="-8" y="-2.6" width="16" height="5.2" fill="#fff"/><rect x="-2.6" y="-8" width="5.2" height="16" fill="#fff"/><rect x="-6" y="-1.4" width="12" height="2.8" fill="#111"/><rect x="-1.4" y="-6" width="2.8" height="12" fill="#111"/></g>'
+  + '</g>';
 const img = (href: string, x = 0, y = 0, w = 160, h = 160) => `<image href="${href}" x="${x}" y="${y}" width="${w}" height="${h}"/>`;
 const asBox = (b: readonly number[]) => ({ x: b[0], y: b[1], w: b[2], h: b[3] });
 
@@ -139,7 +152,7 @@ export function chitSvg(c: Chit | Counter): string {
     const b = asBox(CHIT_ART.fuelBox), captured = name.startsWith('Captured'), bid = k === 'fuel_bid';
     return `${open(side, ['#f07a17', '#f89a47', '#c25d0a'])}${bid ? txt('Bid', 14, 34, 26, { w: 'b' }) : ''}${captured ? txt('Captured', 80, 24, 23, { anchor: 'middle', max: 100 }) : ''}${img(CHIT_ART.fuel, b.x + 2, b.y + 6, b.w * 1.12, b.h * 1.12)}${txt('Fuel', 100, 112, 38, { w: 'b', anchor: 'middle', fill: '#ffe100', stroke: '#111', sw: 90, max: 84 })}${txt('Asset', 83, 146, 27, { w: 'b', anchor: 'middle', max: 76 })}</svg>`;
   }
-  if (k === 'event_bodenplatte') { const b = asBox(CHIT_ART.bodenBox); return `${open(side, ['#9fcff0', '#c4e3f7', '#78a8cc'])}${turn(t, 14, 38, 32)}${img(CHIT_ART.boden, b.x, b.y + 2, b.w, b.h)}${txt('Operation', 80, 118, 31, { w: 'b', anchor: 'middle', fill: '#fff', stroke: '#222', sw: 130, max: 128 })}${txt('Bodenplatte', 80, 148, 31, { w: 'b', anchor: 'middle', fill: '#fff', stroke: '#222', sw: 130, max: 128 })}</svg>`; }
+  if (k === 'event_bodenplatte') { return `${open(side, ['#9fcff0', '#c4e3f7', '#78a8cc'])}${turn(t, 14, 38, 32)}<g transform="translate(58 14) scale(0.48)">${FIGHTER}</g><g transform="translate(8 40) scale(0.74)">${FIGHTER}</g>${txt('Operation', 80, 118, 31, { w: 'b', anchor: 'middle', fill: '#fff', stroke: '#222', sw: 130, max: 128 })}${txt('Bodenplatte', 80, 148, 31, { w: 'b', anchor: 'middle', fill: '#fff', stroke: '#222', sw: 130, max: 128 })}</svg>`; }
   if (k === 'air_mission') { const b = asBox(CHIT_ART.airBox); return `${flat('#1f5db0')}<rect x="8" y="8" width="144" height="144" fill="#9fcff0" stroke="#fff" stroke-width="3"/>${turn(t, 16, 44, 32)}${txt('Allied', 98, 36, 22, { anchor: 'middle' })}${img(CHIT_ART.air, b.x + 2, b.y + 8, b.w, b.h)}${txt('Air', 14, 112, 36, { w: 'b', fill: '#fff', stroke: '#222', sw: 130 })}${txt('Mission', 14, 144, 36, { w: 'b', fill: '#fff', stroke: '#222', sw: 130, max: 130 })}</svg>`; }
   if (k === 'special_action_event' && ART[`sae_${c.ech}_${t}`]) return pic(ART[`sae_${c.ech}_${t}`]);      // the user's redrawn counters
   if (k === 'special_action_event') {
@@ -148,7 +161,7 @@ export function chitSvg(c: Chit | Counter): string {
   }
   if (k === 'event_greif_bridge') return `${open(side)}${panel('#e8412b')}${turn(t, 22, 52, 32)}<path d="M20 69H54" stroke="#fff" stroke-width="2.4"/><path d="M50 62L62 69L50 76Z" fill="#fff"/><path d="M76 61Q80 64 86 64H112Q118 64 122 61M76 76Q80 73 86 73H112Q118 73 122 76" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>${txt('Greif Team', 81, 114, 29, { w: 'b', anchor: 'middle', max: 108 })}${txt('Bridge', 81, 145, 30, { anchor: 'middle', max: 108 })}</g></svg>`;
   if (k === 'event_greif_interdict') return `${open(side)}${panel('#e8412b')}${turn(t, 22, 52, 32)}${txt('?', 78, 78, 68, { anchor: 'middle', fill: '#fff' })}${txt('Greif Team', 81, 114, 29, { w: 'b', anchor: 'middle', max: 108 })}${txt('Interdict', 81, 145, 30, { anchor: 'middle', max: 108 })}</g></svg>`;
-  if (k === 'event_delayed_response') return `${open(side)}${panel(side === 'allied' ? '#b5d27a' : '#f07a17')}<ellipse cx="82" cy="100" rx="46" ry="44" fill="#fff"/>${turn(t, 22, 52, 32)}${txt('Delayed', 84, 85, 31, { anchor: 'middle', max: 100 })}${txt('Response', 82, 128, 31, { anchor: 'middle', max: 108 })}</g></svg>`;
+  if (k === 'event_delayed_response') return `${open(side)}${panel(side === 'allied' ? '#b5d27a' : '#f07a17')}<ellipse cx="78.5" cy="85.5" rx="44" ry="42" fill="#fff"/>${turn(t, 22, 46, 30)}${txt('Delayed', 78.5, 79, 30, { anchor: 'middle', max: 104 })}${txt('Response', 78.5, 112, 30, { anchor: 'middle', max: 112 })}</g></svg>`;
   if (k === 'event_arriving_regiment') return `${open(side)}${panel('#a9d37a')}${turn(t, 22, 52, 32)}${txt('III', 79, 46, 14, { w: 'b', anchor: 'middle', max: 22 })}<rect x="57" y="53" width="44" height="26" fill="#fff" stroke="#111" stroke-width="2.4"/><path d="M57 53L101 79M101 53L57 79" stroke="#111" stroke-width="1.6"/>${wrap(name).map((l, i) => txt(l, 81, 107 + i * 28, 22, { anchor: 'middle', fill: '#1c2b0d', max: 108 })).join('')}</g></svg>`;
   if (k === 'event_release') { const ls = wrap(name); return `${open(side)}${panel('#f07a17')}${turn(t, 22, 52, 32)}${ls.map((l, i) => txt(l, 88, 66 + i * 35, 33, { anchor: 'middle', max: 92 })).join('')}</g></svg>`; }
   /* markers and backs */
