@@ -647,3 +647,12 @@ body:has(.hotcover) #leaders, body:has(.hotcover) #fx, body:has(.hotcover) #mark
 .aar .aarfx { display: grid; gap: 4px; margin: 4px 0; }
 
 #gl:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }     /* the map has keyboard focus */
+@media (max-width: 700px) {      /* phones: the shortcuts get the top lane (fading where they run off) with undo and the explanations switch at its end; the prompt has the rest of the bottom row, beside the main button, on up to two lines */
+  .c-bar.b { grid-template-columns: minmax(0, 1fr) 62px 44px 40px !important; grid-template-rows: 44px 44px !important; grid-template-areas: none !important; }
+  .c-bar.b .dchips { grid-column: 1 / 3 !important; grid-row: 1 !important; -webkit-mask-image: none; mask-image: none; }
+  .c-bar.b .dchips.more { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
+  .c-bar.b .dundo { grid-column: 3 !important; grid-row: 1 !important; }
+  .c-bar.b .guidebtn { grid-column: 4 !important; grid-row: 1 !important; align-self: center; justify-self: end; }
+  .c-bar.b .c-prompt { grid-column: 1 !important; grid-row: 2 !important; padding-right: 2px !important; white-space: normal !important; display: -webkit-box !important; -webkit-box-orient: vertical; -webkit-line-clamp: 2 !important; overflow: hidden; line-height: 1.25 !important; font-size: 12px !important; align-self: center; }
+  .c-bar.b .go, .c-bar.b .gowait { grid-column: 2 / 5 !important; grid-row: 2 !important; width: 100% !important; max-width: none !important; }
+}
