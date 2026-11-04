@@ -543,3 +543,27 @@ body:has(.hotcover) #leaders, body:has(.hotcover) #fx, body:has(.hotcover) #mark
 .dock { position: relative; }
 @media (min-width: 1000px) { .dock > .c-ledger { position: absolute; right: 12px; bottom: calc(100% + 8px); width: min(470px, 36vw); max-height: 62vh; border: 1px solid var(--line); z-index: 6; } }
 @media (max-width: 700px) { .dock > .c-ledger { max-height: 34vh; } }
+/* stable action bar: every control keeps its place; empty slots stay reserved */
+.dundo.idle { opacity: .28; pointer-events: none; } .dundo.idle span { display: none; }
+.gowait.slot { display: inline-block; min-width: 140px; }
+@media (min-width: 701px) { .dundo.idle { display: none; } }
+@media (max-width: 700px) {
+  .c-bar.b { grid-template-columns: minmax(0, 1fr) 44px 150px !important; grid-template-rows: 22px 44px; grid-template-areas: "p p g" "c u go" !important; height: 98px; box-sizing: border-box; align-content: center; padding-block: 6px !important; }
+  .c-bar.b .c-prompt { grid-area: p; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block !important; -webkit-line-clamp: unset !important; line-height: 22px; font-size: 12.5px !important; }
+  .c-bar.b .guidebtn { grid-area: g; justify-self: end; width: 30px !important; min-width: 30px !important; min-height: 26px !important; height: 26px; padding: 0 !important; }
+  .c-bar.b .dundo { grid-area: u; width: 44px; max-width: 44px !important; min-height: 44px; padding: 0 !important; justify-content: center; } .c-bar.b .dundo span { display: none; }
+  .c-bar.b .go, .c-bar.b .gowait { grid-area: go; width: 150px; max-width: 150px !important; min-height: 44px; box-sizing: border-box; justify-content: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .c-bar.b .gowait { display: flex; align-items: center; font-size: 11px; line-height: 1.1; white-space: normal; text-align: center; border: 1px dashed #8d906566; color: #b3ad8b; }
+  .c-bar.b .gowait.slot { border-color: transparent; }
+  .c-bar.b .dchips { grid-area: c; align-self: center; }
+  .c-bar.b .turnchip { font-size: 10px; padding: 1px 5px; }
+  /* less chrome: the VP strip steps aside during a battle (the battle header has the numbers that matter), the hand switch is a slim row */
+  .tops:has(+ .stage .c-table) .vps { display: none; }
+  .handtab { padding: 0 !important; gap: 4px !important; min-height: 0; } .handtab button { min-height: 32px !important; padding: 0 10px !important; font-size: 12px; }
+  .c-hand { height: 78px !important; padding-top: 6px !important; }
+}
+@media (max-width: 700px) {
+  .c-bar.b .c-prompt { grid-column: 1 / -1 !important; grid-row: 1; padding-right: 38px; }
+  .c-bar.b .guidebtn { grid-column: 3; grid-row: 1; z-index: 1; }
+  .c-bar.b .dchips { -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+}
