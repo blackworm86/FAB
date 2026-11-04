@@ -244,8 +244,8 @@ const dotTex = new Map<string, THREE.CanvasTexture>();
 /** A small round marker lying on the table: a red cross to take an asset back, a gold target for the point unit. */
 function disc(kind: 'x' | 'point', size: number) {
   let t = dotTex.get(kind);
-  if (!t) { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d')!; x.fillStyle = kind === 'x' ? '#c0392b' : '#e7b04a'; x.beginPath(); x.arc(64, 64, 60, 0, 7); x.fill(); x.lineWidth = 8; x.strokeStyle = '#fff'; x.stroke();
-    x.strokeStyle = kind === 'x' ? '#fff' : '#1a1608'; x.lineWidth = 14; x.lineCap = 'round'; x.beginPath();
+  if (!t) { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d')!; x.fillStyle = kind === 'x' ? '#3a3d2c' : '#e7b04a';                 /* take-back is a quiet olive disc: red stays for the one main action */ x.beginPath(); x.arc(64, 64, 60, 0, 7); x.fill(); x.lineWidth = 8; x.strokeStyle = '#fff'; x.stroke();
+    x.strokeStyle = kind === 'x' ? '#ddd7b5' : '#1a1608'; x.lineWidth = 14; x.lineCap = 'round'; x.beginPath();
     if (kind === 'x') { x.moveTo(40, 40); x.lineTo(88, 88); x.moveTo(88, 40); x.lineTo(40, 88); } else { x.arc(64, 64, 26, 0, 7); x.moveTo(64, 22); x.lineTo(64, 40); x.moveTo(64, 88); x.lineTo(64, 106); x.moveTo(22, 64); x.lineTo(40, 64); x.moveTo(88, 64); x.lineTo(106, 64); }
     x.stroke(); t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; dotTex.set(kind, t); }
   const m = new THREE.Mesh(new THREE.CircleGeometry(size, 28), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false })); m.rotation.x = -Math.PI / 2; return m;
@@ -887,10 +887,10 @@ function decisionBubble(): string {
   const at = `data-area="${b.area}" data-tg="${tg.join(',')}"`;                                       // placed off the area by placeBubbles, with a line to each block it is about
   if (!allowed()) return `<div class="mapbubble wait" ${at}><b>${nm(who)} decides…</b></div>`;
   if (b.stage === 'attFirst') return `<div class="mapbubble" ${at}><b>${b.pending} hit${b.pending > 1 ? 's' : ''}</b><span>Tap the point unit or an asset to take the first loss</span></div>`;
-  if (b.stage === 'attChoice') return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b><div class="row">${btn(`${ico('back')}<span>Abort</span>`, () => E.attackerChoice(g, g.battle!, true), 'ab', false, 'Abort: all attackers disordered, no losses')}${btn(`${ico('xbold')}<span>Take losses</span>`, () => E.attackerChoice(g, g.battle!, false), 'ab primary', false, 'Continue and take the step losses')}</div></div>`;
+  if (b.stage === 'attChoice') return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b><div class="row">${btn(`${ico('back')}<span>Abort</span>`, () => E.attackerChoice(g, g.battle!, true), 'ab', false, 'Abort: all attackers disordered, no losses')}${btn(`${ico('xbold')}<span>Take losses</span>`, () => E.attackerChoice(g, g.battle!, false), 'ab', false, 'Continue and take the step losses')}</div></div>`;
   if (b.stage !== 'defChoice') return '';
   const arty = b.pendingKind === 'arty';
-  return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b><div class="row">${btn(`${ico('xbold')}<span>Take losses</span>`, () => E.defenderChoice(g, g.battle!, false), 'ab', false, 'Stand and take the step losses')}${btn(`${ico(arty ? 'disorder' : 'back')}<span>${arty ? 'Disorder' : 'Retreat'}</span>`, () => E.defenderChoice(g, g.battle!, true), 'ab primary', false, arty ? 'Disorder all defenders to absorb 1 hit' : 'Retreat (absorbs 1 hit, units disordered)')}</div></div>`;
+  return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b><div class="row">${btn(`${ico('xbold')}<span>Take losses</span>`, () => E.defenderChoice(g, g.battle!, false), 'ab', false, 'Stand and take the step losses')}${btn(`${ico(arty ? 'disorder' : 'back')}<span>${arty ? 'Disorder' : 'Retreat'}</span>`, () => E.defenderChoice(g, g.battle!, true), 'ab', false, arty ? 'Disorder all defenders to absorb 1 hit' : 'Retreat (absorbs 1 hit, units disordered)')}</div></div>`;
 }
 /** Who can move now: a green arrow over every block that has somewhere to go; the side's other blocks get a grey dash. Hidden once a block is picked or a battle opens. */
 let moveMarks: { el: HTMLElement; unit: string }[] = [];
