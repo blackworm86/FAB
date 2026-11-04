@@ -6,7 +6,7 @@ import { LESSONS, U, replay, type Step, type Target } from './tutorial-script';
 export interface TutHost {
   game(): E.Game; load(g: E.Game): void; act(f: () => void, label: string): void;
   unitScreen(id: string): { x: number; y: number; rad: number } | null; areaScreen(a: number): { x: number; y: number } | null;
-  lookAt(a: number): void; select(id: string): void; toast(t: string): void; busy(): boolean;
+  lookAt(a: number): void; pan(dx: number, dy: number): void; moving(): boolean; fold(): void; select(id: string): void; toast(t: string): void; busy(): boolean;
   guide(): 'full' | 'short'; setGuide(v: 'full' | 'short'): void; home(scenario?: string): void;
 }
 const KEY = 'fab-tut', GKEY = 'fab-tut-guide';
@@ -46,6 +46,7 @@ export function initTutorial(h: TutHost) {
     if (s.skip?.(g)) { si++; return si < L.steps.length ? enter() : next(); }
     s.enter?.(g);
     const t = s.target, prev = L.steps[si - 1]?.target;
+    if (t && !('el' in t)) h.fold();                                                                  // the chit panel folds its rules so the map shows
     if (t && 'area' in t && prev && 'unit' in prev) { try { h.select(U(g, prev.unit).id); } catch { /* */ } }   // a move: the block stays selected after Back
     const at = s.look ?? (t && 'unit' in t ? U(g, t.unit).area : t && 'area' in t ? t.area : null);
     if (at != null) { const p = t && 'unit' in t ? h.unitScreen(U(g, t.unit).id) : h.areaScreen(at); if (s.look != null || !p || p.x < 20 || p.x > innerWidth - 20 || p.y < 120 || p.y > innerHeight - 140) h.lookAt(at); }
@@ -103,8 +104,7 @@ export function initTutorial(h: TutHost) {
     let x: number, y: number;
     if (W < 700) {                                                                                  // phones: under the top bar, or above the bottom bar when the target is up there
       x = 10; y = top;
-      if (r && r.y < y + ch + 6 && r.y + r.h > y) y = Math.max(top, bot - ch);
-      if (r && y < r.y + r.h && y + ch > r.y) y = r.y + r.h + 10 + ch < H ? r.y + r.h + 10 : Math.max(8, r.y - ch - 10);
+      if (r && t && 'el' in t && r.y < y + ch + 6 && r.y + r.h > y) y = Math.max(top, bot - ch);           // a button up there: the coach goes down; map targets are brought into view instead (keep())
     } else if (!r) { x = (W - cw) / 2; y = top + 8; }
     else {
       const cands: [number, number][] = [[r.x + r.w + 18, r.y + r.h / 2 - ch / 2], [r.x - cw - 18, r.y + r.h / 2 - ch / 2], [r.x + r.w / 2 - cw / 2, r.y + r.h + 18], [r.x + r.w / 2 - cw / 2, r.y - ch - 18]];
@@ -125,10 +125,22 @@ export function initTutorial(h: TutHost) {
   }
   for (const ty of ['pointerdown', 'mousedown', 'touchstart', 'click', 'dblclick']) window.addEventListener(ty, guard, { capture: true, passive: false });
 
+  /** A block or area hidden behind the coach or a panel slides into the clear band of the screen. */
+  function keep(s: Step) {
+    const t = s.target, g = h.game(); if (!t || 'el' in t || h.busy() || h.moving()) return;
+    const p = 'unit' in t ? h.unitScreen(U(g, t.unit).id) : h.areaScreen(t.area); if (!p) return;
+    const W = innerWidth, H = innerHeight, top = (document.querySelector('#ui .tops')?.getBoundingClientRect().bottom ?? 0);
+    const obs = [coach, ...Array.from(document.querySelectorAll<HTMLElement>('#ui .c-dispatch, #ui .c-hand, #ui .c-ledger, #ui .c-bar.b, #ui .arrtray, #ui .modal'))].filter(visible).map((e) => e.getBoundingClientRect()).filter((b) => b.left < p.x + 30 && b.right > p.x - 30).sort((a, b) => a.top - b.top);
+    let y0 = top, best = { a: 0, b: 0 };
+    for (const b of [...obs, { top: H, bottom: H } as DOMRect]) { if (b.top - y0 > best.b - best.a) best = { a: y0, b: b.top }; y0 = Math.max(y0, b.bottom); }
+    if (best.b - best.a < 70) return;
+    const m = Math.min(45, (best.b - best.a) / 3), dy = p.y < best.a + m || p.y > best.b - m ? (best.a + best.b) / 2 - p.y : 0, dx = p.x < 30 || p.x > W - 30 ? W / 2 - p.x : 0;
+    if (Math.abs(dx) + Math.abs(dy) > 2) h.pan(dx * 0.25, dy * 0.25);
+  }
   function loop(now: number) {
     requestAnimationFrame(loop);
     const s = step(); if (!s) return;
-    place();
+    keep(s); place();
     if (now - last < 200 || h.busy() || tapped) return; last = now;
     if (s.done && s.done(h.game(), q)) next();
   }
@@ -142,7 +154,7 @@ export function initTutorial(h: TutHost) {
       const t = s.target, g = h.game(), on = unit ? g.units.find((u) => u.id === unit)?.area ?? null : null;
       const ok = t && 'unit' in t ? (() => { const u = U(g, t.unit); return unit === u.id || (u.area != null && (area === u.area || on === u.area)) ? { unit: u.id, area: u.area ?? undefined } : null; })()
         : t && 'area' in t && (area === t.area || on === t.area) ? { area: t.area } : null;
-      if (!ok) { console.log("tut-gate", unit, area, on, JSON.stringify(t)); h.toast(`${hint(s)}.`); return false; }
+      if (!ok) { h.toast(`${hint(s)}.`); return false; }
       if (s.tap) { tapped = true; setTimeout(() => { if (step() === s) next(); }, 60); }
       return ok;
     },

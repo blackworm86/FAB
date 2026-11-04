@@ -76,7 +76,7 @@ const recap = (text: string): Step => ({ title: 'Recap', text });
 /* ---------------- Lesson 0 · The table ---------------- */
 const L0: Lesson = { topic: 'The table', ref: '', setup: () => { const g = E.newGame(2007, { scenario: 'campaign', fuel: true }); g.phase = 'movement'; g.log = []; return g; }, steps: [
   { title: 'Welcome', text: 'This is <b>The Bulge</b>, December 1944. You play the <b>Germans</b> first: grey blocks, attacking west across the Ardennes. Drag to pan, pinch or scroll to zoom.', look: 23 },
-  { title: 'The steps of a turn', text: 'The top bar shows the steps of a player turn and whose turn it is. <b>Tap the step names.</b>', target: { el: '.c-crumbs', label: 'step names' }, tap: true },
+  { title: 'The steps of a turn', text: 'The top bar shows the steps of a player turn (on a phone: the current one) and whose turn it is. <b>Tap the step names.</b>', target: { el: ['.c-crumbs', '.c-stat .tp'], label: 'step names' }, tap: true },
   { title: 'Five steps', text: '<b>Prepare</b>: resources and chits. <b>Move</b>: blocks move. <b>Fight</b>: battles in contested areas. <b>Breakthrough</b>: reserves and exploiting units move and fight again. <b>Supply</b>: units cut off check morale. Then the Allies play the same five steps.', rule: '3.0 Sequence of play' },
   { title: 'Victory points', text: 'Under the bar, the VP strip: who holds which objectives. <b>Tap it.</b>', target: { el: '.vps', label: 'VP strip' }, done: (_g, q) => q('.vsheet') },
   close('.vsheet [aria-label="Close"]', '.vsheet', 'The VP sheet', 'Each objective, its owner and the net score; from Turn 4 a big enough lead wins at once. <b>Close it.</b>'),
