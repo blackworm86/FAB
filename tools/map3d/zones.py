@@ -10,4 +10,4 @@ for z in (5,6,7):
         for ring in [g.exterior,*g.interiors]:
             c=list(ring.coords);d.append('M'+' L'.join(f'{x:.1f} {y:.1f}' for x,y in c)+'Z')
     out[z]=' '.join(d)
-json.dump(out,open('zones.json','w'));print({k:len(v) for k,v in out.items()})
+json.dump(out,open('/home/user/FAB/data/bulge/zones.json','w'),separators=(',',':'));print({k:len(v) for k,v in out.items()})

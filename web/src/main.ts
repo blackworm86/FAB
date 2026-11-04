@@ -20,6 +20,8 @@ import databaseRules from '../../database.rules.json?raw';
 import { initTouch } from './touch';
 import { throwDice, clearDice, type DiceGroup } from './dice3d';
 import { initTutorial } from './tutorial';
+import { loadRelief, type Relief } from './relief';
+import zonesJson from '../../data/bulge/zones.json';
 
 type MapArea = { id: number; label: [number, number]; polygon: [number, number][] };
 type MapEntry = { letter: string; x: number; y: number; side: E.Side };
@@ -87,7 +89,7 @@ scene.add(new THREE.HemisphereLight(0xeef3ff, 0x2a2622, 1.0));
 const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(-20, 50, 32); sun.castShadow = true;
 sun.shadow.mapSize.set(4096, 4096); Object.assign(sun.shadow.camera, { left: -35, right: 35, top: 35, bottom: -35, far: 200 }); scene.add(sun);
 
-const board = new THREE.Mesh(new THREE.PlaneGeometry(MW / S, MH / S), new THREE.MeshStandardMaterial({ map: null, roughness: 0.9 }));
+const board: THREE.Mesh<THREE.BufferGeometry, THREE.Material> = new THREE.Mesh(new THREE.PlaneGeometry(MW / S, MH / S), new THREE.MeshStandardMaterial({ map: null, roughness: 0.9 }));
 board.rotation.x = -Math.PI / 2; board.receiveShadow = true; scene.add(board);
 /* The board texture is composed in layers: ground and forest, then the area tint (so roads and rivers stay visible), then the line work, then the printed items (numbers, TDN, VP, names), turned to face the player. */
 const boardCv = document.createElement('canvas'); boardCv.width = MW * 2; boardCv.height = MH * 2;
@@ -104,6 +106,45 @@ function pixels(im: HTMLImageElement): CanvasImageSource {
   setTimeout(paintBoard, 120); return im;
 }
 function applyArt() { const mat = board.material as THREE.MeshStandardMaterial; mat.map = boardTex; mat.needsUpdate = true; paintBoard(); }
+/* ---------- 3D map (View › Map): the snowy relief with contour lines, 3D woods and towns; the 2D board stays the default ---------- */
+let map3d = (() => { try { return localStorage.getItem('fab-map3d') === '1'; } catch { return false; } })();
+let REL: Relief | null = null, relLoading = false, focusOn = false;
+const flatGeo = board.geometry, flatMat = board.material as THREE.MeshStandardMaterial, reliefMat = new THREE.MeshStandardMaterial({ map: boardTex, roughness: 0.95 });
+const relArt = new Map<HTMLImageElement, HTMLCanvasElement>();
+/** On the relief the area highlights are painted by the ground itself: a picture of the area numbers, and one colour per area. */
+const areaIdTex = (() => { const d = new Uint8Array(MW * MH * 4);                                   // filled by hand, row by row: a canvas would blend the numbers along the borders
+  for (const a of MAP.areas) { const P = a.polygon, ys = P.map((q) => q[1]);
+    for (let y = Math.max(0, Math.floor(Math.min(...ys))); y <= Math.min(MH - 1, Math.ceil(Math.max(...ys))); y++) { const yc = y + 0.5, xs: number[] = [];
+      for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i], [xj, yj] = P[j]; if ((yi > yc) !== (yj > yc)) xs.push(xi + ((yc - yi) * (xj - xi)) / (yj - yi)); }
+      xs.sort((u, v) => u - v); for (let k = 0; k + 1 < xs.length; k += 2) for (let x = Math.max(0, Math.round(xs[k])); x < Math.min(MW, Math.round(xs[k + 1])); x++) d[((MH - 1 - y) * MW + x) * 4] = a.id; } }
+  const t = new THREE.DataTexture(d, MW, MH); t.magFilter = t.minFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+const tintData = new Uint8Array(128 * 4), tintTex = new THREE.DataTexture(tintData, 128, 1); tintTex.needsUpdate = true;
+const relPixels = (im: HTMLImageElement) => { let c = relArt.get(im); if (!c) { c = document.createElement('canvas'); c.width = boardCv.width; c.height = boardCv.height; c.getContext('2d')!.drawImage(im, 0, 0, c.width, c.height); relArt.set(im, c); } return c; };
+const show3d = () => map3d && !!REL;
+function applyMap3d() {
+  const on = show3d(); board.geometry = on ? REL!.geometry : flatGeo; board.material = on ? reliefMat : flatMat; if (REL) REL.props.visible = on;
+  paintBoard(); paintAreas();
+}
+function setMap3d(on: boolean) {
+  map3d = on; try { localStorage.setItem('fab-map3d', on ? '1' : '0'); } catch { /* storage off */ }
+  if (on && !REL) { if (!relLoading) { relLoading = true; say('Loading the 3D map…'); loadRelief(MW, MH, S, MAP.areas.map((x) => x.label)).then((r) => { REL = r; REL.patch(reliefMat, areaIdTex, tintTex); scene.add(REL.props); applyMap3d(); refresh(); }).catch(() => { relLoading = false; map3d = false; say('The 3D map could not be loaded'); }); } return; }
+  applyMap3d(); refresh();
+}
+/** Everything standing on the map sits on the relief: pieces and markers are raised to the ground under them, flat route drawings follow it vertex by vertex. In the battle close-up the area is shown flat. */
+function settle() {
+  const on = show3d() && !focusOn, key = on ? 1 : 0;
+  for (const grp of [pieces, markers, route, fades]) for (const o of grp.children) {
+    const mesh = o as THREE.Mesh;
+    if (o.position.x === 0 && o.position.z === 0 && mesh.geometry) {                           // drawn in world coordinates (route arrows, supply line)
+      const gm = mesh.geometry, pa = gm.getAttribute('position') as THREE.BufferAttribute; if (gm.userData.lk === key) continue;
+      const off: Float32Array = gm.userData.off ?? new Float32Array(pa.count);
+      for (let k = 0; k < pa.count; k++) { const nv = on ? REL!.h(pa.getX(k), pa.getZ(k)) : 0; pa.setY(k, pa.getY(k) - off[k] + nv); off[k] = nv; }
+      gm.userData.off = off; gm.userData.lk = key; pa.needsUpdate = true; continue;
+    }
+    const L = on ? REL!.h(o.position.x, o.position.z) : 0, prev = (o.userData.lift as number | undefined) ?? 0;
+    if (L !== prev) { o.position.y += L - prev; o.userData.lift = L; }
+  }
+}
 const table = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({ color: 0x3b2a1d, roughness: 1 }));
 table.rotation.x = -Math.PI / 2; table.position.y = -0.02; scene.add(table);
 
@@ -343,13 +384,20 @@ function sharedBorder(a: number, b: number): [number, number][] {
 function paintBoard() {
   if (!baseImg.naturalWidth || !linesImg.naturalWidth) return;
   const c = boardCv.getContext('2d')!, k = 2; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, boardCv.width, boardCv.height);
-  c.drawImage(pixels(baseImg), 0, 0, boardCv.width, boardCv.height);
+  const r3 = show3d() ? REL : null;
+  c.drawImage(r3 ? relPixels(r3.snow) : pixels(baseImg), 0, 0, boardCv.width, boardCv.height);
   if (tint !== 'off' && tint !== 'supply') {
     c.save(); c.scale(k, k); c.globalAlpha = 0.6;
     for (const a of MAP.areas) { c.beginPath(); a.polygon.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fillStyle = hex6(tintOf(a.id)); c.fill(); }
     c.restore();
   }
-  c.drawImage(pixels(linesImg), 0, 0, boardCv.width, boardCv.height);
+  if (r3) { c.drawImage(relPixels(r3.lines), 0, 0, boardCv.width, boardCv.height); c.drawImage(relPixels(r3.borders), 0, 0, boardCv.width, boardCv.height); }
+  else c.drawImage(pixels(linesImg), 0, 0, boardCv.width, boardCv.height);
+  {                                                                                              // the three German army zones: a dashed line in the zone's colour just inside it
+    c.save(); c.scale(k, k); c.lineWidth = 2.6; c.lineJoin = 'round'; c.setLineDash([9, 5]);
+    for (const [z, d] of Object.entries(zonesJson as Record<string, string>)) { c.strokeStyle = hex6(ZONE_COL[+z]); c.stroke(new Path2D(d)); }
+    c.restore();
+  }
   {
     c.save(); c.scale(k, k);
     for (const [a, b] of RESTRICTED) drawRestricted(c, sharedBorder(a, b));
@@ -360,6 +408,7 @@ function paintBoard() {
   boardTex.needsUpdate = true;
 }
 applyArt();
+if (map3d) setTimeout(() => { map3d = false; setMap3d(true); }, 0);           // a saved choice of the 3D map: loaded once the game is up
 /** Supply overlay: your own side (or the Phasing Player when you play both); computed once per refresh. */
 const supplySide = (): E.Side => online.mySide() ?? g.phasing;
 let supCache = new Map<string, boolean>(), supKey = '';
@@ -379,7 +428,8 @@ function paintAreas() {
     if (ret.has(id)) { c = 0x37d67a; o = 0.5; }
     if (tint === 'supply' && !g.battle && o === 0 && !tgt) { const sd = supplySide(), mine2 = g.control[id] === sd; if (mine2) { if (supOk(sd, id)) { c = sd === 'german' ? 0x6fb7ff : 0x9bd35a; o = 0.36; } else { c = 0xd1432f; o = 0.58; } } }
     if (g.inPlay && !g.inPlay.includes(id)) { if (g.supplyOnly?.includes(id)) { c = 0x1d2a45; o = 0.5; } else { c = 0x000000; o = 0.62; } }      // Cold Shoulder: Zone 5 carries supply only (P.6)                                   // 24.33 outside the Introductory map sheet
-    mat.color.setHex(c); mat.opacity = o;
+    mat.color.setHex(c); mat.opacity = o; m.visible = o > 0 && !show3d();                           // a clear overlay is not drawn at all; on the relief the ground paints it
+    tintData.set([mat.color.r * 255, mat.color.g * 255, mat.color.b * 255, o * 255], id * 4); tintTex.needsUpdate = true;
   }
 }
 
@@ -409,7 +459,7 @@ function pick(e: PointerEvent) {
   return { unit: hitPiece?.object.userData.unit as string | undefined, chit: hitPiece?.object.userData.chit as string | undefined, area: areaAt(ray) };
 }
 function areaAt(ray: THREE.Raycaster): number | null {
-  const hitBoard = ray.intersectObject(board)[0];
+  const hitBoard = show3d() ? (() => { const p = REL!.hit(ray.ray); return p ? { point: p } : undefined; })() : ray.intersectObject(board)[0];
   let area: number | null = null;
   if (hitBoard) { const px = (hitBoard.point.x + MW / (2 * S)) * S, py = (hitBoard.point.z + MH / (2 * S)) * S; area = MAP.areas.find((a) => inside(px, py, a.polygon))?.id ?? null; if (area != null && g.inPlay && !g.inPlay.includes(area)) area = null; }
   return area;
@@ -754,7 +804,7 @@ function focusGeometry(id: number) {
 const inPoly = (x: number, z: number, pts: THREE.Vector3[]) => { let c = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { if ((pts[i].z > z) !== (pts[j].z > z) && x < ((pts[j].x - pts[i].x) * (z - pts[i].z)) / (pts[j].z - pts[i].z) + pts[i].x) c = !c; } return c; };
 /** Second pass: only the battle area and what stands in it, on a transparent canvas laid over the blurred one. */
 function renderFocus() {
-  const b = g.battle, on = !!b && !reinforcing && b.stage !== 'retreat';              // choosing where to retreat needs the neighbouring areas sharp
+  const b = g.battle, on = !!b && !reinforcing && b.stage !== 'retreat'; focusOn = on;              // choosing where to retreat needs the neighbouring areas sharp
   canvas.classList.toggle('blurred', on); canvas2.style.display = on ? 'block' : 'none';
   if (!on) return;
   if (!renderer2) { renderer2 = new THREE.WebGLRenderer({ canvas: canvas2, antialias: true, alpha: true }); renderer2.setPixelRatio(Math.min(2, devicePixelRatio)); }
@@ -763,7 +813,7 @@ function renderFocus() {
   (focusMesh.material as THREE.MeshStandardMaterial).map = (board.material as THREE.MeshStandardMaterial).map; (focusMesh.material as THREE.MeshStandardMaterial).needsUpdate = true;
   const poly = areaWorld(b!.area), hidden: THREE.Object3D[] = [], bg = scene.background;
   const hide = (o: THREE.Object3D) => { if (o.visible) { o.visible = false; hidden.push(o); } };
-  hide(board); hide(table); for (const [id, m] of overlays) if (id !== b!.area) hide(m);
+  hide(board); hide(table); if (REL) hide(REL.props); for (const [id, m] of overlays) if (id !== b!.area || show3d()) hide(m);         // the close-up is flat: a tint draped on the relief would float above it
   for (const grp of [pieces, markers]) for (const o of grp.children) { const a = o.userData.anchor ? pieces.children.find((x) => x.userData.unit === o.userData.anchor) : null, q = a ?? o, uid = (q.userData.unit ?? q.userData.anchor) as string | undefined, cid = q.userData.chit as string | undefined;
     const ofBattle = (uid && g.units.find((u) => u.id === uid)?.area === b!.area) || (cid && (b!.assets.german.includes(cid) || b!.assets.allied.includes(cid) || b!.air.german?.id === cid || b!.air.allied?.id === cid));      // the battle formation may reach past the border: keep it sharp
     if (!ofBattle && !inPoly(q.position.x, q.position.z, poly)) hide(o); }      // a marker follows the piece it belongs to
@@ -1435,7 +1485,7 @@ function layersHtml() {
   const lay = (k: 'numbers' | 'tdn' | 'vp' | 'names', icon: string, title: string) => chip('', layers[k], () => { layers[k] = !layers[k]; relayer(); }, title, icon);
   return `<div class="modal"><div class="sheet slim"><h3>${ico('eye')} View <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
     <h4>Printed</h4><div class="chips">${lay('numbers', 'hash', 'Area numbers and entry letters')}${lay('tdn', 'tree', 'Terrain defence number')}${lay('vp', 'star', 'Victory points')}${lay('names', 'text', 'Place names')}</div>
-    <h4>Colour</h4><div class="chips">${tintBtn('off', '', 'close', 'No colour')}${tintBtn('tdn', '', 'tree', 'Terrain defence')}${tintBtn('zones', '', 'layers', 'Army zones')}${tintBtn('control', '', 'flag', 'Who holds each area')}${tintBtn('supply', '', 'fuel', 'Supply: which of your areas trace supply')}</div><h4>Camera</h4><div class="row"><button data-home>${ico('home')} Reset the camera</button></div></div></div>`;
+    <h4>Colour</h4><div class="chips">${tintBtn('off', '', 'close', 'No colour')}${tintBtn('tdn', '', 'tree', 'Terrain defence')}${tintBtn('zones', '', 'layers', 'Army zones')}${tintBtn('control', '', 'flag', 'Who holds each area')}${tintBtn('supply', '', 'fuel', 'Supply: which of your areas trace supply')}</div><h4>Map</h4><div class="chips">${chip('2D', !map3d, () => setMap3d(false), 'The printed board, flat')}${chip('3D', map3d, () => setMap3d(true), 'The snowy Ardennes in relief, with contour lines, woods and towns')}</div><h4>Camera</h4><div class="row"><button data-home>${ico('home')} Reset the camera</button></div></div></div>`;
 }
 /** The game log, newest first, grouped by turn; each line tinted by the side it concerns. */
 /** A log line with its side prefix (GE / AL) as a coloured tag: side shown by colour and name. */
@@ -1568,9 +1618,9 @@ function frame() {
   if (canvas.width !== Math.round(r.width * renderer.getPixelRatio())) { renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; cam.updateProjectionMatrix(); }
   if (goal) { const k = goal.fast ? 0.28 : 0.1; target.lerp(goal.t, k); dist += (goal.dist - dist) * k; pitch += (goal.pitch - pitch) * k; if (target.distanceTo(goal.t) < 0.05 && Math.abs(dist - goal.dist) < 0.1) goal = null; }
   if (lock && !goal) target.copy(lock.c);
-  if (!CALM) { const t = performance.now() / 1000; for (const k of markers.children) { const f = k.userData.float; if (f) { k.position.y = f.y + Math.sin(t * 1.6 + f.ph) * 0.07; k.rotation.y = viewRot() + Math.sin(t * 0.9 + f.ph) * 0.22; } } }   // a slow 4 s bob and 7 s sway, each marker out of step
+  if (!CALM) { const t = performance.now() / 1000; for (const k of markers.children) { const f = k.userData.float; if (f) { k.position.y = f.y + ((k.userData.lift as number | undefined) ?? 0) + Math.sin(t * 1.6 + f.ph) * 0.07; k.rotation.y = viewRot() + Math.sin(t * 0.9 + f.ph) * 0.22; } } }   // a slow 4 s bob and 7 s sway, each marker out of step
   { const old = Math.round(clearRatio * 5); clearRatio = fitBattleView(); if (g.battle && Math.round(clearRatio * 5) !== old) syncBattleCam(); }
-  placeCam(); runAnims(); renderer.render(scene, cam); renderFocus(); placeBadges();
+  placeCam(); runAnims(); settle(); renderer.render(scene, cam); renderFocus(); placeBadges();
 }
 SBU.initSandboxUi({
   get g() { return g; }, set g(v) { g = v; }, get selUnit() { return selUnit; }, set selUnit(v) { selUnit = v; }, get selChit() { return selChit; }, set selChit(v) { selChit = v; },
@@ -1628,4 +1678,4 @@ function sheets() {
   for (const m of ['X', 'FW', 'RA', 'RB', 'DIS', 'REC', 'E', 'B', 'P', 'R5', 'R6', 'R7', 'A7', 'A56', 'GI', 'G', 'OOS', 'AIR']) add('markers', m, m, mapMarkerSvg(m));
   return out;
 }
-if (DEV || SANDBOX) Object.assign(window, { __fab: { unitAt: (id: string) => { const m = pieces.children.find((o) => o.userData.unit === id || o.userData.chit === id); if (!m) return null; const r = canvas.getBoundingClientRect(), v = m.getWorldPosition(new THREE.Vector3()).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, game: () => g, setGame: (x: E.Game) => { g = x; hist.clear(); save(); refresh(); }, at: (a: number) => { const p = center(a), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(p.x, 0, p.z).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, project: (x: number, y: number, z: number) => { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height }; }, online, setMatches: (m: Match[]) => { matches = m; }, iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets, setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, board: () => boardCv.toDataURL("image/png"), layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
+if (DEV || SANDBOX) Object.assign(window, { __fab: { unitAt: (id: string) => { const m = pieces.children.find((o) => o.userData.unit === id || o.userData.chit === id); if (!m) return null; const r = canvas.getBoundingClientRect(), v = m.getWorldPosition(new THREE.Vector3()).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, game: () => g, setGame: (x: E.Game) => { g = x; hist.clear(); save(); refresh(); }, at: (a: number) => { const p = center(a), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(p.x, 0, p.z).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, project: (x: number, y: number, z: number) => { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height }; }, online, setMatches: (m: Match[]) => { matches = m; }, iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets, setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, rel: () => ({ tris: renderer.info.render.triangles, calls: renderer.info.render.calls, trees: (REL?.props.children[0] as THREE.InstancedMesh | undefined)?.count }), board: () => boardCv.toDataURL("image/png"), layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
