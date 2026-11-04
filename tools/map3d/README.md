@@ -6,7 +6,7 @@ Offline build of the low-poly relief described in docs/PLAN-3D-MAP.md. Run from 
 2. `python3 geo.py`: thin-plate-spline warp from 44 towns (game label → real lon/lat), real elevation for every map pixel (`real.npy`).
 3. `node raster.cjs`: woods, rivers, roads, towns, borders masks from the map SVGs. `node cap.cjs` / `node cap2.cjs`: the printed board and the transparent printed layer from the running dev server (`?sandbox=1`, uses `__fab.board()`).
 4. `python3 shape.py`: game shaping (TDN scales the relief, rivers cut valleys, Schnee Eifel ridge) and the region crop.
-5. `node borders.cjs`, then the borders.png step in its header comment (area border masks).
+5. `node borders.cjs` then `python3 borders.py`: area border masks (drawn by the page in its own style, so they never look like roads).
 6. `python3 pack.py`: embeds everything into `ardennes-relief.html` (from `page.html`).
 
 Elevation data: Mapzen Terrarium tiles (AWS open data). Nothing generated here is committed.
