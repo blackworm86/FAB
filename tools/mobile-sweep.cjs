@@ -1,6 +1,7 @@
 // One pass over every screen on a phone: screenshot + automatic checks (overflow, small tap targets, panels overlapping the bottom bar).
 const {chromium,devices}=require('playwright');const fs=require('fs');
-const DEV=process.argv[2]||'iPhone 13', O=(process.argv[3]||'sweep-out')+'/';// usage: (dev server on :5199) NODE_PATH=$(npm root -g) node tools/mobile-sweep.cjs 'iPhone 13' out-dirfs.mkdirSync(O,{recursive:true});
+const DEV=process.argv[2]||'iPhone 13', O=(process.argv[3]||'sweep-out')+'/';// usage: (dev server on :5199) NODE_PATH=$(npm root -g) node tools/mobile-sweep.cjs 'iPhone 13' out-dir
+fs.mkdirSync(O,{recursive:true});
 const out=[];
 (async()=>{const b=await chromium.launch();const ctx=await b.newContext({...devices[DEV]});const p=await ctx.newPage();
  p.on('pageerror',e=>out.push('PAGE ERROR '+e.message));
