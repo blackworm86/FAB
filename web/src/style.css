@@ -570,3 +570,13 @@ body:has(.hotcover) #leaders, body:has(.hotcover) #fx, body:has(.hotcover) #mark
 @media (max-width: 700px) { .c-bar.b .turnchip { vertical-align: 1px; margin-right: 6px; } }
 @media (max-width: 700px) { .c-hand { height: 84px !important; padding-bottom: 6px !important; box-sizing: border-box; } .handtab { margin-bottom: 4px; } }
 @media (max-width: 700px) { .c-bar.b { grid-template-columns: minmax(0, 1fr) 44px 178px !important; } .c-bar.b .go, .c-bar.b .gowait { width: 178px; max-width: 178px !important; font-size: 12.5px !important; letter-spacing: .04em; padding-inline: 8px !important; } .c-ledger .engch { margin: 2px 0 8px; } }
+/* phones, battle set-up: a lower hand so the battle keeps the screen */
+@media (max-width: 700px) {
+  .stage:has(.c-table) ~ .dock .c-hand { height: 70px !important; padding-top: 4px !important; }
+  .stage:has(.c-table) ~ .dock .card2 { width: 54px !important; height: 54px !important; }
+  .stage:has(.c-table) ~ .dock .handtab { justify-content: flex-end; padding-inline: 8px !important; margin-bottom: 0; }
+  .stage:has(.c-table) ~ .dock .handtab button { min-height: 30px !important; min-width: 36px !important; }
+}
+@media (max-width: 700px) { body.guide-short .engch { display: flex; align-items: center; gap: 8px; } body.guide-short .engch .row { margin-top: 0; flex: 1; } body.guide-short .engch .row button { min-height: 34px; font-size: 11.5px; } }
+@media (max-width: 700px) { body.guide-short .engch .row { flex-direction: row !important; flex-wrap: nowrap !important; } body.guide-short .engch .row button { flex: 1 1 0; width: auto !important; } body.guide-short .engch > b { white-space: nowrap; } }
+@media (max-width: 700px) { body.guide-short .engch { white-space: nowrap; font-size: 12px; } body.guide-short .engch .row button { white-space: nowrap; padding-inline: 6px; } }
