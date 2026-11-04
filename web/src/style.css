@@ -672,3 +672,22 @@ button.go:disabled { background: #2a2d22; color: #8d9065; box-shadow: none; opac
 .vtb i { font-size: 10.5px !important; }
 .m2[role=button] { position: relative; min-height: 20px; } .m2[role=button]::after { content: ""; position: absolute; inset: -8px -2px; }     /* a finger-sized tap area around the small chip */
 .c-vs .big small.xs { display: inline !important; }
+
+/* home: the war-room table behind, a shelf of box covers (our own artwork) to choose the FAB volume */
+.homepage { background-color: #0b0d08; background-size: cover; background-position: center; }
+.homein { width: min(780px, 100%); }
+.homein .card { background: #12150ef0; box-shadow: 0 10px 24px #000a; }
+.homein h2.sec { margin: 6px 0 -4px; font: 600 13px var(--sfd); letter-spacing: .16em; text-transform: uppercase; color: #8d9065; }
+.shelf { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.cover { position: relative; display: block; text-align: left; padding: 0 !important; border: 1px solid #000 !important; background: #111; overflow: hidden; cursor: pointer; aspect-ratio: 3 / 4; box-shadow: 0 12px 26px #000c; color: #fff; min-height: 0 !important; }
+.cover svg.art { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cover .band { position: absolute; left: 0; right: 0; top: 0; padding: 8px 10px 6px; background: linear-gradient(#000d, #0000); }
+.cover .band small { display: block; font: 600 10px var(--sfd); letter-spacing: .22em; opacity: .85; }
+.cover .band b { display: block; font: 700 clamp(20px, 4vw, 32px)/0.95 var(--sfd); letter-spacing: .04em; text-transform: uppercase; text-shadow: 0 2px 6px #000; }
+.cover .foot { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 10px; background: linear-gradient(#0000, #000e); display: flex; justify-content: space-between; align-items: end; gap: 6px; font-size: 11px; }
+.cover .foot > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cover .cst { font: 700 11px var(--sfd); letter-spacing: .12em; text-transform: uppercase; padding: 2px 7px; border: 1px solid currentColor; flex: none; } .cover .cst.ready { color: var(--gold); } .cover .cst.soon { color: #c9c4a6; }
+.cover[aria-pressed=true] { outline: 3px solid var(--gold); outline-offset: 3px; } .cover:hover:not([aria-pressed=true]) { outline: 1px solid #e7b04a88; outline-offset: 3px; }
+.cover.soon svg { filter: saturate(.75) brightness(.85); }
+.soonbox { border-style: dashed !important; }
+@media (max-width: 600px) { .shelf { grid-template-columns: repeat(3, 42%); overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 4px 8px; margin: 0 -4px; } .shelf .cover { scroll-snap-align: start; } .shelf .cover .foot > span:first-child { display: none; } .shelf .cover .foot { justify-content: flex-end; } }
