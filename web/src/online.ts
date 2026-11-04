@@ -6,7 +6,7 @@ import { rtdbStore } from './store-rtdb';
 
 export interface Seats { german?: string | null; allied?: string | null; germanName?: string | null; alliedName?: string | null }
 /** A game as listed in the lobby: who made it, which game and rules, who sits where. */
-export interface Match { id: string; game: string; title: string; opts: { scenario: string; fuel: boolean; airborne?: boolean }; owner: string; members: string[]; germanName?: string; alliedName?: string; created: number }
+export interface Match { id: string; game: string; title: string; opts: { scenario: string; fuel: boolean; airborne?: boolean }; owner: string; members: string[]; germanName?: string; alliedName?: string; created: number; /** whose move it is: my move, turn and step, read from the shared state */ myMove?: boolean; turn?: number; step?: string }
 export interface Account { uid: string; name: string; email: string; guest: boolean; admin: boolean }
 /** The shared game as the store hands it over: a revision counter and the game as JSON. */
 /** One chat message: written only by a seated player, signed with their own account and side. */

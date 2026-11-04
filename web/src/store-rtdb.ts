@@ -108,16 +108,24 @@ export async function rtdbStore(table: string): Promise<Store | null> {
     /** The games on my list, each joined with its meta and seat names; a game that no longer exists drops off. */
     watchMyMatches: (next, err) => {
       if (account.guest) { next([]); return; }
-      const rows = new Map<string, { meta?: Record<string, unknown>; names?: Record<string, string>; stop: () => void }>();
-      const emit = () => next([...rows.entries()].filter(([, r]) => r.meta).map(([id, r]) => ({ id, game: String(r.meta!.game ?? 'bulge'), title: String(r.meta!.title ?? id), opts: (r.meta!.opts ?? { scenario: 'tournament', fuel: true }) as Match['opts'], owner: String(r.meta!.owner ?? ''), members: [], germanName: r.names?.german, alliedName: r.names?.allied, created: Number(r.meta!.created ?? 0) })).sort((a, b) => b.created - a.created));
+      type Row = { meta?: Record<string, unknown>; names?: Record<string, string>; seats?: Record<string, string>; f?: Record<string, string>; stop: () => void };
+      const rows = new Map<string, Row>();
+      /** Who must act, from a few top-level fields of the shared state (not the whole game): mirrors the engine's actorOf. */
+      const move = (r: Row) => { const f = r.f, P = (k: string) => { try { return f?.[k] ? JSON.parse(f[k]) : null; } catch { return null; } }; if (!f || P('over')) return {}; const phase = P('phase') as string, phasing = P('phasing') as Side, b = P('battle') as { stage: string; attacker: Side } | null, oth = (x: Side): Side => (x === 'german' ? 'allied' : 'german');
+        const actor = P('pendingBlow') ? 'both' : b ? (b.stage === 'setup' ? 'both' : ['defArty', 'defFire', 'defChoice', 'retreat'].includes(b.stage) ? oth(b.attacker) : b.attacker) : phase === 'admin' || phase === 'reinforcement' ? 'both' : phase === 'reaction' ? oth(phasing) : phasing;
+        const mySides = (['german', 'allied'] as Side[]).filter((x) => r.seats?.[x] === account.uid), other = r.seats && Object.keys(r.seats).length === 2;
+        return { myMove: !!other && mySides.length > 0 && (actor === 'both' || mySides.includes(actor as Side)), turn: Number(P('turn') ?? 0) || undefined, step: phase ?? undefined }; };
+      const emit = () => next([...rows.entries()].filter(([, r]) => r.meta).map(([id, r]) => ({ id, game: String(r.meta!.game ?? 'bulge'), title: String(r.meta!.title ?? id), opts: (r.meta!.opts ?? { scenario: 'tournament', fuel: true }) as Match['opts'], owner: String(r.meta!.owner ?? ''), members: [], germanName: r.names?.german, alliedName: r.names?.allied, created: Number(r.meta!.created ?? 0), ...move(r) })).sort((a, b) => b.created - a.created));
       rt.onValue(R(`users/${account.uid}/games`), (s) => {
         const ids = new Set(Object.keys(s.val() ?? {}));
         for (const [id, r] of rows) if (!ids.has(id)) { r.stop(); rows.delete(id); }
         for (const id of ids) if (!rows.has(id)) {
-          const row: { meta?: Record<string, unknown>; names?: Record<string, string>; stop: () => void } = { stop: () => undefined }; rows.set(id, row);
+          const row: Row = { stop: () => undefined }; rows.set(id, row);
           const u1 = rt.onValue(R(`games/${id}/meta`), (m) => { if (!m.exists()) { void rt.remove(R(`users/${account.uid}/games/${id}`)); } row.meta = m.val() ?? undefined; emit(); }, () => undefined);
           const u2 = rt.onValue(R(`games/${id}/seatNames`), (n) => { row.names = n.val() ?? {}; emit(); }, () => undefined);
-          row.stop = () => { u1(); u2(); };
+          const u3 = rt.onValue(R(`games/${id}/seats`), (n) => { row.seats = n.val() ?? {}; emit(); }, () => undefined);
+          const fs: Record<string, string> = {}, u4 = ['phase', 'phasing', 'battle', 'pendingBlow', 'turn', 'over'].map((k) => rt.onValue(R(`games/${id}/state/f/${k}`), (n) => { const v = n.val(); if (v == null) delete fs[k]; else fs[k] = v; row.f = { ...fs }; emit(); }, () => undefined));
+          row.stop = () => { u1(); u2(); u3(); u4.forEach((x) => x()); };
         }
         emit();
       }, (e) => err(msg(e)));

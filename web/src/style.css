@@ -691,3 +691,7 @@ button.go:disabled { background: #2a2d22; color: #8d9065; box-shadow: none; opac
 .cover.soon svg { filter: saturate(.75) brightness(.85); }
 .soonbox { border-style: dashed !important; }
 @media (max-width: 600px) { .shelf { grid-template-columns: repeat(3, 42%); overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 4px 8px; margin: 0 -4px; } .shelf .cover { scroll-snap-align: start; } .shelf .cover .foot > span:first-child { display: none; } .shelf .cover .foot { justify-content: flex-end; } }
+
+/* home: a table waiting for your move carries the page's one red action */
+.matchrow.yours { flex-wrap: wrap; } .matchrow .resume { flex: 1 0 100%; min-height: 46px; font-size: 16px; }
+.stampy { margin-left: 10px; font: 700 11px var(--sfd); letter-spacing: .14em; text-transform: uppercase; color: var(--red); border: 1px solid currentColor; padding: 1px 6px; vertical-align: 3px; }
