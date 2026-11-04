@@ -617,7 +617,7 @@ async function chatSend(text: string) { const e = await sendChat(text); if (e) {
 function chatBtn() { if (!chatOn()) return ''; const n = unread(); return `<button class="ico chatbtn ${chatOpen ? 'on' : ''}" data-ui="${reg(() => { chatOpen = !chatOpen; if (chatOpen) markSeen(); })}" title="Chat" aria-label="Chat${n ? `, ${n} new` : ''}">${ico('chat')}${n ? `<i class="unread">${n > 9 ? '9+' : n}</i>` : ''}<span class="bl">Chat</span></button>`; }
 function chatRows() {
   const time = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  return online.chat.map((m) => `<div class="cm ${m.side} ${m.uid === online.uid ? 'me' : ''}"><small>${m.name && m.name.toLowerCase() !== m.side ? `<b>${esc(m.name)}</b> · ` : ''}${nm(m.side)} · ${time(m.t)}</small><p>${esc(m.text)}</p></div>`).join('') || '<p class="hint">No messages yet.</p>';
+  return online.chat.map((m) => `<div class="cm ${m.side} ${m.uid === online.uid ? 'me' : ''}"><small>${m.name && m.name.toLowerCase() !== m.side ? `<b>${esc(m.name)}</b> · ` : ''}<span class="sd">${nm(m.side)}</span> · ${time(m.t)}</small><p>${esc(m.text)}</p></div>`).join('') || '<p class="hint">No messages yet.</p>';
 }
 function chatHtml() {
   if (!chatOn() || !chatOpen) return '';
@@ -1501,11 +1501,17 @@ function layersHtml() {
 /** The game log, newest first, grouped by turn; each line tinted by the side it concerns. */
 /** A log line with its side prefix (GE / AL) as a coloured tag: side shown by colour and name. */
 const sideTag = (x: string) => { const m = /^(GE|AL)\b ?/.exec(x); return m ? `<b class="stag ${m[1] === 'GE' ? 'german' : 'allied'}">${m[1]}</b> ${esc(x.slice(m[0].length))}` : esc(x); };
+const STEP_NAME: Record<string, string> = { reinforcement: 'Reinforcement', admin: 'Admin', movement: 'Movement', strategic: 'Strategic movement', combat: 'Combat', reaction: 'Reaction', btMove: 'Breakthrough movement', btCombat: 'Breakthrough combat', supply: 'Supply' };
+/** The game log, newest first: a heading per turn, a smaller one per step, each line with its side tag (the step is in the heading, not on the line). */
 function logHtml() {
-  const groups: { turn: string; lines: string[] }[] = [];
-  for (const l of g.log) { const m = /^T(\d+) /.exec(l), t = m ? m[1] : '0', text = m ? l.slice(m[0].length) : l; if (groups.at(-1)?.turn !== t) groups.push({ turn: t, lines: [] }); groups.at(-1)!.lines.push(text); }
+  const groups: { turn: string; steps: { step: string; lines: string[] }[] }[] = [];
+  for (const l of g.log) {
+    const m = /^T(\d+) /.exec(l), t = m ? m[1] : '0', rest = m ? l.slice(m[0].length) : l, s = /^(GE|AL) (\w+): /.exec(rest), step = s && STEP_NAME[s[2]] ? s[2] : '', text = step ? `${s![1]} ${rest.slice(s![0].length)}` : rest;
+    if (groups.at(-1)?.turn !== t) groups.push({ turn: t, steps: [] });
+    const gr = groups.at(-1)!; if (gr.steps.at(-1)?.step !== step) gr.steps.push({ step, lines: [] }); if (!/^(GE|AL) (phase start|[a-zA-Z]+ phase)$/.test(text)) gr.steps.at(-1)!.lines.push(text);   /* the heading already says which step began */
+  }
   const side = (x: string) => (/^(GE|German)\b/.test(x) ? 'german' : /^(AL|Allied)\b/.test(x) ? 'allied' : '');
-  return `<div class="log">${groups.reverse().map((gr) => `<h5>${gr.turn === '0' ? 'Set-up' : `Turn ${gr.turn}`}</h5>${[...gr.lines].reverse().map((x) => `<div class="ll ${side(x)}">${sideTag(x)}</div>`).join('')}`).join('') || '<p class="hint">Nothing yet.</p>'}</div>`;
+  return `<div class="log">${groups.reverse().map((gr) => `<h5>${gr.turn === '0' ? 'Set-up' : `Turn ${gr.turn}`}</h5>${[...gr.steps].reverse().map((st) => `${st.step ? `<h6>${STEP_NAME[st.step]}</h6>` : ''}${[...st.lines].reverse().map((x) => `<div class="ll ${side(x)}">${sideTag(x)}</div>`).join('')}`).join('')}`).join('') || '<p class="hint">Nothing yet.</p>'}</div>`;
 }
 function modalHtml() {
   if (modal === 'layers') return layersHtml();
@@ -1561,6 +1567,10 @@ function renderInner() {
   bind(ui, keepH, keepA);
 }
 function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
+  ui.querySelectorAll<HTMLElement>('.dchips').forEach((row) => {                                  // a row of chips that runs off the right edge fades there, so it reads as "more to the right"
+    const edge = () => row.classList.toggle('more', row.scrollLeft + row.clientWidth < row.scrollWidth - 2);
+    edge(); row.addEventListener('scroll', edge, { passive: true });
+  });
   { const h = ui.querySelector<HTMLElement>('.c-hand'), a = ui.querySelector<HTMLElement>('.arrtray'); if (h) h.scrollLeft = keepH; if (a) a.scrollLeft = keepA; }
   ui.querySelectorAll<HTMLElement>('[data-ui]').forEach((e) => (e.onclick = () => { acts[e.dataset.ui!]?.(); render(); }));            // view-only choices: allowed for everyone, never touch the game
   ui.querySelectorAll<HTMLElement>('[data-do]').forEach((e) => (e.onclick = () => { if (inGame()) act(acts[e.dataset.do!]); else { acts[e.dataset.do!]?.(); render(); } }));        // on the home page nothing is a game move
