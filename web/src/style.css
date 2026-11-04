@@ -695,3 +695,24 @@ button.go:disabled { background: #2a2d22; color: #8d9065; box-shadow: none; opac
 /* home: a table waiting for your move carries the page's one red action */
 .matchrow.yours { flex-wrap: wrap; } .matchrow .resume { flex: 1 0 100%; min-height: 46px; font-size: 16px; }
 .stampy { margin-left: 10px; font: 700 11px var(--sfd); letter-spacing: .14em; text-transform: uppercase; color: var(--red); border: 1px solid currentColor; padding: 1px 6px; vertical-align: 3px; }
+
+/* phones: the volumes as box spines stacked on a shelf (our own design, each in its volume's colour); the pulled-out box is the chosen one */
+.spines { display: none; }
+@media (max-width: 600px) {
+  .shelf { display: none !important; }
+  .spines { display: grid; gap: 3px; padding: 6px 0 10px; border-bottom: 6px solid #3a2a1c; box-shadow: 0 8px 12px -6px #000; }
+  .spine { position: relative; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 12px; height: 58px; padding: 0 12px 0 7px !important; margin-right: var(--off); border: 0 !important; text-align: left; color: #fff; cursor: pointer;
+    box-shadow: inset 0 2px 0 #ffffff26, inset 0 -3px 0 #0006, 0 2px 3px #000a; transition: transform .25s cubic-bezier(.16, 1, .3, 1); }
+  .spine .thumb { width: 44px; height: 44px; overflow: hidden; position: relative; border: 1px solid #0008; box-shadow: 0 0 0 1px #ffffff22; }
+  .spine .thumb svg { position: absolute; left: 0; top: -12px; width: 44px; height: 59px; }
+  .spine .tt small { display: block; font: 600 10px var(--sfd); letter-spacing: .22em; opacity: .8; }
+  .spine .tt b { display: block; font: 700 24px/1 var(--sfd); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .spine .cst { font: 700 11px var(--sfd); letter-spacing: .12em; text-transform: uppercase; padding: 2px 7px; border: 1px solid currentColor; }
+  .spine .cst.ready { color: var(--gold); } .spine .cst.soon { color: #ffffffb0; }
+  .sp-bulge { background: linear-gradient(90deg, #161616, #0d0d0d 60%, #1c1c1c); } .sp-bulge .tt b { color: #f2f0e6; }
+  .sp-sicily { background: linear-gradient(90deg, #9e2a22, #7f1d17 60%, #a3322a); } .sp-sicily .tt b { color: #fff3e0; }
+  .sp-golan73 { background: linear-gradient(90deg, #7b7046, #625934 60%, #82764a); } .sp-golan73 .tt b { color: #f6f0d8; }
+  .spine[aria-pressed=true] { transform: translateX(-4px) scale(1.015); outline: 2px solid var(--gold); outline-offset: 2px; z-index: 1; }
+  .spine.soon .thumb { filter: saturate(.7) brightness(.85); }
+}
+@media (prefers-reduced-motion: reduce) { .spine { transition: none; } }
