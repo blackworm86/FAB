@@ -10,7 +10,7 @@ import { vpStrip, vpSheet, endPanel } from './score';
 import * as SBU from './sandbox-ui';
 import { online, startOnline, push, sit, sendChat, setChatListener, type ChatMsg, setDevSeat, auth, lobby, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, SANDBOX, TUTORIAL, type DevSeat, type Match } from './online';
 import { gameInfo, GAMES } from './games';
-import { coverArt } from './covers';
+import { coverArt, BOXES, boxFront, boxSpine } from './covers';
 import { ICONS, ico } from './icons';
 import { esc, nm } from './util';
 import { drawItems as drawAreaItems, drawEntry, drawRestricted } from './board-art';
@@ -1482,8 +1482,10 @@ const tutCard = () => `<section class="card tutcard"><div class="lh"><h2>${ico('
 const WHEN: Record<string, string> = { bulge: 'Ardennes · Dec 1944 – Jan 1945', sicily: 'Operation Husky · July – August 1943', golan73: 'Golan Heights · October 1973' };
 /** The shelf: one box cover per FAB volume; tapping one shows that volume's tables (option A of the home mockup). */
 function shelfHtml() {
-  const spines = `<div class="spines" role="group" aria-label="Choose a battle">${GAMES.map((x, i) => `<button class="spine sp-${x.id} ${x.ready ? '' : 'soon'}" style="--off:${[0, 10, 4][i] ?? 0}px" aria-pressed="${form.game === x.id}" data-ui="${reg(() => { form.game = x.id; creating = false; })}" aria-label="${esc(x.name)}, ${x.ready ? 'ready to play' : 'in preparation'}"><span class="thumb">${coverArt(x.id)}</span><span class="tt"><small>FAB · ${esc(x.vol.toUpperCase())}</small><b>${esc(x.name)}</b></span><span class="cst ${x.ready ? 'ready' : 'soon'}">${x.ready ? 'Play' : 'Soon'}</span></button>`).join('')}</div>`;
-  return `<h2 class="sec">Choose a battle</h2>${spines}<div class="shelf">${GAMES.map((x) => `<button class="cover ${x.ready ? '' : 'soon'}" aria-pressed="${form.game === x.id}" data-ui="${reg(() => { form.game = x.id; creating = false; })}" aria-label="${esc(x.name)}, ${x.ready ? 'ready to play' : 'in preparation'}">${coverArt(x.id)}<span class="band"><small>FAB · ${esc(x.vol.toUpperCase())}</small><b>${esc(x.name)}</b></span><span class="foot"><span>${esc(WHEN[x.id] ?? '')}</span><span class="cst ${x.ready ? 'ready' : 'soon'}">${x.ready ? 'Play' : 'Soon'}</span></span></button>`).join('')}</div>`;
+  const pick = (id: string) => reg(() => { form.game = id; creating = false; });
+  const st = (x: { ready: boolean }) => `<span class="cst ${x.ready ? 'ready' : 'soon'}">${x.ready ? 'Play' : 'Soon'}</span>`;
+  const spines = `<div class="spines" role="group" aria-label="Choose a battle">${GAMES.map((x, i) => `<button class="spine ${x.ready ? '' : 'soon'}" style="--off:${[0, 10, 4][i] ?? 0}px" aria-pressed="${form.game === x.id}" data-ui="${pick(x.id)}" aria-label="${esc(x.name)}, ${x.ready ? 'ready to play' : 'in preparation'}">${boxSpine(BOXES[i])}${st(x)}</button>`).join('')}</div>`;
+  return `<h2 class="sec">Choose a battle</h2>${spines}<div class="shelf">${GAMES.map((x, i) => `<button class="cover ${x.ready ? '' : 'soon'}" aria-pressed="${form.game === x.id}" data-ui="${pick(x.id)}" aria-label="${esc(x.name)}, ${x.ready ? 'ready to play' : 'in preparation'}">${boxFront(BOXES[i])}${st(x)}</button>`).join('')}</div>`;
 }
 const soonCard = (x: { name: string; id: string }) => `<section class="card soonbox"><h2>${esc(x.name)} is in preparation</h2><p class="hint">Rules, map and counters are being transcribed. You'll be able to play it here when the engine supports it.</p><p class="hint">${esc(WHEN[x.id] ?? '')}</p><div class="row">${ubtn('Go to The Bulge', () => { form.game = 'bulge'; })}</div></section>`;
 function homeHtml() {

@@ -30,4 +30,23 @@ const ART: Record<string, string> = {
   <g fill="#1c1916"><path d="M60 300 h56 l8 12 h-72z"/><rect x="74" y="290" width="26" height="10" rx="2"/><rect x="98" y="293" width="40" height="3"/><path d="M180 320 h48 l7 10 h-62z"/><rect x="192" y="312" width="22" height="9" rx="2"/><rect x="212" y="314" width="34" height="3"/></g>
   <g fill="#f3d9a6" opacity=".35"><circle cx="135" cy="292" r="10"/><circle cx="148" cy="286" r="7"/><circle cx="246" cy="312" r="8"/></g></svg>`,
 };
-export const coverArt = (id: string) => (ART[id] ?? ART.bulge).replace('__TREES__', trees).replace('__SNOW__', snow);
+let uid = 0;
+/** Each copy gets its own gradient ids: a copy inside a hidden element would otherwise lend its (unrendered) gradients to the visible ones. */
+export const coverArt = (id: string) => { const n = ++uid; return (ART[id] ?? ART.bulge).replace('__TREES__', trees).replace('__SNOW__', snow).replace(/sky-(\w)\b/g, `sky-$1-${n}`); };
+
+/** Box front and spine laid out like the series boxes: art panel on top with the title in heavy italic over it, the volume colour below with
+ *  the series line and the designers, a slice of the art at one end of the spine. Artwork, type and the cycle mark are our own. */
+type Box = { id: string; vol: string; name: string; tail?: string; design: string; bg: string; ink: string; title: string; titleTail?: string; tone: string; inset?: boolean };
+export const BOXES: Box[] = [
+  { id: 'bulge', vol: 'I', name: 'The Bulge', design: 'Rick Young', bg: '#0e0e0e', ink: '#f2f0e8', title: '#111', tone: 'grayscale(1) brightness(1.25) contrast(1.05)', inset: true },
+  { id: 'sicily', vol: 'II', name: 'Sicily', design: 'Rick Young', bg: '#b3261e', ink: '#fff', title: '#c3241c', tone: 'grayscale(1) sepia(.55) brightness(1.35) contrast(.95)' },
+  { id: 'golan73', vol: 'III', name: 'Golan', tail: "'73", design: 'Michael Gustavsson & Rick Young', bg: '#e9d3a8', ink: '#2a2420', title: '#c3241c', titleTail: '#23201c', tone: 'saturate(1.05)' },
+];
+const mark = (c: string) => `<svg class="bxmark" viewBox="0 0 40 40" aria-hidden="true"><g fill="none" stroke="${c}" stroke-width="3.2" stroke-linecap="round"><path d="M8 20a12 12 0 0 1 20-9"/><path d="M32 20a12 12 0 0 1-20 9"/></g><path d="M25 5l6 6-8 2z M15 35l-6-6 8-2z" fill="${c}"/></svg>`;
+const ttl = (b: Box) => `<b class="bxt" style="color:${b.title}">${b.name}${b.tail ? `<span style="color:${b.titleTail}">${b.tail}</span>` : ''}</b>`;
+export function boxFront(b: Box) {
+  return `<span class="bx ${b.inset ? 'inset' : ''}" style="--bg:${b.bg};--ink:${b.ink}"><span class="bxart" style="filter:${b.tone}">${coverArt(b.id)}</span>${ttl(b)}<span class="bxlow"><span class="bxser">${mark(b.ink)}<i>A Fast Action Battle Game</i></span><small>Game design</small><em>${b.design}</em><span class="bxfoot"><span>FAB · Volume ${b.vol}</span><span>Digital edition</span></span></span></span>`;
+}
+export function boxSpine(b: Box) {
+  return `<span class="bxs" style="--bg:${b.bg};--ink:${b.ink}"><span class="bxsart" style="filter:${b.tone}">${coverArt(b.id)}</span>${ttl(b).replace('class="bxt" style="color:' + b.title, `class="bxt" style="color:${b.id === 'golan73' ? b.title : b.ink}`)}<span class="bxsv"><small>Volume ${b.vol}</small><i>Fast Action Battle Game</i></span>${mark(b.id === 'golan73' ? b.title : b.ink)}</span>`;
+}
