@@ -182,7 +182,7 @@ A strip under the top bar: the turn track (each turn's sudden-death numbers in r
 Wooden blocks (units and the reusable Special Action) are always drawn as 3D blocks; chits, garrisons and Task Forces always as cardboard counters with rounded corners and an edge, in the hand, the piece boxes, panels, the sandbox library, the supply list and the score sheets, and on the map. A chit that can be played in the current phase glows softly (hand and Available box).
 
 ### Chat
-A speech-bubble button in the top bar (unread count in an alarm-red dot) opens the players' chat: a slim panel on the right on computers, a bottom sheet over the hand on phones. Messages show name, side colour (steel or olive edge) and time; one-tap quick lines (Your turn, Ready, One moment, Nice move, Good game) sit above the text box. A message arriving while the chat is closed shows as a short banner. Watchers read but see "only the two players can write"; there is no chat in the sandbox or hotseat.
+A speech-bubble button in the top bar (unread count in an alarm-red dot) opens the players' chat: a slim panel on the right on computers, a bottom sheet over the hand on phones. Messages show name, the side named in its colour (steel or olive) and time; one-tap quick lines (Your turn, Ready, One moment, Nice move, Good game) sit above the text box. A message arriving while the chat is closed shows as a short banner. Watchers read but see "only the two players can write"; there is no chat in the sandbox or hotseat.
 
 ### Rules check bar
 A red bar over the table when the other player's browser wrote something the rules do not allow (game sent back, dice changed, wrong side acting). It names the problem in plain words and has an OK button. It must never appear in honest play.
