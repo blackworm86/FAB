@@ -177,7 +177,7 @@ button.ico.dev { border-color: #4aa3ff; color: #9fd0ff; }
 .sheetfoot { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); } button.danger { color: #ff9a8a; }
 .c-side.theirs { opacity: .62; } .c-side.theirs .slot, .c-side.theirs .x { pointer-events: none; } .c-side.mine h4 { text-decoration: underline; text-decoration-color: var(--gold); text-underline-offset: 4px; }
 .handtab button { min-height: 44px; }
-.turnchip { display: inline-block; padding: 1px 7px; margin-right: 4px; font: 700 12px var(--sfd); letter-spacing: .1em; text-transform: uppercase; border-radius: 3px; } .turnchip.go { background: var(--gold); color: #1a1608; } .turnchip.wait { background: #333a2a; color: #cfd6bd; }
+.turnchip { display: inline-block; padding: 1px 7px; margin-right: 4px; font: 700 12px var(--sfd); letter-spacing: .1em; text-transform: uppercase; border-radius: 3px; } .turnchip.tc-go { background: var(--gold); color: #1a1608; } .turnchip.tc-wait { background: #333a2a; color: #cfd6bd; }
 .handtab { display: flex; gap: 8px; align-items: center; } .handtab button.ico { min-width: 44px; width: auto; padding-inline: 10px; display: inline-flex; gap: 6px; align-items: center; justify-content: center; } .handtab button.ico .bl { display: inline; font-size: 13px; }
 .handtab summary { display: inline-flex; gap: 4px; align-items: center; min-height: 44px; padding-inline: 8px; cursor: pointer; } .handtab .ic { width: 20px; height: 20px; }
 button.go .ic, button.plain .ic, .row button .ic { width: 18px; height: 18px; vertical-align: -4px; } button.go .ic { margin-left: 6px; }
@@ -567,3 +567,5 @@ body:has(.hotcover) #leaders, body:has(.hotcover) #fx, body:has(.hotcover) #mark
   .c-bar.b .guidebtn { grid-column: 3; grid-row: 1; z-index: 1; }
   .c-bar.b .dchips { -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
 }
+@media (max-width: 700px) { .c-bar.b .turnchip { vertical-align: 1px; margin-right: 6px; } }
+@media (max-width: 700px) { .c-hand { height: 84px !important; padding-bottom: 6px !important; box-sizing: border-box; } .handtab { margin-bottom: 4px; } }
