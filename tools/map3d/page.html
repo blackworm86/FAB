@@ -1,0 +1,181 @@
+<title>Ardennes Relief</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: the relief fills the screen; a title plate top-left, one control bar at the bottom (wraps on phones). Single dark look, the game's own palette. */
+:root { --ink: #0b0d08; --panel: #12150ef2; --line: #3a3e2c; --fg: #ddd7b5; --mute: #8d9065; --gold: #e7b04a;
+  --disp: 'Saira Condensed', 'Arial Narrow', sans-serif; --mono: 'JetBrains Mono', ui-monospace, monospace; color-scheme: dark; }
+html, body { height: 100%; } body { background: var(--ink); color: var(--fg); font: 13px/1.4 var(--mono); overflow: hidden; }
+#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.plate { position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); left: max(16px, env(safe-area-inset-left, 0px)); background: var(--panel); border: 1px solid var(--line); padding: 10px 14px; max-width: min(360px, calc(100% - 32px)); }
+.plate h1 { margin: 0; font: 700 22px/1 var(--disp); letter-spacing: .06em; text-transform: uppercase; text-wrap: balance; }
+.plate p { margin: 4px 0 0; color: var(--mute); font-size: 11.5px; }
+.plate b { color: var(--gold); font-weight: 600; }
+.bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; justify-content: center; background: var(--panel); border-top: 1px solid var(--line);
+  padding-block: 10px calc(10px + env(safe-area-inset-bottom, 0px)); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.grp { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.grp > span { font: 600 11px var(--disp); letter-spacing: .14em; text-transform: uppercase; color: var(--mute); }
+.seg { display: flex; border: 1px solid var(--line); }
+.seg button, .tog { background: transparent; color: var(--fg); border: 0; font: 600 13px var(--disp); letter-spacing: .08em; text-transform: uppercase; padding: 8px 11px; min-height: 36px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--gold); color: var(--ink); }
+.tog { border: 1px solid var(--line); display: flex; gap: 7px; align-items: center; }
+.tog::before { content: ""; width: 10px; height: 10px; border: 1px solid var(--mute); }
+.tog[aria-pressed="true"]::before { background: var(--gold); border-color: var(--gold); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+input[type=range] { width: 120px; accent-color: var(--gold); }
+#zv { min-width: 3.5ch; font-variant-numeric: tabular-nums; color: var(--gold); }
+.hint { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--barh, 70px) + 12px); background: var(--panel); border: 1px solid var(--gold); padding: 7px 12px; font-size: 12px; max-width: calc(100% - 32px); text-align: center; pointer-events: none; }
+.hint b { color: var(--gold); }
+@media (max-width: 560px) { .plate h1 { font-size: 18px; } .plate p { font-size: 10.5px; } .hint { bottom: auto; top: calc(118px + env(safe-area-inset-top, 0px)); font-size: 11px; padding: 5px 9px; } .bar { gap: 8px 12px; } input[type=range] { width: 90px; } .seg button, .tog { padding: 7px 9px; font-size: 12px; } }
+</style>
+
+<canvas id="c" aria-label="3D relief of the St. Vith and Malmedy area of the game map"></canvas>
+<div class="plate"><h1>Ardennes Relief</h1><p>Mockup · St. Vith – Malmedy · real elevation bent onto the game map. <b>Drag</b> to move, <b>pinch / wheel</b> to zoom, <b>two fingers / right-drag</b> to tilt.</p></div>
+<div class="hint" id="hint">Tap the green <b>106 Inf</b> block in St. Vith to see its moves</div>
+<div class="bar" id="bar">
+  <div class="grp"><span>Look</span><div class="seg" id="look"><button id="lk-board" data-v="0" aria-pressed="true">Game board</button><button id="lk-paint" data-v="1" aria-pressed="false">Painted</button></div></div>
+  <div class="grp"><span>Facets</span><div class="seg" id="fac"><button id="fc-s" data-v="2" aria-pressed="false">Small</button><button id="fc-m" data-v="3" aria-pressed="true">Medium</button><button id="fc-l" data-v="5" aria-pressed="false">Large</button></div></div>
+  <div class="grp"><span>Relief</span><input id="z" type="range" min="0" max="6" step="0.5" value="4" aria-label="Relief height"><output id="zv">×4</output></div>
+  <div class="grp"><button class="tog" id="trees" aria-pressed="true">Trees &amp; towns</button><button class="tog" id="flat" aria-pressed="true">Flatten while choosing</button></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const D = /*DATA*/null;
+const { meta } = D, C = meta.cols, R = meta.rows, ST = meta.step, X0 = meta.x0, Y0 = meta.y0, MW = meta.w, MH = meta.h, CX = X0 + MW / 2, CY = Y0 + MH / 2;
+const dec = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+const HB = new Uint16Array(dec(D.h).buffer), FL = dec(D.f), M_PER_PX = 80;
+// height in "map pixels" above the lowest point (1 map px ≈ 80 m), bilinear on the 2 px grid
+const hAt = (x, y) => { let gx = Math.min(Math.max((x - X0) / ST, 0), C - 1.001), gy = Math.min(Math.max((y - Y0) / ST, 0), R - 1.001); const i = gx | 0, j = gy | 0, fx = gx - i, fy = gy - j, g = (a, b) => HB[b * C + a];
+  return ((g(i, j) * (1 - fx) + g(i + 1, j) * fx) * (1 - fy) + (g(i, j + 1) * (1 - fx) + g(i + 1, j + 1) * fx) * fy) / 65535 * (meta.hi - meta.lo) / M_PER_PX; };
+const flagAt = (x, y) => FL[Math.min(R - 1, Math.max(0, Math.round((y - Y0) / ST))) * C + Math.min(C - 1, Math.max(0, Math.round((x - X0) / ST)))];
+const rnd = (() => { let s = 7; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })();
+const hash = (a, b) => { const s = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return s - Math.floor(s); };
+
+const canvas = document.getElementById('c'), renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0b0d08); scene.fog = new THREE.Fog(0x0b0d08, 1500, 2600);
+window.cam = new THREE.PerspectiveCamera(40, 1, 5, 4000);
+const ctl = new THREE.OrbitControls(cam, canvas);
+ctl.screenSpacePanning = false; ctl.enableDamping = true; ctl.maxPolarAngle = 1.25; ctl.minDistance = 60; ctl.maxDistance = 2200;
+ctl.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+ctl.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE };
+const SUN = new THREE.Vector3(-0.55, 0.78, -0.45).normalize();
+scene.add(new THREE.AmbientLight(0xffffff, 0.62)); const dl = new THREE.DirectionalLight(0xffffff, 0.55); dl.position.copy(SUN); scene.add(dl);
+
+const loadTex = (src) => { const t = new THREE.TextureLoader().load(src); t.anisotropy = renderer.capabilities.getMaxAnisotropy(); return t; };
+const hlCv = document.createElement('canvas'); hlCv.width = MW * 2; hlCv.height = MH * 2; const hlTex = new THREE.CanvasTexture(hlCv);
+const U = { tP: { value: loadTex('__PRINTED__') }, tO: { value: loadTex('__OVERLAY__') }, tH: { value: hlTex }, uMode: { value: 0 }, uHl: { value: 0 }, uZ: { value: 4 }, uSun: { value: SUN } };
+const mat = new THREE.ShaderMaterial({ uniforms: U, extensions: { derivatives: true },
+  vertexShader: `attribute vec3 fcol; uniform float uZ; varying vec3 vCol; varying vec2 vUv; varying vec3 vW;
+    void main(){ vec3 p=position; p.y*=uZ; vUv=uv; vCol=fcol; vec4 w=modelMatrix*vec4(p,1.); vW=w.xyz; gl_Position=projectionMatrix*viewMatrix*w; }`,
+  fragmentShader: `uniform sampler2D tP,tO,tH; uniform float uMode,uHl; uniform vec3 uSun; varying vec3 vCol; varying vec2 vUv; varying vec3 vW;
+    void main(){ vec3 n=normalize(cross(dFdx(vW),dFdy(vW))); if(n.y<0.) n=-n;
+      vec4 o=texture2D(tO,vUv); vec3 base = uMode<.5 ? texture2D(tP,vUv).rgb : mix(vCol,o.rgb,o.a);
+      vec4 h=texture2D(tH,vUv); base=mix(base,h.rgb,h.a*uHl);
+      float l=1.+.75*(max(dot(n,uSun),0.)-uSun.y);           /* flat ground keeps the printed colours; slopes to the sun lighter, away darker */
+      gl_FragColor=vec4(base*clamp(l,.45,1.35),1.); }` });
+
+// painted palette: fields in a soft patchwork, woods, water, high moor
+const PAL = { field: [[0.66, 0.70, 0.52], [0.71, 0.72, 0.55], [0.62, 0.67, 0.49], [0.74, 0.70, 0.56]], wood: [[0.27, 0.40, 0.26], [0.24, 0.36, 0.23], [0.30, 0.43, 0.28]], water: [0.29, 0.52, 0.74], moor: [0.69, 0.63, 0.50] };
+let terrain = null;
+function buildTerrain(step) {
+  if (terrain) { scene.remove(terrain); terrain.geometry.dispose(); }
+  const cell = ST * step, nx = Math.floor(MW / cell), ny = Math.floor(MH / cell), P = [];
+  for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) {               // jitter inner vertices so the facets look hand-cut, not gridded
+    const edge = i === 0 || j === 0 || i === nx || j === ny, jx = edge ? 0 : (hash(i, j) - 0.5) * 0.7 * cell, jy = edge ? 0 : (hash(j + 9, i) - 0.5) * 0.7 * cell;
+    const x = X0 + Math.min(i * cell, MW) + jx, y = Y0 + Math.min(j * cell, MH) + jy; P.push([x, y, hAt(x, y)]);
+  }
+  const pos = [], uv = [], col = [];
+  const tri = (a, b, c) => { const mx = (a[0] + b[0] + c[0]) / 3, my = (a[1] + b[1] + c[1]) / 3, f = flagAt(mx, my), w = (f >> 2) / 63, k = hash(Math.floor(mx / 23), Math.floor(my / 19));
+    const hm = (a[2] + b[2] + c[2]) / 3 * M_PER_PX + meta.lo;
+    let cc = f & 2 ? PAL.water : w > 0.45 ? PAL.wood[(k * 3) | 0] : hm > 560 ? PAL.moor : PAL.field[(k * 4) | 0];
+    const v = 0.96 + hash(mx, my) * 0.08;
+    for (const p of [a, b, c]) { pos.push(p[0] - CX, p[2], p[1] - CY); uv.push((p[0] - X0) / MW, 1 - (p[1] - Y0) / MH); col.push(cc[0] * v, cc[1] * v, cc[2] * v); } };
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    const a = P[j * (nx + 1) + i], b = P[j * (nx + 1) + i + 1], c = P[(j + 1) * (nx + 1) + i], d = P[(j + 1) * (nx + 1) + i + 1];
+    if ((i + j) % 2) { tri(a, c, b); tri(b, c, d); } else { tri(a, c, d); tri(a, d, b); }
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setAttribute('fcol', new THREE.Float32BufferAttribute(col, 3));
+  terrain = new THREE.Mesh(g, mat); scene.add(terrain);
+  // a dark plinth under the cut edges so the region reads as a piece of terrain
+}
+const plinth = new THREE.Mesh(new THREE.BoxGeometry(MW, 6, MH), new THREE.MeshLambertMaterial({ color: 0x2a2d20 })); plinth.position.y = -3.2; scene.add(plinth);
+
+// trees in the woods, houses around each town symbol (instanced, low-poly)
+const props = new THREE.Group(); scene.add(props);
+const treeSpots = [], houseSpots = [];
+const nearLabel = (x, y) => D.areas.some((a) => Math.abs(x - a.label[0]) < 48 && y - a.label[1] > -34 && y - a.label[1] < 22);   // keep the printed number and name clear
+for (let j = 0; j < R; j++) for (let i = 0; i < C; i++) { const f = FL[j * C + i], w = (f >> 2) / 63; const X = X0 + i * ST, Y = Y0 + j * ST; if (!(f & 2) && w > 0.3 && rnd() < w * 0.13 && !nearLabel(X, Y)) treeSpots.push([X0 + i * ST + (rnd() - 0.5) * ST, Y0 + j * ST + (rnd() - 0.5) * ST, 0.75 + rnd() * 0.6, rnd()]); }
+for (const [x, y, s] of D.towns) { const n = Math.min(14, 4 + Math.round(s / 6)); for (let k = 0; k < n; k++) { const a = rnd() * 6.283, r = 7 + rnd() * (6 + n * 0.6); houseSpots.push([x + Math.cos(a) * r, y + Math.sin(a) * r, rnd() * 3.14, 0.8 + rnd() * 0.5]); } }
+const treeGeo = new THREE.ConeGeometry(2.1, 6, 5); treeGeo.translate(0, 3, 0);
+const trees = new THREE.InstancedMesh(treeGeo, new THREE.MeshLambertMaterial({ flatShading: true }), treeSpots.length);
+treeSpots.forEach((t, k) => trees.setColorAt(k, new THREE.Color().setRGB(0.18 + t[3] * 0.08, 0.33 + t[3] * 0.1, 0.19 + t[3] * 0.05)));
+const houseGeo = new THREE.BoxGeometry(3.2, 2.6, 4.4); houseGeo.translate(0, 1.3, 0);
+const roofGeo = new THREE.CylinderGeometry(0.01, 2.6, 2.2, 4, 1); roofGeo.rotateY(Math.PI / 4); roofGeo.scale(0.9, 1, 1.25); roofGeo.translate(0, 3.7, 0);
+const houses = new THREE.InstancedMesh(houseGeo, new THREE.MeshLambertMaterial({ color: 0xe6dcc6, flatShading: true }), houseSpots.length);
+const roofs = new THREE.InstancedMesh(roofGeo, new THREE.MeshLambertMaterial({ color: 0x9a4a35, flatShading: true }), houseSpots.length);
+props.add(trees, houses, roofs);
+const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v3 = new THREE.Vector3(), sc = new THREE.Vector3();
+function placeProps(z) {
+  const k = Math.min(1, z / 2 + 0.25);                                        // props shrink with the relief, so a flat board is not a forest of spikes
+  treeSpots.forEach((t, i) => { m4.compose(v3.set(t[0] - CX, hAt(t[0], t[1]) * z - 0.3, t[1] - CY), q.identity(), sc.setScalar(t[2] * k)); trees.setMatrixAt(i, m4); });
+  houseSpots.forEach((h, i) => { m4.compose(v3.set(h[0] - CX, hAt(h[0], h[1]) * z - 0.2, h[1] - CY), q.setFromEuler(e.set(0, h[2], 0)), sc.setScalar(h[3] * k)); houses.setMatrixAt(i, m4); roofs.setMatrixAt(i, m4); });
+  trees.instanceMatrix.needsUpdate = houses.instanceMatrix.needsUpdate = roofs.instanceMatrix.needsUpdate = true;
+}
+
+// game layer: a few blocks, as in the app
+const AREA = Object.fromEntries(D.areas.map((a) => [a.id, a]));
+const labelTex = (t, bg, fg) => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); x.fillStyle = bg; x.fillRect(0, 0, 128, 128); x.fillStyle = fg; x.font = '700 40px Saira Condensed, Arial Narrow, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(t, 64, 66); x.strokeStyle = '#0006'; x.lineWidth = 6; x.strokeRect(3, 3, 122, 122); return new THREE.CanvasTexture(c); };
+const BLOCKS = [['106 Inf', 'allied', 23, -62, 30], ['7 Arm', 'allied', 24, 0, -40], ['30 Inf', 'allied', 33, -62, 22], ['3 FJ', 'german', 10, 0, -40], ['18 VG', 'german', 11, -14, -40], ['1 SS', 'german', 9, -8, -40]];
+window.blocks = BLOCKS.map(([name, side, area, dx, dy]) => {
+  const col = side === 'german' ? 0xb9bcc0 : 0x9db36a, top = labelTex(name, side === 'german' ? '#c9ccd0' : '#a9c077', '#1b1e14'), side_ = new THREE.MeshLambertMaterial({ color: col });
+  const m = new THREE.Mesh(new THREE.BoxGeometry(17, 10, 17), [side_, side_, new THREE.MeshLambertMaterial({ map: top }), side_, side_, side_]);
+  const a = AREA[area]; m.userData = { name, area, x: a.label[0] + dx, y: a.label[1] + dy }; scene.add(m); return m; });
+function placeBlocks(z) { for (const b of window.blocks) { const { x, y } = b.userData; let h = 0; for (const [ox, oy] of [[0, 0], [-8, -8], [8, -8], [-8, 8], [8, 8]]) h = Math.max(h, hAt(x + ox, y + oy)); b.position.set(x - CX, h * z + 5, y - CY); } }
+
+// move options for 106 Inf from St. Vith: green = can go on, orange = must stop (river crossing)
+const MOVES = { go: [10, 22, 24], stop: [11, 12, 25] };
+(function drawHl() { const x = hlCv.getContext('2d'); x.setTransform(2, 0, 0, 2, -X0 * 2, -Y0 * 2);
+  const poly = (a) => { x.beginPath(); a.poly.forEach(([px, py], i) => (i ? x.lineTo(px, py) : x.moveTo(px, py))); x.closePath(); };
+  for (const id of MOVES.go) { poly(AREA[id]); x.fillStyle = 'rgba(95,211,90,.55)'; x.fill(); }
+  for (const id of MOVES.stop) { poly(AREA[id]); x.fillStyle = 'rgba(240,160,48,.6)'; x.fill(); }
+  poly(AREA[23]); x.fillStyle = 'rgba(231,176,74,.25)'; x.fill(); x.lineWidth = 5; x.strokeStyle = 'rgba(231,176,74,1)'; x.stroke();
+  hlTex.needsUpdate = true; })();
+
+// state and controls
+const S = { look: 0, step: 3, z: 4, props: true, flat: true, choosing: false, zNow: 4 };
+const bar = document.getElementById('bar'), hint = document.getElementById('hint');
+const seg = (id, f) => document.getElementById(id).addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (!b) return; for (const o of b.parentNode.children) o.setAttribute('aria-pressed', String(o === b)); f(+b.dataset.v); });
+seg('look', (v) => { S.look = v; U.uMode.value = v; });
+seg('fac', (v) => { S.step = v; buildTerrain(v); });
+const zIn = document.getElementById('z'), zOut = document.getElementById('zv');
+zIn.addEventListener('input', () => { S.z = +zIn.value; zOut.textContent = S.z ? '×' + S.z : 'flat'; });
+const tog = (id, k, f) => { const b = document.getElementById(id); b.addEventListener('click', () => { S[k] = !S[k]; b.setAttribute('aria-pressed', String(S[k])); f && f(); }); };
+tog('trees', 'props', () => { props.visible = S.props; });
+tog('flat', 'flat');
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(); let down = null;
+canvas.addEventListener('pointerdown', (ev) => { down = [ev.clientX, ev.clientY]; });
+canvas.addEventListener('pointerup', (ev) => { if (!down || Math.hypot(ev.clientX - down[0], ev.clientY - down[1]) > 6) return; const r = canvas.getBoundingClientRect();
+  ndc.set((ev.clientX - r.left) / r.width * 2 - 1, -(ev.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(ndc, cam);
+  const hit = ray.intersectObjects(window.blocks)[0]; S.choosing = !!hit && hit.object.userData.name === '106 Inf' && !S.choosing;
+  hint.innerHTML = S.choosing ? '<b>Green</b>: can move on · <b>Orange</b>: must stop (river) · tap anywhere to cancel' : 'Tap the green <b>106 Inf</b> block in St. Vith to see its moves'; });
+
+function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); document.documentElement.style.setProperty('--barh', bar.offsetHeight + 'px'); }
+addEventListener('resize', resize); resize();
+const phone = innerWidth < 600; cam.position.set(-20, phone ? 680 : 340, phone ? 600 : 360); ctl.target.set(phone ? 20 : -10, 0, phone ? 10 : 30); ctl.update();
+buildTerrain(S.step); placeProps(S.z); placeBlocks(S.z);
+let last = -1, lastP = -1;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+(function loop() {
+  const want = S.choosing && S.flat ? S.z * 0.2 : S.z;                       // flatten while choosing: the relief settles so the lit areas read clearly
+  S.zNow += reduce ? want - S.zNow : (want - S.zNow) * 0.12; if (Math.abs(want - S.zNow) < 0.002) S.zNow = want;
+  U.uZ.value = S.zNow; U.uHl.value += ((S.choosing ? 1 : 0) - U.uHl.value) * (reduce ? 1 : 0.15);
+  if (Math.abs(S.zNow - last) > 1e-4) { placeBlocks(S.zNow); last = S.zNow; }
+  if (S.props && Math.abs(S.zNow - lastP) > 0.02) { placeProps(S.zNow); lastP = S.zNow; }
+  ctl.update(); renderer.render(scene, cam); requestAnimationFrame(loop);
+})();
+</script>
