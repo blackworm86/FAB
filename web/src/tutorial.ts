@@ -6,10 +6,11 @@ import { LESSONS, U, replay, type Step, type Target } from './tutorial-script';
 export interface TutHost {
   game(): E.Game; load(g: E.Game): void; act(f: () => void, label: string): void;
   unitScreen(id: string): { x: number; y: number; rad: number } | null; areaScreen(a: number): { x: number; y: number } | null;
-  lookAt(a: number): void; pan(dx: number, dy: number): void; moving(): boolean; fold(): void; select(id: string): void; toast(t: string): void; busy(): boolean;
+  lookAt(a: number): void; pan(dx: number, dy: number): void; /** the finger is on the map */ moving(): boolean; fold(): void; select(id: string): void; toast(t: string): void; busy(): boolean;
   guide(): 'full' | 'short'; setGuide(v: 'full' | 'short'): void; home(scenario?: string): void;
 }
 const KEY = 'fab-tut', GKEY = 'fab-tut-guide';
+let entered = 0;
 const store = { get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k: string, v: string | null) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* private mode */ } } };
 const q = (s: string, text?: string) => Array.from(document.querySelectorAll(s)).some((e) => !text || (e.textContent ?? '').includes(text));
 const visible = (e: Element) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; };
@@ -42,7 +43,7 @@ export function initTutorial(h: TutHost) {
   }
   function enter(): void {
     const L = LESSONS[li], s = step(); if (!L || !s) return;
-    const g = h.game(); tapped = false;
+    const g = h.game(); tapped = false; entered = performance.now();
     if (s.skip?.(g)) { si++; return si < L.steps.length ? enter() : next(); }
     s.enter?.(g);
     const t = s.target, prev = L.steps[si - 1]?.target;
@@ -108,7 +109,7 @@ export function initTutorial(h: TutHost) {
       else if (r && r.y < y + ch + 6 && r.y + r.h > y) y = Math.max(top, bot - ch);                   // a button up there: the coach goes down
     } else if (!r) { x = (W - cw) / 2; y = top + 8; }
     else {
-      const cands: [number, number][] = [[r.x + r.w + 18, r.y + r.h / 2 - ch / 2], [r.x - cw - 18, r.y + r.h / 2 - ch / 2], [r.x + r.w / 2 - cw / 2, r.y + r.h + 18], [r.x + r.w / 2 - cw / 2, r.y - ch - 18]];
+      const cands: [number, number][] = [[r.x + r.w + 18, r.y + r.h / 2 - ch / 2], [r.x - cw - 18, r.y + r.h / 2 - ch / 2], [r.x + r.w / 2 - cw / 2, r.y + r.h + 18], [r.x + r.w / 2 - cw / 2, r.y - ch - 18], [W - cw - 10, top], [10, top], [(W - cw) / 2, top]];
       const avoid = [{ left: r.x, top: r.y, right: r.x + r.w, bottom: r.y + r.h }, ...Array.from(document.querySelectorAll('#ui .c-ledger')).filter(visible).map((e) => e.getBoundingClientRect())];   // the target and the fire report stay readable
       const clear = ([cx, cy]: [number, number]) => avoid.every((b) => cx + cw < b.left || cx > b.right || cy + ch < b.top || cy > b.bottom);
       const all = cands.map(([cx, cy]) => [Math.min(W - cw - 10, Math.max(10, cx)), Math.min(bot - ch, Math.max(top, cy))] as [number, number]);
@@ -131,14 +132,16 @@ export function initTutorial(h: TutHost) {
 
   /** A block or area hidden behind the coach or a panel slides into the clear band of the screen. */
   function keep(s: Step) {
-    const t = s.target, g = h.game(); if (!t || 'el' in t || h.busy() || h.moving()) return;
+    const t = s.target, g = h.game(); if (!t || 'el' in t || h.busy() || h.moving() || performance.now() - entered < 1300) return;   // after the camera's glide to it
     const p = 'unit' in t ? h.unitScreen(U(g, t.unit).id) : h.areaScreen(t.area); if (!p) return;
     const W = innerWidth, H = innerHeight, top = (document.querySelector('#ui .tops')?.getBoundingClientRect().bottom ?? 0);
     const obs = [coach, ...Array.from(document.querySelectorAll<HTMLElement>('#ui .c-dispatch, #ui .c-hand, #ui .c-ledger, #ui .c-bar.b, #ui .arrtray, #ui .modal'))].filter(visible).map((e) => e.getBoundingClientRect()).filter((b) => b.left < p.x + 30 && b.right > p.x - 30).sort((a, b) => a.top - b.top);
     let y0 = top, best = { a: 0, b: 0 };
     for (const b of [...obs, { top: H, bottom: H } as DOMRect]) { if (b.top - y0 > best.b - best.a) best = { a: y0, b: b.top }; y0 = Math.max(y0, b.bottom); }
     if (best.b - best.a < 70) return;
-    const m = Math.min(45, (best.b - best.a) / 3), dy = p.y < best.a + m || p.y > best.b - m ? (best.a + best.b) / 2 - p.y : 0, dx = p.x < 30 || p.x > W - 30 ? W / 2 - p.x : 0;
+    const m = Math.min(45, (best.b - best.a) / 3), dy = p.y < best.a + m || p.y > best.b - m ? (best.a + best.b) / 2 - p.y : 0;
+    const hit = document.elementFromPoint(p.x, p.y), covered = !!hit && hit.tagName !== 'CANVAS';     // under a panel or a legend: towards the middle
+    const dx = p.x < 30 || p.x > W - 30 || (covered && !dy) ? W / 2 - p.x : 0;
     if (Math.abs(dx) + Math.abs(dy) > 2) h.pan(dx * 0.25, dy * 0.25);
   }
   function loop(now: number) {
