@@ -850,7 +850,7 @@ function syncTags() {
 function placeTags() {
   const r = canvas.getBoundingClientRect(), v = new THREE.Vector3();
   for (const t of optTags) { let p: THREE.Vector3 | null = null; if (t.unit) { const o = pieces.children.find((x) => x.userData.unit === t.unit); if (o) p = new THREE.Vector3(o.position.x, 3.2, o.position.z); } else if (t.area != null) { const c = center(t.area); p = new THREE.Vector3(c.x, 0.5, c.z); }
-    if (!p) { t.el.style.display = 'none'; continue; } v.copy(p).project(cam); t.el.style.display = v.z < 1 ? '' : 'none'; t.el.style.transform = `translate(${(v.x * 0.5 + 0.5) * r.width}px, ${(-v.y * 0.5 + 0.5) * r.height}px) translate(-50%, -50%)`; }
+    if (!p) { t.el.style.display = 'none'; continue; } v.copy(p).project(cam); t.el.style.display = v.z < 1 ? '' : 'none'; const hw = (t.el.offsetWidth || 60) / 2 + 4, px = Math.min(r.width - hw, Math.max(hw, (v.x * 0.5 + 0.5) * r.width)); t.el.style.transform = `translate(${px}px, ${(-v.y * 0.5 + 0.5) * r.height}px) translate(-50%, -50%)`; }      // tags stay on screen
 }
 function placeMoveMarks() {
   placeTags();
