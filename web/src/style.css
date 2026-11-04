@@ -638,3 +638,10 @@ body:has(.hotcover) #leaders, body:has(.hotcover) #fx, body:has(.hotcover) #mark
 .tut-coach .tut-hint { font: 600 11px var(--sfd); letter-spacing: .1em; color: var(--line); text-transform: uppercase; text-align: right; }
 .tut-coach .tut-end { display: flex; flex-wrap: wrap; gap: 8px; } .tut-coach .tut-end button { flex: 1 1 140px; }
 @media (prefers-reduced-motion: reduce) { .tut-ring { animation: none; } .tut-coach .bar i { transition: none; } }
+
+/* combat record: die faces, the dice so far, the after-action card */
+.faces { display: inline-flex; gap: 3px; flex-wrap: wrap; } .faces i { font: 700 13px var(--sf); font-style: normal; font-variant-numeric: tabular-nums; min-width: 22px; height: 22px; display: inline-grid; place-items: center; border: 1px solid currentColor; }
+.faces i.h { color: var(--good); background: #a9e08a1f; } .faces i.m { color: var(--bad); background: #ff9c8a14; }
+.rrec { margin-top: 8px; border-top: 1px solid #8d906544; padding-top: 4px; } .rrec summary { cursor: pointer; display: flex; align-items: center; gap: 6px; font: 600 12px var(--sfd); letter-spacing: .12em; text-transform: uppercase; color: #b3ad8b; padding: 4px 0; list-style: none; } .rrec summary::-webkit-details-marker { display: none; } .rrec summary small { font: 400 11px var(--sf); letter-spacing: 0; text-transform: none; }
+.rrec .rr { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 3px 0; font-size: 12px; } .rrec .rr .who { flex: 1 1 110px; } .rrec .rr .sn { color: #b3ad8b; } .rrec .rr b.hit { color: var(--good); } .rrec .rr b.miss { color: var(--bad); }
+.aar .aarfx { display: grid; gap: 4px; margin: 4px 0; }

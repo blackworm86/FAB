@@ -984,7 +984,7 @@ function afterDice(rv: RollView) {
   setTimeout(() => {
     if (rollView !== rv) return;
     hideDice(); commitRoll(); showFx(pendingFx); pendingFx = []; render();
-    setTimeout(() => { if (rollView === rv) endRoll(); }, 3200);
+    if (rv.remote) setTimeout(() => { if (rollView === rv) endRoll(); }, 3200);           // your own roll stays until you tap Continue; the other player's moves on by itself
   }, 1100);
 }
 function hideDice() { clearDice(); const cv = $('#dice') as HTMLElement | null; if (cv) cv.style.display = 'none'; }
@@ -1111,6 +1111,7 @@ document.body.classList.toggle('guide-short', guide === 'short');
 const gx = (long: string, short = '') => `${short ? `<span class="gs">${short}</span>` : ''}<span class="gx">${long}</span>`;
 function promptText() {
   const b = g.battle;
+  if (rollView?.pos) return gx('<b>Read the dice:</b> green hits, salmon misses. Then continue.', '<b>Read the dice,</b> then continue.');
   if (reinforcing && b) return '<b>Tap a glowing neighbouring block</b> to bring it in, or tap the map to cancel.';
   if (airPick?.step === 'unit' && b) return '<b>Air Mission +2:</b> tap one of your blocks in the battle.';
   if (online.active && !allowed() && !g.over) return online.mySide() == null ? '<b>Watching.</b> Take a seat in the menu.' : `<b>Waiting for the ${nm(actorNow() as E.Side)} player…</b>`;
@@ -1134,6 +1135,7 @@ function promptText() {
 }
 function primary(): { label: string; fn: () => void; dis?: boolean } | null {
   const b = g.battle;
+  if (rollView?.pos && !rollView.remote) return { label: 'Continue', fn: () => endRoll() };          // the dice have landed: one clear step on, the report stays readable until then
   if (g.over || g.pendingBlow || rollView) return null;
   if (b) {
     if (b.stage === 'setup') {
@@ -1357,11 +1359,20 @@ function engChoice(b: E.Battle): string {
   return `<div class="engch"><b>Engineer (6.33)</b>${gx(' · the defenders sit in field works. If the engineer survives artillery and defensive fire, it can remove them just before your units fire (no −1 then), instead of firing itself. Choose before offensive fire:', ' vs FW:')}<div class="row">${pickB(false, gx('Fire with the ground units', 'Fire'))}${pickB(true, gx('Remove the field works', 'Remove FW'))}</div></div>`;
 }
 let refusal = '';      // the last refused battle chit, shown in the set-up panel
+/** Die faces as small tiles: green when the die succeeds against the Success Number (a 1 always does, a 10 never), salmon when it misses. */
+const ok10 = (d: number, sn: number) => d === 1 || (d !== 10 && d <= sn);
+const faces = (dice: number[], sn: number) => `<span class="faces">${dice.map((d) => `<i class="${ok10(d, sn) ? 'h' : 'm'}" title="${ok10(d, sn) ? 'hit' : 'miss'}">${d}</i>`).join('')}</span>`;
+/** Every roll of this battle so far, newest first: who rolled, against what, and the faces; it stays with the battle until it ends. */
+function rollRecord(b: E.Battle, open = false) {
+  if (!b.rolls.length) return '';
+  const rows = [...b.rolls].reverse().map((r) => `<div class="rr"><span class="who">${esc(r.who)}</span><span class="sn">SN ${r.sn}</span>${faces(r.dice, r.sn)}<b class="${r.hits ? 'hit' : 'miss'}">${r.hits}${r.kind === 'morale' ? (r.hits ? ' pass' : ' fail') : ` hit${r.hits === 1 ? '' : 's'}`}</b></div>`).join('');
+  return `<details class="rrec" ${open ? 'open' : ''}><summary>${ico('dice')} Dice so far <small>${b.rolls.length} roll${b.rolls.length === 1 ? '' : 's'}</small></summary>${rows}</details>`;
+}
 function ledger() {
   const b = g.battle; if ((!b || g.pendingBlow) && !rollView?.check) return '';
   if (rollView) {
     const rv = rollView, hits = rv.groups.reduce((a, x) => a + x.hits, 0);
-    return `<div class="c-ledger tight" data-ui="${reg(() => { if (rollView?.pos) endRoll(); })}" title="Tap to continue"><div class="lh"><h3>${esc(rv.title)}</h3><b class="tot ${hits ? 'hit' : 'miss'}">${rv.pos ? rv.morale ? `${hits} of ${rv.groups.length} pass` : `${hits} hit${hits === 1 ? '' : 's'}` : '…'}</b></div>${rv.remote && !rv.pos ? `<p class="hint">${ico('dice')} The other player is rolling…</p>` : ''}${rv.pos ? rollFx.map(fxRow).join('') : ''}${rv.groups.map((x) => `<div class="ln2"><span class="who">${esc(x.label)}</span><span class="sn">SN ${x.sn}</span><span class="cnt">${x.dice.length}${ico('dice')}</span><b class="${x.hits ? 'hit' : 'miss'}">${x.hits}</b></div>`).join('')}
+    return `<div class="c-ledger tight" data-ui="${reg(() => { if (rollView?.pos) endRoll(); })}" title="Tap to continue"><div class="lh"><h3>${esc(rv.title)}</h3><b class="tot ${hits ? 'hit' : 'miss'}">${rv.pos ? rv.morale ? `${hits} of ${rv.groups.length} pass` : `${hits} hit${hits === 1 ? '' : 's'}` : '…'}</b></div>${rv.remote && !rv.pos ? `<p class="hint">${ico('dice')} The other player is rolling…</p>` : ''}${rv.pos ? rollFx.map(fxRow).join('') : ''}${rv.groups.map((x) => `<div class="ln2"><span class="who">${esc(x.label)}</span><span class="sn">SN ${x.sn}</span>${rv.pos ? faces(x.dice, x.sn) : `<span class="cnt">${x.dice.length}${ico('dice')}</span>`}<b class="${x.hits ? 'hit' : 'miss'}">${x.hits}</b>${x.parts.length ? `<span class="chips2">${modChips(x.parts)}</span>` : ''}</div>`).join('')}
       </div>`;
   }
   if (!b || g.pendingBlow) return '';
@@ -1371,12 +1382,14 @@ function ledger() {
       ${us.map((u) => `<div class="fl"><span class="who">${esc(seen(u) ? u.name : 'Hidden block')}</span><span class="cnt">1${ico('dice')}</span><b class="sn">needs ${E.exploitSn(g, u)} or less</b></div>`).join('')}
       ${mineStep ? `<div class="row">${btn('Decline (stay hidden)', () => E.declineExploit(g, b), '', false, '6.8: you may decline the opportunity and keep the blocks hidden')}</div>` : `<p class="hint">Waiting for the ${nm(b.attacker)} player to roll.</p>`}</div>`;
   }
-  if (b.stage === 'done') return `<div class="c-ledger tight"><div class="lh"><h3>Battle over</h3></div><p class="resline">${esc(b.result ?? '')}</p>${battleFx.map(fxRow).join('')}</div>`;
+  if (b.stage === 'done') return `<div class="c-ledger tight aar"><div class="lh"><h3>Battle over · ${esc(areaName(b.area))}</h3></div><p class="resline">${esc(b.result ?? '')}</p>${battleFx.length ? `<div class="aarfx">${battleFx.map(fxRow).join('')}</div>` : '<p class="hint">No losses on either side.</p>'}${rollRecord(b, true)}</div>`;
+  if (b.stage.endsWith('Choice')) { const sd = b.stage === 'attChoice' ? b.attacker : other(b.attacker);           // the bubble on the table holds the choice; the report keeps the dice that caused it
+    return `<div class="c-ledger tight"><div class="lh"><h3 class="${sd}">${nm(sd)} ${b.pending} hit${b.pending === 1 ? '' : 's'} to take</h3></div>${rollRecord(b, true)}</div>`; }
   if (b.stage === 'retreat' && b.retreat) return '';                                                    // the lit areas on the table are the choice
   if (STAGE_NAME[b.stage]) {                                                                           // fire step: who rolls, what, against which number and why
     const sd = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker), fl = E.fireList(g, b, sd, b.stage.endsWith('Arty') ? 'arty' : 'ground'), mineStep = !online.active || online.both() || online.mySide() === sd;
     const lines = fl.map((f) => `<div class="fl"><span class="who">${esc(f.who)}</span><span class="cnt">${f.dice}${ico('dice')}</span><b class="sn">SN ${f.sn}</b><span class="chips2">${modChips(f.parts)}</span></div>`).join('') || '<p class="hint">Nothing can fire.</p>';
-    return `<div class="c-ledger tight"><div class="lh"><h3 class="${sd}">${nm(sd)} ${esc(STAGE_NAME[b.stage].toLowerCase())}</h3></div>${b.stage === 'offFire' && engChoice(b) ? engChoice(b) : ''}${lines}${mineStep ? '' : `<p class="hint">Waiting for the ${nm(sd)} player to roll…</p>`}</div>`;
+    return `<div class="c-ledger tight"><div class="lh"><h3 class="${sd}">${nm(sd)} ${esc(STAGE_NAME[b.stage].toLowerCase())}</h3></div>${b.stage === 'offFire' && engChoice(b) ? engChoice(b) : ''}${lines}${mineStep ? '' : `<p class="hint">Waiting for the ${nm(sd)} player to roll…</p>`}${rollRecord(b)}</div>`;
   }
   return '';
 }
