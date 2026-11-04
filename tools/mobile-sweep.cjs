@@ -3,7 +3,7 @@ const {chromium,devices}=require('playwright');const fs=require('fs');
 const DEV=process.argv[2]||'iPhone 13', O=(process.argv[3]||'sweep-out')+'/';// usage: (dev server on :5199) NODE_PATH=$(npm root -g) node tools/mobile-sweep.cjs 'iPhone 13' out-dir
 fs.mkdirSync(O,{recursive:true});
 const out=[];
-(async()=>{const b=await chromium.launch();const ctx=await b.newContext({...devices[DEV]});const p=await ctx.newPage();
+(async()=>{const b=await chromium.launch();const ctx=await b.newContext(devices[DEV] ? {...devices[DEV]} : {viewport:{width:+DEV.split('x')[0],height:+DEV.split('x')[1]}});const p=await ctx.newPage();      // DEV: a device name, or WIDTHxHEIGHT for desktop;
  p.on('pageerror',e=>out.push('PAGE ERROR '+e.message));
  const check=async(name)=>{await p.waitForTimeout(250);const r=await p.evaluate(()=>{const W=innerWidth,H=innerHeight,vis=(e)=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&getComputedStyle(e).visibility!=='hidden'&&getComputedStyle(e).opacity!=='0'};
    const all=[...document.querySelectorAll('#ui *')].filter(vis);
@@ -14,7 +14,7 @@ const out=[];
    const clipped=[...document.querySelectorAll('#ui .go, #ui .dundo span, #ui .dchip, #ui .c-prompt b, #ui h3, #ui h4')].filter(vis).filter(e=>e.scrollWidth>e.clientWidth+2&&getComputedStyle(e).textOverflow!=='ellipsis').map(e=>e.textContent.trim().slice(0,24));
    return {over:[...new Set(over)].slice(0,5),small:[...new Set(small)].slice(0,6),covering:[...new Set(covering)],clipped:clipped.slice(0,4)}});
   const bad=Object.entries(r).filter(([,v])=>v.length);out.push(`${name.padEnd(22)} ${bad.length?JSON.stringify(Object.fromEntries(bad)):'ok'}`);await p.screenshot({path:O+name+'.png'});};
- const G=(fn,arg)=>p.evaluate(fn,arg);const tap=async(s)=>{await p.tap(s).catch(()=>{});await p.waitForTimeout(350)};
+ const G=(fn,arg)=>p.evaluate(fn,arg);const tap=async(s)=>{await (devices[DEV]?p.tap(s):p.click(s,{timeout:3000})).catch(()=>{});await p.waitForTimeout(350)};
  // ---- home
  await p.goto('http://localhost:5199/?dev=1');await p.waitForTimeout(3500);
  await G(()=>{const o=__fab.online;o.mode='remote';o.ready=true;o.hasAccounts=true;o.uid='u1';o.admin=false;o.account={uid:'u1',name:'Riccardo',email:'r@example.com',guest:false,admin:false};__fab.setMatches([{id:'a',game:'bulge',title:'Bulge with Marco',opts:{scenario:'campaign',fuel:true,bridgeLimit:true,bid:2},owner:'u1',members:[],germanName:'Riccardo',alliedName:'Marco',created:Date.now()},{id:'b',game:'bulge',title:'Cold Shoulder test',opts:{scenario:'cold',fuel:true},owner:'u1',members:[],germanName:'Riccardo',alliedName:null,created:Date.now()}]);__fab.setGame(__fab.game());});

@@ -610,3 +610,6 @@ body:has(.hotcover) #leaders, body:has(.hotcover) #fx, body:has(.hotcover) #mark
   .gowait.slot { background: transparent !important; border: 0 !important; }
   .vps .gauge .sd span { display: none; }      /* the sudden-death numbers are in the VP sheet; on phones only the red marks stay */
 }
+/* desktop sweep fixes */
+@media (min-width: 701px) { .c-table .engch { display: flex; align-items: center; gap: 10px; justify-content: center; } .c-table .engch .row { margin-top: 0; flex: none; } .c-table .engch .row button { flex: none; min-width: 120px; min-height: 34px; } }
+.c-prompt button { min-height: 32px; padding: 4px 12px; }
