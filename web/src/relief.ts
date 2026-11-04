@@ -68,7 +68,7 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
     churches.push([c.c[0], c.c[1], 1.6]); const f = c.cells[(c.cells.length * 0.3) | 0]; churches.push([f[0], f[1], 1.2]);
     for (let k = 0; k < 16; k++) { const a = rnd() * 6.283, r = far + 4 + rnd() * 7; houses.push([c.c[0] + Math.cos(a) * r, c.c[1] + Math.sin(a) * r, -a, 2.6, 2.2 + rnd(), 3.4]); }
   }
-  const lam = (color: number) => new THREE.MeshLambertMaterial({ color });
+  const lams: THREE.MeshLambertMaterial[] = [], lam = (color: number) => { const m = new THREE.MeshLambertMaterial({ color }); lams.push(m); return m; };
   const treeGeo = new THREE.ConeGeometry(2.1, 6, 5).translate(0, 3, 0), capGeo = new THREE.ConeGeometry(0.95, 2.2, 5).translate(0, 4.95, 0);
   const tr = new THREE.InstancedMesh(treeGeo, lam(0xffffff), trees.length), cap = new THREE.InstancedMesh(capGeo, lam(0xf1f4f8), trees.length);
   const hs = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), lam(0xe9e0cc), houses.length);
@@ -92,10 +92,25 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
           float c2 = vMet / 100., f2 = fwidth(c2), m2 = (1. - clamp(abs(fract(c2 + .5) - .5) / max(f2, 1e-4) - .3, 0., 1.)) * smoothstep(2., 5., 1. / max(f2, 1e-4));
           diffuseColor.rgb = mix(diffuseColor.rgb, lc, max(m1 * .32, m2 * .58));
           /* area highlights (moves, battles, tints) painted straight onto the ground, so they follow every fold of it */
-          float id = floor(texture2D(tId, vMapUv).r * 255. + .5); vec4 t = texture2D(tTint, vec2((id + .5) / 128., .5)); diffuseColor.rgb = mix(diffuseColor.rgb, t.rgb, t.a); }`);
+          float id = floor(texture2D(tId, vMapUv).r * 255. + .5); vec4 t = texture2D(tTint, vec2((id + .5) / 128., .5)); diffuseColor.rgb = mix(diffuseColor.rgb, t.rgb, min(1., t.a * 1.45)); }`);   // a little stronger than on the flat board, so snow and woods do not show through as spots
     };
     mat.customProgramCacheKey = () => 'relief';
     mat.needsUpdate = true;
+    for (const m of lams) {                                  // trees and houses take the colour of a lit area too, so it reads as one patch
+      m.onBeforeCompile = (sh) => {
+        sh.uniforms.tId = { value: areaId }; sh.uniforms.tTint = { value: tints }; sh.uniforms.uBoard = { value: new THREE.Vector2(MW / S, MH / S) };
+        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vAU; uniform vec2 uBoard;').replace('#include <begin_vertex>', `#include <begin_vertex>
+          #ifdef USE_INSTANCING
+            vec4 wpA = modelMatrix * instanceMatrix * vec4(transformed, 1.);
+          #else
+            vec4 wpA = modelMatrix * vec4(transformed, 1.);
+          #endif
+          vAU = vec2(wpA.x / uBoard.x + .5, .5 - wpA.z / uBoard.y);`);
+        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vAU; uniform sampler2D tId, tTint;').replace('#include <color_fragment>', `#include <color_fragment>
+          { float id = floor(texture2D(tId, vAU).r * 255. + .5); vec4 t = texture2D(tTint, vec2((id + .5) / 128., .5)); diffuseColor.rgb = mix(diffuseColor.rgb, t.rgb, min(1., t.a * 2.2)); }`);
+      };
+      m.customProgramCacheKey = () => 'relief-prop'; m.needsUpdate = true;
+    }
   };
 
   const top = (meta.metres * RELIEF) / (80 * S) + 0.1;
