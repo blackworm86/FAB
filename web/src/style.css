@@ -763,3 +763,6 @@ button.go:disabled { background: #2a2d22; color: #8d9065; box-shadow: none; opac
 
 .bdg.war { background: var(--red) !important; color: #fff !important; font-size: 12px !important; letter-spacing: .08em; text-transform: uppercase; padding: 2px 7px !important; }
 .bdg.opt { background: #1a1608 !important; color: var(--gold) !important; border-color: var(--gold) !important; font-size: 12px !important; letter-spacing: .08em; text-transform: uppercase; padding: 2px 7px !important; }
+
+.mapkey { display: grid; gap: 5px; font-size: 12px; } .mapkey span { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .mapkey i { width: 16px; height: 12px; display: inline-block; flex: none; }
+.mapkey i.fuel { background: #1a1608; border: 1px solid var(--gold); } .mapkey .ar { font-family: var(--sf); letter-spacing: -2px; } .mapkey .ic { width: 16px; height: 16px; color: var(--ok); }

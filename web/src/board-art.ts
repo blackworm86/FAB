@@ -16,6 +16,7 @@ export function drawItems(c: CanvasRenderingContext2D, a: { id: number }, layers
     c.fill(); c.stroke();
     c.font = '700 16px "Arial Narrow", Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.fillStyle = col === 3 ? '#fff' : col === 2 ? '#111' : '#1a1608';
     c.fillText(String(layers.numbers ? a.id : t), 0, col === 3 ? -3 : 0);
+    if (layers.numbers && layers.tdn && t > 0) { c.beginPath(); c.arc(15, -15, 8, 0, 7); c.fillStyle = '#1a1608'; c.fill(); c.font = '700 11px "Arial Narrow", Arial, sans-serif'; c.fillStyle = '#f4e3a4'; c.fillText(`−${t}`, 15, -11); }     // the terrain defence as a number too, not only the plate's shape
   }
   if (layers.vp) {                                                                                   // the symbols are the editable files in public/icons
     const v = ar.vp, put = (img: HTMLImageElement, x: number, y: number) => { if (img.naturalWidth) c.drawImage(img, x - 13, y - 13, 26, 26); };
