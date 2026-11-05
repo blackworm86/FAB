@@ -1,35 +1,27 @@
 // Vector art drawn from data (no scans). One SVG per block label / chit; strength turns the label as the block would turn.
 import type { Unit } from '../../engine/src';
+import { blockFace, hex } from './block-kit';
+import scen from '../../data/bulge/scenarios.json';
 
 export const ECH: Record<string, string> = { de_5pz: '#d6d8db', de_6pz: '#8e2d82', de_7a: '#3fa0dc', de_sr: '#f07f1e', us_1a: '#b9dc8c', us_3a: '#4d5b2c', us_sr: '#a6d6f3', br_xxx: '#e0412e', is_northern_command: '#f3f0e2', sy_golan_front: '#f8efc8' };
-const LABEL_BG: Record<string, string> = { german: '#b7bbc1', us: '#8fa83f', british: '#e3bb7d' };
-const PIP: Record<string, [string, string]> = { elite: ['#d7262b', '#fff'], veteran: ['#151515', '#151515'], green: ['#fff', '#151515'] };
+// Block faces follow the series rule (block-kit.ts); colours sampled from the printed Bulge sticker sheet (docs/game-pieces/Sticker_Sheet.jpg).
+/** Sticker paper: German grey (the 6th Panzer Army and three reserve divisions on the darker grey, the paratroopers on blue), US green, British tan. */
+const PAPER = { german: '#b5bcd3', germanDark: '#958c97', fj: '#86c3ee', us: '#93a536', british: '#e1b563' };
+const DARK_DE = new Set(['10SS', '17SS', '6SS']);
+/** Unit-box colour of each command, as printed on the stickers. */
+const BOX: Record<string, string> = { de_6pz: '#a0237e', de_5pz: '#dfe1e6', de_7a: '#62bdf6', de_sr: '#f47710', us_1a: '#c5e184', us_3a: '#565c20', us_sr: '#a0daff', br_xxx: '#d4271e' };
+/** Block wood (also the 3D blocks: vol.ts wood, main.ts British blue). */
+export const BULGE_WOOD = { german: 0x8e9296, allied: 0x5d8a45, british: 0x3f6fb8 };
+/** Names printed on a yellow box. */
+const YELLOW = new Set(['Peiper', '150 Pz', '82', '101', '517']);
+/** The strength a reduced unit starts or arrives with (the yellow arrow on its sticker). */
+const ARROW: Record<string, number> = { ...(scen.tournament.reduced as Record<string, number>), ...(scen.tournament.reinforcementsReduced as Record<string, number>) };
 
-function symbol(kind: string, fill: string) {
-  const box = `<rect x="27" y="27" width="46" height="34" fill="${fill}" stroke="#111" stroke-width="2.4"/>`;
-  const X = `<path d="M27 27 L73 61 M73 27 L27 61" stroke="#111" stroke-width="2.2"/>`;
-  const oval = `<rect x="36" y="35" width="28" height="18" rx="9" fill="none" stroke="#111" stroke-width="2.2"/>`;
-  const extra: Record<string, string> = {
-    inf: X, armor: oval, mech: X + oval, cavalry: `<path d="M27 61 L73 27" stroke="#111" stroke-width="2.2"/>` + oval,
-    airborne: X + `<path d="M38 55 q6 -8 12 0 q6 -8 12 0" fill="none" stroke="#111" stroke-width="2"/>`, mountain: X + `<path d="M44 61 L50 51 L56 61 Z" fill="#111"/>`,
-  };
-  return box + (extra[kind] ?? X);
-}
-function pips(n: number, q: string, edge: number) {               // edge 0 top, 1 right, 2 bottom, 3 left (clockwise, as strength drops)
-  if (!n || !q) return '';
-  const [f, s] = PIP[q], out: string[] = [];
-  for (let i = 0; i < n; i++) { const t = 50 + (i - (n - 1) / 2) * 9.5; out.push(`<circle cx="${t}" cy="11" r="4" fill="${f}" stroke="${s}" stroke-width="1.4"/>`); }
-  return `<g transform="rotate(${edge * 90} 50 50)">${out.join('')}</g>`;
-}
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-
-/** 100x100 SVG of the block label at its current strength (full strength edge on top, rotated 90° CCW per step lost). */
+/** 512 px SVG of a Bulge block face at its current strength. */
 export function labelSvg(u: Unit) {
-  const side = u.name in BRIT ? 'british' : u.side === 'german' ? 'german' : 'us';
-  const edges = Array.from({ length: u.max }, (_, k) => pips(u.max - k, u.q[u.max - k - 1], k)).join('');
-  const code = u.code ? `<rect x="6" y="20" width="12" height="${8 + u.code.length * 7}" fill="#fff"/><text transform="translate(15 ${23 + u.code.length * 3.5}) rotate(-90)" font-size="9" text-anchor="middle" font-family="Arial Narrow, Arial" font-weight="700">${esc(u.code)}</text>` : '';
-  const inner = `<rect width="100" height="100" fill="${LABEL_BG[side]}"/>${code}${symbol(u.symbol ?? 'inf', ECH[u.ech ?? ''] ?? '#ccc')}${edges}
-    <text x="88" y="80" font-size="13" text-anchor="end" font-family="Arial Narrow, Arial" font-weight="700">${esc(u.name)}</text>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100"><g transform="rotate(${-90 * (u.max - u.str)} 50 50)">${inner}</g></svg>`;
+  const brit = u.name in BRIT, side = brit ? 'british' : u.side === 'german' ? 'german' : 'allied';
+  const paper = brit ? PAPER.british : side === 'german' ? (/ FJ$/.test(u.name) ? PAPER.fj : u.ech === 'de_6pz' || DARK_DE.has(u.name) ? PAPER.germanDark : PAPER.german) : PAPER.us;
+  const code = u.code ? { t: u.code, bg: /^\d+$/.test(u.code) ? '#fff' : undefined } : null;
+  return blockFace({ wood: hex(BULGE_WOOD[side]), paper, box: BOX[u.ech ?? ''] ?? ECH[u.ech ?? ''] ?? '#ccc', symbol: u.symbol ?? 'inf', steps: u.max, q: u.q, name: u.name, nameBg: YELLOW.has(u.name) ? '#f8e23c' : undefined, code, arrowAt: ARROW[u.name], size: { pip: 4.7, gap: 12.2, name: 17, code: 13.5 } }, u.str);
 }
 const BRIT: Record<string, 1> = { '43 Inf': 1, '53 Inf': 1, Guards: 1, '51 Inf': 1 };
