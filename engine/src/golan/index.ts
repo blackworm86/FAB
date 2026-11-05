@@ -1,7 +1,4 @@
-// FAB: Golan '73 rules engine (exclusive rules 11–19 on the series rules). Separate from The Bulge engine in ../.
+// FAB: Golan '73 map, movement and combat tables: the pure rule helpers the Golan volume module (../vol/golan.ts) builds on.
 export * from './map';
 export * from './move';
 export * from './combat';
-export * from './game';
-export * from './battle';
-export * from './events';

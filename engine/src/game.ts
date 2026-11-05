@@ -23,6 +23,7 @@ export interface Unit {
   fort?: 'armor' | 'infantry';   /** a strongpoint (Golan 15.6): cannot move, attack or retreat; fires one die; its symbol gives the fire modifier */
   ghost?: boolean;              /** a ghost (Golan 15.7): revealed and removed when a battle begins */
   division?: string; brigade?: string; kind?: string; symbol2?: string;
+  box?: string;   /** an off-map holding box of the volume (Golan: Operational/Strategic Reserve, Air Assault, strongpoint pool, evacuated, deploy, arriving) */
   disorder: 0 | 1 | 2; unsupplied: boolean; moved: boolean; reserve: string | null; exploit: boolean; from?: number;
   arrival?: number; entry?: string[]; ech?: string; symbol?: string; code?: string;
   chitId?: string; interdict?: string; adjOnly?: boolean; peiperFull?: boolean; spent?: number; delayed?: boolean; paradrop?: 'pending' | 'intact' | 'partial'; heydte?: boolean; bcross?: boolean;
@@ -30,13 +31,15 @@ export interface Unit {
 }
 /** A morale check outside a battle: who rolled, against what, and the result. */
 export interface Check { who: string; why: string; sn: number; die: number; ok: boolean; area: number | null }
-export interface Roll { who: string; sn: number; dice: number[]; hits: number; kind: 'arty' | 'ground' | 'morale' }
+export interface Roll { who: string; sn: number; dice: number[]; hits: number; kind: 'arty' | 'ground' | 'morale' | 'sam' }
 export interface Battle {
   area: number; attacker: Side; attPoint: string; defPoint: string; bt: boolean; riverAssault: boolean;
   stage: 'setup' | 'attArty' | 'defArty' | 'defFire' | 'offFire' | 'attChoice' | 'attFirst' | 'defChoice' | 'retreat' | 'exploit' | 'done';
   exploitIds?: string[];   /** 6.8: the attacking armor-class units that may roll the exploitation morale check */
   retreat?: { side: Side; queue: string[]; moved: boolean; after: 'ground' | 'arty' | 'sa'; h: number; excess: number };
   queue: ('attArty' | 'defArty' | 'defFire' | 'offFire')[]; assets: Record<Side, string[]>; air: Partial<Record<Side, { id: string; mode: 'arty' | 'support'; unit?: string }>>;
+  air2?: Partial<Record<Side, { id: string; mode: 'arty' | 'support'; unit?: string }>>;   /** a second air asset (Golan 16.22: one fires as artillery, the other supports a unit) */
+  vol?: Record<string, unknown>;   /** a volume's own battle state (Golan: the events played, jamming, counterbattery, the ditch an engineer bridges) */
   pending: number; pendingKind?: 'arty' | 'ground'; engFw: boolean; rolls: Roll[]; result?: string; exploit: boolean; unitHit: Record<Side, boolean>; mark: number; hit?: Record<Side, string[]>;
   ready?: Side[]; locked?: boolean;
   pz150?: string;   /** 18.4 the 150th's first battle: its id, cleared once the morale check is done */
@@ -226,10 +229,10 @@ function bulgeNewGame(seed: number, opts: Partial<Opts>): Game {
 /* ================= control, supply, VP ================= */
 function updateControl(g: Game, a: number) {
   if (contested(g, a)) for (const u of unitsIn(g, a)) if (u.reserve) { g.markers[u.side][u.reserve]++; u.reserve = null; }       // 5.21 the marker goes when the area becomes contested
-  const ge = blocks(g, a, 'german').length, al = blocks(g, a, 'allied').length, was = g.control[a];
-  if (ge && !al && !unitsIn(g, a, 'allied').length) g.control[a] = 'german';
-  if (al && !ge && !unitsIn(g, a, 'german').length) g.control[a] = 'allied';
-  if (was !== 'german' && g.control[a] === 'german' && areas.get(a)!.vp.mutual && !g.captured.includes(a)) {      // 16.13 captured fuel, first capture of a yellow-star area
+  const [p, q] = sidesOf(g), np = blocks(g, a, p).length, nq = blocks(g, a, q).length, was = g.control[a];
+  if (np && !nq && !unitsIn(g, a, q).length) g.control[a] = p;
+  if (nq && !np && !unitsIn(g, a, p).length) g.control[a] = q;
+  if (CUR.id === 'bulge' && was !== 'german' && g.control[a] === 'german' && areas.get(a)!.vp.mutual && !g.captured.includes(a)) {      // 16.13 captured fuel, first capture of a yellow-star area
     g.captured.push(a); const r = roll(g);
     if (r === 1 && !g.fuelAdded) { g.fuelAdded = true; g.chits.push({ id: `FUEL-C${a}`, name: 'Captured Fuel Asset', kind: 'fuel', side: 'german', ech: 'german', turn: 'S', box: 'available' }); say(g, `captured fuel at ${areas.get(a)!.name} (rolled 1): new fuel asset`); }
     else if (r <= 5) { const f = g.chits.find((c) => c.kind === 'fuel' && c.box === 'used') ?? g.chits.find((c) => c.kind === 'fuel' && c.box === 'cup'); if (f) { f.box = 'available'; say(g, `captured fuel at ${areas.get(a)!.name} (rolled ${r}): a fuel asset is available again`); } }
@@ -384,7 +387,7 @@ const dropReserve = (g: Game, u: Unit) => { if (u.reserve) { g.markers[u.side][u
 
 /* ================= movement ================= */
 const fuelChits = (g: Game) => boxOf(g, 'german', 'available').filter((c) => c.kind === 'fuel');
-export interface Opt { area: number; cost: number; fuel: boolean; mustStop: boolean; path: number[] }
+export interface Opt { area: number; cost: number; fuel: boolean; mustStop: boolean; path: number[]; triggers?: string[]; limited?: string[] }
 const markerAreas = (g: Game, owner: Side) => Object.keys(g.roadblocks).map(Number).filter((a) => g.roadblocks[a] === owner && !unitsIn(g, a).length);
 export function moveOptions(g: Game, id: string): Opt[] {
   setPlayArea(g.inPlay);
@@ -518,7 +521,7 @@ const supplied = (g: Game, side: Side, a: number) => g.control[a] === side && in
 export const BRITISH_AREAS = new Set([57, 58, 78, 79, 92, 93, 94, 95, 96]);
 const britishOk = (u: Unit, a: number) => u.ech !== 'br_xxx' || BRITISH_AREAS.has(a);
 const ARMY_ECH: Record<number, string> = { 5: 'de_5pz', 6: 'de_6pz', 7: 'de_7a' };
-export const assetZoneOk = (g: Game, c: Chit, a: number) => c.side === 'allied' || c.ech === 'de_sr' || c.ech === 'german' || ZONE[c.ech] === zoneOf(a) ||
+export const assetZoneOk = (g: Game, c: Chit, a: number) => CUR.id !== 'bulge' || c.side === 'allied' || c.ech === 'de_sr' || c.ech === 'german' || ZONE[c.ech] === zoneOf(a) ||
   (c.kind === 'engineer' && !g.chits.some((x) => x.kind === 'engineer' && x.ech === ARMY_ECH[zoneOf(a)] && x.box !== 'eliminated'));   // 14.52 an army that lost its engineer may borrow another   // 16.1 German assets/events act only in their own army's zone
 export function bridgeTargets(g: Game, side: Side, area: number) {
   return neighbors(area).filter((n) => connection(area, n)!.river && !g.blown.includes(keyOf(area, n)) && supplied(g, side, area));
@@ -710,10 +713,10 @@ export function assetLimits(g: Game, b: Battle, side: Side) {
   const onlyAssets = unitsIn(g, b.area, side).every((u) => u.garrison);
   return { arty: (attacker ? 2 : 1) + (us && !mixed && !onlyAssets ? 1 : 0), battle: !mixed && !onlyAssets, event: !mixed && !onlyAssets, mixed, pure, ech, pooled };
 }
-export function canAssign(g: Game, b: Battle, side: Side, c: Chit): string | null {
+export function canAssign(g: Game, b: Battle, side: Side, c: Chit, mode?: 'arty' | 'support'): string | null {
   if (b.stage !== 'setup') return 'assets are committed before the first roll';
   if (c.side !== side || c.box !== 'available') return 'not in the Available Box';
-  return CUR.canAssign(g, b, side, c);
+  return CUR.canAssign(g, b, side, c, mode);
 }
 /** The Bulge's asset rules: supply, army zones and Higher Echelons (6.22, 6.23, 16.1, 16.12, 16.23, 14.62b, 4.35), one Allied Air Mission. */
 function bulgeCanAssign(g: Game, b: Battle, side: Side, c: Chit): string | null {
@@ -738,14 +741,20 @@ function bulgeCanAssign(g: Game, b: Battle, side: Side, c: Chit): string | null 
   return 'this chit cannot be assigned to a battle';
 }
 export function assign(g: Game, b: Battle, id: string, mode?: 'arty' | 'support', unit?: string) {
-  const c = chit(g, id), err = canAssign(g, b, c.side, c); if (err) throw new Error(err);
+  const c = chit(g, id), err = canAssign(g, b, c.side, c, mode); if (err) throw new Error(err);
   c.box = 'map';
-  if (c.kind === 'air_mission') b.air[c.side] = { id, mode: mode ?? 'arty', unit }; else b.assets[c.side].push(id);
+  if (c.kind === 'air_mission') { const a = { id, mode: mode ?? 'arty', unit }; if (b.air[c.side]) (b.air2 ??= {})[c.side] = a; else b.air[c.side] = a; } else b.assets[c.side].push(id);
   CUR.onAssign?.(g, b, c, mode, unit);
 }
 export function unassign(g: Game, b: Battle, id: string) {
   const c = chit(g, id); if (b.stage !== 'setup') return; c.box = 'available';
-  b.assets[c.side] = b.assets[c.side].filter((x) => x !== id); if (b.air[c.side]?.id === id) delete b.air[c.side];
+  b.assets[c.side] = b.assets[c.side].filter((x) => x !== id); dropAir(b, c.side, id);
+}
+/** The air assets a side committed to a battle (one, or two in Golan '73). */
+export const airOf = (b: Battle, side: Side) => [b.air[side], b.air2?.[side]].filter((a): a is { id: string; mode: 'arty' | 'support'; unit?: string } => !!a);
+export function dropAir(b: Battle, side: Side, id: string) {
+  if (b.air[side]?.id === id) delete b.air[side]; if (b.air2?.[side]?.id === id) delete b.air2[side];
+  if (!b.air[side] && b.air2?.[side]) { b.air[side] = b.air2[side]; delete b.air2[side]; }
 }
 /* --- fire --- */
 export interface Fire { key: string; who: string; shooter: Shooter; dice: number; sn: number; parts: [string, number][]; isAsset: boolean }
@@ -758,9 +767,9 @@ export function fireList(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground'
   const add = (key: string, who: string, shooter: Shooter, isAsset: boolean) => { const r = CUR.successNumber({ side, ...shooter }, tgt, set); out.push({ key, who, shooter, dice: shooter.dice, sn: r.sn, parts: r.parts, isAsset }); };
   if (kind === 'arty') {
     for (const id of b.assets[side]) { const c = chit(g, id); if (isArty(c)) add(id, c.name, { kind: 'artillery', cls: 'infantry', dice: 1, rocket: c.kind === 'rocket_artillery' }, true); }
-    const a = b.air[side]; if (a?.mode === 'arty') add(a.id, 'Air Mission (artillery)', { kind: 'air', cls: 'infantry', dice: 1 }, true);
+    for (const a of airOf(b, side)) if (a.mode === 'arty') add(a.id, 'Air Mission (artillery)', { kind: 'air', cls: 'infantry', dice: 1 }, true);
   } else {
-    for (const u of fighters(g, b.area, side, att)) { if (u.paradrop === 'partial') continue; const sup = b.air[side]?.mode === 'support' && b.air[side]!.unit === u.id; add(u.id, u.name, { kind: u.garrison ? 'battle' : 'unit', cls: u.cls, quality: quality(u), dice: u.fort ? 1 : u.str, disordered: u.disorder > 0, unsupplied: u.unsupplied, airSupport: sup, closeAirSupport: sup, strongpoint: u.fort }, !!u.garrison); }
+    for (const u of fighters(g, b.area, side, att)) { if (u.paradrop === 'partial') continue; const sup = airOf(b, side).some((a) => a.mode === 'support' && a.unit === u.id); add(u.id, u.name, { kind: u.garrison ? 'battle' : 'unit', cls: u.cls, quality: quality(u), dice: u.fort ? 1 : u.str, disordered: u.disorder > 0, unsupplied: u.unsupplied, airSupport: sup, closeAirSupport: sup, strongpoint: u.fort }, !!u.garrison); }
     for (const id of b.assets[side]) { const c = chit(g, id); if (!isBattleAsset(c) || (att && kind === 'ground' && c.kind === 'engineer' && engRemovesFw(g, b))) continue; add(id, c.name, { kind: 'battle', cls: chitClass(c), quality: c.q, dice: 1 }, true); }
   }
   CUR.adjustFire?.(g, b, side, kind, out);
@@ -854,7 +863,7 @@ export function setReady(g: Game, b: Battle, side: Side, on = true) {
 export function cancelBattle(g: Game) {
   const b = g.battle; if (!b) throw new Error('no battle'); if (b.stage !== 'setup') throw new Error('combat has begun');
   if (b.locked) throw new Error('a Special Action was spent; the battle cannot be withdrawn');
-  for (const id of [...b.assets.german, ...b.assets.allied, ...Object.values(b.air).map((a) => a!.id)]) unassign(g, b, id);
+  for (const id of sidesOf(g).flatMap((s) => [...(b.assets[s] ?? []), ...airOf(b, s).map((a) => a.id)])) unassign(g, b, id);
   g.battle = null;
 }
 export const exploitSn = (g: Game, u: Unit) => CUR.moraleSn(g, u, 'exploit');
@@ -900,7 +909,7 @@ export function attackerChoice(g: Game, b: Battle, abort: boolean) {
   if (abort) {
     const us = unitsIn(g, b.area, b.attacker).filter((u) => !u.garrison);
     if (b.riverAssault) for (const u of us) { const from = u.from; if (from != null && g.control[from] === b.attacker && !unitsIn(g, from, other(b.attacker)).length && blocks(g, from, b.attacker).length < 2) { u.area = from; } else if (from != null) stepLoss(g, b, b.attacker, u.id); }
-    for (const u of unitsIn(g, b.area, b.attacker)) if (!u.garrison) u.disorder = 1;
+    for (const u of us) if (u.area != null) u.disorder = 1;                                      // the ones that fell back are disordered too
     b.queue = []; return end(g, b, 'Attack aborted: attackers disordered' + (b.riverAssault ? ' and back across the river' : ''));
   }
   allocate(g, b, b.attacker, b.pending); b.pending = 0; next(g, b);
@@ -998,7 +1007,7 @@ function end(g: Game, b: Battle, result: string) {
   if (g.opts.overrun) overrun(g, b);
   b.lastDefPoint = undefined;                                                                          // a copy of a block: never left in the shared game
   for (const side of sidesOf(g)) for (const id of b.assets[side] ?? []) { const c = chit(g, id); if (c.box === 'map') c.box = 'used'; }
-  for (const side of sidesOf(g)) { const a = b.air[side]; if (a) chit(g, a.id).box = CUR.id === 'bulge' ? 'eliminated' : 'used'; }      // Bulge air missions are single-use; Golan air support recycles (16.31)
+  for (const side of sidesOf(g)) for (const a of airOf(b, side)) chit(g, a.id).box = CUR.id === 'bulge' ? 'eliminated' : 'used';      // Bulge air missions are single-use; Golan air support recycles (16.31)
   CUR.onBattle?.(g, b, 'end');
   g.fought.push(b.area); for (const n of [b.area, ...neighbors(b.area)]) updateControl(g, n);
   say(g, `${areas.get(b.area)!.name}: ${result}`); g.battles = (g.battles ?? 0) + 1;
@@ -1010,9 +1019,9 @@ export function declineExploit(g: Game, b: Battle) { if (b.stage !== 'exploit') 
 export function closeBattle(g: Game) { if (g.battle?.stage !== 'done') throw new Error('battle not finished'); g.battle = null; settleUp(g); }
 export function defenderRetreatSA(g: Game, b: Battle, chitId?: string) {
   if (b.stage !== 'setup') throw new Error('only before the first roll'); const def = other(b.attacker);
-  const us = unitsIn(g, b.area, def).filter((u) => !u.garrison); if (!us.length) throw new Error('only units retreat: garrisons and defended roadblocks stay (16.21, 4.35)');
+  const us = unitsIn(g, b.area, def).filter((u) => !u.garrison && !u.fort && !u.ghost); if (!us.length) throw new Error('only units retreat: garrisons, defended roadblocks and strongpoints stay (16.21, 4.35, 15.6)');
   spendSA(g, def, us[0].ech, 'retreat before combat', chitId);
-  for (const id of [...b.assets[def], ...(b.air[def] ? [b.air[def]!.id] : [])]) unassign(g, b, id);               // assets already assigned go back to the Available Box b.locked = true; us.forEach((x) => clearInterdict(g, x));
+  for (const id of [...b.assets[def], ...airOf(b, def).map((a) => a.id)]) unassign(g, b, id);               // assets already assigned go back to the Available Box b.locked = true; us.forEach((x) => clearInterdict(g, x));
   b.retreat = { side: def, queue: us.map((u) => u.id), moved: false, after: 'sa', h: 0, excess: 0 }; advanceRetreat(g, b);
 }
 export function defenderReinforceSA(g: Game, b: Battle, unitId: string, chitId?: string) {
@@ -1040,7 +1049,7 @@ export function mustFight(g: Game) {
 function retreatExcess(g: Game) {
   for (const side of sidesOf(g)) for (const a of areas.keys()) {
     const us = blocks(g, a, side).filter((u) => !u.fort && !u.ghost); while (us.length > stackMax(g, a)) {
-      const u = us.pop()!, to = neighbors(a).find((n) => g.control[n] === side && !unitsIn(g, n, other(side)).length && blocks(g, n, side).length < 2 && (!CUR.retreatOk || CUR.retreatOk(g, u, a, n)));
+      const u = us.pop()!, to = neighbors(a).find((n) => g.control[n] === side && !unitsIn(g, n, other(side)).length && blocks(g, n, side).length < stackMax(g, n) && (!CUR.retreatOk || CUR.retreatOk(g, u, a, n)));
       if (to == null) { u.str = 0; eliminate(g, u); } else { u.area = to; u.disorder = 1; say(g, `${u.name} retreats from overstacking to ${areas.get(to)!.name}`); }
     }
   }
@@ -1112,7 +1121,7 @@ export function endPhase(g: Game) {
   if (g.battle) throw new Error('finish the open battle first');
   if (g.pendingBlow) throw new Error('resolve the bridge-blowing attempt first');
   if (mustFight(g).length) throw new Error('newly contested areas must be fought first');
-  const ph = g.phase; CUR.onPhase?.(g, ph, 'end');
+  const ph = g.phase; if (ph !== 'supply') CUR.onPhase?.(g, ph, 'end');                        // supply's end ran in rollSupply
   if (ph === 'deploy') { g.phase = 'movement'; g.phasing = sidesOf(g)[0]; g.units.forEach((u) => { u.moved = false; u.spent = 0; }); g.contestedAtMoveStart = contestedAreas(g); g.stratMoves = 0; CUR.onPhase?.(g, 'movement', 'start'); say(g, 'phase start'); return; }
   g.fieldWorks = g.fieldWorks.filter((a) => { const o = g.fwOwner[a]; return o ? unitsIn(g, a, o).length > 0 : unitsIn(g, a).length > 0; });   // 5.23 gone when no friendly unit is left in the area
   for (const a of Object.keys(g.fwOwner).map(Number)) if (!g.fieldWorks.includes(a)) delete g.fwOwner[a];
@@ -1184,7 +1193,7 @@ export function roadblock(g: Game, id: string, area: number, defended: boolean) 
   needAdmin(g); const c = chit(g, id);
   if (c.kind !== 'engineer' || c.box !== 'available' || !assetZoneOk(g, c, area) || !vacantSupplied(g, c.side, area) || g.roadblocks[area]) throw new Error('needs a supplied, friendly, vacant area with a Terrain Difficulty Number of 1 or more');
   if (defended) {
-    g.units.push({ id: `DR-${id}`, name: `${c.name} (defended roadblock)`, side: c.side, cls: 'infantry', q: ['green'], max: 1, str: 1, area, garrison: true, disorder: 0, unsupplied: false, moved: true, reserve: null, exploit: false, ech: c.ech, chitId: id });
+    g.units.push({ id: `DR-${id}`, name: `${c.name} (defended roadblock)`, side: c.side, cls: 'infantry', q: [c.q ?? 'green'], max: 1, str: 1, area, garrison: true, disorder: 0, unsupplied: false, moved: true, reserve: null, exploit: false, ech: c.ech, chitId: id });
     c.box = 'map';
   } else { g.roadblocks[area] = c.side; c.box = 'used'; }
   say(g, `${c.name} makes a ${defended ? 'defended ' : ''}roadblock in ${areas.get(area)!.name}`, c.side);

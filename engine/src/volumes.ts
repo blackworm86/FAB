@@ -49,7 +49,7 @@ export interface Volume {
   successNumber: (s: Shooter, t: Target, c: Setting) => { sn: number; parts: [string, number][] };
   /** Extra firing groups (brigade integrity) or changes to the list before the dice roll. */
   adjustFire?: (g: Game, b: Battle, side: Side, kind: 'arty' | 'ground', list: { key: string; who: string; shooter: Shooter; dice: number; sn: number; parts: [string, number][]; isAsset: boolean }[]) => void;
-  canAssign: (g: Game, b: Battle, side: Side, c: Chit) => string | null;
+  canAssign: (g: Game, b: Battle, side: Side, c: Chit, mode?: 'arty' | 'support') => string | null;
   moraleSn: (g: Game, u: Unit, why: 'exploit' | 'supply' | 'check') => number;
   retreatOk?: (g: Game, u: Unit, from: number, to: number) => boolean;
   retreatPrefer?: (g: Game, u: Unit, from: number, opts: number[]) => number[];
