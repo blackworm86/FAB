@@ -131,9 +131,12 @@ export function useVolume(id: string | null | undefined): VolView {
 }
 /** The stylesheet names its side classes after The Bulge's sides (.german, .allied); another volume gets the same rules under its own side names. */
 function aliasSideCss(map: Record<string, string>) {
-  const re = /\.(german|allied)\b/g, walk = (rules: CSSRuleList, into: CSSStyleSheet | CSSGroupingRule) => {
+  const re = /\.(german|allied)\b/g, own = new Set<string>(), seen = (rules: CSSRuleList) => { for (const r of Array.from(rules)) { if (r instanceof CSSStyleRule) own.add(r.selectorText); else if (r instanceof CSSGroupingRule) seen(r.cssRules); } };
+  for (const ss of Array.from(document.styleSheets)) { try { seen(ss.cssRules); } catch { /* cross-origin */ } }
+  const walk = (rules: CSSRuleList, into: CSSStyleSheet | CSSGroupingRule) => {
     for (const r of Array.from(rules)) {
-      if (r instanceof CSSStyleRule && re.test(r.selectorText)) { try { into.insertRule(r.cssText.replace(re, (_, k) => `.${map[k]}`), into.cssRules.length); } catch { /* an odd rule: skip it */ } }
+      if (r instanceof CSSStyleRule && re.test(r.selectorText)) { const sel = r.selectorText.replace(re, (_, k) => `.${map[k]}`); if (own.has(sel)) continue;        // the volume styles this itself (e.g. its block wood): keep its own
+        try { into.insertRule(r.cssText.replace(re, (_, k) => `.${map[k]}`), into.cssRules.length); } catch { /* an odd rule: skip it */ } }
       else if (r instanceof CSSGroupingRule) walk(r.cssRules, r);
     }
   };

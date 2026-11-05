@@ -1,5 +1,6 @@
 /** The games that share the FAB series rules, as the home page and the lobby need them (no engine import: the home page shows every game, not only the one loaded). */
-export interface ScenarioInfo { id: string; name: string; sub: string; title: string }
+/** testing: a scenario still being built and checked; only the admin sandbox offers it. */
+export interface ScenarioInfo { id: string; name: string; sub: string; title: string; testing?: boolean }
 export interface GameInfo {
   id: string; name: string; vol: string; blurb: string; when: string; ready: boolean;
   sides: [string, string]; tag: Record<string, string>; sideName: Record<string, string>;      // First Player first; the database seats keep the keys german (first) and allied (second)
@@ -17,7 +18,7 @@ export const GAMES: GameInfo[] = [
     sides: ['axis', 'allied'], tag: { axis: 'AX', allied: 'AL' }, sideName: { axis: 'Axis', allied: 'Allied' }, scenarios: [], defaultScenario: '', fuel: false, optional: false },
   { id: 'golan73', name: "Golan '73", vol: 'Vol. 3', blurb: 'Yom Kippur War, October 1973. Syrian armor against the Golan heights.', when: 'Golan Heights · October 1973', ready: true,
     sides: ['syrian', 'israeli'], tag: { syrian: 'SY', israeli: 'IS' }, sideName: { syrian: 'Syrian', israeli: 'Israeli' },
-    scenarios: [{ id: 'badr', name: 'Operation Badr', sub: '9 turns · historical set-up', title: 'Operation Badr (22.1): the historical set-up, 9 turns' }, { id: 'badr_alt', name: 'Badr, free set-up', sub: '9 turns · players place their units', title: 'Operation Badr, alternate set-up (22.2): the players place their units' }],
+    scenarios: [{ id: 'badr', name: 'Operation Badr', sub: '9 turns · historical set-up', title: 'Operation Badr (22.1): the historical set-up, 9 turns' }, { id: 'badr_alt', name: 'Badr, free set-up', sub: '9 turns · players place their units', title: 'Operation Badr, alternate set-up (22.2): the players place their units' }, { id: 'nafakh', name: 'Battle for Nafakh', sub: '4 turns · Oct 7–8 · in testing', title: 'Battle for Nafakh (22.4): the Syrian drive on Nafakh, 4 turns', testing: true }, { id: 'alowda', name: 'Operation Al-Owda', sub: '6 turns · hypothetical · in testing', title: 'Operation Al-Owda (20.3): the original Syrian plan, 6 turns', testing: true }],
     defaultScenario: 'badr', fuel: false, optional: false },
 ];
 export const gameInfo = (id: string) => GAMES.find((x) => x.id === id);

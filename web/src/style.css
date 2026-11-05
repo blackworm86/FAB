@@ -382,7 +382,7 @@ ul.rl { margin: 4px 0; padding-left: 16px; } ul.rl li { margin: 2px 0; } .inspec
 .vchart { width: 100%; height: auto; background: #11140c; border: 1px solid #3a3f2a; } .vend h4 { font: 700 14px var(--sfd); letter-spacing: .1em; text-transform: uppercase; color: #aaa; margin: 14px 0 4px; }
 .vbtns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 18px 0 8px; } @media (max-width: 700px) { .vban h1 { font-size: 30px; } }
 /* phones: the top bar must fit; map layers stay in Menu > Settings, the sandbox reset in its Turn tab */
-@media (max-width: 560px) { .c-bar.t .sbreset { display: none !important; } .c-bar.t { overflow: hidden; } }
+@media (max-width: 560px) { .c-bar.t { overflow: hidden; } }
 /* chits that can be played now glow softly */
 .card2.live:not(.wood) img, .pc.live img, .card2.live.wood .b3 .f { box-shadow: 0 0 0 2px #ffe08aaa, 0 0 14px 4px #ffd25a88; animation: liveglow 2.4s ease-in-out infinite; }
 @keyframes liveglow { 50% { box-shadow: 0 0 0 2px #ffe08a55, 0 0 8px 2px #ffd25a44; } }
@@ -812,3 +812,10 @@ a.btnlink.primary { background: var(--gold); color: #1a1608; border-color: trans
 .b3.israeli .r { background: #1b80b4; } .b3.israeli .t { background: #5cbde6; } .b3.syrian .r { background: #1d6131; } .b3.syrian .t { background: #3f9a57; }
 .blk .b3.israeli { box-shadow: 6px 6px 0 #1b80b4, 9px 12px 12px #000a; } .blk .b3.syrian { box-shadow: 6px 6px 0 #1d6131, 9px 12px 12px #000a; }
 .card2.wood.israeli { box-shadow: 0 5px 0 #1b80b4, 0 6px 0 #135c82, 0 12px 18px #000b; } .card2.wood.syrian { box-shadow: 0 5px 0 #1d6131, 0 6px 0 #144522, 0 12px 18px #000b; }
+/* admin sandbox: one floating button at the left edge (never in the top bar), and the game / scenario header of its panel */
+.sbfab { position: fixed; left: 10px; top: 46%; z-index: 25; display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: #0b0d08cc; color: var(--gold); border: 1px dashed var(--gold); border-radius: 22px; font: 700 12px var(--sfd); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; box-shadow: 0 4px 12px #000a; opacity: .78; }
+.sbfab:hover, .sbfab:focus-visible { opacity: 1; background: #0b0d08f2; }
+.sbfab svg { width: 18px; height: 18px; }
+@media (max-width: 700px) { .sbfab { padding: 9px; top: 42%; } .sbfab span { display: none; } }
+.sbhead { padding-bottom: 6px; margin-bottom: 6px; border-bottom: 1px solid var(--line); } .sbhead > b { display: flex; align-items: center; gap: 6px; color: var(--gold); font: 700 13px var(--sfd); letter-spacing: .08em; text-transform: uppercase; } .sbhead b svg { width: 16px; height: 16px; }
+.sbhead .row select { flex: 1; min-width: 0; }

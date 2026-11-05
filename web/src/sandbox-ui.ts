@@ -6,6 +6,7 @@ import { esc, nm } from './util';
 import { RULE, ruleHtml } from './rules-text';
 import { online, setDevSeat, SANDBOX, type DevSeat } from './online';
 import type { History } from './history';
+import { GAMES } from './games';
 
 /** What the sandbox needs from main: the game and selection (read and written), and the shared screen helpers. */
 export interface SbCtx {
@@ -20,7 +21,7 @@ export function initSandboxUi(ctx: SbCtx) { M = ctx; ({ unitPic, chitPic, ABBR, 
 const other = E.other;
 const $ = (q: string) => document.querySelector(q) as HTMLElement;
 /* admin sandbox (?sandbox=1): free edits, seat switch, notes and the test report ---------- */
-export const st = { sbHot: (() => { try { return localStorage.getItem('fab-hotseat') === '1'; } catch { return false; } })(), hotCover: null as E.Side | null, sbOpen: true, sbPlace: null as string | null, sbAuto: false, sbFilter: '', sbDraft: '', rules: {} as Partial<E.Opts> };
+export const st = { sbHot: (() => { try { return localStorage.getItem('fab-hotseat') === '1'; } catch { return false; } })(), hotCover: null as E.Side | null, sbOpen: (() => { try { return localStorage.getItem('fab-sb-open') === '1'; } catch { return false; } })(), sbPlace: null as string | null, sbAuto: false, sbFilter: '', sbDraft: '', rules: {} as Partial<E.Opts> };
 let sbTab = 'Pieces';
 let sbJump: { turn: number; side: E.Side; phase: E.Phase };
 let sbNotes = SB.loadNotes();
@@ -51,8 +52,17 @@ export function sbReset(opts: Partial<E.Opts>) {
   if (st.sbHot) { setDevSeat(M.g.phasing); st.hotCover = M.g.phasing; }
   save(); refresh();
 }
-export function sandboxBtns() {
-  return ubtn(`${ico('wand')}<span class="bl">Sandbox</span>`, () => { st.sbOpen = !st.sbOpen; }, 'ico ' + (st.sbOpen ? 'on' : ''), false, 'Sandbox tools') + ubtn(`${ico('undo')}<span class="bl">Reset</span>`, () => sbReset({ scenario: M.g.opts.scenario }), 'ico sbreset', false, 'Reset: a new game from the first turn (same scenario)');
+const openSb = (v: boolean) => { st.sbOpen = v; try { localStorage.setItem('fab-sb-open', v ? '1' : '0'); } catch { /* private mode */ } };
+/** The sandbox's only control on the playing screen: a small floating button at the left edge, clear of the bars and the map's middle. */
+export function sandboxFab() {
+  return `<button class="sbfab" data-ui="${reg(() => openSb(true))}" title="Sandbox tools (admin testing)" aria-label="Open the sandbox tools">${ico('wand')}<span>Sandbox</span></button>`;
+}
+/** Which game and scenario the sandbox runs: another game reloads the page on that game's own sandbox table. */
+function sbHead() {
+  const gameSel = sbSel(GAMES.filter((x) => x.ready).map((x): [string, string] => [x.id, x.name]), E.VOLUME.id, (v) => { if (v === E.VOLUME.id) return; const q = new URLSearchParams(location.search); q.set('game', v); location.search = q.toString(); });
+  const cur = M.g.opts.scenario ?? M.defaultOpts.scenario ?? '';
+  const scenSel = sbSel(M.scenarios.map((sc): [string, string] => [sc.id, `${sc.name}${(sc as { testing?: boolean }).testing ? ' (in testing)' : ''}`]), String(cur), (v) => { if (v !== cur) sbReset({ scenario: v as E.Opts['scenario'] }); });
+  return `<div class="sbhead"><b>${ico('wand')} Sandbox</b><div class="row">${gameSel}${scenSel}${ubtn(`${ico('undo')} Reset`, () => sbReset({ scenario: M.g.opts.scenario }), '', false, 'A new game of this scenario from its first turn')}</div></div>`;
 }
 function sbTarget(): SB.Target {
   const u = M.selUnit ? M.g.units.find((x) => x.id === M.selUnit) : null; if (u) return { kind: 'unit', id: u.id, label: `${u.name} (${u.side}, ${u.id})` };
@@ -133,5 +143,5 @@ function sbNotesHtml() {
 }
 export function sandboxPanel() {
   const tabs = ['Turn', 'Pieces', 'Notes'], body = sbTab === 'Pieces' ? sbPieces() : sbTab === 'Notes' ? sbNotesHtml() : sbTurn();
-  return `<div class="sbx"><div class="tabs">${tabs.map((t) => `<button class="${t === sbTab ? 'on' : ''}" data-ui="${reg(() => { sbTab = t; })}">${t === 'Notes' ? `Notes (${sbNotes.length})` : t}</button>`).join('')}${ubtn(ico('close'), () => { st.sbOpen = false; }, 'ico', false, 'Hide the sandbox tools')}</div>${body}</div>`;
+  return `<div class="sbx">${sbHead()}<div class="tabs">${tabs.map((t) => `<button class="${t === sbTab ? 'on' : ''}" data-ui="${reg(() => { sbTab = t; })}">${t === 'Notes' ? `Notes (${sbNotes.length})` : t}</button>`).join('')}${ubtn(ico('close'), () => openSb(false), 'ico', false, 'Hide the sandbox tools')}</div>${body}</div>`;
 }
