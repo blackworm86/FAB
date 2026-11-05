@@ -133,6 +133,11 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
     const sa = E.saAvailable(g, 'israeli').length > 0;
     out.push(`<div class="volpanel"><b>${ctx.ico('next')} Golani (22.45)</b><span>A Special Action brings the Golani brigade in beside Oretal.</span><div class="row">${ctx.btn('Spend a Special Action: release Golani', () => G.releaseGolani(g), 'primary', !sa, sa ? '' : 'No Special Action available')}</div></div>`);
   }
+  if (G.isAlOwda(g) && g.phase === 'deploy') {
+    const at = G.alowdaRaidAreas(g), cmd = g.chits.filter((c) => c.kind === 'commando' && c.side === 'syrian' && c.box === 'available');
+    const land = at.length && cmd.length && ctx.mine('syrian');
+    out.push(`<div class="volpanel">${land ? `<b>${ctx.ico('air_mission')} Commando landings (20.35)</b><span>Land up to two commandos in vacant Israeli-held areas east of the Jordan (not Mt Hermon or Ma'agan), or skip them.</span><div class="row">${ctx.ubtn('Choose a landing area', () => ctx.pickArea('Land the commandos', at, (a) => G.alowdaRaid(g, cmd[0].id, a)), 'primary')}</div>` : ''}<small>${ctx.ico('warn')} Draft scenario: ${esc(G.ALOWDA_ESTIMATES)}.</small></div>`);
+  }
   if (!b && g.phase === 'combat' && ctx.mine('syrian')) {
     const aa = G.airAssaultTargets(g);
     if (aa.length) out.push(`<div class="volpanel"><b>${ctx.ico('air_mission')} 82nd Para (15.3)</b><span>The paratroop battalion may air-assault east of the SAM barrier or onto Mt Hermon, before any battle.</span><div class="row">${ctx.ubtn('Choose the landing area', () => ctx.pickArea('Air assault: tap the landing area', aa, (a) => G.airAssault(g, a)), 'primary')}</div></div>`);
