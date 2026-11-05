@@ -158,7 +158,7 @@ Black panel with a 1px rule, a brass display title, dotted-rule rows of label an
 Black panel with the roll title, one row per firer: name, modifier chips (green for plus, salmon for minus), a brass SN tag, the dice in hit or miss colours and the hit count.
 
 ### Badges on the map
-Pill badges in a white 2px border: green for reachable, brass for must stop or fuel, red for mandatory battle.
+Pill badges in a white 2px border: green for reachable, brass for must stop, dark with a brass edge and fuel drop for a move that uses fuel, red for mandatory battle.
 
 ### Choice bubbles and effect pop-ups
 A decision on the table (take the hits, retreat, first loss) is a small bubble placed just outside the battle area, never over its pieces, with a thin brass leader line and a dashed ring on every block it is about. Effects (−1 step, eliminated, disordered) sit beside their block on the side away from the battle, with a short line and a ✕ to dismiss; they clear by themselves after a few seconds.
@@ -172,8 +172,18 @@ Disordered, recovering, reserve, exploitation, out of supply, Greif interdict an
 ### Supply
 Map layers > Colour > Supply tints your side's areas: light blue (German) or green (Allied) where they trace supply, red where they are cut off. A selected block shows its supply line in pale blue to its source, and a line in its panel: "In supply: traces through N areas to …" or "Out of supply" with the reason. The Supply Phase opens with a list of the cut-off units, the number each needs, and a Roll supply checks button; tapping a unit centres the camera on it.
 
+### Map overlays
+One meaning per colour, from the palette above; the printed map keeps its own colours underneath.
+- **Reach** (OK Green #5d8b3a, arrow #8fc46a): areas a selected block can enter, a normal move arrow, valid targets and retreat areas.
+- **Must stop / costs a Special Action** (Brass): the area is lit brass, its badge is brass with dark ink.
+- **Uses fuel** (Brass outline): a dark badge with a brass edge and a fuel-drop mark; the move arrow is brass.
+- **Must fight** (Alarm Red): the area is tinted red with its own red inner border and a battle badge. **May fight**: a brass tint and border.
+- **Selected area**: brass. **Preview of the destination**: pale brass.
+- **Supply**: your supplied areas in your side's colour (German Steel, Allied Olive); cut off in Alarm Red.
+- **Other arrows**: steel = minimum move, red with a white break = across a blown bridge, paper = strategic move.
+- Blue is never used on the map except for the printed rivers.
 ### Route arrows
-Movement is a flat, tapered operations arrow (shadow, dark rim, light core, notched head, tail fading in), coloured by kind: brass = normal, orange = uses fuel, steel = minimum move, red with a white break = across a blown bridge, violet = strategic move. Supply is a quiet dotted lifeline of light-blue beads with a ring on each area and a glowing source; it shows when a block is selected and no destination is hovered. Mockup: `docs/design/route-style-v2.png`.
+Movement is a flat, tapered operations arrow (shadow, dark rim, light core, notched head, tail fading in), coloured by kind (see Map overlays): green = normal, brass = uses fuel, steel = minimum move, red with a white break = across a blown bridge, paper = strategic move. Supply is a quiet dotted lifeline of paper-coloured beads with a ring on each area and a glowing source; it shows when a block is selected and no destination is hovered. Mockup: `docs/design/route-style-v2.png`.
 
 ### Victory points
 A strip under the top bar: the turn track (each turn's sudden-death numbers in red, the current turn in brass), the Allied and German totals around a gauge whose brass needle shows the net score, with red lines where either side wins outright this turn; on phones only the gauge and totals. Tapping it opens the breakdown: totals, each side's objective areas (cut-off ones struck through), destroyed big units, the victory table. When the game ends a full panel shows the result, summary cards, a net-VP-by-turn chart, the breakdown and View map / New game / Home; "Result" in the bottom line reopens it. Not shown in Nuts!, which is decided in Bastogne.

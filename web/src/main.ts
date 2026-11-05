@@ -287,7 +287,7 @@ function drawBattleTable(b: E.Battle, spot: (id: number, x: number, z: number, r
     ids.forEach((id, i) => {
       const m = chit3d(E.chit(g, id)), at = battleSpot(b, sd, 'asset', i, ids.length), x = at.x, z = at.z; void spot; m.userData.chit = id; m.position.set(x, 0.06, z); pieces.add(m);
       if (b.stage === 'setup' && mine(sd)) { const d = disc('x', 0.42); d.position.set(x + 0.5, 0.2, z - 0.5); d.userData.chit = id; pieces.add(d); }
-      if (tgt?.units.has(id)) { const ring = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.25, 40), new THREE.MeshBasicMaterial({ color: 0x37d67a, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.14, z); markers.add(ring); }
+      if (tgt?.units.has(id)) { const ring = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.25, 40), new THREE.MeshBasicMaterial({ color: MAPC.ring, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.14, z); markers.add(ring); }
     });
   }
 }
@@ -300,6 +300,10 @@ function drawPointMarks(b: E.Battle) {
 }
 function drawPieces() {
   disposeAll(pieces); disposeAll(markers);
+  coveredLabels.clear();
+  /** The printed number plate and name (drawn upright for the viewer) are kept clear: blocks go around them when the area has room. */
+  const labelSpots = (id: number) => { const L = MAP.areas.find((a) => a.id === id)!.label, rt = viewRot(), cs = Math.cos(rt), sn = Math.sin(rt);
+    return ([[0, -4, 17], [0, 25, 12], [-22, 25, 11], [22, 25, 11]] as const).map(([dx, dy, r]) => { const w = toWorld(L[0] + dx * cs - dy * sn, L[1] + dx * sn + dy * cs); return { x: w.x, z: w.z, r: r / S }; }); };
   const taken = new Map<number, { x: number; z: number; r: number }[]>(), edgeTaken: { x: number; z: number; r: number }[] = [];
   /** Spot inside the area nearest to (x, z) whose footprint (radius r) is fully inside it and clear of what is already there. */
   const inArea = (id: number, x: number, z: number, r: number) => {
@@ -321,6 +325,7 @@ function drawPieces() {
   if (g.battle) drawBattleTable(g.battle, inArea);                                                      // counters first, so blocks make room around them and nothing hides one
   for (const a of MAP.areas) {
     const us = E.unitsIn(g, a.id), base = toWorld(...POLE.get(a.id)!), cont = E.contestedAreas(g).includes(a.id); rows.set(a.id, { base, cont });
+    const lab = us.length && g.battle?.area !== a.id ? labelSpots(a.id) : []; if (lab.length) taken.set(a.id, [...(taken.get(a.id) ?? []), ...lab]);
     const order = [...us].sort((p, q) => +(p.side !== 'german') - +(q.side !== 'german') || +!!p.garrison - +!!q.garrison);
     const place = (column: boolean) => {                                                           // a row of blocks, or a column when the area is too narrow for a row
       const t = taken.get(a.id) ?? [], saved = [...t]; let tight = false;
@@ -336,12 +341,13 @@ function drawPieces() {
         return { x: pl.x + (i % per - (inRow - 1) / 2) * 1.75, z: pl.z + dir * (1.3 + rw * 1.75) }; });
     }
     if (g.battle?.area === a.id) { const b = g.battle; lay.spots = order.map((u) => { const same = order.filter((x) => x.side === u.side); return battleSpot(b, u.side, 'unit', same.indexOf(u), same.length); }); }
+    if (lab.some((l) => lay.spots.some((p) => Math.hypot(p.x - l.x, p.z - l.z) < l.r + 0.7))) coveredLabels.add(a.id);          // no room: the area's number and name ride on a tag above
     order.forEach((u, n) => {
       const hid = !seen(u), m = block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
       const flat = cont && !hid && !u.garrison && u.up === a.id;                                                           // revealed blocks lie flat, label up, while the area is contested
       m.position.x = p.x; m.position.z = p.z;
       if (flat) { m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, viewRot(), 0); m.position.y = 0.4; }
-      if (tgt?.units.has(u.id)) { const ring = new THREE.Mesh(new THREE.RingGeometry(1.15, 1.45, 40), new THREE.MeshBasicMaterial({ color: 0x37d67a, transparent: true, opacity: 0.95, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(p.x, 0.09, p.z); markers.add(ring); const glow = new THREE.Mesh(new THREE.CircleGeometry(1.15, 40), new THREE.MeshBasicMaterial({ color: 0x37d67a, transparent: true, opacity: 0.28 })); glow.rotation.x = -Math.PI / 2; glow.position.set(p.x, 0.085, p.z); markers.add(glow); }
+      if (tgt?.units.has(u.id)) { const ring = new THREE.Mesh(new THREE.RingGeometry(1.15, 1.45, 40), new THREE.MeshBasicMaterial({ color: MAPC.ring, transparent: true, opacity: 0.95, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(p.x, 0.09, p.z); markers.add(ring); const glow = new THREE.Mesh(new THREE.CircleGeometry(1.15, 40), new THREE.MeshBasicMaterial({ color: MAPC.ring, transparent: true, opacity: 0.28 })); glow.rotation.x = -Math.PI / 2; glow.position.set(p.x, 0.085, p.z); markers.add(glow); }
       m.userData.unit = u.id; if (u.id === selUnit || (g.battle && !hid && (u.id === g.battle.attPoint || u.id === g.battle.defPoint))) { const o = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xffb347 })); m.add(o); }
       pieces.add(m);
       const tags: [string, string][] = []; const top = flat ? 0.85 : 1.66;
@@ -374,6 +380,8 @@ function drawPieces() {
 /** Map overlays: the area tint (terrain defence or army zones) is painted into the board under the line work. */
 let tint: 'off' | 'tdn' | 'zones' | 'control' | 'supply' = (() => { try { const t = localStorage.getItem('fab-tint'); return t === 'tdn' || t === 'zones' || t === 'control' || t === 'supply' ? t : 'off'; } catch { return 'off'; } })();
 const TDN_COL = [0xf4e3a4, 0xc9a24f, 0x8a8f86, 0x4a5028], ZONE_COL: Record<number, number> = { 5: 0x3a3f46, 6: 0x951b81, 7: 0x009fe3 };   // the TDN colours are the printed TDN markers'
+/** Map overlays (DESIGN.md › Map overlays): one meaning per colour. Reach green, stop brass, must-fight red, optional fight brass, selection brass, supply in the side's colour. */
+const MAPC = { reach: 0x5d8b3a, stop: 0xe7b04a, preview: 0xf6e3a8, must: 0xd1432f, fight: 0xe7b04a, sel: 0xe7b04a, cut: 0xd1432f, supGe: 0xb9bcc0, supAl: 0x9db36a, ring: 0x8fc46a };
 const CONTROL_COL = { allied: 0x6aa84f, german: 0x8a9096, contested: 0x9b59d0 };                      // allied green, axis grey, contested violet (red and yellow are the combat highlights)
 const tintOf = (id: number) => (tint === 'tdn' ? TDN_COL[E.areas.get(id)!.tdn] : tint === 'control' ? (E.contested(g, id) ? CONTROL_COL.contested : CONTROL_COL[g.control[id] ?? 'german']) : ZONE_COL[E.areas.get(id)!.zone]);
 const hex6 = (n: number) => '#' + n.toString(16).padStart(6, '0');
@@ -433,15 +441,15 @@ function paintAreas() {
   const arr = new Map(arrOpts().map((x) => [x.area, x])), ret = new Set(g.battle?.stage === 'retreat' ? E.retreatOptions(g, g.battle) : []);      // once, not per area
   for (const [id, m] of overlays) {
     const mat = m.material as THREE.MeshBasicMaterial; let c = 0xffffff, o = 0; const r = opts.find((x) => x.area === id);
-    if (r) { c = r.mustStop ? 0xff8a3d : 0x37d67a; o = 0.32; } else if (fight.includes(id)) { c = must.has(id) ? 0xff4d4d : 0xffc542; o = 0.28; }
-    if (id === (previewArea ?? hoverArea) && r) { c = 0xffe08a; o = 0.5; }
-    if (id === selArea && !selUnit) { c = 0x4aa3ff; o = Math.max(o, 0.3); }
+    if (r) { c = r.mustStop ? MAPC.stop : MAPC.reach; o = r.mustStop ? 0.34 : 0.4; } else if (fight.includes(id)) { c = must.has(id) ? MAPC.must : MAPC.fight; o = must.has(id) ? 0.34 : 0.26; }
+    if (id === (previewArea ?? hoverArea) && r) { c = MAPC.preview; o = 0.5; }
+    if (id === selArea && !selUnit) { c = MAPC.sel; o = Math.max(o, 0.3); }
     if (id === kbArea && document.activeElement === canvas && o < 0.3) { c = 0xffffff; o = 0.3; }              // the keyboard cursor
-    if (dragTargets.includes(id)) { c = 0x37d67a; o = 0.5; }
-    if (tgt) { if (tgt.areas.has(id) || (tgt.any && false)) { c = tgt.color.get(id) ?? 0x37d67a; o = 0.5; } else if (tgt.pick.has(id) && (!tgt.focus || tgt.color.has(id))) { c = tgt.color.get(id) ?? 0xe7b04a; o = 0.45; } else if (o === 0) { c = 0x000000; o = 0.28; } }       // a chit in hand: what it can act on glows, the rest dims
-    const ar = arr.get(id); if (ar) { c = ar.sa ? 0xff8a3d : 0x37d67a; o = 0.45; }
-    if (ret.has(id)) { c = 0x37d67a; o = 0.5; }
-    if (tint === 'supply' && !g.battle && o === 0 && !tgt) { const sd = supplySide(), mine2 = g.control[id] === sd; if (mine2) { if (supOk(sd, id)) { c = sd === 'german' ? 0x6fb7ff : 0x9bd35a; o = 0.36; } else { c = 0xd1432f; o = 0.58; } } }
+    if (dragTargets.includes(id)) { c = MAPC.reach; o = 0.5; }
+    if (tgt) { if (tgt.areas.has(id) || (tgt.any && false)) { c = tgt.color.get(id) ?? MAPC.reach; o = 0.5; } else if (tgt.pick.has(id) && (!tgt.focus || tgt.color.has(id))) { c = tgt.color.get(id) ?? 0xe7b04a; o = 0.45; } else if (o === 0) { c = 0x000000; o = 0.28; } }       // a chit in hand: what it can act on glows, the rest dims
+    const ar = arr.get(id); if (ar) { c = ar.sa ? MAPC.stop : MAPC.reach; o = 0.45; }
+    if (ret.has(id)) { c = MAPC.reach; o = 0.5; }
+    if (tint === 'supply' && !g.battle && o === 0 && !tgt) { const sd = supplySide(), mine2 = g.control[id] === sd; if (mine2) { if (supOk(sd, id)) { c = sd === 'german' ? MAPC.supGe : MAPC.supAl; o = 0.36; } else { c = MAPC.cut; o = 0.5; } } }
     if (g.inPlay && !g.inPlay.includes(id)) { if (g.supplyOnly?.includes(id)) { c = 0x1d2a45; o = 0.5; } else { c = 0x000000; o = 0.62; } }      // Cold Shoulder: Zone 5 carries supply only (P.6)                                   // 24.33 outside the Introductory map sheet
     mat.color.setHex(c); mat.opacity = o; m.visible = o > 0 && !show3d();                           // a clear overlay is not drawn at all; on the relief the ground paints it
     tintData.set([mat.color.r * 255, mat.color.g * 255, mat.color.b * 255, o * 255], id * 4); tintTex.needsUpdate = true;
@@ -762,7 +770,7 @@ function quad(v: THREE.Vector3[], c: [number, number, number, number], y: number
 }
 const rgb = (h: number, a = 1): [number, number, number, number] => { const c = new THREE.Color(h); return [c.r, c.g, c.b, a]; };
 type MoveKind = 'normal' | 'fuel' | 'minimum' | 'blown' | 'strat';
-const MOVE_COL: Record<MoveKind, [number, number]> = { normal: [0xf0b43c, 0x6b4708], fuel: [0xff7a1f, 0x6a2a00], minimum: [0xc9ccd2, 0x3a3d44], blown: [0xff4b3e, 0x5c0f0a], strat: [0xb48cff, 0x2f1a5c] };
+const MOVE_COL: Record<MoveKind, [number, number]> = { normal: [0x8fc46a, 0x2c4419], fuel: [0xe7b04a, 0x5a3f08], minimum: [0xc9ccd2, 0x3a3d44], blown: [0xd1432f, 0x5c0f0a], strat: [0xddd7b5, 0x3a3826] };      // green = a normal move, brass = it burns fuel, steel = minimum move, red = across a blown bridge, paper = strategic
 /** Movement: a tapered operations arrow with a soft shadow, a dark rim, a light core and a notched head; the tail fades in. */
 function moveArrow(path: number[], kind: MoveKind, blownAt = -1) {
   const pts = pathPts(path), [main, rim] = MOVE_COL[kind], n = pts.length, hl = Math.min(n - 2, 14), body = pts.slice(0, n - hl + 2), tip = pts[n - 1], base = pts[n - hl], d = new THREE.Vector3().subVectors(tip, base).setY(0).normalize(), nn = new THREE.Vector3(-d.z, 0, d.x);
@@ -781,7 +789,7 @@ function moveArrow(path: number[], kind: MoveKind, blownAt = -1) {
 }
 /** Supply: a calm dotted lifeline, beads at even steps, a ring on every area it passes and a glowing source. */
 function supplyLine(path: number[]) {
-  const pts = pathPts(path), blue = 0x7fd6ff, deep = 0x0d3a52;
+  const pts = pathPts(path), blue = 0xddd7b5, deep = 0x2a2a1c;      // supply: a paper-coloured lifeline (blue is for rivers only)
   const disc = (x: number, z: number, r1: number, r2: number, c: [number, number, number, number], y: number, o: number) => { const m = new THREE.Mesh(r1 ? new THREE.RingGeometry(r1, r2, 40) : new THREE.CircleGeometry(r2, 24), new THREE.MeshBasicMaterial({ color: new THREE.Color(c[0], c[1], c[2]), transparent: true, opacity: c[3], depthTest: false, side: THREE.DoubleSide })); m.rotation.x = -Math.PI / 2; m.position.set(x, y, z); m.renderOrder = o; route.add(m); };
   route.add(band(pts, () => 0.5, () => rgb(blue, 0.14), 0.04, 7));
   for (let i = 0; i < pts.length; i += 6) { disc(pts[i].x, pts[i].z, 0, 0.2, rgb(deep, 0.9), 0.05, 8); disc(pts[i].x, pts[i].z, 0, 0.13, rgb(blue, 1), 0.06, 9); }
@@ -799,19 +807,21 @@ function drawRoute() {
   const kind: MoveKind = g.phase === 'strategic' ? 'strat' : bi > 0 ? 'blown' : o.fuel && u.side === 'german' && g.opts.fuel ? 'fuel' : (u.unsupplied || u.disorder || u.adjOnly) && path.length === 2 ? 'minimum' : 'normal';
   moveArrow(path, kind, bi - 1);
 }
-type Badge = { area: number; text: string; cls: string };
+type Badge = { area: number; text: string; cls: string; key?: string };
+const coveredLabels = new Set<number>();
 let badges: Badge[] = [];
 function badgeList(): Badge[] {
   const out: Badge[] = [];
   if (selUnit && !g.battle) { const u = g.units.find((x) => x.id === selUnit)!; for (const o of optsFor(selUnit)) out.push({ area: o.area, text: g.phase === 'strategic' ? '' : `${o.cost}`, cls: o.mustStop ? 'stop' : o.fuel && u.side === 'german' ? 'fuel' : 'ok' }); }
   for (const o of arrOpts()) if (o.sa) out.push({ area: o.area, text: 'SA', cls: 'stop' });              // plain entry areas are lit; only the ones that cost a Special Action are marked
   if (g.battle?.stage === 'retreat') for (const a of E.retreatOptions(g, g.battle)) out.push({ area: a, text: 'Retreat', cls: 'ok' });
+  if (!g.battle && layers.numbers) for (const a of coveredLabels) out.push({ area: a, text: `${a} ${areaName(a)}`, cls: 'tint lab', key: `L${a}` });
   return out;
 }
 const badgeEls = new Map<string, HTMLElement>();
 function syncBadges() {
   const layer = $('#badges'); layer.innerHTML = ''; badgeEls.clear();
-  for (const b of badges) { const d = document.createElement('div'); d.className = 'bdg ' + b.cls; d.textContent = b.text; layer.appendChild(d); badgeEls.set(String(b.area), d); }
+  for (const b of badges) { const d = document.createElement('div'); d.className = 'bdg ' + b.cls; d.textContent = b.text; layer.appendChild(d); badgeEls.set(b.key ?? String(b.area), d); }
 }
 /** Focus on the battle. The whole table is drawn blurred and dimmed by the browser; a second canvas draws the contested area again, sharp, with its pieces (so nothing inside is cut),
  *  and the area's exact edge glows. */
@@ -937,7 +947,7 @@ function placeBadges() {
   { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(); fxLayer.place((area, unit) => { const ps = unit ? pieceScreen(unit) : null, c = center(area); v.set(c.x, 0, c.z).project(cam); const cx = r.left + (v.x * 0.5 + 0.5) * r.width, cy = r.top + (-v.y * 0.5 + 0.5) * r.height; return ps ? { x: ps.x, y: ps.y, cx, cy, rad: ps.rad, visible: true } : { x: cx, y: cy - 30, cx: cx - 1, cy, rad: 0, visible: v.z < 1 }; }); }
   placeFocus(); placeBubbles();
   const r = canvas.getBoundingClientRect(), v = new THREE.Vector3();
-  for (const [k, d] of badgeEls) { const p = d.classList.contains('tint') ? toWorld(...(MAP.areas.find((x) => x.id === +k)!.label)).add(new THREE.Vector3(0, 0, 2.3)) : center(+k); v.set(p.x, 2.2, p.z - 4).project(cam); d.style.display = v.z < 1 ? '' : 'none'; d.style.transform = `translate(${(v.x * 0.5 + 0.5) * r.width}px, ${(-v.y * 0.5 + 0.5) * r.height}px) translate(-50%, -50%)`; }
+  for (const [k, d] of badgeEls) { const id = +k.replace(/^L/, ''), p = d.classList.contains('lab') ? toWorld(...(MAP.areas.find((x) => x.id === id)!.label)).add(new THREE.Vector3(0, 0, -1.6)) : d.classList.contains('tint') ? toWorld(...(MAP.areas.find((x) => x.id === id)!.label)).add(new THREE.Vector3(0, 0, 2.3)) : center(id); v.set(p.x, 2.2, p.z - 4).project(cam); d.style.display = v.z < 1 ? '' : 'none'; d.style.transform = `translate(${(v.x * 0.5 + 0.5) * r.width}px, ${(-v.y * 0.5 + 0.5) * r.height}px) translate(-50%, -50%)`; }
 }
 
 /* ---------- battle state shared with the view ---------- */
@@ -1134,12 +1144,12 @@ function promptText() {
   switch (g.phase) {
     case 'reinforcement': return '<b>Pick a new block</b>, then a lit entry area.';
     case 'admin': return selChit && tgt?.hint ? `<b>${esc(tgt.hint)}</b>${tgt.areas.size + tgt.units.size > 0 ? ` · ${tgt.areas.size + tgt.units.size} lit` : ''}` : `<b>Tap a card</b>${gx(' to play it, or end the step.')}`;
-    case 'movement': return selUnit ? `Tap a <b>green</b> area${gx(' to move there. <b>Orange</b>: must stop there. Wrong move? <b>Undo</b>.', ' · <b>orange</b> = stop')}` : `<b>Tap one of your blocks</b>${gx(' to move it, or <b>Can move</b> to go through them.', ' to move it.')}`;
+    case 'movement': return selUnit ? `Tap a <b>green</b> area${gx(' to move there. <b>Brass</b>: must stop there. Wrong move? <b>Undo</b>.', ' · <b>brass</b> = stop')}` : `<b>Tap one of your blocks</b>${gx(' to move it, or <b>Can move</b> to go through them.', ' to move it.')}`;
     case 'strategic': return '<b>Tap a reserve block</b>, then a green area.';
-    case 'combat': case 'btCombat': if (g.phase === 'btCombat' && !m && E.contestedAreas(g).some((a) => !g.fought.includes(a) && !E.newlyContested(g).includes(a))) return gx('<b>Breakthrough combat.</b> Newly contested areas are free; areas already contested before movement need a Special Action (orange tags).', '<b>Breakthrough combat:</b> orange = needs SA');
+    case 'combat': case 'btCombat': if (g.phase === 'btCombat' && !m && E.contestedAreas(g).some((a) => !g.fought.includes(a) && !E.newlyContested(g).includes(a))) return gx('<b>Breakthrough combat.</b> Newly contested areas are free; areas already contested before movement need a Special Action (brass tags).', '<b>Breakthrough combat:</b> orange = needs SA');
       return m ? `<b>${m} battle${m > 1 ? 's' : ''} to fight.</b> Tap a red area.` : fightable().length ? '<b>Tap a contested area</b> to fight, or end the step.' : 'No battles left.';
     case 'reaction': return `<b>${nm(other(g.phasing))} reserves</b> may react: select a reserve block.`;
-    case 'btMove': return btArmor().length ? gx('<b>Breakthrough movement.</b> Reserve and exploiting blocks may move; armor that has not moved can move one area for a Special Action (orange tags).', '<b>Breakthrough:</b> orange = SA move') : `<b>Reserve and exploitation blocks</b> may move.${gx(' Select one.')}`;
+    case 'btMove': return btArmor().length ? gx('<b>Breakthrough movement.</b> Reserve and exploiting blocks may move; armor that has not moved can move one area for a Special Action (brass tags).', '<b>Breakthrough:</b> orange = SA move') : `<b>Reserve and exploitation blocks</b> may move.${gx(' Select one.')}`;
     default: return g.phase === 'supply' && g.supplyPending ? `<b>Supply check</b>${gx(': roll for the units that are cut off.')}` : 'Supply checked. End the phase.';
   }
 }
@@ -1428,7 +1438,7 @@ function ledger() {
 function legend() {
   if (tint === 'off') return '';
   const hex = (n: number) => '#' + n.toString(16).padStart(6, '0');
-  const items = tint === 'supply' ? [[supplySide() === 'german' ? 0x6fb7ff : 0x9bd35a, 'Supplied', `${nm(supplySide())} areas`], [0xd1432f, 'Cut off', 'no path to a source']] : tint === 'control' ? [[CONTROL_COL.allied, 'Allied', 'control'], [CONTROL_COL.german, 'German', 'control'], [CONTROL_COL.contested, 'Contested', 'both sides present']] : tint === 'tdn' ? TDN_COL.map((c, i) => [c, `TDN ${i}`, (i ? `attackers −${i} to hit` : 'no modifier')]) : [[ZONE_COL[5], 'Zone 5', '5th Panzer Army'], [ZONE_COL[6], 'Zone 6', '6th Panzer Army'], [ZONE_COL[7], 'Zone 7', '7th Army']];
+  const items = tint === 'supply' ? [[supplySide() === 'german' ? MAPC.supGe : MAPC.supAl, 'Supplied', `${nm(supplySide())} areas`], [0xd1432f, 'Cut off', 'no path to a source']] : tint === 'control' ? [[CONTROL_COL.allied, 'Allied', 'control'], [CONTROL_COL.german, 'German', 'control'], [CONTROL_COL.contested, 'Contested', 'both sides present']] : tint === 'tdn' ? TDN_COL.map((c, i) => [c, `TDN ${i}`, (i ? `attackers −${i} to hit` : 'no modifier')]) : [[ZONE_COL[5], 'Zone 5', '5th Panzer Army'], [ZONE_COL[6], 'Zone 6', '6th Panzer Army'], [ZONE_COL[7], 'Zone 7', '7th Army']];
   return `<div class="legend" aria-label="Overlay legend"><b>${tint === 'tdn' ? 'Terrain defence' : tint === 'control' ? 'Area control' : tint === 'supply' ? 'Supply' : 'Army zones'}</b>${items.map(([c, a, b]) => `<span><i style="background:${hex(c as number)}"></i>${a} <small>${b}</small></span>`).join('')}</div>`;
 }
 /* ---------- home: sign in, your games, a new game, join ---------- */

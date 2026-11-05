@@ -148,7 +148,7 @@ const L3: Lesson = { topic: 'Movement', ref: '23.3', setup: () => {
   for (const c of g.chits.filter((x) => x.side === 'german' && x.kind === 'fuel')) c.box = 'available';
   return g;
 }, steps: [
-  tapUnit('26 VG', 'Select a block', '<b>Tap the infantry block in Prüm.</b> The areas it can reach turn green; orange means it must stop there.', '5.3 Movement'),
+  tapUnit('26 VG', 'Select a block', '<b>Tap the infantry block in Prüm.</b> The areas it can reach turn green; brass means it must stop there.', '5.3 Movement'),
   moveTo('26 VG', 5, 'Army zones', '<b>Tap Losheim.</b> The road costs 1 MP, plus 2 MP for leaving its own army zone (5th Panzer, Zone 5): it must stop there.', '5.33 Army boundaries'),
   { title: 'Undo', text: 'Moves can be taken back until something is revealed or rolled. <b>Tap Undo.</b>', target: { el: '[data-undo]', label: 'Undo' }, undo: true, done: (g) => area('26 VG', g) === 4 },
   tapUnit('26 VG', 'Again', '<b>Tap the infantry again.</b>'),

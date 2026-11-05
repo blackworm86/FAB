@@ -29,10 +29,10 @@ export function targetsFor(G: () => E.Game, c: E.Chit | null, ctx: TgtCtx): Tgt 
     for (const ar of E.areas.keys()) if (capable(ar)) t.pick.set(ar, () => { ctx.setArea(ar); ctx.setMode(''); });
     if (a != null && t.pick.has(a)) {
       const bt = E.bridgeTargets(G(), c.side, a), rt = E.repairTargets(G(), c.side, a);
-      t.focus = true; t.color.set(a, 0x4aa3ff);                                                     // the chosen area and its bridges only; other areas stay tappable but unlit
+      t.focus = true; t.color.set(a, 0xe7b04a);                                                     // the chosen area and its bridges only; other areas stay tappable but unlit
       const sel = ctx.mode.startsWith('b:') ? ctx.mode.slice(2).split(',').filter(Boolean).map(Number).filter((n) => bt.includes(n)) : [];
       for (const n of bt) { t.pick.set(n, () => { const s = sel.includes(n) ? sel.filter((x) => x !== n) : [...sel, n].slice(-2); ctx.setMode('b:' + s.join(',')); }); t.color.set(n, sel.includes(n) ? 0xff2a2a : 0xff9a8a); }
-      for (const n of rt) { t.areas.set(n, () => E.repairBridge(G(), c.id, a, n)); t.color.set(n, 0x37d67a); }
+      for (const n of rt) { t.areas.set(n, () => E.repairBridge(G(), c.id, a, n)); t.color.set(n, 0x5d8b3a); }
       if (sel.length) t.buttons.push({ icon: 'xbold', label: `Blow ${sel.length} bridge${sel.length > 1 ? 's' : ''}`, fn: () => E.blowBridges(G(), c.id, a, sel), title: '4.31: up to two bridges from the same area' });
       if (works((tg) => E.fieldWorksFor(tg, c.id, a))) t.buttons.push({ icon: 'gear', label: 'Field works', fn: () => E.fieldWorksFor(G(), c.id, a), title: '4.33 Build field works here' });
       if (rbs.includes(a)) t.buttons.push({ icon: 'flag', label: 'Roadblock', fn: () => E.roadblock(G(), c.id, a, false), title: '4.34 Roadblock' }, { icon: 'engineer', label: 'Defended roadblock', fn: () => E.roadblock(G(), c.id, a, true), title: '4.35 The engineer chit itself stays in the area as a defended roadblock' });
@@ -53,7 +53,7 @@ export function targetsFor(G: () => E.Game, c: E.Chit | null, ctx: TgtCtx): Tgt 
   } else if (k === 'event_greif_bridge') {
     const valid = (ar: number) => E.neighbors(ar).filter((n) => E.connection(ar, n)!.river && !G().blown.includes(BRIDGE_KEY(ar, n)) && !G().greif[BRIDGE_KEY(ar, n)]);
     for (const ar of E.areas.keys()) { const v = valid(ar); if (v.length === 1) t.areas.set(ar, () => E.playGreifBridge(G(), c.id, ar, v[0])); else if (v.length > 1) t.pick.set(ar, () => { ctx.setArea(ar); }); }
-    if (a != null && valid(a).length > 1) for (const n of valid(a)) { t.areas.set(n, () => E.playGreifBridge(G(), c.id, a, n)); t.color.set(n, 0x37d67a); }
+    if (a != null && valid(a).length > 1) for (const n of valid(a)) { t.areas.set(n, () => E.playGreifBridge(G(), c.id, a, n)); t.color.set(n, 0x5d8b3a); }
     t.hint = a != null && valid(a).length > 1 ? `Tap the neighbour across the river from ${ctx.areaName(a)}` : 'Tap a glowing area: the bridge is placed on its river boundary';
   } else if (k === 'event_greif_interdict') {
     for (const x of G().units.filter((u) => u.side === 'allied' && u.area != null && !u.garrison)) if (works((tg) => E.playInterdict(tg, c.id, x.id))) t.units.set(x.id, () => E.playInterdict(G(), c.id, x.id));
