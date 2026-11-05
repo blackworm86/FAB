@@ -772,7 +772,7 @@ button.go:disabled { background: #2a2d22; color: #8d9065; box-shadow: none; opac
 .mapbubble.fighttag button.primary { box-shadow: 0 6px 14px #000a; }
 
 .chp small { font: 500 10px var(--sf); opacity: .75; margin-left: 3px; }
-.vtt::before { content: "SUDDEN DEATH GE/AL"; position: absolute; left: 0; bottom: -11px; font: 600 8.5px var(--sfd); letter-spacing: .12em; color: #d1432fcc; white-space: nowrap; }
+.vtt[data-cap]::before { content: attr(data-cap); position: absolute; left: 0; bottom: -11px; font: 600 8.5px var(--sfd); letter-spacing: .12em; color: #d1432fcc; white-space: nowrap; }
 .vtt { position: relative; }
 
 /* battle set-up: the two Special Actions sit behind one control on phones */

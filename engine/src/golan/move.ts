@@ -13,6 +13,7 @@ export interface GMoveUnit {
 }
 export interface GMoveCtx {
   turn: number;
+  night?: boolean;                                                 // a night turn (14.03); default: turn 2, as on the Badr track
   units: (a: number) => Record<GSide, number>;                     // units (incl. strongpoints and ghosts)
   assets?: (a: number) => Record<GSide, number>;                   // assets on the map: garrisons, commando raids, roadblocks
   controller?: (a: number) => GSide | undefined;
@@ -35,8 +36,12 @@ function step(u: GMoveUnit, ctx: GMoveCtx, from: number, to: number, first: bool
   const c = connection(from, to)!, key = edgeKey(from, to), enemy = enemyOf(u.side);
   const occ = (a: number) => total(ctx.units(a)) + (ctx.assets ? total(ctx.assets(a)) : 0);
   const enemyIn = (a: number) => ctx.units(a)[enemy] + (ctx.assets?.(a)[enemy] ?? 0) > 0;
-  const syrianNight = ctx.turn === 2 && u.side === 'syrian';
+  const syrianNight = (ctx.night ?? ctx.turn === 2) && u.side === 'syrian';
   if (c.kind === 'assembly' && !isAssembly(from)) return null;                                  // 14.22: no entering an Assembly area from the map
+  if (c.sheet) {                                                                                 // a scenario sheet's box link: its printed MP, maybe one unit per phase
+    const lim = c.once ? key : undefined; if (lim && ctx.crossedThisPhase?.has(lim)) return null;
+    return { cost: c.mp! + (occ(to) > 0 ? 1 : 0), limited: lim, stop: enemyIn(to) };
+  }
   if (c.kind === 'transfer') return first ? { cost: allowance, all: true } : null;               // 14.22: between the boxes for all MP
   if (c.kind === 'hermon') {                                                                     // 14.16: infantry class, from 59 / out to 59, all MP
     if (u.cls !== 'infantry' || !first || syrianNight) return null;
@@ -84,7 +89,7 @@ function step(u: GMoveUnit, ctx: GMoveCtx, from: number, to: number, first: bool
 /** Every area the unit can end an Operational (or Breakthrough) move in, cheapest first (5.22, 5.32–5.35, 14.x). */
 export function reachable(u: GMoveUnit, ctx: GMoveCtx): GReach[] {
   if (u.immobile) return [];
-  const syrianNight = ctx.turn === 2 && u.side === 'syrian';                                     // 14.03
+  const syrianNight = (ctx.night ?? ctx.turn === 2) && u.side === 'syrian';                                     // 14.03
   const allowance = syrianNight ? (u.cls === 'armor' ? 4 : 1) : u.cls === 'armor' ? 6 : 3;
   const maxAreas = syrianNight ? (u.cls === 'armor' ? 2 : 1) : Infinity;
   const spent = u.spent ?? 0, enemy = enemyOf(u.side);
@@ -126,7 +131,7 @@ export function reachable(u: GMoveUnit, ctx: GMoveCtx): GReach[] {
 /** The cost of one exact route (the player's chosen path), or null if any step of it is not allowed. */
 export function pathCost(u: GMoveUnit, ctx: GMoveCtx, path: number[]): { cost: number; mustStop: boolean; triggers: Trigger[]; limited: string[] } | null {
   if (u.immobile || path[0] !== u.area) return null;
-  const syrianNight = ctx.turn === 2 && u.side === 'syrian';
+  const syrianNight = (ctx.night ?? ctx.turn === 2) && u.side === 'syrian';
   const allowance = syrianNight ? (u.cls === 'armor' ? 4 : 1) : u.cls === 'armor' ? 6 : 3;
   const oneArea = !!u.adjacentOnly || u.supplied === false || !!u.disordered;
   if ((oneArea || (syrianNight && u.cls === 'infantry')) && path.length > 2) return null;

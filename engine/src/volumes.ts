@@ -20,7 +20,9 @@ export type Side = string;
 export interface Area { id: number; name: string; tdn: number; zone: number; vp: { mutual: boolean; german: number; allied: number; syrian: number; israeli: number }; supply?: boolean; altSetup?: string | null }
 /** One link between two areas. `type` is the connection (road 1 MP, field 2 MP, special: an arrow); the flags are the boundary types drawn along it (14.1 of each volume). */
 export interface Conn { a: number; b: number; type: 'road' | 'field' | 'special'; mp: number; river: boolean; restricted: boolean; army_boundary: boolean;
-  atDitch?: boolean; wadi?: boolean; escarpment?: boolean; rugged?: boolean; samBarrier?: boolean; sector?: boolean; hermon?: boolean }
+  atDitch?: boolean; wadi?: boolean; escarpment?: boolean; rugged?: boolean; samBarrier?: boolean; sector?: boolean; hermon?: boolean;
+  /** Printed only on this scenario's map sheet (with its own MP cost; once: one unit per Movement Phase). */
+  sheet?: string; once?: boolean }
 export interface MapData { size: [number, number]; areas: Area[]; connections: Conn[] }
 export interface TrackRow { ge: number[]; al: number[]; sd: number[] | null }      // draws [first player's turn, second player's turn] for the first (ge) and second (al) player; sd: net VP for sudden death [first, second]
 
@@ -111,8 +113,9 @@ VOLUMES.bulge = data({ id: 'bulge', name: 'The Bulge', sides: ['german', 'allied
   const track: TrackRow[] = Object.keys(t).sort((a, b) => +a - +b).map((k) => ({ ge: t[k].draws.syrian, al: t[k].draws.israeli, sd: t[k].suddenDeath ? [t[k].suddenDeath!.syrian, t[k].suddenDeath!.israeli] : null }));
   VOLUMES.golan73 = data({ id: 'golan73', name: "Golan '73", sides: ['syrian', 'israeli'], tag: { syrian: 'SY', israeli: 'IS' }, sideName: { syrian: 'Syrian', israeli: 'Israeli' },
     map: { size: m.size, areas: [...m.areas.map((a) => ({ id: a.id, name: a.name, tdn: a.tdn, zone: 0, vp: { mutual: a.vp.mutual, german: 0, allied: 0, syrian: a.vp.syrian, israeli: 0 }, supply: a.supply, altSetup: a.altSetup })),
-      ...[[101, 'Northern Assembly Area'], [102, 'Southern Assembly Area']].map(([id, name]) => ({ id: id as number, name: name as string, tdn: 0, zone: 0, vp: { mutual: false, german: 0, allied: 0, syrian: 0, israeli: 0 } }))],
-      connections: [...conns, ...[[101, 6], [101, 10], [102, 17]].map(([a, b]) => ({ a, b, type: 'road' as const, mp: 1, river: false, restricted: false, army_boundary: false })), { a: 101, b: 102, type: 'special' as const, mp: 99, river: false, restricted: false, army_boundary: false }] },
+      ...[[101, 'Northern Assembly Area'], [102, 'Southern Assembly Area'], [103, 'Syrian Rear Area'], [104, 'Northern Assembly Area (Nafakh)']].map(([id, name]) => ({ id: id as number, name: name as string, tdn: 0, zone: 0, vp: { mutual: false, german: 0, allied: 0, syrian: 0, israeli: 0 } }))],
+      connections: [...conns, ...[[101, 6], [101, 10], [102, 17]].map(([a, b]) => ({ a, b, type: 'road' as const, mp: 1, river: false, restricted: false, army_boundary: false })), { a: 101, b: 102, type: 'special' as const, mp: 99, river: false, restricted: false, army_boundary: false },
+        ...Object.entries(golanSetups as unknown as Record<string, { sheet?: { links: { a: number; b: number; mp: number; once?: boolean }[] } }>).flatMap(([id, sc]) => (sc.sheet?.links ?? []).map((l) => ({ a: l.a, b: l.b, type: 'field' as const, mp: l.mp, river: false, restricted: false, army_boundary: false, sheet: id, once: l.once })))] },
     units: golanUnits as unknown[], counters: golanCounters as unknown[], scenarios: golanSetups as unknown as Record<string, unknown>,
     entries: { ...Object.fromEntries(m.entries.map((e) => [e.letter, { side: 'syrian', area: e.area }])), A: { side: 'israeli', area: 101 }, B: { side: 'israeli', area: 102 } }, track });
 }

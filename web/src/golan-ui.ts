@@ -124,6 +124,15 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
     }
     for (const s of E.sidesOf(g)) if (B.event[s]) out.push(`<div class="volpanel"><small>${nm(s)} event: ${esc(E.chit(g, B.event[s]!).name)}</small></div>`);
   }
+  const N = V.nafakh;
+  if (N && !N.s03Free && g.phasing === 'syrian' && (g.phase === 'admin' || g.phase === 'movement') && ctx.mine('syrian') && g.units.some((u) => u.id === 'S03' && u.area != null)) {
+    const sa = E.saAvailable(g, 'syrian').length > 0;
+    out.push(`<div class="volpanel"><b>${ctx.ico('lock')} The 33rd holds Tel Fazra (22.46)</b><span>It may not leave its area until a Special Action is spent on it.</span><div class="row">${ctx.btn('Spend a Special Action: free the 33rd', () => G.freeThe33rd(g), '', !sa, sa ? '' : 'No Special Action available')}</div></div>`);
+  }
+  if (N && !N.golani && g.phasing === 'israeli' && g.phase === 'admin' && (g.turn === 3 || g.turn === 4) && ctx.mine('israeli') && g.units.some((u) => u.box === 'sa_release')) {
+    const sa = E.saAvailable(g, 'israeli').length > 0;
+    out.push(`<div class="volpanel"><b>${ctx.ico('next')} Golani (22.45)</b><span>A Special Action brings the Golani brigade in beside Oretal.</span><div class="row">${ctx.btn('Spend a Special Action: release Golani', () => G.releaseGolani(g), 'primary', !sa, sa ? '' : 'No Special Action available')}</div></div>`);
+  }
   if (!b && g.phase === 'combat' && ctx.mine('syrian')) {
     const aa = G.airAssaultTargets(g);
     if (aa.length) out.push(`<div class="volpanel"><b>${ctx.ico('air_mission')} 82nd Para (15.3)</b><span>The paratroop battalion may air-assault east of the SAM barrier or onto Mt Hermon, before any battle.</span><div class="row">${ctx.ubtn('Choose the landing area', () => ctx.pickArea('Air assault: tap the landing area', aa, (a) => G.airAssault(g, a)), 'primary')}</div></div>`);
@@ -134,6 +143,6 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
 export const golanBlocksBegin = (g: Game) => (G.state(g).samTarget ? 'Syria must answer the Israeli air mission first (fire a SAM or let it fly)' : g.battle && G.battleState(g.battle).ew?.pending ? 'The Defender must answer the jamming first' : null);
 
 /** Holding boxes of the volume, for the pieces panel. */
-export const GOLAN_BOXES: Record<string, string> = { operational_reserve: 'Operational Reserve (3rd Tank Division)', strategic_reserve: 'Strategic Reserve', air_assault: 'Air Assault (82nd Para)', strongpoint_pool: 'Strongpoints not placed', evacuated: 'Evacuated strongpoints', deploy: 'To be placed', arriving: 'Arriving' };
+export const GOLAN_BOXES: Record<string, string> = { operational_reserve: 'Operational Reserve (3rd Tank Division)', strategic_reserve: 'Strategic Reserve', air_assault: 'Air Assault (82nd Para)', strongpoint_pool: 'Strongpoints not placed', evacuated: 'Evacuated strongpoints', deploy: 'To be placed', arriving: 'Arriving', sa_release: 'Released by a Special Action (turns 3-4)' };
 /** The markers lying on boundaries: minefields and bridged ditch sections (blown bridges are the series' own). */
 export const golanEdgeMarks = (g: Game) => { const V = G.state(g); return [...V.minefields.map((key) => ({ key, code: 'MINE' })), ...V.bridgedDitch.map((key) => ({ key, code: 'ATB' }))]; };

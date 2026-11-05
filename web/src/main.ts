@@ -122,8 +122,8 @@ const WOOD_BASE = 0x2e2117;
 { const slab = new THREE.Mesh(new THREE.BoxGeometry(MW / S + 1.2, 1.4, MH / S + 1.2), new THREE.MeshStandardMaterial({ color: WOOD_BASE, roughness: 0.8 })); slab.position.y = -0.7 - 0.002; slab.receiveShadow = true; diorama.add(slab); }
 const relArt = new Map<HTMLImageElement, HTMLCanvasElement>();
 /** On the relief the area highlights are painted by the ground itself: a picture of the area numbers, and one colour per area. */
-const areaIdTex = (() => { const d = new Uint8Array(MW * MH * 4);                                   // filled by hand, row by row: a canvas would blend the numbers along the borders
-  for (const a of MAP.areas) { const P = a.polygon, ys = P.map((q) => q[1]);
+const areaIdTex = (() => { const d = new Uint8Array(MW * MH * 4);                                   // filled by hand, row by row: a canvas would blend the numbers along the borders; a scenario sheet's boxes float on their own cards and take no pixels
+  for (const a of MAP.areas.filter((x) => !(VOL.art.sheetBoxes ?? []).some((b) => b.id === x.id))) { const P = a.polygon, ys = P.map((q) => q[1]);
     for (let y = Math.max(0, Math.floor(Math.min(...ys))); y <= Math.min(MH - 1, Math.ceil(Math.max(...ys))); y++) { const yc = y + 0.5, xs: number[] = [];
       for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i], [xj, yj] = P[j]; if ((yi > yc) !== (yj > yc)) xs.push(xi + ((yc - yi) * (xj - xi)) / (yj - yi)); }
       xs.sort((u, v) => u - v); for (let k = 0; k + 1 < xs.length; k += 2) for (let x = Math.max(0, Math.round(xs[k])); x < Math.min(MW, Math.round(xs[k + 1])); x++) d[((MH - 1 - y) * MW + x) * 4] = a.id; } }
@@ -399,6 +399,9 @@ function sharedBorder(a: number, b: number): [number, number][] {
   const out: [number, number][] = []; for (let k = 0; k < n; k++) { const i = (start + k) % n; if (!on[i]) break; out.push(A[i]); }
   return out;
 }
+/** Areas drawn and clickable now: a scenario sheet's own boxes only while it is played; outside a play area, nothing is clickable. */
+const SHEET_ONLY = new Set((VOL.art.sheetBoxes ?? []).map((b) => b.id));
+const shownArea = (id: number) => !SHEET_ONLY.has(id) || !!g.inPlay?.includes(id);
 function paintBoard() {
   if (!baseImg.naturalWidth || !linesImg.naturalWidth) return;
   const c = boardCv.getContext('2d')!, k = 2; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, boardCv.width, boardCv.height);
@@ -407,11 +410,11 @@ function paintBoard() {
   else c.drawImage(pixels(baseImg), 0, 0, boardCv.width, boardCv.height);
   if (tint !== 'off' && tint !== 'supply') {
     c.save(); c.scale(k, k); c.globalAlpha = 0.6;
-    for (const a of MAP.areas) { c.beginPath(); a.polygon.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fillStyle = hex6(tintOf(a.id)); c.fill(); }
+    for (const a of MAP.areas.filter((x) => shownArea(x.id))) { c.beginPath(); a.polygon.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fillStyle = hex6(tintOf(a.id)); c.fill(); }
     c.restore();
   }
   if (r3) { c.drawImage(relPixels(r3.lines), 0, 0, boardCv.width, boardCv.height); c.save(); c.scale(k, k); c.lineJoin = 'round';                                       // area borders from the area shapes themselves: every edge, including the circles round Bastogne and Verviers
-    for (const [w, col] of [[7, '#ffffff99'], [2.9, '#141416']] as const) { c.lineWidth = w; c.strokeStyle = col; for (const a of MAP.areas) { c.beginPath(); a.polygon.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.stroke(); } }
+    for (const [w, col] of [[7, '#ffffff99'], [2.9, '#141416']] as const) { c.lineWidth = w; c.strokeStyle = col; for (const a of MAP.areas.filter((x) => shownArea(x.id))) { c.beginPath(); a.polygon.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.stroke(); } }
     c.restore(); }
   else c.drawImage(pixels(linesImg), 0, 0, boardCv.width, boardCv.height);
   if (VOL.art.zones) {                                                                           // the three German army zones: a dashed line in the zone's colour just inside it
@@ -444,6 +447,16 @@ function buildLabels() {
     if (show3d()) { y = 0; for (const dx of [-0.5, 0, 0.5]) for (const dz of [-0.5, 0, 0.5]) y = Math.max(y, REL!.h(p.x + (dx * L.w) / S, p.z + (dz * L.h) / S)); y += 0.03; }      // level, at the highest ground under it
     m.position.set(p.x, y, p.z); m.renderOrder = 2; labelsGrp.add(m);
   }
+  for (const bx of (VOL.art.sheetBoxes ?? []).filter((x) => shownArea(x.id))) {                     // a scenario sheet's own box, on a card above the dimmed map around it
+    const K2 = 3, cv = document.createElement('canvas'); cv.width = bx.w * K2; cv.height = bx.h * K2; const c = cv.getContext('2d')!; c.scale(K2, K2);
+    c.fillStyle = hex6(VOL.controlCol[bx.side] ?? 0x666666); c.fillRect(0, 0, bx.w, bx.h); c.lineWidth = 4; c.strokeStyle = '#141416'; c.strokeRect(2, 2, bx.w - 4, bx.h - 4);
+    c.fillStyle = '#fff'; c.font = '700 19px Arial Narrow, Arial, sans-serif'; c.textAlign = 'center'; c.fillText(bx.name.toUpperCase(), bx.w / 2, 26);
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(bx.w / S, bx.h / S), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }));
+    const p = toWorld(bx.x + bx.w / 2, bx.y + bx.h / 2); m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, 0, 0);
+    let y = 0.008; if (show3d()) { y = 0; for (const dx of [-0.5, 0, 0.5]) for (const dz of [-0.5, 0, 0.5]) y = Math.max(y, REL!.h(p.x + (dx * bx.w) / S, p.z + (dz * bx.h) / S)); y += 0.04; }
+    m.position.set(p.x, y + 0.004, p.z); m.renderOrder = 3; labelsGrp.add(m);      // over the dimmed areas' own labels
+  }
 }
 applyArt();
 if (map3d && VOL.art.relief) setTimeout(() => { map3d = false; setMap3d(true); }, 0); else map3d = false;           // a saved choice of the 3D map: loaded once the game is up
@@ -467,7 +480,8 @@ function paintAreas() {
     if (ret.has(id)) { c = MAPC.reach; o = 0.5; }
     if (areaPick) { if (areaPick.areas.has(id)) { c = MAPC.reach; o = 0.5; } else if (o === 0) { c = 0x000000; o = 0.28; } }
     if (tint === 'supply' && !g.battle && o === 0 && !tgt) { const sd = supplySide(), mine2 = g.control[id] === sd; if (!mine2) { c = 0x000000; o = 0.22; } else if (supOk(sd, id)) { c = 0xffffff; o = 0.16; } else { c = MAPC.cut; o = 0.5; } }      // your supplied areas stay light, cut-off ones red, the enemy's dimmed
-    if (g.inPlay && !g.inPlay.includes(id)) { if (g.supplyOnly?.includes(id)) { c = 0x1d2a45; o = 0.5; } else { c = 0x000000; o = 0.62; } }      // Cold Shoulder: Zone 5 carries supply only (P.6)                                   // 24.33 outside the Introductory map sheet
+    if (!shownArea(id)) o = 0;
+    else if (g.inPlay && !g.inPlay.includes(id)) { if (g.supplyOnly?.includes(id)) { c = 0x1d2a45; o = 0.5; } else { c = 0x000000; o = 0.62; } }      // Cold Shoulder: Zone 5 carries supply only (P.6)                                   // 24.33 outside the Introductory map sheet
     mat.color.setHex(c); mat.opacity = o; m.visible = o > 0 && !show3d();                           // a clear overlay is not drawn at all; on the relief the ground paints it
     tintData.set([mat.color.r * 255, mat.color.g * 255, mat.color.b * 255, o * 255], id * 4); tintTex.needsUpdate = true;
   }
@@ -501,7 +515,7 @@ function pick(e: PointerEvent) {
 function areaAt(ray: THREE.Raycaster): number | null {
   const hitBoard = show3d() ? (() => { const p = REL!.hit(ray.ray); return p ? { point: p } : undefined; })() : ray.intersectObject(board)[0];
   let area: number | null = null;
-  if (hitBoard) { const px = (hitBoard.point.x + MW / (2 * S)) * S, py = (hitBoard.point.z + MH / (2 * S)) * S; area = MAP.areas.find((a) => inside(px, py, a.polygon))?.id ?? null; if (area != null && g.inPlay && !g.inPlay.includes(area)) area = null; }
+  if (hitBoard) { const px = (hitBoard.point.x + MW / (2 * S)) * S, py = (hitBoard.point.z + MH / (2 * S)) * S; area = MAP.areas.find((a) => shownArea(a.id) && (!g.inPlay || g.inPlay.includes(a.id)) && inside(px, py, a.polygon))?.id ?? null; }
   return area;
 }
 function inside(x: number, y: number, poly: [number, number][]) { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; }
@@ -1609,6 +1623,13 @@ const modChips = (parts: [string, number][]) => parts.map(([w, v]) => `<span cla
 const chip = (label: string, on: boolean, f: () => void, title = '', icon = '') => `<button class="chip ${on ? 'on' : ''} ${label ? '' : 'iconly'}" aria-pressed="${on}" data-ui="${reg(f)}" title="${esc(title || label)}" aria-label="${esc(title || label)}">${icon ? ico(icon) : on ? ico('check') : ''}${label ? `<span>${label}</span>` : ''}</button>`;
 const relayer = () => { saveLayers(); paintBoard(); paintAreas(); };
 /** The camera takes in all the areas a side holds (the supply colour then always shows something). */
+/** The opening view: the whole map, or a scenario's own sheet (its play area) framed from above. */
+function homeGoal() {
+  const ids = g.inPlay ? MAP.areas.filter((a) => g.inPlay!.includes(a.id)).flatMap((a) => a.polygon.map(([x, y]) => toWorld(x, y))) : [];      // every corner of the sheet
+  if (!ids.length) return { t: new THREE.Vector3(17, 0, -3), dist: innerWidth < 700 ? 52 : 36, pitch: 1.0 };
+  const x0 = Math.min(...ids.map((p) => p.x)), x1 = Math.max(...ids.map((p) => p.x)), z0 = Math.min(...ids.map((p) => p.z)), z1 = Math.max(...ids.map((p) => p.z));
+  return { t: new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), dist: clampDist(Math.max(x1 - x0, (z1 - z0) * 1.3) * (innerWidth < 700 ? 1.7 : 1.12) + 3), pitch: 1.0 };
+}
 function frameSide(sd: E.Side) { const ids = MAP.areas.filter((a) => g.control[a.id] === sd && (!g.inPlay || g.inPlay.includes(a.id))).map((a) => center(a.id)); if (!ids.length) return;
   const x0 = Math.min(...ids.map((p) => p.x)), x1 = Math.max(...ids.map((p) => p.x)), z0 = Math.min(...ids.map((p) => p.z)), z1 = Math.max(...ids.map((p) => p.z));
   goal = { t: new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), dist: clampDist(Math.max(x1 - x0, (z1 - z0) * 1.3) * 0.95 + 8), pitch }; }
@@ -1718,7 +1739,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
     else if (k === 'in') void auth.signIn(v('a-mail'), v('a-pass')); else if (k === 'reg') void auth.register(v('a-mail'), v('a-pass'), v('a-name')); else if (k === 'reset') void auth.reset(v('a-mail'));
   }));
   ui.querySelectorAll<HTMLElement>('[data-seat]').forEach((e) => (e.onclick = () => { const order: DevSeat[] = ['both', ...VOL.sides, 'watch']; setDevSeat(order[(order.indexOf(online.devSeat) + 1) % order.length]); selUnit = selChit = selArr = null; previewArea = null; refresh(); }));
-  ui.querySelectorAll<HTMLElement>('[data-home]').forEach((e) => (e.onclick = () => { goal = { t: new THREE.Vector3(17, 0, -3), dist: innerWidth < 700 ? 52 : 36, pitch: 1.0 }; yaw = viewRot(); }));
+  ui.querySelectorAll<HTMLElement>('[data-home]').forEach((e) => (e.onclick = () => { goal = homeGoal(); yaw = viewRot(); }));
   ui.querySelectorAll<HTMLElement>('[data-tint]').forEach((e) => (e.onclick = () => { modal = 'layers'; render(); }));
   ui.querySelectorAll<HTMLElement>('[data-undo]').forEach((e) => (e.onclick = () => undo()));
   ui.querySelectorAll<HTMLElement>('[data-u]').forEach((e) => (e.onclick = () => { selUnit = e.dataset.u!; selArea = g.units.find((x) => x.id === selUnit)!.area ?? selArea; previewArea = null; refresh(); }));
@@ -1730,7 +1751,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
 let lastView: E.Side | null = null;
 /** Standard view: German from the bottom of the map, Allied from the top; the printed items turn with it. */
 function syncView() {
-  const v = viewSide(); if (v === lastView) return; const fresh = lastView === null; lastView = v; yaw = v !== VOL.bottom ? Math.PI : 0; if (!fresh) goal = { t: new THREE.Vector3(17, 0, -3), dist, pitch }; paintBoard();
+  const v = viewSide(); if (v === lastView) return; const fresh = lastView === null; lastView = v; yaw = v !== VOL.bottom ? Math.PI : 0; if (!fresh) goal = g.inPlay ? homeGoal() : { t: new THREE.Vector3(17, 0, -3), dist, pitch }; paintBoard();
 }
 /** Split tables: publish the blocks the other side may now see, and (attacker's seat) start combat once both sides are ready and their blocks are known. */
 function driveSplit() {
@@ -1740,9 +1761,11 @@ function driveSplit() {
   if (b && b.stage === 'setup' && b.ready?.length === 2 && g.deferBegin && me === b.attacker && E.unitsIn(g, b.area).every((u) => u.name !== 'Hidden block')) act(() => E.beginCombat(g, b));
 }
 let ctlKey = '', tgtKey = '';
+let playKey: string | null = null;
 function refresh() {
   { const ph = `${g.turn}${g.phasing}${g.phase}`; if (ph !== lastPhase) { lastPhase = ph; fxLayer.clear(); } }
   E.setPlayArea(g.inPlay);
+  { const k = (g.inPlay ?? []).join(); if (k !== playKey) { const first = playKey === null; playKey = k; if (!first) paintBoard(); if (g.inPlay || !first) goal = homeGoal(); } }
   SBU.hotseatSync();
   if (online.mode === 'remote') setTimeout(driveSplit, 0);
   { const key = `${online.devSeat}|${online.mySide()}|${g.battle?.attPoint}|${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed

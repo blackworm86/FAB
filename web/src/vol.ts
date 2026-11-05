@@ -28,7 +28,9 @@ export interface VolView {
   wood: Record<string, number>; ink: Record<string, string>; controlCol: Record<string, number>;   // block wood, text colour (CSS --ge/--al), area-control tint
   map: { size: [number, number]; areas: MapArea[]; connections: { a: number; b: number }[]; entries: MapEntry[] };
   labels: Record<string, LabelBox>;
-  art: { base: string; lines: string; vpIcons: Record<string, string>; zones?: Record<string, string>; relief: string | null; reliefName: string; entryDark: (side: E.Side) => boolean };
+  art: { base: string; lines: string; vpIcons: Record<string, string>; zones?: Record<string, string>; relief: string | null; reliefName: string; entryDark: (side: E.Side) => boolean;
+    /** Off-map boxes printed only on a scenario's own sheet: drawn, and clickable, only while that scenario's play area includes them. */
+    sheetBoxes?: { id: number; name: string; side: E.Side; x: number; y: number; w: number; h: number }[] };
   features: { fuel: boolean; zones: boolean; optional: boolean; tutorial: boolean };
   scenarios: ScenarioInfo[]; defaultOpts: Partial<E.Opts>;
   unitSvg: (u: E.Unit, g: E.Game) => string; chitSvg: (c: E.Chit) => string;
@@ -87,7 +89,8 @@ function bulge(): VolView {
 /** Golan '73: the hand-drawn map, the Assembly areas as two boxes under it, the Golan counters and blocks (golan-art.ts). */
 function golan(): VolView {
   const m = golanMap as unknown as RawMap, info = gameInfo('golan73')!, G = E.golan;
-  const boxes = Object.entries(m.assembly ?? {}).map(([k, b]) => { const [x, y, w, h] = b.box; return { id: k === 'B' ? G.ASSEMBLY.B : G.ASSEMBLY.A, name: b.name, x, y, w, h }; });
+  const sheetBoxes = [{ id: G.REAR, name: 'Syrian Rear Area', side: 'syrian' as E.Side, x: 945, y: 292, w: 215, h: 130 }, { id: G.NAF_NORTH, name: 'Northern Assembly Area', side: 'israeli' as E.Side, x: 1000, y: 1095, w: 215, h: 130 }];      // Battle for Nafakh: beside the areas they feed, as on its sheet
+  const boxes = [...Object.entries(m.assembly ?? {}).map(([k, b]) => { const [x, y, w, h] = b.box; return { id: k === 'B' ? G.ASSEMBLY.B : G.ASSEMBLY.A, name: b.name, x, y, w, h }; }), ...sheetBoxes];
   const areas: MapArea[] = [...m.areas, ...boxes.map((b) => ({ id: b.id, label: [b.x + b.w / 2, b.y + b.h / 2] as [number, number], polygon: [[b.x, b.y], [b.x + b.w, b.y], [b.x + b.w, b.y + b.h], [b.x, b.y + b.h]] as [number, number][] }))];
   const labels: Record<string, LabelBox> = { ...(golanLabels as unknown as Record<string, LabelBox>) };
   const RAW_UNITS = new Map((golanUnits as unknown as GUnit[]).map((u) => [u.id, u])), RAW_COUNTERS = new Map((golanCounters as unknown as (GCounter & { ids?: string[] })[]).map((c) => [c.id, c]));
@@ -104,7 +107,7 @@ function golan(): VolView {
     wood: { ...GOLAN_WOOD }, ink: { syrian: '#8fc46a', israeli: '#6fd0ea' }, controlCol: { syrian: 0x4f9a4a, israeli: 0x3ab0d0 },
     map: { size: m.size, areas, connections: m.connections, entries: (golanEntries as { letter: string; x: number; y: number }[]).map((e) => ({ ...e, side: 'syrian' })) },      // the letters sit in the printed triangles (tools/golan73/board.py)
     labels,
-    art: { base: './golan73/map-base.svg', lines: './golan73/map-lines.svg', vpIcons: { syrian: './icons/vp-golan-syrian.svg', israeli: './icons/vp-mutual.svg', mutual: './icons/vp-mutual.svg' }, relief: './golan73/', reliefName: 'The Golan Heights in relief, from Mt Hermon to the Sea of Galilee, with contour lines', entryDark: () => false },
+    art: { base: './golan73/map-base.svg', lines: './golan73/map-lines.svg', vpIcons: { syrian: './icons/vp-golan-syrian.svg', israeli: './icons/vp-mutual.svg', mutual: './icons/vp-mutual.svg' }, relief: './golan73/', reliefName: 'The Golan Heights in relief, from Mt Hermon to the Sea of Galilee, with contour lines', entryDark: () => false, sheetBoxes },
     features: { fuel: false, zones: false, optional: false, tutorial: false },
     scenarios: info.scenarios, defaultOpts: { scenario: 'badr', fuel: false },
     unitSvg: (u, g) => (u.garrison && u.chitId ? chitArt(E.chit(g, u.chitId)) : unitArt(u)), chitSvg: chitArt,

@@ -7,8 +7,8 @@ import unitsJson from '../../../data/golan73/units.json';
 import countersJson from '../../../data/golan73/counters.json';
 import setupsJson from '../../../data/golan73/setups.json';
 import trackJson from '../../../data/golan73/turn_track.json';
-import { areas, connection, edgeKey, neighbors } from '../map';
-import { ASSEMBLY, ENTRY, HERMON, eastOfSam, isAssembly, area as garea, type GSide } from '../golan/map';
+import { areas, connection, edgeKey, neighbors, setPlayArea } from '../map';
+import { ASSEMBLY, ENTRY, HERMON, NAF_NORTH, REAR, boxSide, eastOfSam, isAssembly, area as garea, type GSide } from '../golan/map';
 import { reachable, type GMoveCtx, type GMoveUnit } from '../golan/move';
 import { assetLimits, brigadeExtraDie, moraleSn as gMoraleSn, samResult, successNumber as gSuccessNumber, type GShooter, type GTarget, type Quality } from '../golan/combat';
 import { isArty, isBattleAsset, type Chit } from '../chits';
@@ -16,7 +16,7 @@ import { registerHooks, type Volume } from '../volumes';
 import { airOf, blocks, buildFieldWorks, chit, contested, dropAir, dropReserve, eliminate, fighters, inSupply, moraleCheck, needAdmin, other, quality, rollDie, say, saAvailable, sidesOf, spendSA, supplied, unitsIn, updateControl,
   type Battle, type Game, type Opt, type Side, type Unit, type Fire } from '../game';
 import type { Shooter, Target, Setting } from '../combat';
-export { ASSEMBLY, HERMON, isAssembly, eastOfSam };
+export { ASSEMBLY, HERMON, NAF_NORTH, REAR, isAssembly, eastOfSam };
 
 /* ================= the volume's own state ================= */
 export interface GolanState {
@@ -30,6 +30,7 @@ export interface GolanState {
   freeCombatRound: number;                                // 22.17: Syrian free Breakthrough combat rounds left on turn 1
   purpleLineCrossed: boolean; airReleased: number; hermonLost: boolean;
   airAssaultArea?: number; samTarget?: string;            // 15.3; 16.12: the Israeli air mission a SAM may answer now
+  nafakh?: { s03Free: boolean; golani: boolean; staffOut: boolean };   // 22.46: the 33rd held back, Golani's release, the HQ Staff lost with Nafakh
 }
 export interface GolanBattle { event: Partial<Record<Side, string>>; counterbattery: Partial<Record<Side, string>>; ew?: { pending: boolean }; defLocked?: boolean; engBridge?: string }
 export const state = (g: Game) => g.vol as unknown as GolanState;
@@ -44,7 +45,9 @@ const UNITS = unitsJson as unknown as RawUnit[], COUNTERS = countersJson as unkn
 const TRACK = (trackJson as unknown as { turns: Record<string, { night: boolean }> }).turns;
 const NOT_CHITS = new Set(['minefield', 'marker', 'reserve_marker', 'marker_control', 'field_works', 'marker_at_ditch_bridged']);
 const need = (cond: unknown, msg: string) => { if (!cond) throw new Error(msg); };
-export const isNight = (g: Game) => TRACK[String(g.turn)]?.night ?? false;
+/** The Battle for Nafakh (22.4) plays on its own sheet. */
+export const isNafakh = (g: Game) => g.opts.scenario === 'nafakh';
+export const isNight = (g: Game) => !isNafakh(g) && (TRACK[String(g.turn)]?.night ?? false);       // Nafakh's four turns are all daylight
 const q = (u: Unit): Quality => quality(u) ?? 'veteran';
 const regular = (u: Unit) => !u.garrison && !u.fort && !u.ghost;
 /** Standing assets are units with the garrison flag; this finds the one a chit stands as. */
@@ -55,6 +58,8 @@ const asGarrison = (c: Chit, prefix: string, a: number, cls: 'armor' | 'infantry
 
 /* ================= set-up (22.1 Operation Badr, 22.2 the alternate set-up) ================= */
 function newGolanGame(seed: number, opts: Partial<{ scenario: string }>): Game {
+  setPlayArea(null);                                                                                 // whatever the last game played on
+  if (opts.scenario === 'nafakh') { const g = nafakhSetup(newGolanGame(seed, { scenario: 'badr' })); setPlayArea(g.inPlay); return g; }
   const scenario = opts.scenario === 'badr_alt' ? 'badr_alt' : 'badr', S = SETUPS.badr;        // badr_alt shares everything but the free placement (22.24/22.25)
   const where = new Map(S.units.map((p) => [p.id, p])), sp = new Map((S.strongpoints?.suggested_historical ?? []).map((p) => [p.id, p.area]));
   const units: Unit[] = UNITS.filter((u) => u.kind !== 'special_action_block').map((u) => {
@@ -96,16 +101,94 @@ function newGolanGame(seed: number, opts: Partial<{ scenario: string }>): Game {
   return g;
 }
 
+/* ================= 22.4 Battle for Nafakh: its own map sheet, four turns, from the Syrian Movement Phase of turn 1 ================= */
+type Nafakh = { turns: number; areas_in_play: number[]; units: { id: string; area?: number; box?: string; recovering?: boolean }[]; reduced: Record<string, number>;
+  on_map_chits: { id: string; area: number }[]; garrisons: { id: string; area: number }[]; available: Record<Side, string[]>; minefields: { fixed: number[][] };
+  reserve: { markers: Record<Side, number> }; special_action_release: { id: string; turns: number[] };
+  reinforcements: Record<string, Record<Side, { units: { id: string; entry: string[]; steps?: number }[]; chits: string[] }>>;
+  sheet: { entry: Record<string, number>; control_israeli: number[]; supply: Record<Side, number[]>; track: Record<string, Record<Side, number[]>> } };
+const NAF = (setupsJson as unknown as Record<string, Nafakh>).nafakh;
+const nafBox = (b: string) => (b === 'northern_assembly' ? NAF_NORTH : b === 'syrian_rear_area' ? REAR : NAF.sheet.entry[b]);
+function nafakhSetup(g: Game): Game {
+  g.opts = { scenario: 'nafakh', fuel: false }; g.lastTurn = NAF.turns; g.phasing = 'syrian'; g.phase = 'movement'; g.log = [];
+  g.inPlay = [...NAF.areas_in_play, NAF_NORTH, REAR];
+  g.track = Array.from({ length: NAF.turns }, (_, i) => ({ ge: NAF.sheet.track[i + 1].syrian, al: NAF.sheet.track[i + 1].israeli, sd: null }));
+  g.riverAssault = []; g.fieldWorks = []; g.markers = { syrian: { res: NAF.reserve.markers.syrian }, israeli: { res: NAF.reserve.markers.israeli } };
+  const V = state(g); V.freeCombatRound = 0; V.minefields = NAF.minefields.fixed.map(([a, b]) => edgeKey(a, b)); V.nafakh = { s03Free: false, golani: false, staffOut: false };
+  const place = new Map(NAF.units.map((p) => [p.id, p])), arrive = new Map<string, { turn: number; entry: string[]; steps?: number }>();
+  for (const [t, sides] of Object.entries(NAF.reinforcements)) for (const s of ['israeli', 'syrian'] as const) for (const r of sides[s].units) arrive.set(r.id, { turn: +t, entry: r.entry, steps: r.steps });
+  g.units = g.units.filter((u) => !u.garrison && (place.has(u.id) || arrive.has(u.id) || u.id === NAF.special_action_release.id));
+  for (const u of g.units) {
+    const p = place.get(u.id), a = arrive.get(u.id);
+    Object.assign(u, { reserve: null, from: undefined, disorder: 0, str: NAF.reduced[u.id] ?? u.max, arrival: undefined, entry: undefined, box: undefined, area: null });
+    if (p) { u.area = p.area ?? nafBox(p.box!); if (p.recovering) u.disorder = 2; }                       // 22.46: the 52nd starts recovering
+    else if (a) { u.arrival = a.turn; u.entry = a.entry.map((e) => `#${nafBox(e)}`); if (a.steps) u.str = a.steps; }   // 22.45: full strength unless listed reduced
+    else u.box = 'sa_release';                                                                                 // Golani: only by a Special Action on turns 3-4
+  }
+  const avail = new Set([...NAF.available.israeli, ...NAF.available.syrian]), later = new Map<string, number>(), onMap = new Map([...NAF.on_map_chits, ...NAF.garrisons].map((x) => [x.id, x.area]));
+  for (const [t, sides] of Object.entries(NAF.reinforcements)) for (const s of ['israeli', 'syrian'] as const) for (const id of sides[s].chits) later.set(id, +t);
+  g.chits = g.chits.filter((c) => avail.has(c.id) || later.has(c.id) || onMap.has(c.id));
+  for (const c of g.chits) {
+    c.area = undefined; c.mission = undefined;
+    if (onMap.has(c.id)) { c.box = 'map'; c.area = onMap.get(c.id); c.turn = 'S'; }
+    else if (avail.has(c.id)) { c.box = 'available'; c.turn = 'S'; }
+    else { c.box = 'future'; c.turn = later.get(c.id)!; }
+  }
+  for (const c of g.chits.filter((x) => x.box === 'map')) {                                                  // the garrisons, and Lt. Zvika already in Sindiana
+    if (c.kind === 'garrison') g.units.push(asGarrison(c, 'G', c.area!));
+    if (c.kind === 'event_lt_zvika') { c.q = 'elite'; g.units.push(asGarrison(c, 'Z', c.area!, 'armor', 'elite')); }
+  }
+  for (const a of NAF.areas_in_play) g.control[a] = NAF.sheet.control_israeli.includes(a) ? 'israeli' : 'syrian';   // 22.43
+  g.control[NAF_NORTH] = 'israeli'; g.control[REAR] = 'syrian';
+  say(g, 'Battle for Nafakh, October 7th AM: the 1st Tank Division drives on the Israeli command centre. The game opens with the Syrian Movement Phase of turn 1.');
+  return g;
+}
+/** 22.46: the 33rd may leave Tel Fazra only once a Special Action is spent on it. */
+export function freeThe33rd(g: Game, chitId?: string) {
+  const V = state(g); need(isNafakh(g) && V.nafakh && !V.nafakh.s03Free, 'the 33rd is already free to move');
+  need(g.phasing === 'syrian' && (g.phase === 'admin' || g.phase === 'movement'), 'in the Syrian Admin or Movement Phase');
+  spendSA(g, 'syrian', undefined, 'the 33rd leaves its mop-up of the AT ditch crossings (22.46)', chitId); V.nafakh!.s03Free = true;
+}
+/** 22.45: on turns 3-4 a Special Action brings Golani into play at the sheet's Israeli entry area (beside Oretal). */
+export function releaseGolani(g: Game, chitId?: string) {
+  const V = state(g), u = unit(g, NAF.special_action_release.id), at = NAF.sheet.entry.A;
+  need(isNafakh(g) && V.nafakh && u.box === 'sa_release', 'Golani is not waiting to be released');
+  needAdmin(g); need(g.phasing === 'israeli' && NAF.special_action_release.turns.includes(g.turn), 'in the Israeli Admin Phase of turn 3 or 4');
+  need(g.control[at] === 'israeli' && !unitsIn(g, at, 'syrian').length && blocks(g, at, 'israeli').length < 2, `${nameOf(at)} must be Israeli-held with room for a unit`);
+  spendSA(g, 'israeli', undefined, 'Golani released (22.45)', chitId); u.box = undefined; u.area = at; V.nafakh!.golani = true;
+  say(g, `Golani enters at ${nameOf(at)}`, 'israeli');
+}
+/** 22.46: whenever Syria holds Nafakh, the Israeli reusable Special Action is lost and the HQ Staff goes to the cup; drawing it brings the Special Action back. */
+function nafakhStaff(g: Game) {
+  const V = state(g); if (!isNafakh(g) || !V.nafakh) return;
+  const staff = g.chits.find((c) => c.kind === 'command_staff' && c.side === 'israeli'), sa = g.chits.find((c) => c.kind === 'sa_block' && c.side === 'israeli');
+  if (g.control[42] === 'syrian' && staff?.box === 'map') {
+    staff.box = 'cup'; staff.area = undefined; V.nafakh.staffOut = true;
+    if (sa && sa.box !== 'future') sa.box = 'eliminated';
+    say(g, 'Syria holds Nafakh: the Israeli reusable Special Action is lost; the HQ Staff goes into the cup (22.46)', 'israeli');
+  }
+  if (V.nafakh.staffOut && staff && staff.box !== 'cup' && staff.box !== 'map') { V.nafakh.staffOut = false; if (sa && sa.box === 'eliminated') { sa.box = 'available'; say(g, 'The HQ Staff is back: the reusable Special Action returns (22.46)', 'israeli'); } }
+}
+/** 22.47: strength points of regular units in Nafakh. */
+const strengthIn = (g: Game, side: Side) => unitsIn(g, 42, side).filter(regular).reduce((s, u) => s + u.str, 0);
+function nafakhResult(g: Game) {
+  const held = g.control[42], clear = held && !contested(g, 42);
+  if (clear) return `${held === 'syrian' ? 'Syrian' : 'Israeli'} Decisive Victory: uncontested control of Nafakh (22.47)`;
+  const s = strengthIn(g, 'syrian'), i = strengthIn(g, 'israeli');
+  return `${s > i ? 'Syrian' : 'Israeli'} Marginal Victory: ${Math.max(s, i)} to ${Math.min(s, i)} strength points in Nafakh${s === i ? ', a tie goes to Israel' : ''} (22.47)`;
+}
+
 /* ================= movement (14.x), through ../golan/move.ts ================= */
 const interdictedBy = (g: Game, a: number): Side | undefined => { const id = g.interdicted[a]; return id ? chit(g, id).side : undefined; };
 function moveCtx(g: Game): GMoveCtx {
   const V = state(g), count = (a: number, f: (u: Unit) => boolean): Record<GSide, number> => ({ israeli: unitsIn(g, a, 'israeli').filter(f).length, syrian: unitsIn(g, a, 'syrian').filter(f).length });
-  return { turn: g.turn, units: (a) => (isAssembly(a) ? { israeli: 0, syrian: 0 } : count(a, (u) => !u.garrison)), assets: (a) => count(a, (u) => !!u.garrison), controller: (a) => (isAssembly(a) ? 'israeli' : g.control[a]) as GSide | undefined,
+  return { turn: g.turn, night: isNight(g), units: (a) => (isAssembly(a) ? { israeli: 0, syrian: 0 } : count(a, (u) => !u.garrison)), assets: (a) => count(a, (u) => !!u.garrison), controller: (a) => (isAssembly(a) ? boxSide(a) : g.control[a]) as GSide | undefined,
     bridgedDitch: new Set(V.bridgedDitch), blownBridges: new Set(g.blown), minefields: new Set(V.minefields), crossedThisPhase: new Set(V.crossed),
     interdicted: (a) => interdictedBy(g, a) as GSide | undefined, raids: new Set(V.raids), roadblocks: new Map(Object.entries(g.roadblocks).map(([a, s]) => [+a, s as GSide])) };
 }
 const asMover = (g: Game, u: Unit, one: boolean): GMoveUnit => ({ side: u.side as GSide, cls: u.cls, area: u.area!, supplied: !u.unsupplied, disordered: u.disorder > 0, adjacentOnly: one || !!u.adjOnly, spent: u.spent, minefieldFailed: state(g).minefieldFailed.includes(u.id) });
 function golanReach(g: Game, u: Unit, one: boolean): Opt[] {
+  if (isNafakh(g) && u.id === 'S03' && !state(g).nafakh?.s03Free) return [];                       // 22.46: the 33rd holds Tel Fazra
   let r = reachable(asMover(g, u, one), moveCtx(g));
   if (state(g).kingHassan && u.id === 'S07') r = r.filter((x) => x.path.slice(1).every((a) => isAssembly(a) || g.control[a] !== 'israeli'));   // 17.24: the Moroccans keep out of Israeli-controlled areas
   return r.map((x) => ({ area: x.area, cost: x.cost, fuel: false, mustStop: x.mustStop, path: x.path, triggers: x.triggers, limited: x.limited }));
@@ -162,9 +245,9 @@ function stratStep(g: Game, u: Unit, a: number, n: number): boolean {
 }
 
 /* ================= supply (9.31, 14.93–14.95) and victory (19.x) ================= */
-const sources = (g: Game, side: Side) => new Set(side === 'syrian' ? Object.values(ENTRY) : [...areas.values()].filter((a) => a.supply).map((a) => a.id));
+const sources = (g: Game, side: Side) => new Set(isNafakh(g) ? NAF.sheet.supply[side] : side === 'syrian' ? Object.values(ENTRY) : [...areas.values()].filter((a) => a.supply).map((a) => a.id));   // 22.46: the sources printed on the Nafakh sheet
 function supplyStep(g: Game, side: Side, a: number, n: number, first: boolean) {
-  if (isAssembly(n)) return false;
+  if (isAssembly(n)) return isNafakh(g) && n === REAR && side === 'syrian';                          // the Syrian Rear Area is the Nafakh sheet's Syrian supply source
   const c = connection(a, n)!, key = edgeKey(a, n);
   if (c.hermon) return false;
   if (c.river && g.blown.includes(key) && !first) return false;                                     // 9.31a
@@ -175,6 +258,7 @@ function supplyStep(g: Game, side: Side, a: number, n: number, first: boolean) {
 }
 /** 19.1–19.2: Syria scores its objective areas (held, supplied and occupied) and the mutual stars; Israel the mutual stars and each supplied area it holds in Syria; one point per large enemy unit destroyed. */
 function golanVictory(g: Game): Record<Side, number> & { net: number } {
+  if (isNafakh(g)) { const s = strengthIn(g, 'syrian'), i = strengthIn(g, 'israeli'); return { syrian: s, israeli: i, net: s - i }; }   // 22.47: the score is the strength in Nafakh
   const pts: Record<Side, number> = { syrian: 0, israeli: 0 };
   for (const id of g.elimLarge) { const u = g.units.find((x) => x.id === id)!; pts[other(u.side)]++; }
   for (const a of areas.values()) {
@@ -185,13 +269,13 @@ function golanVictory(g: Game): Record<Side, number> & { net: number } {
   }
   return { ...pts, net: pts.syrian - pts.israeli };
 }
-const finalResult = (_g: Game, net: number) => (net === 0 ? 'Draw (0 net VP)' : `${net > 0 ? 'Syrian' : 'Israeli'} ${Math.abs(net) >= 3 ? 'Operational' : 'Marginal'} Victory (${Math.abs(net)} net VP)`);
+const finalResult = (g: Game, net: number) => isNafakh(g) ? nafakhResult(g) : (net === 0 ? 'Draw (0 net VP)' : `${net > 0 ? 'Syrian' : 'Israeli'} ${Math.abs(net) >= 3 ? 'Operational' : 'Marginal'} Victory (${Math.abs(net)} net VP)`);
 /** 19.5: a supplied Syrian unit west of the Jordan (areas 6, 7, 8) at the end of an Israeli player turn. */
 const jordanCrossed = (g: Game) => g.units.some((u) => u.side === 'syrian' && regular(u) && u.area != null && [6, 7, 8].includes(u.area) && inSupply(g, 'syrian', u.area));
 
 /* ================= phases ================= */
 function onPhase(g: Game, phase: string, when: 'start' | 'mid' | 'end') {
-  const V = state(g);
+  const V = state(g); nafakhStaff(g);
   if (phase === 'reinforcement' && when === 'start') V.minefieldFailed = [];
   if ((phase === 'movement' || phase === 'btMove' || phase === 'reaction') && when === 'start') { V.crossed = []; V.assaultEntered = {}; }
   if (phase === 'deploy' && when === 'end' && g.units.some((u) => u.box === 'deploy')) throw new Error('place every unit first');
@@ -200,7 +284,7 @@ function onPhase(g: Game, phase: string, when: 'start' | 'mid' | 'end') {
     g.interdicted = {};
     for (const c of g.chits) if (c.mission === 'interdiction' && c.box === 'map') { c.box = 'used'; c.area = undefined; c.mission = undefined; }
   }
-  if (phase === 'supply' && when === 'end' && g.phasing === 'israeli' && jordanCrossed(g)) g.over = 'Syrian Automatic Victory: a supplied Syrian unit west of the Jordan (19.5)';
+  if (phase === 'supply' && when === 'end' && g.phasing === 'israeli' && !isNafakh(g) && jordanCrossed(g)) g.over = 'Syrian Automatic Victory: a supplied Syrian unit west of the Jordan (19.5)';
 }
 /** The Reinforcement Phase's Golan extras: the SAM barrier reduction (16.12) and the units released into the Arriving box. */
 function reinforce(g: Game, side: Side) {
@@ -425,7 +509,7 @@ export function placeRaid(g: Game, chitId: string, a: number) {
 export function fireSam(g: Game, samId: string) {
   const V = state(g), b = g.battle, airId = V.samTarget; need(airId, 'no Israeli air mission to answer');
   const sam = chit(g, samId); need(sam.kind === 'sam' && sam.box === 'available', 'no SAM asset available');
-  const die = rollDie(g), res = samResult(g.turn, die); sam.box = 'used'; V.samTarget = undefined;
+  const die = rollDie(g), res = samResult(isNafakh(g) ? Math.max(4, g.turn) : g.turn, die); sam.box = 'used'; V.samTarget = undefined;      // 22.46: Nafakh uses the turn 4-6 column
   const a = chit(g, airId!);
   if (a.mission === 'interdiction' && res !== 'none' && a.area != null) delete g.interdicted[a.area];
   if (a.mission === 'recon' && res === 'none') finishRecon(g, a);
@@ -600,6 +684,6 @@ registerHooks('golan73', {
   stratAllowed: (g, u) => interdictedBy(g, u.area!) !== other(u.side), stratStep,
   successNumber: golanSuccessNumber, adjustFire, canAssign, moraleSn: golanMoraleSn, retreatOk, retreatPrefer, onRetreat,
   sources, supplyStep, supplyFree: (_g, _s, a) => isAssembly(a) || a === HERMON, alwaysSupplied: (_g, u) => !!u.ghost || u.id === 'S17',
-  victory: golanVictory, finalResult, onPhase, onBattle, freeBattle, assault, reinforce, afterDraw: (g) => { const d = g.chits.find((c) => c.kind === 'event_dugman5' && c.box === 'available'); if (d) resolveDugman(g, d); },
-  stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2), appropriate: (_g, u) => (u.side === 'israeli' ? [ASSEMBLY.A, ASSEMBLY.B] : Object.values(ENTRY)), isNight, onAssign, beforeBegin, beforeFire, afterFire,
+  victory: golanVictory, finalResult, onPhase, onBattle, freeBattle, assault, reinforce, afterDraw: (g) => { nafakhStaff(g); const d = g.chits.find((c) => c.kind === 'event_dugman5' && c.box === 'available'); if (d) resolveDugman(g, d); },
+  stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2), appropriate: (g, u) => (isNafakh(g) ? (u.side === 'israeli' ? [NAF_NORTH] : [REAR, NAF.sheet.entry.Z]) : u.side === 'israeli' ? [ASSEMBLY.A, ASSEMBLY.B] : Object.values(ENTRY)), isNight, onAssign, beforeBegin, beforeFire, afterFire,
 } as Partial<Volume>);

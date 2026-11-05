@@ -715,10 +715,109 @@
    "Syrian 52nd (S04) starts with a Recovering marker",
    "Kuzabia (34) starts contested and Israeli-controlled",
    "Israeli HQ Staff asset starts in Nafakh (42); whenever Syria controls Nafakh the Israeli reusable Special Action goes to the Eliminated Box, the Staff asset goes to the cup and brings the SA back when drawn",
-   "Syrian Rear Area: entering the map costs 4 MP, one unit per Movement Phase; Northern Assembly Area costs the MP printed on the scenario map",
+   "Off-map boxes (map sheet): Northern Assembly Area to Katzrin 4 MP (one unit per Movement Phase) or Kuzabia 5 MP; Syrian Rear Area to Bunker 109 or Tel Fazra 2 MP",
    "Units forced off map are eliminated; no voluntary exit",
    "No Sudden Death or Syrian Automatic Victory; Decisive = uncontested control of Nafakh at end of T4, else most strength points in Nafakh (tie: Israel)"
-  ]
+  ],
+  "sheet": {
+   "note": "From the Battle for Nafakh map sheet (scenario PDF p.4): the off-map boxes (engine ids: 104 the sheet's Northern Assembly Area, 103 the Syrian Rear Area), their entry costs, the entry areas and supply sources printed on it.",
+   "links": [
+    {
+     "a": 104,
+     "b": 36,
+     "mp": 4,
+     "once": true,
+     "note": "Northern Assembly Area to Katzrin: 4 MP, one unit per Movement Phase"
+    },
+    {
+     "a": 104,
+     "b": 34,
+     "mp": 5,
+     "note": "Northern Assembly Area to Kuzabia: 5 MP"
+    },
+    {
+     "a": 103,
+     "b": 48,
+     "mp": 2,
+     "note": "Syrian Rear Area to Bunker 109: 2 MP"
+    },
+    {
+     "a": 103,
+     "b": 39,
+     "mp": 2,
+     "note": "Syrian Rear Area to Tel Fazra: 2 MP, across the bridged AT ditch"
+    }
+   ],
+   "entry": {
+    "A": 45,
+    "Z": 38,
+    "note": "Entry triangles on the sheet: A beside Oretal (45, 1 MP), Z on the road into Hushniyah (38). The rules send a released Golani to Entry Area C (14.21); the sheet shows only A on the Israeli side, so Golani enters at A."
+   },
+   "control_israeli": [
+    34,
+    36,
+    37,
+    41,
+    42,
+    43,
+    45,
+    46,
+    47,
+    48
+   ],
+   "supply": {
+    "israeli": [
+     43,
+     36,
+     34
+    ],
+    "syrian": [
+     103
+    ]
+   },
+   "track": {
+    "1": {
+     "syrian": [
+      0,
+      0
+     ],
+     "israeli": [
+      0,
+      0
+     ]
+    },
+    "2": {
+     "syrian": [
+      4,
+      2
+     ],
+     "israeli": [
+      1,
+      2
+     ]
+    },
+    "3": {
+     "syrian": [
+      3,
+      1
+     ],
+     "israeli": [
+      2,
+      3
+     ]
+    },
+    "4": {
+     "syrian": [
+      2,
+      1
+     ],
+     "israeli": [
+      2,
+      4
+     ]
+    }
+   }
+  }
  },
  "badr_alt": {
   "name": "Operation Badr: Alternate Setup (22.2)",
