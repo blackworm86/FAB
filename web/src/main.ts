@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import * as E from '../../engine/src';
 import { loadChitArt, garrisonChit } from './chits';
+import { loadGolanChitArt } from './golan-art';
 import { useVolume, type LabelBox } from './vol';
 import type { PanelCtx } from './golan-ui';
 import { History } from './history';
@@ -1818,7 +1819,7 @@ tut = TUTORIAL ? initTutorial({
   home: (sc) => { try { if (sc) sessionStorage.setItem('fab-new', sc); } catch { /* private mode */ } location.href = homeUrl(); },
 }) : null;
 frame();
-loadChitArt().catch((e) => console.error(e)).finally(() => { auto(); refresh(); });
+Promise.all([loadChitArt(), VOL.id === 'golan73' ? loadGolanChitArt() : null]).catch((e) => console.error(e)).finally(() => { auto(); refresh(); });
 let lobbyUid = '';
 const onNet = (): void => {
   if (online.mode !== 'remote' || !online.hasAccounts) return;

@@ -100,8 +100,8 @@ function golan(): VolView {
     const raw = RAW_COUNTERS.get(c.counter ?? c.id);
     return golanChitSvg({ id: c.counter ?? c.id, kind: c.kind, side: c.side as 'israeli' | 'syrian', name: c.name, turn: c.turn, quality: c.q ?? raw?.quality, area: c.area ?? raw?.area, subtype: raw?.subtype, symbol: raw?.symbol, brigade: c.brigade, echelon: raw?.echelon });
   };
-  const EDGE: Record<string, string> = { MINE: golanChitSvg({ id: 'M01', kind: 'minefield', side: 'israeli', name: 'Minefield' }), ATB: golanChitSvg({ id: 'M13', kind: 'marker_at_ditch_bridged', side: 'none', name: 'AT Ditch Bridged' }),
-    R: golanChitSvg({ id: 'R', kind: 'reserve_marker', side: 'syrian', name: 'Reserve' }), RI: golanChitSvg({ id: 'R', kind: 'reserve_marker', side: 'israeli', name: 'Reserve' }) };
+  const EDGE: Record<string, () => string> = { MINE: () => golanChitSvg({ id: 'M01', kind: 'minefield', side: 'israeli', name: 'Minefield' }), ATB: () => golanChitSvg({ id: 'M13', kind: 'marker_at_ditch_bridged', side: 'none', name: 'AT Ditch Bridged' }),
+    R: () => golanChitSvg({ id: 'M03', kind: 'reserve_marker', side: 'syrian', name: 'Reserve' }), RI: () => golanChitSvg({ id: 'R', kind: 'reserve_marker', side: 'israeli', name: 'Reserve' }) };      // the Syrian one as printed
   return {
     id: 'golan73', name: "Golan '73", info, sides: ['syrian', 'israeli'], bottom: 'israeli', tag: info.tag, sideName: info.sideName,
     wood: { ...GOLAN_WOOD }, ink: { syrian: '#8fc46a', israeli: '#6fd0ea' }, controlCol: { syrian: 0x4f9a4a, israeli: 0x3ab0d0 },
@@ -115,7 +115,7 @@ function golan(): VolView {
     reserveTag: (u) => (u.side === 'syrian' ? 'R' : 'RI'),
     ruleKey: (k) => (k === 'air_mission' || k === 'event_release' ? `golan:${k}` : k), targetsFor: golanTargets,
     battleCard: golanBattleCard, battleUse: golanBattleUse, playInBattle: golanPlayInBattle,
-    panel: golanPanel, blocksBegin: golanBlocksBegin, edgeMarks: golanEdgeMarks, markSvg: (code) => EDGE[code] ?? mapMarkerSvg(code), boxes: GOLAN_BOXES,
+    panel: golanPanel, blocksBegin: golanBlocksBegin, edgeMarks: golanEdgeMarks, markSvg: (code) => EDGE[code]?.() ?? mapMarkerSvg(code), boxes: GOLAN_BOXES,
     fieldWorks: (g, id) => G.unitFieldWorks(g, id),
     limits: (g, b, s) => { const l = G.limits(g, b, s); return { arty: l.artillery, assets: l.battle }; },
     placeOptions: (g, id) => (g.phase === 'deploy' ? G.deployOptions(g, id) : []), pendingPlace: (g) => (g.phase === 'deploy' ? g.units.filter((u) => u.box === 'deploy').map((u) => u.id) : []), place: (g, id, a) => G.deploy(g, id, a),

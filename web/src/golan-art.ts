@@ -3,6 +3,15 @@
 // Syrian chits the gold frame of the Golan sheet; blocks are cyan (Israel) and green (Syria) wood.
 import { chitSvg, CHIT_KIT, CHIT_ART, mapMarkerSvg, type Counter } from './chits';
 import { blockFace, frame, sticker, word, hex, PIP } from './block-kit';
+import { GOLAN_SCANS } from './golan-chit-scans';
+
+/** Counters shown as printed: cut from the Set-up Card scans (tools/golan73/chit_scans.py), loaded once before any chit is drawn. */
+const SCAN: Record<string, string> = {};
+export async function loadGolanChitArt(base = './golan73/chit/') {
+  const uri = (b: Blob) => new Promise<string>((ok, bad) => { const r = new FileReader(); r.onload = () => ok(r.result as string); r.onerror = () => bad(r.error); r.readAsDataURL(b); });
+  await Promise.all(GOLAN_SCANS.map(async (id) => { const r = await fetch(`${base}${id}.jpg`); if (r.ok) SCAN[id] = await uri(await r.blob()); }));
+}
+const scanned = (href: string) => `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160"><image href="${href}" width="160" height="160"/></svg>`;
 
 const { txt, open, flat, panel, turn, square, star, MK, wrap, QDOT, INK, CX, CY } = CHIT_KIT;
 export type GSide = 'israeli' | 'syrian';
@@ -25,7 +34,6 @@ const gunPic = (x: number, y: number, s: number) => `<g transform="translate(${x
 const jetPic = (x: number, y: number, s: number) => `<g transform="translate(${x} ${y}) scale(${s})" fill="#3a4a5e"><path d="M-40 0L30 -4L40 0L30 4Z"/><path d="M-6 -2L-22 -26H-14L10 -2ZM-6 2L-22 26H-14L10 2Z"/><path d="M-36 -1L-42 -12H-36L-28 -1ZM-36 1L-42 12H-36L-28 1Z"/></g>`;
 const samPic = (x: number, y: number, s: number) => `<g transform="translate(${x} ${y}) scale(${s})"><rect x="-34" y="10" width="68" height="10" rx="4" fill="#2b2d2a"/><path d="M-20 10L-8 -2H8L14 10Z" fill="#2b2d2a"/>${[-14, 0, 14].map((d) => `<g transform="translate(${d} -2) rotate(-38)"><rect x="-3" y="-34" width="6" height="34" fill="#e9eaea" stroke="#2b2d2a" stroke-width="1.6"/><path d="M-3 -34L0 -42L3 -34Z" fill="#c03a2a"/></g>`).join('')}</g>`;
 const ssmPic = (x: number, y: number, s: number) => `<g transform="translate(${x} ${y}) scale(${s})"><rect x="-38" y="6" width="70" height="12" rx="3" fill="#2b2d2a"/><circle cx="-26" cy="20" r="5" fill="#2b2d2a"/><circle cx="-6" cy="20" r="5" fill="#2b2d2a"/><circle cx="20" cy="20" r="5" fill="#2b2d2a"/><path d="M20 6V-6H34L38 6Z" fill="#2b2d2a"/><g transform="rotate(-24 -10 4)"><rect x="-40" y="-2" width="48" height="8" rx="2" fill="#e9eaea" stroke="#2b2d2a" stroke-width="1.6"/><path d="M8 -2L18 2L8 6Z" fill="#c03a2a"/></g></g>`;
-const bridgePic = (x: number, y: number) => `<g transform="translate(${x} ${y})"><path d="M-46 14H46" stroke="#5a3a20" stroke-width="10"/><path d="M-46 4H46" stroke="#e9e2cf" stroke-width="6"/><path d="M-40 14V26M-14 14V26M14 14V26M40 14V26" stroke="#5a3a20" stroke-width="5"/><path d="M-52 34L-30 18H30L52 34" fill="none" stroke="#2b2d2a" stroke-width="3" stroke-dasharray="5 4"/></g>`;
 const skull = (x: number, y: number) => `<g transform="translate(${x} ${y})"><path d="M-30 18L30 34M-30 34L30 18" stroke="#f3eee0" stroke-width="7" stroke-linecap="round"/><circle cy="-4" r="20" fill="#f3eee0"/><rect x="-10" y="10" width="20" height="10" rx="2" fill="#f3eee0"/><circle cx="-7.5" cy="-4" r="5.5" fill="#2b2420"/><circle cx="7.5" cy="-4" r="5.5" fill="#2b2420"/></g>`;
 const moroccoFlag = (x: number, y: number, w: number, h: number) => { const cx = x + w / 2, cy = y + h / 2, r = h * 0.3; const p = Array.from({ length: 5 }, (_, i) => [cx + r * Math.sin(i * 4 * Math.PI / 5), cy - r * Math.cos(i * 4 * Math.PI / 5)]);
   return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#c1272d" stroke="${INK}" stroke-width="1.6"/><path d="M${p.map((q) => q.map((v) => v.toFixed(1)).join(' ')).join('L')}Z" fill="none" stroke="#006233" stroke-width="3"/>`; };
@@ -49,6 +57,7 @@ const SIDE_BG: Record<GSide, string> = { israeli: '#0f55b5', syrian: '#3d5a2c' }
 
 /** The SVG of one Golan counter (asset, event or marker), 160 x 160 units. */
 export function golanChitSvg(c: GCounter): string {
+  if (SCAN[c.id]) return scanned(SCAN[c.id]);
   const side = c.side as GSide, k = c.kind;
   const asBulge = (over: Partial<Counter> = {}) => chitSvg({ id: c.id, kind: k, name: c.name, side: c.side, ech: c.echelon ?? 'none', turn: T(c.turn), q: c.quality ?? null, ...over } as Counter);
   switch (k) {
@@ -72,7 +81,9 @@ export function golanChitSvg(c: GCounter): string {
     case 'event_king_hassan': return eventChit(c, CREAM[side], moroccoFlag(54, 46, 54, 36), ["King Hassan's", 'Troublemakers'], { size: 19 });
     case 'event_ssm': return eventChit(c, '#bfe0f4', ssmPic(82, 62, 1), ['SSM Strike']);
     case 'minefield': return MK(`<rect x="8" y="8" width="144" height="144" fill="#b9a776" stroke="#8a7a4e" stroke-width="2"/>${txt('DANGER', 80, 42, 28, { w: 'b', anchor: 'middle', fill: '#a3261c', max: 120 })}<rect x="40" y="52" width="80" height="60" rx="6" fill="#3a2e24"/>${skull(80, 80)}${txt('MINEFIELD', 80, 140, 25, { w: 'b', anchor: 'middle', fill: INK, max: 128 })}`, '#8a7a4e');
-    case 'marker_at_ditch_bridged': return MK(`<rect x="8" y="8" width="144" height="144" fill="#b48a52"/>${txt('AT Ditch', 80, 42, 30, { w: 'b', italic: true, anchor: 'middle', fill: '#2b1d10', max: 128 })}${bridgePic(80, 70)}${txt('Bridged', 80, 138, 32, { w: 'b', italic: true, anchor: 'middle', fill: '#2b1d10', max: 128 })}`, '#7a5a30');
+    case 'marker_at_ditch_bridged': {                                   // as printed: the AT ditch (a grey barbed line) with a bridge (two splayed brackets) across it
+      const teeth = [26, 50, 110, 134].map((x) => `M${x - 10} 78L${x} 98L${x + 10} 78Z`).join('');
+      return `${open('syrian', ['#c9a043', '#dfbb63', '#9c7a28'])}${txt('AT Ditch', 80, 46, 30, { w: 'b', italic: true, anchor: 'middle', max: 124 })}<path d="M12 70H148V79H12Z${teeth}" fill="#6f6c66"/><path d="M58 50L68 63V97L58 110M102 50L92 63V97L102 110" fill="none" stroke="#2f302e" stroke-width="5" stroke-linejoin="miter"/>${txt('Bridged', 80, 140, 31, { w: 'b', italic: true, anchor: 'middle', max: 124 })}</svg>`; }
     case 'marker_control': return golanControl(side === 'syrian' ? 'syrian' : 'israeli');
     case 'reserve_marker': { const s = side === 'syrian' ? 'syrian' : 'israeli', [a, b] = s === 'israeli' ? ['Northern Cmd', 'Reserve Unit'] : ['Syrian Army', 'Reserve Unit'];
       return `${flat(SIDE_BG[s])}${emblem(s, 80, 40, 24)}${txt(a, 80, 100, 32, { w: 'b', anchor: 'middle', fill: '#fff', max: 130 })}${txt(b, 80, 134, 24, { anchor: 'middle', fill: '#fff', max: 130 })}</svg>`; }

@@ -5,7 +5,7 @@ import units from '../../data/golan73/units.json';
 import counters from '../../data/golan73/counters.json';
 import backs from '../../data/golan73/counter_backs.json';
 import { drawLabel, drawEntry } from './board-art';
-import { golanChitSvg, golanBlockSvg, golanBackSvg, GOLAN_WOOD, type GCounter, type GUnit } from './golan-art';
+import { golanChitSvg, golanBlockSvg, golanBackSvg, loadGolanChitArt, GOLAN_WOOD, type GCounter, type GUnit } from './golan-art';
 import { loadChitArt } from './chits';
 
 const svgUri = (s: string) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
@@ -44,4 +44,4 @@ function dump() {
     wood: GOLAN_WOOD,
   };
 }
-loadChitArt().then(() => { sheets(); dump(); return board(); }).then(() => { document.body.dataset.ready = '1'; });
+Promise.all([loadChitArt(), loadGolanChitArt()]).then(() => { sheets(); dump(); return board(); }).then(() => { document.body.dataset.ready = '1'; });
