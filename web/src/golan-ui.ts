@@ -133,6 +133,19 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
     const sa = E.saAvailable(g, 'israeli').length > 0;
     out.push(`<div class="volpanel"><b>${ctx.ico('next')} Golani (22.45)</b><span>A Special Action brings the Golani brigade in beside Oretal.</span><div class="row">${ctx.btn('Spend a Special Action: release Golani', () => G.releaseGolani(g), 'primary', !sa, sa ? '' : 'No Special Action available')}</div></div>`);
   }
+  if (g.phase === 'deploy' && ctx.mine('israeli')) {                                                // 15.7 and 14.02: what the Israeli player places before the first phase
+    const sp = g.units.filter((u) => (u.fort || u.ghost) && u.box === 'deploy').length, mines = V.minesLeft ?? 0;
+    if (sp) out.push(`<div class="volpanel"><b>${ctx.ico('lock')} Strongpoints and ghosts (15.7)</b><span>${sp} to place face-down, one in each area next to the Purple Line: drag them from the tray, or place them all at once.</span><div class="row">${ctx.btn('Shuffle face-down', () => G.autoStrongpoints(g, 'shuffle'), 'primary', false, 'Random, as most players do (errata)')}${ctx.btn('Historical placement', () => G.autoStrongpoints(g, 'historical'), '', false, "The errata's rough historical set-up")}</div></div>`);
+    if (mines) {
+      const keys = G.minefieldOptions(g).map((k) => k.split('-').map(Number)), ends = [...new Set(keys.flat())];
+      const second = (a: number) => keys.filter((k) => k.includes(a)).map((k) => (k[0] === a ? k[1] : k[0]));
+      out.push(`<div class="volpanel"><b>${ctx.ico('warn')} Minefields (14.02)</b><span>${mines} of 3 still to lay, on any boundary but the AT ditch, escarpment, river, Mt Hermon or rugged ones; no area may have two mined boundaries.</span><div class="row">${ctx.ubtn('Lay a minefield', () => ctx.pickArea('Minefield: first area', ends, (a) => ctx.pickArea(`Minefield from ${ctx.areaName(a)}: the area across the boundary`, second(a), (b) => G.placeMinefield(g, a, b))), 'primary')}${ctx.btn('Lay the rest at random', () => G.autoMinefields(g))}</div></div>`);
+    }
+  }
+  if (g.phase === 'deploy' && g.opts.scenario === 'badr_alt' && ctx.mine('syrian')) {                // 22.25: two reserve markers on placed units
+    const left = g.markers.syrian?.res ?? 0, placed = [...new Set(g.units.filter((u) => u.side === 'syrian' && u.area != null && !u.garrison && !u.reserve).map((u) => u.area!))];
+    out.push(`<div class="volpanel"><b>${ctx.ico('next')} Reserve markers (22.25)</b><span>${left} of 2 left to put on Syrian units you have placed.</span><div class="row">${ctx.ubtn('Mark a unit as reserve', () => ctx.pickArea('Reserve marker', placed, (a) => G.deployReserve(g, g.units.find((u) => u.side === 'syrian' && u.area === a && !u.garrison && !u.reserve)!.id)), '', !left || !placed.length)}</div></div>`);
+  }
   if (G.isAlOwda(g) && g.phase === 'deploy') {
     const at = G.alowdaRaidAreas(g), cmd = G.alowdaCommandos(g);
     const land = at.length && cmd.length && ctx.mine('syrian');
@@ -142,7 +155,7 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
     const aa = G.airAssaultTargets(g);
     if (aa.length) out.push(`<div class="volpanel"><b>${ctx.ico('air_mission')} 82nd Para (15.3)</b><span>The paratroop battalion may air-assault east of the SAM barrier or onto Mt Hermon, before any battle.</span><div class="row">${ctx.ubtn('Choose the landing area', () => ctx.pickArea('Air assault: tap the landing area', aa, (a) => G.airAssault(g, a)), 'primary')}</div></div>`);
   }
-  return out.join('');
+  return out.length ? `<div class="volstack">${out.join('')}</div>` : '';
 }
 /** Why combat cannot begin yet, or null. */
 export const golanBlocksBegin = (g: Game) => (G.state(g).samTarget ? 'Syria must answer the Israeli air mission first (fire a SAM or let it fly)' : g.battle && G.battleState(g.battle).ew?.pending ? 'The Defender must answer the jamming first' : null);

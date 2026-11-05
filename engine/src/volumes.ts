@@ -89,6 +89,8 @@ export interface Volume {
   /** The chit side of the Reinforcement Phase (4.1a–d) for one side; returns true when the side still has a choice to make (4.1a). */
   reinforce?: (g: Game, side: Side) => void;
   afterDraw?: (g: Game) => void;
+  /** The set-up step is over: true if the volume started the first phase itself (Golan's historical set-up opens with the Syrian Combat Phase). */
+  afterDeploy?: (g: Game) => boolean;
   quality?: (u: Unit) => Quality;
 }
 

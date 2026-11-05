@@ -8,7 +8,7 @@ import countersJson from '../../../data/golan73/counters.json';
 import setupsJson from '../../../data/golan73/setups.json';
 import trackJson from '../../../data/golan73/turn_track.json';
 import { areas, connection, edgeKey, neighbors, setPlayArea } from '../map';
-import { ASSEMBLY, ENTRY, HERMON, NAF_NORTH, REAR, boxSide, eastOfSam, isAssembly, area as garea, type GSide } from '../golan/map';
+import { ASSEMBLY, ENTRY, HERMON, NAF_NORTH, REAR, boxSide, connections, eastOfSam, isAssembly, area as garea, type GSide } from '../golan/map';
 import { reachable, type GMoveCtx, type GMoveUnit } from '../golan/move';
 import { assetLimits, brigadeExtraDie, moraleSn as gMoraleSn, samResult, successNumber as gSuccessNumber, type GShooter, type GTarget, type Quality } from '../golan/combat';
 import { isArty, isBattleAsset, type Chit } from '../chits';
@@ -30,6 +30,7 @@ export interface GolanState {
   freeCombatRound: number;                                // 22.17: Syrian free Breakthrough combat rounds left on turn 1
   purpleLineCrossed: boolean; airReleased: number; hermonLost: boolean;
   airAssaultArea?: number; samTarget?: string;            // 15.3; 16.12: the Israeli air mission a SAM may answer now
+  minesLeft?: number; startAt?: 'combat' | 'movement';    // 14.02: minefields the Israeli player still places at the start; the phase the scenario opens with once set up
   nafakh?: { s03Free: boolean; golani: boolean; staffOut: boolean };   // 22.46: the 33rd held back, Golani's release, the HQ Staff lost with Nafakh
   alowda?: { raids: number; cup?: string[]; drawn?: string[] };       // 20.35 the commandos landed at the start; 20.36 the Israeli Reinforcements Draw Cup
 }
@@ -41,7 +42,7 @@ type RawUnit = { id: string; name: string; side: Side; cls?: string | null; symb
   start_area?: number; arrival_turn?: number; entry?: string[]; initial_steps?: number };
 type RawChit = { id: string; ids?: string[]; kind: string; side: Side | 'none'; name: string; turn: number | string | null; quality?: Quality | null; area?: number; brigade?: string };
 type Setup = { units: { id: string; area?: number; box?: string }[]; reduced?: Record<string, number>; holding_boxes?: Record<string, string[]>; available?: Record<string, string[]>;
-  garrisons?: { id: string; area: number }[]; strongpoints?: { suggested_historical: { area: number; id: string }[] }; minefields?: { fixed: number[][] }; riverAssault?: number[]; reserve?: { syrian?: string[] }; turns: number };
+  garrisons?: { id: string; area: number }[]; strongpoints?: { areas?: number[]; suggested_historical: { area: number; id: string }[] }; minefields?: { fixed: number[][]; player_placed?: number }; riverAssault?: number[]; reserve?: { syrian?: string[] }; turns: number };
 const UNITS = unitsJson as unknown as RawUnit[], COUNTERS = countersJson as unknown as RawChit[], SETUPS = setupsJson as unknown as Record<string, Setup>;
 const TRACK = (trackJson as unknown as { turns: Record<string, { night: boolean }> }).turns;
 const NOT_CHITS = new Set(['minefield', 'marker', 'reserve_marker', 'marker_control', 'field_works', 'marker_at_ditch_bridged']);
@@ -65,10 +66,10 @@ function newGolanGame(seed: number, opts: Partial<{ scenario: string }>): Game {
   if (opts.scenario === 'nafakh') { const g = nafakhSetup(newGolanGame(seed, { scenario: 'badr' })); setPlayArea(g.inPlay); return g; }
   if (opts.scenario === 'alowda') { const g = alowdaSetup(newGolanGame(seed, { scenario: 'badr' })); setPlayArea(g.inPlay); return g; }
   const scenario = opts.scenario === 'badr_alt' ? 'badr_alt' : 'badr', S = SETUPS.badr;        // badr_alt shares everything but the free placement (22.24/22.25)
-  const where = new Map(S.units.map((p) => [p.id, p])), sp = new Map((S.strongpoints?.suggested_historical ?? []).map((p) => [p.id, p.area]));
+  const where = new Map(S.units.map((p) => [p.id, p]));
   const units: Unit[] = UNITS.filter((u) => u.kind !== 'special_action_block').map((u) => {
-    const p = where.get(u.id), max = u.steps ?? 1, kind = u.kind === 'strongpoint' || u.kind === 'ghost' ? u.kind : undefined, area = p?.area ?? sp.get(u.id) ?? null;
-    const box = area != null ? undefined : ['operational_reserve', 'strategic_reserve', 'air_assault'].includes(p?.box ?? '') ? p!.box : kind ? 'strongpoint_pool' : undefined;
+    const p = where.get(u.id), max = u.steps ?? 1, kind = u.kind === 'strongpoint' || u.kind === 'ghost' ? u.kind : undefined, area = p?.area ?? null;
+    const box = area != null ? undefined : ['operational_reserve', 'strategic_reserve', 'air_assault'].includes(p?.box ?? '') ? p!.box : kind ? 'deploy' : undefined;          // 15.6/15.7: the Israeli player places every strongpoint and ghost at the start
     return { id: u.id, name: u.name, side: u.side, cls: (u.cls ?? 'infantry') as 'armor' | 'infantry', q: (u.quality_by_step ?? []).map((x) => x ?? 'veteran'), max, str: S.reduced?.[u.id] ?? u.initial_steps ?? max,
       area, box, disorder: 0, unsupplied: false, moved: false, reserve: null, exploit: false, arrival: u.arrival_turn, entry: u.entry, symbol: u.symbol, division: u.division ?? undefined, brigade: u.brigade ?? undefined,
       kind, fort: kind === 'strongpoint' ? (u.symbol === 'armor' ? 'armor' : 'infantry') : undefined, ghost: kind === 'ghost' || undefined,
@@ -90,18 +91,18 @@ function newGolanGame(seed: number, opts: Partial<{ scenario: string }>): Game {
   const control: Record<number, Side> = { [ASSEMBLY.A]: 'israeli', [ASSEMBLY.B]: 'israeli' };
   for (const a of areas.keys()) if (!isAssembly(a)) control[a] = garea(a).syria ? 'syrian' : 'israeli';                     // 22.13: everything west of the Purple Line is Israeli
   const vol: GolanState = { minefields: (S.minefields?.fixed ?? []).map(([a, b]) => edgeKey(a, b)), bridgedDitch: [], raids: [], raidPartial: [], crossed: [], minefieldFailed: [], assaultEntered: {}, kingHassan: false,
-    freeCombatRound: scenario === 'badr' ? 2 : 0, purpleLineCrossed: false, airReleased: 0, hermonLost: false };
+    freeCombatRound: scenario === 'badr' ? 2 : 0, purpleLineCrossed: false, airReleased: 0, hermonLost: false, minesLeft: S.minefields?.player_placed ?? 3, startAt: scenario === 'badr' ? 'combat' : 'movement' };
   const g: Game = { game: 'golan73', sides: ['syrian', 'israeli'], turn: 1, lastTurn: S.turns, phasing: 'syrian', phase: 'combat', units, chits, control, fieldWorks: [], fwOwner: {}, riverAssault: scenario === 'badr' ? [...(S.riverAssault ?? [])] : [], blown: [],
     contestedAtMoveStart: [], fought: [], markers: { syrian: { res: 2 }, israeli: { res: 4 } }, stratMoves: 0, riverCross: [], blowTried: [], entered: {}, pendingBlow: null, greif: {}, greifTried: [], fwBuilt: [], tfNew: [],
     elimLarge: [], captured: [], fuelAdded: false, opts: { scenario, fuel: false }, roadblocks: {}, interdicted: {}, pooled: null, airSupply: null, revealed: null, arrived: [], pendingArrivals: [], recover: [], battle: null, seed, rolls: 0, log: [],
     vol: vol as unknown as Record<string, unknown> };
   for (const a of g.riverAssault) for (const u of unitsIn(g, a, 'syrian')) u.from = neighbors(a).find((n) => connection(a, n)!.atDitch && g.control[n] === 'syrian');   // the bridgeheads came across the ditch
   if (scenario === 'badr') for (const id of S.reserve?.syrian ?? []) { g.units.find((u) => u.id === id)!.reserve = 'res'; g.markers.syrian.res--; }
-  if (scenario === 'badr_alt') {                                                                     // 22.24/22.25: the players place their regular units
+  if (scenario === 'badr_alt')                                                                       // 22.24/22.25: the players place their regular units too
     for (const u of g.units) if (u.area != null && regular(u) && u.id !== 'S17') { u.box = 'deploy'; u.area = null; u.from = undefined; }
-    g.phase = 'deploy'; g.phasing = 'israeli';
-  }
-  say(g, scenario === 'badr' ? 'Operation Badr: the Syrian assault has crossed the Purple Line; the game opens with the Syrian Combat Phase of turn 1.' : 'Operation Badr, alternate set-up: the players place their units.');
+  g.phase = 'deploy'; g.phasing = 'israeli';                                                          // 22.14/22.24: the Israeli player places strongpoints, ghosts and three minefields first
+  say(g, scenario === 'badr' ? 'Operation Badr: the Syrian assault has crossed the Purple Line. Israel places its strongpoints and ghosts face-down, one per Purple Line area, and three minefields; then the Syrian Combat Phase of turn 1.'
+    : 'Operation Badr, alternate set-up: Israel places its strongpoints, ghosts, minefields and regular units, Syria its sixteen units and two reserve markers; then the Syrian Movement Phase of turn 1.');
   return g;
 }
 
@@ -118,7 +119,7 @@ function nafakhSetup(g: Game): Game {
   g.inPlay = [...NAF.areas_in_play, NAF_NORTH, REAR];
   g.track = Array.from({ length: NAF.turns }, (_, i) => ({ ge: NAF.sheet.track[i + 1].syrian, al: NAF.sheet.track[i + 1].israeli, sd: null }));
   g.riverAssault = []; g.fieldWorks = []; g.markers = { syrian: { res: NAF.reserve.markers.syrian }, israeli: { res: NAF.reserve.markers.israeli } };
-  const V = state(g); V.freeCombatRound = 0; V.minefields = NAF.minefields.fixed.map(([a, b]) => edgeKey(a, b)); V.nafakh = { s03Free: false, golani: false, staffOut: false };
+  const V = state(g); V.freeCombatRound = 0; V.minefields = NAF.minefields.fixed.map(([a, b]) => edgeKey(a, b)); V.nafakh = { s03Free: false, golani: false, staffOut: false }; V.minesLeft = 0;
   const place = new Map(NAF.units.map((p) => [p.id, p])), arrive = new Map<string, { turn: number; entry: string[]; steps?: number }>();
   for (const [t, sides] of Object.entries(NAF.reinforcements)) for (const s of ['israeli', 'syrian'] as const) for (const r of sides[s].units) arrive.set(r.id, { turn: +t, entry: r.entry, steps: r.steps });
   g.units = g.units.filter((u) => !u.garrison && (place.has(u.id) || arrive.has(u.id) || u.id === NAF.special_action_release.id));
@@ -198,7 +199,7 @@ function alowdaSetup(g: Game): Game {
   const rows = Array.from({ length: ALO.turns }, (_, i) => TRACK[String(i + 1)] as unknown as { draws: Record<Side, number[]> });
   g.track = rows.map((r, i) => ({ ge: i === 0 ? [0, 0] : r.draws.syrian, al: i === 0 ? [0, 0] : r.draws.israeli, sd: null }));
   g.riverAssault = []; g.control[HERMON] = 'syrian';
-  const V = state(g); V.freeCombatRound = 0;
+  const V = state(g); V.freeCombatRound = 0; V.startAt = 'movement';
   const I = ALO.israeli, S = ALO.syrian, cup = I.draw_cup;
   V.alowda = { raids: 0, cup: [...cup.start, ...Array.from({ length: cup.ghosts }, (_, k) => `ghost${k + 1}`)], drawn: [] };
   const fixed = new Map(Object.entries(I.fixed_reinforcements).flatMap(([t, l]) => l.map((r) => [r.id, { turn: +t, entry: r.entry }] as const)));
@@ -351,6 +352,7 @@ function onPhase(g: Game, phase: string, when: 'start' | 'mid' | 'end') {
   if (phase === 'reinforcement' && when === 'start') V.minefieldFailed = [];
   if ((phase === 'movement' || phase === 'btMove' || phase === 'reaction') && when === 'start') { V.crossed = []; V.assaultEntered = {}; }
   if (phase === 'deploy' && when === 'end' && g.units.some((u) => u.box === 'deploy')) throw new Error('place every unit first');
+  if (phase === 'deploy' && when === 'end' && V.minesLeft) throw new Error(`place the Israeli minefields first (${V.minesLeft} left, 14.02)`);
   if (phase === 'admin' && when === 'end') V.intel = undefined;
   if (phase === 'supply' && when === 'mid' && g.phasing === 'israeli') {                              // 16.31b: interdiction lasts to the second player's Supply Phase
     g.interdicted = {};
@@ -736,13 +738,52 @@ export function airAssault(g: Game, a: number) {
 export function deployOptions(g: Game, unitId: string): number[] {
   const u = unit(g, unitId); if (g.phase !== 'deploy' || u.box !== 'deploy') return [];
   const ids = [...areas.keys()].filter((a) => !isAssembly(a));
-  if (u.side === 'israeli') return ids.filter((a) => a !== HERMON && !garea(a).syria && blocks(g, a, 'israeli').filter(regular).length < 2 && !unitsIn(g, a).some((x) => x.fort || x.ghost));
+  if (u.fort || u.ghost) return PURPLE.filter((a) => g.inPlay?.includes(a) !== false && !unitsIn(g, a).some((x) => x.fort || x.ghost));    // 15.7: one strongpoint or ghost in each area next to the Purple Line
+  if (u.side === 'israeli') return ids.filter((a) => a !== HERMON && !garea(a).syria && !PURPLE.includes(a) && blocks(g, a, 'israeli').filter(regular).length < 2);   // 22.24 and the set-up card: not next to the Purple Line
   if (isAlOwda(g)) return ids.filter((a) => garea(a).altSetup && !unitsIn(g, a, 'syrian').length);     // 20.35: any tank-symbol area, one unit each
   return ids.filter((a) => garea(a).altSetup === u.division && !unitsIn(g, a, 'syrian').length);       // one unit per tank symbol of its division colour
 }
 export function deploy(g: Game, unitId: string, a: number) {
   need(deployOptions(g, unitId).includes(a), 'not a set-up area for this unit');
   const u = unit(g, unitId); u.box = undefined; u.area = a; updateControl(g, a);
+}
+/** The Israeli areas next to the Purple Line: each takes one strongpoint or ghost (15.7). */
+const PURPLE = SETUPS.badr.strongpoints!.areas!;
+const SUGGESTED = SETUPS.badr.strongpoints!.suggested_historical;
+/** A seeded shuffle that spends no dice (the set-up must not change the game's rolls). */
+const shuffled = <T,>(g: Game, xs: T[], salt: number) => { let h = (g.seed ^ salt) >>> 0; const a = [...xs]; for (let i = a.length - 1; i > 0; i--) { h = (Math.imul(h ^ (h >>> 15), 2246822507) + 0x9e3779b9) >>> 0; const j = h % (i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+/** 15.7 quick placement of the strongpoints and ghosts still to place: the errata's rough historical set-up, or shuffled face-down ("most players prefer"). */
+export function autoStrongpoints(g: Game, how: 'historical' | 'shuffle') {
+  need(g.phase === 'deploy', 'only while setting up');
+  if (how === 'historical') for (const { id, area } of SUGGESTED) if (deployOptions(g, id).includes(area)) deploy(g, id, area);
+  const rest = shuffled(g, g.units.filter((u) => (u.fort || u.ghost) && u.box === 'deploy'), 7);
+  for (const u of rest) { const o = deployOptions(g, u.id); if (o.length) deploy(g, u.id, shuffled(g, o, u.id.charCodeAt(2))[0]); }
+}
+/** 14.02: boundaries where the Israeli player may still place one of his three minefields. */
+export function minefieldOptions(g: Game): string[] {
+  const V = state(g); if (g.phase !== 'deploy' || !V.minesLeft) return [];
+  const mined = new Set(V.minefields.flatMap((k) => k.split('-').map(Number)));
+  return connections().filter((c) => !isAssembly(c.a) && !isAssembly(c.b) && c.kind !== 'hermon' && !c.atDitch && !c.escarpment && !c.river && !c.rugged && !c.sheet
+    && c.a !== HERMON && c.b !== HERMON && !mined.has(c.a) && !mined.has(c.b) && (!g.inPlay || (g.inPlay.includes(c.a) && g.inPlay.includes(c.b)))).map((c) => edgeKey(c.a, c.b));
+}
+export function placeMinefield(g: Game, a: number, b: number) {
+  const key = edgeKey(a, b); need(minefieldOptions(g).includes(key), 'not a boundary for a minefield (14.02: not on the AT ditch, escarpment, river, Mt Hermon or rugged; one mined boundary per area)');
+  const V = state(g); V.minefields.push(key); V.minesLeft!--; say(g, `Minefield laid between ${nameOf(a)} and ${nameOf(b)} (14.02)`, 'israeli');
+}
+/** Random minefields, on boundaries between Israeli-held areas within two areas of the Purple Line (where they can stop an attack). */
+export function autoMinefields(g: Game) {
+  const front = new Set(PURPLE.flatMap((a) => [a, ...neighbors(a)])), useful = (k: string) => k.split('-').map(Number).every((a) => g.control[a] === 'israeli' && !garea(a).syria && front.has(a));
+  for (let k = 0; k < 5 && state(g).minesLeft; k++) { const all = minefieldOptions(g), o = shuffled(g, all.some(useful) ? all.filter(useful) : all, 31 + k); if (!o.length) break; const [a, b] = o[0].split('-').map(Number); placeMinefield(g, a, b); } }
+/** 22.25: in the alternate set-up Syria may put its two reserve markers on units it has placed (toggle). */
+export function deployReserve(g: Game, unitId: string) {
+  const u = unit(g, unitId); need(g.phase === 'deploy' && g.opts.scenario === 'badr_alt' && u.side === 'syrian' && regular(u) && u.area != null, 'a placed Syrian unit, during the alternate set-up');
+  if (u.reserve) { u.reserve = null; g.markers.syrian.res++; return; }
+  need(g.markers.syrian.res > 0, 'both reserve markers are already placed'); u.reserve = 'res'; g.markers.syrian.res--;
+}
+/** End of the set-up: the historical scenario opens with the Syrian Combat Phase (the Operational Movement Phase has taken place, 22.17). */
+function afterDeploy(g: Game) {
+  if (state(g).startAt !== 'combat') return false;
+  g.phase = 'combat'; g.phasing = 'syrian'; g.units.forEach((u) => { u.moved = false; u.spent = 0; }); return true;
 }
 /** The Israeli player places strongpoints and ghosts at will, one per Purple Line area (15.7): swap two of them while setting up. */
 export function swapStrongpoints(g: Game, a: string, b: string) {
@@ -759,5 +800,5 @@ registerHooks('golan73', {
   successNumber: golanSuccessNumber, adjustFire, canAssign, moraleSn: golanMoraleSn, retreatOk, retreatPrefer, onRetreat,
   sources, supplyStep, supplyFree: (_g, _s, a) => isAssembly(a) || a === HERMON, alwaysSupplied: (_g, u) => !!u.ghost || u.id === 'S17',
   victory: golanVictory, finalResult, onPhase, onBattle, freeBattle, assault, reinforce, afterDraw: (g) => { nafakhStaff(g); const d = g.chits.find((c) => c.kind === 'event_dugman5' && c.box === 'available'); if (d) resolveDugman(g, d); },
-  stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2), appropriate: (g, u) => (isNafakh(g) ? (u.side === 'israeli' ? [NAF_NORTH] : [REAR, NAF.sheet.entry.Z]) : u.side === 'israeli' ? [ASSEMBLY.A, ASSEMBLY.B] : Object.values(ENTRY)), isNight, onAssign, beforeBegin, beforeFire, afterFire,
+  afterDeploy, stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2), appropriate: (g, u) => (isNafakh(g) ? (u.side === 'israeli' ? [NAF_NORTH] : [REAR, NAF.sheet.entry.Z]) : u.side === 'israeli' ? [ASSEMBLY.A, ASSEMBLY.B] : Object.values(ENTRY)), isNight, onAssign, beforeBegin, beforeFire, afterFire,
 } as Partial<Volume>);

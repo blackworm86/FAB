@@ -1122,6 +1122,7 @@ export function endPhase(g: Game) {
   if (g.pendingBlow) throw new Error('resolve the bridge-blowing attempt first');
   if (mustFight(g).length) throw new Error('newly contested areas must be fought first');
   const ph = g.phase; if (ph !== 'supply') CUR.onPhase?.(g, ph, 'end');                        // supply's end ran in rollSupply
+  if (ph === 'deploy' && CUR.afterDeploy?.(g)) { say(g, 'phase start'); return; }
   if (ph === 'deploy') { g.phase = 'movement'; g.phasing = sidesOf(g)[0]; g.units.forEach((u) => { u.moved = false; u.spent = 0; }); g.contestedAtMoveStart = contestedAreas(g); g.stratMoves = 0; CUR.onPhase?.(g, 'movement', 'start'); say(g, 'phase start'); return; }
   g.fieldWorks = g.fieldWorks.filter((a) => { const o = g.fwOwner[a]; return o ? unitsIn(g, a, o).length > 0 : unitsIn(g, a).length > 0; });   // 5.23 gone when no friendly unit is left in the area
   for (const a of Object.keys(g.fwOwner).map(Number)) if (!g.fieldWorks.includes(a)) delete g.fwOwner[a];

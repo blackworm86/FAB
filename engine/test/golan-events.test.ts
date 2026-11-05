@@ -201,11 +201,15 @@ describe('a released unit arrives next Reinforcement Phase (15.2, 17.11)', () =>
 describe('alternate set-up (22.2)', () => {
   it('both sides place their units; Syrian units go on squares of their division colour, one per square', () => {
     const g = newGolanGame(19, 'badr_alt');
-    expect(g.phase).toBe('deploy'); expect(g.units.filter((u) => u.box === 'deploy').length).toBe(7 + 16);
+    expect(g.phase).toBe('deploy'); expect(g.units.filter((u) => u.box === 'deploy').length).toBe(7 + 16 + 11);   // regulars, Syrian units, strongpoints and ghosts
+    expect(golan.deployOptions(g, 'I03')).not.toContain(27);                                   // not next to the Purple Line (set-up card)
     expect(golan.deployOptions(g, 'S01').length).toBe(5);                                      // 61st, 5th Inf (yellow): five squares
     expect(golan.deployOptions(g, 'I01')).not.toContain(83);
     expect(() => endPhase(g)).toThrow(/place every unit/);
+    golan.autoStrongpoints(g, 'shuffle');
     for (const u of g.units.filter((x) => x.box === 'deploy')) golan.deploy(g, u.id, golan.deployOptions(g, u.id)[0]);
+    golan.deployReserve(g, 'S01'); golan.deployReserve(g, 'S02'); expect(() => golan.deployReserve(g, 'S03')).toThrow(/both/);
+    expect(() => endPhase(g)).toThrow(/minefields/); golan.autoMinefields(g);
     endPhase(g); expect([g.turn, g.phasing, g.phase]).toEqual([1, 'syrian', 'movement']);
     playOut(g); expect(g.over).toMatch(/victory|draw/i);
   });

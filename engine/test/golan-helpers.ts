@@ -2,7 +2,12 @@
 import { newGame, useGame, endPhase, mustFight, startBattle, beginCombat, roll_step as rollStep, chooseFirstLoss, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, declineExploit, closeBattle,
   arrivalOptions, placeArrival, autoRecover, unitsIn, move as seriesMove, resolveBlow, golan, type Game, type Side } from '../src';
 
-export const newGolanGame = (seed = 1, scenario: 'badr' | 'badr_alt' = 'badr'): Game => { useGame('golan73'); return newGame(seed, { scenario }); };
+/** A Golan game; Operation Badr comes set up (strongpoints and ghosts as the errata's historical placement, no free minefields) and starts at its first phase, unless setup is false. */
+export const newGolanGame = (seed = 1, scenario: 'badr' | 'badr_alt' = 'badr', setup = true): Game => {
+  useGame('golan73'); const g = newGame(seed, { scenario });
+  if (setup && scenario === 'badr') { golan.autoStrongpoints(g, 'historical'); golan.state(g).minesLeft = 0; endPhase(g); }
+  return g;
+};
 export const unit = (g: Game, id: string) => { const u = g.units.find((x) => x.id === id); if (!u) throw new Error(`no unit ${id}`); return u; };
 export const chit = (g: Game, id: string) => { const c = g.chits.find((x) => x.id === id); if (!c) throw new Error(`no counter ${id}`); return c; };
 /** Blocks in an area (regular units, strongpoints and ghosts; not the standing assets). */

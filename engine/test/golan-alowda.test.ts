@@ -4,14 +4,14 @@ import { endPhase, victory, golan, type Game } from '../src';
 import { newGolanGame, unit, chit, playOut, runTo } from './golan-helpers';
 
 const alowda = (seed = 4): Game => newGolanGame(seed, 'alowda' as 'badr');
-const placeAll = (g: Game) => { for (const u of g.units.filter((x) => x.box === 'deploy')) golan.deploy(g, u.id, golan.deployOptions(g, u.id)[0]); };
+const placeAll = (g: Game) => { golan.autoStrongpoints(g, 'historical'); for (const u of g.units.filter((x) => x.box === 'deploy')) golan.deploy(g, u.id, golan.deployOptions(g, u.id)[0]); golan.autoMinefields(g); };
 
 describe('Operation Al-Owda (20.3)', () => {
   it('sets up from the cards: six turns, Mt Hermon Syrian, sixteen Syrian units to place, the cards\' garrisons', () => {
     const g = alowda();
     expect(g.lastTurn).toBe(6); expect(g.phase).toBe('deploy'); expect(g.phasing).toBe('syrian');
     expect(g.inPlay).not.toContain(golan.HERMON); expect(g.control[golan.HERMON]).toBe('syrian');
-    expect(g.units.filter((u) => u.box === 'deploy').length).toBe(16);
+    expect(g.units.filter((u) => u.box === 'deploy' && u.side === 'syrian').length).toBe(16); expect(g.units.filter((u) => u.box === 'deploy' && (u.fort || u.ghost)).length).toBe(11);
     for (const id of ['S24', 'S22', 'S17', 'S23']) expect(g.units.some((u) => u.id === id)).toBe(false);
     expect(g.units.filter((u) => u.garrison).map((u) => u.area).sort((a, b) => a! - b!)).toEqual([22, 30, 42, 46]);
     expect(unit(g, 'I03').area).toBe(31);
