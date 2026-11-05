@@ -22,7 +22,9 @@ export type MapEntry = { letter: string; x: number; y: number; side: E.Side };
 export type LabelBox = { mode: string; x: number; y: number; w: number; h: number; px: number; py: number; pr: number };
 export interface VolView {
   id: string; name: string; info: GameInfo;
-  sides: [E.Side, E.Side]; tag: Record<string, string>; sideName: Record<string, string>;
+  sides: [E.Side, E.Side];
+  /** The side whose edge of the printed map is at the bottom: that player looks up the map, the other down it from the far edge. */
+  bottom: E.Side; tag: Record<string, string>; sideName: Record<string, string>;
   wood: Record<string, number>; ink: Record<string, string>; controlCol: Record<string, number>;   // block wood, text colour (CSS --ge/--al), area-control tint
   map: { size: [number, number]; areas: MapArea[]; connections: { a: number; b: number }[]; entries: MapEntry[] };
   labels: Record<string, LabelBox>;
@@ -63,7 +65,7 @@ function bulge(): VolView {
     return garrisonChit(tf != null ? 'Task Force' : u.name.replace('Garrison ', ''), tf != null ? `${tf}-*` : u.id.replace(/^G/, ''), tf == null);
   };
   return {
-    id: 'bulge', name: 'The Bulge', info, sides: ['german', 'allied'], tag: info.tag, sideName: info.sideName,
+    id: 'bulge', name: 'The Bulge', info, sides: ['german', 'allied'], bottom: 'german', tag: info.tag, sideName: info.sideName,
     wood: { german: 0x8e9296, allied: 0x5d8a45 }, ink: { german: '#b9bcc0', allied: '#9db36a' }, controlCol: { german: 0x8a9096, allied: 0x6aa84f },
     map: { size: m.size, areas: m.areas, connections: m.connections, entries: m.entries.map((e) => ({ letter: e.letter, x: e.x, y: e.y, side: e.side === 'german' ? 'german' : 'allied' })) },
     labels: bulgeLabels as unknown as Record<string, LabelBox>,
@@ -98,7 +100,7 @@ function golan(): VolView {
   const EDGE: Record<string, string> = { MINE: golanChitSvg({ id: 'M01', kind: 'minefield', side: 'israeli', name: 'Minefield' }), ATB: golanChitSvg({ id: 'M13', kind: 'marker_at_ditch_bridged', side: 'none', name: 'AT Ditch Bridged' }),
     R: golanChitSvg({ id: 'R', kind: 'reserve_marker', side: 'syrian', name: 'Reserve' }), RI: golanChitSvg({ id: 'R', kind: 'reserve_marker', side: 'israeli', name: 'Reserve' }) };
   return {
-    id: 'golan73', name: "Golan '73", info, sides: ['syrian', 'israeli'], tag: info.tag, sideName: info.sideName,
+    id: 'golan73', name: "Golan '73", info, sides: ['syrian', 'israeli'], bottom: 'israeli', tag: info.tag, sideName: info.sideName,
     wood: { ...GOLAN_WOOD }, ink: { syrian: '#8fc46a', israeli: '#6fd0ea' }, controlCol: { syrian: 0x4f9a4a, israeli: 0x3ab0d0 },
     map: { size: m.size, areas, connections: m.connections, entries: (golanEntries as { letter: string; x: number; y: number }[]).map((e) => ({ ...e, side: 'syrian' })) },      // the letters sit in the printed triangles (tools/golan73/board.py)
     labels,

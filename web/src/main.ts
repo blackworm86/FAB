@@ -29,7 +29,7 @@ const KEY0 = TUTORIAL ? 'fab-tutorial' : SANDBOX ? 'fab-sandbox' : TABLE === 'ma
 function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif && x.roadblocks && x.pendingArrivals && x.fwOwner && Array.isArray(x.recover) ? x : null; } catch { return null; } }
 /** The volume (docs/design/one-engine.md): the address says which game, else the game saved for this table, else The Bulge. A shared table of another game reloads the page with its game. */
 const VOL = useVolume(TUTORIAL ? 'bulge' : GAME_PARAM ?? load()?.game ?? 'bulge');
-const [P1, P2] = VOL.sides, first = (sd: string) => sd === P1;
+const [P1, P2] = VOL.sides, first = (sd: string) => sd === P1, near = (sd: string) => sd === VOL.bottom;     // near: the side whose map edge is at the bottom, whose rows sit toward +z
 const MAP = VOL.map, LAB: Record<string, LabelBox> = VOL.labels;
 // World unit = 1 cm. Every FAB map is the full 34 x 22 in sheet (86.36 x 55.88 cm); the drawing's width gives the pixels per cm.
 const [MW, MH] = MAP.size, S = MW / 86.36;                                    // map pixels per cm
@@ -266,7 +266,7 @@ function fitBattleView() {
   return clear / r.height;
 }
 function battleSpot(b: E.Battle, sd: E.Side, kind: 'unit' | 'asset', i: number, n: number) {
-  const base = toWorld(...POLE.get(b.area)!), dir = first(sd) ? 1 : -1, per = 5, row = Math.floor(i / per), inRow = Math.min(per, n - row * per), col = i % per;
+  const base = toWorld(...POLE.get(b.area)!), dir = near(sd) ? 1 : -1, per = 5, row = Math.floor(i / per), inRow = Math.min(per, n - row * per), col = i % per;
   const units = E.unitsIn(g, b.area, sd).length, unitRows = Math.max(1, Math.ceil(units / per));
   const depth = kind === 'unit' ? 1.35 + row * 1.9 : 1.35 + unitRows * 1.9 + 0.5 + row * 1.7;
   return { x: base.x + (col - (inRow - 1) / 2) * (kind === 'unit' ? 1.95 : 1.75), z: base.z + dir * depth };
@@ -288,7 +288,7 @@ function drawBattleTable(b: E.Battle, spot: (id: number, x: number, z: number, r
 function drawPointMarks(b: E.Battle) {
   for (const [uid, sd] of [[b.attPoint, b.attacker], [b.defPoint, other(b.attacker)]] as const) {                  // the point unit carries a gold target
     const o = pieces.children.find((x) => x.userData.unit === uid); const u = g.units.find((x) => x.id === uid); if (!o || !u || !seen(u)) continue; void sd;
-    const d = discSprite('point', 0.26), c = viewSide() === P2 ? -1 : 1; d.position.set(o.position.x + 0.58 * c, o.position.y > 0.6 ? 1.95 : 0.9, o.position.z - 0.58 * c); d.userData.anchor = uid; markers.add(d);                 // a back corner of the block, clear of its pips and symbol d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
+    const d = discSprite('point', 0.26), c = farSide() ? -1 : 1; d.position.set(o.position.x + 0.58 * c, o.position.y > 0.6 ? 1.95 : 0.9, o.position.z - 0.58 * c); d.userData.anchor = uid; markers.add(d);                 // a back corner of the block, clear of its pips and symbol d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
   }
 }
 function drawPieces() {
@@ -323,7 +323,7 @@ function drawPieces() {
     const order = [...us].sort((p, q) => +(p.side !== P1) - +(q.side !== P1) || +!!p.garrison - +!!q.garrison);
     const place = (column: boolean) => {                                                           // a row of blocks, or a column when the area is too narrow for a row
       const t = taken.get(a.id) ?? [], saved = [...t]; let tight = false;
-      const spots = order.map((u) => { const same = us.filter((x) => x.side === u.side), idx = column ? order.indexOf(u) - (order.length - 1) / 2 : same.indexOf(u) - (same.length - 1) / 2, row = first(u.side) ? 1.1 : -1.1;
+      const spots = order.map((u) => { const same = us.filter((x) => x.side === u.side), idx = column ? order.indexOf(u) - (order.length - 1) / 2 : same.indexOf(u) - (same.length - 1) / 2, row = near(u.side) ? 1.1 : -1.1;
         const p = column ? inArea(a.id, base.x, base.z + idx * 1.8, u.garrison ? 0.75 : 0.95) : inArea(a.id, base.x + idx * 1.75, base.z + (cont ? row : 0.4), u.garrison ? 0.75 : 0.95); if ((p as { tight?: boolean }).tight) tight = true; return p; });
       return { spots, tight, saved };
     };
@@ -331,7 +331,7 @@ function drawPieces() {
     if (lay.tight && order.length > 1) { taken.set(a.id, lay.saved); const col = place(true); if (!col.tight) lay = col; else { taken.set(a.id, lay.saved); lay = place(false); } }
     if (cont && lay.tight && g.battle?.area !== a.id) {                                             // a crowded contested area: the two sides in facing rows (German row, Allied row), never mixed or stacked
       taken.set(a.id, lay.saved); const pl = toWorld(...POLE.get(a.id)!);
-      lay.spots = order.map((u) => { const same = order.filter((x) => x.side === u.side), i = same.indexOf(u), per = 4, rw = Math.floor(i / per), inRow = Math.min(per, same.length - rw * per), dir = first(u.side) ? 1 : -1;
+      lay.spots = order.map((u) => { const same = order.filter((x) => x.side === u.side), i = same.indexOf(u), per = 4, rw = Math.floor(i / per), inRow = Math.min(per, same.length - rw * per), dir = near(u.side) ? 1 : -1;
         return { x: pl.x + (i % per - (inRow - 1) / 2) * 1.75, z: pl.z + dir * (1.3 + rw * 1.75) }; });
     }
     if (g.battle?.area === a.id) { const b = g.battle; lay.spots = order.map((u) => { const same = order.filter((x) => x.side === u.side); return battleSpot(b, u.side, 'unit', same.indexOf(u), same.length); }); }
@@ -347,7 +347,7 @@ function drawPieces() {
       const tags: [string, string][] = []; const top = flat ? 0.85 : 1.66;
       if (u.disorder && !u.garrison) tags.push([u.disorder === 1 ? 'DIS' : 'REC', u.disorder === 1 ? '#8a1f1f' : '#a8741a']);
       if (u.reserve) tags.push([VOL.reserveTag(u), '#2d6cb0']); if (u.exploit) tags.push(['E', '#d9741c']); if (u.unsupplied && !u.garrison) tags.push(['OOS', '#b8312f']); if (u.interdict) tags.push(['GI', '#8a2f9c']); if (u.bcross) tags.push(['B', '#8a6a1c']); if (g.riverAssault.includes(a.id) && u.side === g.phasing && !u.garrison) tags.push(['RA', '#2a7fb8']);
-      const dc = viewSide() === P2 ? -1 : 1;
+      const dc = farSide() ? -1 : 1;
       tags.forEach(([t, c], i) => {               // status markers float in a row above the block, tilted toward the player (animated in frame())
         const k = tag(t, c, CHIT * 0.6), x0 = (i - (tags.length - 1) / 2) * 0.95;
         k.rotation.order = 'YXZ'; k.rotation.set(0.95, viewRot(), 0); k.userData.float = { y: top + 1.0, ph: i * 1.1 + m.position.x * 0.3 };
@@ -364,7 +364,7 @@ function drawPieces() {
     if (g.roadblocks[a.id]) mine.push({ side: g.roadblocks[a.id], t: 'RB', c: '#6b4a8a' }); if (g.interdicted[a.id]) mine.push({ t: 'AIR', c: '#2f6fb0' }); if (g.pooled === a.id) mine.push({ side: 'allied', t: 'P', c: '#3f8a5a' }); if (g.airSupply?.area === a.id) mine.push({ side: g.airSupply.side, t: 'AS', c: '#2f6fb0' });
     if (g.fieldWorks.includes(a.id)) mine.push({ side: g.fwOwner[a.id] ?? g.control[a.id], t: 'FW', c: '#7a5a2b' });
     mine.forEach((m, i) => {
-      const side = m.side ?? g.control[a.id], lane = cont ? (first(side) ? 1 : -1) : 1, size = CHIT;
+      const side = m.side ?? g.control[a.id], lane = cont ? (near(side) ? 1 : -1) : 1, size = CHIT;
       const p = inArea(a.id, base.x + (i - (mine.length - 1) / 2) * 1.5, base.z + lane * 2.3, size / 2 + 0.25);
       const k = tag(m.t, m.c, size); k.position.set(p.x, 0.02, p.z); k.userData.mark = `${m.t}:${a.id}`; markers.add(k);
     });
@@ -384,11 +384,12 @@ const hex6 = (n: number) => '#' + n.toString(16).padStart(6, '0');
 /** What is printed on the map, and how. */
 const layers = (() => { const d = { numbers: true, tdn: true, vp: true, names: true }; try { return { ...d, ...JSON.parse(localStorage.getItem('fab-layers') ?? '{}') }; } catch { return d; } })();
 const saveLayers = () => { try { localStorage.setItem('fab-layers', JSON.stringify(layers)); localStorage.setItem('fab-tint', tint); } catch { /* private mode */ } };
-/** Whose side of the table we look from: the German player looks up the map from the bottom, the Allied player down from the top. */
-const viewSide = (): E.Side => (online.active && !online.both() && online.mySide() ? online.mySide()! : P1);
+/** Whose side of the table we look from: each player sits at their own edge of the printed map (Bulge: German at the bottom; Golan: Israeli at the bottom, by the lakes); a shared screen looks from the bottom. */
+const viewSide = (): E.Side => (online.active && !online.both() && online.mySide() ? online.mySide()! : VOL.bottom);
+const farSide = () => viewSide() !== VOL.bottom;
 const fogSide = (): E.Side | 'spectator' | null => (online.active && !online.both() ? online.mySide() ?? 'spectator' : null);
 const seen = (u: E.Unit) => E.visibleTo(g, u, fogSide());
-const viewRot = () => (viewSide() === P2 ? Math.PI : 0);
+const viewRot = () => (farSide() ? Math.PI : 0);
 /** Restricted boundaries (14.1) and the border two areas share, as a polyline (vertices of one area lying on the other's outline). */
 const RESTRICTED: [number, number][] = [...E.areas.keys()].flatMap((a) => E.neighbors(a).filter((b) => b > a && E.connection(a, b)?.restricted).map((b): [number, number] => [a, b]));
 function sharedBorder(a: number, b: number): [number, number][] {
@@ -1729,7 +1730,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
 let lastView: E.Side | null = null;
 /** Standard view: German from the bottom of the map, Allied from the top; the printed items turn with it. */
 function syncView() {
-  const v = viewSide(); if (v === lastView) return; const fresh = lastView === null; lastView = v; yaw = v === P2 ? Math.PI : 0; if (!fresh) goal = { t: new THREE.Vector3(17, 0, -3), dist, pitch }; paintBoard();
+  const v = viewSide(); if (v === lastView) return; const fresh = lastView === null; lastView = v; yaw = v !== VOL.bottom ? Math.PI : 0; if (!fresh) goal = { t: new THREE.Vector3(17, 0, -3), dist, pitch }; paintBoard();
 }
 /** Split tables: publish the blocks the other side may now see, and (attacker's seat) start combat once both sides are ready and their blocks are known. */
 function driveSplit() {
