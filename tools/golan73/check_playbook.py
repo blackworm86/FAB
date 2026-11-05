@@ -14,7 +14,7 @@ EXAMPLES = [
     (50, 51, 'road', [], 'Ex 4A'), (51, 52, 'road', [], 'Ex 4A'), (52, 46, 'field', [], 'Ex 4A: 3 MP, field +1'), (51, 46, 'field', ['rugged'], 'Ex 4B: rugged, armor may not cross'),
     (49, 46, None, ['rugged'], 'Ex 4C: rugged'), (49, 48, None, ['sector'], 'Ex 4D: operational boundary'), (18, 19, 'road', ['rugged'], '14.14: rugged with road'),
     (64, 50, None, ['atDitch'], 'Ex 5A'), (61, 57, None, ['atDitch'], 'Ex 5B'), (60, 59, None, ['atDitch'], 'Ex 5C'), (63, 64, None, [], 'Ex 5E'),
-    (48, 47, 'road', [], 'Ex 6C: road +1 occupied +1 minefield'), (48, 40, 'road', [], 'Ex 6B: 1 MP'), (40, 41, 'field', [], 'Ex 6B: 2 MP'), (41, 47, 'field', [], 'Ex 6B: 2 MP'),
+    (48, 47, 'road', [], 'Ex 6C: road +1 occupied +1 minefield'), (48, 40, 'road', [], 'Ex 6B: 1 MP'), (40, 41, 'road', [], 'Ex 6B charges 2 MP, but the printed map has a road here (checked on the map): the example is off'), (41, 47, 'field', [], 'Ex 6B: 2 MP'),
     (10, 11, 'road', [], 'Ex 7'), (11, 12, 'road', [], 'Ex 7'), (12, 24, 'road', ['escarpment'], 'Ex 7, Ex 13B'), (24, 26, 'road', [], 'Ex 7'), (12, 35, 'road', [], 'Ex 7'),
     (26, 31, 'field', [], 'Ex 14E: 3 MP = field +1'), (30, 31, None, [], 'Ex 14A'), (33, 32, None, [], 'Ex 14C'), (27, 28, None, [], 'Ex 14D'),
     (3, 54, None, ['escarpment'], 'Ex 15C: supply blocked by escarpment'), (2, 58, 'road', ['escarpment'], 'Ex 15C: road across the escarpment'), (57, 61, None, ['atDitch'], 'Ex 15B'),

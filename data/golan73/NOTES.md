@@ -40,7 +40,7 @@ Sources: Vassal module `docs/games/golan73/other/FAB_Golan73.vmod` (buildFile.xm
 - **Syrian entry areas V–Z (82, 75, 69, 63, 62)** are not drawn on the SVG; they come from the Vassal module and are printed at the map edge at run time.
 - **Mt Hermon (83) connects only to 59**, by the all-MP arrow (14.16). The orange massif around it is off the map.
 - **Operational boundaries:** 12 edges carry the dashed sector line; the sectors themselves (Northern, Central, Southern) are not named yet.
-- **Edge 40/41 (Tel Hazeika / Mt. Yosifon): road or field?** Your drawing has a road branch crossing it, so `map.json` makes it a road connection (1 MP). Play Book Example 6B charges 2 MP for that step, which is a field connection. Every other edge the examples mention agrees with the drawing (`tools/golan73/check_playbook.py`, 40 of 41). Check the printed map: if the road stops short of the edge, move it in the SVG.
+- **Edge 40/41 (Tel Hazeika / Mt. Yosifon) is a road connection.** Settled: the printed map has the road (checked by the map's owner), so Play Book Example 6B's 2 MP for that step is an error in the example. All 41 map facts in the examples now agree with the drawing (`tools/golan73/check_playbook.py`).
 
 ## Alternate set-up (Play Book 22.2)
 
