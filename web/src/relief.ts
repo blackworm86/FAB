@@ -125,7 +125,7 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
           #endif
           vAU = vec2(wpA.x / uBoard.x + .5, .5 - wpA.z / uBoard.y);`);
         sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vAU; uniform sampler2D tId, tTint;').replace('#include <color_fragment>', `#include <color_fragment>
-          { float id = floor(texture2D(tId, vAU).r * 255. + .5); vec4 t = texture2D(tTint, vec2((id + .5) / 128., .5)); diffuseColor.rgb = mix(diffuseColor.rgb, t.rgb, min(1., t.a * 2.2)); }`);
+          { float id = floor(texture2D(tId, vAU).r * 255. + .5); vec4 t = texture2D(tTint, vec2((id + .5) / 128., .5)); diffuseColor.rgb = mix(diffuseColor.rgb, t.rgb, min(1., t.a * .9)); }`);      // trees and houses only take a little of the tint: the area's own colour carries it
       };
       m.customProgramCacheKey = () => 'relief-prop'; m.needsUpdate = true;
     }

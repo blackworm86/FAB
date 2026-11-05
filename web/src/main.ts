@@ -362,6 +362,8 @@ function drawPieces() {
     });
   }
   if (g.battle) drawPointMarks(g.battle);
+  if (!g.battle && (g.phase === 'combat' || g.phase === 'btCombat')) { const must = new Set(E.mustFight(g));         // each battle area gets its own edge, so neighbouring battles never merge into one patch
+    for (const id of fightable()) markers.add(outlineRibbon(id, -0.32, 0.22, must.has(id) ? MAPC.must : MAPC.fight)); }
   // area markers: inside their own area, next to the group they belong to
   for (const a of MAP.areas) {
     const { base, cont } = rows.get(a.id)!, mine: { side?: E.Side; t: string; c: string }[] = [];
@@ -822,6 +824,7 @@ function badgeList(): Badge[] {
   if (selUnit && !g.battle) { const u = g.units.find((x) => x.id === selUnit)!; for (const o of optsFor(selUnit)) out.push({ area: o.area, text: g.phase === 'strategic' ? '' : `${o.cost}`, cls: o.mustStop ? 'stop' : o.fuel && u.side === 'german' ? 'fuel' : 'ok' }); }
   for (const o of arrOpts()) if (o.sa) out.push({ area: o.area, text: 'SA', cls: 'stop' });              // plain entry areas are lit; only the ones that cost a Special Action are marked
   if (g.battle?.stage === 'retreat') for (const a of E.retreatOptions(g, g.battle)) out.push({ area: a, text: 'Retreat', cls: 'ok' });
+  if (!g.battle && (g.phase === 'combat' || g.phase === 'btCombat') && allowed()) { const must = new Set(E.mustFight(g)); for (const a of fightable()) out.push({ area: a, text: must.has(a) ? 'Must fight' : 'May fight', cls: must.has(a) ? 'war' : 'opt' }); }
   if (!g.battle && layers.numbers) for (const a of coveredLabels) out.push({ area: a, text: `${a} ${areaName(a)}`, cls: 'tint lab', key: `L${a}` });
   return out;
 }
