@@ -225,11 +225,6 @@ function tag(text: string, bg: string, size = 1.1) {
 /** Every counter is a 9/16 inch square (1.43 cm) with slightly rounded corners. */
 const CHIT = 1.43;
 const SIDE_HEX = { german: 0xb9bcc0, allied: 0x9db36a };
-/** A marker on a plate in its owner's colour, so it is clear whom it helps (field works) or who is attacking (river assault). */
-function owned(text: string, bg: string, size: number, side: E.Side) {
-  const grp = new THREE.Group(), plate = new THREE.Mesh(new RoundedBoxGeometry(size + 0.2, 0.07, size + 0.2, 2, 0.1), new THREE.MeshStandardMaterial({ color: SIDE_HEX[side], roughness: 0.7 })), t = tag(text, bg, size);
-  plate.position.y = 0.035; t.position.y = 0.07 + 0.06; plate.castShadow = true; grp.add(plate, t); return grp;
-}
 /** A cardboard counter lying on the board: the chit's own printed art on a thin rounded square. */
 function chit3d(c: E.Chit) {
   const edge = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new RoundedBoxGeometry(CHIT, 0.12, CHIT, 2, 0.1), [edge, edge, new THREE.MeshStandardMaterial({ map: svgTex('chit:' + c.id, chitSvg(c)), roughness: 0.7 }), edge, edge, edge]);
@@ -237,11 +232,13 @@ function chit3d(c: E.Chit) {
 }
 /** The outline of an area pushed outwards by `d` (cm), as a flat ribbon of width `w` lying on the board. */
 function outlineRibbon(id: number, d: number, w: number, color: number) {
-  const pts = areaWorld(id).map((q) => new THREE.Vector2(q.x, q.z)), n = pts.length;
+  const raw = areaWorld(id).map((q) => new THREE.Vector2(q.x, q.z)), pts: THREE.Vector2[] = [];
+  raw.forEach((q, i) => { const nx = raw[(i + 1) % raw.length], k = Math.max(1, Math.ceil(q.distanceTo(nx) / 0.35)); for (let j = 0; j < k; j++) pts.push(q.clone().lerp(nx, j / k)); });      // short pieces, so on the 3D relief every piece sits on the ground
+  const n = pts.length;
   const area2 = pts.reduce((a, q, i) => a + (q.x * pts[(i + 1) % n].y - pts[(i + 1) % n].x * q.y), 0), sgn = area2 > 0 ? 1 : -1;
   const norm = (i: number) => { const a = pts[(i + n - 1) % n], b = pts[i], c = pts[(i + 1) % n], e1 = b.clone().sub(a).normalize(), e2 = c.clone().sub(b).normalize(); const n1 = new THREE.Vector2(e1.y, -e1.x).multiplyScalar(sgn), n2 = new THREE.Vector2(e2.y, -e2.x).multiplyScalar(sgn), m = n1.add(n2); return m.lengthSq() < 1e-6 ? n1 : m.normalize().multiplyScalar(1 / Math.max(0.5, m.dot(n2) || 1)); };
   const pos: number[] = [], idx: number[] = [];
-  pts.forEach((q, i) => { const nn = norm(i), a = q.clone().addScaledVector(nn, d), b = q.clone().addScaledVector(nn, d + w); pos.push(a.x, 0.04, a.y, b.x, 0.04, b.y); });
+  pts.forEach((q, i) => { const nn = norm(i), a = q.clone().addScaledVector(nn, d), b = q.clone().addScaledVector(nn, d + w); pos.push(a.x, 0.09, a.y, b.x, 0.09, b.y); });
   for (let i = 0; i < n; i++) { const a = i * 2, b = ((i + 1) % n) * 2; idx.push(a, a + 1, b, b, a + 1, b + 1); }
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx);
   return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.92, side: THREE.DoubleSide, depthWrite: false }));
@@ -358,7 +355,7 @@ function drawPieces() {
       pieces.add(m);
       const tags: [string, string][] = []; const top = flat ? 0.85 : 1.66;
       if (u.disorder && !u.garrison) tags.push([u.disorder === 1 ? 'DIS' : 'REC', u.disorder === 1 ? '#8a1f1f' : '#a8741a']);
-      if (u.reserve) tags.push([u.side === 'german' ? ({ z5: 'R5', z6: 'R6', z7: 'R7' } as Record<string, string>)[u.reserve] ?? 'R5' : u.reserve === 'z7' ? 'A7' : 'A56', '#2d6cb0']); if (u.exploit) tags.push(['E', '#d9741c']); if (u.unsupplied && !u.garrison) tags.push(['OOS', '#b8312f']); if (u.interdict) tags.push(['GI', '#8a2f9c']); if (u.bcross) tags.push(['B', '#8a6a1c']);
+      if (u.reserve) tags.push([u.side === 'german' ? ({ z5: 'R5', z6: 'R6', z7: 'R7' } as Record<string, string>)[u.reserve] ?? 'R5' : u.reserve === 'z7' ? 'A7' : 'A56', '#2d6cb0']); if (u.exploit) tags.push(['E', '#d9741c']); if (u.unsupplied && !u.garrison) tags.push(['OOS', '#b8312f']); if (u.interdict) tags.push(['GI', '#8a2f9c']); if (u.bcross) tags.push(['B', '#8a6a1c']); if (g.riverAssault.includes(a.id) && u.side === g.phasing && !u.garrison) tags.push(['RA', '#2a7fb8']);
       const dc = viewSide() === 'allied' ? -1 : 1;
       tags.forEach(([t, c], i) => {               // status markers float in a row above the block, tilted toward the player (animated in frame())
         const k = tag(t, c, CHIT * 0.6), x0 = (i - (tags.length - 1) / 2) * 0.95;
@@ -375,11 +372,10 @@ function drawPieces() {
     const { base, cont } = rows.get(a.id)!, mine: { side?: E.Side; t: string; c: string }[] = [];
     if (g.roadblocks[a.id]) mine.push({ side: g.roadblocks[a.id], t: 'RB', c: '#6b4a8a' }); if (g.interdicted[a.id]) mine.push({ t: 'AIR', c: '#2f6fb0' }); if (g.pooled === a.id) mine.push({ side: 'allied', t: 'P', c: '#3f8a5a' }); if (g.airSupply?.area === a.id) mine.push({ side: g.airSupply.side, t: 'AS', c: '#2f6fb0' });
     if (g.fieldWorks.includes(a.id)) mine.push({ side: g.fwOwner[a.id] ?? g.control[a.id], t: 'FW', c: '#7a5a2b' });
-    if (g.riverAssault.includes(a.id)) mine.push({ side: g.phasing, t: 'RA', c: '#2a7fb8' });
     mine.forEach((m, i) => {
       const side = m.side ?? g.control[a.id], lane = cont ? (side === 'german' ? 1 : -1) : 1, size = CHIT;
       const p = inArea(a.id, base.x + (i - (mine.length - 1) / 2) * 1.5, base.z + lane * 2.3, size / 2 + 0.25);
-      const k = m.side ? owned(m.t, m.c, size, m.side) : tag(m.t, m.c, size); k.position.set(p.x, 0.02, p.z); k.userData.mark = `${m.t}:${a.id}`; markers.add(k);
+      const k = tag(m.t, m.c, size); k.position.set(p.x, 0.02, p.z); k.userData.mark = `${m.t}:${a.id}`; markers.add(k);
     });
   }
   for (const k of Object.keys(g.greif)) { const [x, y] = k.split('-').map(Number), q = toWorld(...borderMid(x, y)), p = free(q.x, q.z - 1.3, 0.8), t = tag('G', '#8a2f9c', CHIT); t.position.set(p.x, 0.07, p.z); t.rotation.y = -borderAngle(x, y); markers.add(t); }
@@ -443,13 +439,13 @@ const labelsGrp = new THREE.Group(); scene.add(labelsGrp);
 const labelTexCache = new Map<string, THREE.CanvasTexture>();
 function buildLabels() {
   labelsGrp.children.forEach((o) => { (o as THREE.Mesh).geometry.dispose(); ((o as THREE.Mesh).material as THREE.Material).dispose(); }); labelsGrp.clear();
-  const lk = `${+layers.numbers}${+layers.tdn}${+layers.vp}${+layers.names}${vpIcons.allied.naturalWidth > 0}`, K = 4;
+  const PAD = 12, lk = `${+layers.numbers}${+layers.tdn}${+layers.vp}${+layers.names}${vpIcons.allied.naturalWidth > 0}`, K = 4;
   for (const a of MAP.areas) {
     const L = LAB[a.id]; if (!L || (!layers.numbers && !layers.tdn && !layers.vp && !layers.names)) continue;
     let t = labelTexCache.get(a.id + lk);
-    if (!t) { const cv = document.createElement('canvas'); cv.width = Math.ceil(L.w * K); cv.height = Math.ceil(L.h * K); const c = cv.getContext('2d')!; c.scale(K, K); c.translate(L.w / 2, L.h / 2); drawLabel(c, a, layers, vpIcons, L);
+    if (!t) { const cv = document.createElement('canvas'); cv.width = Math.ceil((L.w + 2 * PAD) * K); cv.height = Math.ceil((L.h + 2 * PAD) * K); const c = cv.getContext('2d')!; c.scale(K, K); c.translate(L.w / 2 + PAD, L.h / 2 + PAD); drawLabel(c, a, layers, vpIcons, L);
       t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; labelTexCache.set(a.id + lk, t); }
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(L.w / S, L.h / S), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+    const m = new THREE.Mesh(new THREE.PlaneGeometry((L.w + 2 * PAD) / S, (L.h + 2 * PAD) / S), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
     const p = toWorld(L.x, L.y); m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, viewRot(), 0); m.userData.area = a.id;
     let y = 0.006;
     if (show3d()) { y = 0; for (const dx of [-0.5, 0, 0.5]) for (const dz of [-0.5, 0, 0.5]) y = Math.max(y, REL!.h(p.x + (dx * L.w) / S, p.z + (dz * L.h) / S)); y += 0.03; }      // level, at the highest ground under it
