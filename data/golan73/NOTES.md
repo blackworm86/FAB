@@ -31,4 +31,12 @@ Sources: Vassal module `docs/games/golan73/other/FAB_Golan73.vmod` (buildFile.xm
 - **Nafakh reinforcement chits.** The cards print them under "Available Box" brackets, while the Vassal save puts them on the turn track. Do they go straight to Available, or into the cup as usual? Some arrive on a different turn than their counter code (e.g. 183rd Cdo S at T2, 185th Cdo 5 at T3); the data uses the scenario turn.
 - **Nafakh 179th, 33rd, 52nd, 43rd start reduced** (save `Steps` state and card). The data gives them as `reduced` or the reinforcement `steps`. The 52nd also starts `recovering`.
 - **The Badr save gives no step reductions.** Only the 179th (2/4), 4th (3/4) and 679th (2/3) arrive reduced, from the yellow arrow on the block and the initial `Steps` in Vassal.
-- **map.json `assembly.A` is [6, 10].** Rule 14.22 says "area 6 (Gadot) or area 8 (Almagor)", but on the Vassal zones Almagor is 10 and 8 is Had Nes. Worth checking during the map review (map.json was not touched here).
+- **Northern Assembly Area A enters areas 6 (Gadot) and 10 (Almagor).** Rule 14.22 says "area 8 (Almagor)", but Almagor is area 10, and the hand-drawn map's 1 MP arrows go to 6 and 10. Settled: the rule's 8 is a misprint.
+
+## Map (hand-drawn SVG, `docs/games/golan73/maps/GolanMap.svg`)
+
+- **Area 30 (Tel Faris) has no mutual VP star on the hand-drawn map.** The errata count six mutual VP areas (30, 42, 46, 50, 57, 83); the drawing has five (no 30). `map.json` follows the drawing. Add the star to the SVG if 30 should have it.
+- **Three pairs of areas only touch at a corner on the drawing: 3/53, 8/10 and 50/66.** The Vassal zones made them neighbours. As drawn they are not adjacent (series rule: a point contact is not a boundary). Widen the shared edge in the SVG if they should be.
+- **Syrian entry areas V–Z (82, 75, 69, 63, 62)** are not drawn on the SVG; they come from the Vassal module and are printed at the map edge at run time.
+- **Mt Hermon (83) connects only to 59**, by the all-MP arrow (14.16). The orange massif around it is off the map.
+- **Operational boundaries:** 12 edges carry the dashed sector line; the sectors themselves (Northern, Central, Southern) are not named yet.

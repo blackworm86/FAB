@@ -1,7 +1,7 @@
 // Vector art drawn from data (no scans). One SVG per block label / chit; strength turns the label as the block would turn.
 import type { Unit } from '../../engine/src';
 
-export const ECH: Record<string, string> = { de_5pz: '#d6d8db', de_6pz: '#8e2d82', de_7a: '#3fa0dc', de_sr: '#f07f1e', us_1a: '#b9dc8c', us_3a: '#4d5b2c', us_sr: '#a6d6f3', br_xxx: '#e0412e' };
+export const ECH: Record<string, string> = { de_5pz: '#d6d8db', de_6pz: '#8e2d82', de_7a: '#3fa0dc', de_sr: '#f07f1e', us_1a: '#b9dc8c', us_3a: '#4d5b2c', us_sr: '#a6d6f3', br_xxx: '#e0412e', is_northern_command: '#f3f0e2', sy_golan_front: '#f8efc8' };
 const LABEL_BG: Record<string, string> = { german: '#b7bbc1', us: '#8fa83f', british: '#e3bb7d' };
 const PIP: Record<string, [string, string]> = { elite: ['#d7262b', '#fff'], veteran: ['#151515', '#151515'], green: ['#fff', '#151515'] };
 

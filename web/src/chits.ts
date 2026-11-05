@@ -28,8 +28,9 @@ function txt(s: string, x: number, y: number, size: number, o: { w?: Weight; anc
   return `<g transform="translate(${x} ${y})${rot}"><g transform="translate(${ox.toFixed(2)} 0) scale(${(k * sq).toFixed(5)} ${k})${skew}" fill="${o.fill ?? '#111'}"${o.stroke ? ` stroke="${o.stroke}" stroke-width="${o.sw ?? 60}" paint-order="stroke" stroke-linejoin="round"` : ''}>${d}</g></g>`;
 }
 const BRIT = ['#d9b374', '#ebcb93', '#b08f55'];
-const FRAME = { german: ['#b9bcc4', '#d9dbe0', '#8e919a'], allied: ['#7d8d2b', '#9aa944', '#5d6a1f'] };
-const open = (side: 'german' | 'allied', bg = FRAME[side]) => `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160"><rect width="160" height="160" fill="${bg[0]}"/><path d="M0 0H160L156 4H4V156L0 160Z" fill="${bg[1]}"/><path d="M160 160H0L4 156H156V4L160 0Z" fill="${bg[2]}"/>`;
+const FRAME = { german: ['#b9bcc4', '#d9dbe0', '#8e919a'], allied: ['#7d8d2b', '#9aa944', '#5d6a1f'], israeli: ['#bdb48c', '#d8d1ad', '#958c64'], syrian: ['#dca23a', '#eec067', '#a97518'] };
+type FrameSide = keyof typeof FRAME;
+const open = (side: FrameSide, bg = FRAME[side]) => `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160"><rect width="160" height="160" fill="${bg[0]}"/><path d="M0 0H160L156 4H4V156L0 160Z" fill="${bg[1]}"/><path d="M160 160H0L4 156H156V4L160 0Z" fill="${bg[2]}"/>`;
 const flat = (fill: string) => `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160"><rect width="160" height="160" fill="${fill}"/>`;
 const turn = (t: number | 'S' | string | null | undefined, x: number, y: number, size: number, fill = '#111') => t == null ? '' : t === 'S'
   ? `<rect x="${x}" y="${y - 24}" width="22" height="30" fill="#fff"/>${txt('S', x + 11, y + 1, 29, { w: 'b', anchor: 'middle' })}`
@@ -110,11 +111,11 @@ function redrawn(c: Chit | Counter): string | null {
   const t = (c as Counter).turn, num = typeof t === 'number' ? `<rect x="9" y="9" width="26" height="30" fill="#fff" opacity=".92"/>${txt(String(t), 22, 34, 28, { anchor: 'middle' })}` : '';
   return `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160"><image href="${ART[`mk_${code}`]}" width="160" height="160"/>${num}</svg>`;
 }
-export type Counter = { id?: string; kind: string; name: string; side: 'german' | 'allied' | 'none'; ech: string; turn?: number | 'S' | null; q?: string | null };
+export type Counter = { id?: string; kind: string; name: string; side: 'german' | 'allied' | 'israeli' | 'syrian' | 'none'; ech: string; turn?: number | 'S' | null; q?: string | null };
 export function chitSvg(c: Chit | Counter): string {
   const drawn = redrawn(c); if (drawn) return drawn;                                               // the user's redrawn art wins over the code-drawn counter
   if (c.kind === 'sa_block') return saBlockSvg(c.side === 'german' ? 'german' : 'allied');
-  const k = c.kind, name = c.name, ech = ECH[c.ech] ?? '#bbb', side = c.side === 'german' ? 'german' : 'allied', t = (c as Counter).turn ?? null, q = c.q ?? undefined;
+  const k = c.kind, name = c.name, ech = ECH[c.ech] ?? '#bbb', side: FrameSide = c.side in FRAME ? c.side as FrameSide : 'allied', t = (c as Counter).turn ?? null, q = c.q ?? undefined;
   const dot = (cx: number, cy: number) => { if (!q) return ''; const [f, ring] = QDOT[q]; return `${ring ? `<circle cx="${cx}" cy="${cy}" r="10.5" fill="${ring}"/>` : ''}<circle cx="${cx}" cy="${cy}" r="${ring ? 8 : 7.5}" fill="${f}"/>`; };
   const unit = (sym: string, fill = ech, bg?: string[]) => `${open(side, (c.ech === 'br_xxx' ? BRIT : bg) as never)}${turn(t, 14, 36, 33)}${dot(CX, 17)}${square(fill)}${sym}${txt(name, CX, 143, 23, { anchor: 'middle', max: 104 })}</svg>`;
   if (k === 'artillery') return unit(`<circle cx="${CX}" cy="${CY}" r="7.3" fill="${INK}"/>`);
@@ -186,3 +187,6 @@ export function chitSvg(c: Chit | Counter): string {
   }
   return `${open(side)}${panel(ech)}${turn(t, 22, 52, 32)}${wrap(name).map((l, i) => txt(l, 82, 94 + i * 26, 23, { anchor: 'middle', max: 108 })).join('')}</g></svg>`;
 }
+
+/** Drawing helpers shared with the other games' counters (golan-art.ts), so every game's chits come out of the same hand. */
+export const CHIT_KIT = { txt, open, flat, panel, turn, square, star, img, MK, outl, wrap, QDOT, INK, CX, CY, FRAME, marker: (n: string) => marker(n) };
