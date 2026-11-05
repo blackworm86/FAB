@@ -1,20 +1,15 @@
 // Golan '73 pieces, drawn with the same kit as The Bulge counters (chits.ts) so both games look like one series:
 // the same bevelled frame, unit square, lettering, quality dot and turn number. Israeli chits use the khaki frame and
 // Syrian chits the gold frame of the Golan sheet; blocks are cyan (Israel) and green (Syria) wood.
-import { chitSvg, CHIT_KIT, mapMarkerSvg, type Counter } from './chits';
+import { chitSvg, CHIT_KIT, CHIT_ART, mapMarkerSvg, type Counter } from './chits';
 
 const { txt, open, flat, panel, turn, square, star, MK, wrap, QDOT, INK, CX, CY } = CHIT_KIT;
 export type GSide = 'israeli' | 'syrian';
 /** Wooden block colours (the physical game): cyan for Israel, green for Syria. */
-export const GOLAN_WOOD: Record<GSide, number> = { israeli: 0x2aa3c8, syrian: 0x3f8240 };
+export const GOLAN_WOOD: Record<GSide, number> = { israeli: 0x2ea1d5, syrian: 0x2a7f42 };
 /** Block label paper and unit-square colours. */
 const LABEL: Record<GSide, string> = { israeli: '#cdc49e', syrian: '#d8a43c' };
 const CREAM: Record<GSide, string> = { israeli: '#f3f0e2', syrian: '#f8efc8' };
-/** Division colour bar across the block label, a little below the centre (18.5 for Israel; the Syrian stripes show the division for set-up and the operational sectors). */
-export const DIVISION: Record<string, string> = {
-  '36th_armored': '#e5852e', '240th_armored': '#a6568c', '146th_armored': '#86c3e5',
-  '5th_inf': '#f0cf2c', '9th_inf': '#86c4e8', '7th_inf': '#d8412e', '1st_tank': '#7f9c6b', '3rd_tank': '#e8d4a2',
-};
 export const ECH_GOLAN: Record<string, string> = { is_northern_command: CREAM.israeli, sy_golan_front: CREAM.syrian };
 
 /* ---------- emblems and pictures, all vector ---------- */
@@ -109,33 +104,84 @@ export function golanBackSvg(id: string): string {
   return lines('#ccc', [id]);
 }
 
-/* ---------- block labels (100 x 100, like art.ts labelSvg: full strength edge on top, turned 90° per step lost) ---------- */
-export type GUnit = { id: string; name: string; side: GSide; steps?: number; quality_by_step?: string[]; symbol?: string; division?: string | null; start_area?: number; arrival_turn?: number | string; entry?: string[]; kind?: string; cls?: string };
-const PIP: Record<string, [string, string]> = { elite: ['#d7262b', '#fff'], veteran: ['#151515', '#151515'], green: ['#fff', '#151515'] };
+/* ---------- block labels (100 x 100: the block's wood shows as a thin frame round the sticker; full strength edge on top, turned 90° per step lost) ---------- */
+// Measured from the printed stickers: the stripe runs edge to edge a little below the centre and passes behind the unit box;
+// pips sit 18 in from each edge; the set-up or arrival code reads up the left edge; the name sits bottom right beside that edge's pips.
+export type GUnit = { id: string; name: string; side: GSide; steps?: number; quality_by_step?: (string | null)[]; symbol?: string; division?: string | null; brigade?: string | null; start_area?: number; start_box?: string; arrival_turn?: number | string; entry?: string[]; initial_steps?: number; kind?: string; cls?: string };
+/** Sticker paper. */
+const STICKER: Record<GSide, string> = { israeli: '#d3c296', syrian: '#d7a039' };
+/** Brigade stripes (Israel: the eight two-block brigades, 15.51) and division stripes (Syria). */
+export const STRIPE: Record<string, string> = {
+  golani: '#f09018', '179th': '#5490b4', '4th': '#a8549c', '679th': '#f0f0cc', '9th': '#f0e430', '205th': '#6c8460', '317th': '#b4d8e4', '670th': '#cc5424',
+  '5th_inf': '#f0cc48', '9th_inf': '#b4d8e4', '7th_inf': '#e43c30', '3rd_tank': '#d8cc90', '1st_tank': '#6c9060',
+};
+/** The unit box: Israeli divisions by colour (the optional divisional rule), Syrian cream, gold for the independent units. */
+const BOXFILL: Record<string, string> = { '36th_armored': '#b4b088', '240th_armored': '#dfd2c1', '146th_armored': '#b4d9ec' };
+const boxFill = (u: GUnit) => (u.side === 'israeli' ? BOXFILL[u.division ?? ''] ?? BOXFILL['36th_armored'] : u.division ? '#fcf9ce' : '#f8d64e');
+const stripeOf = (u: GUnit) => (u.side === 'israeli' ? STRIPE[u.brigade ?? ''] : STRIPE[u.division ?? '']);
+const PIP: Record<string, [string, string]> = { elite: ['#e3222b', '#fff'], veteran: ['#141414', '#141414'], green: ['#fff', '#141414'] };
+const FONT = 'font-family="Arial Narrow, Arial, sans-serif" font-weight="700"';
+const e = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+/** Bold narrow lettering squeezed into w when it would run longer. */
+/** Width of bold condensed lettering (the stickers' Arial Narrow), so the layout does not depend on the fonts installed. */
+const textW = (s: string, size: number) => [...s].reduce((a, c) => a + (/[il1.\-()*\/ ]/.test(c) ? 0.3 : /[mwMW]/.test(c) ? 0.68 : /[A-Z0-9]/.test(c) ? 0.5 : 0.45), 0) * size;
+const word = (s: string, x: number, y: number, size: number, w: number, o: { anchor?: string; fill?: string; italic?: boolean; rot?: number } = {}) => {
+  const fit = ` textLength="${Math.min(textW(s, size), w).toFixed(1)}" lengthAdjust="spacingAndGlyphs"`;
+  return `<text x="${x}" y="${y}" font-size="${size}"${o.anchor ? ` text-anchor="${o.anchor}"` : ''}${o.fill ? ` fill="${o.fill}"` : ''}${o.italic ? ' font-style="italic"' : ''}${o.rot ? ` transform="rotate(${o.rot} ${x} ${y})"` : ''} ${FONT}${fit}>${e(s)}</text>`;
+};
 function bsym(kind: string | undefined, fill: string) {
-  const box = `<rect x="29" y="31" width="42" height="30" fill="${fill}" stroke="#111" stroke-width="2.4"/>`;
-  const x = '<path d="M29 31L71 61M71 31L29 61" stroke="#111" stroke-width="2.1"/>', oval = '<rect x="37" y="38" width="26" height="16" rx="8" fill="none" stroke="#111" stroke-width="2.1"/>';
-  const extra: Record<string, string> = { inf: x, armor: oval, mech: x + oval, recon: '<path d="M29 61L71 31" stroke="#111" stroke-width="2.1"/>' + oval, airborne: x + '<path d="M40 56q5-7 10 0q5-7 10 0" fill="none" stroke="#111" stroke-width="1.8"/>' };
+  const L = 24.5, T = 27.5, W = 50, H = 43, R = L + W, B = T + H;
+  const box = `<rect x="${L}" y="${T}" width="${W}" height="${H}" fill="${fill}" stroke="#111" stroke-width="2.5"/>`;
+  const x = `<path d="M${L} ${T}L${R} ${B}M${R} ${T}L${L} ${B}" stroke="#111" stroke-width="2.1"/>`, oval = '<rect x="34" y="38.5" width="31" height="21.5" rx="10.75" fill="none" stroke="#111" stroke-width="2.5"/>';
+  const extra: Record<string, string> = { inf: x, armor: oval, mech: x + oval, recon: `<path d="M${L} ${B}L${R} ${T}" stroke="#111" stroke-width="2.1"/>` + oval,
+    airborne: x + '<path d="M38.5 66q5.75-9 11.5 0q5.75-9 11.5 0" fill="none" stroke="#111" stroke-width="1.9"/>' };
   return box + (extra[kind ?? 'inf'] ?? x);
 }
-function bpips(n: number, q: string, edge: number, starPip: boolean) {
-  if (!n || !q) return '';
-  const [f, s] = PIP[q] ?? PIP.veteran, out: string[] = [];
-  for (let i = 0; i < n; i++) { const t = 50 + (i - (n - 1) / 2) * (starPip ? 12 : 9.5);
-    out.push(starPip ? `<path d="${tri(t, 11, 5, true)}${tri(t, 11, 5, false)}" fill="none" stroke="${q === 'elite' ? '#d7262b' : '#151515'}" stroke-width="1.5"/>` : `<circle cx="${t}" cy="11" r="4" fill="${f}" stroke="${s}" stroke-width="1.4"/>`); }
-  return `<g transform="rotate(${edge * 90} 50 50)">${out.join('')}</g>`;
+/** One edge's pips, drawn as if that edge were on top (then turned into place): centred on cx, the yellow arrow of a reduced arrival (15.52) at the right end. */
+function edgeRow(n: number, q: string | null | undefined, k: number, cx: number, arrow: boolean, star: boolean) {
+  if (!n) return '';
+  const gap = star ? 11.5 : 10.8, out: string[] = [], qq = q ?? 'veteran', [f, s] = PIP[qq] ?? PIP.veteran;
+  for (let i = 0; i < n; i++) { const t = cx + (i - (n - 1) / 2) * gap;
+    out.push(star ? `<path d="${tri(t, 18, 5, true)}${tri(t, 18, 5, false)}" fill="none" stroke="#1d3f8a" stroke-width="1.7"/>` : `<circle cx="${t.toFixed(1)}" cy="18" r="3.7" fill="${f}" stroke="${s}" stroke-width="1.3"/>`); }
+  if (arrow) { const a = cx + ((n - 1) / 2) * gap + 9.5; out.push(`<path d="M${a + 4} 13.2V22.8L${a - 4.5} 18Z" fill="#e2e22a" stroke="#4a4a14" stroke-width=".9" stroke-linejoin="round"/>`); }
+  return `<g transform="rotate(${k * 90} 50 50)">${out.join('')}</g>`;
 }
-const e = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-/** 512 px SVG of a Golan block label at strength str. */
+/** Which edge holds which strength: n-1 pips on the right, then the bottom, then the left; the strongpoints keep their bottom for the word "Strongpoint". */
+/** The name as printed on the sticker: the recon battalions and the paratroopers carry just their number. */
+const printed = (u: GUnit) => u.name.replace(/ (Recon|Para)$/, '');
+const edgeOf = (u: GUnit, s: number) => { const max = u.steps ?? 1, k = max - s; return u.kind === 'strongpoint' && k === 2 ? 3 : k; };
+const stickerOpen = (side: GSide) => `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100"><rect width="100" height="100" fill="#${GOLAN_WOOD[side].toString(16).padStart(6, '0')}"/>`;
+const tankSil = (x: number, y: number, s: number, rot: number, fill: string) => `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s})" fill="${fill}"><path d="M-30 4Q-33 4-33 8V12Q-33 17-27 17H26Q32 17 32 12V8Q32 4 29 4Z"/><path d="M-27 4L-21 -5H23L29 4Z"/><path d="M-12 -5L-8 -13H10L14 -5Z"/><rect x="10" y="-11.5" width="34" height="3.2" rx="1.2"/></g>`;
+const rifleSil = (x: number, y: number, s: number, rot: number) => `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s})" fill="#141414"><path d="M-34 -3H-14L-10 -6H22V-2H36V1H22V3H8L4 12H-2L1 3H-8L-14 4L-30 9Q-35 9-35 4Z"/><rect x="-6" y="-10" width="10" height="4"/><path d="M10 3L13 13H8L6 3Z"/></g>`;
+/** 512 px SVG of a Golan block face (sticker on its wood) at strength str. */
 export function golanBlockSvg(u: GUnit, str = u.steps ?? 1): string {
-  const bg = LABEL[u.side], max = u.steps ?? 1, q = u.quality_by_step ?? [];
-  if (u.kind === 'special_action_block') return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100"><rect width="100" height="100" fill="${bg}"/><rect x="6" y="6" width="88" height="88" fill="none" stroke="#111" stroke-width="1.2" opacity=".35"/><g transform="translate(50 30) scale(.62) translate(-80 -40)">${emblem(u.side, 80, 40, 26).replace(/#fff/g, '#1a1a1a')}</g><text x="50" y="70" font-size="15" text-anchor="middle" font-family="Arial Narrow, Arial" font-weight="700" font-style="italic">Special</text><text x="50" y="86" font-size="15" text-anchor="middle" font-family="Arial Narrow, Arial" font-weight="700" font-style="italic">Action</text></svg>`;
-  if (u.kind === 'ghost') return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100"><rect width="100" height="100" fill="${bg}"/>${davidStar(50, 44, 22, '#1d4f9a', 4)}<text x="50" y="86" font-size="16" text-anchor="middle" font-family="Arial Narrow, Arial" font-weight="700" font-style="italic">Ghost</text><text x="12" y="20" font-size="11" font-family="Arial Narrow, Arial" font-weight="700">S*</text></svg>`;
-  const strong = u.kind === 'strongpoint', stripe = u.division && DIVISION[u.division] ? `<rect x="17" y="62" width="66" height="7.5" fill="${DIVISION[u.division]}"/>` : '';      // a little below the centre, under the unit symbol: clear of the side pips and the name
-  const edges = Array.from({ length: max }, (_, k) => bpips(max - k, q[max - k - 1], k, strong)).join('');
-  const code = u.arrival_turn != null ? `${u.arrival_turn}${u.entry?.length ? `-${u.entry.join('')}` : ''}` : u.start_area != null ? String(u.start_area) : strong ? 'S*' : '';
-  const codeEl = code ? (u.start_area != null && u.arrival_turn == null ? `<rect x="5" y="20" width="16" height="12" fill="#fff"/><text x="13" y="29.5" font-size="9.5" text-anchor="middle" font-family="Arial Narrow, Arial" font-weight="700">${e(code)}</text>` : `<text x="90" y="27" font-size="10" text-anchor="end" font-family="Arial Narrow, Arial" font-weight="700">${e(code)}</text>`) : '';
-  const name = strong ? 'Strongpoint' : u.name;
-  const inner = `<rect width="100" height="100" fill="${bg}"/>${stripe}${codeEl}${bsym(u.symbol, CREAM[u.side])}${edges}<text x="88" y="80" font-size="${name.length > 9 ? 11 : 13}" text-anchor="end" font-family="Arial Narrow, Arial" font-weight="700">${e(name)}</text>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100"><g transform="rotate(${-90 * (max - str)} 50 50)">${inner}</g></svg>`;
+  const side = u.side, paper = STICKER[side], max = u.steps ?? 1, q = u.quality_by_step ?? [];
+  const sticker = `<rect x="5" y="5" width="90" height="90" fill="${paper}"/>`;
+  if (u.kind === 'special_action_block') {
+    const panelFill = side === 'israeli' ? '#b8b48a' : '#f8d64e', sp = side === 'israeli' ? '#fff' : '#141414', art = CHIT_ART.saArrow;
+    return `${stickerOpen(side)}${sticker}<rect x="11" y="11" width="78" height="78" fill="${panelFill}" stroke="#fff" stroke-width="3.4"/>${word(String(u.arrival_turn ?? 2), 16, 30, 16, 12)}${word('Special', 57, 29, 15, 50, { anchor: 'middle', fill: sp, italic: true })}${art ? `<svg x="13" y="35" width="74" height="40" viewBox="0 0 122 72"><image href="${art}" width="130" height="72"/></svg>` : ''}${word('Action', 55, 84, 15, 50, { anchor: 'middle', italic: true })}</svg>`;
+  }
+  if (u.kind === 'ghost') return `${stickerOpen(side)}${sticker}${davidStar(50, 46, 29, '#fff', 8.5)}${davidStar(50, 46, 29, '#1e56a8', 5)}${tankSil(49, 49, 0.98, 0, '#5d554cdd')}<g opacity=".55">${davidStar(50, 46, 29, '#1e56a8', 5)}</g>${word('S*', 10, 22, 13, 14)}${word('Ghost', 50, 90, 16, 44, { anchor: 'middle', fill: '#57524a', italic: true })}</svg>`;
+  const strong = u.kind === 'strongpoint', col = stripeOf(u);
+  const edges = Array.from({ length: max }, (_, i) => { const s = max - i, k = edgeOf(u, s);
+    let cx = 50;
+    if (k === 2 && !strong) {                                    // the bottom edge shares its line with the name: its pips move left of it
+      const nameW = Math.min(textW(printed(u), 13.5), 62), half = ((s - 1) / 2) * 10.8 + 4;
+      cx = 100 - Math.min(50, 86.5 - nameW - 3 - half);           // drawn upside down, so measured from the right
+    }
+    return edgeRow(s, q[s - 1], k, cx, u.initial_steps === s && s < max, strong); }).join('');
+  let body: string;
+  if (strong) {
+    const hex = Array.from({ length: 6 }, (_, i) => { const a = (i * 60 - 90) * Math.PI / 180; return `${(50 + 24 * Math.cos(a)).toFixed(1)} ${(53 + 24 * Math.sin(a)).toFixed(1)}`; }).join('L');
+    const [f, s] = PIP[q[0] ?? 'veteran'] ?? PIP.veteran;
+    body = `<path d="M${hex}Z" fill="${boxFill(u)}" stroke="#5a5c5e" stroke-width="3.2" stroke-linejoin="round"/>${u.symbol === 'armor' ? tankSil(47, 56, 0.78, -24, '#141414') : rifleSil(50, 55, 0.82, -52)}<circle cx="50" cy="29" r="4" fill="${f}" stroke="${s}" stroke-width="1.3"/>${word('S*', 10, 22, 13, 14)}${word('Strongpoint', 50, 89, 15, 76, { anchor: 'middle' })}`;
+  } else {
+    const code = u.start_area != null ? { t: String(u.start_area), bg: '#fff' } : u.start_box === 'air_assault' ? { t: 'AA', bg: '#9fcbe6' } : u.start_box === 'strategic_reserve' ? { t: 'SR', bg: '#9fcbe6' }
+      : u.start_box === 'operational_reserve' ? { t: `OR-${(u.entry ?? []).join('')}`, bg: '#9fcbe6' } : u.arrival_turn != null ? { t: `${u.arrival_turn}${u.entry?.length ? `-${u.entry.join('')}` : ''}`, bg: '' } : null;
+    const codeEl = !code ? '' : (() => { const h = 7 + code.t.length * 5.6;
+      return `${code.bg ? `<rect x="8.5" y="11" width="12.5" height="${h.toFixed(1)}" fill="${code.bg}"/>` : ''}${word(code.t, 18.6, 11 + h / 2, 11, h - 4, { anchor: 'middle', rot: -90 })}`; })();
+    const nw = Math.min(textW(printed(u), 13.5), 62), nameBg = u.start_box === 'air_assault' ? `<rect x="${(85 - nw).toFixed(1)}" y="77" width="${(nw + 3.5).toFixed(1)}" height="13.5" fill="#f8e23c"/>` : '';
+    body = `${col ? `<rect x="5" y="54.5" width="90" height="11.5" fill="${col}"/>` : ''}${bsym(u.symbol, boxFill(u))}${codeEl}${nameBg}${word(printed(u), 86.5, 88, 13.5, 62, { anchor: 'end' })}`;
+  }
+  return `${stickerOpen(side)}<g transform="rotate(${-90 * edgeOf(u, str)} 50 50)">${sticker}${body}${edges}</g></svg>`;
 }

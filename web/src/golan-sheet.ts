@@ -29,7 +29,7 @@ async function board() {
 function sheets() {
   const fig = (src: string, cap: string, cls = '') => `<figure class="${cls}"><img src="${svgUri(src)}" alt=""><figcaption>${cap}</figcaption></figure>`;
   const hex = (n: number) => '#' + n.toString(16).padStart(6, '0');
-  const blocks = (side: 'israeli' | 'syrian') => (units as GUnit[]).filter((u) => u.side === side).map((u) => `<figure class="blk"><img style="border:7px solid ${hex(GOLAN_WOOD[side])}" src="${svgUri(golanBlockSvg(u))}" alt=""><figcaption>${u.id} ${u.name}</figcaption></figure>`).join('');
+  const blocks = (side: 'israeli' | 'syrian') => (units as GUnit[]).filter((u) => u.side === side).map((u) => `<figure class="blk"><img src="${svgUri(golanBlockSvg(u))}" alt=""><figcaption>${u.id} ${u.name}</figcaption></figure>`).join('');
   const chits = (side: string) => (counters as GCounter[]).filter((c) => c.side === side).map((c) => fig(golanChitSvg(c), `${c.id} ${c.name}`)).join('');
   const extra = [fig(golanChitSvg({ id: 'M06s', kind: 'marker_control', side: 'syrian', name: 'Control' }), 'M06 Control (Syria)')].join('');
   document.getElementById('sheets')!.innerHTML = `<h2>Israeli blocks</h2><div class="g">${blocks('israeli')}</div><h2>Syrian blocks</h2><div class="g">${blocks('syrian')}</div>

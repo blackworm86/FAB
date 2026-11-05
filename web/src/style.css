@@ -809,6 +809,6 @@ a.btnlink.primary { background: var(--gold); color: #1a1608; border-color: trans
 .volpanel + .volpanel { bottom: 120px; } .volpanel b { color: var(--gold); display: flex; gap: 6px; align-items: center; } .volpanel .row { flex-wrap: wrap; } .volpanel button.on { border-color: var(--gold); }
 @media (max-width: 700px) { .volpanel { left: 12px; width: auto; bottom: 12px; } }
 /* Golan '73 wood: cyan Israeli, green Syrian blocks (the side classes are copied from .german/.allied at start-up; these fix the colours) */
-.b3.israeli .r { background: #1d7d9c; } .b3.israeli .t { background: #5cc0dc; } .b3.syrian .r { background: #2d5f2e; } .b3.syrian .t { background: #5aa15a; }
-.blk .b3.israeli { box-shadow: 6px 6px 0 #1d7d9c, 9px 12px 12px #000a; } .blk .b3.syrian { box-shadow: 6px 6px 0 #2d5f2e, 9px 12px 12px #000a; }
-.card2.wood.israeli { box-shadow: 0 5px 0 #1d7d9c, 0 6px 0 #145868, 0 12px 18px #000b; } .card2.wood.syrian { box-shadow: 0 5px 0 #2d5f2e, 0 6px 0 #1f4320, 0 12px 18px #000b; }
+.b3.israeli .r { background: #1b80b4; } .b3.israeli .t { background: #5cbde6; } .b3.syrian .r { background: #1d6131; } .b3.syrian .t { background: #3f9a57; }
+.blk .b3.israeli { box-shadow: 6px 6px 0 #1b80b4, 9px 12px 12px #000a; } .blk .b3.syrian { box-shadow: 6px 6px 0 #1d6131, 9px 12px 12px #000a; }
+.card2.wood.israeli { box-shadow: 0 5px 0 #1b80b4, 0 6px 0 #135c82, 0 12px 18px #000b; } .card2.wood.syrian { box-shadow: 0 5px 0 #1d6131, 0 6px 0 #144522, 0 12px 18px #000b; }
