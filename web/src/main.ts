@@ -13,7 +13,10 @@ import { gameInfo, GAMES } from './games';
 import { coverArt, BOXES, boxFront, boxSpine } from './covers';
 import { ICONS, ico } from './icons';
 import { esc, nm } from './util';
-import { drawItems as drawAreaItems, drawEntry, drawRestricted } from './board-art';
+import { drawLabel, drawEntry, drawRestricted } from './board-art';
+import labelsJson from '../../data/bulge/labels.json';
+type LabelBox = { mode: string; x: number; y: number; w: number; h: number; px: number; py: number; pr: number };
+const LAB = labelsJson as unknown as Record<string, LabelBox>;
 import { targetsFor, type Tgt } from './chit-play';
 import { snap, diffFx, FxLayer, fxRow, FX_SAMPLES, type Fx } from './fx';
 import { RULE, ruleHtml } from './rules-text';
@@ -50,7 +53,7 @@ function cellsOf(id: number) {
   for (let x = Math.min(...xs); x <= Math.max(...xs); x += 5) for (let y = Math.min(...ys); y <= Math.max(...ys); y += 5) if (inside(x, y)) { const w = toWorld(x, y); c.push({ x: w.x, z: w.z, d: edge(x, y) / S }); }
   CELLS.set(id, c); return c;
 }
-const POLE = new Map<number, [number, number]>(MAP.areas.map((a) => [a.id, pole(a.polygon)]));
+const POLE = new Map<number, [number, number]>(MAP.areas.map((a) => [a.id, LAB[a.id] ? [LAB[a.id].px, LAB[a.id].py] : pole(a.polygon)]));      // where an area's pieces stand: its clear spot beside the label
 /** Marker spot on the shared border of two areas (the scan carries no marker positions for most connections). */
 function borderMid(a: number, b: number): [number, number] {
   const A = MAP.areas.find((x) => x.id === a)!, B = MAP.areas.find((x) => x.id === b)!, near = A.polygon.filter((p) => B.polygon.some((q) => Math.hypot(p[0] - q[0], p[1] - q[1]) < 8));
@@ -138,7 +141,7 @@ function applyMap3d() {
 }
 function setMap3d(on: boolean) {
   map3d = on; try { localStorage.setItem('fab-map3d', on ? '1' : '0'); } catch { /* storage off */ }
-  if (on && !REL) { if (!relLoading) { relLoading = true; say('Loading the 3D map…', true); loadRelief(MW, MH, S, MAP.areas.map((x) => x.label), PHONE).then((r) => { REL = r; REL.patch(reliefMat, areaIdTex, tintTex); diorama.add(REL.props);
+  if (on && !REL) { if (!relLoading) { relLoading = true; say('Loading the 3D map…', true); loadRelief(MW, MH, S, MAP.areas.map((x) => [LAB[x.id].x, LAB[x.id].y, LAB[x.id].w, LAB[x.id].h] as [number, number, number, number]), PHONE).then((r) => { REL = r; REL.patch(reliefMat, areaIdTex, tintTex); diorama.add(REL.props);
         const ground = new THREE.Mesh(REL.geometry, reliefMat); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; diorama.add(ground);
         diorama.add(new THREE.Mesh(REL.walls, new THREE.MeshStandardMaterial({ color: 0x4a3524, roughness: 0.9, side: THREE.DoubleSide }))); applyMap3d(); refresh(); }).catch(() => { relLoading = false; map3d = false; say('The 3D map could not be loaded. Check your connection and try again.'); }); } return; }
   applyMap3d(); refresh();
@@ -302,8 +305,9 @@ function drawPieces() {
   disposeAll(pieces); disposeAll(markers);
   coveredLabels.clear();
   /** The printed number plate and name (drawn upright for the viewer) are kept clear: blocks go around them when the area has room. */
-  const labelSpots = (id: number) => { const L = MAP.areas.find((a) => a.id === id)!.label, rt = viewRot(), cs = Math.cos(rt), sn = Math.sin(rt);
-    return ([[0, -4, 17], [0, 25, 12], [-22, 25, 11], [22, 25, 11]] as const).map(([dx, dy, r]) => { const w = toWorld(L[0] + dx * cs - dy * sn, L[1] + dx * sn + dy * cs); return { x: w.x, z: w.z, r: r / S }; }); };
+  const labelSpots = (id: number) => { const L = LAB[id]; if (!L) return []; const r = L.h / 2, out: { x: number; z: number; r: number }[] = [];
+    for (let dx = -L.w / 2 + r; dx <= L.w / 2 - r + 0.1; dx += Math.max(4, r * 0.8)) { const w = toWorld(L.x + dx, L.y); out.push({ x: w.x, z: w.z, r: r / S }); }
+    if (!out.length) { const w = toWorld(L.x, L.y); out.push({ x: w.x, z: w.z, r: Math.max(L.w, L.h) / 2 / S }); } return out; };
   const taken = new Map<number, { x: number; z: number; r: number }[]>(), edgeTaken: { x: number; z: number; r: number }[] = [];
   /** Spot inside the area nearest to (x, z) whose footprint (radius r) is fully inside it and clear of what is already there. */
   const inArea = (id: number, x: number, z: number, r: number) => {
@@ -415,7 +419,9 @@ function paintBoard() {
     for (const a of MAP.areas) { c.beginPath(); a.polygon.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fillStyle = hex6(tintOf(a.id)); c.fill(); }
     c.restore();
   }
-  if (r3) { c.drawImage(relPixels(r3.lines), 0, 0, boardCv.width, boardCv.height); c.drawImage(relPixels(r3.borders), 0, 0, boardCv.width, boardCv.height); }
+  if (r3) { c.drawImage(relPixels(r3.lines), 0, 0, boardCv.width, boardCv.height); c.save(); c.scale(k, k); c.lineJoin = 'round';                                       // area borders from the area shapes themselves: every edge, including the circles round Bastogne and Verviers
+    for (const [w, col] of [[7, '#ffffff99'], [2.9, '#141416']] as const) { c.lineWidth = w; c.strokeStyle = col; for (const a of MAP.areas) { c.beginPath(); a.polygon.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.stroke(); } }
+    c.restore(); }
   else c.drawImage(pixels(linesImg), 0, 0, boardCv.width, boardCv.height);
   {                                                                                              // the three German army zones: a dashed line in the zone's colour just inside it
     c.save(); c.scale(k, k); c.lineWidth = 2.6; c.lineJoin = 'round'; c.setLineDash([9, 5]);
@@ -425,11 +431,28 @@ function paintBoard() {
   {
     c.save(); c.scale(k, k);
     for (const [a, b] of RESTRICTED) drawRestricted(c, sharedBorder(a, b));
-    for (const a of MAP.areas) { c.save(); c.translate(a.label[0], a.label[1]); c.rotate(viewRot()); drawAreaItems(c, a, layers, vpIcons, true); c.restore(); }
     if (layers.numbers) for (const e of MAP.entries) { c.save(); c.translate(e.x, e.y); c.rotate(viewRot()); drawEntry(c, e); c.restore(); }
     c.restore();
   }
-  boardTex.needsUpdate = true;
+  boardTex.needsUpdate = true; buildLabels();
+}
+/* ---------- area labels: printed flat, each on its own level card, so the relief never bends them ---------- */
+const labelsGrp = new THREE.Group(); scene.add(labelsGrp);
+const labelTexCache = new Map<string, THREE.CanvasTexture>();
+function buildLabels() {
+  labelsGrp.children.forEach((o) => { (o as THREE.Mesh).geometry.dispose(); ((o as THREE.Mesh).material as THREE.Material).dispose(); }); labelsGrp.clear();
+  const lk = `${+layers.numbers}${+layers.tdn}${+layers.vp}${+layers.names}${vpIcons.allied.naturalWidth > 0}`, K = 4;
+  for (const a of MAP.areas) {
+    const L = LAB[a.id]; if (!L || (!layers.numbers && !layers.tdn && !layers.vp && !layers.names)) continue;
+    let t = labelTexCache.get(a.id + lk);
+    if (!t) { const cv = document.createElement('canvas'); cv.width = Math.ceil(L.w * K); cv.height = Math.ceil(L.h * K); const c = cv.getContext('2d')!; c.scale(K, K); c.translate(L.w / 2, L.h / 2); drawLabel(c, a, layers, vpIcons, L);
+      t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; labelTexCache.set(a.id + lk, t); }
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(L.w / S, L.h / S), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+    const p = toWorld(L.x, L.y); m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, viewRot(), 0); m.userData.area = a.id;
+    let y = 0.006;
+    if (show3d()) { y = 0; for (const dx of [-0.5, 0, 0.5]) for (const dz of [-0.5, 0, 0.5]) y = Math.max(y, REL!.h(p.x + (dx * L.w) / S, p.z + (dz * L.h) / S)); y += 0.03; }      // level, at the highest ground under it
+    m.position.set(p.x, y, p.z); m.renderOrder = 2; labelsGrp.add(m);
+  }
 }
 applyArt();
 if (map3d) setTimeout(() => { map3d = false; setMap3d(true); }, 0);           // a saved choice of the 3D map: loaded once the game is up
@@ -856,7 +879,7 @@ function renderFocus() {
   (focusMesh.material as THREE.MeshStandardMaterial).map = (board.material as THREE.MeshStandardMaterial).map; (focusMesh.material as THREE.MeshStandardMaterial).needsUpdate = true;
   const poly = areaWorld(b!.area), hidden: THREE.Object3D[] = [], bg = scene.background;
   const hide = (o: THREE.Object3D) => { if (o.visible) { o.visible = false; hidden.push(o); } };
-  hide(board); hide(table); hide(diorama); for (const [id, m] of overlays) if (id !== b!.area || show3d()) hide(m);         // the close-up is flat: a tint draped on the relief would float above it
+  hide(board); hide(table); hide(diorama); for (const l of labelsGrp.children) if (l.userData.area !== b!.area) hide(l); for (const [id, m] of overlays) if (id !== b!.area || show3d()) hide(m);         // the close-up is flat: a tint draped on the relief would float above it
   for (const grp of [pieces, markers]) for (const o of grp.children) { const a = o.userData.anchor ? pieces.children.find((x) => x.userData.unit === o.userData.anchor) : null, q = a ?? o, uid = (q.userData.unit ?? q.userData.anchor) as string | undefined, cid = q.userData.chit as string | undefined;
     const ofBattle = (uid && g.units.find((u) => u.id === uid)?.area === b!.area) || (cid && (b!.assets.german.includes(cid) || b!.assets.allied.includes(cid) || b!.air.german?.id === cid || b!.air.allied?.id === cid));      // the battle formation may reach past the border: keep it sharp
     if (!ofBattle && !inPoly(q.position.x, q.position.z, poly)) hide(o); }      // a marker follows the piece it belongs to
@@ -959,7 +982,7 @@ function placeBadges() {
   { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(); fxLayer.place((area, unit) => { const ps = unit ? pieceScreen(unit) : null, c = center(area); v.set(c.x, 0, c.z).project(cam); const cx = r.left + (v.x * 0.5 + 0.5) * r.width, cy = r.top + (-v.y * 0.5 + 0.5) * r.height; return ps ? { x: ps.x, y: ps.y, cx, cy, rad: ps.rad, visible: true } : { x: cx, y: cy - 30, cx: cx - 1, cy, rad: 0, visible: v.z < 1 }; }); }
   placeFocus(); placeBubbles();
   const r = canvas.getBoundingClientRect(), v = new THREE.Vector3();
-  for (const [k, d] of badgeEls) { const id = +k.replace(/^L/, ''), p = d.classList.contains('lab') ? toWorld(...(MAP.areas.find((x) => x.id === id)!.label)).add(new THREE.Vector3(0, 0, -1.6)) : d.classList.contains('tint') ? toWorld(...(MAP.areas.find((x) => x.id === id)!.label)).add(new THREE.Vector3(0, 0, 2.3)) : center(id); v.set(p.x, 2.2, p.z - 4).project(cam); d.style.display = v.z < 1 ? '' : 'none'; d.style.transform = `translate(${(v.x * 0.5 + 0.5) * r.width}px, ${(-v.y * 0.5 + 0.5) * r.height}px) translate(-50%, -50%)`; }
+  for (const [k, d] of badgeEls) { const id = +k.replace(/^L/, ''), p = d.classList.contains('lab') ? toWorld(LAB[id].x, LAB[id].y).add(new THREE.Vector3(0, 0, -(LAB[id].h / 2 + 14) / S)) : d.classList.contains('tint') ? toWorld(LAB[id].x, LAB[id].y + LAB[id].h / 2 + 40) : center(id); v.set(p.x, 2.2, p.z - 4).project(cam); d.style.display = v.z < 1 ? '' : 'none'; d.style.transform = `translate(${(v.x * 0.5 + 0.5) * r.width}px, ${(-v.y * 0.5 + 0.5) * r.height}px) translate(-50%, -50%)`; }
 }
 
 /* ---------- battle state shared with the view ---------- */
@@ -1238,7 +1261,7 @@ function kbStep(dx: number, dy: number) {
   const s = screenOf(kbArea!), r = canvas.getBoundingClientRect(); if (s.x < r.left + 60 || s.x > r.right - 60 || s.y < r.top + 60 || s.y > r.bottom - 60) lookAt(kbArea!);
   say(`${areaName(kbArea!)} [${kbArea}]`, true); refresh();
 }
-function kbEnter() { if (kbArea == null) return; const a = MAP.areas.find((x) => x.id === kbArea)!, w = toWorld(...a.label), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(w.x, show3d() ? REL!.h(w.x, w.z) : 0, w.z + 0.6).project(cam);
+function kbEnter() { if (kbArea == null) return; const a = MAP.areas.find((x) => x.id === kbArea)!, w = toWorld(LAB[a.id].px, LAB[a.id].py), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(w.x, show3d() ? REL!.h(w.x, w.z) : 0, w.z + 0.6).project(cam);
   click({ clientX: r.left + (v.x * 0.5 + 0.5) * r.width, clientY: r.top + (-v.y * 0.5 + 0.5) * r.height } as PointerEvent); }
 function dockChips(): string {
   if (g.over || !allowed()) return '';

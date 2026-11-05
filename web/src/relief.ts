@@ -30,7 +30,7 @@ const svgImg = (svg: string) => img(URL.createObjectURL(new Blob([svg], { type: 
 const group = (svg: string, id: string) => { const m = new RegExp(`<g id="${id}"[\\s\\S]*?</g>(\\s*</g>)?`).exec(svg); return m ? m[0] : ''; };
 
 /** lite (phones): a ground mesh half as fine and half the trees. */
-export async function loadRelief(MW: number, MH: number, S: number, labels: [number, number][], lite = false, base = './'): Promise<Relief> {
+export async function loadRelief(MW: number, MH: number, S: number, labels: [number, number, number, number][], lite = false, base = './'): Promise<Relief> {
   const [meta, hb, wb, snow, linesSvg, entry] = await Promise.all([
     fetch(base + 'relief/relief.json').then((r) => r.json() as Promise<Meta>),
     fetch(base + 'relief/height.bin').then((r) => r.arrayBuffer()),
@@ -72,7 +72,7 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
   const props = new THREE.Group(), P = 1.1;               // props a little larger than life on the mockup, so they read at game scale
   const towns = meta.towns, cityCell = new Set(meta.cities.flatMap((c) => c.cells.map(([x, y]) => `${(x / 4) | 0},${(y / 4) | 0}`)));
   const inTown = (x: number, y: number) => towns.some(([tx, ty]) => Math.hypot(x - tx, y - ty) < 15) || [-2, 0, 2].some((a) => [-2, 0, 2].some((b) => cityCell.has(`${((x / 4) | 0) + a},${((y / 4) | 0) + b}`)));
-  const nearLabel = (x: number, y: number) => labels.some(([lx, ly]) => Math.abs(x - lx) < 50 && y - ly > -36 && y - ly < 24);   // the printed number and name stay clear
+  const nearLabel = (x: number, y: number) => labels.some(([lx, ly, w, h]) => Math.abs(x - lx) < w / 2 + 8 && Math.abs(y - ly) < h / 2 + 8);   // the printed number and name stay clear
   const trees: number[][] = [];
   for (let j = 0; j < R; j++) for (let i = 0; i < C; i++) { const w = WB[j * C + i] / 255; if (w > 0.3 && rnd() < w * (lite ? 0.12 : 0.26)) { const x = i * ST + (rnd() - 0.5) * ST, y = j * ST + (rnd() - 0.5) * ST; if (!inTown(x, y) && !nearLabel(x, y)) trees.push([x, y, 0.75 + rnd() * 0.6, rnd()]); } }
   const houses: number[][] = [], churches: number[][] = [];
@@ -100,7 +100,7 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
   props.add(tr, cap, hs, rf, tw, sp);
 
   const labMask = (() => { const c = document.createElement('canvas'); c.width = meta.w / 2; c.height = meta.h / 2; const x = c.getContext('2d')!; x.filter = 'blur(3px)'; x.fillStyle = '#fff';
-    for (const [lx, ly] of labels) { x.beginPath(); x.roundRect((lx - 46) / 2, (ly - 22) / 2, 46, 28, 6); x.fill(); }
+    for (const [lx, ly, w, h] of labels) { x.beginPath(); x.roundRect((lx - w / 2 - 6) / 2, (ly - h / 2 - 6) / 2, (w + 12) / 2, (h + 12) / 2, 6); x.fill(); }
     const t = new THREE.CanvasTexture(c); t.flipY = true; return t; })();
   const patch = (mat: THREE.MeshStandardMaterial, areaId: THREE.Texture, tints: THREE.Texture) => {
     mat.onBeforeCompile = (sh) => {

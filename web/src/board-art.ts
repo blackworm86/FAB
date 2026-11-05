@@ -55,3 +55,16 @@ export function drawRestricted(c: CanvasRenderingContext2D, border: [number, num
   c.lineWidth = 2.6; c.strokeStyle = '#e9e6d4'; c.strokeText(label, 0, 0); c.fillStyle = '#3a2d1a'; c.fillText(label, 0, 0);
   c.restore();
 }
+
+/** One area's label as a single printed group inside a w x h box centred on (0, 0): the number plate in its TDN shape with the VP stars beside it, the name below.
+ *  Placement comes from data/bulge/labels.json (the largest clear spot that covers the least printed detail). */
+export function drawLabel(c: CanvasRenderingContext2D, a: { id: number }, layers: Layers, vpIcons: Record<'allied' | 'german' | 'mutual', HTMLImageElement>, box: { w: number; h: number; mode: string }) {
+  const ar = E.areas.get(a.id)!, v = ar.vp, icons: HTMLImageElement[] = [];
+  if (layers.vp) { for (let i = 0; i < v.allied; i++) icons.push(vpIcons.allied); for (let i = 0; i < v.german; i++) icons.push(vpIcons.german); if (v.mutual) icons.push(vpIcons.mutual); }
+  const plate = layers.numbers || layers.tdn, rowW = (plate ? 32 : 0) + icons.length * 21, name = layers.names && box.mode === 'full', top = name ? -box.h / 2 + 15 : 0;
+  let x = -rowW / 2;
+  if (plate) { c.save(); c.translate(x + 16, top + 3); drawItems(c, a, { ...layers, vp: false, names: false }, vpIcons, false); c.restore(); x += 32; }
+  for (const im of icons) { if (im.naturalWidth) c.drawImage(im, x, top - 10, 20, 20); x += 21; }
+  if (name) { let fs = 15; c.font = `italic 600 ${fs}px "Arial Narrow", Arial, sans-serif`; while (fs > 9 && c.measureText(ar.name).width > box.w - 4) { fs -= 0.5; c.font = `italic 600 ${fs}px "Arial Narrow", Arial, sans-serif`; }      // a long name shrinks to its box, never clipped
+    c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.lineWidth = 3.2; c.strokeStyle = '#e4e6d8'; c.strokeText(ar.name, 0, box.h / 2 - 4); c.fillStyle = '#1c2216'; c.fillText(ar.name, 0, box.h / 2 - 4); }
+}
