@@ -35,8 +35,8 @@ describe('Operation Badr set-up (22.1)', () => {
     expect(unit(g, 'S15').reserve && unit(g, 'S13').reserve).toBeTruthy(); expect(g.markers.syrian.res).toBe(0); expect(g.markers.israeli.res).toBe(4);
     expect(golan.state(g).freeCombatRound).toBe(2);
   });
-  it('at the start Israel holds the VP lead from the mutual VP areas it controls', () => {
-    const v = victory(g); expect(v.israeli).toBe(5); expect(v.syrian).toBe(0); expect(v.net).toBe(-5);
+  it('at the start Israel holds the six mutual VP areas: 6 VP, as the errata says', () => {
+    const v = victory(g); expect(v.israeli).toBe(6); expect(v.syrian).toBe(0); expect(v.net).toBe(-6);
   });
 });
 

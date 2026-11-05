@@ -6719,7 +6719,7 @@
    "name": "Tel Faris",
    "tdn": 2,
    "vp": {
-    "mutual": false,
+    "mutual": true,
     "syrian": 0
    },
    "supply": false,
