@@ -17,9 +17,12 @@ h=np.where(dr<2.5,np.minimum(h,nd.minimum_filter(h,7)),h)
 b411=(ids==4)&nd.binary_dilation(ids==11,iterations=3)|(ids==11)&nd.binary_dilation(ids==4,iterations=3)
 ds=nd.distance_transform_edt(~b411);h+=110*np.exp(-(ds/10)**2)+40*np.exp(-(ds/30)**2)
 h=nd.gaussian_filter(h,1.2)
-land=ids>0;lo=float(h[land].min());h=h-lo                                 # the diorama is the playing area: the union of the game's areas
-dist,(iy,ix)=nd.distance_transform_edt(~land,return_indices=True)       # off it the heights carry on from the nearest land, so the cut sides stand straight
-h=np.where(land,h,h[iy,ix]);h=np.maximum(h,0)
+land=ids>0;lo=float(h[land].min());h=h-lo                                 # the play areas carry the relief
+dist,(iy,ix)=nd.distance_transform_edt(~land,return_indices=True)       # the rest of the printed sheet carries on from the nearest play area, smoothed
+hp=np.where(land,h,nd.gaussian_filter(h[iy,ix],6))
+sheet=m('land')|land                                                      # the printed land; off it (the sheet's margin) the board is flat
+dl=nd.distance_transform_edt(~sheet)
+h=np.where(sheet,hp,hp*np.clip(1-dl/8,0,1));h=np.maximum(h,0)
 g=h[::STEP,::STEP];hi=float(g.max());rows,cols=g.shape
 np.round(g/hi*65535).astype('<u2').tofile(OUT+'height.bin')
 entryA=nd.binary_dilation(np.array(Image.open(OUT+'entry.png').convert('RGBA'))[...,3]>20,iterations=6)          # no trees on the entry strips
@@ -41,11 +44,13 @@ paved|=nd.binary_dilation(cm,iterations=2)
 wsoft=np.clip(nd.gaussian_filter(nd.uniform_filter(woods.astype(np.float32),5),2.0)*1.6-0.3,0,1)
 snow=np.array([241,244,248],np.float32)*(1-wsoft[...,None])+np.array([158,186,168],np.float32)*wsoft[...,None]
 snow=np.where(paved[...,None],np.array([200,202,206],np.float32),snow)
-q=np.array(Image.fromarray(snow.astype(np.uint8)).quantize(24).convert('RGB'))
-Image.fromarray(np.dstack([q,np.where(land,255,0).astype(np.uint8)])).quantize(25,method=Image.Quantize.FASTOCTREE).save(OUT+'snow.png',optimize=True)     # transparent off the land
+off=np.array([214,218,214],np.float32); sea=np.array([200,212,220],np.float32)                 # beyond the play areas: greyer snow; the sheet's margin: pale blue-grey, as on the printed map
+soft=np.clip(nd.distance_transform_edt(~land)/6,0,1)[...,None]
+snow=snow*(1-soft)+(snow*0.55+off*0.45)*soft
+snow=np.where(sheet[...,None],snow,sea)
+Image.fromarray(snow.astype(np.uint8)).quantize(28).save(OUT+'snow.png',optimize=True)      # the whole rectangle of the sheet
 from shapely.geometry import Polygon
 from shapely.ops import unary_union
-u=unary_union([Polygon(a['polygon']).buffer(1.2) for a in M['areas']]).buffer(-1.2).simplify(0.6)
-rings=[[[round(x,1),round(y,1)] for x,y in r.coords] for g2 in getattr(u,'geoms',[u]) for r in [g2.exterior,*g2.interiors]]
+rings=[[[0,0],[W,0],[W,H],[0,H],[0,0]]]                                  # the board is the printed sheet's rectangle, cut straight
 json.dump({'outline':rings,'w':W,'h':H,'step':STEP,'cols':cols,'rows':rows,'metres':hi,'towns':towns,'cities':cities},open(OUT+'relief.json','w'),separators=(',',':'))
 print(rows,cols,round(hi,1),len(towns),len(cities),{f:os.path.getsize(OUT+f)//1024 for f in os.listdir(OUT)})

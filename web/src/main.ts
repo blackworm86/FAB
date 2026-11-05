@@ -157,7 +157,9 @@ function settle() {
       for (let k = 0; k < pa.count; k++) { const nv = on ? REL!.h(pa.getX(k), pa.getZ(k)) : 0; pa.setY(k, pa.getY(k) - off[k] + nv); off[k] = nv; }
       gm.userData.off = off; gm.userData.lk = key; pa.needsUpdate = true; continue;
     }
-    const L = on ? REL!.h(o.position.x, o.position.z) : 0, prev = (o.userData.lift as number | undefined) ?? 0;
+    let L = 0;
+    if (on) { const rr = 0.8; L = REL!.h(o.position.x, o.position.z); for (const [dx, dz] of [[-rr, -rr], [rr, -rr], [-rr, rr], [rr, rr], [0, -rr], [0, rr], [-rr, 0], [rr, 0]]) L = Math.max(L, REL!.h(o.position.x + dx, o.position.z + dz)); L += 0.02; }      // the highest ground under the whole counter or block, so the relief never swallows it
+    const prev = (o.userData.lift as number | undefined) ?? 0;
     if (L !== prev) { o.position.y += L - prev; o.userData.lift = L; }
   }
 }
