@@ -8,6 +8,7 @@ import trackJson from '../../../data/golan73/turn_track.json';
 import { ASSEMBLY, ENTRY, HERMON, area, areas, connection, edgeKey, enemyOf, isAssembly, neighbors, type GSide } from './map';
 import { pathCost, reachable, stratReachable, type GMoveCtx, type GReach } from './move';
 import { moraleSn, type Quality } from './combat';
+import type { GBattle } from './battle';
 
 export type GPhase = 'reinforcement' | 'admin' | 'movement' | 'strategic' | 'combat' | 'reaction' | 'btMove' | 'btCombat' | 'supply';
 export const PHASES: GPhase[] = ['admin', 'movement', 'strategic', 'combat', 'reaction', 'btMove', 'btCombat', 'supply'];
@@ -22,6 +23,7 @@ export interface GUnit {
   disorder: 0 | 1 | 2;                     // good order, disordered, recovering
   unsupplied: boolean; reserve: boolean; exploit: boolean; revealed: boolean;
   movedThisPhase?: boolean; spent?: number; minefieldFailed?: boolean;
+  from?: number;                           // area it came from into a newly contested area (14.01a: an aborted assault goes back there)
 }
 export interface GChit { id: string; counter: string; name: string; kind: string; side: GSide | 'none'; quality?: Quality; turn: number | string | null; box: ChitBox; area?: number }
 export interface GLog { turn: number; side: GSide | null; phase: GPhase; text: string }
@@ -35,6 +37,8 @@ export interface GGame {
   eliminatedLarge: Record<GSide, number>;  // large units lost by each side (19.2)
   vp: { syrian: number; israeli: number; net: number; leader: GSide | null };
   result: string | null; log: GLog[];
+  battle: GBattle | null; fought: number[];
+  airAssaultArea?: number; samTarget?: string; raidPartial?: number[];
 }
 
 type RawUnit = { id: string; name: string; side: GSide; cls?: string; symbol?: string; kind?: string; steps?: number; quality_by_step?: Quality[]; division?: string | null; brigade?: string;
@@ -100,8 +104,9 @@ export function newGolanGame(seed = 1, scenario: 'badr' | 'badr_alt' = 'badr'): 
     units, chits, control, minefields: (S.minefields?.fixed ?? []).map(([a, b]) => edgeKey(a, b)), bridgedDitch: [], blownBridges: [], fieldWorks: [],
     riverAssault: scenario === 'badr' ? [...(S.riverAssault ?? [])] : [], raids: [], interdicted: {}, crossed: [], reserveMarkers: { israeli: 4, syrian: 2 },
     freeCombatRound: scenario === 'badr' ? 2 : 0, purpleLineCrossed: false, airReleased: 0, hermonLost: false, eliminatedLarge: { israeli: 0, syrian: 0 },
-    vp: { syrian: 0, israeli: 0, net: 0, leader: null }, result: null, log: [],
+    vp: { syrian: 0, israeli: 0, net: 0, leader: null }, result: null, log: [], battle: null, fought: [],
   };
+  for (const a of g.riverAssault) for (const u of onMap(g, a)) if (u.side === 'syrian') u.from = neighbors(a).find((n) => connection(a, n)!.atDitch && g.control[n] === 'syrian');   // the bridgeheads came across the ditch
   for (const id of S.reserve?.syrian ?? []) if (scenario === 'badr') { unit(g, id).reserve = true; g.reserveMarkers.syrian--; }
   computeVictory(g);
   say(g, scenario === 'badr' ? 'Operation Badr: the Syrian assault has crossed the Purple Line; the game opens with the Syrian Combat Phase of turn 1.' : 'Operation Badr, alternate set-up.');
@@ -156,11 +161,12 @@ export function move(g: GGame, id: string, to: number, path?: number[]) {
     if (u.side === 'israeli' && g.raids.includes(next)) {                                         // 16.11a
       const die = roll(g);
       if (die >= 6) { const c = g.chits.find((x) => x.box === 'map' && x.area === next && x.kind === 'commando'); if (c) c.box = 'eliminated'; g.raids = g.raids.filter((a) => a !== next); say(g, `Commando raid in ${next} fails (${die}).`); }
-      else { say(g, `Commando raid in ${next} ${die <= 2 ? 'succeeds' : 'partly succeeds'} (${die}): ${u.name} stops.`); break; }
+      else { if (die >= 3) (g.raidPartial ??= []).push(next); say(g, `Commando raid in ${next} ${die <= 2 ? 'succeeds' : 'partly succeeds'} (${die}): ${u.name} stops.`); break; }
     }
   }
   for (const l of priced.limited) if (!g.crossed.includes(l)) g.crossed.push(l);
   if (u.area != null && !isAssembly(u.area) && area(u.area).syria === false && !isAssembly(at) && area(at).syria && u.side === 'israeli' && !g.purpleLineCrossed) purpleLineCrossed(g);
+  if (count(g, at)[enemyOf(u.side)] > 0 && !onMap(g, at).some((x) => x.revealed)) u.from = route[route.indexOf(at) - 1];
   u.area = at; u.movedThisPhase = true; u.reserve = false;                                  // 5.21: the marker goes when the unit moves
   evacuateStrongpoints(g, route[0], u);
   updateControl(g, at);
@@ -304,9 +310,20 @@ export function eliminate(g: GGame, u: GUnit) {
   if (u.max >= 3 && !u.kind) g.eliminatedLarge[u.side]++;                                       // 19.2
 }
 
+/** Newly contested areas (2.4): contested with blocks not yet face-up, or a raid an Israeli unit ran into. */
+const holdsAsset = (g: GGame, a: number, side: GSide) => g.chits.some((c) => c.box === 'map' && c.area === a && c.side === side && (c.kind === 'garrison' || c.kind === 'commando'));
+export const newlyContested = (g: GGame) => [...new Set([
+  ...g.units.filter((u) => u.box === 'map' && u.area != null && !isAssembly(u.area) && !u.revealed && (contested(g, u.area) || holdsAsset(g, u.area, enemyOf(u.side)))).map((u) => u.area!),
+  ...g.raids.filter((a) => count(g, a).israeli > 0 && !g.units.some((u) => u.area === a && u.revealed))])];
+/** Battles still owed this Combat or Breakthrough Combat Phase (6.1, 7.41). */
+export const mustFight = (g: GGame) => (g.phase === 'combat' || g.phase === 'btCombat' ? newlyContested(g).filter((a) => !g.fought.includes(a)) : []);
+
 /** Advance to the next phase, running the automatic steps (Reinforcement, Admin draws, Supply, Victory Check). */
 export function endPhase(g: GGame) {
   if (g.result) return;
+  if (g.battle) throw new Error('finish the open battle first');
+  if (mustFight(g).length) throw new Error(`combat is required in ${mustFight(g).join(', ')}`);
+  if (g.phase === 'combat' || g.phase === 'btCombat') g.fought = [];
   if (g.phase === 'reinforcement' && g.units.some((u) => u.box === 'arriving' && arrivalOptions(g, u.id).length)) throw new Error('place the arriving units first');
   for (const u of g.units) { u.movedThisPhase = false; if (g.phase === 'movement' || g.phase === 'btMove') { u.spent = 0; } }
   if (g.phase === 'movement' || g.phase === 'btMove') g.crossed = [];

@@ -44,3 +44,7 @@ export const areas = new Map<number, GArea>(RAW.areas.map((a) => [a.id, { ...a, 
 export const area = (id: number) => areas.get(id)!;
 /** Syrian Entry areas V–Z (14.21), letter → area. */
 export const ENTRY = Object.fromEntries(RAW.entries.map((e) => [e.letter, e.area])) as Record<string, number>;
+/** East of the Syrian SAM Barrier (14.15): the side holding the Syrian Entry areas, without crossing a SAM barrier edge. */
+const east = new Set<number>(), todoE = Object.values(ENTRY);
+while (todoE.length) { const a = todoE.pop()!; if (east.has(a)) continue; east.add(a); for (const n of neighbors(a)) if (!isAssembly(n) && connection(a, n)!.kind !== 'hermon' && !connection(a, n)!.samBarrier) todoE.push(n); }
+export const eastOfSam = (a: number) => east.has(a);

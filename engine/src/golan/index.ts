@@ -3,3 +3,4 @@ export * from './map';
 export * from './move';
 export * from './combat';
 export * from './game';
+export * from './battle';

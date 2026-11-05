@@ -1,10 +1,12 @@
 // Golan '73 game state: Operation Badr set-up (Play Book 22.1 with the errata), turn sequence, draws, control, supply, victory.
 import { describe, expect, it } from 'vitest';
-import { newGolanGame, endPhase, onMap, count, unit, chit, moveOptions, move, arrivalOptions, placeArrival, inSupply, computeVictory, ASSEMBLY, TURN_TRACK, type GGame } from '../src/golan';
+import { fight } from './golan-helpers';
+import { mustFight, newGolanGame, endPhase, onMap, count, unit, chit, moveOptions, move, arrivalOptions, placeArrival, inSupply, computeVictory, ASSEMBLY, TURN_TRACK, type GGame } from '../src/golan';
 
 const runTo = (g: GGame, turn: number, player: 'syrian' | 'israeli', phase: string) => {
   for (let i = 0; i < 400 && !(g.turn === turn && g.player === player && g.phase === phase); i++) {
     if (g.phase === 'reinforcement') for (const u of g.units.filter((x) => x.box === 'arriving')) { const o = arrivalOptions(g, u.id); if (o.length) placeArrival(g, u.id, o[0]); }
+    for (const a of mustFight(g)) fight(g, a);
     endPhase(g);
   }
   expect([g.turn, g.player, g.phase]).toEqual([turn, player, phase]);
@@ -67,7 +69,7 @@ describe('turn sequence, reinforcements and draws', () => {
     const g = newGolanGame(11); runTo(g, 2, 'syrian', 'movement');
     const u = unit(g, 'S24'); const opt = moveOptions(g, u.id).find((r) => !r.mustStop)!;
     move(g, u.id, opt.area); expect(u.area).toBe(opt.area); expect(g.control[opt.area]).toBe('syrian');
-    for (let i = 0; i < 2000 && !g.result; i++) { if (g.phase === 'reinforcement') for (const x of g.units.filter((y) => y.box === 'arriving')) { const o = arrivalOptions(g, x.id); if (o.length) placeArrival(g, x.id, o[0]); } endPhase(g); }
+    for (let i = 0; i < 2000 && !g.result; i++) { if (g.phase === 'reinforcement') for (const x of g.units.filter((y) => y.box === 'arriving')) { const o = arrivalOptions(g, x.id); if (o.length) placeArrival(g, x.id, o[0]); } for (const a of mustFight(g)) fight(g, a); endPhase(g); }
     expect(g.result).toMatch(/Victory|Draw/);
   });
 });
