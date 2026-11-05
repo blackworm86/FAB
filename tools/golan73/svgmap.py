@@ -92,7 +92,7 @@ for e in layer('SYRIA_VPS'):
 for e in layer('MUTUAL_VPS'):
     if FILL.get(e['cls']) == '#c42a1d': vp_mut.add(area_at(*centre(e)))
 supply = {area_at(*centre(e)) for e in layer('ISRAELI_SUPPLY_SOURCES') if FILL.get(e['cls']) == '#1172b5'}
-ALT = {'#e30613': '7th_infantry', '#009fe3': '9th_infantry', '#ffed00': '5th_infantry'}   # division colours (Syrian alternate set-up)
+ALT = {'#e30613': '7th_inf', '#009fe3': '9th_inf', '#ffed00': '5th_inf'}   # division colours (Syrian alternate set-up)
 alt = {area_at(*centre(e)): ALT[FILL[e['cls']]] for e in layer('SYRIAN_ALTERNATE_SETUP_AREAS')}
 
 # ---- adjacency and boundary types along each shared edge ----

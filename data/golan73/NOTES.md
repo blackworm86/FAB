@@ -27,7 +27,7 @@ Sources: Vassal module `docs/games/golan73/other/FAB_Golan73.vmod` (buildFile.xm
 - **Badr Syrian reserve markers start on 132nd Mech (S15) and 51st Tank (S13)**, per the scenario text quoted in the errata. The setup card says the holding box; the errata says the scenario text overrides it.
 - **Badr minefields:** 29/30, 47/48, 50/51 are printed on the map and placed by the Vassal setup. The setup-card pairs 26/83, 51/52, 47/50 are rejected per the errata. The other 3 are placed by the Israeli player.
 - **Israeli VPs start at 6** (errata). The card says 5th space.
-- **The Golan Play Book's 22.1 (Badr scenario text) is not in docs.** Start phase (combat), "Syrian admin skipped T1" and the 22.17 free breakthrough round come from the errata and the card notes. The Al-Owda scenario (docs/scenarios) was not built.
+- **Scenario text (Play Book 22.1 and 22.2, now in docs).** It confirms the start phase (Syrian Combat Phase of Turn 1), the skipped Syrian Admin Phase, the reserve markers on 132nd Mech and 51st Tank and the free Breakthrough combat round in two contested areas. Its own numbers (5 Israeli VP, assault markers in 26, 27, 39, 47, 50, 57, 58, minefields on 26/83, 51/52, 47/50) are the ones the errata correct, so the data keeps the errata values; `setups.json` records both. The Al-Owda scenario (20.3, docs/scenarios) is still not built.
 - **Nafakh reinforcement chits.** The cards print them under "Available Box" brackets, while the Vassal save puts them on the turn track. Do they go straight to Available, or into the cup as usual? Some arrive on a different turn than their counter code (e.g. 183rd Cdo S at T2, 185th Cdo 5 at T3); the data uses the scenario turn.
 - **Nafakh 179th, 33rd, 52nd, 43rd start reduced** (save `Steps` state and card). The data gives them as `reduced` or the reinforcement `steps`. The 52nd also starts `recovering`.
 - **The Badr save gives no step reductions.** Only the 179th (2/4), 4th (3/4) and 679th (2/3) arrive reduced, from the yellow arrow on the block and the initial `Steps` in Vassal.
@@ -40,3 +40,9 @@ Sources: Vassal module `docs/games/golan73/other/FAB_Golan73.vmod` (buildFile.xm
 - **Syrian entry areas V–Z (82, 75, 69, 63, 62)** are not drawn on the SVG; they come from the Vassal module and are printed at the map edge at run time.
 - **Mt Hermon (83) connects only to 59**, by the all-MP arrow (14.16). The orange massif around it is off the map.
 - **Operational boundaries:** 12 edges carry the dashed sector line; the sectors themselves (Northern, Central, Southern) are not named yet.
+- **Edge 40/41 (Tel Hazeika / Mt. Yosifon): road or field?** Your drawing has a road branch crossing it, so `map.json` makes it a road connection (1 MP). Play Book Example 6B charges 2 MP for that step, which is a field connection. Every other edge the examples mention agrees with the drawing (`tools/golan73/check_playbook.py`, 40 of 41). Check the printed map: if the road stops short of the edge, move it in the SVG.
+
+## Alternate set-up (Play Book 22.2)
+
+- Built as `setups.json` › `badr_alt`: starts in the Syrian Operational Movement Phase of Turn 1; Israeli regular units anywhere west of the Purple Line (stacking limits, not with a strongpoint, not in 83); the Syrian Setup Card rows go on the tank symbols of their colour, one unit per symbol: yellow 5th Inf (5), blue 9th Inf (5), red 7th Inf (6). Your map's squares match those counts exactly. Two Syrian reserve markers on any deployed units; no free Breakthrough combat round (errata).
+- The playbook calls them "tank symbols"; your SVG draws them as coloured squares. If the printed map has a tank silhouette, the board art can draw that instead.

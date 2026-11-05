@@ -1,11 +1,11 @@
 {
  "badr": {
-  "name": "Operation Badr (historical setup)",
+  "name": "Operation Badr: Historical Setup (22.1)",
   "map": "golan73",
   "turns": 9,
   "first_player": "syrian",
   "startPhase": "combat",
-  "source": "Vassal module default setup + \"Operation Badr Historical Setup.vsav\" (identical), Setup Cards, errata 9/23/17",
+  "source": "Play Book 22.1 (scanned) + Vassal default setup + Setup Cards; errata 9/23/17 corrections applied",
   "syrian_admin_skipped_turn1": true,
   "free_breakthrough_combat_round": {
    "side": "syrian",
@@ -401,10 +401,49 @@
    "israeli": "all areas west of the Purple Line",
    "syrian": "all areas east of the Purple Line, incl. entry areas V-Z"
   },
-  "alternate": {
-   "israeli": "units (not strongpoints/ghosts/garrisons) in any area not adjacent to the Purple Line",
-   "syrian": "units in any area showing the tank symbol of their division colour (5th yellow, 9th blue, 7th red); reserve markers on any two units",
-   "free_breakthrough_combat_round": false
+  "victory": {
+   "rule": "19.3, if no Sudden Death Victory",
+   "table": [
+    {
+     "vp": "3+",
+     "result": "operational victory for the side with the VPs"
+    },
+    {
+     "vp": "1-2",
+     "result": "marginal victory for the side with the VPs"
+    },
+    {
+     "vp": "0",
+     "result": "draw"
+    }
+   ]
+  },
+  "playbook_says": {
+   "israeli_vp": 5,
+   "riverAssault": [
+    26,
+    27,
+    39,
+    47,
+    50,
+    57,
+    58
+   ],
+   "minefields": [
+    [
+     26,
+     83
+    ],
+    [
+     51,
+     52
+    ],
+    [
+     47,
+     50
+    ]
+   ],
+   "note": "errata 9/23/17 corrects these to 6 VP, assault markers 27,28,39,48,50,57,59 and the printed minefields 29/30, 47/48, 50/51"
   }
  },
  "nafakh": {
@@ -680,5 +719,89 @@
    "Units forced off map are eliminated; no voluntary exit",
    "No Sudden Death or Syrian Automatic Victory; Decisive = uncontested control of Nafakh at end of T4, else most strength points in Nafakh (tie: Israel)"
   ]
+ },
+ "badr_alt": {
+  "name": "Operation Badr: Alternate Setup (22.2)",
+  "map": "golan73",
+  "turns": 9,
+  "first_player": "syrian",
+  "startPhase": "operational_movement",
+  "source": "Play Book 22.2 (scanned); errata: no free breakthrough combat round",
+  "same_as": "badr",
+  "same_for": [
+   "strongpoints",
+   "garrisons",
+   "assets_events_available",
+   "air_assault",
+   "operational_reserve",
+   "strategic_reserve",
+   "reinforcements",
+   "minefields",
+   "vp"
+  ],
+  "syrian_admin_skipped_turn1": true,
+  "free_breakthrough_combat_round": false,
+  "israeli_regulars": {
+   "units": [
+    "I01",
+    "I03",
+    "I04",
+    "I05",
+    "I06",
+    "I07",
+    "I08"
+   ],
+   "place": "any area west of the Purple Line, within stacking limits, not stacked with a Strongpoint, not in area 83"
+  },
+  "syrian_regulars": {
+   "rows": [
+    {
+     "row": 1,
+     "colour": "yellow",
+     "division": "5th_inf",
+     "count": 5
+    },
+    {
+     "row": 2,
+     "colour": "blue",
+     "division": "9th_inf",
+     "count": 5
+    },
+    {
+     "row": 3,
+     "colour": "red",
+     "division": "7th_inf",
+     "count": 6
+    }
+   ],
+   "place": "each row of the Syrian Setup Card in areas showing the tank symbol of its colour, one unit per symbol (map.json altSetup)"
+  },
+  "reserve": {
+   "syrian": "two reserve markers may be placed on deployed units",
+   "israeli": []
+  },
+  "riverAssault": [],
+  "contested": [],
+  "control": {
+   "israeli": "all areas west of the Purple Line",
+   "syrian": "all areas east of the Purple Line, incl. entry areas V-Z"
+  },
+  "victory": {
+   "rule": "19.3, if no Sudden Death Victory",
+   "table": [
+    {
+     "vp": "3+",
+     "result": "operational victory for the side with the VPs"
+    },
+    {
+     "vp": "1-2",
+     "result": "marginal victory for the side with the VPs"
+    },
+    {
+     "vp": "0",
+     "result": "draw"
+    }
+   ]
+  }
  }
 }
