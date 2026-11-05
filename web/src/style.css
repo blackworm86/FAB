@@ -801,3 +801,5 @@ input::placeholder { color: #9a9a8a; opacity: 1; }
   .c-dispatch { width: min(300px, 42vw) !important; left: 8px !important; right: auto !important; bottom: 8px !important; max-height: calc(100% - 16px) !important; overflow: auto; padding: 6px 10px !important; }
   .c-dispatch h3 { font-size: 18px !important; margin: 0 !important; } .c-dispatch .row button { min-height: 36px !important; padding: 4px 10px !important; }
 }
+a.btnlink { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; padding: 7px 14px; border: 1px solid var(--line); color: var(--ink); background: #1d2114; }
+a.btnlink.primary { background: var(--gold); color: #1a1608; border-color: transparent; font: 700 15px var(--sfd); letter-spacing: .1em; text-transform: uppercase; }

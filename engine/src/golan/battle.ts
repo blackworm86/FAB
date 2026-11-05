@@ -5,7 +5,7 @@
 // players' choices in between (first loss, abort, disorder/retreat, retreat destination, exploitation).
 import { HERMON, area, connection, edgeKey, eastOfSam, enemyOf, isAssembly, neighbors, type GSide } from './map';
 import { assetLimits, brigadeExtraDie, moraleSn, samResult, successNumber, unitDice, type GShooter, type GTarget, type Quality } from './combat';
-import { chit, contested, count, eliminate, inSupply, isNight, newlyContested, onMap, roll, spendSA, unit, updateControl, type GChit, type GGame, type GUnit } from './game';
+import { chit, contested, count, dropReserve, eliminate, inSupply, isNight, newlyContested, onMap, roll, spendSA, unit, updateControl, type GChit, type GGame, type GUnit } from './game';
 export { mustFight, newlyContested } from './game';
 
 type Step = 'attArty' | 'defArty' | 'defFire' | 'offFire';
@@ -385,7 +385,7 @@ function moveRetreat(g: GGame, b: GBattle, u: GUnit, to: number) {
     const die = roll(g), sn = moraleSn(quality(u), { disordered: u.disorder > 0, unsupplied: u.unsupplied });
     if (!ok(die, sn)) { say(g, `${u.name} retreats through the minefield and loses a step (${die} vs ${sn}).`); u.str--; if (u.str <= 0) { eliminate(g, u); b.retreat!.moved = true; return; } }
   }
-  u.area = to; if (b.retreat!.after !== 'sa') u.disorder = 1; u.reserve = false; b.retreat!.moved = true;           // 8.24: no disorder
+  u.area = to; if (b.retreat!.after !== 'sa') u.disorder = 1; dropReserve(g, u); b.retreat!.moved = true;           // 8.24: no disorder
   updateControl(g, from); updateControl(g, to); say(g, `${u.name} retreats to ${to}.`);
 }
 export function chooseRetreat(g: GGame, b: GBattle, to: number) {
@@ -502,7 +502,7 @@ export const reinforceOptions = (g: GGame, b: GBattle) => {
 export function defenderReinforceSA(g: GGame, b: GBattle, unitId: string, chitId?: string) {
   if (!reinforceOptions(g, b).includes(unitId)) throw new Error('that unit cannot reinforce this battle');
   spendSA(g, other(b.attacker), 'reinforce a battle (8.23)', chitId); b.locked = true;
-  const u = unit(g, unitId), from = u.area!; u.area = b.area; u.reserve = false; updateControl(g, from);
+  const u = unit(g, unitId), from = u.area!; u.area = b.area; dropReserve(g, u); updateControl(g, from);
   say(g, `${u.name} reinforces the battle in ${b.area}.`);
 }
 /** Withdraw from a battle that has not rolled yet, returning its assets (not once a Special Action or event was spent on it). */

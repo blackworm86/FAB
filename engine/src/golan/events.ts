@@ -4,7 +4,7 @@
 // alternate set-up placement (22.24/22.25). Each function checks the rule's conditions and throws a plain-language error.
 import { ASSEMBLY, ENTRY, HERMON, area, connection, eastOfSam, edgeKey, enemyOf, isAssembly, neighbors, type GSide } from './map';
 import { onReconFlies } from './battle';
-import { chit, contested, count, inSupply, isNight, onMap, roll, spendSA, unit, updateControl, type GChit, type GGame, type GUnit } from './game';
+import { chit, contested, count, dropReserve, inSupply, isNight, onMap, roll, spendSA, unit, updateControl, type GChit, type GGame, type GUnit } from './game';
 
 const log = (g: GGame, text: string) => g.log.push({ turn: g.turn, side: g.player, phase: g.phase, text });
 const need = (cond: unknown, msg: string) => { if (!cond) throw new Error(msg); };
@@ -228,7 +228,7 @@ export const reserveEligible = (g: GGame, u: GUnit) => u.box === 'map' && !u.kin
 export function setReserve(g: GGame, unitId: string, on: boolean) {
   const u = unit(g, unitId);
   need((g.phase === 'movement' && u.side === g.player && !u.movedThisPhase) || (g.phase === 'deploy' && u.side === 'syrian'), 'reserve markers are placed in your Operational Movement Phase');
-  if (!on) { if (u.reserve) { u.reserve = false; g.reserveMarkers[u.side]++; } return; }
+  if (!on) { dropReserve(g, u); return; }
   need(reserveEligible(g, u), 'only supplied units in good order in uncontested areas (14.7)');
   need(g.reserveMarkers[u.side] > 0, 'no reserve marker left'); u.reserve = true; g.reserveMarkers[u.side]--;
 }
@@ -237,7 +237,7 @@ export function unitFieldWorks(g: GGame, unitId: string) {
   const u = unit(g, unitId);
   need(['movement', 'reaction', 'btMove'].includes(g.phase) && !u.movedThisPhase && !u.kind && u.disorder === 0 && !u.unsupplied, 'a supplied unit in good order that has not moved');
   need(u.box === 'map' && !isAssembly(u.area!) && !contested(g, u.area!) && !g.fieldWorks.includes(u.area!) && !onMap(g, u.area!).some((x) => x.kind === 'strongpoint'), 'an uncontested area without field works or a strongpoint');
-  g.fieldWorks.push(u.area!); u.movedThisPhase = true; u.reserve = false; log(g, `${u.name} digs in at ${u.area} (5.23).`);
+  g.fieldWorks.push(u.area!); u.movedThisPhase = true; dropReserve(g, u); log(g, `${u.name} digs in at ${u.area} (5.23).`);
 }
 
 /* ---------- 4.1a: the reusable Special Action was not used last turn: bring one used asset back to the Available Box ---------- */

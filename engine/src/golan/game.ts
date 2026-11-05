@@ -59,7 +59,7 @@ type Setup = { units: { id: string; area?: number; box?: string }[]; reduced?: R
   reserve?: { syrian?: string[] }; turns: number };
 const UNITS = unitsJson as unknown as RawUnit[], COUNTERS = countersJson as unknown as RawChit[];
 const SETUPS = setupsJson as unknown as Record<string, Setup>;
-const TRACK = (trackJson as unknown as { turns: Record<string, { night: boolean; draws: Record<GSide, [number, number]>; suddenDeath: Record<GSide, number> | null }> }).turns;
+const TRACK = (trackJson as unknown as { turns: Record<string, { name: string; night: boolean; draws: Record<GSide, [number, number]>; suddenDeath: Record<GSide, number> | null }> }).turns;
 const NOT_CHITS = new Set(['minefield', 'marker', 'reserve_marker', 'marker_control', 'field_works', 'marker_at_ditch_bridged']);
 
 /* ---------- dice: a serialisable mulberry32 state, so a saved game replays the same rolls ---------- */
@@ -156,6 +156,14 @@ export function moveOptions(g: GGame, id: string): GReach[] {
   if (g.phase === 'reaction' && u.reserve) return reachable(asMover(u), moveCtx(g)).filter((r) => contested(g, r.area) || count(g, r.area)[enemyOf(u.side)] === 0);
   return [];
 }
+/** A reserve marker comes off a unit and goes back to its holding box. */
+export function dropReserve(g: GGame, u: GUnit) { if (u.reserve) { u.reserve = false; g.reserveMarkers[u.side]++; } }
+/** 5.4: carry out a strategic move (the reserve marker goes back to the holding box). */
+export function stratMove(g: GGame, id: string, to: number) {
+  const u = unit(g, id); if (!stratOptions(g, id).includes(to)) throw new Error(`${u.name} cannot strat-move to ${to}`);
+  const from = u.area!; u.area = to; dropReserve(g, u); u.movedThisPhase = true;
+  updateControl(g, to); updateControl(g, from); say(g, `${u.name} strat-moves to ${to}.`);
+}
 export const stratOptions = (g: GGame, id: string) => { const u = unit(g, id); return g.phase === 'strategic' && u.reserve && !u.unsupplied && u.side === g.player ? stratReachable(asMover(u), moveCtx(g)) : []; };
 
 /** Move a unit along a chosen path (or the cheapest one to `to`). Minefield checks and commando raid rolls happen on the way. */
@@ -188,7 +196,7 @@ export function move(g: GGame, id: string, to: number, path?: number[]) {
   for (const l of priced.limited) if (!g.crossed.includes(l)) g.crossed.push(l);
   if (u.area != null && !isAssembly(u.area) && area(u.area).syria === false && !isAssembly(at) && area(at).syria && u.side === 'israeli' && !g.purpleLineCrossed) purpleLineCrossed(g);
   if (count(g, at)[enemyOf(u.side)] > 0 && !onMap(g, at).some((x) => x.revealed)) u.from = route[route.indexOf(at) - 1];
-  u.area = at; u.movedThisPhase = true; u.reserve = false; u.saMove = false; if (g.phase === 'btMove') u.exploit = false;                                  // 5.21: the marker goes when the unit moves
+  u.area = at; u.movedThisPhase = true; dropReserve(g, u); u.saMove = false; if (g.phase === 'btMove') u.exploit = false;                                  // 5.21: the marker goes when the unit moves
   evacuateStrongpoints(g, route[0], u);
   updateControl(g, at);
   say(g, `${u.name} moves to ${at}.`);
@@ -349,7 +357,7 @@ function supplyPhase(g: GGame) {
     u.str--; if (u.str <= 0) eliminate(g, u); say(g, `${u.name} is unsupplied and loses a step (${die}).`);
   }
   for (const a of [...g.fieldWorks]) if (contested(g, a)) g.fieldWorks = g.fieldWorks.filter((x) => x !== a);           // 9.5
-  g.riverAssault = []; g.units.forEach((u) => { u.exploit = false; if (u.side !== g.player) u.reserve = false; });
+  g.riverAssault = []; g.units.forEach((u) => { u.exploit = false; if (u.side !== g.player) dropReserve(g, u); });
   if (g.player === 'israeli') {                                                                   // 16.31b: interdiction lasts to the second player's Supply Phase
     for (const k of Object.keys(g.interdicted)) delete g.interdicted[+k];
     for (const c of g.chits) if (c.mission === 'interdiction' && c.box === 'map') { c.box = 'used'; c.area = undefined; c.mission = undefined; }
@@ -358,7 +366,7 @@ function supplyPhase(g: GGame) {
   for (const c of g.chits) if (c.stand && c.kind === 'engineer' && c.box === 'map') { c.box = 'used'; c.area = undefined; c.stand = undefined; }
 }
 export function eliminate(g: GGame, u: GUnit) {
-  u.box = 'eliminated'; u.area = null;
+  dropReserve(g, u); u.box = 'eliminated'; u.area = null;
   if (u.max >= 3 && !u.kind) g.eliminatedLarge[u.side]++;                                       // 19.2
 }
 
