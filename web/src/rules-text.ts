@@ -62,6 +62,25 @@ German engineers work in their own army's zone (14.52); an army without its engi
 • If the unit's next move is by a friendly Special Action (8.21, 8.23, 8.24), the marker is removed with no effect.`],
   event_bodenplatte: ['Operation Bodenplatte', `Admin Phase (17.14): roll one die for each Air Mission in the Allied Available Box: 1-5 = no effect, 6-9 = delayed (back to the cup), 10 = eliminated (Player Aid D; the Play Book numbers the die the other way round, with a typo).`],
   event_delayed_response: ['Delayed Response', `No effect (17.34): when drawn it goes straight to the Eliminated Box, and it still counts as one of your draws. It cannot be used for the alternate use (4.21).`],
+  /* ---- Golan '73 (Vol. III): rule numbers from its exclusive rules ---- */
+  commando: ['Commando battalion (16.11)', `Admin Phase: land in a vacant Israeli-controlled area next to a Syrian-occupied one. The first Israeli unit entering rolls: 1–2 the raid succeeds, 3–5 partly (the commandos do not fire back), 6+ the helicopters are shot down.
+• It stands like a defended roadblock and must be fought; a Syrian unit entering relieves it (back to the Used Box).
+• In a battle it is a Syrian battle asset (infantry class).`],
+  sam: ['SAM battery (16.12)', `When an Israeli air mission is flown east of the SAM barrier, Syria may fire one SAM: shot down on a 1; the mission is cancelled on a low roll (the threshold falls as the war goes on).
+• Used SAMs roll for reduction each Reinforcement Phase (6+: one is eliminated). The first three losses each release an Israeli air asset (16.23).`],
+  'golan:air_mission': ['Air support (16.3)', `Combat: fires as artillery or supports one unit (+1 Syrian, +2 Israeli). Israel may commit two (one of each) only west of the SAM barrier or when no SAM is available (16.22).
+• Admin Phase: interdiction over an area (+1 MP to enter and leave until the second player's Supply Phase) or reconnaissance (the enemy blocks there are shown).
+• Never on the night turn (14.03). Israeli missions east of the SAM barrier may be answered by a SAM.`],
+  'golan:event_release': ['Strategic Reserve released (17.11)', `Admin Phase: the named brigade is released; it arrives next Reinforcement Phase at a Syrian entry area.`],
+  event_ssm_strike: ['SSM strike (17.12)', `Admin Phase: each Israeli air asset in the Available Box goes back to the cup on a roll of 1–2.`],
+  event_arriving_battalion: ['Arriving battalion (17.21)', `Admin Phase, to its brigade: +2 steps to one supplied unit, +1 to each of two, or an eliminated unit back with 2 steps in an Assembly area (and off the eliminated-units VP track).`],
+  event_dugman5: ['Operation Dugman 5 (17.22)', `Played when drawn: one die per SAM in the Available Box. 1: destroyed (an Israeli air asset is released). 2–3: back to the cup. 10: an Israeli air asset is lost.`],
+  event_lt_zvika: ['Lt. Zvika Greengold (17.23)', `Admin Phase: an elite armor defended roadblock in an empty Israeli-controlled area. It stays until destroyed and may be reinforced by a Special Action.`],
+  event_king_hassan: ["King Hassan's Troublemakers (17.24)", `Admin Phase: for the rest of the game the Moroccan brigade fires only in defence and never enters an Israeli-controlled area.`],
+  replacement_mech: ['Mechanized replacement (17.32)', `Admin Phase: one step to a supplied reduced mech or infantry-class unit, even in a contested area; elite steps allowed.`],
+  event_ew: ['Electronic warfare (17.33)', `Battle set-up, before the Defender assigns anything: the Attacker jams the defence. Each defending unit rolls: 5 or less, disordered. The Defender may answer with his own EW card (+2 to each roll). If every defender is disordered, no defending assets, air or SAMs.`],
+  event_counterbattery: ['Counterbattery (17.34)', `Battle set-up, as the side's one event: after the enemy artillery fires, roll. 1–5: one enemy artillery asset goes that many turns down the track, then straight back to the Available Box.`],
+  garrison: ['Garrison (16.24)', `A standing asset in its area: it defends like a defended roadblock, alone or beside Israeli units. It is destroyed by a hit or when the units leave it behind in a retreat.`],
   air_mission: ['Allied Air Mission', `One of three missions (17.21), then it goes to the Eliminated Box. It may be played on unsupplied areas.
 • Combat support: the battle's one event; either fires as artillery (outside the artillery limit), or gives +2 to one Allied unit's Success Number. It cannot take a step-loss.
 • Interdiction (Admin): mark an area; Germans pay +1 MP to enter AND to leave it and may not strat-move through it, until the Supply Phase.

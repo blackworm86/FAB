@@ -1,7 +1,7 @@
 # FAB – Fast Action Battles (online)
 
 Browser version of the tabletop wargame series **FAB – Fast Action Battles**.
-Planned entries: 1) *The Bulge* (first), 2) TBD, 3) TBD.
+Volumes: 1) *The Bulge* (playable), 2) *Sicily* (planned), 3) *Golan '73* (playable). One rules engine and one interface serve them all (docs/design/one-engine.md).
 
 ## Source material (add here)
 

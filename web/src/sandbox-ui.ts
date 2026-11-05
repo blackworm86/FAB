@@ -12,6 +12,7 @@ export interface SbCtx {
   g: E.Game; selUnit: string | null; selChit: string | null; selArr: string | null; selArea: number | null; previewArea: number | null; rollView: unknown;
   ABBR: Record<string, string>; actorNow: () => E.Side | 'both'; areaName: (a: number) => string; b3: (face: string, side: E.Side | 'british', chit?: boolean) => string;
   chitImg: (c: E.Chit) => string; unitFace: (u: E.Unit) => string; unitPic: (u: E.Unit) => string; chitPic: (c: E.Chit) => string; hist: History<E.Game>; optChooser: (o: Partial<E.Opts>) => string; refresh: () => void; render: () => void; save: () => void; say: (t: string) => void;
+  scenarios: { id: string; name: string }[]; defaultOpts: Partial<E.Opts>; optional: boolean;
   reg: (f: () => void) => string; regv: (f: (v: string) => void) => string; ubtn: (label: string, f: () => void, cls?: string, dis?: boolean, title?: string) => string;
 }
 let M: SbCtx; let unitPic: SbCtx['unitPic'], chitPic: SbCtx['chitPic'], ABBR: SbCtx['ABBR'], actorNow: SbCtx['actorNow'], areaName: SbCtx['areaName'], b3: SbCtx['b3'], chitImg: SbCtx['chitImg'], unitFace: SbCtx['unitFace'], hist: SbCtx['hist'], refresh: SbCtx['refresh'], render: SbCtx['render'], save: SbCtx['save'], say: SbCtx['say'], reg: SbCtx['reg'], regv: SbCtx['regv'], ubtn: SbCtx['ubtn'];
@@ -28,7 +29,7 @@ export function sbx(f: () => void) { const r = hist.run(M.g, f); M.g = r.game; i
 const sbtn = (label: string, f: () => void, cls = '', title = '') => ubtn(label, () => sbx(f), cls, false, title);
 const sbSel = (opts: [string, string][], cur: string, f: (v: string) => void) => `<select data-sel="${regv((v) => { f(v); render(); })}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
 const sbChk = (label: string, on: boolean, f: (v: boolean) => void) => `<label class="sbchk"><input type="checkbox" ${on ? 'checked' : ''} data-sel="${regv((v) => sbx(() => f(v === 'on')))}"> ${esc(label)}</label>`;
-const SEATS: [DevSeat, string][] = [['both', 'Both'], ['german', 'German'], ['allied', 'Allied'], ['watch', 'Watch']];
+const SEATS = (): [DevSeat, string][] => [['both', 'Both'], ...E.VOLUME.sides.map((s): [DevSeat, string] => [s, nm(s)]), ['watch', 'Watch']];
 /** Hotseat: one screen, two players. The seat follows whoever has to act; between players a cover hides the hidden blocks until the next player taps. */
 export function hotWant(): E.Side | null {
   if (!SANDBOX || !st.sbHot || M.g.over) return null;
@@ -46,7 +47,7 @@ export function hotCoverHtml() {
 }
 export function sbReset(opts: Partial<E.Opts>) {
   if (!confirm('Reset the sandbox and start a new game from the first turn?')) return;
-  M.g = E.newGame(undefined, { fuel: true, ...st.rules, ...opts }); hist.clear(); st.sbPlace = null; M.selUnit = M.selChit = M.selArr = null; M.selArea = null; M.previewArea = null; M.rollView = null;
+  M.g = E.newGame(undefined, { ...M.defaultOpts, ...st.rules, ...opts }); hist.clear(); st.sbPlace = null; M.selUnit = M.selChit = M.selArr = null; M.selArea = null; M.previewArea = null; M.rollView = null;
   if (st.sbHot) { setDevSeat(M.g.phasing); st.hotCover = M.g.phasing; }
   save(); refresh();
 }
@@ -62,15 +63,15 @@ function sbTarget(): SB.Target {
 }
 function sbTurn() {
   const turns = Array.from({ length: M.g.lastTurn }, (_, i) => [String(i + 1), `Turn ${i + 1}`] as [string, string]);
-  return `<h4>Jump to</h4><div class="row">${sbSel(turns, String(sbJump.turn), (v) => { sbJump.turn = +v; })}${sbSel([['german', 'German'], ['allied', 'Allied']], sbJump.side, (v) => { sbJump.side = v as E.Side; })}</div>
+  return `<h4>Jump to</h4><div class="row">${sbSel(turns, String(sbJump.turn), (v) => { sbJump.turn = +v; })}${sbSel(E.VOLUME.sides.map((x): [string, string] => [x, nm(x)]), sbJump.side, (v) => { sbJump.side = v as E.Side; })}</div>
     <div class="row">${sbSel(SB.PHASES, sbJump.phase, (v) => { sbJump.phase = v as E.Phase; })}${sbtn(`${ico('next')} Go`, () => SB.jump(M.g, sbJump.turn, sbJump.side, sbJump.phase), 'primary', 'Start of that phase: battles, moves and per-phase marks cleared')}</div>
     <p class="hint">Now: turn ${M.g.turn}, ${nm(M.g.phasing)}, ${esc(SB.PHASES.find((x) => x[0] === M.g.phase)?.[1] ?? M.g.phase)}${M.g.battle ? `, battle in ${esc(areaName(M.g.battle.area))} (${M.g.battle.stage})` : ''}.</p>
     <h4>Hotseat</h4><label class="sbchk"><input type="checkbox" ${st.sbHot ? 'checked' : ''} data-sel="${regv((v) => { st.sbHot = v === 'on'; try { localStorage.setItem('fab-hotseat', st.sbHot ? '1' : '0'); } catch { /* private mode */ } if (st.sbHot) { st.sbAuto = true; st.hotCover = hotWant() ?? M.g.phasing; } render(); })}"> Two players on this screen: the seat follows whoever acts, with a cover between players</label>
-    <h4>Seat</h4><div class="chips">${SEATS.map(([k, l]) => ubtn(l, () => { setDevSeat(k); M.selUnit = M.selChit = M.selArr = null; M.previewArea = null; refresh(); }, online.devSeat === k ? 'on' : '')).join('')}</div>
+    <h4>Seat</h4><div class="chips">${SEATS().map(([k, l]) => ubtn(l, () => { setDevSeat(k); M.selUnit = M.selChit = M.selArr = null; M.previewArea = null; refresh(); }, online.devSeat === k ? 'on' : '')).join('')}</div>
     <label class="sbchk"><input type="checkbox" ${st.sbAuto ? 'checked' : ''} data-sel="${regv((v) => { st.sbAuto = v === 'on'; render(); })}"> Skip empty phases like a real game</label>
     <h4>Dice</h4><div class="row authform"><input id="sb-dice" class="grow" placeholder="Next results, e.g. 1 1 9" aria-label="Next die results">${sbtn('Queue', () => { const v = (($('#sb-dice') as HTMLInputElement)?.value ?? '').split(/[^0-9]+/).filter(Boolean).map(Number).map((x) => (x === 0 ? 10 : x)).filter((x) => x >= 1 && x <= 10); M.g.force = [...(M.g.force ?? []), ...v]; })}</div>
     <p class="hint">${M.g.force?.length ? `Queued: <b>${M.g.force.join(' ')}</b> ${sbtn('Clear', () => { M.g.force = []; })}` : 'No dice queued: rolls come from the seed.'}</p>
-    <h4>Table</h4><div class="row">${sbtn(`${ico('trash')} Clear map`, () => SB.clearMap(M.g), '', 'Every block off the map')}${ubtn(`${ico('undo')} Reset: Nuts!`, () => sbReset({ scenario: 'intro' }))}${ubtn(`${ico('undo')} Reset: 5-turn game`, () => sbReset({ scenario: 'tournament' }))}${ubtn(`${ico('undo')} Reset: campaign`, () => sbReset({ scenario: 'campaign' }))}${ubtn(`${ico('undo')} Reset: Cold Shoulder`, () => sbReset({ scenario: 'cold' }))}</div>${M.optChooser(st.rules)}`;
+    <h4>Table</h4><div class="row">${sbtn(`${ico('trash')} Clear map`, () => SB.clearMap(M.g), '', 'Every block off the map')}${M.scenarios.map((sc) => ubtn(`${ico('undo')} Reset: ${esc(sc.name)}`, () => sbReset({ scenario: sc.id }))).join('')}</div>${M.optional ? M.optChooser(st.rules) : ''}`;
 }
 /* The piece library: every block and chit with its printed art, a search box and filters. */
 let lbSide: 'all' | E.Side = 'all', lbType = 'all', lbWhere = 'all';
@@ -86,7 +87,7 @@ function sbLibrary() {
   const tiles = [...us.sort((a, b) => a.name.localeCompare(b.name)).map((u) => tile(`${u.name} ${u.code ?? ''} ${u.id} ${u.side} ${u.cls} block unit ${u.q.join(' ')}`, unitFace(u), u.name, u.area != null ? areaName(u.area) : whereOfU(u) === 'eliminated' ? 'eliminated' : u.arrival ? `turn ${u.arrival}` : 'off map', M.selUnit === u.id, () => { M.selUnit = u.id; M.selChit = null; M.selArea = u.area ?? M.selArea; refresh(); }, u.side, !u.garrison)),
     ...cs.map((c) => tile(`${c.name} ${c.kind} ${c.id} ${c.side} ${ABBR[c.kind] ?? ''} chit`, chitImg(c), c.name, `${c.box}${c.turn != null && c.box === 'future' ? ' t' + c.turn : ''}`, M.selChit === c.id, () => { M.selChit = c.id; M.selUnit = null; refresh(); }, c.side, c.kind === 'sa_block'))];
   return `<div class="authform lbsearch"><input id="lb-q" class="grow" placeholder="Search: name, unit, kind (e.g. Peiper, artillery, 116)" value="${esc(st.sbFilter)}" aria-label="Search pieces"></div>
-    <div class="chips lbf">${(['all', 'german', 'allied'] as const).map((s) => fchip(s === 'all' ? 'Both sides' : nm(s), lbSide === s, () => { lbSide = s; })).join('')}</div>
+    <div class="chips lbf">${(['all', ...E.VOLUME.sides] as const).map((s) => fchip(s === 'all' ? 'Both sides' : nm(s), lbSide === s, () => { lbSide = s; })).join('')}</div>
     <div class="chips lbf">${[['all', 'All'], ['blocks', 'Blocks'], ['assets', 'Assets'], ['events', 'Events']].map(([k, l]) => fchip(l, lbType === k, () => { lbType = k; })).join('')}</div>
     <div class="chips lbf">${WHERE.map(([k, l]) => fchip(l, lbWhere === k, () => { lbWhere = k; })).join('')}</div>
     <div class="lbgrid">${tiles.join('') || '<p class="hint">Nothing matches.</p>'}</div>`;
@@ -95,7 +96,7 @@ function sbLibrary() {
 function sbDetail() {
   const u = M.selUnit ? M.g.units.find((x) => x.id === M.selUnit) : null, c = !u && M.selChit ? M.g.chits.find((x) => x.id === M.selChit) : null;
   if (u) {
-    const res: [string, string][] = [['', 'No reserve'], ...(u.side === 'german' ? ['z5', 'z6', 'z7'] : ['z56', 'z7']).map((z) => [z, `Reserve ${z.slice(1)}`] as [string, string])];
+    const res: [string, string][] = [['', 'No reserve'], ...Object.keys(M.g.markers[u.side] ?? {}).map((z) => [z, z === 'res' ? 'Reserve' : `Reserve ${z.slice(1)}`] as [string, string])];
     return `<div class="lbd">${unitPic(u)}<div><b>${esc(u.name)}</b><small>${nm(u.side)} ${u.cls} · ${esc(u.q.join('/'))} · ${u.area != null ? esc(areaName(u.area)) : 'off the map'}</small>
       <div class="row">${sbtn(ico('minus'), () => { u.str = Math.max(1, u.str - 1); }, 'ico', 'One step less')}<b>${u.str}/${u.max}</b>${sbtn(ico('plus'), () => { u.str = Math.min(u.max, u.str + 1); }, 'ico', 'One step more')}
       ${ubtn(`${ico('next')} ${u.area != null ? 'Move' : 'Place'}`, () => { st.sbPlace = u.id; }, 'primary', false, 'Then tap an area')}${u.area != null ? sbtn(ico('trash'), () => SB.lift(M.g, u.id), 'ico', 'Take off the map') : ''}${ubtn(ico('close'), () => { M.selUnit = null; refresh(); }, 'ico', false, 'Deselect')}</div></div></div>
@@ -109,9 +110,9 @@ function sbDetail() {
   }
   if (M.selArea != null) {
     const a = M.selArea;
-    return `<div class="lbd area"><div><b>${esc(areaName(a))} (${a})</b><div class="row">${sbSel([['', 'Nobody holds it'], ['german', 'German control'], ['allied', 'Allied control']], M.g.control[a] ?? '', (v) => sbx(() => { if (v) M.g.control[a] = v as E.Side; else delete M.g.control[a]; }))}
+    return `<div class="lbd area"><div><b>${esc(areaName(a))} (${a})</b><div class="row">${sbSel([['', 'Nobody holds it'], ...E.VOLUME.sides.map((x): [string, string] => [x, `${nm(x)} control`])], M.g.control[a] ?? '', (v) => sbx(() => { if (v) M.g.control[a] = v as E.Side; else delete M.g.control[a]; }))}
       ${E.contested(M.g, a) && !M.g.battle ? sbtn(`${ico('burst')} Battle here`, () => { E.startBattle(M.g, a); }, 'primary') : ''}${ubtn(ico('close'), () => { M.selArea = null; refresh(); }, 'ico', false, 'Deselect')}</div>
-      <div class="row">${sbChk('Field works', M.g.fieldWorks.includes(a), (v) => { M.g.fieldWorks = M.g.fieldWorks.filter((x) => x !== a); if (v) { M.g.fieldWorks.push(a); M.g.fwOwner[a] = M.g.control[a] ?? 'allied'; } })}${sbChk('River assault', M.g.riverAssault.includes(a), (v) => { M.g.riverAssault = M.g.riverAssault.filter((x) => x !== a); if (v) M.g.riverAssault.push(a); })}</div>
+      <div class="row">${sbChk('Field works', M.g.fieldWorks.includes(a), (v) => { M.g.fieldWorks = M.g.fieldWorks.filter((x) => x !== a); if (v) { M.g.fieldWorks.push(a); M.g.fwOwner[a] = M.g.control[a] ?? E.VOLUME.sides[1]; } })}${sbChk('River assault', M.g.riverAssault.includes(a), (v) => { M.g.riverAssault = M.g.riverAssault.filter((x) => x !== a); if (v) M.g.riverAssault.push(a); })}</div>
       <div class="lbrow">${E.unitsIn(M.g, a).map((x) => `<button class="lbt ${x.side}" data-u="${esc(x.id)}" title="${esc(x.name)}">${unitPic(x)}<small>${esc(x.name)}</small></button>`).join('')}</div></div></div>`;
   }
   return '<p class="hint">Tap a piece below or a block or area on the map.</p>';

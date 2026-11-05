@@ -1,22 +1,19 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
-import mapJson from '../../data/bulge/map.json';
 import * as E from '../../engine/src';
-import { labelSvg } from './art';
-import { chitSvg, mapMarkerSvg, loadChitArt, garrisonChit } from './chits';
+import { loadChitArt, garrisonChit } from './chits';
+import { useVolume, type LabelBox } from './vol';
+import type { PanelCtx } from './golan-ui';
 import { History } from './history';
 import * as SB from './sandbox';
 import { vpStrip, vpSheet, endPanel } from './score';
 import * as SBU from './sandbox-ui';
-import { online, startOnline, push, sit, sendChat, setChatListener, type ChatMsg, setDevSeat, auth, lobby, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, SANDBOX, TUTORIAL, type DevSeat, type Match } from './online';
+import { online, startOnline, push, sit, sendChat, setChatListener, type ChatMsg, setDevSeat, auth, lobby, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, SANDBOX, TUTORIAL, seatOf, seatName, type DevSeat, type Match } from './online';
 import { gameInfo, GAMES } from './games';
 import { coverArt, BOXES, boxFront, boxSpine } from './covers';
 import { ICONS, ico } from './icons';
 import { esc, nm } from './util';
 import { drawLabel, drawEntry, drawRestricted } from './board-art';
-import labelsJson from '../../data/bulge/labels.json';
-type LabelBox = { mode: string; x: number; y: number; w: number; h: number; px: number; py: number; pr: number };
-const LAB = labelsJson as unknown as Record<string, LabelBox>;
 import { targetsFor, type Tgt } from './chit-play';
 import { snap, diffFx, FxLayer, fxRow, FX_SAMPLES, type Fx } from './fx';
 import { RULE, ruleHtml } from './rules-text';
@@ -25,14 +22,17 @@ import { initTouch } from './touch';
 import { throwDice, clearDice, type DiceGroup } from './dice3d';
 import { initTutorial } from './tutorial';
 import { loadRelief, type Relief } from './relief';
-import zonesJson from '../../data/bulge/zones.json';
 
-type MapArea = { id: number; label: [number, number]; polygon: [number, number][] };
-type MapEntry = { letter: string; x: number; y: number; side: E.Side };
-type MapConn = { a: number; b: number; marker: [number, number] | null };
-const MAP = mapJson as unknown as { size: [number, number]; areas: MapArea[]; connections: MapConn[]; entries: MapEntry[] };
-// World unit = 1 cm. The scan is the full 34 x 22 in map (86.36 x 55.88 cm) at 2448 x 1584 px.
-const [MW, MH] = MAP.size, S = 2448 / 86.36;                                  // map pixels per cm
+/* ---------- which game this page shows ---------- */
+const PARAMS = new URLSearchParams(location.search), GAME_PARAM = PARAMS.get('game');
+const KEY0 = TUTORIAL ? 'fab-tutorial' : SANDBOX ? 'fab-sandbox' : TABLE === 'main' ? 'fab-demo2' : `fab-demo2-${TABLE}`, KEY = GAME_PARAM && GAME_PARAM !== 'bulge' ? `${KEY0}-${GAME_PARAM}` : KEY0;
+function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif && x.roadblocks && x.pendingArrivals && x.fwOwner && Array.isArray(x.recover) ? x : null; } catch { return null; } }
+/** The volume (docs/design/one-engine.md): the address says which game, else the game saved for this table, else The Bulge. A shared table of another game reloads the page with its game. */
+const VOL = useVolume(TUTORIAL ? 'bulge' : GAME_PARAM ?? load()?.game ?? 'bulge');
+const [P1, P2] = VOL.sides, first = (sd: string) => sd === P1;
+const MAP = VOL.map, LAB: Record<string, LabelBox> = VOL.labels;
+// World unit = 1 cm. Every FAB map is the full 34 x 22 in sheet (86.36 x 55.88 cm); the drawing's width gives the pixels per cm.
+const [MW, MH] = MAP.size, S = MW / 86.36;                                    // map pixels per cm
 const toWorld = (x: number, y: number) => new THREE.Vector3(x / S - MW / (2 * S), 0, y / S - MH / (2 * S));
 /** Pole of inaccessibility: the point inside the polygon farthest from its edges, so pieces sit visually centred. */
 function pole(poly: [number, number][]): [number, number] {
@@ -75,10 +75,10 @@ const areaName = (a: number) => E.areas.get(a)!.name;
 
 /* ---------- state ---------- */
 let tut: ReturnType<typeof initTutorial> | null = null;
-const KEY = TUTORIAL ? 'fab-tutorial' : SANDBOX ? 'fab-sandbox' : TABLE === 'main' ? 'fab-demo2' : `fab-demo2-${TABLE}`;
-function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif && x.roadblocks && x.pendingArrivals && x.fwOwner && Array.isArray(x.recover) ? x : null; } catch { return null; } }
-let g: E.Game = load() ?? E.newGame();
-let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, previewArea: number | null = null, hoverArea: number | null = null, newOpts: E.Opts = { scenario: 'tournament', fuel: true };
+let g: E.Game = (() => { const s = load(); return s && (s.game ?? 'bulge') === VOL.id ? s : E.newGame(undefined, VOL.defaultOpts); })();
+let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, previewArea: number | null = null, hoverArea: number | null = null, newOpts: E.Opts = { scenario: VOL.defaultOpts.scenario ?? 'tournament', fuel: !!VOL.defaultOpts.fuel };
+/** A prompt of the volume asked for an area (an air assault landing): the legal ones light up, a tap runs it. */
+let areaPick: { label: string; areas: Set<number>; run: (a: number) => void } | null = null;
 let applyingRemote = false;
 const save = () => { if (heldNext) return;                                                       // a roll is on screen: its result is already saved; the board shown is older and must not be written back
    try { localStorage.setItem(KEY, JSON.stringify(g)); } catch { /* storage off: the game still runs */ } if (!applyingRemote) void push(g); };
@@ -101,8 +101,8 @@ board.rotation.x = -Math.PI / 2; board.receiveShadow = true; scene.add(board);
 const boardCv = document.createElement('canvas'); boardCv.width = MW * 2; boardCv.height = MH * 2;
 const boardTex = new THREE.CanvasTexture(boardCv); boardTex.colorSpace = THREE.SRGBColorSpace; boardTex.anisotropy = 8;
 const loadImg = (src: string) => { const i = new Image(); i.onload = () => paintBoard(); i.src = src; return i; };
-const vpIcons = { allied: loadImg('./icons/vp-allied.svg'), german: loadImg('./icons/vp-german.svg'), mutual: loadImg('./icons/vp-mutual.svg') };
-const baseImg = loadImg('./map-base.svg'), linesImg = loadImg('./map-lines.svg');
+const vpIcons: Record<string, HTMLImageElement> = Object.fromEntries(Object.entries(VOL.art.vpIcons).map(([k, src]) => [k, loadImg(src)]));
+const baseImg = loadImg(VOL.art.base), linesImg = loadImg(VOL.art.lines);
 /** The map drawings are turned into pixels once and reused: redrawing the detailed SVG on every colour change is what made phones stall. */
 const flat = new Map<HTMLImageElement, HTMLCanvasElement>();
 function pixels(im: HTMLImageElement): CanvasImageSource {
@@ -140,6 +140,7 @@ function applyMap3d() {
   paintBoard(); paintAreas();
 }
 function setMap3d(on: boolean) {
+  if (on && !VOL.art.relief) { map3d = false; say('This map has no 3D relief yet.'); return; }
   map3d = on; try { localStorage.setItem('fab-map3d', on ? '1' : '0'); } catch { /* storage off */ }
   if (on && !REL) { if (!relLoading) { relLoading = true; say('Loading the 3D map…', true); loadRelief(MW, MH, S, MAP.areas.map((x) => [LAB[x.id].x, LAB[x.id].y, LAB[x.id].w, LAB[x.id].h] as [number, number, number, number]), PHONE).then((r) => { REL = r; REL.patch(reliefMat, areaIdTex, tintTex); diorama.add(REL.props);
         const ground = new THREE.Mesh(REL.geometry, reliefMat); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; diorama.add(ground);
@@ -179,24 +180,15 @@ const labelTex = new Map<string, THREE.Texture>();
 const texQueue: [THREE.Texture, string][] = [];
 function pumpTextures() { for (let n = 0; n < 6 && texQueue.length; n++) { const [t, src] = texQueue.shift()!; const im = new Image(); im.onload = () => { t.image = im; t.needsUpdate = true; lastInput = performance.now(); }; im.src = src; } }
 const svgTex = (key: string, svg: string) => { if (!labelTex.has(key)) { const t = new THREE.Texture(); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; texQueue.push([t, 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)]); labelTex.set(key, t); } return labelTex.get(key)!; };
-const WOOD = { german: 0x8e9296, allied: 0x5d8a45 };
-const BRIT = new Set(['43 Inf', '53 Inf', 'Guards', '51 Inf']);
 
-/** Garrison and Task Force counters, drawn like the printed ones (area number, or turn and star). */
-function garrisonArt(u: E.Unit) {
-  if (u.id.startsWith('DR-') && u.chitId) return chitSvg(E.chit(g, u.chitId));                // 4.35: the engineer chit itself stands as the defended roadblock
-  if (u.heydte) return chitSvg({ kind: 'infantry_asset', name: 'v.d. Heydte', side: 'german', ech: 'de_sr', q: 'veteran', turn: null });
-  const tf = u.id.startsWith('TF-') ? E.chit(g, u.chitId!).turn : null;
-  return garrisonChit(tf != null ? 'Task Force' : u.name.replace('Garrison ', ''), tf != null ? `${tf}-*` : u.id.replace(/^G/, ''), tf == null);
-}
 function block(u: E.Unit, hidden = false) {
   const w = 1.6, h = 1.6, d = 0.8;                                    // 16 x 16 x 8 mm block
-  const wood = new THREE.MeshStandardMaterial({ color: BRIT.has(u.name) ? 0x3f6fb8 : WOOD[u.side], roughness: 0.75 });
+  const wood = new THREE.MeshStandardMaterial({ color: VOL.cssSide(u) === 'british' ? 0x3f6fb8 : VOL.wood[u.side], roughness: 0.75 });
   if (u.garrison) {
-    const chit = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new RoundedBoxGeometry(1.43, 0.12, 1.43, 2, 0.1), [chit, chit, new THREE.MeshStandardMaterial({ map: svgTex(u.id, garrisonArt(u)), roughness: 0.7 }), chit, chit, chit]);      // a counter, like the other chits // 9/16 in chit
+    const chit = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new RoundedBoxGeometry(1.43, 0.12, 1.43, 2, 0.1), [chit, chit, new THREE.MeshStandardMaterial({ map: svgTex(u.id, VOL.unitSvg(u, g)), roughness: 0.7 }), chit, chit, chit]);      // a counter, like the other chits // 9/16 in chit
     m.position.y = 0.06; m.castShadow = true; m.rotation.y = viewRot(); return m;
   }
-  const face = hidden ? wood : new THREE.MeshStandardMaterial({ map: svgTex(`${u.id}-${u.str}`, labelSvg(u)), roughness: 0.6 });   // upright blocks show their blank back to the enemy
+  const face = hidden ? wood : new THREE.MeshStandardMaterial({ map: svgTex(`${u.id}-${u.str}`, VOL.unitSvg(u, g)), roughness: 0.6 });   // upright blocks show their blank back to the enemy
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [wood, wood, wood, wood, face, wood]); m.rotation.y = viewRot();
   m.position.y = h / 2; m.castShadow = true;
   return m;
@@ -209,7 +201,7 @@ function disposeAll(group: THREE.Group) {
 }
 const tagTex = new Map<string, THREE.CanvasTexture>();
 function tag(text: string, bg: string, size = 1.1) {
-  const art = mapMarkerSvg(text);
+  const art = VOL.markSvg(text);
   if (art) {                                                         // printed marker art, drawn as a vector chit
     const key = 'art:' + text; let at = tagTex.get(key);
     if (!at) { at = new THREE.CanvasTexture(document.createElement('canvas')); const im = new Image(); im.onload = () => { const c = document.createElement('canvas'); c.width = c.height = 256; c.getContext('2d')!.drawImage(im, 0, 0, 256, 256); at!.image = c; at!.colorSpace = THREE.SRGBColorSpace; at!.anisotropy = 8; at!.needsUpdate = true; }; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(art); tagTex.set(key, at); }
@@ -224,10 +216,9 @@ function tag(text: string, bg: string, size = 1.1) {
 }
 /** Every counter is a 9/16 inch square (1.43 cm) with slightly rounded corners. */
 const CHIT = 1.43;
-const SIDE_HEX = { german: 0xb9bcc0, allied: 0x9db36a };
 /** A cardboard counter lying on the board: the chit's own printed art on a thin rounded square. */
 function chit3d(c: E.Chit) {
-  const edge = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new RoundedBoxGeometry(CHIT, 0.12, CHIT, 2, 0.1), [edge, edge, new THREE.MeshStandardMaterial({ map: svgTex('chit:' + c.id, chitSvg(c)), roughness: 0.7 }), edge, edge, edge]);
+  const edge = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new RoundedBoxGeometry(CHIT, 0.12, CHIT, 2, 0.1), [edge, edge, new THREE.MeshStandardMaterial({ map: svgTex('chit:' + c.id, VOL.chitSvg(c)), roughness: 0.7 }), edge, edge, edge]);
   m.castShadow = true; m.position.y = 0.06; m.rotation.y = viewRot(); return m;
 }
 /** The outline of an area pushed outwards by `d` (cm), as a flat ribbon of width `w` lying on the board. */
@@ -260,7 +251,7 @@ function discSprite(kind: 'x' | 'point', size: number) { disc(kind, size); const
  *  formation may reach past the area border. */
 /** How far the battle formation reaches from the area's pole (cm), on the deeper side. */
 function formationReach(b: E.Battle) {
-  return Math.max(...(['german', 'allied'] as E.Side[]).map((sd) => { const u = Math.max(1, Math.ceil(E.unitsIn(g, b.area, sd).length / 5)), n = b.assets[sd].length + (b.air[sd] ? 1 : 0), a = Math.ceil(n / 5); return 1.35 + u * 1.9 + (a ? 0.5 + a * 1.7 : 0); }), 5 * 1.95 / 2 + 1);
+  return Math.max(...VOL.sides.map((sd) => { const u = Math.max(1, Math.ceil(E.unitsIn(g, b.area, sd).length / 5)), n = b.assets[sd].length + E.airOf(b, sd).length, a = Math.ceil(n / 5); return 1.35 + u * 1.9 + (a ? 0.5 + a * 1.7 : 0); }), 5 * 1.95 / 2 + 1);
 }
 /** Panels over the battle (header at the top, report and hand at the bottom): the view is shifted so the battle sits in the clear band between them. */
 let viewShift = 0, clearRatio = 1;
@@ -275,7 +266,7 @@ function fitBattleView() {
   return clear / r.height;
 }
 function battleSpot(b: E.Battle, sd: E.Side, kind: 'unit' | 'asset', i: number, n: number) {
-  const base = toWorld(...POLE.get(b.area)!), dir = sd === 'german' ? 1 : -1, per = 5, row = Math.floor(i / per), inRow = Math.min(per, n - row * per), col = i % per;
+  const base = toWorld(...POLE.get(b.area)!), dir = first(sd) ? 1 : -1, per = 5, row = Math.floor(i / per), inRow = Math.min(per, n - row * per), col = i % per;
   const units = E.unitsIn(g, b.area, sd).length, unitRows = Math.max(1, Math.ceil(units / per));
   const depth = kind === 'unit' ? 1.35 + row * 1.9 : 1.35 + unitRows * 1.9 + 0.5 + row * 1.7;
   return { x: base.x + (col - (inRow - 1) / 2) * (kind === 'unit' ? 1.95 : 1.75), z: base.z + dir * depth };
@@ -283,9 +274,9 @@ function battleSpot(b: E.Battle, sd: E.Side, kind: 'unit' | 'asset', i: number, 
 /** The battle on the table: each side's assigned assets as cardboard counters in a row behind its blocks, with a red cross to take one back before the battle starts. */
 function drawBattleTable(b: E.Battle, spot: (id: number, x: number, z: number, r: number) => { x: number; z: number }) {
   const base = toWorld(...POLE.get(b.area)!);
-  for (const sd of ['german', 'allied'] as E.Side[]) {
+  for (const sd of VOL.sides) {
     const live = sd === b.attacker ? ['setup', 'attArty'] : ['setup', 'attArty', 'defArty'], spent = (arty: boolean) => arty && !live.includes(b.stage);
-    const all = [...b.assets[sd], ...(b.air[sd] ? [b.air[sd]!.id] : [])], ids = all.filter((id) => { const c = E.chit(g, id); return !spent(E.isArty(c) || (c.kind === 'air_mission' && b.air[sd]?.mode === 'arty')); }), dir = sd === 'german' ? 1 : -1;     // artillery leaves the table once it has fired
+    const airs = E.airOf(b, sd), all = [...b.assets[sd], ...airs.map((a) => a.id)], ids = all.filter((id) => { const c = E.chit(g, id); return !spent(E.isArty(c) || (c.kind === 'air_mission' && airs.find((a) => a.id === id)?.mode === 'arty')); }), dir = first(sd) ? 1 : -1;     // artillery leaves the table once it has fired
     ids.forEach((id, i) => {
       const m = chit3d(E.chit(g, id)), at = battleSpot(b, sd, 'asset', i, ids.length), x = at.x, z = at.z; void spot; m.userData.chit = id; m.position.set(x, 0.06, z); pieces.add(m);
       if (b.stage === 'setup' && mine(sd)) { const d = disc('x', 0.42); d.position.set(x + 0.5, 0.2, z - 0.5); d.userData.chit = id; pieces.add(d); }
@@ -297,7 +288,7 @@ function drawBattleTable(b: E.Battle, spot: (id: number, x: number, z: number, r
 function drawPointMarks(b: E.Battle) {
   for (const [uid, sd] of [[b.attPoint, b.attacker], [b.defPoint, other(b.attacker)]] as const) {                  // the point unit carries a gold target
     const o = pieces.children.find((x) => x.userData.unit === uid); const u = g.units.find((x) => x.id === uid); if (!o || !u || !seen(u)) continue; void sd;
-    const d = discSprite('point', 0.26), c = viewSide() === 'allied' ? -1 : 1; d.position.set(o.position.x + 0.58 * c, o.position.y > 0.6 ? 1.95 : 0.9, o.position.z - 0.58 * c); d.userData.anchor = uid; markers.add(d);                 // a back corner of the block, clear of its pips and symbol d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
+    const d = discSprite('point', 0.26), c = viewSide() === P2 ? -1 : 1; d.position.set(o.position.x + 0.58 * c, o.position.y > 0.6 ? 1.95 : 0.9, o.position.z - 0.58 * c); d.userData.anchor = uid; markers.add(d);                 // a back corner of the block, clear of its pips and symbol d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
   }
 }
 function drawPieces() {
@@ -329,10 +320,10 @@ function drawPieces() {
   for (const a of MAP.areas) {
     const us = E.unitsIn(g, a.id), base = toWorld(...POLE.get(a.id)!), cont = E.contestedAreas(g).includes(a.id); rows.set(a.id, { base, cont });
     const lab = us.length && g.battle?.area !== a.id ? labelSpots(a.id) : []; if (lab.length) taken.set(a.id, [...(taken.get(a.id) ?? []), ...lab]);
-    const order = [...us].sort((p, q) => +(p.side !== 'german') - +(q.side !== 'german') || +!!p.garrison - +!!q.garrison);
+    const order = [...us].sort((p, q) => +(p.side !== P1) - +(q.side !== P1) || +!!p.garrison - +!!q.garrison);
     const place = (column: boolean) => {                                                           // a row of blocks, or a column when the area is too narrow for a row
       const t = taken.get(a.id) ?? [], saved = [...t]; let tight = false;
-      const spots = order.map((u) => { const same = us.filter((x) => x.side === u.side), idx = column ? order.indexOf(u) - (order.length - 1) / 2 : same.indexOf(u) - (same.length - 1) / 2, row = u.side === 'german' ? 1.1 : -1.1;
+      const spots = order.map((u) => { const same = us.filter((x) => x.side === u.side), idx = column ? order.indexOf(u) - (order.length - 1) / 2 : same.indexOf(u) - (same.length - 1) / 2, row = first(u.side) ? 1.1 : -1.1;
         const p = column ? inArea(a.id, base.x, base.z + idx * 1.8, u.garrison ? 0.75 : 0.95) : inArea(a.id, base.x + idx * 1.75, base.z + (cont ? row : 0.4), u.garrison ? 0.75 : 0.95); if ((p as { tight?: boolean }).tight) tight = true; return p; });
       return { spots, tight, saved };
     };
@@ -340,7 +331,7 @@ function drawPieces() {
     if (lay.tight && order.length > 1) { taken.set(a.id, lay.saved); const col = place(true); if (!col.tight) lay = col; else { taken.set(a.id, lay.saved); lay = place(false); } }
     if (cont && lay.tight && g.battle?.area !== a.id) {                                             // a crowded contested area: the two sides in facing rows (German row, Allied row), never mixed or stacked
       taken.set(a.id, lay.saved); const pl = toWorld(...POLE.get(a.id)!);
-      lay.spots = order.map((u) => { const same = order.filter((x) => x.side === u.side), i = same.indexOf(u), per = 4, rw = Math.floor(i / per), inRow = Math.min(per, same.length - rw * per), dir = u.side === 'german' ? 1 : -1;
+      lay.spots = order.map((u) => { const same = order.filter((x) => x.side === u.side), i = same.indexOf(u), per = 4, rw = Math.floor(i / per), inRow = Math.min(per, same.length - rw * per), dir = first(u.side) ? 1 : -1;
         return { x: pl.x + (i % per - (inRow - 1) / 2) * 1.75, z: pl.z + dir * (1.3 + rw * 1.75) }; });
     }
     if (g.battle?.area === a.id) { const b = g.battle; lay.spots = order.map((u) => { const same = order.filter((x) => x.side === u.side); return battleSpot(b, u.side, 'unit', same.indexOf(u), same.length); }); }
@@ -355,8 +346,8 @@ function drawPieces() {
       pieces.add(m);
       const tags: [string, string][] = []; const top = flat ? 0.85 : 1.66;
       if (u.disorder && !u.garrison) tags.push([u.disorder === 1 ? 'DIS' : 'REC', u.disorder === 1 ? '#8a1f1f' : '#a8741a']);
-      if (u.reserve) tags.push([u.side === 'german' ? ({ z5: 'R5', z6: 'R6', z7: 'R7' } as Record<string, string>)[u.reserve] ?? 'R5' : u.reserve === 'z7' ? 'A7' : 'A56', '#2d6cb0']); if (u.exploit) tags.push(['E', '#d9741c']); if (u.unsupplied && !u.garrison) tags.push(['OOS', '#b8312f']); if (u.interdict) tags.push(['GI', '#8a2f9c']); if (u.bcross) tags.push(['B', '#8a6a1c']); if (g.riverAssault.includes(a.id) && u.side === g.phasing && !u.garrison) tags.push(['RA', '#2a7fb8']);
-      const dc = viewSide() === 'allied' ? -1 : 1;
+      if (u.reserve) tags.push([VOL.reserveTag(u), '#2d6cb0']); if (u.exploit) tags.push(['E', '#d9741c']); if (u.unsupplied && !u.garrison) tags.push(['OOS', '#b8312f']); if (u.interdict) tags.push(['GI', '#8a2f9c']); if (u.bcross) tags.push(['B', '#8a6a1c']); if (g.riverAssault.includes(a.id) && u.side === g.phasing && !u.garrison) tags.push(['RA', '#2a7fb8']);
+      const dc = viewSide() === P2 ? -1 : 1;
       tags.forEach(([t, c], i) => {               // status markers float in a row above the block, tilted toward the player (animated in frame())
         const k = tag(t, c, CHIT * 0.6), x0 = (i - (tags.length - 1) / 2) * 0.95;
         k.rotation.order = 'YXZ'; k.rotation.set(0.95, viewRot(), 0); k.userData.float = { y: top + 1.0, ph: i * 1.1 + m.position.x * 0.3 };
@@ -373,30 +364,31 @@ function drawPieces() {
     if (g.roadblocks[a.id]) mine.push({ side: g.roadblocks[a.id], t: 'RB', c: '#6b4a8a' }); if (g.interdicted[a.id]) mine.push({ t: 'AIR', c: '#2f6fb0' }); if (g.pooled === a.id) mine.push({ side: 'allied', t: 'P', c: '#3f8a5a' }); if (g.airSupply?.area === a.id) mine.push({ side: g.airSupply.side, t: 'AS', c: '#2f6fb0' });
     if (g.fieldWorks.includes(a.id)) mine.push({ side: g.fwOwner[a.id] ?? g.control[a.id], t: 'FW', c: '#7a5a2b' });
     mine.forEach((m, i) => {
-      const side = m.side ?? g.control[a.id], lane = cont ? (side === 'german' ? 1 : -1) : 1, size = CHIT;
+      const side = m.side ?? g.control[a.id], lane = cont ? (first(side) ? 1 : -1) : 1, size = CHIT;
       const p = inArea(a.id, base.x + (i - (mine.length - 1) / 2) * 1.5, base.z + lane * 2.3, size / 2 + 0.25);
       const k = tag(m.t, m.c, size); k.position.set(p.x, 0.02, p.z); k.userData.mark = `${m.t}:${a.id}`; markers.add(k);
     });
   }
   for (const k of Object.keys(g.greif)) { const [x, y] = k.split('-').map(Number), q = toWorld(...borderMid(x, y)), p = free(q.x, q.z - 1.3, 0.8), t = tag('G', '#8a2f9c', CHIT); t.position.set(p.x, 0.07, p.z); t.rotation.y = -borderAngle(x, y); markers.add(t); }
   for (const k of g.blown) { const [x, y] = k.split('-').map(Number), q = toWorld(...borderMid(x, y)), p = free(q.x, q.z, 0.85), t = tag('X', '#d9421f', CHIT * 0.72); t.position.set(p.x, 0.07, p.z); t.rotation.y = -borderAngle(x, y); markers.add(t); }
+  for (const { key, code } of VOL.edgeMarks(g)) { const [x, y] = key.split('-').map(Number), q = toWorld(...borderMid(x, y)), p = free(q.x, q.z, 0.85), t = tag(code, '#8a7a4e', CHIT * 0.8); t.position.set(p.x, 0.07, p.z); t.rotation.y = -borderAngle(x, y); markers.add(t); }      // the volume's boundary markers (Golan: minefields, bridged ditch)
 }
 /** Map overlays: the area tint (terrain defence or army zones) is painted into the board under the line work. */
 let tint: 'off' | 'tdn' | 'zones' | 'control' | 'supply' = (() => { try { const t = localStorage.getItem('fab-tint'); return t === 'tdn' || t === 'zones' || t === 'control' || t === 'supply' ? t : 'off'; } catch { return 'off'; } })();
 const TDN_COL = [0xf4e3a4, 0xc9a24f, 0x8a8f86, 0x4a5028], ZONE_COL: Record<number, number> = { 5: 0x3a3f46, 6: 0x951b81, 7: 0x009fe3 };   // the TDN colours are the printed TDN markers'
 /** Map overlays (DESIGN.md › Map overlays): one meaning per colour. Reach green, stop brass, must-fight red, optional fight brass, selection brass, supply in the side's colour. */
 const MAPC = { reach: 0x5d8b3a, stop: 0xe7b04a, preview: 0xf6e3a8, must: 0xd1432f, fight: 0xe7b04a, sel: 0xe7b04a, cut: 0xd1432f, supGe: 0xb9bcc0, supAl: 0x9db36a, ring: 0x8fc46a };
-const CONTROL_COL = { allied: 0x6aa84f, german: 0x8a9096, contested: 0x9b59d0 };                      // allied green, axis grey, contested violet (red and yellow are the combat highlights)
-const tintOf = (id: number) => (tint === 'tdn' ? TDN_COL[E.areas.get(id)!.tdn] : tint === 'control' ? (E.contested(g, id) ? CONTROL_COL.contested : CONTROL_COL[g.control[id] ?? 'german']) : ZONE_COL[E.areas.get(id)!.zone]);
+const CONTROL_COL: Record<string, number> = { ...VOL.controlCol, contested: 0x9b59d0 };                      // allied green, axis grey, contested violet (red and yellow are the combat highlights)
+const tintOf = (id: number) => (tint === 'tdn' ? TDN_COL[E.areas.get(id)!.tdn] : tint === 'control' ? (E.contested(g, id) ? CONTROL_COL.contested : CONTROL_COL[g.control[id] ?? P1]) : ZONE_COL[E.areas.get(id)!.zone]);
 const hex6 = (n: number) => '#' + n.toString(16).padStart(6, '0');
 /** What is printed on the map, and how. */
 const layers = (() => { const d = { numbers: true, tdn: true, vp: true, names: true }; try { return { ...d, ...JSON.parse(localStorage.getItem('fab-layers') ?? '{}') }; } catch { return d; } })();
 const saveLayers = () => { try { localStorage.setItem('fab-layers', JSON.stringify(layers)); localStorage.setItem('fab-tint', tint); } catch { /* private mode */ } };
 /** Whose side of the table we look from: the German player looks up the map from the bottom, the Allied player down from the top. */
-const viewSide = (): E.Side => (online.active && !online.both() && online.mySide() ? online.mySide()! : 'german');
+const viewSide = (): E.Side => (online.active && !online.both() && online.mySide() ? online.mySide()! : P1);
 const fogSide = (): E.Side | 'spectator' | null => (online.active && !online.both() ? online.mySide() ?? 'spectator' : null);
 const seen = (u: E.Unit) => E.visibleTo(g, u, fogSide());
-const viewRot = () => (viewSide() === 'allied' ? Math.PI : 0);
+const viewRot = () => (viewSide() === P2 ? Math.PI : 0);
 /** Restricted boundaries (14.1) and the border two areas share, as a polyline (vertices of one area lying on the other's outline). */
 const RESTRICTED: [number, number][] = [...E.areas.keys()].flatMap((a) => E.neighbors(a).filter((b) => b > a && E.connection(a, b)?.restricted).map((b): [number, number] => [a, b]));
 function sharedBorder(a: number, b: number): [number, number][] {
@@ -421,15 +413,15 @@ function paintBoard() {
     for (const [w, col] of [[7, '#ffffff99'], [2.9, '#141416']] as const) { c.lineWidth = w; c.strokeStyle = col; for (const a of MAP.areas) { c.beginPath(); a.polygon.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.stroke(); } }
     c.restore(); }
   else c.drawImage(pixels(linesImg), 0, 0, boardCv.width, boardCv.height);
-  {                                                                                              // the three German army zones: a dashed line in the zone's colour just inside it
+  if (VOL.art.zones) {                                                                           // the three German army zones: a dashed line in the zone's colour just inside it
     c.save(); c.scale(k, k); c.lineWidth = 2.6; c.lineJoin = 'round'; c.setLineDash([9, 5]);
-    for (const [z, d] of Object.entries(zonesJson as Record<string, string>)) { c.strokeStyle = hex6(ZONE_COL[+z]); c.stroke(new Path2D(d)); }
+    for (const [z, d] of Object.entries(VOL.art.zones)) { c.strokeStyle = hex6(ZONE_COL[+z]); c.stroke(new Path2D(d)); }
     c.restore();
   }
   {
     c.save(); c.scale(k, k);
     for (const [a, b] of RESTRICTED) drawRestricted(c, sharedBorder(a, b));
-    if (layers.numbers) for (const e of MAP.entries) { c.save(); c.translate(e.x, e.y); c.rotate(viewRot()); drawEntry(c, e); c.restore(); }
+    if (layers.numbers) for (const e of MAP.entries) { c.save(); c.translate(e.x, e.y); c.rotate(viewRot()); drawEntry(c, e, first(e.side)); c.restore(); }
     c.restore();
   }
   boardTex.needsUpdate = true; buildLabels();
@@ -439,7 +431,7 @@ const labelsGrp = new THREE.Group(); scene.add(labelsGrp);
 const labelTexCache = new Map<string, THREE.CanvasTexture>();
 function buildLabels() {
   labelsGrp.children.forEach((o) => { (o as THREE.Mesh).geometry.dispose(); ((o as THREE.Mesh).material as THREE.Material).dispose(); }); labelsGrp.clear();
-  const PAD = 12, lk = `${+layers.numbers}${+layers.tdn}${+layers.vp}${+layers.names}${vpIcons.allied.naturalWidth > 0}`, K = 4;
+  const PAD = 12, lk = `${+layers.numbers}${+layers.tdn}${+layers.vp}${+layers.names}${Object.values(vpIcons).every((i) => i.naturalWidth > 0)}`, K = 4;
   for (const a of MAP.areas) {
     const L = LAB[a.id]; if (!L || (!layers.numbers && !layers.tdn && !layers.vp && !layers.names)) continue;
     let t = labelTexCache.get(a.id + lk);
@@ -453,7 +445,7 @@ function buildLabels() {
   }
 }
 applyArt();
-if (map3d) setTimeout(() => { map3d = false; setMap3d(true); }, 0);           // a saved choice of the 3D map: loaded once the game is up
+if (map3d && VOL.art.relief) setTimeout(() => { map3d = false; setMap3d(true); }, 0); else map3d = false;           // a saved choice of the 3D map: loaded once the game is up
 /** Supply overlay: your own side (or the Phasing Player when you play both); computed once per refresh. */
 const supplySide = (): E.Side => online.mySide() ?? g.phasing;
 let supCache = new Map<string, boolean>(), supKey = '';
@@ -472,6 +464,7 @@ function paintAreas() {
     if (tgt) { if (tgt.areas.has(id) || (tgt.any && false)) { c = tgt.color.get(id) ?? MAPC.reach; o = 0.5; } else if (tgt.pick.has(id) && (!tgt.focus || tgt.color.has(id))) { c = tgt.color.get(id) ?? 0xe7b04a; o = 0.45; } else if (o === 0) { c = 0x000000; o = 0.28; } }       // a chit in hand: what it can act on glows, the rest dims
     const ar = arr.get(id); if (ar) { c = ar.sa ? MAPC.stop : MAPC.reach; o = 0.45; }
     if (ret.has(id)) { c = MAPC.reach; o = 0.5; }
+    if (areaPick) { if (areaPick.areas.has(id)) { c = MAPC.reach; o = 0.5; } else if (o === 0) { c = 0x000000; o = 0.28; } }
     if (tint === 'supply' && !g.battle && o === 0 && !tgt) { const sd = supplySide(), mine2 = g.control[id] === sd; if (!mine2) { c = 0x000000; o = 0.22; } else if (supOk(sd, id)) { c = 0xffffff; o = 0.16; } else { c = MAPC.cut; o = 0.5; } }      // your supplied areas stay light, cut-off ones red, the enemy's dimmed
     if (g.inPlay && !g.inPlay.includes(id)) { if (g.supplyOnly?.includes(id)) { c = 0x1d2a45; o = 0.5; } else { c = 0x000000; o = 0.62; } }      // Cold Shoulder: Zone 5 carries supply only (P.6)                                   // 24.33 outside the Introductory map sheet
     mat.color.setHex(c); mat.opacity = o; m.visible = o > 0 && !show3d();                           // a clear overlay is not drawn at all; on the relief the ground paints it
@@ -531,19 +524,20 @@ const BTN_ICON: [RegExp, string][] = [[/blow|bridge.*bridge/i, 'xbold'], [/repai
 const iconify = (html: string) => html.replace(/<button class="([^"]*)" (data-do="[^"]+") ([^>]*)>([^<]*)<\/button>/g, (m, cls, d, rest, text) => { const ic = BTN_ICON.find(([re]) => re.test(text))?.[1]; return ic ? `<button class="${cls} ab" ${d} ${rest}>${ico(ic)}<span>${text}</span></button>` : m; });
 /** The selected chit: a slim bar with its picture, a one-line instruction, an info toggle and the actions as icon buttons. */
 function chitBar(c: E.Chit): string {
-  if (!mine(c.side)) return `<div class="c-dispatch chitbar ${infoOpen ? 'open' : ''}"><div class="cbhead"><span class="cbimg">${chitPic(c)}</span><div class="cbt"><b>${esc(c.name)}</b><small>The other side's piece: you can only look</small></div><button class="ico" data-ui="${reg(() => { selChit = null; })}" aria-label="Put away" title="Put away">${ico('close')}</button></div><div class="inspect slimcard">${ruleHtml(c.kind, E.isEvent(c))}</div></div>`;
-  const tg = tgt, body = chitPanel(c), [kind] = RULE[c.kind] ?? [c.kind];
+  if (!mine(c.side)) return `<div class="c-dispatch chitbar ${infoOpen ? 'open' : ''}"><div class="cbhead"><span class="cbimg">${chitPic(c)}</span><div class="cbt"><b>${esc(c.name)}</b><small>The other side's piece: you can only look</small></div><button class="ico" data-ui="${reg(() => { selChit = null; })}" aria-label="Put away" title="Put away">${ico('close')}</button></div><div class="inspect slimcard">${ruleHtml(VOL.ruleKey(c.kind), E.isEvent(c))}</div></div>`;
+  const tg = tgt, body = chitPanel(c), [kind] = RULE[VOL.ruleKey(c.kind)] ?? [c.kind];
   const chips = tg?.chips.map((x) => `<button class="pc ${c.side}" data-do="${reg(x.fn)}" title="${esc(x.label)}">${x.img}<small>${esc(x.label)}</small></button>`).join('') ?? '';
   if (infoFor !== c.id) { infoFor = c.id; infoOpen = guide === 'full'; }      // each chit opens with its rules folded (short mode) or shown (full mode)
   return `<div class="c-dispatch chitbar ${infoOpen ? 'open' : ''}"><div class="cbhead"><span class="cbimg">${chitPic(c)}</span><div class="cbt"><b>${esc(c.name)}</b><small>${tg?.hint ? gx(esc(tg.hint), esc(kind)) : esc(kind)}</small></div>
     <button class="ico" data-ui="${reg(() => { infoOpen = !infoOpen; })}" aria-pressed="${infoOpen}" aria-label="What it does" title="What it does">${ico('info')}</button><button class="ico" data-ui="${reg(() => { selChit = null; })}" aria-label="Put away" title="Put away">${ico('close')}</button></div>
-    ${tg && tg.modes.length > 1 ? `<div class="modes" role="group" aria-label="What to do">${tg.modes.map((m) => `<button class="ico ${m.id === tgtMode ? 'on' : ''}" data-ui="${reg(() => { tgtMode = m.id; refresh(); })}" title="${esc(m.label)}" aria-label="${esc(m.label)}">${ico(m.icon)}<span>${esc(m.label)}</span></button>`).join('')}</div>` : ''}${infoOpen ? `<div class="inspect slimcard">${ruleHtml(c.kind, E.isEvent(c))}</div>` : ''}${chips ? `<div class="cbchips">${chips}</div>` : ''}${tg?.buttons.length ? `<div class="row">${tg.buttons.map((b) => abtn(b.icon, b.label, b.fn, '', false, b.title)).join('')}</div>` : ''}${iconify(body)}</div>`;
+    ${tg && tg.modes.length > 1 ? `<div class="modes" role="group" aria-label="What to do">${tg.modes.map((m) => `<button class="ico ${m.id === tgtMode ? 'on' : ''}" data-ui="${reg(() => { tgtMode = m.id; refresh(); })}" title="${esc(m.label)}" aria-label="${esc(m.label)}">${ico(m.icon)}<span>${esc(m.label)}</span></button>`).join('')}</div>` : ''}${infoOpen ? `<div class="inspect slimcard">${ruleHtml(VOL.ruleKey(c.kind), E.isEvent(c))}</div>` : ''}${chips ? `<div class="cbchips">${chips}</div>` : ''}${tg?.buttons.length ? `<div class="row">${tg.buttons.map((b) => abtn(b.icon, b.label, b.fn, '', false, b.title)).join('')}</div>` : ''}${iconify(body)}</div>`;
 }
 function chitPanel(c: E.Chit): string {
   const a = selArea, out: string[] = [];
   const head = '';
   if (c.box !== 'available') return head + '<p class="hint">Only chits in the Available Box can be used.</p>';
   if (g.phase !== 'admin') return head + `<p class="hint">${E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission' ? 'This chit is assigned to a battle during the Combat Phase.' : c.kind === 'fuel' ? 'Fuel is spent automatically when a German unit moves more than 3 MP or strategic-moves.' : c.kind === 'sa_block' || c.kind === 'special_action_event' ? 'Special Actions are spent in battles (reinforce / retreat), Breakthrough phases and the Admin Phase.' : 'Events are played in the Admin Phase.'}</p>`;
+  if (VOL.id !== 'bulge') return head;                                                              // the other volumes offer everything through the glowing targets and buttons
   if (c.kind.startsWith('replacement') || c.kind === 'event_arriving_regiment' || c.kind.startsWith('rebuild')) {
     const el = g.units.filter((x) => E.eligibleForStep(c, x));                                       // blocks on the map light up; eliminated ones come back from the chips above
     if (!el.length) out.push('<p class="hint">No reduced, supplied unit of the right class and Higher Echelon.</p>');
@@ -555,10 +549,12 @@ function chitPanel(c: E.Chit): string {
 }
 
 /* ---------- flow ---------- */
-const STEPS = ['Prepare', 'Move', 'Fight', 'Breakthrough', 'Supply'], STEP_OF: Record<E.Phase, number> = { reinforcement: 0, admin: 0, movement: 1, strategic: 1, combat: 2, reaction: 2, btMove: 3, btCombat: 3, supply: 4 };
+const STEPS = ['Prepare', 'Move', 'Fight', 'Breakthrough', 'Supply'], STEP_OF: Record<E.Phase, number> = { deploy: 1, reinforcement: 0, admin: 0, movement: 1, strategic: 1, combat: 2, reaction: 2, btMove: 3, btCombat: 3, supply: 4 };
+/** The red button that ends the step. */
+const endLabel = () => (g.phase === 'deploy' ? 'End set-up' : `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`);
 const other = E.other;
 /** The printed sequence of play (the step bar): Breakthrough covers its movement and its combat. */
-const PHASES = ['Reinforcement', 'Admin', 'Movement', 'Strategic', 'Combat', 'Reaction', 'Breakthrough', 'Supply'], PHASE_OF: Record<E.Phase, number> = { reinforcement: 0, admin: 1, movement: 2, strategic: 3, combat: 4, reaction: 5, btMove: 6, btCombat: 6, supply: 7 };
+const PHASES = ['Reinforcement', 'Admin', 'Movement', 'Strategic', 'Combat', 'Reaction', 'Breakthrough', 'Supply'], PHASE_OF: Record<E.Phase, number> = { deploy: 2, reinforcement: 0, admin: 1, movement: 2, strategic: 3, combat: 4, reaction: 5, btMove: 6, btCombat: 6, supply: 7 };
 /** Areas a battle can start in now. Breakthrough Combat (8.22): areas contested before movement only with a Special Action available. */
 const fightable = () => { const nw = g.phase === 'btCombat' ? new Set(E.newlyContested(g)) : null, sa = nw && E.saAvailable(g, g.phasing).length > 0;
   return E.contestedAreas(g).filter((a) => !g.fought.includes(a) && (!nw || nw.has(a) || sa)); };
@@ -596,7 +592,7 @@ function act(f: () => void, after = '') {
   if (!allowed()) return say(notYou());
   if (heldNext) commitRoll();
   const before = g.battle ? snap(g) : null, ck0 = g.checks?.length ?? 0;
-  const r = hist.run(g, () => { f(); auto(); }, (a, b) => after || (b.log.slice(a.log.length).at(-1) ?? '').replace(/^T\d+ (\[\w+\] )?((GE|AL) \w+: )?/, '').slice(0, 60), lockOf);
+  const r = hist.run(g, () => { f(); auto(); }, (a, b) => after || (b.log.slice(a.log.length).at(-1) ?? '').replace(new RegExp(`^T\\d+ (\\[\\w+\\] )?((${TAGRE}) \\w+: )?`), '').slice(0, 60), lockOf);
   g = r.game; if (r.error) say(/pending|already/.test(r.error.message) ? `That choice is no longer open (the game is at ${g.battle?.stage ?? 'no battle'}). Refreshed.` : r.error.message); else { note = after; if (before && !rollNoted) noteFx(before, g); }       // a roll already noted its own effects, to show them once the dice have settled
   rollNoted = false;
   save(); refresh();
@@ -626,8 +622,9 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !typing && !t?.matches?.('button,[role=button]') && !modal) { const go = document.querySelector<HTMLButtonElement>('#ui .go:not(:disabled)'); if (go) { e.preventDefault(); go.click(); } }
  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey && !(e.target as HTMLElement)?.matches?.('input,select')) { e.preventDefault(); undo(); } });
 const tfAreas = () => [...E.areas.keys()].filter((a) => g.control[a] === 'allied' && !E.contested(g, a) && E.inSupply(g, 'allied', a));
-/** Place an arriving block; an area outside its listed ones costs a Special Action, and the player picks which one (8.27). */
+/** Place an arriving block; an area outside its listed ones costs a Special Action, and the player picks which one (8.27). In a set-up step the block is deployed. */
 function arrive(id: string, area: number) {
+  if (g.phase === 'deploy') return VOL.place(g, id, area);
   if (!g.pendingArrivals.includes(id)) return E.placeTaskForce(g, id, area);
   const u = g.units.find((x) => x.id === id)!, o = E.arrivalOptions(g, id).find((x) => x.area === area);
   if (o?.sa) pickSA(u.side, u.ech, (sa) => E.placeArrival(g, id, area, sa)); else E.placeArrival(g, id, area);
@@ -642,7 +639,7 @@ let followFoe = (() => { try { return localStorage.getItem('fab-follow') !== '0'
 let feed: { t: number; text: string; side: string }[] = [], feedLen = -1;
 function feedHtml(): string {
   const n = g.log.length; if (feedLen < 0 || n < feedLen) feedLen = n;                       // a new or rewound game shows nothing old
-  for (const l of g.log.slice(feedLen)) { if (/\[sandbox\]/.test(l)) continue; const text = l.replace(/^T\d+ /, '').replace(/^(GE|AL) (\w+): \2 phase$/, `$1 Turn ${g.turn}: $2`).replace(/^(GE|AL) [a-zA-Z]+: /, '$1 ');   /* the step is in the top bar; the feed keeps only the news */ feed.push({ t: Date.now(), text, side: /^(GE|German)/.test(text) ? 'german' : /^(AL|Allied)/.test(text) ? 'allied' : '' }); }
+  for (const l of g.log.slice(feedLen)) { if (/\[sandbox\]|: phase start$/.test(l)) continue; const text = l.replace(/^T\d+ /, '').replace(new RegExp(`^(${TAGRE}) (\\w+): \\2 phase$`), `$1 Turn ${g.turn}: $2`).replace(new RegExp(`^(${TAGRE}) [a-zA-Z]+: `), '$1 ');   /* the step is in the top bar; the feed keeps only the news */ feed.push({ t: Date.now(), text, side: sideByTag(text.split(/\s/)[0]) }); }
   feedLen = n; const now = Date.now(); feed = feed.filter((f) => now - f.t < 9000).slice(-3); if (g.battle) return '';         // the battle has its own report
   if (feed.length) setTimeout(() => { if (feed.some((f) => Date.now() - f.t >= 9000)) render(); }, 9100);
   return feed.length ? `<div class="feed ${g.phase === 'admin' || g.phase === 'reinforcement' ? 'top' : ''}" aria-live="polite">${feed.map((f) => `<div class="fl2 ${f.side}" style="animation-delay:${-(now - f.t) / 1000}s">${sideTag(f.text)}</div>`).join('')}</div>` : '';
@@ -693,11 +690,12 @@ function saPickHtml() {
   const p = saPick;
   return `<div class="modal"><div class="sheet sapick"><h3>Which Special Action? <button class="ico" data-ui="${reg(() => { saPick = null; })}" aria-label="Cancel">${ico('close')}</button></h3>
     <p class="hint gx">A single-use event only helps its own Higher Echelon and is eliminated; the reusable block goes to the Used Box and comes back next turn.</p>
-    <div class="pcgrid">${p.cands.map((c) => `<div class="sapc"><button class="pc ${c.side}" data-ui="${reg(() => { saPick = null; act(() => p.run(c.id)); })}" title="${esc(c.name)}">${chitPic(c)}</button><small>${esc(c.kind === 'sa_block' ? 'Reusable block' : `Event · ${ARMY_NAME[c.ech] ?? c.ech}`)}</small></div>`).join('')}</div></div></div>`;
+    <div class="pcgrid">${p.cands.map((c) => `<div class="sapc"><button class="pc ${c.side}" data-ui="${reg(() => { saPick = null; act(() => p.run(c.id)); })}" title="${esc(c.name)}">${chitPic(c)}</button><small>${esc(c.kind === 'sa_block' ? 'Reusable block' : `Event${ARMY_NAME[c.ech] ? ' · ' + ARMY_NAME[c.ech] : ''}`)}</small></div>`).join('')}</div></div></div>`;
 }
 function arrOpts(): { area: number; sa: boolean }[] {
-  if (!selArr || g.phase !== 'reinforcement') return [];
+  if (!selArr || (g.phase !== 'reinforcement' && g.phase !== 'deploy')) return [];
   { const au = g.units.find((x) => x.id === selArr); if (au && !mine(au.side)) return []; const ac = g.chits.find((x) => x.id === selArr); if (ac && !mine(ac.side)) return []; }
+  if (g.phase === 'deploy') return VOL.placeOptions(g, selArr).map((area) => ({ area, sa: false }));
   return g.pendingArrivals.includes(selArr) ? E.arrivalOptions(g, selArr) : g.tfNew.includes(selArr) ? tfAreas().map((area) => ({ area, sa: false })) : [];
 }
 
@@ -735,8 +733,8 @@ function syncBattleCam() {
 }
 
 /* ---------- map interaction ---------- */
-const optsFor = (id: string): E.Opt[] => g.phase === 'strategic' ? E.stratOptions(g, id).map((a) => ({ area: a, cost: 0, fuel: g.units.find((x) => x.id === id)!.side === 'german', mustStop: false, path: [] })) : E.moveOptions(g, id);
-const fuelLeft = () => E.boxOf(g, 'german', 'available').filter((c) => c.kind === 'fuel').length;
+const optsFor = (id: string): E.Opt[] => g.phase === 'strategic' ? E.stratOptions(g, id).map((a) => ({ area: a, cost: 0, fuel: VOL.features.fuel && first(g.units.find((x) => x.id === id)!.side), mustStop: false, path: [] })) : E.moveOptions(g, id);
+const fuelLeft = () => E.boxOf(g, P1, 'available').filter((c) => c.kind === 'fuel').length;
 const center = (a: number) => toWorld(...POLE.get(a)!);
 function confirmMove() {
   const id = selUnit!, to = previewArea!, u = g.units.find((x) => x.id === id)!, from = u.area!; selUnit = null; previewArea = null; selArea = to;
@@ -746,6 +744,7 @@ function click(e: PointerEvent) {
   let { unit, area } = pick(e);
   if (tut) { const t = tut.gate(unit, area); if (t === false) return; if (t.unit) unit = t.unit; if (t.area != null) area = t.area; }
   if (SANDBOX && SBU.st.sbPlace) { const id = SBU.st.sbPlace; if (area == null) return; SBU.st.sbPlace = null; return SBU.sbx(() => SB.place(g, id, area)); }
+  if (areaPick) { const ap = areaPick; areaPick = null; if (area != null && ap.areas.has(area)) return act(() => ap.run(area)); say(`${ap.label}: cancelled.`); return refresh(); }
   if (reinforcing && g.battle) { const fn = unit ? tgt?.units.get(unit) : undefined; if (fn) return act(fn); reinforcing = false; if (unit) say('That block cannot reinforce this battle (8.23: good order, an adjacent uncontested area, and a Special Action for its Higher Echelon).'); return refresh(); }
   { const c0 = selChit ? g.chits.find((x) => x.id === selChit) : null, tg = c0 && g.phase === 'admin' ? tgt : null;
     if (tg) {
@@ -879,7 +878,7 @@ function renderFocus() {
   const hide = (o: THREE.Object3D) => { if (o.visible) { o.visible = false; hidden.push(o); } };
   hide(board); hide(table); hide(diorama); for (const l of labelsGrp.children) if (l.userData.area !== b!.area) hide(l); for (const [id, m] of overlays) if (id !== b!.area || show3d()) hide(m);         // the close-up is flat: a tint draped on the relief would float above it
   for (const grp of [pieces, markers]) for (const o of grp.children) { const a = o.userData.anchor ? pieces.children.find((x) => x.userData.unit === o.userData.anchor) : null, q = a ?? o, uid = (q.userData.unit ?? q.userData.anchor) as string | undefined, cid = q.userData.chit as string | undefined;
-    const ofBattle = (uid && g.units.find((u) => u.id === uid)?.area === b!.area) || (cid && (b!.assets.german.includes(cid) || b!.assets.allied.includes(cid) || b!.air.german?.id === cid || b!.air.allied?.id === cid));      // the battle formation may reach past the border: keep it sharp
+    const ofBattle = (uid && g.units.find((u) => u.id === uid)?.area === b!.area) || (cid && E.sidesOf(g).some((s) => b!.assets[s].includes(cid) || E.airOf(b!, s).some((a) => a.id === cid)));      // the battle formation may reach past the border: keep it sharp
     if (!ofBattle && !inPoly(q.position.x, q.position.z, poly)) hide(o); }      // a marker follows the piece it belongs to
   focusMesh.visible = true; scene.background = null; renderer2.render(scene, cam); scene.background = bg; focusMesh.visible = false; for (const o of hidden) o.visible = true;
 }
@@ -994,7 +993,7 @@ function rollStage(b: E.Battle) {
   const next = structuredClone(g), before = snap(g); E.roll_step(next, next.battle!); rollFx = []; noteFx(before, next, true); rollNoted = true;
   try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* storage off */ } void push(next);          // the result is stored at once; the board shows it when the dice land
   const fresh = next.battle!.rolls.slice(n0); heldNext = next;
-  rollView = { morale: stage === 'exploit', title: `${side === 'german' ? 'German' : 'Allied'} ${STAGE_NAME[stage]}`, pos: null, groups: fresh.map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: fl.find((f) => f.who === r.who)?.parts ?? [] })) };
+  rollView = { morale: stage === 'exploit', title: `${nm(side)} ${STAGE_NAME[stage]}`, pos: null, groups: fresh.map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : first(side) ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: fl.find((f) => f.who === r.who)?.parts ?? [] })) };
   if (!rollView.groups.length) { rollView = null; commitRoll(); return; }
   refresh();
   const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block';
@@ -1046,17 +1045,17 @@ function endRoll() { commitRoll(); rollView = null; clearDice(); ($('#dice') as 
 /* ---------- cards and drag and drop ---------- */
 
 const chitUri = new Map<string, string>();
-const chitImg = (c: E.Chit) => { let u = chitUri.get(c.id); if (!u) { u = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(chitSvg(c)); chitUri.set(c.id, u); } return u; };
+const chitImg = (c: E.Chit) => { let u = chitUri.get(c.id); if (!u) { u = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(VOL.chitSvg(c)); chitUri.set(c.id, u); } return u; };
 /** Can this chit be played right now (its phase, its targets)? Cards that can glow; worked out once per game change. */
 let liveKey = '', liveSet = new Set<string>();
 function usableNow(c: E.Chit): boolean {
   const k = `${g.turn}${g.phasing}${g.phase}${g.log.length}${g.battle?.stage}${online.devSeat}`; if (k !== liveKey) { liveKey = k; liveSet = new Set(); const b = g.battle;
     for (const x of g.chits) { if (x.box !== 'available' || !mine(x.side)) continue;
       let ok = false;
-      if (b) ok = b.stage === 'setup' && (E.isArty(x) || E.isBattleAsset(x) || x.kind === 'air_mission') && !E.canAssign(g, b, x.side, x);
-      else if (g.phase === 'admin') { const t = targetsFor(() => g, x, { area: null, mode: '', setArea: () => {}, setMode: () => {}, face: (u) => unitPic(u), areaName }); ok = !!t && (t.units.size + t.areas.size + t.pick.size + t.chips.length + t.modes.length > 0 || !!t.any); }
+      if (b) ok = b.stage === 'setup' && VOL.battleCard(x) && !VOL.battleUse(g, b, x);
+      else if (g.phase === 'admin') { const t = VOL.targetsFor(() => g, x, { area: null, mode: '', setArea: () => {}, setMode: () => {}, face: (u) => unitPic(u), areaName }); ok = !!t && (t.units.size + t.areas.size + t.pick.size + t.chips.length + t.modes.length + t.buttons.length > 0 || !!t.any); }
       else if (x.kind === 'sa_block' || x.kind === 'special_action_event') ok = g.phase === 'btMove' || g.phase === 'btCombat';
-      else if (x.kind === 'air_mission') ok = g.phase === 'supply' && E.airSupplyAreas(g, x.side).length > 0;
+      else if (x.kind === 'air_mission') ok = VOL.id === 'bulge' && g.phase === 'supply' && E.airSupplyAreas(g, x.side).length > 0;
       if (ok) liveSet.add(x.id); } }
   return liveSet.has(c.id);
 }
@@ -1074,7 +1073,7 @@ function autoFill(b: E.Battle) {
 /** Where a dragged chit may be dropped: exactly the areas it can be used in (its zone, its rules), from the same dry runs as a tap. */
 function chitTargets(c: E.Chit): number[] {
   if (g.phase !== 'admin' || c.box !== 'available' || !mine(c.side)) return [];
-  const t = targetsFor(() => g, c, { area: null, mode: '', setArea: () => {}, setMode: () => {}, face: (u) => unitPic(u), areaName });
+  const t = VOL.targetsFor(() => g, c, { area: null, mode: '', setArea: () => {}, setMode: () => {}, face: (u) => unitPic(u), areaName });
   if (!t) return [];
   const out = new Set<number>([...t.areas.keys(), ...t.pick.keys()]);
   for (const id of t.units.keys()) { const a = g.units.find((x) => x.id === id)?.area; if (a != null) out.add(a); }
@@ -1090,7 +1089,8 @@ function tapCard(id: string) {
     if (b.stage !== 'setup') return;
     if (handInfo) { handInspect = handInspect === id ? null : id; return render(); }
     if (!mine(c.side)) return say('Those are the other player\'s assets.');
-    const why = E.canAssign(g, b, c.side, c); if (why) { refusal = `${c.name}: ${why}`; return render(); } refusal = '';
+    const why = VOL.battleUse(g, b, c); if (why) { refusal = `${c.name}: ${why}`; return render(); } refusal = '';
+    if (!E.isArty(c) && !E.isBattleAsset(c) && c.kind !== 'air_mission') return act(() => { VOL.playInBattle(g, b, c); });      // a combat event of the volume
     if (c.kind === 'air_mission') { airPick = { id, side: c.side, step: 'choose' }; return render(); }
     return act(() => E.assign(g, b, id));
   }
@@ -1130,18 +1130,18 @@ function drag(ev: PointerEvent, el: HTMLElement) {
     if (ghost && document.elementFromPoint(e.clientX, e.clientY) === canvas) {                                // dropped on the table: the card joins the battle
       const { unit: du, area } = pick(e); if (area !== b.area) return say('Drop it on the battle area.');
       if (!mine(s)) return say('Those are the other player\'s assets.');
-      const why = E.canAssign(g, b, s, c); if (why) { refusal = `${c.name}: ${why}`; return render(); } refusal = '';
-      return act(() => { if (c.kind === 'air_mission') { const t = du ? g.units.find((x) => x.id === du) : null; if (t && t.side === s && t.area === b.area) E.assign(g, b, id, 'support', du!); else E.assign(g, b, id, 'arty'); } else E.assign(g, b, id); });
+      const why = VOL.battleUse(g, b, c); if (why) { refusal = `${c.name}: ${why}`; return render(); } refusal = '';
+      return act(() => { if (VOL.playInBattle(g, b, c)) return; if (c.kind === 'air_mission') { const t = du ? g.units.find((x) => x.id === du) : null; if (t && t.side === s && t.area === b.area) E.assign(g, b, id, 'support', du!); else E.assign(g, b, id, 'arty'); } else E.assign(g, b, id); });
     }
     const z = ghost ? at(e) as HTMLElement | undefined : undefined;
     let zone = z?.dataset.zone, unit = z?.dataset.unit;
-    if (!ghost && c.kind === 'air_mission') { if (!mine(s)) return say('Those are the other player\'s assets.'); const why0 = E.canAssign(g, b, s, c); if (why0) return say(why0); airPick = { id, side: s, step: 'choose' }; return render(); }      // a tap asks which use
+    if (!ghost && c.kind === 'air_mission') { if (!mine(s)) return say('Those are the other player\'s assets.'); const why0 = VOL.battleUse(g, b, c); if (why0) return say(why0); airPick = { id, side: s, step: 'choose' }; return render(); }      // a tap asks which use
     if (!ghost) zone = E.isArty(c) ? 'arty' : 'asset';               // a plain click files the card where it belongs
     if (!zone && !unit) return;
-    const why = E.canAssign(g, b, s, c) ?? (z?.dataset.side && z.dataset.side !== s ? 'That slot belongs to the other side' : null) ?? (zone === 'arty' && c.kind === 'engineer' ? 'Engineers go in the Assets slot' : zone === 'asset' && (E.isArty(c)) ? 'Artillery goes in the Artillery slot' : null);
+    const why = VOL.battleUse(g, b, c) ?? (z?.dataset.side && z.dataset.side !== s ? 'That slot belongs to the other side' : null) ?? (zone === 'arty' && c.kind === 'engineer' ? 'Engineers go in the Assets slot' : zone === 'asset' && (E.isArty(c)) ? 'Artillery goes in the Artillery slot' : null);
     if (!mine(s)) return say('Those are the other player\'s assets.');
     if (why) { refusal = `${c.name}: ${why}`; return render(); } refusal = '';
-    act(() => { if (c.kind === 'air_mission') { if (unit) E.assign(g, b, id, 'support', unit); else E.assign(g, b, id, 'arty'); } else E.assign(g, b, id); });
+    act(() => { if (VOL.playInBattle(g, b, c)) return; if (c.kind === 'air_mission') { if (unit) E.assign(g, b, id, 'support', unit); else E.assign(g, b, id, 'arty'); } else E.assign(g, b, id); });
   };
   window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
   window.addEventListener('pointercancel', () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); ghost?.remove(); dragTargets = []; refresh(); }, { once: true });
@@ -1149,9 +1149,9 @@ function drag(ev: PointerEvent, el: HTMLElement) {
 
 /* ---------- views ---------- */
 function topBar() {
-  const v = E.victory(g), tr = (g.track ?? E.TRACK)[g.turn - 1], i = g.phasing === 'german' ? 0 : 1, at = STEP_OF[g.phase], pAt = PHASE_OF[g.phase]; void at;
+  const v = E.victory(g), tr = (g.track ?? E.VOLUME.track)[g.turn - 1], i = first(g.phasing) ? 0 : 1, at = STEP_OF[g.phase], pAt = PHASE_OF[g.phase], phaseLabel = g.phase === 'deploy' ? 'Set-up' : PHASES[pAt]; void at; void v;
   return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game" aria-label="Menu, log and new game">${ico('menu')}</button>${SANDBOX ? SBU.sandboxBtns() : ''}<div class="c-crumbs">${PHASES.map((s, k) => `<span class="${k === pAt ? 'on' : k < pAt ? 'done' : ''}" title="${k + 1}. ${s}">${s}</span>`).join('')}</div>
-    <div class="c-stat"><span class="tp" title="Turn ${g.turn}, ${nm(g.phasing)} player turn">T${g.turn} · <b class="${g.phasing}">${nm(g.phasing).toUpperCase()}</b><i class="ph"> · ${PHASES[pAt].toUpperCase()} <small>${pAt + 1}/8</small></i></span>${online.active && online.mode === 'remote' ? `<span class="syncdot ${/NOT SAVED/.test(online.sync) ? 'bad' : /saving|connecting/.test(online.sync) ? 'wait' : 'ok'}" title="${esc(online.sync)}" aria-label="${esc(online.sync)}"></span>` : ''}${online.active ? `<span>YOU<b class="${online.mySide() ?? ''}">${online.both() ? 'BOTH' : (online.mySide() ?? 'WATCHING').toUpperCase()}</b></span>` : ''}${DEV || SANDBOX ? `<button class="ico dev" data-seat title="Developer: switch seat (German, Allied, both, watching)" aria-label="Switch seat">${ico('swap')}<span class="bl">Seat</span></button>` : ''}${g.phase === 'admin' || g.phase === 'reinforcement' ? `<span title="Chits drawn this turn (German / Allied)">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span>` : ''}${chatBtn()}<button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="View: map layers, colours, reset the camera" aria-label="View">${ico('eye')}<span class="bl">View</span></button><button class="ico" data-modal="boxes" title="Pieces: boxes, arrivals" aria-label="Pieces">${ico('boxes')}<span class="bl">Pieces</span></button></div></div>`;
+    <div class="c-stat"><span class="tp" title="Turn ${g.turn}, ${nm(g.phasing)} player turn">T${g.turn} · <b class="${g.phasing}">${nm(g.phasing).toUpperCase()}</b><i class="ph"> · ${phaseLabel.toUpperCase()} <small>${pAt + 1}/8</small></i></span>${online.active && online.mode === 'remote' ? `<span class="syncdot ${/NOT SAVED/.test(online.sync) ? 'bad' : /saving|connecting/.test(online.sync) ? 'wait' : 'ok'}" title="${esc(online.sync)}" aria-label="${esc(online.sync)}"></span>` : ''}${online.active ? `<span>YOU<b class="${online.mySide() ?? ''}">${online.both() ? 'BOTH' : (online.mySide() ?? 'WATCHING').toUpperCase()}</b></span>` : ''}${DEV || SANDBOX ? `<button class="ico dev" data-seat title="Developer: switch seat (${nm(P1)}, ${nm(P2)}, both, watching)" aria-label="Switch seat">${ico('swap')}<span class="bl">Seat</span></button>` : ''}${g.phase === 'admin' || g.phase === 'reinforcement' ? `<span title="Chits drawn this turn (${nm(P1)} / ${nm(P2)})">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span>` : ''}${chatBtn()}<button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="View: map layers, colours, reset the camera" aria-label="View">${ico('eye')}<span class="bl">View</span></button><button class="ico" data-modal="boxes" title="Pieces: boxes, arrivals" aria-label="Pieces">${ico('boxes')}<span class="bl">Pieces</span></button></div></div>`;
 }
 const COARSE = matchMedia('(pointer: coarse)').matches;
 /** The verb matches the device: tap on touch screens, click with a mouse. */
@@ -1175,6 +1175,7 @@ function stakes(b: E.Battle) {
 function promptText() {
   const b = g.battle;
   if (rollView?.pos) return gx('<b>Read the dice:</b> green hits, salmon misses. Then continue.', '<b>Read the dice,</b> then continue.');
+  if (areaPick) return `<b>${esc(areaPick.label)}</b>, or tap elsewhere to cancel.`;
   if (reinforcing && b) return '<b>Tap a glowing neighbouring block</b> to bring it in, or tap the map to cancel.';
   if (airPick?.step === 'unit' && b) return '<b>Air Mission +2:</b> tap one of your blocks in the battle.';
   if (online.active && !allowed() && !g.over) return online.mySide() == null ? '<b>Watching.</b> Take a seat in the menu.' : `<b>Waiting for the ${nm(actorNow() as E.Side)} player…</b>`;
@@ -1185,6 +1186,7 @@ function promptText() {
   if (b) return b.stage === 'setup' ? (() => { const me = online.mySide(), rd = (sd: E.Side) => b.ready?.includes(sd); return online.active && !online.both() && me ? `<b>${rd(me) ? 'You are ready.' : 'Tap an asset to add it, then press Ready.'}</b> Opponent: ${rd(other(me)) ? 'ready' : 'preparing'}.` : `<b>Tap a card to add it.</b>${gx(' Tap a block to make it the point unit.')}`; })() : b.stage === 'done' ? '' : rollView ? '' : b.stage.endsWith('Choice') ? 'Choose how to take the hits.' : STAGE_NAME[b.stage] ? stakes(b) : '';
   const m = E.mustFight(g).length;
   switch (g.phase) {
+    case 'deploy': return '<b>Set-up:</b> pick a block in the tray, then a lit area.';
     case 'reinforcement': return '<b>Pick a new block</b>, then a lit entry area.';
     case 'admin': return selChit && tgt?.hint ? `<b>${esc(tgt.hint)}</b>${tgt.areas.size + tgt.units.size > 0 ? ` · ${tgt.areas.size + tgt.units.size} lit` : ''}` : `<b>Tap a card</b>${gx(' to play it, or end the step.')}`;
     case 'movement': return selUnit ? `Tap a <b>green</b> area${gx(' to move there. <b>Brass</b>: must stop there. Wrong move? <b>Undo</b>.', ' · <b>brass</b> = stop')}` : `<b>Tap one of your blocks</b>${gx(' to move it, or <b>Can move</b> to go through them.', ' to move it.')}`;
@@ -1204,7 +1206,7 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
   if (b) {
     if (b.stage === 'setup') {
       const solo = !online.active || online.both(), me = online.mySide();
-      if (solo) return { label: 'Begin combat', fn: () => act(() => E.beginCombat(g, b)) };
+      if (solo) { const why = VOL.blocksBegin(g); return { label: why ? 'Begin combat' : 'Begin combat', fn: () => (why ? say(why) : act(() => E.beginCombat(g, b))), dis: !!why }; }
       if (!me) return null;
       const on = b.ready?.includes(me);
       return { label: on ? 'Waiting… tap to undo' : 'Ready', fn: () => act(() => E.setReady(g, b, me, !on)) };
@@ -1224,9 +1226,9 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
     if (me !== g.phasing) { const on = !!g.done?.includes(me); return { label: on ? 'Done · tap to undo' : 'Done', fn: () => act(() => E.setDone(g, me, !on)) }; }
     const wait = !g.done?.includes(other(me));
     if (wait && SANDBOX && SBU.st.sbHot) return { label: `Pass to ${nm(other(me))}`, fn: () => SBU.hotPass(other(me)) };
-    return { label: wait ? `Waiting for ${nm(other(me))}` : `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`, fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; selArea = null; }), dis: wait || !!g.recover.length || !!g.artyPick };
+    return { label: wait ? `Waiting for ${nm(other(me))}` : endLabel(), fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; selArea = null; }), dis: wait || !!g.recover.length || !!g.artyPick };
   }
-  return { label: `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`, fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; selArea = null; }), dis: !!E.mustFight(g).length || !!g.recover.length || !!g.artyPick || (g.phase === 'supply' && !!g.supplyPending) };
+  return { label: endLabel(), fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; selArea = null; }), dis: !!E.mustFight(g).length || !!g.recover.length || !!g.artyPick || (g.phase === 'supply' && !!g.supplyPending) || (g.phase === 'deploy' && VOL.pendingPlace(g).some((id) => mine(g.units.find((u) => u.id === id)!.side))) };
 }
 /* ---------- the actions dock: shortcuts with counts, labelled undo ---------- */
 const lookAt = (a: number) => { const p = center(a); goal = { t: new THREE.Vector3(p.x, 0, p.z), dist: Math.min(dist, 30), pitch }; };
@@ -1259,7 +1261,7 @@ function kbStep(dx: number, dy: number) {
   const s = screenOf(kbArea!), r = canvas.getBoundingClientRect(); if (s.x < r.left + 60 || s.x > r.right - 60 || s.y < r.top + 60 || s.y > r.bottom - 60) lookAt(kbArea!);
   say(`${areaName(kbArea!)} [${kbArea}]`, true); refresh();
 }
-function kbEnter() { if (kbArea == null) return; const a = MAP.areas.find((x) => x.id === kbArea)!, w = toWorld(LAB[a.id].px, LAB[a.id].py), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(w.x, show3d() ? REL!.h(w.x, w.z) : 0, w.z + 0.6).project(cam);
+function kbEnter() { if (kbArea == null) return; const a = MAP.areas.find((x) => x.id === kbArea)!, w = toWorld(LAB[a.id]?.px ?? a.label[0], LAB[a.id]?.py ?? a.label[1]), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(w.x, show3d() ? REL!.h(w.x, w.z) : 0, w.z + 0.6).project(cam);
   click({ clientX: r.left + (v.x * 0.5 + 0.5) * r.width, clientY: r.top + (-v.y * 0.5 + 0.5) * r.height } as PointerEvent); }
 function dockChips(): string {
   if (g.over || !allowed()) return '';
@@ -1285,7 +1287,7 @@ function dockChips(): string {
     else if (all.length) c('Battles', all.length, false, () => { selArea = nextOf(all, selArea); lookAt(selArea!); });
   }
   if (g.phase === 'btMove' || g.phase === 'btCombat') { const n = E.saAvailable(g, g.phasing).length; if (n && mine(g.phasing)) c('Special Actions', n, false, null, 'Special Actions you can spend now'); }
-  if (g.phase === 'supply' && g.supplyPending && mine(g.phasing) && !g.airSupply && E.boxOf(g, g.phasing, 'available').some((x) => x.kind === 'air_mission') && E.airSupplyAreas(g, g.phasing).length) c('Air supply available', null, true, null, '17.21: an Air Mission can supply one cut-off area (in the Supply check panel)');
+  if (VOL.id === 'bulge' && g.phase === 'supply' && g.supplyPending && mine(g.phasing) && !g.airSupply && E.boxOf(g, g.phasing, 'available').some((x) => x.kind === 'air_mission') && E.airSupplyAreas(g, g.phasing).length) c('Air supply available', null, true, null, '17.21: an Air Mission can supply one cut-off area (in the Supply check panel)');
   return out.length ? `<div class="dchips">${out.join('')}</div>` : '';
 }
 function undoBtn(): string {
@@ -1303,15 +1305,16 @@ let piecesTab: 'boxes' | 'arrivals' = 'boxes', piecesSide: E.Side | null = null,
 const chitPic = (c: E.Chit) => (c.kind === 'sa_block' ? b3(chitImg(c), c.side) : `<img class="cb" alt="" draggable="false" src="${chitImg(c)}">`);
 const unitPic = (u: E.Unit) => (u.garrison ? `<img class="cb" alt="" draggable="false" src="${unitFace(u)}">` : b3(unitFace(u), sideOfUnit(u)));
 const pieceBtn = (c: E.Chit, f: () => void, on = false, dis = false) => `<button class="pc ${c.side} ${on ? 'on' : ''} ${c.box === 'available' && usableNow(c) ? 'live' : ''}" data-ui="${reg(f)}" ${dis ? 'disabled' : ''} title="${esc(c.name)}" aria-label="${esc(chitLabel(c))}">${chitPic(c)}</button>`;
-const ruleCard = (c: E.Chit) => { const [t] = RULE[c.kind] ?? [c.kind, '']; return `<span class="big">${chitPic(c)}</span><div><h4>${esc(c.name)} <small>${esc(t)}</small></h4>${ruleHtml(c.kind, E.isEvent(c))}</div>`; };
+const ruleCard = (c: E.Chit) => { const [t] = RULE[VOL.ruleKey(c.kind)] ?? [c.kind, '']; return `<span class="big">${chitPic(c)}</span><div><h4>${esc(c.name)} <small>${esc(t)}</small></h4>${ruleHtml(VOL.ruleKey(c.kind), E.isEvent(c))}</div>`; };
 const seatedView = () => online.active && !online.both() && !!online.mySide();
 function piecesHtml() {
-  const sd = piecesSide ?? viewSide(), tabs = chip('Boxes', piecesTab === 'boxes', () => { piecesTab = 'boxes'; inspectId = null; }, 'Pieces in the boxes', 'boxes') + chip('Arrivals', piecesTab === 'arrivals', () => { piecesTab = 'arrivals'; inspectId = null; }, 'Arrivals by turn', 'calendar') + '<span class="sp"></span>' + (['german', 'allied'] as E.Side[]).sort((x, y) => +(y === viewSide()) - +(x === viewSide())).map((x) => chip(x === 'german' ? 'GE' : 'AL', sd === x, () => { piecesSide = x; inspectId = null; }, seatedView() ? (x === viewSide() ? 'My pieces' : 'Opponent\'s pieces') : nm(x) + ' pieces')).join('');
+  const sd = piecesSide ?? viewSide(), tabs = chip('Boxes', piecesTab === 'boxes', () => { piecesTab = 'boxes'; inspectId = null; }, 'Pieces in the boxes', 'boxes') + chip('Arrivals', piecesTab === 'arrivals', () => { piecesTab = 'arrivals'; inspectId = null; }, 'Arrivals by turn', 'calendar') + '<span class="sp"></span>' + [...VOL.sides].sort((x, y) => +(y === viewSide()) - +(x === viewSide())).map((x) => chip(VOL.tag[x], sd === x, () => { piecesSide = x; inspectId = null; }, seatedView() ? (x === viewSide() ? 'My pieces' : 'Opponent\'s pieces') : nm(x) + ' pieces')).join('');
   let body = '';
   if (piecesTab === 'boxes') {
     const sec = (title: string, bx: E.Chit['box']) => { const cs = E.boxOf(g, sd, bx); return `<h4>${title} <small>${cs.length}</small></h4><div class="pcgrid">${cs.map((c) => pieceBtn(c, () => { inspectId = inspectId === c.id ? null : c.id; }, inspectId === c.id)).join('') || '<small class="none">none</small>'}</div>`; };
     const pick = inspectId ? g.chits.find((c) => c.id === inspectId && c.side === sd) : null;
-    body = `${pick ? `<div class="inspect">${ruleCard(pick)}</div>` : '<p class="hint gx">Tap a piece to read what it does.</p>'}<h4>Cup <small>${E.boxOf(g, sd, 'cup').length} chits, drawn at random</small></h4>${sec('Available', 'available')}${sec('Used', 'used')}${sec('Eliminated', 'eliminated')}${(() => { const dead = g.units.filter((u) => u.side === sd && u.area == null && u.str <= 0 && !u.garrison && (u.arrival == null || u.arrival <= g.turn) && seen(u)); return dead.length ? `<h4>Eliminated blocks <small>${dead.length}${dead.some((u) => g.elimLarge.includes(u.id)) ? ` · ${dead.filter((u) => g.elimLarge.includes(u.id)).length} large (+1 VP each to the other side)` : ''}</small></h4><div class="oobrow">${dead.map((u) => `<div class="oobu" title="${esc(u.name)}">${unitPic({ ...u, str: u.max })}<small>${esc(u.name)}</small></div>`).join('')}</div>` : ''; })()}`;
+    body = `${pick ? `<div class="inspect">${ruleCard(pick)}</div>` : '<p class="hint gx">Tap a piece to read what it does.</p>'}<h4>Cup <small>${E.boxOf(g, sd, 'cup').length} chits, drawn at random</small></h4>${sec('Available', 'available')}${sec('Used', 'used')}${sec('Eliminated', 'eliminated')}${(() => { const dead = g.units.filter((u) => u.side === sd && u.area == null && u.str <= 0 && !u.garrison && (u.arrival == null || u.arrival <= g.turn) && seen(u)); return dead.length ? `<h4>Eliminated blocks <small>${dead.length}${dead.some((u) => g.elimLarge.includes(u.id)) ? ` · ${dead.filter((u) => g.elimLarge.includes(u.id)).length} large (+1 VP each to the other side)` : ''}</small></h4><div class="oobrow">${dead.map((u) => `<div class="oobu" title="${esc(u.name)}">${unitPic({ ...u, str: u.max })}<small>${esc(u.name)}</small></div>`).join('')}</div>` : ''; })()}${(() => { const held = g.units.filter((u) => u.side === sd && u.area == null && u.str > 0 && u.box && seen(u)), boxes = [...new Set(held.map((u) => u.box!))];      // the volume's holding boxes (Golan: reserves, the air assault battalion, evacuated strongpoints)
+      return boxes.map((bx) => `<h4>${esc(VOL.boxes[bx] ?? bx)} <small>${held.filter((u) => u.box === bx).length}</small></h4><div class="oobrow">${held.filter((u) => u.box === bx).map((u) => `<div class="oobu" title="${esc(u.name)}">${unitPic(u)}<small>${esc(u.name)}</small></div>`).join('')}</div>`).join(''); })()}`;
   } else {
     const rows: string[] = [];
     for (let t = 1; t <= g.lastTurn; t++) {
@@ -1324,6 +1327,8 @@ function piecesHtml() {
   }
   return `<div class="modal"><div class="sheet wide"><h3>${seatedView() ? (sd === viewSide() ? 'My pieces' : 'Opponent\'s pieces') : nm(sd) + ' pieces'} <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3><div class="chips tabrow">${tabs}</div>${body}</div></div>`;
 }
+/** What the volume's own prompts may use: buttons, who is mine, an area pick on the map. */
+const panelCtx = (): PanelCtx => ({ btn, ubtn, mine, areaName, ico, pickArea: (label, areas, run) => { areaPick = { label, areas: new Set(areas), run }; selUnit = selChit = selArr = null; refresh(); } });
 function dispatch() {
   if (g.battle || g.over) return '';
   const row = (k: string, v: string, c = '') => `<div class="r"><span>${k}</span><b class="${c}">${v}</b></div>`;
@@ -1345,7 +1350,7 @@ function dispatch() {
     const cs = E.boxOf(g, sd, 'used').filter((c) => E.isAsset(c)), pick = recoverSel[sd] ? cs.find((c) => c.id === recoverSel[sd]) : null, own = mine(sd);
     return `<h4 class="${sd}">${nm(sd)}</h4><div class="pcgrid">${cs.map((c) => pieceBtn(c, () => { recoverSel[sd] = recoverSel[sd] === c.id ? null : c.id; }, recoverSel[sd] === c.id, !own)).join('') || '<small>Nothing in the Used Box</small>'}</div>
       <div class="row">${btn(pick ? `Bring back ${esc(pick.name)}` : 'Choose an asset', () => { E.recoverAsset(g, sd, pick!.id); recoverSel[sd] = null; }, 'primary', !pick || !own)}${btn('None', () => E.recoverAsset(g, sd, null), '', !own)}</div>
-      ${pick ? `<details class="rdet"><summary><b>${esc(pick.name)}</b> · ${esc((RULE[pick.kind] ?? [pick.kind])[0])} <span>What it does</span></summary>${ruleHtml(pick.kind, E.isEvent(pick))}</details>` : ''}`;
+      ${pick ? `<details class="rdet"><summary><b>${esc(pick.name)}</b> · ${esc((RULE[VOL.ruleKey(pick.kind)] ?? [pick.kind])[0])} <span>What it does</span></summary>${ruleHtml(VOL.ruleKey(pick.kind), E.isEvent(pick))}</details>` : ''}`;
   }).join('')}</div>`;
   const u = selUnit ? g.units.find((x) => x.id === selUnit) : null;
   if (u) {
@@ -1353,15 +1358,15 @@ function dispatch() {
     const tags = [u.disorder === 1 ? 'disordered' : u.disorder === 2 ? 'recovering' : '', u.unsupplied ? 'unsupplied' : '', u.reserve ? 'reserve' : '', u.exploit ? 'exploit' : '', u.interdict ? 'interdicted' : ''].filter(Boolean);
     let route = '';
     const sp = u.area != null && !u.garrison ? E.supplyPath(g, u.side, u.area) : null, supLine = u.area == null || u.garrison ? '' : sp ? `<p class="hint sup ok gx">${ico('fuel')} In supply: ${sp.length > 1 ? `traces through ${sp.length - 1} area${sp.length > 2 ? 's' : ''} to ${esc(areaName(sp.at(-1)!))} (blue line)` : 'it stands on a supply source'}.</p>` : `<p class="hint sup bad">${ico('warn')} Out of supply. ${esc(E.supplyWhy(g, u.side, u.area))}</p>`;
-    if (o) route = `<div class="route"><p class="tline"><b>→ ${esc(areaName(o.area))}</b> · ${strat ? 'strategic' : `${o.cost} MP`}${u.side === 'german' && g.opts.fuel && o.fuel ? ' · <span class="bad">fuel −1</span>' : ''}${o.mustStop ? ' · <span class="bad">stops: battle</span>' : ''}</p><h4>→ ${esc(areaName(o.area))}</h4>${strat ? row('Strategic move', 'any distance') : row('Movement', `${o.cost} MP`)}${u.side === 'german' && g.opts.fuel ? row('Fuel', o.fuel ? `−1 &nbsp;(${n} → ${n - 1})` : 'not needed', o.fuel ? 'bad' : '') : ''}${o.mustStop ? row('Stops here', 'enemy present, battle follows', 'bad') : ''}${btn('Move here', () => { previewArea = o.area; confirmMove(); }, 'primary')}</div>`;
+    if (o) route = `<div class="route"><p class="tline"><b>→ ${esc(areaName(o.area))}</b> · ${strat ? 'strategic' : `${o.cost} MP`}${VOL.features.fuel && first(u.side) && g.opts.fuel && o.fuel ? ' · <span class="bad">fuel −1</span>' : ''}${o.mustStop ? ' · <span class="bad">stops: battle</span>' : ''}</p><h4>→ ${esc(areaName(o.area))}</h4>${strat ? row('Strategic move', 'any distance') : row('Movement', `${o.cost} MP`)}${VOL.features.fuel && first(u.side) && g.opts.fuel ? row('Fuel', o.fuel ? `−1 &nbsp;(${n} → ${n - 1})` : 'not needed', o.fuel ? 'bad' : '') : ''}${o.mustStop ? row('Stops here', 'enemy present, battle follows', 'bad') : ''}${btn('Move here', () => { previewArea = o.area; confirmMove(); }, 'primary')}</div>`;
     else if (optsFor(u.id).length) route = `<p class="hint gx">${optsFor(u.id).length} destination(s). Hover or click a highlighted area.</p>`;
     const can = ['movement', 'reaction', 'btMove'].includes(g.phase) && !u.garrison && !u.moved;
     const fw = can && u.area != null && !u.unsupplied && !u.disorder && !E.contested(g, u.area) && !g.fieldWorks.includes(u.area) && ((g.phase === 'movement' && u.side === g.phasing) || (g.phase === 'reaction' && u.side !== g.phasing && !!u.reserve) || (g.phase === 'btMove' && u.side === g.phasing && (!!u.reserve || u.exploit)));
-    const noFuel = u.side === 'german' && g.opts.fuel && ['movement', 'strategic', 'btMove', 'reaction'].includes(g.phase) && mine(u.side) && !u.garrison && !E.boxOf(g, 'german', 'available').some((x) => x.kind === 'fuel');
+    const noFuel = VOL.features.fuel && first(u.side) && g.opts.fuel && ['movement', 'strategic', 'btMove', 'reaction'].includes(g.phase) && mine(u.side) && !u.garrison && !E.boxOf(g, P1, 'available').some((x) => x.kind === 'fuel');
     const warns = (noFuel ? `<div class="warnbox">${ico('fuel')}<span><b>No fuel left</b>${gx('. German blocks may move at most 3 MP this turn and cannot use strategic movement (16.13).', ': 3 MP max, no strategic move.')}</span></div>` : '')
       + (u.interdict && mine(u.side) && ['movement', 'reaction', 'btMove', 'admin'].includes(g.phase) ? `<div class="warnbox bad">${ico('warn')}<span><b>Greif Interdict</b>${gx(' on this block. Moving it, building field works or taking a reserve marker triggers a morale check (+2). Fail: it may only stay or move one area (17.11).', ': moving triggers a morale check (+2).')}</span></div>` : '');
     return `<div class="c-dispatch ${o ? 'previewing' : ''}">${warns}<h3 class="${u.side}">${esc(u.name)}</h3><div class="pipsrow">${pips(u)} <small>${u.garrison ? 'asset' : u.cls} · ${tags.join(' · ') || 'in order'}</small></div>${seen(u) ? supLine : ''}${route}
-      <div class="row">${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve', () => E.setReserve(g, u.id, false)) : btn('Reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u))) : ''}${fw ? btn('Fortify', () => E.buildFieldWorks(g, u.id)) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn('Activate (SA)', () => pickSA(u.side, u.ech, (sa) => E.activateBreakthrough(g, u.id, sa)), '', !E.saAvailable(g, u.side, u.ech).length) : ''}${E.peiperCan(g, u) ? btn(`${u.peiperFull ? ico('check') : ''}KG Peiper: full move (18.3)`, () => E.setPeiperFull(g, u.id, !u.peiperFull), u.peiperFull ? 'primary' : '', false, 'Once per game, up to turn 3: this exploitation move uses Peiper\'s full movement allowance instead of one area') : ''}</div></div>`;
+      <div class="row">${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve', () => E.setReserve(g, u.id, false)) : btn('Reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u))) : ''}${fw ? btn('Fortify', () => VOL.fieldWorks(g, u.id)) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn('Activate (SA)', () => pickSA(u.side, u.ech, (sa) => E.activateBreakthrough(g, u.id, sa)), '', !E.saAvailable(g, u.side, u.ech).length) : ''}${E.peiperCan(g, u) ? btn(`${u.peiperFull ? ico('check') : ''}KG Peiper: full move (18.3)`, () => E.setPeiperFull(g, u.id, !u.peiperFull), u.peiperFull ? 'primary' : '', false, 'Once per game, up to turn 3: this exploitation move uses Peiper\'s full movement allowance instead of one area') : ''}</div></div>`;
   }
   return '';
 }
@@ -1389,31 +1394,30 @@ function dragArrival(ev: PointerEvent, el: HTMLElement) {
   window.addEventListener('pointercancel', () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); ghost?.remove(); }, { once: true });
 }
 /** A block drawn as a real 3D object (front label, right and top faces), for the tray and the battle view. */
-const blankFace = (side: E.Side) => svgUri(`<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100"><rect width="100" height="100" fill="${side === 'german' ? '#8e9296' : '#5d8a45'}"/></svg>`);
-const unitFace = (u: E.Unit) => svgUri(u.garrison ? garrisonArt(u) : labelSvg(u));
+const unitFace = (u: E.Unit) => svgUri(VOL.unitSvg(u, g));
 const b3 = (face: string, side: E.Side | 'british', chit = false) => `<span class="b3 ${side} ${chit ? 'flat' : ''}" aria-hidden="true"><i class="f"><img alt="" draggable="false" src="${face}"></i><i class="r"></i><i class="t"></i></span>`;
-const sideOfUnit = (u: E.Unit) => (u.side === 'german' ? 'german' : BRIT.has(u.name) ? 'british' : 'allied');
+const sideOfUnit = (u: E.Unit) => VOL.cssSide(u);
 function tray() {
-  const us = g.pendingArrivals.map((id) => g.units.find((x) => x.id === id)!).filter((u) => mine(u.side)), tf = g.tfNew.map((id) => E.chit(g, id)).filter((c) => mine(c.side));
+  const ids = g.phase === 'deploy' ? VOL.pendingPlace(g) : g.pendingArrivals, us = ids.map((id) => g.units.find((x) => x.id === id)!).filter((u) => mine(u.side)), tf = g.phase === 'deploy' ? [] : g.tfNew.map((id) => E.chit(g, id)).filter((c) => mine(c.side));
   if (!us.length && !tf.length) return '';
-  return `<div class="arrtray" role="group" aria-label="Arriving reinforcements"><span class="why">Drag a block to a highlighted entry area, or click it to see them.</span>${us.map((u) => `<button class="arr ${u.id === selArr ? 'sel' : ''}" data-arr="${u.id}" title="${esc(u.name)}">${b3(unitFace(u), sideOfUnit(u), !!u.garrison)}<small>${esc(u.name)}</small></button>`).join('')}${tf.map((c) => `<button class="arr ${c.id === selArr ? 'sel' : ''}" data-arr="${c.id}" title="Task Force">${b3(svgUri(garrisonChit('Task Force', `${c.turn}-*`, false)), 'allied', true)}<small>Task Force</small></button>`).join('')}</div>`;
+  return `<div class="arrtray" role="group" aria-label="${g.phase === 'deploy' ? 'Blocks to place' : 'Arriving reinforcements'}"><span class="why">${g.phase === 'deploy' ? 'Drag a block to a highlighted set-up area, or click it to see them.' : 'Drag a block to a highlighted entry area, or click it to see them.'}</span>${us.map((u) => `<button class="arr ${u.id === selArr ? 'sel' : ''}" data-arr="${u.id}" title="${esc(u.name)}">${b3(unitFace(u), sideOfUnit(u), !!u.garrison)}<small>${esc(u.name)}</small></button>`).join('')}${tf.map((c) => `<button class="arr ${c.id === selArr ? 'sel' : ''}" data-arr="${c.id}" title="Task Force">${b3(svgUri(garrisonChit('Task Force', `${c.turn}-*`, false)), 'allied', true)}<small>Task Force</small></button>`).join('')}</div>`;
 }
 /** One slim line above the hand: what the chosen card does and whether it can join, without covering the map. */
 function cardTip() {
   const c = handInspect ? g.chits.find((x) => x.id === handInspect) : null, b = g.battle;
   if (!c || !b) return '<div class="cardtip"><span>Tap a card to read its rule.</span></div>';
-  const [t, d] = RULE[c.kind] ?? [c.kind, ''], why = E.canAssign(g, b, c.side, c);
+  const [t, d] = RULE[VOL.ruleKey(c.kind)] ?? [c.kind, ''], why = VOL.battleUse(g, b, c);
   return `<div class="cardtip">${chitPic(c)}<div><b>${esc(c.name)} <small>${esc(t)}</small></b><span>${esc(d.split("\n")[0])}</span>${why ? `<em>Cannot join: ${esc(why)}</em>` : '<em class="ok">Can join this battle</em>'}</div></div>`;
 }
 function handCards() {
   const b = g.battle;
-  if (!b && g.phase === 'reinforcement') return tray();
+  if (!b && (g.phase === 'reinforcement' || g.phase === 'deploy')) return tray();
   if (b) {
     if (b.stage !== 'setup') return '';
-    const cs = ([b.attacker, other(b.attacker)] as E.Side[]).filter(mine).sort().flatMap((s) => E.boxOf(g, s, 'available').filter((c) => E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission'));
-    const ok = cs.filter((c) => !E.canAssign(g, b, c.side, c));
-    const bad = cs.filter((c) => E.canAssign(g, b, c.side, c));
-    return `<div class="handtab">${mine(b.attacker) ? btn(`${ico('close')}<span class="bl">Cancel</span>`, () => { E.cancelBattle(g); }, 'ico danger', !!b.locked, b.locked ? 'A Special Action was spent, so the battle must be fought' : 'Withdraw the attack and return every assigned asset') : ''}<button class="ico ${handInfo ? 'on' : ''}" data-ui="${reg(() => { handInfo = !handInfo; if (!handInfo) handInspect = null; })}" aria-pressed="${handInfo}" title="Rules: tap a card to read what it does instead of adding it" aria-label="Rules">${ico('info')}</button>${ok.length ? btn(`${ico('wand')}<span class="bl">Auto-fill</span>`, () => autoFill(b), 'ico', false, 'Auto-fill: place every asset that can legally join, artillery first') : ''}</div>${handInfo ? cardTip() : ''}<div class="c-hand" ${handStyle(ok.length + bad.length)}>${fan([...ok.map((c) => card(c)), ...bad.map((c) => card(c, 0, E.canAssign(g, b, c.side, c)))])}</div>`;
+    const cs = ([b.attacker, other(b.attacker)] as E.Side[]).filter(mine).sort().flatMap((s) => E.boxOf(g, s, 'available').filter((c) => VOL.battleCard(c)));
+    const ok = cs.filter((c) => !VOL.battleUse(g, b, c));
+    const bad = cs.filter((c) => VOL.battleUse(g, b, c));
+    return `<div class="handtab">${mine(b.attacker) ? btn(`${ico('close')}<span class="bl">Cancel</span>`, () => { E.cancelBattle(g); }, 'ico danger', !!b.locked, b.locked ? 'A Special Action was spent, so the battle must be fought' : 'Withdraw the attack and return every assigned asset') : ''}<button class="ico ${handInfo ? 'on' : ''}" data-ui="${reg(() => { handInfo = !handInfo; if (!handInfo) handInspect = null; })}" aria-pressed="${handInfo}" title="Rules: tap a card to read what it does instead of adding it" aria-label="Rules">${ico('info')}</button>${ok.length ? btn(`${ico('wand')}<span class="bl">Auto-fill</span>`, () => autoFill(b), 'ico', false, 'Auto-fill: place every asset that can legally join, artillery first') : ''}</div>${handInfo ? cardTip() : ''}<div class="c-hand" ${handStyle(ok.length + bad.length)}>${fan([...ok.map((c) => card(c)), ...bad.map((c) => card(c, 0, VOL.battleUse(g, b, c)))])}</div>`;
   }
   if (g.phase !== 'admin') return '';
   const own = online.active && !online.both() ? online.mySide() : null, s = handSide ?? own ?? (g.battle && !mine(g.phasing) ? other(g.phasing) : g.phasing), cs = [...E.boxOf(g, s, 'available')].sort((x, y) => x.kind.localeCompare(y.kind) || x.name.localeCompare(y.name));
@@ -1427,16 +1431,16 @@ function battleTable() {
   const b = g.battle; if (!b) return '';
   const L = E.areas.get(b.area)!, att = b.attacker, setup = b.stage === 'setup';
   const side = (s: E.Side) => {
-    const us = E.unitsIn(g, b.area, s), lim = E.assetLimits(g, b, s), ids = b.assets[s].map((id) => E.chit(g, id)), air = b.air[s] ? E.chit(g, b.air[s]!.id) : null;
-    const arty = ids.filter((c) => E.isArty(c)).length + (air && b.air[s]!.mode === 'arty' ? 1 : 0), rest = ids.length - ids.filter((c) => E.isArty(c)).length;
-    return `<div class="bside ${s} ${mine(s) ? 'mine' : 'theirs'}"><h4 title="${nm(s)} ${s === att ? 'attacking' : 'defending'}"><span class="tag">${s === 'german' ? 'GE' : 'AL'}</span>${ico(s === att ? 'next' : 'shield')}${online.active && !online.both() ? `<small>${mine(s) ? 'you' : 'foe'}</small>` : ''}</h4>
+    const us = E.unitsIn(g, b.area, s), lim = VOL.limits(g, b, s), ids = b.assets[s].map((id) => E.chit(g, id)), airs = E.airOf(b, s);
+    const arty = ids.filter((c) => E.isArty(c)).length + airs.filter((a) => a.mode === 'arty').length, rest = ids.length - ids.filter((c) => E.isArty(c)).length;
+    return `<div class="bside ${s} ${mine(s) ? 'mine' : 'theirs'}"><h4 title="${nm(s)} ${s === att ? 'attacking' : 'defending'}"><span class="tag">${VOL.tag[s]}</span>${ico(s === att ? 'next' : 'shield')}${online.active && !online.both() ? `<small>${mine(s) ? 'you' : 'foe'}</small>` : ''}</h4>
       <span class="chp" title="Artillery assigned">${ico('artillery')}${arty}/${lim.arty}<small>arty</small></span>${rest || setup ? `<span class="chp" title="Battle assets and events">${ico('armor_asset')}${rest}<small>assets</small></span>` : ''}
       </div>`;
   };
   const saRow = (() => { const s = other(att), us = E.unitsIn(g, b.area, s); if (!setup || !E.saAvailable(g, s).length) return ''; return `<div class="bsarow ${saOpen || reinforcing ? 'open' : ''}"><small class="gx">${nm(s)} Special Action</small>${ubtn(`${ico('plus')}<span>Special Action…</span>`, () => { saOpen = !saOpen; }, `satog ${saOpen ? 'on' : ''}`, !mine(s), 'Retreat before combat or bring in a neighbouring block (uses a Special Action)')}<span class="sabtns">${btn(`${ico('back')}<span class="bsa">Retreat (SA)</span>`, () => pickSA(s, us[0]?.ech, (sa) => E.defenderRetreatSA(g, g.battle!, sa)), 'ico', !mine(s) || !us.some((u) => !u.garrison), 'Retreat before combat (8.24): uses a Special Action; your units leave without disorder, garrisons stay; the attacker gets an exploitation chance')}${ubtn(`${ico('plus')}<span class="bsa">Reinforce (SA)</span>`, () => { reinforcing = !reinforcing; refresh(); }, `ico ${reinforcing ? 'on' : ''}`, !mine(s), 'Bring in a neighbouring block (uses a Special Action)')}</span></div>`; })();
-  const covered = E.unitsIn(g, b.area).some((u) => !seen(u)), al = stats(b, 'allied'), ge = stats(b, 'german'), tot = al.mean + ge.mean || 1;
-  return `<div class="c-table slim ${rollView ? 'rolling' : ''}">${side('allied')}<div class="bmid"><div class="c-title">${g.fought.length + fightable().length > 1 ? `<small class="cnt" title="Battle ${g.fought.length + 1} of ${g.fought.length + fightable().length}">${Math.min(g.fought.length + 1, g.fought.length + fightable().length)}/${g.fought.length + fightable().length}</small>` : ''}${b.bt ? '<small class="cnt" title="Breakthrough combat">BT</small>' : ''}<b>${esc(L.name)}</b><span class="chp" title="Terrain defence number ${L.tdn}: attackers −${L.tdn} to hit">${ico('tree')}${L.tdn}</span>${g.fieldWorks.includes(b.area) ? `<span class="chp" title="Field works">${ico('gear')}</span>` : ''}${b.riverAssault ? `<span class="chp" title="River assault">${ico('wave')}</span>` : ''}</div>
-    <div class="c-vs">${covered ? '<div class="big">?<span>:</span>?</div>' : `<div class="big" title="Expected hits per combat round: Allied : German"><small class="xs al">AL</small>${al.mean.toFixed(1)}<span>:</span>${ge.mean.toFixed(1)}<small class="xs ge">GE</small></div>${gx('<small class="xcap">expected hits per round</small>')}<div class="gauge"><i style="width:${(al.mean / tot) * 100}%"></i></div>`}</div></div>${side('german')}${saRow}${setup ? engChoice(b) : ''}${setup && refusal ? `<div class="refuse">${ico('xbold')}<span><b>Not allowed:</b> ${esc(refusal)}</span></div>` : ''}</div>`;
+  const covered = E.unitsIn(g, b.area).some((u) => !seen(u)), al = stats(b, P2), ge = stats(b, P1), tot = al.mean + ge.mean || 1;
+  return `<div class="c-table slim ${rollView ? 'rolling' : ''}">${side(P2)}<div class="bmid"><div class="c-title">${g.fought.length + fightable().length > 1 ? `<small class="cnt" title="Battle ${g.fought.length + 1} of ${g.fought.length + fightable().length}">${Math.min(g.fought.length + 1, g.fought.length + fightable().length)}/${g.fought.length + fightable().length}</small>` : ''}${b.bt ? '<small class="cnt" title="Breakthrough combat">BT</small>' : ''}<b>${esc(L.name)}</b><span class="chp" title="Terrain defence number ${L.tdn}: attackers −${L.tdn} to hit">${ico('tree')}${L.tdn}</span>${g.fieldWorks.includes(b.area) ? `<span class="chp" title="Field works">${ico('gear')}</span>` : ''}${b.riverAssault ? `<span class="chp" title="River assault">${ico('wave')}</span>` : ''}</div>
+    <div class="c-vs">${covered ? '<div class="big">?<span>:</span>?</div>' : `<div class="big" title="Expected hits per combat round: ${nm(P2)} : ${nm(P1)}"><small class="xs al">${VOL.tag[P2]}</small>${al.mean.toFixed(1)}<span>:</span>${ge.mean.toFixed(1)}<small class="xs ge">${VOL.tag[P1]}</small></div>${gx('<small class="xcap">expected hits per round</small>')}<div class="gauge"><i style="width:${(al.mean / tot) * 100}%"></i></div>`}</div></div>${side(P1)}${saRow}${setup ? engChoice(b) : ''}${setup && refusal ? `<div class="refuse">${ico('xbold')}<span><b>Not allowed:</b> ${esc(refusal)}</span></div>` : ''}</div>`;
 }
 /** 6.33: an attacking engineer in a battle with enemy field works either fires or removes them; two plain buttons, chosen at set-up (or before offensive fire). */
 function engChoice(b: E.Battle): string {
@@ -1482,11 +1486,11 @@ function ledger() {
 function legend() {
   if (tint === 'off') return '';
   const hex = (n: number) => '#' + n.toString(16).padStart(6, '0');
-  const items = tint === 'supply' ? [[0xffffff, 'Supplied', `${nm(supplySide())} areas`], [MAPC.cut, `Cut off (${cutOffCount(supplySide())})`, 'no path to a source'], [0x000000, 'Enemy', 'not your areas']] : tint === 'control' ? [[CONTROL_COL.allied, 'Allied', 'control'], [CONTROL_COL.german, 'German', 'control'], [CONTROL_COL.contested, 'Contested', 'both sides present']] : tint === 'tdn' ? TDN_COL.map((c, i) => [c, `TDN ${i}`, (i ? `attackers −${i} to hit` : 'no modifier')]) : [[ZONE_COL[5], 'Zone 5', '5th Panzer Army'], [ZONE_COL[6], 'Zone 6', '6th Panzer Army'], [ZONE_COL[7], 'Zone 7', '7th Army']];
+  const items = tint === 'supply' ? [[0xffffff, 'Supplied', `${nm(supplySide())} areas`], [MAPC.cut, `Cut off (${cutOffCount(supplySide())})`, 'no path to a source'], [0x000000, 'Enemy', 'not your areas']] : tint === 'control' ? [[CONTROL_COL[P2], nm(P2), 'control'], [CONTROL_COL[P1], nm(P1), 'control'], [CONTROL_COL.contested, 'Contested', 'both sides present']] : tint === 'tdn' ? TDN_COL.map((c, i) => [c, `TDN ${i}`, (i ? `attackers −${i} to hit` : 'no modifier')]) : [[ZONE_COL[5], 'Zone 5', '5th Panzer Army'], [ZONE_COL[6], 'Zone 6', '6th Panzer Army'], [ZONE_COL[7], 'Zone 7', '7th Army']];
   return `<div class="legend" aria-label="Overlay legend"><b>${tint === 'tdn' ? 'Terrain defence' : tint === 'control' ? 'Area control' : tint === 'supply' ? 'Supply' : 'Army zones'}</b>${items.map(([c, a, b]) => `<span><i style="background:${hex(c as number)}"></i>${a} <small>${b}</small></span>`).join('')}</div>`;
 }
 /* ---------- home: sign in, your games, a new game, join ---------- */
-let matches: Match[] = [], form = { game: 'bulge', title: '', side: 'german' as E.Side | '', scenario: 'tournament' as E.Opts['scenario'], fuel: true, rules: {} as Partial<E.Opts> }, homeMsg = (() => { try { const m = sessionStorage.getItem('fab-notice') ?? ''; sessionStorage.removeItem('fab-notice'); return m; } catch { return ''; } })(), creating = false;
+let matches: Match[] = [], form = { game: gameInfo(GAME_PARAM ?? '')?.ready ? GAME_PARAM! : 'bulge', title: '', side: '' as string, scenario: gameInfo(GAME_PARAM ?? '')?.defaultScenario ?? 'tournament', fuel: true, rules: {} as Partial<E.Opts> }, homeMsg = (() => { try { const m = sessionStorage.getItem('fab-notice') ?? ''; sessionStorage.removeItem('fab-notice'); return m; } catch { return ''; } })(), creating = false;
 { try { const sc = sessionStorage.getItem('fab-new'); sessionStorage.removeItem('fab-new'); if (sc === 'intro' || sc === 'campaign') { form.scenario = sc; form.side = 'german'; creating = true; } } catch { /* private mode */ } }   // the tutorial's last buttons open a new game
 const inviteLink = (id: string) => `${location.origin}${location.pathname}?table=${id}`;
 const homeUrl = () => location.pathname;
@@ -1504,7 +1508,8 @@ async function dropMatch(m: { id: string; title: string; owner: string }) {
 /* ---------- optional rules (Play Book 18): one chooser for every place a game is created ---------- */
 let optOpen = false;
 const optOn = (o: Partial<E.Opts>) => E.OPTIONAL_RULES.filter((r) => (r.key === 'bid' ? !!o.bid : !!o[r.key]));
-const SCEN_NAME: Record<string, string> = { tournament: 'Tournament', campaign: 'Campaign', intro: 'Nuts!', cold: 'Cold Shoulder' };
+const SCEN_NAME: Record<string, string> = Object.fromEntries(GAMES.flatMap((x) => x.scenarios.map((sc) => [sc.id, sc.name])));
+const tableUrl = (id: string, game: string) => `${homeUrl()}?table=${id}${game && game !== 'bulge' ? `&game=${game}` : ''}`;
 function optChooser(o: Partial<E.Opts>): string {
   const n = optOn(o).length, bid = o.bid ?? 0;
   const rows = E.OPTIONAL_RULES.map((r) => r.key === 'bid'
@@ -1519,11 +1524,12 @@ function rulesInUse(o: Partial<E.Opts>, extra = true): string {
 }
 async function createGame() {
   const info = gameInfo(form.game); if (!info?.ready) return;
-  const opts: E.Opts = JSON.parse(JSON.stringify({ ...form.rules, scenario: form.scenario, fuel: form.fuel })), title = form.title.trim() || `${info.name} · ${new Date().toLocaleDateString()}`;
+  const opts: E.Opts = JSON.parse(JSON.stringify({ ...(info.optional ? form.rules : {}), scenario: form.scenario || info.defaultScenario, fuel: info.fuel ? form.fuel : false })), title = form.title.trim() || `${info.name} · ${new Date().toLocaleDateString()}`;
   homeMsg = 'Creating…'; render();
-  const id = await lobby.create({ game: form.game, title, opts }, form.side || null, JSON.stringify(E.newGame(undefined, opts)));
+  E.useGame(info.id); const json = JSON.stringify(E.newGame(undefined, opts)); E.useGame(VOL.id);      // the new game is of the chosen volume; this page stays on its own
+  const id = await lobby.create({ game: form.game, title, opts }, form.side ? (form.side === info.sides[0] ? 'german' : 'allied') : null, json);
   if (id.startsWith('!')) { homeMsg = id.slice(1); return render(); }
-  location.href = `${homeUrl()}?table=${id}`;
+  location.href = tableUrl(id, form.game);
 }
 function joinByCode(v: string) {
   const m = v.trim().match(/[?&]table=([\w-]+)/)?.[1] ?? v.trim(); if (!/^[\w-]{3,40}$/.test(m)) { homeMsg = 'Paste the invite link or the game code.'; return render(); }
@@ -1533,27 +1539,27 @@ const stateOf = (m: Match) => (m.germanName && m.alliedName ? 'In play' : 'Waiti
 /** The first screen: never on top of a game. Signed out it is just the sign-in; signed in it is your games, a new game and a way to join one. */
 const tutUrl = () => `${homeUrl()}?tutorial=1`;
 const tutCard = () => `<section class="card tutcard"><div class="lh"><h2>${ico('info')} Learn to play</h2>${ubtn(`${ico('next')}<span>Tutorial</span>`, () => { location.href = tutUrl(); }, 'primary', false, 'An interactive tutorial on the Play Book examples')}</div><p class="hint">Ten short lessons on the Play Book's examples: a whole turn, step by step. Works offline.</p></section>`;
-const WHEN: Record<string, string> = { bulge: 'Ardennes · Dec 1944 – Jan 1945', sicily: 'Operation Husky · July – August 1943', golan73: 'Golan Heights · October 1973' };
+const WHEN: Record<string, string> = Object.fromEntries(GAMES.map((x) => [x.id, x.when]));
 /** The shelf: one box cover per FAB volume; tapping one shows that volume's tables (option A of the home mockup). */
 function shelfHtml() {
-  const pick = (id: string) => reg(() => { form.game = id; creating = false; });
+  const pick = (id: string) => reg(() => { form.game = id; form.scenario = gameInfo(id)?.defaultScenario ?? ''; form.side = ''; creating = false; });
   const st = (x: { ready: boolean }) => `<span class="cst ${x.ready ? 'ready' : 'soon'}">${x.ready ? 'Play' : 'Soon'}</span>`;
   const spines = `<div class="spines" role="group" aria-label="Choose a battle">${GAMES.map((x, i) => `<button class="spine ${x.ready ? '' : 'soon'}" style="--off:${[0, 10, 4][i] ?? 0}px" aria-pressed="${form.game === x.id}" data-ui="${pick(x.id)}" aria-label="${esc(x.name)}, ${x.ready ? 'ready to play' : 'in preparation'}">${boxSpine(BOXES[i])}${st(x)}</button>`).join('')}</div>`;
   return `<h2 class="sec">Choose a battle</h2>${spines}<div class="shelf">${GAMES.map((x, i) => `<button class="cover ${x.ready ? '' : 'soon'}" aria-pressed="${form.game === x.id}" data-ui="${pick(x.id)}" aria-label="${esc(x.name)}, ${x.ready ? 'ready to play' : 'in preparation'}">${boxFront(BOXES[i])}${st(x)}</button>`).join('')}</div>`;
 }
-const soonCard = (x: { name: string; id: string }) => `<section class="card soonbox"><h2>${esc(x.name)} is in preparation</h2><p class="hint">Rules, map and counters are being transcribed. You'll be able to play it here when the engine supports it.</p><p class="hint">${esc(WHEN[x.id] ?? '')}</p><div class="row">${x.id === 'golan73' ? `<a class="btnlink primary" href="./golan.html">Try the hot-seat preview</a>` : ''}${ubtn('Go to The Bulge', () => { form.game = 'bulge'; })}</div></section>`;
+const soonCard = (x: { name: string; id: string }) => `<section class="card soonbox"><h2>${esc(x.name)} is in preparation</h2><p class="hint">Rules, map and counters are being transcribed. You'll be able to play it here when the engine supports it.</p><p class="hint">${esc(WHEN[x.id] ?? '')}</p><div class="row">${ubtn('Go to The Bulge', () => { form.game = 'bulge'; form.scenario = 'tournament'; })}</div></section>`;
 function homeHtml() {
   const a = online.account, signed = !!a && !a.guest, info = gameInfo(form.game), ready = !!info?.ready;
-  const head = `<header><h1>Fast Action Battles</h1><p>Board-game battles with the series rules, played online.</p></header>${shelfHtml()}`, learn = ready ? tutCard() : soonCard(info!);
+  const head = `<header><h1>Fast Action Battles</h1><p>Board-game battles with the series rules, played online.</p></header>${shelfHtml()}`, learn = !ready ? soonCard(info!) : form.game === 'bulge' ? tutCard() : '';
   if (!online.ready) return `<div class="homepage" style="background-image: radial-gradient(ellipse at 55% 35%, #0b0d0866 0%, #0b0d08d9 62%, #0b0d08 100%), url('./home-table.jpg')"><div class="homein">${head}<p class="hint">Connecting…</p></div></div>`;
   if (online.mode !== 'remote' || !online.hasAccounts) return `<div class="homepage" style="background-image: radial-gradient(ellipse at 55% 35%, #0b0d0866 0%, #0b0d08d9 62%, #0b0d08 100%), url('./home-table.jpg')"><div class="homein">${head}<section class="card"><p class="hint">Online play is not set up on this site.${online.error ? ' ' + esc(online.error) : ''}</p></section>${learn}</div></div>`;
   if (!signed) return `<div class="homepage" style="background-image: radial-gradient(ellipse at 55% 35%, #0b0d0866 0%, #0b0d08d9 62%, #0b0d08 100%), url('./home-table.jpg')"><div class="homein">${head}<section class="card"><h2>Sign in</h2>${sessionStorage.getItem('fab-next') ? '<p class="hint">You will go straight back to the game you were invited to.</p>' : '<p class="hint">To create a game or join one. Anyone can watch a game from its link.</p>'}${accountHtml()}</section>${learn}${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}</div></div>`;
-  const mine = matches.filter((m) => (m.game ?? 'bulge') === form.game).sort((x, y) => +!!y.myMove - +!!x.myMove).map((m, mi) => `<div class="matchrow ${m.myMove ? 'yours' : ''}"><button class="open" data-do="${reg(() => { location.href = `${homeUrl()}?table=${m.id}`; })}"><b>${esc(m.title)}${m.myMove ? '<span class="stampy">Your move</span>' : ''}</b><small class="seats"><span class="st ${m.germanName && m.alliedName ? 'live' : 'wait'}" aria-hidden="true"></span><small class="stw">${esc(stateOf(m))}</small><b>GE</b> ${esc(m.germanName || '—')} <b>AL</b> ${esc(m.alliedName || '—')}</small><small class="mrules">${SCEN_NAME[(m.opts as Partial<E.Opts> | undefined)?.scenario ?? 'tournament'] ?? ''}${(m.opts as Partial<E.Opts> | undefined)?.fuel === false ? ' · no fuel rule' : ''}${optOn(m.opts as Partial<E.Opts>).length ? ` · optional ${optOn(m.opts as Partial<E.Opts>).map((r) => r.rule).join(', ')}` : ''}</small></button><div class="row">${btn(`${ico('share')}`, () => { void share(m.id, m.title); }, 'ico', false, 'Invite a player')}${btn(`${ico('trash')}`, () => { void dropMatch(m); }, 'ico danger', false, m.owner === online.uid || online.admin ? 'Delete this game for everyone' : 'Remove from my list')}</div>${m.myMove ? `<button class="${mi === 0 ? 'go' : 'primary'} resume" data-do="${reg(() => { location.href = `${homeUrl()}?table=${m.id}`; })}">Resume${m.turn ? ` turn ${m.turn}` : ''}${m.step && STEP_NAME[m.step] ? ` · ${STEP_NAME[m.step]}` : ''}${ico('next')}</button>` : ''}</div>`).join('') || '<p class="hint">No games yet.</p>';
-  const tile = (v: E.Side | '', label: string, tag: string) => `<button class="tile ${form.side === v ? 'on' : ''} ${v}" aria-pressed="${form.side === v}" data-ui="${reg(() => { form.side = v; })}" title="${label}"><b>${tag}</b><small>${label}</small></button>`;
+  const mine = matches.filter((m) => (m.game ?? 'bulge') === form.game).sort((x, y) => +!!y.myMove - +!!x.myMove).map((m, mi) => `<div class="matchrow ${m.myMove ? 'yours' : ''}"><button class="open" data-do="${reg(() => { location.href = tableUrl(m.id, m.game ?? 'bulge'); })}"><b>${esc(m.title)}${m.myMove ? '<span class="stampy">Your move</span>' : ''}</b><small class="seats"><span class="st ${m.germanName && m.alliedName ? 'live' : 'wait'}" aria-hidden="true"></span><small class="stw">${esc(stateOf(m))}</small><b>${info!.tag[info!.sides[0]]}</b> ${esc(m.germanName || '—')} <b>${info!.tag[info!.sides[1]]}</b> ${esc(m.alliedName || '—')}</small><small class="mrules">${SCEN_NAME[(m.opts as Partial<E.Opts> | undefined)?.scenario ?? 'tournament'] ?? ''}${(m.opts as Partial<E.Opts> | undefined)?.fuel === false ? ' · no fuel rule' : ''}${optOn(m.opts as Partial<E.Opts>).length ? ` · optional ${optOn(m.opts as Partial<E.Opts>).map((r) => r.rule).join(', ')}` : ''}</small></button><div class="row">${btn(`${ico('share')}`, () => { void share(m.id, m.title); }, 'ico', false, 'Invite a player')}${btn(`${ico('trash')}`, () => { void dropMatch(m); }, 'ico danger', false, m.owner === online.uid || online.admin ? 'Delete this game for everyone' : 'Remove from my list')}</div>${m.myMove ? `<button class="${mi === 0 ? 'go' : 'primary'} resume" data-do="${reg(() => { location.href = tableUrl(m.id, m.game ?? 'bulge'); })}">Resume${m.turn ? ` turn ${m.turn}` : ''}${m.step && STEP_NAME[m.step] ? ` · ${STEP_NAME[m.step]}` : ''}${ico('next')}</button>` : ''}</div>`).join('') || '<p class="hint">No games yet.</p>';
+  const tile = (v: string, label: string, tag: string) => `<button class="tile ${form.side === v ? 'on' : ''} ${v}" aria-pressed="${form.side === v}" data-ui="${reg(() => { form.side = v; })}" title="${label}"><b>${tag}</b><small>${label}</small></button>`;
   const create = creating ? `<div class="sheetbox"><div class="lh"><h3>${ico('plus')} New game</h3>${ubtn(ico('close'), () => { creating = false; }, 'ico', false, 'Cancel')}</div>
       <div class="authform"><input placeholder="Name (optional)" value="${esc(form.title)}" data-sel="${regv((x) => { form.title = x; })}"></div>
-      <div class="tiles">${tile('german', 'German', 'GE')}${tile('allied', 'Allied', 'AL')}${tile('', 'Later', '?')}</div>
-      <div class="chips"><div class="scens">${chip('Tournament<small>5 turns</small>', form.scenario === 'tournament', () => { form.scenario = 'tournament'; }, 'Tournament (24.2), 5 turns')}${chip('Campaign<small>9 turns</small>', form.scenario === 'campaign', () => { form.scenario = 'campaign'; }, 'Campaign (24.1), 9 turns')}${chip('Nuts!<small>3 turns · Bastogne</small>', form.scenario === 'intro', () => { form.scenario = 'intro'; }, 'Nuts! Introductory (24.3), 3 turns')}${chip('Cold Shoulder<small>9 turns · Zone 6</small>', form.scenario === 'cold', () => { form.scenario = 'cold'; }, 'Cold Shoulder bonus scenario, 9 turns')}</div><div class="optrules fuelrow"><button class="orow tog ${form.fuel ? 'on' : ''}" aria-pressed="${form.fuel}" data-ui="${reg(() => { form.fuel = !form.fuel; })}"><span class="orn">16.13</span><span class="ort"><b>German fuel</b><small>Moves over 3 MP and strategic moves spend a fuel asset.</small></span><span class="sw ${form.fuel ? 'on' : ''}">${form.fuel ? 'ON' : 'OFF'}</span></button></div></div>${optChooser(form.rules)}
+      <div class="tiles">${info!.sides.map((sd) => tile(sd, info!.sideName[sd], info!.tag[sd])).join('')}${tile('', 'Later', '?')}</div>
+      <div class="chips"><div class="scens">${info!.scenarios.map((sc) => chip(`${esc(sc.name)}<small>${esc(sc.sub)}</small>`, form.scenario === sc.id, () => { form.scenario = sc.id; }, sc.title)).join('')}</div>${info!.fuel ? `<div class="optrules fuelrow"><button class="orow tog ${form.fuel ? 'on' : ''}" aria-pressed="${form.fuel}" data-ui="${reg(() => { form.fuel = !form.fuel; })}"><span class="orn">16.13</span><span class="ort"><b>German fuel</b><small>Moves over 3 MP and strategic moves spend a fuel asset.</small></span><span class="sw ${form.fuel ? 'on' : ''}">${form.fuel ? 'ON' : 'OFF'}</span></button></div>` : ''}</div>${info!.optional ? optChooser(form.rules) : ''}
       <div class="row createrow">${btn(`${ico('check')}<span>Create game</span>`, () => { void createGame(); }, 'primary', !info?.ready)}</div></div>` : '';
   return `<div class="homepage" style="background-image: radial-gradient(ellipse at 55% 35%, #0b0d0866 0%, #0b0d08d9 62%, #0b0d08 100%), url('./home-table.jpg')"><div class="homein">
     <header class="hbar"><div><h1>Fast Action Battles</h1><p>Board-game battles with the series rules, played online.</p></div><div class="who"><span class="avatar" title="${esc(a!.name || a!.email)}">${esc((a!.name || a!.email || '?').slice(0, 1).toUpperCase())}</span>${online.admin ? ubtn(ico('wand'), () => { location.href = `${homeUrl()}?sandbox=1`; }, 'ico', false, 'Admin: sandbox test table') + ubtn(ico('lock'), () => { modal = 'rules'; }, 'ico', false, 'Admin: update the database rules') : ''}<button class="ico" data-auth="out" title="Sign out" aria-label="Sign out">${ico('logout')}</button></div></header>
@@ -1568,7 +1574,7 @@ function seatBar() {
   if (online.error) return `<div class="seatbar err"><span>${esc(online.error)}</span>${ubtn('OK', () => { online.error = ''; })}</div>`;
   const a = online.account, me = online.mySide(), s = online.seats, title = matches.find((m) => m.id === TABLE)?.title ?? 'a game of FAB';
   if (!a || a.guest) return `<div class="seatbar"><span>You are watching.</span>${ubtn('Sign in to play', () => { try { sessionStorage.setItem('fab-next', TABLE); } catch { /* private mode */ } location.href = homeUrl(); }, 'primary')}</div>`;
-  if (!me) { const free = (['german', 'allied'] as E.Side[]).filter((x) => !s[x]); return `<div class="seatbar"><span>${free.length ? 'Take a seat:' : 'Both seats are taken. You are watching.'}</span>${free.map((x) => ubtn(`Play ${nm(x)}`, () => { void sit(x); }, 'primary')).join('')}</div>`; }
+  if (!me) { const free = VOL.sides.filter((x) => !seatOf(s, x)); return `<div class="seatbar"><span>${free.length ? 'Take a seat:' : 'Both seats are taken. You are watching.'}</span>${free.map((x) => ubtn(`Play ${nm(x)}`, () => { void sit(x); }, 'primary')).join('')}</div>`; }
   if (!s.german || !s.allied) return `<div class="seatbar"><span>Waiting for your opponent.</span>${ubtn(`${ico('share')} Invite`, () => { void share(TABLE, title); }, 'primary')}</div>`;
   return '';
 }
@@ -1594,9 +1600,9 @@ function rulesHtml() {
     <h4>Single line</h4><textarea readonly rows="4" style="width:100%;font:12px monospace">${esc(rulesOne())}</textarea></div></div>`;
 }
 /** A Success Number modifier as a small icon chip: the sign and size are the data, the full reason is the tooltip. */
-const modIcon = (why: string) => /base/i.test(why) ? 'target' : /armor|infantry|class/i.test(why) ? 'armor_asset' : /green|veteran|elite|quality/i.test(why) ? 'star' : /terrain|tdn/i.test(why) ? 'tree' : /field/i.test(why) ? 'gear' : /river/i.test(why) ? 'wave' : /disorder/i.test(why) ? 'disorder' : /supply/i.test(why) ? 'warn' : /air|asset|artillery/i.test(why) ? 'air_mission' : 'info';
+const modIcon = (why: string) => /base/i.test(why) ? 'target' : /strongpoint/i.test(why) ? 'shield' : /brigade/i.test(why) ? 'users' : /armor|infantry|class/i.test(why) ? 'armor_asset' : /green|veteran|elite|quality/i.test(why) ? 'star' : /terrain|tdn/i.test(why) ? 'tree' : /field/i.test(why) ? 'gear' : /river|assault/i.test(why) ? 'wave' : /disorder/i.test(why) ? 'disorder' : /supply/i.test(why) ? 'warn' : /night/i.test(why) ? 'eye' : /air|asset|artillery|rocket/i.test(why) ? 'air_mission' : 'info';
 /** A short word for a modifier, shown beside its icon with full explanations on; a tap names it in full. */
-const modWord = (why: string) => /base/i.test(why) ? 'base' : /armor/i.test(why) ? 'armor' : /infantry/i.test(why) ? 'infantry' : /green|veteran|elite|quality/i.test(why) ? 'quality' : /terrain|tdn/i.test(why) ? 'terrain' : /field/i.test(why) ? 'field works' : /river/i.test(why) ? 'river' : /disorder/i.test(why) ? 'disordered' : /supply/i.test(why) ? 'supply' : /air/i.test(why) ? 'air' : /artillery/i.test(why) ? 'artillery' : /defender/i.test(why) ? 'defender' : '';
+const modWord = (why: string) => /base/i.test(why) ? 'base' : /strongpoint/i.test(why) ? 'strongpoint' : /brigade/i.test(why) ? 'brigade' : /night/i.test(why) ? 'night' : /assault/i.test(why) ? 'assault' : /armor/i.test(why) ? 'armor' : /infantry/i.test(why) ? 'infantry' : /green|veteran|elite|quality/i.test(why) ? 'quality' : /terrain|tdn/i.test(why) ? 'terrain' : /field/i.test(why) ? 'field works' : /river/i.test(why) ? 'river' : /disorder/i.test(why) ? 'disordered' : /supply/i.test(why) ? 'supply' : /rocket/i.test(why) ? 'rocket' : /air/i.test(why) ? 'air' : /artillery/i.test(why) ? 'artillery' : /defender/i.test(why) ? 'defender' : '';
 const modChips = (parts: [string, number][]) => parts.map(([w, v]) => `<span class="m2 ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}" role="button" tabindex="0" data-ui="${reg(() => say(`${v > 0 ? '+' : '−'}${Math.abs(v)}: ${w}`, true))}" title="${esc(w)}" aria-label="${esc(`${v > 0 ? 'plus' : 'minus'} ${Math.abs(v)}, ${w}`)}">${ico(modIcon(w))}${v > 0 ? '+' : v < 0 ? '−' : ''}${v ? Math.abs(v) : ''}${modWord(w) ? ` <small>${modWord(w)}</small>` : ''}</span>`).join('');
 /** A toggle chip. With `icon` the icon replaces the tick; with an empty label it is icon-only and `title` names it. */
 const chip = (label: string, on: boolean, f: () => void, title = '', icon = '') => `<button class="chip ${on ? 'on' : ''} ${label ? '' : 'iconly'}" aria-pressed="${on}" data-ui="${reg(f)}" title="${esc(title || label)}" aria-label="${esc(title || label)}">${icon ? ico(icon) : on ? ico('check') : ''}${label ? `<span>${label}</span>` : ''}</button>`;
@@ -1608,24 +1614,26 @@ function frameSide(sd: E.Side) { const ids = MAP.areas.filter((a) => g.control[a
 const cutOffCount = (sd: E.Side) => MAP.areas.filter((a) => g.control[a.id] === sd && !supOk(sd, a.id)).length;
 function layersHtml() {
   const tintBtn = (v: typeof tint, label: string, icon: string, title: string) => chip(label, tint === v, () => { tint = v; relayer(); if (v === 'supply') frameSide(supplySide()); }, title, icon);
+  const mapChips = VOL.art.relief ? `<h4>Map</h4><div class="chips">${chip('2D', !map3d, () => setMap3d(false), 'The printed board, flat')}${chip('3D', map3d, () => setMap3d(true), 'The snowy Ardennes in relief, with contour lines, woods and towns')}</div>` : '';
   const lay = (k: 'numbers' | 'tdn' | 'vp' | 'names', icon: string, title: string, label = '') => chip(label, layers[k], () => { layers[k] = !layers[k]; relayer(); }, title, icon);
   return `<div class="modal"><div class="sheet slim"><h3>${ico('eye')} View <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
     <h4>Printed</h4><div class="chips">${lay('numbers', 'hash', 'Area numbers and entry letters', 'Numbers')}${lay('tdn', 'tree', 'Terrain defence number', 'TDN')}${lay('vp', 'star', 'Victory points', 'VP')}${lay('names', 'text', 'Place names', 'Names')}</div>
-    <h4>Colour</h4><div class="chips">${tintBtn('off', 'None', 'close', 'No colour')}${tintBtn('tdn', 'TDN', 'tree', 'Terrain defence')}${tintBtn('zones', 'Zones', 'layers', 'Army zones')}${tintBtn('control', 'Control', 'flag', 'Who holds each area')}${tintBtn('supply', 'Supply', 'fuel', 'Supply: which of your areas trace supply')}</div><h4>Map key</h4><div class="mapkey"><span><i style="background:#5d8b3a"></i>Can go there</span><span><i style="background:#e7b04a"></i>Must stop · costs a Special Action</span><span><i class="fuel"></i>Uses fuel</span><span><i style="background:#d1432f"></i>Must fight · cut off</span><span><i style="background:transparent;border:2px solid #e7b04a"></i>May fight</span><span><b class="ar" style="color:#8fc46a">━▶</b>Move · <b class="ar" style="color:#e7b04a">━▶</b>with fuel · <b class="ar" style="color:#c9ccd2">━▶</b>minimum move · <b class="ar" style="color:#ddd7b5">━▶</b>strategic</span><span>${ico('back')}<small>over a block: it can still move</small></span></div><h4>Map</h4><div class="chips">${chip('2D', !map3d, () => setMap3d(false), 'The printed board, flat')}${chip('3D', map3d, () => setMap3d(true), 'The snowy Ardennes in relief, with contour lines, woods and towns')}</div><h4>Camera</h4><div class="row"><button data-home>${ico('home')} Reset the camera</button></div></div></div>`;
+    <h4>Colour</h4><div class="chips">${tintBtn('off', 'None', 'close', 'No colour')}${tintBtn('tdn', 'TDN', 'tree', 'Terrain defence')}${VOL.features.zones ? tintBtn('zones', 'Zones', 'layers', 'Army zones') : ''}${tintBtn('control', 'Control', 'flag', 'Who holds each area')}${tintBtn('supply', 'Supply', 'fuel', 'Supply: which of your areas trace supply')}</div><h4>Map key</h4><div class="mapkey"><span><i style="background:#5d8b3a"></i>Can go there</span><span><i style="background:#e7b04a"></i>Must stop · costs a Special Action</span><span><i class="fuel"></i>Uses fuel</span><span><i style="background:#d1432f"></i>Must fight · cut off</span><span><i style="background:transparent;border:2px solid #e7b04a"></i>May fight</span><span><b class="ar" style="color:#8fc46a">━▶</b>Move · <b class="ar" style="color:#e7b04a">━▶</b>with fuel · <b class="ar" style="color:#c9ccd2">━▶</b>minimum move · <b class="ar" style="color:#ddd7b5">━▶</b>strategic</span><span>${ico('back')}<small>over a block: it can still move</small></span></div>${mapChips}<h4>Camera</h4><div class="row"><button data-home>${ico('home')} Reset the camera</button></div></div></div>`;
 }
 /** The game log, newest first, grouped by turn; each line tinted by the side it concerns. */
 /** A log line with its side prefix (GE / AL) as a coloured tag: side shown by colour and name. */
-const sideTag = (x: string) => { const m = /^(GE|AL)\b ?/.exec(x); return m ? `<b class="stag ${m[1] === 'GE' ? 'german' : 'allied'}">${m[1]}</b> ${esc(x.slice(m[0].length))}` : esc(x); };
-const STEP_NAME: Record<string, string> = { reinforcement: 'Reinforcement', admin: 'Admin', movement: 'Movement', strategic: 'Strategic movement', combat: 'Combat', reaction: 'Reaction', btMove: 'Breakthrough movement', btCombat: 'Breakthrough combat', supply: 'Supply' };
+const TAGRE = VOL.sides.map((s) => VOL.tag[s]).join('|'), sideByTag = (t: string) => VOL.sides.find((s) => VOL.tag[s] === t || VOL.sideName[s] === t) ?? '';
+const sideTag = (x: string) => { const m = new RegExp(`^(${TAGRE})\\b ?`).exec(x); return m ? `<b class="stag ${sideByTag(m[1])}">${m[1]}</b> ${esc(x.slice(m[0].length))}` : esc(x); };
+const STEP_NAME: Record<string, string> = { deploy: 'Set-up', reinforcement: 'Reinforcement', admin: 'Admin', movement: 'Movement', strategic: 'Strategic movement', combat: 'Combat', reaction: 'Reaction', btMove: 'Breakthrough movement', btCombat: 'Breakthrough combat', supply: 'Supply' };
 /** The game log, newest first: a heading per turn, a smaller one per step, each line with its side tag (the step is in the heading, not on the line). */
 function logHtml() {
   const groups: { turn: string; steps: { step: string; lines: string[] }[] }[] = [];
   for (const l of g.log) {
-    const m = /^T(\d+) /.exec(l), t = m ? m[1] : '0', rest = m ? l.slice(m[0].length) : l, s = /^(GE|AL) (\w+): /.exec(rest), step = s && STEP_NAME[s[2]] ? s[2] : '', text = step ? `${s![1]} ${rest.slice(s![0].length)}` : rest;
+    const m = /^T(\d+) /.exec(l), t = m ? m[1] : '0', rest = m ? l.slice(m[0].length) : l, s = new RegExp(`^(${TAGRE}) (\\w+): `).exec(rest), step = s && STEP_NAME[s[2]] ? s[2] : '', text = step ? `${s![1]} ${rest.slice(s![0].length)}` : rest;
     if (groups.at(-1)?.turn !== t) groups.push({ turn: t, steps: [] });
-    const gr = groups.at(-1)!; if (gr.steps.at(-1)?.step !== step) gr.steps.push({ step, lines: [] }); if (!/^(GE|AL) (phase start|[a-zA-Z]+ phase)$/.test(text)) gr.steps.at(-1)!.lines.push(text);   /* the heading already says which step began */
+    const gr = groups.at(-1)!; if (gr.steps.at(-1)?.step !== step) gr.steps.push({ step, lines: [] }); if (!new RegExp(`^(${TAGRE}) (phase start|[a-zA-Z]+ phase)$`).test(text)) gr.steps.at(-1)!.lines.push(text);   /* the heading already says which step began */
   }
-  const side = (x: string) => (/^(GE|German)\b/.test(x) ? 'german' : /^(AL|Allied)\b/.test(x) ? 'allied' : '');
+  const side = (x: string) => sideByTag(x.split(/\s/)[0]);
   return `<div class="log">${groups.reverse().map((gr) => `<h5>${gr.turn === '0' ? 'Set-up' : `Turn ${gr.turn}`}</h5>${[...gr.steps].reverse().map((st) => `${st.step ? `<h6>${STEP_NAME[st.step]}</h6>` : ''}${[...st.lines].reverse().map((x) => `<div class="ll ${side(x)}">${sideTag(x)}</div>`).join('')}`).join('')}`).join('') || '<p class="hint">Nothing yet.</p>'}</div>`;
 }
 function modalHtml() {
@@ -1637,19 +1645,19 @@ function modalHtml() {
     if (!tabs.includes(menuTab)) menuTab = 'Players';
     const body = menuTab === 'Log' ? logHtml()
       : menuTab === 'Settings' ? `<h4>Dice</h4><div class="row">${ubtn(`<span class="sw ${autoRoll ? 'on' : ''}">${autoRoll ? 'AUTO' : 'WAIT'}</span> After a roll, move on by itself (decisions still wait for you)`, () => { autoRoll = !autoRoll; try { localStorage.setItem('fab-autoroll', autoRoll ? '1' : '0'); } catch { /* private mode */ } }, autoRoll ? 'on' : '')}</div><h4>Keyboard</h4><dl class="keys"><dt>Tab</dt><dd>to the map (or “Skip to the map” first)</dd><dt>← ↑ → ↓</dt><dd>move between neighbouring areas</dd><dt>Enter</dt><dd>select or move there; on a button, press it</dd><dt>N</dt><dd>next block that can move</dd><dt>Esc</dt><dd>clear the selection, close a window</dd><dt>Ctrl+Z</dt><dd>undo</dd></dl><h4>Rules in use</h4><p>${rulesInUse(g.opts)}</p><h4>Learn</h4><div class="row">${ubtn(`${ico('info')} Tutorial`, () => { location.href = tutUrl(); })}</div><h4>Map</h4><div class="row">${ubtn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${ubtn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Explanations</h4><div class="row">${ubtn(`<span class="sw ${guide === 'full' ? 'on' : ''}">${guide === 'full' ? 'FULL' : 'SHORT'}</span> Explain each option and rule`, () => setGuide(guide === 'full' ? 'short' : 'full'), guide === 'full' ? 'on' : '')}</div><h4>Opponent</h4><div class="row">${ubtn(`<span class="sw ${followFoe ? 'on' : ''}">${followFoe ? 'ON' : 'OFF'}</span> Point the camera at the other player's moves`, () => { followFoe = !followFoe; try { localStorage.setItem('fab-follow', followFoe ? '1' : '0'); } catch { /* private mode */ } }, followFoe ? 'on' : '')}</div>
-        ${online.active && !online.admin && !online.both() ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as E.Opts['scenario']; })}"><option value="intro" ${newOpts.scenario === 'intro' ? 'selected' : ''}>Nuts! introductory (3 turns)</option><option value="tournament" ${newOpts.scenario === 'tournament' ? 'selected' : ''}>Tournament (5 turns)</option><option value="campaign" ${newOpts.scenario === 'campaign' ? 'selected' : ''}>Campaign (9 turns)</option><option value="cold" ${newOpts.scenario === 'cold' ? 'selected' : ''}>Cold Shoulder (bonus, 9 turns)</option></select>
-        <label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label></div>${optChooser(newOpts)}<div class="row">${btn('Restart', () => { if (!confirm('Restart and lose the current game?')) return; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'danger')}</div>`}`
-      : menuTab === 'Admin' ? `<div class="row">${ubtn(`${ico('wand')} Sandbox`, () => { location.href = `${homeUrl()}?sandbox=1`; })}${ubtn('Update rules', () => { modal = 'rules'; })}${ubtn('Free German seat', () => { void auth.freeSeat('german'); })}${ubtn('Free Allied seat', () => { void auth.freeSeat('allied'); })}</div>`
+        ${online.active && !online.admin && !online.both() ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as E.Opts['scenario']; })}">${VOL.scenarios.map((sc) => `<option value="${sc.id}" ${newOpts.scenario === sc.id ? 'selected' : ''}>${esc(sc.name)} (${esc(sc.sub)})</option>`).join('')}</select>
+        ${VOL.features.fuel ? `<label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label>` : ''}</div>${VOL.features.optional ? optChooser(newOpts) : ''}<div class="row">${btn('Restart', () => { if (!confirm('Restart and lose the current game?')) return; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'danger')}</div>`}`
+      : menuTab === 'Admin' ? `<div class="row">${ubtn(`${ico('wand')} Sandbox`, () => { location.href = `${homeUrl()}?sandbox=1`; })}${ubtn('Update rules', () => { modal = 'rules'; })}${VOL.sides.map((sd) => ubtn(`Free ${nm(sd)} seat`, () => { void auth.freeSeat(sd); })).join('')}</div>`
       : online.mode === 'remote' ? (() => {
         const a = online.account, signed = !!a && !a.guest, me = online.mySide(), title = matches.find((m) => m.id === TABLE)?.title ?? TABLE, m = matches.find((x) => x.id === TABLE), own = !!m && (m.owner === online.uid || online.admin);
-        const row = (sd: E.Side) => { const who = online.seats[sd] ? (online.seats[sd] === online.uid ? 'you' : esc((sd === 'german' ? online.seats.germanName : online.seats.alliedName) || 'taken')) : 'free';
-          return `<div class="seatrow"><b class="${sd}">${nm(sd)}</b><span>${who}</span>${online.seats[sd] === online.uid ? ubtn('Leave seat', () => { void sit(null); }) : !online.seats[sd] && signed && !me ? ubtn('Take seat', () => { void sit(sd); }, 'primary') : ''}</div>`; };
-        return `<h4>Players</h4>${row('german')}${row('allied')}<p class="inuse">${rulesInUse(g.opts)}</p>${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}
+        const row = (sd: E.Side) => { const seat = seatOf(online.seats, sd), who = seat ? (seat === online.uid ? 'you' : esc(seatName(online.seats, sd) || 'taken')) : 'free';
+          return `<div class="seatrow"><b class="${sd}">${nm(sd)}</b><span>${who}</span>${seat === online.uid ? ubtn('Leave seat', () => { void sit(null); }) : !seat && signed && !me ? ubtn('Take seat', () => { void sit(sd); }, 'primary') : ''}</div>`; };
+        return `<h4>Players</h4>${VOL.sides.map(row).join('')}<p class="inuse">${rulesInUse(g.opts)}</p>${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}
           <div class="row">${ubtn(`${ico('share')} Invite a player`, () => { void share(TABLE, title); })}</div>
           <p class="hint">Connection: ${esc(online.sync)}</p>
           <p class="hint">${signed ? `Signed in as <b>${esc(a!.name || a!.email)}</b>` : 'You are watching as a guest.'}</p>
           ${own && TABLE !== 'main' ? `<div class="row">${ubtn(`${ico('close')} Delete this game`, () => { void dropMatch(m ?? { id: TABLE, title: TABLE, owner: '' }); }, 'danger')}</div>` : ''}`; })()
-      : '<p class="hint">Developer table. The Seat button in the top bar switches between German, Allied, both and watching; turn rules are enforced for the seat you hold.</p>';
+      : `<p class="hint">Developer table. The Seat button in the top bar switches between ${nm(P1)}, ${nm(P2)}, both and watching; turn rules are enforced for the seat you hold.</p>`;
     return `<div class="modal"><div class="sheet menu"><h3>Game <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
       <div class="tabs">${tabs.map((t) => `<button class="${t === menuTab ? 'on' : ''}" data-ui="${reg(() => { menuTab = t; })}" title="${t}" aria-label="${t}">${ico(({ Players: 'users', Log: 'list', Settings: 'sliders', Admin: 'lock' } as Record<string, string>)[t] ?? 'info')}<span>${t}</span></button>`).join('')}</div><div class="mbody">${body}</div>
       <div class="row sheetfoot">${ubtn(`${ico('back')}<span>Leave game</span>`, () => { location.href = homeUrl(); })}</div></div></div>`;
@@ -1680,7 +1688,7 @@ function renderInner() {
   const dockMain = alert || ledger() || handCards();
   const keepD = document.querySelector<HTMLElement>('#ui .c-dispatch')?.scrollTop ?? 0;           // a panel being read keeps its place when the screen updates
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = `<a class="skipmap" href="#" data-ui="${reg(() => { (document.getElementById('gl') as HTMLElement).focus(); })}">Skip to the map</a><div class="tops">${topBar()}${vpStrip(g, reg(() => { scoreOpen = true; }))}</div>` + `<div class="stage">${SANDBOX && SBU.st.sbOpen ? SBU.sandboxPanel() : ''}${seatBar()}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${airPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} Map`, () => { endHidden = true; }) + ubtn(`${ico('plus')} New game`, () => { if (SANDBOX) { SBU.sbReset({ ...g.opts }); endHidden = false; } else location.href = homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}</button>${undoBtn()}${!p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
+  $('#ui').innerHTML = `<a class="skipmap" href="#" data-ui="${reg(() => { (document.getElementById('gl') as HTMLElement).focus(); })}">Skip to the map</a><div class="tops">${topBar()}${vpStrip(g, reg(() => { scoreOpen = true; }))}</div>` + `<div class="stage">${SANDBOX && SBU.st.sbOpen ? SBU.sandboxPanel() : ''}${seatBar()}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${VOL.panel(g, panelCtx())}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${airPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} Map`, () => { endHidden = true; }) + ubtn(`${ico('plus')} New game`, () => { if (SANDBOX) { SBU.sbReset({ ...g.opts }); endHidden = false; } else location.href = homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}</button>${undoBtn()}${!p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
   const ui = $('#ui');
   { const d = ui.querySelector<HTMLElement>('.c-dispatch'); if (d) d.scrollTop = keepD; }
   bind(ui, keepH, keepA);
@@ -1708,7 +1716,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
     if (k === 'google') void auth.google(); else if (k === 'out') void auth.signOut();
     else if (k === 'in') void auth.signIn(v('a-mail'), v('a-pass')); else if (k === 'reg') void auth.register(v('a-mail'), v('a-pass'), v('a-name')); else if (k === 'reset') void auth.reset(v('a-mail'));
   }));
-  ui.querySelectorAll<HTMLElement>('[data-seat]').forEach((e) => (e.onclick = () => { const order: DevSeat[] = ['both', 'german', 'allied', 'watch']; setDevSeat(order[(order.indexOf(online.devSeat) + 1) % order.length]); selUnit = selChit = selArr = null; previewArea = null; refresh(); }));
+  ui.querySelectorAll<HTMLElement>('[data-seat]').forEach((e) => (e.onclick = () => { const order: DevSeat[] = ['both', ...VOL.sides, 'watch']; setDevSeat(order[(order.indexOf(online.devSeat) + 1) % order.length]); selUnit = selChit = selArr = null; previewArea = null; refresh(); }));
   ui.querySelectorAll<HTMLElement>('[data-home]').forEach((e) => (e.onclick = () => { goal = { t: new THREE.Vector3(17, 0, -3), dist: innerWidth < 700 ? 52 : 36, pitch: 1.0 }; yaw = viewRot(); }));
   ui.querySelectorAll<HTMLElement>('[data-tint]').forEach((e) => (e.onclick = () => { modal = 'layers'; render(); }));
   ui.querySelectorAll<HTMLElement>('[data-undo]').forEach((e) => (e.onclick = () => undo()));
@@ -1721,7 +1729,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
 let lastView: E.Side | null = null;
 /** Standard view: German from the bottom of the map, Allied from the top; the printed items turn with it. */
 function syncView() {
-  const v = viewSide(); if (v === lastView) return; const first = lastView === null; lastView = v; yaw = v === 'allied' ? Math.PI : 0; if (!first) goal = { t: new THREE.Vector3(17, 0, -3), dist, pitch }; paintBoard();
+  const v = viewSide(); if (v === lastView) return; const fresh = lastView === null; lastView = v; yaw = v === P2 ? Math.PI : 0; if (!fresh) goal = { t: new THREE.Vector3(17, 0, -3), dist, pitch }; paintBoard();
 }
 /** Split tables: publish the blocks the other side may now see, and (attacker's seat) start combat once both sides are ready and their blocks are known. */
 function driveSplit() {
@@ -1737,7 +1745,7 @@ function refresh() {
   SBU.hotseatSync();
   if (online.mode === 'remote') setTimeout(driveSplit, 0);
   { const key = `${online.devSeat}|${online.mySide()}|${g.battle?.attPoint}|${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
-    if (key !== tgtKey) { tgtKey = key; tgt = reinforcing ? reinforceTargets() : decisionTargets() ?? (selChit && mine(g.chits.find((x) => x.id === selChit)?.side ?? 'german') ? targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: (u) => unitPic(u), areaName }) : null); } }
+    if (key !== tgtKey) { tgtKey = key; tgt = reinforcing ? reinforceTargets() : decisionTargets() ?? (selChit && mine(g.chits.find((x) => x.id === selChit)?.side ?? P1) ? VOL.targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: (u) => unitPic(u), areaName }) : null); } }
   if (tint === 'control') { const k = JSON.stringify(g.control) + E.contestedAreas(g).join(); if (k !== ctlKey) { ctlKey = k; paintBoard(); } }
   syncView(); syncBattleCam(); drawPieces(); paintAreas(); drawRoute(); badges = g.battle ? [] : badgeList(); syncBadges(); syncMoveMarks(); syncTags(); render();
   if (!rollView) { const cv = $('#dice'); if (cv && cv.style.display !== 'none') { clearDice(); cv.style.display = 'none'; } }
@@ -1768,6 +1776,7 @@ SBU.initSandboxUi({
   get selArr() { return selArr; }, set selArr(v) { selArr = v; }, get selArea() { return selArea; }, set selArea(v) { selArea = v; }, get previewArea() { return previewArea; }, set previewArea(v) { previewArea = v; },
   get rollView() { return rollView; }, set rollView(v) { rollView = v as RollView | null; },
   ABBR, actorNow, areaName, b3, chitImg, unitFace, unitPic, chitPic, hist, refresh, render, save, say, reg, regv, ubtn, optChooser,
+  scenarios: VOL.scenarios, defaultOpts: VOL.defaultOpts, optional: VOL.features.optional,
 });
 initTouch(document.body);
 const toScreen = (p: THREE.Vector3) => { const r = canvas.getBoundingClientRect(), v = p.clone().project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; };
@@ -1794,12 +1803,13 @@ const onNet = (): void => {
   if (next && !HAS_TABLE && online.account && !online.account.guest) { try { sessionStorage.removeItem('fab-next'); } catch { /* private mode */ } location.href = `${homeUrl()}?table=${next}`; }     // back to the invite that sent you to sign in
 };
 void startOnline((rg) => { if (heldNext) commitRoll(); const prevG = g;
-  { const by = online.lastBy, w: E.Side | null = online.seats.german === by ? 'german' : online.seats.allied === by ? 'allied' : null;           // referee-lite: check what the other browser wrote
+  if ((rg.game ?? 'bulge') !== VOL.id) { const u = new URL(location.href); u.searchParams.set('game', rg.game ?? 'bulge'); location.replace(u.href); return; }      // a shared table of another game: this page is built for one game, so it reloads as that one
+  { const by = online.lastBy, w: E.Side | null = online.seats.german === by ? P1 : online.seats.allied === by ? P2 : null;           // referee-lite: check what the other browser wrote
     if (by && by !== online.uid && prevG.turn) { const p = E.auditChange(prevG, rg, w); if (p.length) { auditWarn = [...auditWarn, ...p].slice(-6); console.warn('rules check', p); } } } const ckLast = JSON.stringify(g.checks?.at(-1) ?? null); const was = g.battle, n0 = was?.rolls.length ?? 0, st0 = was?.stage, pre = was ? snap(g) : null; applyingRemote = true; g = rg;
   const nb = g.battle; const rolled = !!(was && nb && nb.area === was.area && nb.rolls.length > n0); if (pre) { try { noteFx(pre, g, rolled); } catch (e) { console.error(e); } }                  // a failure while describing the changes must never stop the screen from updating
   if (was && nb && nb.area === was.area && nb.rolls.length > n0 && st0 && STAGE_NAME[st0]) {      // the other player rolled: show their dice here too
     const side = st0 === 'attArty' || st0 === 'offFire' || st0 === 'exploit' ? nb.attacker : other(nb.attacker);
-    rollView = { remote: true, morale: st0 === 'exploit', title: `${nm(side)} ${STAGE_NAME[st0]}`, pos: null, groups: nb.rolls.slice(n0).map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : side === 'german' ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: [] })) };
+    rollView = { remote: true, morale: st0 === 'exploit', title: `${nm(side)} ${STAGE_NAME[st0]}`, pos: null, groups: nb.rolls.slice(n0).map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : first(side) ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: [] })) };
     if (rollView.groups.length) { heldNext = g; g = prevG; }                                       // the board keeps the old state until the dice land
     if (rollView.groups.length) { const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block'; throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; render(); afterDice(rv); } }); } else rollView = null;       // the other player's dice clear themselves
   }
@@ -1813,10 +1823,10 @@ void startOnline((rg) => { if (heldNext) commitRoll(); const prevG = g;
 function sheets() {
   const seenSvg = new Set<string>(), out: Record<string, { id: string; label: string; svg: string }[]> = { chits: [], blocks: [], markers: [] };
   const add = (k: string, id: string, label: string, svg: string | null) => { if (svg && !seenSvg.has(svg)) { seenSvg.add(svg); out[k].push({ id, label, svg }); } };
-  const cg = E.newGame(5, { scenario: 'campaign', fuel: true });
-  for (const c of cg.chits) add('chits', c.id, `${c.side} ${c.name}${c.turn != null ? ' t' + c.turn : ''}`, chitSvg(c));
-  for (const u of cg.units) add('blocks', u.id, `${u.name}${u.code ? ' ' + u.code : ''}`, u.garrison ? garrisonArt(u) : labelSvg(u));
-  for (const m of ['X', 'FW', 'RA', 'RB', 'DIS', 'REC', 'E', 'B', 'P', 'R5', 'R6', 'R7', 'A7', 'A56', 'GI', 'G', 'OOS', 'AIR']) add('markers', m, m, mapMarkerSvg(m));
+  const cg = E.newGame(5, VOL.id === 'bulge' ? { scenario: 'campaign', fuel: true } : VOL.defaultOpts);
+  for (const c of cg.chits) add('chits', c.id, `${c.side} ${c.name}${c.turn != null ? ' t' + c.turn : ''}`, VOL.chitSvg(c));
+  for (const u of cg.units) add('blocks', u.id, `${u.name}${u.code ? ' ' + u.code : ''}`, VOL.unitSvg(u, cg));
+  for (const m of ['X', 'FW', 'RA', 'RB', 'DIS', 'REC', 'E', 'B', 'P', 'R5', 'R6', 'R7', 'A7', 'A56', 'GI', 'G', 'OOS', 'AIR']) add('markers', m, m, VOL.markSvg(m));
   return out;
 }
 if (DEV || SANDBOX) Object.assign(window, { __fab: { unitAt: (id: string) => { const m = pieces.children.find((o) => o.userData.unit === id || o.userData.chit === id); if (!m) return null; const r = canvas.getBoundingClientRect(), v = m.getWorldPosition(new THREE.Vector3()).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, game: () => g, setGame: (x: E.Game) => { g = x; hist.clear(); save(); refresh(); }, at: (a: number) => { const p = center(a), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(p.x, 0, p.z).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, project: (x: number, y: number, z: number) => { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height }; }, online, setMatches: (m: Match[]) => { matches = m; }, iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets, setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, rel: () => ({ tris: renderer.info.render.triangles, calls: renderer.info.render.calls, trees: (REL?.props.children[0] as THREE.InstancedMesh | undefined)?.count }), board: () => boardCv.toDataURL("image/png"), view: (x: number, z: number, d: number, pt: number, yw: number) => { goal = { t: new THREE.Vector3(x, 0, z), dist: d, pitch: pt, fast: true }; yaw = yw; }, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });

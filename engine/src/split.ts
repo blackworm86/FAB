@@ -2,7 +2,7 @@
  *  real details of its own blocks in a document only that seat can read. A client rebuilds the game it plays on by putting its own details back (`compose`)
  *  and writes the shared copy with its hidden blocks hidden again (`toPublic`). Details of a block the other side must see (a battle reveals them, 6.24;
  *  Intelligence Gathering) are published to a shared "reveals" document by the owner's client. */
-import { visibleTo, other, type Game, type Side, type Unit } from './game';
+import { visibleTo, other, sidesOf, type Game, type Side, type Unit } from './game';
 import { alias } from './redact';
 
 export type UnitSecret = Pick<Unit, 'name' | 'cls' | 'q' | 'max' | 'str' | 'code' | 'symbol' | 'ech' | 'entry' | 'arrival' | 'chitId' | 'from'>;
@@ -67,9 +67,10 @@ export function freshReveals(published: Reveals, wanted: Reveals): Reveals {
 /** A new split table: the shared copy and one private document per seat, made from a fresh full game. Only used once, when the table is created. */
 export function initSplit(full: Game, saltGerman: string, saltAllied: string): { pub: string; german: Priv; allied: Priv } {
   full.deferBegin = true;
-  const german: Priv = { salt: saltGerman, secrets: secretsOf(full, 'german') }, allied: Priv = { salt: saltAllied, secrets: secretsOf(full, 'allied') };
-  const step1 = toPublic(full, 'german', saltGerman, new Map());
-  return { pub: toPublic(JSON.parse(step1) as Game, 'allied', saltAllied, new Map()), german, allied };
+  const [p1, p2] = sidesOf(full);                                                                   // the seats keep their database keys: german = First Player, allied = Second
+  const german: Priv = { salt: saltGerman, secrets: secretsOf(full, p1) }, allied: Priv = { salt: saltAllied, secrets: secretsOf(full, p2) };
+  const step1 = toPublic(full, p1, saltGerman, new Map());
+  return { pub: toPublic(JSON.parse(step1) as Game, p2, saltAllied, new Map()), german, allied };
 }
 
 /** One seat's side of the split protocol: everything online.ts needs, with no network in it, so two seats can be played against each other in a test. */

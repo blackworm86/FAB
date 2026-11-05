@@ -19,12 +19,12 @@ async function board() {
   const [base, lines, syr, mut] = await Promise.all([load('./golan73/map-base.svg'), load('./golan73/map-lines.svg'), load('./icons/vp-golan-syrian.svg'), load('./icons/vp-mutual.svg')]);
   c.drawImage(base, 0, 0, cv.width, cv.height); c.drawImage(lines, 0, 0, cv.width, cv.height);
   c.scale(k, k);
-  const layers = { numbers: true, tdn: true, vp: true, names: true }, icons = { allied: syr, german: syr, mutual: mut };
+  const layers = { numbers: true, tdn: true, vp: true, names: true }, icons = { syrian: syr, israeli: mut, mutual: mut };
   for (const a of map.areas as Area[]) {
     const L = LAB[a.id]; c.save(); c.translate(L.x, L.y);
-    drawLabel(c, a, layers, icons, L, { tdn: a.tdn, name: a.name, vp: { allied: a.vp.syrian, german: 0, mutual: a.vp.mutual } }); c.restore();
+    drawLabel(c, a, layers, icons, L, { tdn: a.tdn, name: a.name, vp: { syrian: a.vp.syrian, israeli: 0, mutual: a.vp.mutual } }); c.restore();
   }
-  for (const e of map.entries as { letter: string; x: number; y: number }[]) { c.save(); c.translate(e.x, e.y); drawEntry(c, { letter: e.letter, side: 'german' }); c.restore(); }
+  for (const e of map.entries as { letter: string; x: number; y: number }[]) { c.save(); c.translate(e.x, e.y); drawEntry(c, { letter: e.letter }, true); c.restore(); }
 }
 function sheets() {
   const fig = (src: string, cap: string, cls = '') => `<figure class="${cls}"><img src="${svgUri(src)}" alt=""><figcaption>${cap}</figcaption></figure>`;

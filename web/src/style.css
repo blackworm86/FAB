@@ -803,3 +803,12 @@ input::placeholder { color: #9a9a8a; opacity: 1; }
 }
 a.btnlink { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; padding: 7px 14px; border: 1px solid var(--line); color: var(--ink); background: #1d2114; }
 a.btnlink.primary { background: var(--gold); color: #1a1608; border-color: transparent; font: 700 15px var(--sfd); letter-spacing: .1em; text-transform: uppercase; }
+
+/* ---------- the volume's own prompts (Golan: SAM fire, air assault, the engineer's bridge, jamming): a slim box above the dock, beside the dispatch panel ---------- */
+.volpanel { position: absolute; right: 12px; bottom: 12px; width: min(340px, calc(100% - 24px)); border: 1px solid var(--line); background: #0b0d08ee; padding: 10px 12px; display: grid; gap: 6px; font-size: 13px; }
+.volpanel + .volpanel { bottom: 120px; } .volpanel b { color: var(--gold); display: flex; gap: 6px; align-items: center; } .volpanel .row { flex-wrap: wrap; } .volpanel button.on { border-color: var(--gold); }
+@media (max-width: 700px) { .volpanel { left: 12px; width: auto; bottom: 12px; } }
+/* Golan '73 wood: cyan Israeli, green Syrian blocks (the side classes are copied from .german/.allied at start-up; these fix the colours) */
+.b3.israeli .r { background: #1d7d9c; } .b3.israeli .t { background: #5cc0dc; } .b3.syrian .r { background: #2d5f2e; } .b3.syrian .t { background: #5aa15a; }
+.blk .b3.israeli { box-shadow: 6px 6px 0 #1d7d9c, 9px 12px 12px #000a; } .blk .b3.syrian { box-shadow: 6px 6px 0 #2d5f2e, 9px 12px 12px #000a; }
+.card2.wood.israeli { box-shadow: 0 5px 0 #1d7d9c, 0 6px 0 #145868, 0 12px 18px #000b; } .card2.wood.syrian { box-shadow: 0 5px 0 #2d5f2e, 0 6px 0 #1f4320, 0 12px 18px #000b; }

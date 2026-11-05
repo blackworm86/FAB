@@ -1,7 +1,7 @@
 /** Online play. Everything of one game lives in the Firebase Realtime Database under `games/{id}` (see store-rtdb.ts and database.rules.json):
  *  the shared game as many small values, each seat's private block details, and the reveals. A browser works out its own moves with the rules engine
  *  and writes only what changed. The seat decides who may act. In development (`?dev=1`) a seat switch lets one tab play both sides. */
-import { setRandom, SplitSeat, type Game, type Side, type Priv, type Reveals } from '../../engine/src';
+import { setRandom, SplitSeat, VOLUME, type Game, type Side, type Priv, type Reveals } from '../../engine/src';
 import { rtdbStore } from './store-rtdb';
 
 export interface Seats { german?: string | null; allied?: string | null; germanName?: string | null; alliedName?: string | null }
@@ -43,15 +43,22 @@ export const HAS_TABLE = params.has('table'), DEV_FAKE = DEV && params.has('fake
 export const SANDBOX = params.has('sandbox');
 /** The tutorial: a local game in this browser, nothing written online. */
 export const TUTORIAL = params.has('tutorial') && !SANDBOX && !params.has('table');
-export type DevSeat = 'german' | 'allied' | 'both' | 'watch';
+/** The seat a side sits in: the database keeps the keys german (First Player) and allied (Second Player) for every game. */
+export type SeatKey = 'german' | 'allied';
+export const seatKey = (s: Side): SeatKey => (s === VOLUME.sides[1] ? 'allied' : 'german');
+export const seatSide = (k: string): Side => (k === 'allied' ? VOLUME.sides[1] : VOLUME.sides[0]);
+export const seatOf = (s: Seats, side: Side) => s[seatKey(side)];
+export const seatName = (s: Seats, side: Side) => (seatKey(side) === 'german' ? s.germanName : s.alliedName);
+/** The development seat switch: a side, both sides, or watching. */
+export type DevSeat = string;
 
 export const online = {
   /** 'off' = not connected, 'local' = a development table on this machine, 'remote' = shared through the database. */
   mode: 'off' as 'off' | 'local' | 'remote', uid: '', seats: {} as Seats, rev: 0, error: '', sync: 'connecting' as string, ready: false,
   lastBy: '', chat: [] as ChatMsg[], devSeat: 'both' as DevSeat, enemyAlias: new Map<string, string>(), account: null as Account | null, admin: false, hasAccounts: false,
   mySide(): Side | null {
-    if ((DEV || SANDBOX) && this.mode !== 'off') return this.devSeat === 'german' || this.devSeat === 'allied' ? this.devSeat : null;
-    return this.seats.german === this.uid && this.uid ? 'german' : this.seats.allied === this.uid && this.uid ? 'allied' : null;
+    if ((DEV || SANDBOX) && this.mode !== 'off') return this.devSeat !== 'both' && this.devSeat !== 'watch' ? this.devSeat : null;
+    return this.seats.german === this.uid && this.uid ? seatSide('german') : this.seats.allied === this.uid && this.uid ? seatSide('allied') : null;
   },
   /** True when this client may act for whoever's turn it is (the development "both" seat). */
   both() { return this.mode === 'off' || ((DEV || SANDBOX) && this.devSeat === 'both'); },
@@ -81,7 +88,7 @@ export async function startOnline(remote: (g: Game) => void, changed: () => void
   try {
     const fake = DEV ? params.get('fake') : null, make = async () => (fake === 'german' || fake === 'allied' ? (await import('./store-fake')).fakeStore(fake) : rtdbStore(TABLE));
     store = await Promise.race([make(), new Promise<never>((_, no) => setTimeout(() => no(new Error('Could not reach the game database. Check the database address and your connection.')), 15000))]);
-    if (store && (fake === 'german' || fake === 'allied')) online.devSeat = fake;                  // a stand-in store plays one seat per tab
+    if (store && (fake === 'german' || fake === 'allied')) online.devSeat = seatSide(fake);                  // a stand-in store plays one seat per tab
   } catch (e) { online.error = String(e); store = null; }
   if (!store) { if (DEV) online.mode = 'local'; online.ready = true; changed(); return; }
   if (SANDBOX) {                                                                                   // only the account: the game stays in this browser
@@ -127,17 +134,17 @@ export async function publishReveals(g: Game) {
 /** Send a chat line as the seated side; resolves an error message or ''. Watchers only read. */
 export async function sendChat(text: string) { const side = online.mySide(), t = text.trim().slice(0, 300); if (!store || online.mode !== 'remote' && !DEV || !side || !t) return 'Only the two players can write in the chat.'; return store.sendChat(side, t); }
 export const setChatListener = (f: (m: ChatMsg[]) => void) => { onChat = f; };
-export async function sit(side: Side | null) { if (online.mode !== 'remote' || !store) return; const e = await store.sit(side); online.error = e; onChange(); }
+export async function sit(side: Side | null) { if (online.mode !== 'remote' || !store) return; const e = await store.sit(side ? seatKey(side) : null); online.error = e; onChange(); }
 export function setDevSeat(s: DevSeat) { online.devSeat = s; onChange(); }
 
 async function run(f: (s: Store) => Promise<string>) { if (!store) return; const e = await f(store); online.error = e ?? ''; onChange(); }
 export const auth = {
   google: () => run((s) => s.google()), signOut: () => run((s) => s.signOut()),
   signIn: (e: string, p: string) => run((s) => s.emailSignIn(e, p)), register: (e: string, p: string, n: string) => run((s) => s.emailRegister(e, p, n)),
-  reset: (e: string) => run((s) => s.resetPassword(e)), freeSeat: (side: Side) => run((s) => s.freeSeat(side)),
+  reset: (e: string) => run((s) => s.resetPassword(e)), freeSeat: (side: Side) => run((s) => s.freeSeat(seatKey(side))),
 };
 export const lobby = {
-  create: async (m: Parameters<Store['createMatch']>[0], side: Side | null, json: string) => (store ? store.createMatch(m, side, json) : '!Online play is not set up'),
+  create: async (m: Parameters<Store['createMatch']>[0], seat: SeatKey | null, json: string) => (store ? store.createMatch(m, seat, json) : '!Online play is not set up'),
   remove: (id: string) => run((s) => s.deleteMatch(id)), leave: (id: string) => run((s) => s.leaveMatch(id)),
   watch: (next: (m: Match[]) => void) => store?.watchMyMatches(next, fail),
 };
