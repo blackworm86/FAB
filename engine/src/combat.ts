@@ -5,16 +5,17 @@ const LEVEL: Record<Quality, number> = { green: 0, veteran: 1, elite: 2 };
 
 /** One firing group: a unit, a battle asset or an artillery asset (rules 6.25-6.28). */
 export interface Shooter {
-  kind: 'unit' | 'battle' | 'artillery';
+  kind: 'unit' | 'battle' | 'artillery' | 'air';
   cls: 'armor' | 'infantry';
   quality?: Quality;            // artillery assets have none
   dice: number;                 // current steps (1 per artillery asset)
   disordered?: boolean; unsupplied?: boolean;
   airSupport?: boolean;         // air mission used as battle support: +2 (17.21)
+  side?: string; rocket?: boolean; strongpoint?: 'armor' | 'infantry'; closeAirSupport?: boolean;    // read by other volumes' tables
 }
 /** What the shooter is shooting at: the opposing point unit and its status. */
-export interface Target { pointCls: 'armor' | 'infantry'; pointQuality: Quality; fieldWorks?: boolean; riverAssaultMarker?: boolean }
-export interface Setting { attacker: boolean; tdn: number; riverAssault?: boolean; advArty?: boolean }
+export interface Target { pointCls: 'armor' | 'infantry'; pointQuality: Quality; fieldWorks?: boolean; riverAssaultMarker?: boolean; strongpoint?: 'armor' | 'infantry' }
+export interface Setting { attacker: boolean; tdn: number; riverAssault?: boolean; advArty?: boolean; night?: boolean }
 
 /** Success Number with every modifier listed, so the UI can explain it (Player Aid C, artillery and ground fire tables). */
 export function successNumber(s: Shooter, t: Target, c: Setting) {
