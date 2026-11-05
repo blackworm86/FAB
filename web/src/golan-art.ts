@@ -10,7 +10,7 @@ export const GOLAN_WOOD: Record<GSide, number> = { israeli: 0x2aa3c8, syrian: 0x
 /** Block label paper and unit-square colours. */
 const LABEL: Record<GSide, string> = { israeli: '#cdc49e', syrian: '#d8a43c' };
 const CREAM: Record<GSide, string> = { israeli: '#f3f0e2', syrian: '#f8efc8' };
-/** Division colour stripe on the block label (18.5 for Israel; the Syrian stripes show the division for set-up and the operational sectors). */
+/** Division colour bar across the block label, a little below the centre (18.5 for Israel; the Syrian stripes show the division for set-up and the operational sectors). */
 export const DIVISION: Record<string, string> = {
   '36th_armored': '#e5852e', '240th_armored': '#a6568c', '146th_armored': '#86c3e5',
   '5th_inf': '#f0cf2c', '9th_inf': '#86c4e8', '7th_inf': '#d8412e', '1st_tank': '#7f9c6b', '3rd_tank': '#e8d4a2',
@@ -131,7 +131,7 @@ export function golanBlockSvg(u: GUnit, str = u.steps ?? 1): string {
   const bg = LABEL[u.side], max = u.steps ?? 1, q = u.quality_by_step ?? [];
   if (u.kind === 'special_action_block') return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100"><rect width="100" height="100" fill="${bg}"/><rect x="6" y="6" width="88" height="88" fill="none" stroke="#111" stroke-width="1.2" opacity=".35"/><g transform="translate(50 30) scale(.62) translate(-80 -40)">${emblem(u.side, 80, 40, 26).replace(/#fff/g, '#1a1a1a')}</g><text x="50" y="70" font-size="15" text-anchor="middle" font-family="Arial Narrow, Arial" font-weight="700" font-style="italic">Special</text><text x="50" y="86" font-size="15" text-anchor="middle" font-family="Arial Narrow, Arial" font-weight="700" font-style="italic">Action</text></svg>`;
   if (u.kind === 'ghost') return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100"><rect width="100" height="100" fill="${bg}"/>${davidStar(50, 44, 22, '#1d4f9a', 4)}<text x="50" y="86" font-size="16" text-anchor="middle" font-family="Arial Narrow, Arial" font-weight="700" font-style="italic">Ghost</text><text x="12" y="20" font-size="11" font-family="Arial Narrow, Arial" font-weight="700">S*</text></svg>`;
-  const strong = u.kind === 'strongpoint', stripe = u.division && DIVISION[u.division] ? `<rect x="43" y="0" width="14" height="100" fill="${DIVISION[u.division]}"/>` : '';
+  const strong = u.kind === 'strongpoint', stripe = u.division && DIVISION[u.division] ? `<rect x="0" y="50" width="100" height="13" fill="${DIVISION[u.division]}"/>` : '';
   const edges = Array.from({ length: max }, (_, k) => bpips(max - k, q[max - k - 1], k, strong)).join('');
   const code = u.arrival_turn != null ? `${u.arrival_turn}${u.entry?.length ? `-${u.entry.join('')}` : ''}` : u.start_area != null ? String(u.start_area) : strong ? 'S*' : '';
   const codeEl = code ? (u.start_area != null && u.arrival_turn == null ? `<rect x="5" y="20" width="16" height="12" fill="#fff"/><text x="13" y="29.5" font-size="9.5" text-anchor="middle" font-family="Arial Narrow, Arial" font-weight="700">${e(code)}</text>` : `<text x="90" y="27" font-size="10" text-anchor="end" font-family="Arial Narrow, Arial" font-weight="700">${e(code)}</text>`) : '';
