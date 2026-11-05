@@ -751,3 +751,12 @@ button.go:disabled { background: #2a2d22; color: #8d9065; box-shadow: none; opac
 .bdg.ok { background: #44692c !important; color: #fff !important; } .bdg.stop { background: var(--gold) !important; color: #1a1608 !important; }
 .bdg.fuel { background: #1a1608 !important; color: var(--gold) !important; border-color: var(--gold) !important; } .bdg.fuel::before { content: ""; display: inline-block; width: 7px; height: 9px; margin-right: 3px; background: currentColor; clip-path: polygon(50% 0, 100% 60%, 85% 95%, 50% 100%, 15% 95%, 0 60%); }
 .bdg.lab { background: #ece6cce8 !important; color: #1a1608 !important; border: 1px solid #8a7a3a !important; font: 700 12px var(--sfd) !important; letter-spacing: .06em; padding: 1px 6px !important; border-radius: 3px !important; pointer-events: none; white-space: nowrap; }     /* the printed number and name, lifted above a stack that covers them */
+
+/* phones: with a destination chosen, the panel shrinks to a one-line route ticket so the route stays in view */
+.route .tline { display: none; }
+@media (max-width: 700px) {
+  .c-dispatch.previewing > *:not(.route) { display: none !important; } .c-dispatch.previewing { padding: 6px 8px !important; }
+  .c-dispatch.previewing .route { display: flex; align-items: center; gap: 8px; margin: 0 !important; padding: 4px 6px !important; } .c-dispatch.previewing .route > *:not(.tline):not(button) { display: none; }
+  .c-dispatch.previewing .route .tline { display: block; flex: 1; min-width: 0; margin: 0; font-size: 12.5px; } .c-dispatch.previewing .route .tline b { font: 700 15px var(--sfd); letter-spacing: .06em; text-transform: uppercase; color: var(--gold); }
+  .c-dispatch.previewing .route button { flex: none; min-height: 40px !important; width: auto !important; padding-inline: 14px !important; }
+}

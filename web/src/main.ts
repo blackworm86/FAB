@@ -806,7 +806,14 @@ function drawRoute() {
   const path = o.path.length ? o.path : [u.area, to], bk = (a: number, b: number) => (a < b ? `${a}-${b}` : `${b}-${a}`), bi = path.findIndex((a, i) => i > 0 && g.blown.includes(bk(path[i - 1], a)));
   const kind: MoveKind = g.phase === 'strategic' ? 'strat' : bi > 0 ? 'blown' : o.fuel && u.side === 'german' && g.opts.fuel ? 'fuel' : (u.unsupplied || u.disorder || u.adjOnly) && path.length === 2 ? 'minimum' : 'normal';
   moveArrow(path, kind, bi - 1);
+  const fk = `${selUnit}>${previewArea}`;
+  if (previewArea != null && innerWidth < 700 && fk !== framedRoute) {                            // phones: the whole route in view, above the one-line ticket
+    framedRoute = fk; const pts = path.map(center), x0 = Math.min(...pts.map((p) => p.x)), x1 = Math.max(...pts.map((p) => p.x)), z0 = Math.min(...pts.map((p) => p.z)), z1 = Math.max(...pts.map((p) => p.z));
+    const span = Math.max(x1 - x0, (z1 - z0) * 1.3, 8), c = viewRot() ? -1 : 1;
+    goal = { t: new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2 + c * span * 0.34), dist: clampDist(span * 2.5 + 10), pitch };
+  }
 }
+let framedRoute = '';
 type Badge = { area: number; text: string; cls: string; key?: string };
 const coveredLabels = new Set<number>();
 let badges: Badge[] = [];
@@ -1309,14 +1316,14 @@ function dispatch() {
     const tags = [u.disorder === 1 ? 'disordered' : u.disorder === 2 ? 'recovering' : '', u.unsupplied ? 'unsupplied' : '', u.reserve ? 'reserve' : '', u.exploit ? 'exploit' : '', u.interdict ? 'interdicted' : ''].filter(Boolean);
     let route = '';
     const sp = u.area != null && !u.garrison ? E.supplyPath(g, u.side, u.area) : null, supLine = u.area == null || u.garrison ? '' : sp ? `<p class="hint sup ok gx">${ico('fuel')} In supply: ${sp.length > 1 ? `traces through ${sp.length - 1} area${sp.length > 2 ? 's' : ''} to ${esc(areaName(sp.at(-1)!))} (blue line)` : 'it stands on a supply source'}.</p>` : `<p class="hint sup bad">${ico('warn')} Out of supply. ${esc(E.supplyWhy(g, u.side, u.area))}</p>`;
-    if (o) route = `<div class="route"><h4>→ ${esc(areaName(o.area))}</h4>${strat ? row('Strategic move', 'any distance') : row('Movement', `${o.cost} MP`)}${u.side === 'german' && g.opts.fuel ? row('Fuel', o.fuel ? `−1 &nbsp;(${n} → ${n - 1})` : 'not needed', o.fuel ? 'bad' : '') : ''}${o.mustStop ? row('Stops here', 'enemy present, battle follows', 'bad') : ''}${btn('Move here', () => { previewArea = o.area; confirmMove(); }, 'primary')}</div>`;
+    if (o) route = `<div class="route"><p class="tline"><b>→ ${esc(areaName(o.area))}</b> · ${strat ? 'strategic' : `${o.cost} MP`}${u.side === 'german' && g.opts.fuel && o.fuel ? ' · <span class="bad">fuel −1</span>' : ''}${o.mustStop ? ' · <span class="bad">stops: battle</span>' : ''}</p><h4>→ ${esc(areaName(o.area))}</h4>${strat ? row('Strategic move', 'any distance') : row('Movement', `${o.cost} MP`)}${u.side === 'german' && g.opts.fuel ? row('Fuel', o.fuel ? `−1 &nbsp;(${n} → ${n - 1})` : 'not needed', o.fuel ? 'bad' : '') : ''}${o.mustStop ? row('Stops here', 'enemy present, battle follows', 'bad') : ''}${btn('Move here', () => { previewArea = o.area; confirmMove(); }, 'primary')}</div>`;
     else if (optsFor(u.id).length) route = `<p class="hint gx">${optsFor(u.id).length} destination(s). Hover or click a highlighted area.</p>`;
     const can = ['movement', 'reaction', 'btMove'].includes(g.phase) && !u.garrison && !u.moved;
     const fw = can && u.area != null && !u.unsupplied && !u.disorder && !E.contested(g, u.area) && !g.fieldWorks.includes(u.area) && ((g.phase === 'movement' && u.side === g.phasing) || (g.phase === 'reaction' && u.side !== g.phasing && !!u.reserve) || (g.phase === 'btMove' && u.side === g.phasing && (!!u.reserve || u.exploit)));
     const noFuel = u.side === 'german' && g.opts.fuel && ['movement', 'strategic', 'btMove', 'reaction'].includes(g.phase) && mine(u.side) && !u.garrison && !E.boxOf(g, 'german', 'available').some((x) => x.kind === 'fuel');
     const warns = (noFuel ? `<div class="warnbox">${ico('fuel')}<span><b>No fuel left</b>${gx('. German blocks may move at most 3 MP this turn and cannot use strategic movement (16.13).', ': 3 MP max, no strategic move.')}</span></div>` : '')
       + (u.interdict && mine(u.side) && ['movement', 'reaction', 'btMove', 'admin'].includes(g.phase) ? `<div class="warnbox bad">${ico('warn')}<span><b>Greif Interdict</b>${gx(' on this block. Moving it, building field works or taking a reserve marker triggers a morale check (+2). Fail: it may only stay or move one area (17.11).', ': moving triggers a morale check (+2).')}</span></div>` : '');
-    return `<div class="c-dispatch">${warns}<h3 class="${u.side}">${esc(u.name)}</h3><div class="pipsrow">${pips(u)} <small>${u.garrison ? 'asset' : u.cls} · ${tags.join(' · ') || 'in order'}</small></div>${seen(u) ? supLine : ''}${route}
+    return `<div class="c-dispatch ${o ? 'previewing' : ''}">${warns}<h3 class="${u.side}">${esc(u.name)}</h3><div class="pipsrow">${pips(u)} <small>${u.garrison ? 'asset' : u.cls} · ${tags.join(' · ') || 'in order'}</small></div>${seen(u) ? supLine : ''}${route}
       <div class="row">${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve', () => E.setReserve(g, u.id, false)) : btn('Reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u))) : ''}${fw ? btn('Fortify', () => E.buildFieldWorks(g, u.id)) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn('Activate (SA)', () => pickSA(u.side, u.ech, (sa) => E.activateBreakthrough(g, u.id, sa)), '', !E.saAvailable(g, u.side, u.ech).length) : ''}${E.peiperCan(g, u) ? btn(`${u.peiperFull ? ico('check') : ''}KG Peiper: full move (18.3)`, () => E.setPeiperFull(g, u.id, !u.peiperFull), u.peiperFull ? 'primary' : '', false, 'Once per game, up to turn 3: this exploitation move uses Peiper\'s full movement allowance instead of one area') : ''}</div></div>`;
   }
   return '';
