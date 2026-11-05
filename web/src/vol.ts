@@ -9,6 +9,7 @@ import golanMap from '../../data/golan73/map.json';
 import golanLabels from '../../data/golan73/labels.json';
 import golanUnits from '../../data/golan73/units.json';
 import golanCounters from '../../data/golan73/counters.json';
+import golanEntries from '../../data/golan73/entry_marks.json';
 import { labelSvg } from './art';
 import { chitSvg, garrisonChit, mapMarkerSvg } from './chits';
 import { golanChitSvg, golanBlockSvg, GOLAN_WOOD, type GCounter, type GUnit } from './golan-art';
@@ -25,7 +26,7 @@ export interface VolView {
   wood: Record<string, number>; ink: Record<string, string>; controlCol: Record<string, number>;   // block wood, text colour (CSS --ge/--al), area-control tint
   map: { size: [number, number]; areas: MapArea[]; connections: { a: number; b: number }[]; entries: MapEntry[] };
   labels: Record<string, LabelBox>;
-  art: { base: string; lines: string; vpIcons: Record<string, string>; zones?: Record<string, string>; relief: boolean };
+  art: { base: string; lines: string; vpIcons: Record<string, string>; zones?: Record<string, string>; relief: string | null; reliefName: string; entryDark: (side: E.Side) => boolean };
   features: { fuel: boolean; zones: boolean; optional: boolean; tutorial: boolean };
   scenarios: ScenarioInfo[]; defaultOpts: Partial<E.Opts>;
   unitSvg: (u: E.Unit, g: E.Game) => string; chitSvg: (c: E.Chit) => string;
@@ -50,7 +51,7 @@ export interface VolView {
 }
 
 const BRIT = new Set(['43 Inf', '53 Inf', 'Guards', '51 Inf']);
-type RawMap = { size: [number, number]; areas: MapArea[]; connections: { a: number; b: number }[]; entries: { letter: string; x: number; y: number; side?: string }[]; assembly?: Record<string, { name: string; box: [number, number, number, number] }> };
+type RawMap = { size: [number, number]; areas: MapArea[]; connections: { a: number; b: number }[]; entries: { letter: string; x: number; y: number; side?: string; area?: number }[]; assembly?: Record<string, { name: string; box: [number, number, number, number] }> };
 
 /** The Bulge: the art and panels the interface has had since the start. */
 function bulge(): VolView {
@@ -66,7 +67,7 @@ function bulge(): VolView {
     wood: { german: 0x8e9296, allied: 0x5d8a45 }, ink: { german: '#b9bcc0', allied: '#9db36a' }, controlCol: { german: 0x8a9096, allied: 0x6aa84f },
     map: { size: m.size, areas: m.areas, connections: m.connections, entries: m.entries.map((e) => ({ letter: e.letter, x: e.x, y: e.y, side: e.side === 'german' ? 'german' : 'allied' })) },
     labels: bulgeLabels as unknown as Record<string, LabelBox>,
-    art: { base: './map-base.svg', lines: './map-lines.svg', vpIcons: { allied: './icons/vp-allied.svg', german: './icons/vp-german.svg', mutual: './icons/vp-mutual.svg' }, zones: zonesJson as Record<string, string>, relief: true },
+    art: { base: './map-base.svg', lines: './map-lines.svg', vpIcons: { allied: './icons/vp-allied.svg', german: './icons/vp-german.svg', mutual: './icons/vp-mutual.svg' }, zones: zonesJson as Record<string, string>, relief: './', reliefName: 'The snowy Ardennes in relief, with contour lines, woods and towns', entryDark: (s) => s === 'german' },
     features: { fuel: true, zones: true, optional: true, tutorial: true },
     scenarios: info.scenarios, defaultOpts: { scenario: 'tournament', fuel: true },
     unitSvg: (u, g) => (u.garrison ? garrisonArt(u, g) : labelSvg(u)), chitSvg: (c) => chitSvg(c),
@@ -87,7 +88,6 @@ function golan(): VolView {
   const boxes = Object.entries(m.assembly ?? {}).map(([k, b]) => { const [x, y, w, h] = b.box; return { id: k === 'B' ? G.ASSEMBLY.B : G.ASSEMBLY.A, name: b.name, x, y, w, h }; });
   const areas: MapArea[] = [...m.areas, ...boxes.map((b) => ({ id: b.id, label: [b.x + b.w / 2, b.y + b.h / 2] as [number, number], polygon: [[b.x, b.y], [b.x + b.w, b.y], [b.x + b.w, b.y + b.h], [b.x, b.y + b.h]] as [number, number][] }))];
   const labels: Record<string, LabelBox> = { ...(golanLabels as unknown as Record<string, LabelBox>) };
-  for (const b of boxes) labels[b.id] = { mode: 'full', x: b.x + b.w / 2, y: b.y + 22, w: Math.min(190, b.w - 16), h: 44, px: b.x + b.w / 2, py: b.y + b.h / 2 + 14, pr: 60 };
   const RAW_UNITS = new Map((golanUnits as unknown as GUnit[]).map((u) => [u.id, u])), RAW_COUNTERS = new Map((golanCounters as unknown as (GCounter & { ids?: string[] })[]).map((c) => [c.id, c]));
   const unitArt = (u: E.Unit) => { const raw = RAW_UNITS.get(u.id); return golanBlockSvg({ ...(raw ?? { id: u.id, name: u.name, side: u.side as 'israeli' | 'syrian' }), name: u.name, side: u.side as 'israeli' | 'syrian', steps: u.max, quality_by_step: u.q, symbol: u.symbol ?? raw?.symbol, division: u.division ?? raw?.division, kind: u.kind ?? raw?.kind }, u.str); };
   const chitArt = (c: E.Chit) => {
@@ -100,9 +100,9 @@ function golan(): VolView {
   return {
     id: 'golan73', name: "Golan '73", info, sides: ['syrian', 'israeli'], tag: info.tag, sideName: info.sideName,
     wood: { ...GOLAN_WOOD }, ink: { syrian: '#8fc46a', israeli: '#6fd0ea' }, controlCol: { syrian: 0x4f9a4a, israeli: 0x3ab0d0 },
-    map: { size: m.size, areas, connections: m.connections, entries: m.entries.map((e) => ({ letter: e.letter, x: e.x, y: e.y, side: 'syrian' })) },
+    map: { size: m.size, areas, connections: m.connections, entries: (golanEntries as { letter: string; x: number; y: number }[]).map((e) => ({ ...e, side: 'syrian' })) },      // the letters sit in the printed triangles (tools/golan73/board.py)
     labels,
-    art: { base: './golan73/map-base.svg', lines: './golan73/map-lines.svg', vpIcons: { syrian: './icons/vp-golan-syrian.svg', israeli: './icons/vp-mutual.svg', mutual: './icons/vp-mutual.svg' }, relief: false },
+    art: { base: './golan73/map-base.svg', lines: './golan73/map-lines.svg', vpIcons: { syrian: './icons/vp-golan-syrian.svg', israeli: './icons/vp-mutual.svg', mutual: './icons/vp-mutual.svg' }, relief: './golan73/', reliefName: 'The Golan Heights in relief, from Mt Hermon to the Sea of Galilee, with contour lines', entryDark: () => false },
     features: { fuel: false, zones: false, optional: false, tutorial: false },
     scenarios: info.scenarios, defaultOpts: { scenario: 'badr', fuel: false },
     unitSvg: (u, g) => (u.garrison && u.chitId ? chitArt(E.chit(g, u.chitId)) : unitArt(u)), chitSvg: chitArt,

@@ -1,9 +1,12 @@
-/** The 3D map: a smooth snowy relief of the real Ardennes, bent onto the game map, with contour lines, woods and 3D towns.
- *  Data is built offline by tools/map3d (fullmap.py) into public/relief/. World unit = 1 cm, like the board. */
+/** The 3D map: a smooth relief of the real ground bent onto the game map, with contour lines, woods and 3D towns. The Bulge: snowy Ardennes, built offline by
+ *  tools/map3d (fullmap.py) into public/relief/; Golan '73: tools/golan73/relief.py into public/golan73/relief/. World unit = 1 cm, like the board. */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
-type Meta = { outline: [number, number][][]; w: number; h: number; step: number; cols: number; rows: number; metres: number; towns: [number, number][]; cities: { c: [number, number]; cells: [number, number][] }[] };
+type Meta = { outline: [number, number][][]; w: number; h: number; step: number; cols: number; rows: number; metres: number; towns: [number, number][]; cities: { c: [number, number]; cells: [number, number][] }[];
+  mpp?: number; exag?: number;   /** ground metres per map pixel (The Bulge 80) and how much the heights are raised (The Bulge 4) */
+  dry?: boolean;                 /** a dry country (Golan): round green trees, no snow */
+  overlay?: string;              /** the printed items off and on the map (entry triangles, boxes, names) come from this board file, minus its ground */ };
 export type Relief = {
   /** Height of the ground (cm) at world x, z. */
   h(x: number, z: number): number;
@@ -31,16 +34,17 @@ const group = (svg: string, id: string) => { const m = new RegExp(`<g id="${id}"
 
 /** lite (phones): a ground mesh half as fine and half the trees. */
 export async function loadRelief(MW: number, MH: number, S: number, labels: [number, number, number, number][], lite = false, base = './'): Promise<Relief> {
-  const [meta, hb, wb, snow, linesSvg, entry] = await Promise.all([
-    fetch(base + 'relief/relief.json').then((r) => r.json() as Promise<Meta>),
+  const meta = await fetch(base + 'relief/relief.json').then((r) => r.json() as Promise<Meta>);
+  const [hb, wb, snow, linesSvg, entry] = await Promise.all([
     fetch(base + 'relief/height.bin').then((r) => r.arrayBuffer()),
     fetch(base + 'relief/woods.bin').then((r) => r.arrayBuffer()),
     img(base + 'relief/snow.png'),
     fetch(base + 'map-lines.svg').then((r) => r.text()),
-    img(base + 'relief/entry.png'),
+    meta.overlay ? fetch(base + meta.overlay).then((r) => r.text()).then((t) => svgImg(t.replace(/<image id="ground"[^>]*\/>/, ''))) : img(base + 'relief/entry.png'),
   ]);
+  const ZS = (meta.exag ?? RELIEF) / ((meta.mpp ?? 80) * S);   // metres → cm
   const { cols: C, rows: R, step: ST } = meta, HB = new Uint16Array(hb), WB = new Uint8Array(wb);
-  const K = (meta.metres / 65535) * (RELIEF / (80 * S));   // grid value → cm (1 map px ≈ 80 m on the ground)
+  const K = (meta.metres / 65535) * ZS;                   // grid value → cm
   const grid = (gx: number, gy: number) => { gx = Math.min(Math.max(gx, 0), C - 1.001); gy = Math.min(Math.max(gy, 0), R - 1.001); const i = gx | 0, j = gy | 0, fx = gx - i, fy = gy - j, v = (a: number, b: number) => HB[b * C + a];
     return ((v(i, j) * (1 - fx) + v(i + 1, j) * fx) * (1 - fy) + (v(i, j + 1) * (1 - fx) + v(i + 1, j + 1) * fx) * fy) * K; };
   const hMap = (px: number, py: number) => grid(px / ST, py / ST) + BASE;
@@ -86,7 +90,8 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
   const lams: THREE.MeshLambertMaterial[] = [], lam = (color: number) => { const m = new THREE.MeshLambertMaterial({ color }); lams.push(m); return m; };
   // one tree = one mesh: a dark cone with a snow cap (vertex colours), so each tree is drawn once, not twice
   const paint = (g: THREE.BufferGeometry, c: number) => { const n = g.getAttribute('position').count, cc = new THREE.Color(c), a = new Float32Array(n * 3); for (let k = 0; k < n; k++) cc.toArray(a, k * 3); g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g.toNonIndexed(); };
-  const treeGeo = mergeGeometries([paint(new THREE.ConeGeometry(2.1, 6, 5).translate(0, 3, 0), 0x2a4a38), paint(new THREE.ConeGeometry(0.95, 2.2, 5).translate(0, 4.95, 0), 0xf1f4f8)])!;
+  const treeGeo = meta.dry ? mergeGeometries([paint(new THREE.CylinderGeometry(0.35, 0.45, 2, 5).translate(0, 1, 0), 0x6b5a3e), paint(new THREE.IcosahedronGeometry(2.1, 0).scale(1, 0.85, 1).translate(0, 3.2, 0), 0x5e7140)])!      // oak scrub and orchards
+    : mergeGeometries([paint(new THREE.ConeGeometry(2.1, 6, 5).translate(0, 3, 0), 0x2a4a38), paint(new THREE.ConeGeometry(0.95, 2.2, 5).translate(0, 4.95, 0), 0xf1f4f8)])!;
   const treeMat = lam(0xffffff); treeMat.vertexColors = true;
   const tr = new THREE.InstancedMesh(treeGeo, treeMat, trees.length), cap = new THREE.Group();
   const hs = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), lam(0xe9e0cc), houses.length);
@@ -104,7 +109,7 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
     const t = new THREE.CanvasTexture(c); t.flipY = true; return t; })();
   const patch = (mat: THREE.MeshStandardMaterial, areaId: THREE.Texture, tints: THREE.Texture) => {
     mat.onBeforeCompile = (sh) => {
-      sh.uniforms.uMetre = { value: 1 / ((RELIEF / (80 * S))) }; sh.uniforms.tId = { value: areaId }; sh.uniforms.tTint = { value: tints }; sh.uniforms.tLab = { value: labMask };
+      sh.uniforms.uMetre = { value: 1 / ZS }; sh.uniforms.tId = { value: areaId }; sh.uniforms.tTint = { value: tints }; sh.uniforms.tLab = { value: labMask };
       sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying float vMet; uniform float uMetre;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvMet = transformed.z * uMetre;');
       sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vMet; uniform sampler2D tId, tTint, tLab;').replace('#include <map_fragment>', `#include <map_fragment>
         { /* contours: fine 25 m lines that fade where they crowd, a stronger line every 100 m; slate blue on snow, green in the woods */
@@ -134,7 +139,7 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
     }
   };
 
-  const top = (meta.metres * RELIEF) / (80 * S) + BASE + 0.1;
+  const top = meta.metres * ZS + BASE + 0.1;
   const hit = (ray: THREE.Ray) => {
     if (ray.direction.y >= -1e-4) return null;
     const p = new THREE.Vector3(), at = (t: number) => ray.at(t, p);

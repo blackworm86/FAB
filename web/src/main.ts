@@ -142,7 +142,7 @@ function applyMap3d() {
 function setMap3d(on: boolean) {
   if (on && !VOL.art.relief) { map3d = false; say('This map has no 3D relief yet.'); return; }
   map3d = on; try { localStorage.setItem('fab-map3d', on ? '1' : '0'); } catch { /* storage off */ }
-  if (on && !REL) { if (!relLoading) { relLoading = true; say('Loading the 3D map…', true); loadRelief(MW, MH, S, MAP.areas.map((x) => [LAB[x.id].x, LAB[x.id].y, LAB[x.id].w, LAB[x.id].h] as [number, number, number, number]), PHONE).then((r) => { REL = r; REL.patch(reliefMat, areaIdTex, tintTex); diorama.add(REL.props);
+  if (on && !REL) { if (!relLoading) { relLoading = true; say('Loading the 3D map…', true); loadRelief(MW, MH, S, MAP.areas.filter((x) => LAB[x.id]).map((x) => [LAB[x.id].x, LAB[x.id].y, LAB[x.id].w, LAB[x.id].h] as [number, number, number, number]), PHONE, VOL.art.relief!).then((r) => { REL = r; REL.patch(reliefMat, areaIdTex, tintTex); diorama.add(REL.props);
         const ground = new THREE.Mesh(REL.geometry, reliefMat); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; diorama.add(ground);
         diorama.add(new THREE.Mesh(REL.walls, new THREE.MeshStandardMaterial({ color: 0x4a3524, roughness: 0.9, side: THREE.DoubleSide }))); applyMap3d(); refresh(); }).catch(() => { relLoading = false; map3d = false; say('The 3D map could not be loaded. Check your connection and try again.'); }); } return; }
   applyMap3d(); refresh();
@@ -421,7 +421,7 @@ function paintBoard() {
   {
     c.save(); c.scale(k, k);
     for (const [a, b] of RESTRICTED) drawRestricted(c, sharedBorder(a, b));
-    if (layers.numbers) for (const e of MAP.entries) { c.save(); c.translate(e.x, e.y); c.rotate(viewRot()); drawEntry(c, e, first(e.side)); c.restore(); }
+    if (layers.numbers) for (const e of MAP.entries) { c.save(); c.translate(e.x, e.y); c.rotate(viewRot()); drawEntry(c, e, VOL.art.entryDark(e.side)); c.restore(); }
     c.restore();
   }
   boardTex.needsUpdate = true; buildLabels();
@@ -1614,7 +1614,7 @@ function frameSide(sd: E.Side) { const ids = MAP.areas.filter((a) => g.control[a
 const cutOffCount = (sd: E.Side) => MAP.areas.filter((a) => g.control[a.id] === sd && !supOk(sd, a.id)).length;
 function layersHtml() {
   const tintBtn = (v: typeof tint, label: string, icon: string, title: string) => chip(label, tint === v, () => { tint = v; relayer(); if (v === 'supply') frameSide(supplySide()); }, title, icon);
-  const mapChips = VOL.art.relief ? `<h4>Map</h4><div class="chips">${chip('2D', !map3d, () => setMap3d(false), 'The printed board, flat')}${chip('3D', map3d, () => setMap3d(true), 'The snowy Ardennes in relief, with contour lines, woods and towns')}</div>` : '';
+  const mapChips = VOL.art.relief ? `<h4>Map</h4><div class="chips">${chip('2D', !map3d, () => setMap3d(false), 'The printed board, flat')}${chip('3D', map3d, () => setMap3d(true), VOL.art.reliefName)}</div>` : '';
   const lay = (k: 'numbers' | 'tdn' | 'vp' | 'names', icon: string, title: string, label = '') => chip(label, layers[k], () => { layers[k] = !layers[k]; relayer(); }, title, icon);
   return `<div class="modal"><div class="sheet slim"><h3>${ico('eye')} View <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
     <h4>Printed</h4><div class="chips">${lay('numbers', 'hash', 'Area numbers and entry letters', 'Numbers')}${lay('tdn', 'tree', 'Terrain defence number', 'TDN')}${lay('vp', 'star', 'Victory points', 'VP')}${lay('names', 'text', 'Place names', 'Names')}</div>
