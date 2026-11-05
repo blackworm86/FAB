@@ -36,4 +36,12 @@ function sheets() {
     <h2>Israeli counters</h2><div class="g">${chits('israeli')}</div><h2>Syrian counters</h2><div class="g">${chits('syrian')}</div>
     <h2>Markers</h2><div class="g">${chits('none')}${extra}</div><h2>Backs</h2><div class="g">${(backs as { id: string; name: string }[]).map((b) => fig(golanBackSvg(b.id), b.name)).join('')}</div>`;
 }
-loadChitArt().then(() => { sheets(); return board(); }).then(() => { document.body.dataset.ready = '1'; });
+/** Every piece's SVG by id, for tools that capture the sheet (the review page). */
+function dump() {
+  (window as unknown as { __golanArt: unknown }).__golanArt = {
+    blocks: Object.fromEntries((units as GUnit[]).map((u) => [u.id, Array.from({ length: u.steps ?? 1 }, (_, i) => golanBlockSvg(u, (u.steps ?? 1) - i))])),
+    chits: Object.fromEntries((counters as GCounter[]).map((c) => [c.id, golanChitSvg(c)])), backs: Object.fromEntries((backs as { id: string }[]).map((b) => [b.id, golanBackSvg(b.id)])),
+    wood: GOLAN_WOOD,
+  };
+}
+loadChitArt().then(() => { sheets(); dump(); return board(); }).then(() => { document.body.dataset.ready = '1'; });
