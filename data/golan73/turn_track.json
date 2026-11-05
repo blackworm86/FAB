@@ -1,0 +1,14 @@
+{
+ "source": "Turn Track on the map (Vassal map image). draws: [during the Syrian (1st) player turn, during the Israeli (2nd) player turn]; suddenDeath: net VPs needed (yours minus theirs) at the Victory Check, from turn 4 (19.4)",
+ "turns": {
+  "1": {"name": "Oct 6 PM", "night": false, "draws": {"syrian": [0, 0], "israeli": [0, 0]}, "suddenDeath": null},
+  "2": {"name": "Oct 6 Night", "night": true, "draws": {"syrian": [8, 2], "israeli": [1, 2]}, "suddenDeath": null},
+  "3": {"name": "Oct 7 AM", "night": false, "draws": {"syrian": [7, 2], "israeli": [2, 3]}, "suddenDeath": null},
+  "4": {"name": "Oct 7 PM", "night": false, "draws": {"syrian": [6, 2], "israeli": [3, 4]}, "suddenDeath": {"syrian": 7, "israeli": 3}},
+  "5": {"name": "Oct 8 AM", "night": false, "draws": {"syrian": [6, 2], "israeli": [3, 5]}, "suddenDeath": {"syrian": 7, "israeli": 3}},
+  "6": {"name": "Oct 8 PM", "night": false, "draws": {"syrian": [6, 2], "israeli": [3, 6]}, "suddenDeath": {"syrian": 8, "israeli": 2}},
+  "7": {"name": "Oct 9 AM", "night": false, "draws": {"syrian": [7, 2], "israeli": [3, 7]}, "suddenDeath": {"syrian": 8, "israeli": 2}},
+  "8": {"name": "Oct 9 PM", "night": false, "draws": {"syrian": [5, 1], "israeli": [3, 8]}, "suddenDeath": {"syrian": 7, "israeli": 3}},
+  "9": {"name": "Oct 10", "night": false, "draws": {"syrian": [4, 1], "israeli": [3, 9]}, "suddenDeath": {"syrian": 6, "israeli": 4}}
+ }
+}
