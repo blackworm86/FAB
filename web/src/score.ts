@@ -33,10 +33,10 @@ export function vpStrip(g: E.Game, open: string) {
   if (cold(g)) return coldStrip(g, open);
   const v = E.victory(g), sd = track(g)[g.turn - 1]?.sd;
   return `<button class="vps" data-ui="${open}" title="Victory points: tap for the details" aria-label="Victory points, net ${netText(v.net)}">
-    <span class="vlab">VP</span><span class="vtt">${track(g).map((t, i) => `<span class="vtb ${i + 1 === g.turn ? 'now' : i + 1 < g.turn ? 'past' : ''}"><b>T${i + 1}</b>${t.sd ? `<i>${t.sd[0]}/${t.sd[1]}</i>` : '<i class="no">–</i>'}</span>`).join('')}</span>
+    <span class="vlab">VP</span><span class="vtt" title="Under each turn: the net VP that wins at once that turn, German / Allied">${track(g).map((t, i) => `<span class="vtb ${i + 1 === g.turn ? 'now' : i + 1 < g.turn ? 'past' : ''}"><b>T${i + 1}</b>${t.sd ? `<i aria-label="sudden death at German +${t.sd[0]} or Allied +${t.sd[1]}">${t.sd[0]}/${t.sd[1]}</i>` : '<i class="no">–</i>'}</span>`).join('')}</span>
     <span class="vlab al">AL ${v.allied}</span>
     <span class="gauge"><span class="z"></span>${sd ? `<span class="sd" style="left:${pos(-sd[1])}%"><span>AL wins ${sd[1]}</span></span><span class="sd" style="left:${pos(sd[0])}%"><span>GE wins ${sd[0]}</span></span>` : ''}<span class="nd" style="left:${pos(v.net)}%"></span></span>
-    <span class="vlab ge">GE ${v.german}</span><span class="vlab net">${netText(v.net).toUpperCase()}</span></button>`;
+    <span class="vlab ge">GE ${v.german}</span><span class="vlab net ${v.net > 0 ? 'ge' : v.net < 0 ? 'al' : ''}">${netText(v.net).toUpperCase()}</span></button>`;
 }
 
 function tableRows(g: E.Game, hit: string | null) { return `<div class="vtab">${E.victoryTable(g).map(([a, b]) => `<div class="${hit?.includes(b) ? 'on' : ''}">${esc(a)} = ${esc(b)}</div>`).join('')}</div>`; }
