@@ -76,12 +76,12 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
   const trees: number[][] = [];
   for (let j = 0; j < R; j++) for (let i = 0; i < C; i++) { const w = WB[j * C + i] / 255; if (w > 0.3 && rnd() < w * (lite ? 0.12 : 0.26)) { const x = i * ST + (rnd() - 0.5) * ST, y = j * ST + (rnd() - 0.5) * ST; if (!inTown(x, y) && !nearLabel(x, y)) trees.push([x, y, 0.75 + rnd() * 0.6, rnd()]); } }
   const houses: number[][] = [], churches: number[][] = [];
-  for (const [x, y] of towns) { churches.push([x + 1, y - 1, 1]); for (let k = 0; k < 9; k++) { const a = (k / 9) * 6.283 + rnd() * 0.4, r = 5.5 + rnd() * 3.5; houses.push([x + Math.cos(a) * r, y + Math.sin(a) * r, -a, 2.4 + rnd() * 0.6, 2 + rnd() * 0.8, 3.2 + rnd() * 0.8]); } }
+  for (const [x, y] of towns) { churches.push([x + 1, y - 1, 1]); for (let k = 0; k < 9; k++) { const a = (k / 9) * 6.283 + rnd() * 0.4, r = 5.5 + rnd() * 3.5; const hx = x + Math.cos(a) * r, hy = y + Math.sin(a) * r; if (!nearLabel(hx, hy)) houses.push([hx, hy, -a, 2.4 + rnd() * 0.6, 2 + rnd() * 0.8, 3.2 + rnd() * 0.8]); } }
   for (const c of meta.cities) {
     const far = Math.max(...c.cells.map(([x, y]) => Math.hypot(x - c.c[0], y - c.c[1]))) || 1;
     for (const [x, y] of c.cells) { const t = 1 - Math.hypot(x - c.c[0], y - c.c[1]) / far; houses.push([x + (rnd() - 0.5) * 0.6, y + (rnd() - 0.5) * 0.6, rnd() < 0.5 ? 0 : 1.571, 3.3, 2.6 + t * 4 + rnd() * 1.5, 3.4]); }
     churches.push([c.c[0], c.c[1], 1.6]); const f = c.cells[(c.cells.length * 0.3) | 0]; churches.push([f[0], f[1], 1.2]);
-    for (let k = 0; k < 16; k++) { const a = rnd() * 6.283, r = far + 4 + rnd() * 7; houses.push([c.c[0] + Math.cos(a) * r, c.c[1] + Math.sin(a) * r, -a, 2.6, 2.2 + rnd(), 3.4]); }
+    for (let k = 0; k < 16; k++) { const a = rnd() * 6.283, r = far + 4 + rnd() * 7, hx = c.c[0] + Math.cos(a) * r, hy = c.c[1] + Math.sin(a) * r; if (!nearLabel(hx, hy)) houses.push([hx, hy, -a, 2.6, 2.2 + rnd(), 3.4]); }
   }
   const lams: THREE.MeshLambertMaterial[] = [], lam = (color: number) => { const m = new THREE.MeshLambertMaterial({ color }); lams.push(m); return m; };
   // one tree = one mesh: a dark cone with a snow cap (vertex colours), so each tree is drawn once, not twice
@@ -99,16 +99,19 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
   churches.forEach((c, i) => { m4.compose(v.set(wx(c[0]), groundMin(c[0], c[1], 1) - 0.01, wz(c[1])), q.identity(), sc.setScalar(c[2] * u)); tw.setMatrixAt(i, m4); sp.setMatrixAt(i, m4); });
   props.add(tr, cap, hs, rf, tw, sp);
 
+  const labMask = (() => { const c = document.createElement('canvas'); c.width = meta.w / 2; c.height = meta.h / 2; const x = c.getContext('2d')!; x.filter = 'blur(3px)'; x.fillStyle = '#fff';
+    for (const [lx, ly] of labels) { x.beginPath(); x.roundRect((lx - 46) / 2, (ly - 22) / 2, 46, 28, 6); x.fill(); }
+    const t = new THREE.CanvasTexture(c); t.flipY = true; return t; })();
   const patch = (mat: THREE.MeshStandardMaterial, areaId: THREE.Texture, tints: THREE.Texture) => {
     mat.onBeforeCompile = (sh) => {
-      sh.uniforms.uMetre = { value: 1 / ((RELIEF / (80 * S))) }; sh.uniforms.tId = { value: areaId }; sh.uniforms.tTint = { value: tints };
+      sh.uniforms.uMetre = { value: 1 / ((RELIEF / (80 * S))) }; sh.uniforms.tId = { value: areaId }; sh.uniforms.tTint = { value: tints }; sh.uniforms.tLab = { value: labMask };
       sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying float vMet; uniform float uMetre;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvMet = transformed.z * uMetre;');
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vMet; uniform sampler2D tId, tTint;').replace('#include <map_fragment>', `#include <map_fragment>
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vMet; uniform sampler2D tId, tTint, tLab;').replace('#include <map_fragment>', `#include <map_fragment>
         { /* contours: fine 25 m lines that fade where they crowd, a stronger line every 100 m; slate blue on snow, green in the woods */
           float wood = clamp((0.8 - diffuseColor.r) / 0.45, 0., 1.); vec3 lc = mix(vec3(.13,.21,.36), vec3(.03,.13,.05), wood);
           float c1 = vMet / 25., f1 = fwidth(c1), m1 = (1. - clamp(abs(fract(c1 + .5) - .5) / max(f1, 1e-4), 0., 1.)) * smoothstep(2.5, 7., 1. / max(f1, 1e-4));
           float c2 = vMet / 100., f2 = fwidth(c2), m2 = (1. - clamp(abs(fract(c2 + .5) - .5) / max(f2, 1e-4) - .3, 0., 1.)) * smoothstep(2., 5., 1. / max(f2, 1e-4));
-          diffuseColor.rgb = mix(diffuseColor.rgb, lc, max(m1 * .32, m2 * .58));
+          diffuseColor.rgb = mix(diffuseColor.rgb, lc, max(m1 * .32, m2 * .58) * (1. - texture2D(tLab, vMapUv).r));      /* no contour lines across the printed numbers and names */
           /* area highlights (moves, battles, tints) painted straight onto the ground, so they follow every fold of it */
           float id = floor(texture2D(tId, vMapUv).r * 255. + .5); if (id < .5) discard; vec4 t = texture2D(tTint, vec2((id + .5) / 128., .5)); diffuseColor.rgb = mix(diffuseColor.rgb, t.rgb, min(1., t.a * 1.45)); }`);   // a little stronger than on the flat board, so snow and woods do not show through as spots
     };
