@@ -72,6 +72,18 @@ export interface Volume {
   /** Before the Used Box recycles (4.1b): true when the side must first make a choice (The Bulge's artillery attrition). */
   beforeRecycle?: (g: Game, side: Side) => boolean;
   vpHist?: (g: Game, v: Record<Side, number> & { net: number }) => number;
+  /** How many blocks of one side an area holds (5.1: two; Golan's Assembly areas: any number). */
+  stackLimit?: (g: Game, area: number) => number;
+  /** The entry areas a unit may be rerouted to or placed in when its own are blocked (14.2). */
+  appropriate?: (g: Game, u: Unit) => number[];
+  isNight?: (g: Game) => boolean;
+  /** An asset was just assigned to a battle (an air mission may draw SAM fire). */
+  onAssign?: (g: Game, b: Battle, c: Chit, mode?: string, unit?: string) => void;
+  /** Combat may not begin yet (a SAM answer or a jamming roll is pending): throw. */
+  beforeBegin?: (g: Game, b: Battle) => void;
+  /** Before and after one side's dice of a firing step (an engineer bridging instead of firing; a counterbattery strike). */
+  beforeFire?: (g: Game, b: Battle, side: Side, kind: 'arty' | 'ground') => void;
+  afterFire?: (g: Game, b: Battle, side: Side, kind: 'arty' | 'ground') => void;
   /** The chit side of the Reinforcement Phase (4.1a–d) for one side; returns true when the side still has a choice to make (4.1a). */
   reinforce?: (g: Game, side: Side) => void;
   afterDraw?: (g: Game) => void;
@@ -98,9 +110,11 @@ VOLUMES.bulge = data({ id: 'bulge', name: 'The Bulge', sides: ['german', 'allied
   const t = (golanTrack as unknown as { turns: Record<string, { draws: Record<string, [number, number]>; suddenDeath: Record<string, number> | null }> }).turns;
   const track: TrackRow[] = Object.keys(t).sort((a, b) => +a - +b).map((k) => ({ ge: t[k].draws.syrian, al: t[k].draws.israeli, sd: t[k].suddenDeath ? [t[k].suddenDeath!.syrian, t[k].suddenDeath!.israeli] : null }));
   VOLUMES.golan73 = data({ id: 'golan73', name: "Golan '73", sides: ['syrian', 'israeli'], tag: { syrian: 'SY', israeli: 'IS' }, sideName: { syrian: 'Syrian', israeli: 'Israeli' },
-    map: { size: m.size, areas: m.areas.map((a) => ({ id: a.id, name: a.name, tdn: a.tdn, zone: 0, vp: { mutual: a.vp.mutual, german: 0, allied: 0, syrian: a.vp.syrian, israeli: 0 }, supply: a.supply, altSetup: a.altSetup })), connections: conns },
+    map: { size: m.size, areas: [...m.areas.map((a) => ({ id: a.id, name: a.name, tdn: a.tdn, zone: 0, vp: { mutual: a.vp.mutual, german: 0, allied: 0, syrian: a.vp.syrian, israeli: 0 }, supply: a.supply, altSetup: a.altSetup })),
+      ...[[101, 'Northern Assembly Area'], [102, 'Southern Assembly Area']].map(([id, name]) => ({ id: id as number, name: name as string, tdn: 0, zone: 0, vp: { mutual: false, german: 0, allied: 0, syrian: 0, israeli: 0 } }))],
+      connections: [...conns, ...[[101, 6], [101, 10], [102, 17]].map(([a, b]) => ({ a, b, type: 'road' as const, mp: 1, river: false, restricted: false, army_boundary: false })), { a: 101, b: 102, type: 'special' as const, mp: 99, river: false, restricted: false, army_boundary: false }] },
     units: golanUnits as unknown[], counters: golanCounters as unknown[], scenarios: golanSetups as unknown as Record<string, unknown>,
-    entries: Object.fromEntries(m.entries.map((e) => [e.letter, { side: 'syrian', area: e.area }])), track });
+    entries: { ...Object.fromEntries(m.entries.map((e) => [e.letter, { side: 'syrian', area: e.area }])), A: { side: 'israeli', area: 101 }, B: { side: 'israeli', area: 102 } }, track });
 }
 CUR = VOLUMES.bulge;
 /** Attach a volume's rule hooks. */
