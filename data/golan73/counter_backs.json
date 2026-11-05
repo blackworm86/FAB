@@ -1,0 +1,65 @@
+[
+ {
+  "id": "back_is_asset",
+  "name": "Asset or Event (Israeli)",
+  "kind": "back_generic",
+  "vassal_image": "Asset_IS-Back.png",
+  "art": "bulge:back_green_asset",
+  "copies": 52,
+  "image": null
+ },
+ {
+  "id": "back_sy_asset",
+  "name": "Asset or Event (Syrian)",
+  "kind": "back_generic",
+  "vassal_image": "Asset_SY-Back.png",
+  "art": "bulge:back_grey_asset",
+  "copies": 56,
+  "image": null
+ },
+ {
+  "id": "back_is_strongpoint",
+  "name": "Strongpoint (Task Force back)",
+  "kind": "back_generic",
+  "vassal_image": "Asset_IS-Back(Strongpoint).png",
+  "art": "new",
+  "copies": 8,
+  "image": null
+ },
+ {
+  "id": "back_garrison",
+  "name": "Garrison (back)",
+  "kind": "back_generic",
+  "vassal_image": null,
+  "art": "bulge:back_garrison",
+  "copies": 5,
+  "image": null
+ },
+ {
+  "id": "back_game_turn_is",
+  "name": "Game Turn (Israeli side)",
+  "kind": "marker",
+  "vassal_image": "Marker_Game Turn-Israeli.png",
+  "art": "bulge:back_game_turn",
+  "copies": 1,
+  "image": null
+ },
+ {
+  "id": "back_vps_sy",
+  "name": "VPs (Syrian side)",
+  "kind": "marker",
+  "vassal_image": "Marker_VPs-Syrian.png",
+  "art": "bulge:back_vps",
+  "copies": 1,
+  "image": null
+ },
+ {
+  "id": "back_control_sy",
+  "name": "Control (Syrian side)",
+  "kind": "marker",
+  "vassal_image": "Marker_Control-Syrian.png",
+  "art": "new",
+  "copies": null,
+  "image": null
+ }
+]

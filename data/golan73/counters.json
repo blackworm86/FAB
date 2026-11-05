@@ -1,0 +1,2195 @@
+[
+ {
+  "id": "IC01",
+  "kind": "artillery",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": "S",
+  "name": "405th+55th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "IC01"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_IS-S-Arty(405th+55th).png",
+  "image": null
+ },
+ {
+  "id": "IC02",
+  "kind": "artillery",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": "S",
+  "name": "9th+334th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "IC02"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_IS-S-Arty(9th+334th).png",
+  "image": null
+ },
+ {
+  "id": "IC03",
+  "kind": "air_mission",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": "S",
+  "name": "Air Support",
+  "copies": 1,
+  "ids": [
+   "IC03"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:air_mission",
+  "vassal_image": "Asset_IS-S-Air Support.png",
+  "image": null
+ },
+ {
+  "id": "IC04",
+  "kind": "event_lt_zvika",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": "S",
+  "name": "Lt. Zvika",
+  "quality": "elite",
+  "class": "armor",
+  "symbol": "armor",
+  "copies": 1,
+  "ids": [
+   "IC04"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "new",
+  "vassal_image": "Asset_IS-S-Event(LtZvika).png",
+  "image": null
+ },
+ {
+  "id": "IC05",
+  "kind": "garrison",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": "scenario",
+  "name": "R. Magshimim",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "inf",
+  "area": 22,
+  "copies": 1,
+  "ids": [
+   "IC05"
+  ],
+  "limit": "limited",
+  "back": "back_garrison",
+  "art": "bulge:garrison",
+  "vassal_image": "Garrison_IS-S22(R Magshimim).png",
+  "image": null
+ },
+ {
+  "id": "IC06",
+  "kind": "garrison",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": "scenario",
+  "name": "Tel Faris",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "inf",
+  "area": 30,
+  "copies": 1,
+  "ids": [
+   "IC06"
+  ],
+  "limit": "limited",
+  "back": "back_garrison",
+  "art": "bulge:garrison",
+  "vassal_image": "Garrison_IS-S30(Tel Faris).png",
+  "image": null
+ },
+ {
+  "id": "IC07",
+  "kind": "garrison",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": "scenario",
+  "name": "Nafakh",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "inf",
+  "area": 42,
+  "copies": 1,
+  "ids": [
+   "IC07"
+  ],
+  "limit": "limited",
+  "back": "back_garrison",
+  "art": "bulge:garrison",
+  "vassal_image": "Garrison_IS-S42(Nafakh).png",
+  "image": null
+ },
+ {
+  "id": "IC08",
+  "kind": "garrison",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": "scenario",
+  "name": "Tel Abu Nida",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "inf",
+  "area": 46,
+  "copies": 1,
+  "ids": [
+   "IC08"
+  ],
+  "limit": "limited",
+  "back": "back_garrison",
+  "art": "bulge:garrison",
+  "vassal_image": "Garrison_IS-S46(Tel Abu Nida).png",
+  "image": null
+ },
+ {
+  "id": "IC09",
+  "kind": "garrison",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": "scenario",
+  "name": "Mt. Hermon",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "inf",
+  "area": 83,
+  "copies": 1,
+  "ids": [
+   "IC09"
+  ],
+  "limit": "limited",
+  "back": "back_garrison",
+  "art": "bulge:garrison",
+  "vassal_image": "Garrison_IS-S83(Mt Hermon).png",
+  "image": null
+ },
+ {
+  "id": "IC10",
+  "kind": "air_mission",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": "C",
+  "name": "Air Support",
+  "conditional": "sam_eliminated",
+  "start_box": "air_support_holding",
+  "copies": 3,
+  "ids": [
+   "IC10a",
+   "IC10b",
+   "IC10c"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:air_mission",
+  "vassal_image": "Asset_IS-C-Air Supportx3.png",
+  "image": null
+ },
+ {
+  "id": "IC11",
+  "kind": "task_force",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": "C",
+  "name": "Task Force (armor)",
+  "quality": "veteran",
+  "class": "armor",
+  "symbol": "armor",
+  "conditional": "strongpoint_evacuated",
+  "start_box": "evacuated_strongpoints",
+  "copies": 4,
+  "ids": [
+   "IC11a",
+   "IC11b",
+   "IC11c",
+   "IC11d"
+  ],
+  "limit": "limited",
+  "back": "back_is_strongpoint",
+  "art": "bulge:task_force",
+  "vassal_image": "Asset_IS-C-TF(Arm)x4.png",
+  "image": null
+ },
+ {
+  "id": "IC12",
+  "kind": "task_force",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": "C",
+  "name": "Task Force (infantry)",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "inf",
+  "conditional": "strongpoint_evacuated",
+  "start_box": "evacuated_strongpoints",
+  "copies": 4,
+  "ids": [
+   "IC12a",
+   "IC12b",
+   "IC12c",
+   "IC12d"
+  ],
+  "limit": "limited",
+  "back": "back_is_strongpoint",
+  "art": "bulge:task_force",
+  "vassal_image": "Asset_IS-C-TF(Inf)x4.png",
+  "image": null
+ },
+ {
+  "id": "IC13",
+  "kind": "event_king_hassan",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 2,
+  "name": "King Hassan's Troublemakers",
+  "target": "S07",
+  "copies": 1,
+  "ids": [
+   "IC13"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "new",
+  "vassal_image": "Asset_IS-2-Event(King Hassan's Troublemakers).png",
+  "image": null
+ },
+ {
+  "id": "IC14",
+  "kind": "special_action_event",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 2,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "IC14"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_IS-2-Event(SpecialAction).png",
+  "image": null
+ },
+ {
+  "id": "IC15",
+  "kind": "infantry_asset",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 2,
+  "name": "Militia",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "inf",
+  "subtype": "militia",
+  "copies": 1,
+  "ids": [
+   "IC15"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_IS-2-Militia.png",
+  "image": null
+ },
+ {
+  "id": "IC16",
+  "kind": "air_mission",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 3,
+  "name": "Air Support",
+  "copies": 1,
+  "ids": [
+   "IC16"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:air_mission",
+  "vassal_image": "Asset_IS-3-Air Support.png",
+  "image": null
+ },
+ {
+  "id": "IC17",
+  "kind": "engineer",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 3,
+  "name": "36th",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "engineer",
+  "copies": 1,
+  "ids": [
+   "IC17"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:engineer",
+  "vassal_image": "Asset_IS-3-Eng(36th).png",
+  "image": null
+ },
+ {
+  "id": "IC18",
+  "kind": "event_arriving_battalion",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 3,
+  "name": "Battalion only for 179th Arm Bde",
+  "brigade": "179th",
+  "copies": 1,
+  "ids": [
+   "IC18"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:event_arriving_regiment",
+  "vassal_image": "Asset_IS-3-Event(179thArmBn).png",
+  "image": null
+ },
+ {
+  "id": "IC19",
+  "kind": "replacement_arm",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 3,
+  "name": "Armor Replacement",
+  "elite_allowed": true,
+  "copies": 1,
+  "ids": [
+   "IC19"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:replacement_arm",
+  "vassal_image": "Asset_IS-3-Event(ArmRepl).png",
+  "image": null
+ },
+ {
+  "id": "IC20",
+  "kind": "event_dugman5",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 3,
+  "name": "Operation Dugman 5",
+  "must_play": true,
+  "copies": 1,
+  "ids": [
+   "IC20"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "new",
+  "vassal_image": "Asset_IS-3-Event(OperationDugman5).png",
+  "image": null
+ },
+ {
+  "id": "IC21",
+  "kind": "special_action_event",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 3,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "IC21"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_IS-3-Event(SpecialAction).png",
+  "image": null
+ },
+ {
+  "id": "IC22",
+  "kind": "command_staff",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 3,
+  "name": "Staff Asset",
+  "copies": 1,
+  "ids": [
+   "IC22"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:command_staff",
+  "vassal_image": "Asset_IS-3-HQ(Staff Asset).png",
+  "image": null
+ },
+ {
+  "id": "IC23",
+  "kind": "armor_asset",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 4,
+  "name": "Moshe",
+  "quality": "veteran",
+  "class": "armor",
+  "symbol": "armor",
+  "copies": 1,
+  "ids": [
+   "IC23"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_IS-4-Arm(Moshe).png",
+  "image": null
+ },
+ {
+  "id": "IC24",
+  "kind": "artillery",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 4,
+  "name": "212th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "IC24"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_IS-4-Arty(212th).png",
+  "image": null
+ },
+ {
+  "id": "IC25",
+  "kind": "engineer",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 4,
+  "name": "210th",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "engineer",
+  "copies": 1,
+  "ids": [
+   "IC25"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:engineer",
+  "vassal_image": "Asset_IS-4-Eng(210th).png",
+  "image": null
+ },
+ {
+  "id": "IC26",
+  "kind": "event_arriving_battalion",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 4,
+  "name": "Battalion only for 179th Arm Bde",
+  "brigade": "179th",
+  "copies": 1,
+  "ids": [
+   "IC26"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:event_arriving_regiment",
+  "vassal_image": "Asset_IS-4-Event(179thBn).png",
+  "image": null
+ },
+ {
+  "id": "IC27",
+  "kind": "event_arriving_battalion",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 4,
+  "name": "Battalion only for 4th Mech Bde",
+  "brigade": "4th",
+  "copies": 1,
+  "ids": [
+   "IC27"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:event_arriving_regiment",
+  "vassal_image": "Asset_IS-4-Event(4thMechBn).png",
+  "image": null
+ },
+ {
+  "id": "IC28",
+  "kind": "event_arriving_battalion",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 4,
+  "name": "Battalion only for 679th Arm Bde",
+  "brigade": "679th",
+  "copies": 1,
+  "ids": [
+   "IC28"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:event_arriving_regiment",
+  "vassal_image": "Asset_IS-4-Event(679thArmBn).png",
+  "image": null
+ },
+ {
+  "id": "IC29",
+  "kind": "replacement_arm",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 4,
+  "name": "Armor Replacement",
+  "elite_allowed": true,
+  "copies": 1,
+  "ids": [
+   "IC29"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:replacement_arm",
+  "vassal_image": "Asset_IS-4-Event(ArmRepl).png",
+  "image": null
+ },
+ {
+  "id": "IC30",
+  "kind": "event_counterbattery",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 4,
+  "name": "Counterbattery",
+  "copies": 1,
+  "ids": [
+   "IC30"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "new",
+  "vassal_image": "Asset_IS-4-Event(Counterbattery).png",
+  "image": null
+ },
+ {
+  "id": "IC31",
+  "kind": "special_action_event",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 4,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "IC31"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_IS-4-Event(SpecialAction).png",
+  "image": null
+ },
+ {
+  "id": "IC32",
+  "kind": "infantry_asset",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 4,
+  "name": "Militia",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "inf",
+  "subtype": "militia",
+  "copies": 1,
+  "ids": [
+   "IC32"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_IS-4-Militia.png",
+  "image": null
+ },
+ {
+  "id": "IC33",
+  "kind": "rocket_artillery",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 4,
+  "name": "270th",
+  "class": "infantry",
+  "symbol": "rocket_artillery",
+  "copies": 1,
+  "ids": [
+   "IC33"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:rocket_artillery",
+  "vassal_image": "Asset_IS-4-Rocket(270th).png",
+  "image": null
+ },
+ {
+  "id": "IC34",
+  "kind": "artillery",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 5,
+  "name": "282nd",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "IC34"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_IS-5-Arty(282nd).png",
+  "image": null
+ },
+ {
+  "id": "IC35",
+  "kind": "replacement_arm",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 5,
+  "name": "Armor Replacement",
+  "elite_allowed": true,
+  "copies": 1,
+  "ids": [
+   "IC35"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:replacement_arm",
+  "vassal_image": "Asset_IS-5-Event(ArmRepl).png",
+  "image": null
+ },
+ {
+  "id": "IC36",
+  "kind": "event_ew",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 5,
+  "name": "EW",
+  "copies": 1,
+  "ids": [
+   "IC36"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "new",
+  "vassal_image": "Asset_IS-5-Event(EW).png",
+  "image": null
+ },
+ {
+  "id": "IC37",
+  "kind": "special_action_event",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 5,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "IC37"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_IS-5-Event(SpecialAction).png",
+  "image": null
+ },
+ {
+  "id": "IC38",
+  "kind": "infantry_asset",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 5,
+  "name": "Militia",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "inf",
+  "subtype": "militia",
+  "copies": 1,
+  "ids": [
+   "IC38"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_IS-5-Militia.png",
+  "image": null
+ },
+ {
+  "id": "IC39",
+  "kind": "armor_asset",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 6,
+  "name": "Hanon",
+  "quality": "veteran",
+  "class": "armor",
+  "symbol": "armor",
+  "copies": 1,
+  "ids": [
+   "IC39"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_IS-6-Arm(Hanon).png",
+  "image": null
+ },
+ {
+  "id": "IC40",
+  "kind": "artillery",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 6,
+  "name": "213th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "IC40"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_IS-6-Arty(213th).png",
+  "image": null
+ },
+ {
+  "id": "IC41",
+  "kind": "engineer",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 6,
+  "name": "146th",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "engineer",
+  "copies": 1,
+  "ids": [
+   "IC41"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:engineer",
+  "vassal_image": "Asset_IS-6-Eng(146th).png",
+  "image": null
+ },
+ {
+  "id": "IC42",
+  "kind": "replacement_arm",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 6,
+  "name": "Armor Replacement",
+  "elite_allowed": true,
+  "copies": 1,
+  "ids": [
+   "IC42"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:replacement_arm",
+  "vassal_image": "Asset_IS-6-Event(ArmRepl).png",
+  "image": null
+ },
+ {
+  "id": "IC43",
+  "kind": "event_counterbattery",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 6,
+  "name": "Counterbattery",
+  "copies": 1,
+  "ids": [
+   "IC43"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "new",
+  "vassal_image": "Asset_IS-6-Event(Counterbattery).png",
+  "image": null
+ },
+ {
+  "id": "IC44",
+  "kind": "replacement_mech",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 6,
+  "name": "Mech Replacement",
+  "elite_allowed": true,
+  "copies": 1,
+  "ids": [
+   "IC44"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:replacement_inf",
+  "vassal_image": "Asset_IS-6-Event(MechRepl).png",
+  "image": null
+ },
+ {
+  "id": "IC45",
+  "kind": "special_action_event",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 6,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "IC45"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_IS-6-Event(SpecialAction).png",
+  "image": null
+ },
+ {
+  "id": "IC46",
+  "kind": "replacement_arm",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 7,
+  "name": "Armor Replacement",
+  "elite_allowed": true,
+  "copies": 1,
+  "ids": [
+   "IC46"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:replacement_arm",
+  "vassal_image": "Asset_IS-7-Event(ArmRepl).png",
+  "image": null
+ },
+ {
+  "id": "IC47",
+  "kind": "event_ew",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 7,
+  "name": "EW",
+  "copies": 1,
+  "ids": [
+   "IC47"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "new",
+  "vassal_image": "Asset_IS-7-Event(EW).png",
+  "image": null
+ },
+ {
+  "id": "IC48",
+  "kind": "replacement_mech",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 7,
+  "name": "Mech Replacement",
+  "elite_allowed": true,
+  "copies": 1,
+  "ids": [
+   "IC48"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:replacement_inf",
+  "vassal_image": "Asset_IS-7-Event(MechRepl).png",
+  "image": null
+ },
+ {
+  "id": "IC49",
+  "kind": "special_action_event",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 7,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "IC49"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_IS-7-Event(SpecialAction).png",
+  "image": null
+ },
+ {
+  "id": "IC50",
+  "kind": "infantry_asset",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 7,
+  "name": "Sayeret Egoz",
+  "quality": "elite",
+  "class": "infantry",
+  "symbol": "special_forces",
+  "subtype": "special_forces",
+  "copies": 1,
+  "ids": [
+   "IC50"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_IS-7-SF(Sayeret Egoz).png",
+  "image": null
+ },
+ {
+  "id": "IC51",
+  "kind": "replacement_arm",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 8,
+  "name": "Armor Replacement",
+  "elite_allowed": true,
+  "copies": 1,
+  "ids": [
+   "IC51"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:replacement_arm",
+  "vassal_image": "Asset_IS-8-Event(ArmRepl).png",
+  "image": null
+ },
+ {
+  "id": "IC52",
+  "kind": "replacement_mech",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 8,
+  "name": "Mech Replacement",
+  "elite_allowed": true,
+  "copies": 1,
+  "ids": [
+   "IC52"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:replacement_inf",
+  "vassal_image": "Asset_IS-8-Event(MechRepl).png",
+  "image": null
+ },
+ {
+  "id": "IC53",
+  "kind": "special_action_event",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 8,
+  "name": "Special Action",
+  "copies": 2,
+  "ids": [
+   "IC53a",
+   "IC53b"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_IS-8-Event(SpecialAction)x2.png",
+  "image": null
+ },
+ {
+  "id": "IC54",
+  "kind": "replacement_arm",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 9,
+  "name": "Armor Replacement",
+  "elite_allowed": true,
+  "copies": 1,
+  "ids": [
+   "IC54"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:replacement_arm",
+  "vassal_image": "Asset_IS-9-Event(ArmRepl).png",
+  "image": null
+ },
+ {
+  "id": "IC55",
+  "kind": "special_action_event",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": 9,
+  "name": "Special Action",
+  "copies": 2,
+  "ids": [
+   "IC55a",
+   "IC55b"
+  ],
+  "limit": "limited",
+  "back": "back_is_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_IS-9-Event(SpecialAction)x2.png",
+  "image": null
+ },
+ {
+  "id": "SC01",
+  "kind": "infantry_asset",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": "S",
+  "name": "5th AT",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "anti_tank",
+  "subtype": "anti_tank",
+  "copies": 1,
+  "ids": [
+   "SC01"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_SY-S-AT(5th).png",
+  "image": null
+ },
+ {
+  "id": "SC02",
+  "kind": "infantry_asset",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": "S",
+  "name": "7th AT",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "anti_tank",
+  "subtype": "anti_tank",
+  "copies": 1,
+  "ids": [
+   "SC02"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_SY-S-AT(7th).png",
+  "image": null
+ },
+ {
+  "id": "SC03",
+  "kind": "infantry_asset",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": "S",
+  "name": "9th AT",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "anti_tank",
+  "subtype": "anti_tank",
+  "copies": 1,
+  "ids": [
+   "SC03"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_SY-S-AT(9th).png",
+  "image": null
+ },
+ {
+  "id": "SC04",
+  "kind": "armor_asset",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": "S",
+  "name": "5th Tank",
+  "quality": "green",
+  "class": "armor",
+  "symbol": "armor",
+  "copies": 1,
+  "ids": [
+   "SC04"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_SY-S-Arm(5th).png",
+  "image": null
+ },
+ {
+  "id": "SC05",
+  "kind": "armor_asset",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": "S",
+  "name": "9th Tank",
+  "quality": "green",
+  "class": "armor",
+  "symbol": "armor",
+  "copies": 1,
+  "ids": [
+   "SC05"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_SY-S-Arm(9th).png",
+  "image": null
+ },
+ {
+  "id": "SC06",
+  "kind": "artillery",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": "S",
+  "name": "50th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "SC06"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_SY-S-Arty(50th).png",
+  "image": null
+ },
+ {
+  "id": "SC07",
+  "kind": "artillery",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": "S",
+  "name": "70th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "SC07"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_SY-S-Arty(70th).png",
+  "image": null
+ },
+ {
+  "id": "SC08",
+  "kind": "artillery",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": "S",
+  "name": "89th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "SC08"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_SY-S-Arty(89th).png",
+  "image": null
+ },
+ {
+  "id": "SC09",
+  "kind": "artillery",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": "S",
+  "name": "GHQ",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "SC09"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_SY-S-Arty(GHQ).png",
+  "image": null
+ },
+ {
+  "id": "SC10",
+  "kind": "engineer",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": "S",
+  "name": "5th",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "engineer",
+  "copies": 1,
+  "ids": [
+   "SC10"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:engineer",
+  "vassal_image": "Asset_SY-S-Eng(5th).png",
+  "image": null
+ },
+ {
+  "id": "SC11",
+  "kind": "engineer",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": "S",
+  "name": "7th",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "engineer",
+  "copies": 1,
+  "ids": [
+   "SC11"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:engineer",
+  "vassal_image": "Asset_SY-S-Eng(7th).png",
+  "image": null
+ },
+ {
+  "id": "SC12",
+  "kind": "engineer",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": "S",
+  "name": "9th",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "engineer",
+  "copies": 1,
+  "ids": [
+   "SC12"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:engineer",
+  "vassal_image": "Asset_SY-S-Eng(9th).png",
+  "image": null
+ },
+ {
+  "id": "SC13",
+  "kind": "engineer",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": "S",
+  "name": "GHQ",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "engineer",
+  "copies": 2,
+  "ids": [
+   "SC13a",
+   "SC13b"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:engineer",
+  "vassal_image": "Asset_SY-S-Eng(GHQ)x2.png",
+  "image": null
+ },
+ {
+  "id": "SC14",
+  "kind": "air_mission",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": "S",
+  "name": "Air Support",
+  "copies": 3,
+  "ids": [
+   "SC14a",
+   "SC14b",
+   "SC14c"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:air_mission",
+  "vassal_image": "Asset_SY-S-Event(AirSupport)x3.png",
+  "image": null
+ },
+ {
+  "id": "SC15",
+  "kind": "event_counterbattery",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": "S",
+  "name": "Counterbattery",
+  "copies": 1,
+  "ids": [
+   "SC15"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "new",
+  "vassal_image": "Asset_SY-S-Event(Counterbattery).png",
+  "image": null
+ },
+ {
+  "id": "SC16",
+  "kind": "event_ew",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": "S",
+  "name": "EW",
+  "copies": 1,
+  "ids": [
+   "SC16"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "new",
+  "vassal_image": "Asset_SY-S-Event(EW).png",
+  "image": null
+ },
+ {
+  "id": "SC17",
+  "kind": "sam",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": "S",
+  "name": "SAM",
+  "copies": 5,
+  "ids": [
+   "SC17a",
+   "SC17b",
+   "SC17c",
+   "SC17d",
+   "SC17e"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "new",
+  "vassal_image": "Asset_SY-S-Event(SAM)x5.png",
+  "image": null
+ },
+ {
+  "id": "SC18",
+  "kind": "infantry_asset",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": "S",
+  "name": "Druze",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "inf",
+  "subtype": "militia",
+  "copies": 1,
+  "ids": [
+   "SC18"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_SY-S-Inf(Druze).png",
+  "image": null
+ },
+ {
+  "id": "SC19",
+  "kind": "commando",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": "S",
+  "name": "183rd Cdo",
+  "quality": "elite",
+  "class": "infantry",
+  "symbol": "special_forces",
+  "copies": 1,
+  "ids": [
+   "SC19"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "new",
+  "vassal_image": "Asset_SY-S-SF(183rd Cdo).png",
+  "image": null
+ },
+ {
+  "id": "SC20",
+  "kind": "armor_asset",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 2,
+  "name": "7th Tank",
+  "quality": "green",
+  "class": "armor",
+  "symbol": "armor",
+  "copies": 1,
+  "ids": [
+   "SC20"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_SY-2-Arm(7th).png",
+  "image": null
+ },
+ {
+  "id": "SC21",
+  "kind": "special_action_event",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 2,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "SC21"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_SY-2-Event(SpecialAction).png",
+  "image": null
+ },
+ {
+  "id": "SC22",
+  "kind": "infantry_asset",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 2,
+  "name": "Druze",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "inf",
+  "subtype": "militia",
+  "copies": 2,
+  "ids": [
+   "SC22a",
+   "SC22b"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_SY-2-Inf(Druze)x2.png",
+  "image": null
+ },
+ {
+  "id": "SC23",
+  "kind": "commando",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 2,
+  "name": "182nd Cdo",
+  "quality": "elite",
+  "class": "infantry",
+  "symbol": "special_forces",
+  "copies": 1,
+  "ids": [
+   "SC23"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "new",
+  "vassal_image": "Asset_SY-2-SF(182nd Cdo).png",
+  "image": null
+ },
+ {
+  "id": "SC24",
+  "kind": "artillery",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 3,
+  "name": "64th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "SC24"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_SY-3-Arty(64th).png",
+  "image": null
+ },
+ {
+  "id": "SC25",
+  "kind": "air_mission",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 3,
+  "name": "Air Support",
+  "copies": 1,
+  "ids": [
+   "SC25"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:air_mission",
+  "vassal_image": "Asset_SY-3-Event(AirSupport).png",
+  "image": null
+ },
+ {
+  "id": "SC26",
+  "kind": "event_counterbattery",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 3,
+  "name": "Counterbattery",
+  "copies": 1,
+  "ids": [
+   "SC26"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "new",
+  "vassal_image": "Asset_SY-3-Event(Counterbattery).png",
+  "image": null
+ },
+ {
+  "id": "SC27",
+  "kind": "event_ew",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 3,
+  "name": "EW",
+  "copies": 1,
+  "ids": [
+   "SC27"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "new",
+  "vassal_image": "Asset_SY-3-Event(EW).png",
+  "image": null
+ },
+ {
+  "id": "SC28",
+  "kind": "special_action_event",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 3,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "SC28"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_SY-3-Event(SpecialAction).png",
+  "image": null
+ },
+ {
+  "id": "SC29",
+  "kind": "command_staff",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 3,
+  "name": "Staff Asset",
+  "copies": 1,
+  "ids": [
+   "SC29"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:command_staff",
+  "vassal_image": "Asset_SY-3-HW(Staff Asset).png",
+  "image": null
+ },
+ {
+  "id": "SC30",
+  "kind": "commando",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 3,
+  "name": "181st Cdo",
+  "quality": "elite",
+  "class": "infantry",
+  "symbol": "special_forces",
+  "copies": 1,
+  "ids": [
+   "SC30"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "new",
+  "vassal_image": "Asset_SY-3-SF(181st Cdo).png",
+  "image": null
+ },
+ {
+  "id": "SC31",
+  "kind": "artillery",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 4,
+  "name": "13th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "SC31"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_SY-4-Arty(13th).png",
+  "image": null
+ },
+ {
+  "id": "SC32",
+  "kind": "event_ew",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 4,
+  "name": "EW",
+  "copies": 1,
+  "ids": [
+   "SC32"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "new",
+  "vassal_image": "Asset_SY-4-Event(EW).png",
+  "image": null
+ },
+ {
+  "id": "SC33",
+  "kind": "special_action_event",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 4,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "SC33"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_SY-4-Event(SpecialAction).png",
+  "image": null
+ },
+ {
+  "id": "SC34",
+  "kind": "rocket_artillery",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 4,
+  "name": "66th",
+  "class": "infantry",
+  "symbol": "rocket_artillery",
+  "copies": 1,
+  "ids": [
+   "SC34"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:rocket_artillery",
+  "vassal_image": "Asset_SY-4-Rocket(66th).png",
+  "image": null
+ },
+ {
+  "id": "SC35",
+  "kind": "commando",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 4,
+  "name": "184th Cdo",
+  "quality": "elite",
+  "class": "infantry",
+  "symbol": "special_forces",
+  "copies": 1,
+  "ids": [
+   "SC35"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "new",
+  "vassal_image": "Asset_SY-4-SF(184th Cdo).png",
+  "image": null
+ },
+ {
+  "id": "SC36",
+  "kind": "replacement_arm",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 5,
+  "name": "Armor Replacement",
+  "elite_allowed": true,
+  "copies": 1,
+  "ids": [
+   "SC36"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:replacement_arm",
+  "vassal_image": "Asset_SY-5-Event(ArmRepl).png",
+  "image": null
+ },
+ {
+  "id": "SC37",
+  "kind": "replacement_mech",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 5,
+  "name": "Mech Replacement",
+  "elite_allowed": true,
+  "copies": 1,
+  "ids": [
+   "SC37"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:replacement_inf",
+  "vassal_image": "Asset_SY-5-Event(MechRepl).png",
+  "image": null
+ },
+ {
+  "id": "SC38",
+  "kind": "special_action_event",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 5,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "SC38"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_SY-5-Event(SpecialAction).png",
+  "image": null
+ },
+ {
+  "id": "SC39",
+  "kind": "rocket_artillery",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 5,
+  "name": "68th",
+  "class": "infantry",
+  "symbol": "rocket_artillery",
+  "copies": 1,
+  "ids": [
+   "SC39"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:rocket_artillery",
+  "vassal_image": "Asset_SY-5-Rocket(68th).png",
+  "image": null
+ },
+ {
+  "id": "SC40",
+  "kind": "commando",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 5,
+  "name": "185th Cdo",
+  "quality": "elite",
+  "class": "infantry",
+  "symbol": "special_forces",
+  "copies": 1,
+  "ids": [
+   "SC40"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "new",
+  "vassal_image": "Asset_SY-5-SF(185th Cdo).png",
+  "image": null
+ },
+ {
+  "id": "SC41",
+  "kind": "armor_asset",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 6,
+  "name": "3rd Recon",
+  "quality": "veteran",
+  "class": "armor",
+  "symbol": "recon",
+  "copies": 1,
+  "ids": [
+   "SC41"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_SY-6-ArmRecon(3rd).png",
+  "image": null
+ },
+ {
+  "id": "SC42",
+  "kind": "event_release",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 6,
+  "name": "Assad Gd Tank Brigade Released",
+  "releases": "S21",
+  "copies": 1,
+  "ids": [
+   "SC42"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:event_release",
+  "vassal_image": "Asset_SY-6-Event(AssadReleased).png",
+  "image": null
+ },
+ {
+  "id": "SC43",
+  "kind": "replacement_mech",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 6,
+  "name": "Mech Replacement",
+  "elite_allowed": true,
+  "copies": 1,
+  "ids": [
+   "SC43"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:replacement_inf",
+  "vassal_image": "Asset_SY-6-Event(MechRepl).png",
+  "image": null
+ },
+ {
+  "id": "SC44",
+  "kind": "event_release",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 7,
+  "name": "141st Tank Brigade Released",
+  "releases": "S22",
+  "copies": 1,
+  "ids": [
+   "SC44"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:event_release",
+  "vassal_image": "Asset_SY-7-Event(141st Released).png",
+  "image": null
+ },
+ {
+  "id": "SC45",
+  "kind": "replacement_arm",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 7,
+  "name": "Armor Replacement",
+  "elite_allowed": true,
+  "copies": 1,
+  "ids": [
+   "SC45"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:replacement_arm",
+  "vassal_image": "Asset_SY-7-Event(ArmRepl).png",
+  "image": null
+ },
+ {
+  "id": "SC46",
+  "kind": "event_ssm_strike",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 7,
+  "name": "SSM Strike",
+  "copies": 1,
+  "ids": [
+   "SC46"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "new",
+  "vassal_image": "Asset_SY-7-Event(SSM Strike).png",
+  "image": null
+ },
+ {
+  "id": "SC47",
+  "kind": "armor_asset",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 8,
+  "name": "88th",
+  "quality": "veteran",
+  "class": "armor",
+  "symbol": "armor",
+  "copies": 1,
+  "ids": [
+   "SC47"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_SY-8-Arm(88th).png",
+  "image": null
+ },
+ {
+  "id": "SC48",
+  "kind": "event_release",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": 8,
+  "name": "62nd Mech Brigade Released",
+  "releases": "S23",
+  "copies": 1,
+  "ids": [
+   "SC48"
+  ],
+  "limit": "limited",
+  "back": "back_sy_asset",
+  "art": "bulge:event_release",
+  "vassal_image": "Asset_SY-8-Event(62ndReleased).png",
+  "image": null
+ },
+ {
+  "id": "M01",
+  "kind": "minefield",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": null,
+  "name": "Minefield",
+  "copies": 6,
+  "ids": [
+   "M01a",
+   "M01b",
+   "M01c",
+   "M01d",
+   "M01e",
+   "M01f"
+  ],
+  "limit": "limited",
+  "back": "none",
+  "art": "new",
+  "vassal_image": "Marker_Minefieldx6.png",
+  "image": null
+ },
+ {
+  "id": "M02",
+  "kind": "reserve_marker",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "turn": null,
+  "name": "Northern Cmd Reserve Unit",
+  "copies": 4,
+  "ids": [
+   "M02a",
+   "M02b",
+   "M02c",
+   "M02d"
+  ],
+  "limit": "limited",
+  "back": "none",
+  "art": "bulge:reserve_marker",
+  "vassal_image": "Marker_Reserve-Israelix4.png",
+  "image": null
+ },
+ {
+  "id": "M03",
+  "kind": "reserve_marker",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "turn": null,
+  "name": "Syrian Army Reserve Unit",
+  "copies": 2,
+  "ids": [
+   "M03a",
+   "M03b"
+  ],
+  "limit": "limited",
+  "back": "none",
+  "art": "bulge:reserve_marker",
+  "vassal_image": "Marker_Reserve-Syrianx2.png",
+  "image": null
+ },
+ {
+  "id": "M04",
+  "kind": "marker",
+  "side": "none",
+  "echelon": "none",
+  "turn": null,
+  "name": "Game Turn",
+  "vassal_faces": [
+   "Marker_Game Turn-Syrian.png",
+   "Marker_Game Turn-Israeli.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M04"
+  ],
+  "limit": "limited",
+  "back": "back_game_turn_is",
+  "art": "bulge:marker",
+  "vassal_image": "Marker_Game Turn-Syrian.png",
+  "image": null
+ },
+ {
+  "id": "M05",
+  "kind": "marker",
+  "side": "none",
+  "echelon": "none",
+  "turn": null,
+  "name": "VPs",
+  "vassal_faces": [
+   "Marker_VPs-Israelis.png",
+   "Marker_VPs-Syrian.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M05"
+  ],
+  "limit": "limited",
+  "back": "back_vps_sy",
+  "art": "bulge:marker",
+  "vassal_image": "Marker_VPs-Israelis.png",
+  "image": null
+ },
+ {
+  "id": "M06",
+  "kind": "marker_control",
+  "side": "none",
+  "echelon": "none",
+  "turn": null,
+  "name": "Control",
+  "vassal_faces": [
+   "Marker_Control-Israel.png",
+   "Marker_Control-Syrian.png"
+  ],
+  "copies": null,
+  "ids": [],
+  "limit": "unlimited",
+  "back": "back_control_sy",
+  "art": "new",
+  "vassal_image": "Marker_Control-Israel.png",
+  "image": null
+ },
+ {
+  "id": "M07",
+  "kind": "marker",
+  "side": "none",
+  "echelon": "none",
+  "turn": null,
+  "name": "River Assault",
+  "copies": null,
+  "ids": [],
+  "limit": "unlimited",
+  "back": null,
+  "art": "bulge:marker",
+  "vassal_image": "Marker_RiverAssault.png",
+  "image": null
+ },
+ {
+  "id": "M08",
+  "kind": "marker",
+  "side": "none",
+  "echelon": "none",
+  "turn": null,
+  "name": "Exploitation",
+  "copies": null,
+  "ids": [],
+  "limit": "unlimited",
+  "back": null,
+  "art": "bulge:marker",
+  "vassal_image": "Marker_Exploitation.png",
+  "image": null
+ },
+ {
+  "id": "M09",
+  "kind": "marker",
+  "side": "none",
+  "echelon": "none",
+  "turn": null,
+  "name": "Disordered / Recovering",
+  "vassal_faces": [
+   "Marker_Disrupted.png",
+   "Marker_Disruptedb.png"
+  ],
+  "copies": null,
+  "ids": [],
+  "limit": "unlimited",
+  "back": null,
+  "art": "bulge:marker",
+  "vassal_image": "Marker_Disrupted.png",
+  "image": null
+ },
+ {
+  "id": "M10",
+  "kind": "marker",
+  "side": "none",
+  "echelon": "none",
+  "turn": null,
+  "name": "Road Block",
+  "copies": null,
+  "ids": [],
+  "limit": "unlimited",
+  "back": null,
+  "art": "bulge:marker",
+  "vassal_image": "Marker_Road Block.png",
+  "image": null
+ },
+ {
+  "id": "M11",
+  "kind": "marker",
+  "side": "none",
+  "echelon": "none",
+  "turn": null,
+  "name": "Blown Bridge",
+  "copies": null,
+  "ids": [],
+  "limit": "unlimited",
+  "back": null,
+  "art": "bulge:marker",
+  "vassal_image": "Marker_Blown Bridge.png",
+  "image": null
+ },
+ {
+  "id": "M12",
+  "kind": "field_works",
+  "side": "none",
+  "echelon": "none",
+  "turn": null,
+  "name": "Field Works",
+  "copies": null,
+  "ids": [],
+  "limit": "unlimited",
+  "back": null,
+  "art": "bulge:field_works",
+  "vassal_image": "Marker_FieldWorks.png",
+  "image": null
+ },
+ {
+  "id": "M13",
+  "kind": "marker_at_ditch_bridged",
+  "side": "none",
+  "echelon": "none",
+  "turn": null,
+  "name": "AT Ditch Bridged",
+  "copies": null,
+  "ids": [],
+  "limit": "unlimited",
+  "back": null,
+  "art": "new",
+  "vassal_image": "Marker_AT Ditch Bridged.png",
+  "image": null
+ },
+ {
+  "id": "M14",
+  "kind": "marker",
+  "side": "none",
+  "echelon": "none",
+  "turn": null,
+  "name": "Out of Supply",
+  "copies": null,
+  "ids": [],
+  "limit": "unlimited",
+  "back": null,
+  "art": "new",
+  "vassal_image": "Marker_OOS.png",
+  "image": null
+ }
+]

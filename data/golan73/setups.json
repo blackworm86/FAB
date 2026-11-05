@@ -1,0 +1,684 @@
+{
+ "badr": {
+  "name": "Operation Badr (historical setup)",
+  "map": "golan73",
+  "turns": 9,
+  "first_player": "syrian",
+  "startPhase": "combat",
+  "source": "Vassal module default setup + \"Operation Badr Historical Setup.vsav\" (identical), Setup Cards, errata 9/23/17",
+  "syrian_admin_skipped_turn1": true,
+  "free_breakthrough_combat_round": {
+   "side": "syrian",
+   "turn": 1,
+   "areas": 2,
+   "note": "22.17 per errata: two contested areas, historical setup only"
+  },
+  "units": [
+   {
+    "id": "I01",
+    "area": 2
+   },
+   {
+    "id": "I03",
+    "area": 31
+   },
+   {
+    "id": "I04",
+    "area": 37
+   },
+   {
+    "id": "I05",
+    "area": 42
+   },
+   {
+    "id": "I06",
+    "area": 51
+   },
+   {
+    "id": "I07",
+    "area": 52
+   },
+   {
+    "id": "I08",
+    "area": 52
+   },
+   {
+    "id": "S01",
+    "area": 27
+   },
+   {
+    "id": "S02",
+    "area": 28
+   },
+   {
+    "id": "S03",
+    "area": 39
+   },
+   {
+    "id": "S04",
+    "area": 48
+   },
+   {
+    "id": "S05",
+    "area": 50
+   },
+   {
+    "id": "S06",
+    "area": 57
+   },
+   {
+    "id": "S07",
+    "area": 59
+   },
+   {
+    "id": "S08",
+    "area": 60
+   },
+   {
+    "id": "S09",
+    "area": 61
+   },
+   {
+    "id": "S10",
+    "area": 64
+   },
+   {
+    "id": "S11",
+    "area": 67
+   },
+   {
+    "id": "S12",
+    "area": 73
+   },
+   {
+    "id": "S13",
+    "area": 74
+   },
+   {
+    "id": "S14",
+    "area": 78
+   },
+   {
+    "id": "S15",
+    "area": 80
+   },
+   {
+    "id": "S16",
+    "area": 81
+   },
+   {
+    "id": "S17",
+    "box": "air_assault"
+   },
+   {
+    "id": "S18",
+    "box": "operational_reserve"
+   },
+   {
+    "id": "S19",
+    "box": "operational_reserve"
+   },
+   {
+    "id": "S20",
+    "box": "operational_reserve"
+   },
+   {
+    "id": "S21",
+    "box": "strategic_reserve"
+   },
+   {
+    "id": "S22",
+    "box": "strategic_reserve"
+   },
+   {
+    "id": "S23",
+    "box": "strategic_reserve"
+   },
+   {
+    "id": "I23",
+    "box": "strongpoint_pool"
+   },
+   {
+    "id": "I24",
+    "box": "strongpoint_pool"
+   },
+   {
+    "id": "I25",
+    "box": "strongpoint_pool"
+   },
+   {
+    "id": "I26",
+    "box": "strongpoint_pool"
+   },
+   {
+    "id": "I27",
+    "box": "strongpoint_pool"
+   },
+   {
+    "id": "I28",
+    "box": "strongpoint_pool"
+   },
+   {
+    "id": "I29",
+    "box": "strongpoint_pool"
+   },
+   {
+    "id": "I30",
+    "box": "strongpoint_pool"
+   },
+   {
+    "id": "I31",
+    "box": "strongpoint_pool"
+   },
+   {
+    "id": "I32",
+    "box": "strongpoint_pool"
+   },
+   {
+    "id": "I33",
+    "box": "strongpoint_pool"
+   }
+  ],
+  "reduced": {},
+  "holding_boxes": {
+   "operational_reserve": [
+    "S18",
+    "S19",
+    "S20"
+   ],
+   "strategic_reserve": [
+    "S21",
+    "S22",
+    "S23"
+   ],
+   "air_assault": [
+    "S17"
+   ],
+   "strongpoint_pool": [
+    "I23",
+    "I24",
+    "I25",
+    "I26",
+    "I27",
+    "I28",
+    "I29",
+    "I30",
+    "I31",
+    "I32",
+    "I33"
+   ],
+   "evacuated_strongpoints": [
+    "IC11a",
+    "IC11b",
+    "IC11c",
+    "IC11d",
+    "IC12a",
+    "IC12b",
+    "IC12c",
+    "IC12d"
+   ],
+   "air_support_holding": [
+    "IC10a",
+    "IC10b",
+    "IC10c"
+   ],
+   "israeli_reserve_markers": [
+    "M02a",
+    "M02b",
+    "M02c",
+    "M02d"
+   ],
+   "syrian_reserve_markers": []
+  },
+  "available": {
+   "syrian": [
+    "SC01",
+    "SC02",
+    "SC03",
+    "SC04",
+    "SC05",
+    "SC06",
+    "SC07",
+    "SC08",
+    "SC09",
+    "SC10",
+    "SC11",
+    "SC12",
+    "SC13a",
+    "SC13b",
+    "SC14a",
+    "SC14b",
+    "SC14c",
+    "SC15",
+    "SC16",
+    "SC17a",
+    "SC17b",
+    "SC17c",
+    "SC17d",
+    "SC17e",
+    "SC18",
+    "SC19"
+   ],
+   "israeli": [
+    "IC01",
+    "IC02",
+    "IC03",
+    "IC04"
+   ]
+  },
+  "garrisons": [
+   {
+    "id": "IC05",
+    "area": 22
+   },
+   {
+    "id": "IC06",
+    "area": 30
+   },
+   {
+    "id": "IC07",
+    "area": 42
+   },
+   {
+    "id": "IC08",
+    "area": 46
+   },
+   {
+    "id": "IC09",
+    "area": 83
+   }
+  ],
+  "strongpoints": {
+   "placement": "israeli_player",
+   "rule": "15.7: one Strongpoint or Ghost in every Israeli area adjacent to the Purple Line (11 areas, 11 pieces), face-down",
+   "areas": [
+    27,
+    28,
+    29,
+    30,
+    39,
+    40,
+    48,
+    49,
+    50,
+    57,
+    59
+   ],
+   "suggested_historical": [
+    {
+     "area": 59,
+     "id": "I27"
+    },
+    {
+     "area": 57,
+     "id": "I29"
+    },
+    {
+     "area": 50,
+     "id": "I25"
+    },
+    {
+     "area": 49,
+     "id": "I31"
+    },
+    {
+     "area": 48,
+     "id": "I23"
+    },
+    {
+     "area": 40,
+     "id": "I32"
+    },
+    {
+     "area": 39,
+     "id": "I24"
+    },
+    {
+     "area": 30,
+     "id": "I33"
+    },
+    {
+     "area": 29,
+     "id": "I28"
+    },
+    {
+     "area": 28,
+     "id": "I26"
+    },
+    {
+     "area": 27,
+     "id": "I30"
+    }
+   ]
+  },
+  "minefields": {
+   "fixed": [
+    [
+     29,
+     30
+    ],
+    [
+     47,
+     48
+    ],
+    [
+     50,
+     51
+    ]
+   ],
+   "player_placed": 3,
+   "rule": "14.02: three printed on the map, then three on any boundary except AT ditch/escarpment/river/Mt Hermon/rugged; max one per boundary and one mined boundary per area"
+  },
+  "riverAssault": [
+   27,
+   28,
+   39,
+   48,
+   50,
+   57,
+   59
+  ],
+  "contested": [
+   27,
+   28,
+   39,
+   48,
+   50,
+   57,
+   59
+  ],
+  "reserve": {
+   "syrian": [
+    "S15",
+    "S13"
+   ],
+   "israeli": []
+  },
+  "vp": {
+   "israeli": 6
+  },
+  "control": {
+   "israeli": "all areas west of the Purple Line",
+   "syrian": "all areas east of the Purple Line, incl. entry areas V-Z"
+  },
+  "alternate": {
+   "israeli": "units (not strongpoints/ghosts/garrisons) in any area not adjacent to the Purple Line",
+   "syrian": "units in any area showing the tank symbol of their division colour (5th yellow, 9th blue, 7th red); reserve markers on any two units",
+   "free_breakthrough_combat_round": false
+  }
+ },
+ "nafakh": {
+  "name": "Battle for Nafakh (22.4)",
+  "map": "nafakh",
+  "turns": 4,
+  "first_player": "syrian",
+  "startPhase": "movement",
+  "source": "Battle_for_Nafakh_Scenario_Docs.pdf (rules + setup cards) and \"Battle for Nafakh.vsav\" (identical placements)",
+  "turn_names": {
+   "1": "October 7th AM",
+   "2": "October 7th PM",
+   "3": "October 8th AM",
+   "4": "October 8th PM"
+  },
+  "areas_in_play": [
+   34,
+   36,
+   37,
+   38,
+   39,
+   40,
+   41,
+   42,
+   43,
+   45,
+   46,
+   47,
+   48
+  ],
+  "syrian_admin_skipped_turn1": true,
+  "sam_table_column": "4-6",
+  "units": [
+   {
+    "id": "I13",
+    "area": 47
+   },
+   {
+    "id": "I14",
+    "box": "northern_assembly"
+   },
+   {
+    "id": "I09",
+    "area": 34
+   },
+   {
+    "id": "I04",
+    "area": 41
+   },
+   {
+    "id": "I29",
+    "area": 48
+   },
+   {
+    "id": "S13",
+    "area": 38
+   },
+   {
+    "id": "S03",
+    "area": 39
+   },
+   {
+    "id": "S14",
+    "area": 34
+   },
+   {
+    "id": "S26",
+    "box": "syrian_rear_area"
+   },
+   {
+    "id": "S04",
+    "box": "syrian_rear_area",
+    "recovering": true
+   }
+  ],
+  "reduced": {
+   "I13": 2,
+   "I14": 2,
+   "I09": 2,
+   "S03": 3,
+   "S04": 3
+  },
+  "on_map_chits": [
+   {
+    "id": "IC04",
+    "area": 37
+   },
+   {
+    "id": "IC22",
+    "area": 42
+   }
+  ],
+  "garrisons": [
+   {
+    "id": "IC07",
+    "area": 42
+   },
+   {
+    "id": "IC08",
+    "area": 46
+   }
+  ],
+  "available": {
+   "israeli": [
+    "IC03",
+    "IC01"
+   ],
+   "syrian": [
+    "SC08",
+    "SC12",
+    "SC17a",
+    "SC03",
+    "SC05",
+    "SC14a"
+   ]
+  },
+  "minefields": {
+   "fixed": [
+    [
+     47,
+     48
+    ]
+   ],
+   "player_placed": 1
+  },
+  "atDitchBridged": [
+   [
+    39,
+    "syrian_rear_area"
+   ]
+  ],
+  "contested": [
+   34
+  ],
+  "control": {
+   "israeli": "areas holding Israeli units (incl. contested Kuzabia 34) and all areas behind them",
+   "syrian": "all other areas"
+  },
+  "reserve": {
+   "israeli": "one Israeli unit may start with a reserve marker",
+   "markers": {
+    "israeli": 2,
+    "syrian": 1
+   }
+  },
+  "reinforcements": {
+   "2": {
+    "israeli": {
+     "units": [
+      {
+       "id": "I10",
+       "entry": [
+        "northern_assembly"
+       ],
+       "steps": 2
+      }
+     ],
+     "chits": [
+      "I34",
+      "IC11a",
+      "IC28",
+      "IC02",
+      "IC12a"
+     ]
+    },
+    "syrian": {
+     "units": [
+      {
+       "id": "S27",
+       "entry": [
+        "syrian_rear_area"
+       ]
+      },
+      {
+       "id": "S25",
+       "entry": [
+        "syrian_rear_area"
+       ]
+      }
+     ],
+     "chits": [
+      "S29",
+      "SC27",
+      "SC24",
+      "SC34",
+      "SC19"
+     ]
+    }
+   },
+   "3": {
+    "israeli": {
+     "units": [
+      {
+       "id": "I19",
+       "entry": [
+        "northern_assembly"
+       ]
+      }
+     ],
+     "chits": [
+      "IC21",
+      "IC18",
+      "IC16",
+      "IC19"
+     ]
+    },
+    "syrian": {
+     "units": [
+      {
+       "id": "S28",
+       "entry": [
+        "Z"
+       ]
+      },
+      {
+       "id": "S12",
+       "entry": [
+        "syrian_rear_area"
+       ],
+       "steps": 2
+      }
+     ],
+     "chits": [
+      "SC15",
+      "SC25",
+      "SC36",
+      "SC29",
+      "SC40"
+     ]
+    }
+   },
+   "4": {
+    "israeli": {
+     "units": [],
+     "chits": [
+      "IC25",
+      "IC29",
+      "IC10a",
+      "IC30",
+      "IC33"
+     ]
+    },
+    "syrian": {
+     "units": [
+      {
+       "id": "S18",
+       "entry": [
+        "Z"
+       ]
+      }
+     ],
+     "chits": []
+    }
+   }
+  },
+  "special_action_release": {
+   "id": "I02",
+   "turns": [
+    3,
+    4
+   ],
+   "entry": [
+    "C"
+   ],
+   "note": "Golani enters at Entry Area C if released by a Special Action on T3-4"
+  },
+  "rules": [
+   "Syrian 33rd (S03) may not leave its start area unless a Special Action is used",
+   "Syrian 52nd (S04) starts with a Recovering marker",
+   "Kuzabia (34) starts contested and Israeli-controlled",
+   "Israeli HQ Staff asset starts in Nafakh (42); whenever Syria controls Nafakh the Israeli reusable Special Action goes to the Eliminated Box, the Staff asset goes to the cup and brings the SA back when drawn",
+   "Syrian Rear Area: entering the map costs 4 MP, one unit per Movement Phase; Northern Assembly Area costs the MP printed on the scenario map",
+   "Units forced off map are eliminated; no voluntary exit",
+   "No Sudden Death or Syrian Automatic Victory; Decisive = uncontested control of Nafakh at end of T4, else most strength points in Nafakh (tie: Israel)"
+  ]
+ }
+}

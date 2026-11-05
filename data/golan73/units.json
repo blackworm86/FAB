@@ -1,0 +1,1523 @@
+[
+ {
+  "id": "I01",
+  "name": "Golani",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "elite",
+   "elite"
+  ],
+  "division": "36th_armored",
+  "brigade": "golani",
+  "start_area": 2,
+  "vassal_images": [
+   "Block_IS-S2(Golani)-1.png",
+   "Block_IS-S2(Golani)-2.png",
+   "Block_IS-S2(Golani)-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I02",
+  "name": "Golani",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "elite",
+   "elite"
+  ],
+  "division": "36th_armored",
+  "brigade": "golani",
+  "arrival_turn": 2,
+  "entry": [
+   "A"
+  ],
+  "vassal_images": [
+   "Block_IS-2A(Golani)-1.png",
+   "Block_IS-2A(Golani)-2.png",
+   "Block_IS-2A(Golani)-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I03",
+  "name": "53/188(-)",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 1,
+  "quality_by_step": [
+   "elite"
+  ],
+  "division": "36th_armored",
+  "brigade": null,
+  "parent": "188th",
+  "start_area": 31,
+  "sticker_area": 30,
+  "vassal_images": [
+   "Block_IS-S30(53-188th)-1.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I04",
+  "name": "82/188",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 2,
+  "quality_by_step": [
+   "veteran",
+   "veteran"
+  ],
+  "division": "36th_armored",
+  "brigade": null,
+  "parent": "188th",
+  "start_area": 37,
+  "vassal_images": [
+   "Block_IS-S37(82-188th)-1.png",
+   "Block_IS-S37(82-188th)-2.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I05",
+  "name": "77/7th",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "elite",
+   "elite"
+  ],
+  "division": "36th_armored",
+  "brigade": null,
+  "parent": "7th",
+  "start_area": 42,
+  "sticker_area": 47,
+  "vassal_images": [
+   "Block_IS-S47(77-7th)-1.png",
+   "Block_IS-S47(77-7th)-2.png",
+   "Block_IS-S47(77-7th)-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I06",
+  "name": "74/7th(-)",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 1,
+  "quality_by_step": [
+   "elite"
+  ],
+  "division": "36th_armored",
+  "brigade": null,
+  "parent": "7th",
+  "start_area": 51,
+  "vassal_images": [
+   "Block_IS-S51(74-75th)-1.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I07",
+  "name": "71/7th",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 2,
+  "quality_by_step": [
+   "veteran",
+   "veteran"
+  ],
+  "division": "36th_armored",
+  "brigade": null,
+  "parent": "7th",
+  "start_area": 52,
+  "vassal_images": [
+   "Block_IS-S62(71-7th)-1.png",
+   "Block_IS-S62(71-7th)-2.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I08",
+  "name": "75/7th",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 2,
+  "quality_by_step": [
+   "veteran",
+   "veteran"
+  ],
+  "division": "36th_armored",
+  "brigade": null,
+  "parent": "7th",
+  "start_area": 52,
+  "vassal_images": [
+   "Block_IS-S52(75-7th)-1.png",
+   "Block_IS-S52(75-7th)-2.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I09",
+  "name": "179th",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "elite",
+   "elite",
+   "elite"
+  ],
+  "initial_steps": 2,
+  "division": "240th_armored",
+  "brigade": "179th",
+  "arrival_turn": 2,
+  "entry": [
+   "A"
+  ],
+  "vassal_images": [
+   "Block_IS-2A(179th)x2-1.png",
+   "Block_IS-2A(179th)x2-2.png",
+   "Block_IS-2A(179th)x2-3.png",
+   "Block_IS-2A(179th)x2-4.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I10",
+  "name": "179th",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "elite",
+   "elite",
+   "elite"
+  ],
+  "initial_steps": 2,
+  "division": "240th_armored",
+  "brigade": "179th",
+  "arrival_turn": 2,
+  "entry": [
+   "A"
+  ],
+  "vassal_images": [
+   "Block_IS-2A(179th)x2-1.png",
+   "Block_IS-2A(179th)x2-2.png",
+   "Block_IS-2A(179th)x2-3.png",
+   "Block_IS-2A(179th)x2-4.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I11",
+  "name": "4th",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "initial_steps": 3,
+  "division": "240th_armored",
+  "brigade": "4th",
+  "arrival_turn": 3,
+  "entry": [
+   "A"
+  ],
+  "vassal_images": [
+   "Block_IS-3A(4th)x2-1.png",
+   "Block_IS-3A(4th)x2-2.png",
+   "Block_IS-3A(4th)x2-3.png",
+   "Block_IS-3A(4th)x2-4.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I12",
+  "name": "4th",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "initial_steps": 3,
+  "division": "240th_armored",
+  "brigade": "4th",
+  "arrival_turn": 3,
+  "entry": [
+   "A"
+  ],
+  "vassal_images": [
+   "Block_IS-3A(4th)x2-1.png",
+   "Block_IS-3A(4th)x2-2.png",
+   "Block_IS-3A(4th)x2-3.png",
+   "Block_IS-3A(4th)x2-4.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I13",
+  "name": "679th",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "elite",
+   "elite"
+  ],
+  "initial_steps": 2,
+  "division": "240th_armored",
+  "brigade": "679th",
+  "arrival_turn": 3,
+  "entry": [
+   "A"
+  ],
+  "vassal_images": [
+   "Block_IS-3A(679th)x2-1.png",
+   "Block_IS-3A(679th)x2-2.png",
+   "Block_IS-3A(679th)x2-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I14",
+  "name": "679th",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "elite",
+   "elite"
+  ],
+  "initial_steps": 2,
+  "division": "240th_armored",
+  "brigade": "679th",
+  "arrival_turn": 3,
+  "entry": [
+   "A"
+  ],
+  "vassal_images": [
+   "Block_IS-3A(679th)x2-1.png",
+   "Block_IS-3A(679th)x2-2.png",
+   "Block_IS-3A(679th)x2-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I15",
+  "name": "9th",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "146th_armored",
+  "brigade": "9th",
+  "arrival_turn": 4,
+  "entry": [
+   "B"
+  ],
+  "vassal_images": [
+   "Block_IS-4B(9th)x2-1.png",
+   "Block_IS-4B(9th)x2-2.png",
+   "Block_IS-4B(9th)x2-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I16",
+  "name": "9th",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "146th_armored",
+  "brigade": "9th",
+  "arrival_turn": 4,
+  "entry": [
+   "B"
+  ],
+  "vassal_images": [
+   "Block_IS-4B(9th)x2-1.png",
+   "Block_IS-4B(9th)x2-2.png",
+   "Block_IS-4B(9th)x2-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I17",
+  "name": "205th",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "elite",
+   "elite",
+   "elite"
+  ],
+  "division": "146th_armored",
+  "brigade": "205th",
+  "arrival_turn": 5,
+  "entry": [
+   "B"
+  ],
+  "vassal_images": [
+   "Block_IS-5B(205th)x2-1.png",
+   "Block_IS-5B(205th)x2-2.png",
+   "Block_IS-5B(205th)x2-3.png",
+   "Block_IS-5B(205th)x2-4.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I18",
+  "name": "205th",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "elite",
+   "elite",
+   "elite"
+  ],
+  "division": "146th_armored",
+  "brigade": "205th",
+  "arrival_turn": 5,
+  "entry": [
+   "B"
+  ],
+  "vassal_images": [
+   "Block_IS-5B(205th)x2-1.png",
+   "Block_IS-5B(205th)x2-2.png",
+   "Block_IS-5B(205th)x2-3.png",
+   "Block_IS-5B(205th)x2-4.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I19",
+  "name": "317th",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "airborne",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "elite"
+  ],
+  "division": "36th_armored",
+  "brigade": "317th",
+  "arrival_turn": 5,
+  "entry": [
+   "A",
+   "B"
+  ],
+  "vassal_images": [
+   "Block_IS-5AB(317th)x2-1.png",
+   "Block_IS-5AB(317th)x2-2.png",
+   "Block_IS-5AB(317th)x2-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I20",
+  "name": "317th",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "airborne",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "elite"
+  ],
+  "division": "36th_armored",
+  "brigade": "317th",
+  "arrival_turn": 5,
+  "entry": [
+   "A",
+   "B"
+  ],
+  "vassal_images": [
+   "Block_IS-5AB(317th)x2-1.png",
+   "Block_IS-5AB(317th)x2-2.png",
+   "Block_IS-5AB(317th)x2-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I21",
+  "name": "670th",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "green",
+   "green"
+  ],
+  "division": "146th_armored",
+  "brigade": "670th",
+  "arrival_turn": 6,
+  "entry": [
+   "B"
+  ],
+  "vassal_images": [
+   "Block_IS-6B(670th)x2-1.png",
+   "Block_IS-6B(670th)x2-2.png",
+   "Block_IS-6B(670th)x2-3.png",
+   "Block_IS-6B(670th)x2-4.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I22",
+  "name": "670th",
+  "side": "israeli",
+  "echelon": "is_northern_command",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "green",
+   "green"
+  ],
+  "division": "146th_armored",
+  "brigade": "670th",
+  "arrival_turn": 6,
+  "entry": [
+   "B"
+  ],
+  "vassal_images": [
+   "Block_IS-6B(670th)x2-1.png",
+   "Block_IS-6B(670th)x2-2.png",
+   "Block_IS-6B(670th)x2-3.png",
+   "Block_IS-6B(670th)x2-4.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I23",
+  "name": "Elite Armor Strongpoint",
+  "side": "israeli",
+  "kind": "strongpoint",
+  "echelon": "is_northern_command",
+  "symbol": "armor",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "elite",
+   "elite"
+  ],
+  "division": "36th_armored",
+  "arrival": "scenario",
+  "fire_dice": 1,
+  "fire_sn_mod": 1,
+  "vp_steps": 1,
+  "evacuates_to": "task_force_armor",
+  "vassal_images": [
+   "Block_IS-S(ArmEliteStrongpoint)x2-1.png",
+   "Block_IS-S(ArmEliteStrongpoint)x2-2.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I24",
+  "name": "Elite Armor Strongpoint",
+  "side": "israeli",
+  "kind": "strongpoint",
+  "echelon": "is_northern_command",
+  "symbol": "armor",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "elite",
+   "elite"
+  ],
+  "division": "36th_armored",
+  "arrival": "scenario",
+  "fire_dice": 1,
+  "fire_sn_mod": 1,
+  "vp_steps": 1,
+  "evacuates_to": "task_force_armor",
+  "vassal_images": [
+   "Block_IS-S(ArmEliteStrongpoint)x2-1.png",
+   "Block_IS-S(ArmEliteStrongpoint)x2-2.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I25",
+  "name": "Veteran Armor Strongpoint",
+  "side": "israeli",
+  "kind": "strongpoint",
+  "echelon": "is_northern_command",
+  "symbol": "armor",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "36th_armored",
+  "arrival": "scenario",
+  "fire_dice": 1,
+  "fire_sn_mod": 1,
+  "vp_steps": 1,
+  "evacuates_to": "task_force_armor",
+  "vassal_images": [
+   "Block_IS-S(ArmVetStrongpoint)x2-1.png",
+   "Block_IS-S(ArmVetStrongpoint)x2-2.png",
+   "Block_IS-S(ArmVetStrongpoint)x2-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I26",
+  "name": "Veteran Armor Strongpoint",
+  "side": "israeli",
+  "kind": "strongpoint",
+  "echelon": "is_northern_command",
+  "symbol": "armor",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "36th_armored",
+  "arrival": "scenario",
+  "fire_dice": 1,
+  "fire_sn_mod": 1,
+  "vp_steps": 1,
+  "evacuates_to": "task_force_armor",
+  "vassal_images": [
+   "Block_IS-S(ArmVetStrongpoint)x2-1.png",
+   "Block_IS-S(ArmVetStrongpoint)x2-2.png",
+   "Block_IS-S(ArmVetStrongpoint)x2-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I27",
+  "name": "Green Infantry Strongpoint",
+  "side": "israeli",
+  "kind": "strongpoint",
+  "echelon": "is_northern_command",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "green",
+   "green"
+  ],
+  "division": "36th_armored",
+  "arrival": "scenario",
+  "fire_dice": 1,
+  "fire_sn_mod": -1,
+  "vp_steps": 1,
+  "evacuates_to": "task_force_infantry",
+  "vassal_images": [
+   "Block_IS-S(InfGreenStrongpoint)x2-1.png",
+   "Block_IS-S(InfGreenStrongpoint)x2-2.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I28",
+  "name": "Green Infantry Strongpoint",
+  "side": "israeli",
+  "kind": "strongpoint",
+  "echelon": "is_northern_command",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "green",
+   "green"
+  ],
+  "division": "36th_armored",
+  "arrival": "scenario",
+  "fire_dice": 1,
+  "fire_sn_mod": -1,
+  "vp_steps": 1,
+  "evacuates_to": "task_force_infantry",
+  "vassal_images": [
+   "Block_IS-S(InfGreenStrongpoint)x2-1.png",
+   "Block_IS-S(InfGreenStrongpoint)x2-2.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I29",
+  "name": "Veteran Infantry Strongpoint",
+  "side": "israeli",
+  "kind": "strongpoint",
+  "echelon": "is_northern_command",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "veteran",
+   "veteran"
+  ],
+  "division": "36th_armored",
+  "arrival": "scenario",
+  "fire_dice": 1,
+  "fire_sn_mod": -1,
+  "vp_steps": 1,
+  "evacuates_to": "task_force_infantry",
+  "vassal_images": [
+   "Block_IS-S(InfVetStrongpoint)-1.png",
+   "Block_IS-S(InfVetStrongpoint)x2-2.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I30",
+  "name": "Veteran Infantry Strongpoint",
+  "side": "israeli",
+  "kind": "strongpoint",
+  "echelon": "is_northern_command",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "veteran",
+   "veteran"
+  ],
+  "division": "36th_armored",
+  "arrival": "scenario",
+  "fire_dice": 1,
+  "fire_sn_mod": -1,
+  "vp_steps": 1,
+  "evacuates_to": "task_force_infantry",
+  "vassal_images": [
+   "Block_IS-S(InfVetStrongpoint)-1.png",
+   "Block_IS-S(InfVetStrongpoint)x2-2.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I31",
+  "name": "Ghost",
+  "side": "israeli",
+  "kind": "ghost",
+  "echelon": "is_northern_command",
+  "symbol": "ghost",
+  "cls": null,
+  "steps": 1,
+  "quality_by_step": [
+   null
+  ],
+  "arrival": "scenario",
+  "vassal_images": [
+   "Block_IS-S(Ghost)x3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I32",
+  "name": "Ghost",
+  "side": "israeli",
+  "kind": "ghost",
+  "echelon": "is_northern_command",
+  "symbol": "ghost",
+  "cls": null,
+  "steps": 1,
+  "quality_by_step": [
+   null
+  ],
+  "arrival": "scenario",
+  "vassal_images": [
+   "Block_IS-S(Ghost)x3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I33",
+  "name": "Ghost",
+  "side": "israeli",
+  "kind": "ghost",
+  "echelon": "is_northern_command",
+  "symbol": "ghost",
+  "cls": null,
+  "steps": 1,
+  "quality_by_step": [
+   null
+  ],
+  "arrival": "scenario",
+  "vassal_images": [
+   "Block_IS-S(Ghost)x3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "I34",
+  "name": "Israeli Special Action",
+  "side": "israeli",
+  "kind": "special_action_block",
+  "arrival_turn": 2,
+  "vassal_images": [
+   "Block_IS-2(SpecialAction).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S01",
+  "name": "61st",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "5th_inf",
+  "start_area": 27,
+  "vassal_images": [
+   "Block_SY-S27(61st)-1.png",
+   "Block_SY-S27(61st)-2.png",
+   "Block_SY-S27(61st)-3.png",
+   "Block_SY-S27(61st)-4.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S02",
+  "name": "112th",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "5th_inf",
+  "start_area": 28,
+  "vassal_images": [
+   "Block_SY-S28(112th)-1.png",
+   "Block_SY-S28(112th)-2.png",
+   "Block_SY-S28(112th)-3.png",
+   "Block_SY-S28(112th)-4.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S03",
+  "name": "33rd",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "9th_inf",
+  "start_area": 39,
+  "vassal_images": [
+   "Block_SY-S39(33rd)-1.png",
+   "Block_SY-S39(33rd)-2.png",
+   "Block_SY-S39(33rd)-3.png",
+   "Block_SY-S39(33rd)-4.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S04",
+  "name": "52nd",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "9th_inf",
+  "start_area": 48,
+  "vassal_images": [
+   "Block_SY-S48(52nd)-1.png",
+   "Block_SY-S48(52nd)-2.png",
+   "Block_SY-S48(52nd)-3.png",
+   "Block_SY-S48(52nd)-4.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S05",
+  "name": "85th",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "7th_inf",
+  "start_area": 50,
+  "vassal_images": [
+   "Block_SY-S50(85th)-1.png",
+   "Block_SY-S50(85th)-2.png",
+   "Block_SY-S50(85th)-3.png",
+   "Block_SY-S50(85th)-4.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S06",
+  "name": "68th",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "7th_inf",
+  "start_area": 57,
+  "vassal_images": [
+   "Block_SY-S57(68th)-1.png",
+   "Block_SY-S57(68th)-2.png",
+   "Block_SY-S57(68th)-3.png",
+   "Block_SY-S57(68th)-4.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S07",
+  "name": "Moroc",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "green",
+   "green",
+   "veteran"
+  ],
+  "division": "7th_inf",
+  "start_area": 59,
+  "vassal_images": [
+   "Block_SY-S59(Moroc)-1.png",
+   "Block_SY-S59(Moroc)-2.png",
+   "Block_SY-S59(Moroc)-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S08",
+  "name": "7th Recon",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "recon",
+  "cls": "armor",
+  "steps": 1,
+  "quality_by_step": [
+   "veteran"
+  ],
+  "division": "7th_inf",
+  "start_area": 60,
+  "vassal_images": [
+   "Block_SY-S60(7th)-1.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S09",
+  "name": "78th",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "7th_inf",
+  "start_area": 61,
+  "vassal_images": [
+   "Block_SY-S61(78th)-1.png",
+   "Block_SY-S61(78th)-2.png",
+   "Block_SY-S61(78th)-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S10",
+  "name": "121st",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "7th_inf",
+  "start_area": 64,
+  "vassal_images": [
+   "Block_SY-S64(121st)-1.png",
+   "Block_SY-S64(121st)-2.png",
+   "Block_SY-S64(121st)-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S11",
+  "name": "9th Recon",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "recon",
+  "cls": "armor",
+  "steps": 1,
+  "quality_by_step": [
+   "veteran"
+  ],
+  "division": "9th_inf",
+  "start_area": 67,
+  "vassal_images": [
+   "Block_SY-S67(9th)-1.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S12",
+  "name": "43rd",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "9th_inf",
+  "start_area": 73,
+  "vassal_images": [
+   "Block_SY-S73(43rd)-1.png",
+   "Block_SY-S73(43rd)-2.png",
+   "Block_SY-S73(43rd)-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S13",
+  "name": "51st",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "9th_inf",
+  "start_area": 74,
+  "vassal_images": [
+   "Block_SY-S74(51st)-1.png",
+   "Block_SY-S74(51st)-2.png",
+   "Block_SY-S74(51st)-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S14",
+  "name": "46th",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "5th_inf",
+  "start_area": 78,
+  "vassal_images": [
+   "Block_SY-S78(46th)-1.png",
+   "Block_SY-S78(46th)-2.png",
+   "Block_SY-S78(46th)-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S15",
+  "name": "132nd",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "5th_inf",
+  "start_area": 80,
+  "vassal_images": [
+   "Block_SY-S80(132nd)-1.png",
+   "Block_SY-S80(132nd)-2.png",
+   "Block_SY-S80(132nd)-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S16",
+  "name": "5th Recon",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "recon",
+  "cls": "armor",
+  "steps": 1,
+  "quality_by_step": [
+   "veteran"
+  ],
+  "division": "5th_inf",
+  "start_area": 81,
+  "vassal_images": [
+   "Block_SY-S81(5th)-1.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S17",
+  "name": "82nd Para",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "airborne",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "elite",
+   "elite"
+  ],
+  "division": null,
+  "start_box": "air_assault",
+  "arrival": "air_assault",
+  "vassal_images": [
+   "Block_SY-AA(82nd)-1.png",
+   "Block_SY-AA(82nd)-2.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S18",
+  "name": "15th",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "3rd_tank",
+  "start_box": "operational_reserve",
+  "arrival": "operational_reserve_release",
+  "release_order": 1,
+  "entry": [
+   "X",
+   "Y"
+  ],
+  "vassal_images": [
+   "Block_SY-ORXY(15th)-1.png",
+   "Block_SY-ORXY(15th)-2.png",
+   "Block_SY-ORXY(15th)-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S19",
+  "name": "81st",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "elite",
+   "elite"
+  ],
+  "division": "3rd_tank",
+  "start_box": "operational_reserve",
+  "arrival": "operational_reserve_release",
+  "release_order": 2,
+  "entry": [
+   "Y",
+   "Z"
+  ],
+  "vassal_images": [
+   "Block_SY-ORYZ(81st)-1.png",
+   "Block_SY-ORYZ(81st)-2.png",
+   "Block_SY-ORYZ(81st)-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S20",
+  "name": "65th",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "elite",
+   "elite"
+  ],
+  "division": "3rd_tank",
+  "start_box": "operational_reserve",
+  "arrival": "operational_reserve_release",
+  "release_order": 3,
+  "entry": [
+   "Y",
+   "Z"
+  ],
+  "vassal_images": [
+   "Block_SY-ORYZ(65th)-1.png",
+   "Block_SY-ORYZ(65th)-2.png",
+   "Block_SY-ORYZ(65th)-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S21",
+  "name": "Assad",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "elite",
+   "elite"
+  ],
+  "division": null,
+  "start_box": "strategic_reserve",
+  "arrival": "strategic_reserve_event",
+  "entry": [
+   "V",
+   "W",
+   "X",
+   "Y",
+   "Z"
+  ],
+  "vassal_images": [
+   "Block_SY-SR(Assad)-1.png",
+   "Block_SY-SR(Assad)-2.png",
+   "Block_SY-SR(Assad)-3.png",
+   "Block_SY-SR(Assad)-4.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S22",
+  "name": "141st",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "green",
+   "green",
+   "green"
+  ],
+  "division": null,
+  "start_box": "strategic_reserve",
+  "arrival": "strategic_reserve_event",
+  "entry": [
+   "V",
+   "W",
+   "X",
+   "Y",
+   "Z"
+  ],
+  "vassal_images": [
+   "Block_SY-SR(141st)-1.png",
+   "Block_SY-SR(141st)-2.png",
+   "Block_SY-SR(141st)-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S23",
+  "name": "62nd",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": null,
+  "start_box": "strategic_reserve",
+  "arrival": "strategic_reserve_event",
+  "entry": [
+   "V",
+   "W",
+   "X",
+   "Y",
+   "Z"
+  ],
+  "vassal_images": [
+   "Block_SY-SR(62nd)-1.png",
+   "Block_SY-SR(62nd)-2.png",
+   "Block_SY-SR(62nd)-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S24",
+  "name": "47th",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "5th_inf",
+  "arrival_turn": 2,
+  "entry": [
+   "V"
+  ],
+  "vassal_images": [
+   "Block_SY-2V(47th)-1.png",
+   "Block_SY-2V(47th)-2.png",
+   "Block_SY-2V(47th)-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S25",
+  "name": "58th",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "1st_tank",
+  "arrival_turn": 3,
+  "entry": [
+   "W"
+  ],
+  "vassal_images": [
+   "Block_SY-3W(58th)-1.png",
+   "Block_SY-3W(58th)-2.png",
+   "Block_SY-3W(58th)-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S26",
+  "name": "91st",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "elite",
+   "elite"
+  ],
+  "division": "1st_tank",
+  "arrival_turn": 3,
+  "entry": [
+   "W"
+  ],
+  "vassal_images": [
+   "Block_SY-3W(91st)-1.png",
+   "Block_SY-3W(91st)-2.png",
+   "Block_SY-3W(91st)-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S27",
+  "name": "76th",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "elite",
+   "elite"
+  ],
+  "division": "1st_tank",
+  "arrival_turn": 4,
+  "entry": [
+   "V",
+   "W"
+  ],
+  "vassal_images": [
+   "Block_SY-4VW(76th)-1.png",
+   "Block_SY-4VW(76th)-2.png",
+   "Block_SY-4VW(76th)-3.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S28",
+  "name": "1st Recon",
+  "side": "syrian",
+  "echelon": "sy_golan_front",
+  "symbol": "recon",
+  "cls": "armor",
+  "steps": 1,
+  "quality_by_step": [
+   "veteran"
+  ],
+  "division": "1st_tank",
+  "arrival_turn": 4,
+  "entry": [
+   "V",
+   "W"
+  ],
+  "vassal_images": [
+   "Block_SY-4VW(1st)-1.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "S29",
+  "name": "Syrian Special Action",
+  "side": "syrian",
+  "kind": "special_action_block",
+  "arrival_turn": 2,
+  "vassal_images": [
+   "Block_SY-2(Special Action).png"
+  ],
+  "image": null
+ }
+]

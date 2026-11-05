@@ -1,0 +1,982 @@
+{
+ "source": "Vassal module turn-track SetupStacks (file-name turn codes match every stack) + printed Setup Cards; units and chits per turn; S = start (Available Box), C = conditional, holding boxes listed separately",
+ "turn_names": {
+  "1": "October 6th (day)",
+  "2": "October 6th Night",
+  "3": "October 7th AM",
+  "4": "October 7th PM",
+  "5": "October 8th AM",
+  "6": "October 8th PM",
+  "7": "October 9th AM",
+  "8": "October 9th PM",
+  "9": "October 10th"
+ },
+ "start_assets": {
+  "syrian": [
+   {
+    "id": "S01",
+    "name": "61st",
+    "area": 27
+   },
+   {
+    "id": "S02",
+    "name": "112th",
+    "area": 28
+   },
+   {
+    "id": "S03",
+    "name": "33rd",
+    "area": 39
+   },
+   {
+    "id": "S04",
+    "name": "52nd",
+    "area": 48
+   },
+   {
+    "id": "S05",
+    "name": "85th",
+    "area": 50
+   },
+   {
+    "id": "S06",
+    "name": "68th",
+    "area": 57
+   },
+   {
+    "id": "S07",
+    "name": "Moroc",
+    "area": 59
+   },
+   {
+    "id": "S08",
+    "name": "7th Recon",
+    "area": 60
+   },
+   {
+    "id": "S09",
+    "name": "78th",
+    "area": 61
+   },
+   {
+    "id": "S10",
+    "name": "121st",
+    "area": 64
+   },
+   {
+    "id": "S11",
+    "name": "9th Recon",
+    "area": 67
+   },
+   {
+    "id": "S12",
+    "name": "43rd",
+    "area": 73
+   },
+   {
+    "id": "S13",
+    "name": "51st",
+    "area": 74
+   },
+   {
+    "id": "S14",
+    "name": "46th",
+    "area": 78
+   },
+   {
+    "id": "S15",
+    "name": "132nd",
+    "area": 80
+   },
+   {
+    "id": "S16",
+    "name": "5th Recon",
+    "area": 81
+   },
+   {
+    "id": "SC01",
+    "kind": "infantry_asset",
+    "name": "5th AT"
+   },
+   {
+    "id": "SC02",
+    "kind": "infantry_asset",
+    "name": "7th AT"
+   },
+   {
+    "id": "SC03",
+    "kind": "infantry_asset",
+    "name": "9th AT"
+   },
+   {
+    "id": "SC04",
+    "kind": "armor_asset",
+    "name": "5th Tank"
+   },
+   {
+    "id": "SC05",
+    "kind": "armor_asset",
+    "name": "9th Tank"
+   },
+   {
+    "id": "SC06",
+    "kind": "artillery",
+    "name": "50th"
+   },
+   {
+    "id": "SC07",
+    "kind": "artillery",
+    "name": "70th"
+   },
+   {
+    "id": "SC08",
+    "kind": "artillery",
+    "name": "89th"
+   },
+   {
+    "id": "SC09",
+    "kind": "artillery",
+    "name": "GHQ"
+   },
+   {
+    "id": "SC10",
+    "kind": "engineer",
+    "name": "5th"
+   },
+   {
+    "id": "SC11",
+    "kind": "engineer",
+    "name": "7th"
+   },
+   {
+    "id": "SC12",
+    "kind": "engineer",
+    "name": "9th"
+   },
+   {
+    "id": "SC13",
+    "kind": "engineer",
+    "name": "GHQ",
+    "copies": 2
+   },
+   {
+    "id": "SC14",
+    "kind": "air_mission",
+    "name": "Air Support",
+    "copies": 3
+   },
+   {
+    "id": "SC15",
+    "kind": "event_counterbattery",
+    "name": "Counterbattery"
+   },
+   {
+    "id": "SC16",
+    "kind": "event_ew",
+    "name": "EW"
+   },
+   {
+    "id": "SC17",
+    "kind": "sam",
+    "name": "SAM",
+    "copies": 5
+   },
+   {
+    "id": "SC18",
+    "kind": "infantry_asset",
+    "name": "Druze"
+   },
+   {
+    "id": "SC19",
+    "kind": "commando",
+    "name": "183rd Cdo"
+   }
+  ],
+  "israeli": [
+   {
+    "id": "I01",
+    "name": "Golani",
+    "area": 2
+   },
+   {
+    "id": "I03",
+    "name": "53/188(-)",
+    "area": 31
+   },
+   {
+    "id": "I04",
+    "name": "82/188",
+    "area": 37
+   },
+   {
+    "id": "I05",
+    "name": "77/7th",
+    "area": 42
+   },
+   {
+    "id": "I06",
+    "name": "74/7th(-)",
+    "area": 51
+   },
+   {
+    "id": "I07",
+    "name": "71/7th",
+    "area": 52
+   },
+   {
+    "id": "I08",
+    "name": "75/7th",
+    "area": 52
+   },
+   {
+    "id": "IC01",
+    "kind": "artillery",
+    "name": "405th+55th"
+   },
+   {
+    "id": "IC02",
+    "kind": "artillery",
+    "name": "9th+334th"
+   },
+   {
+    "id": "IC03",
+    "kind": "air_mission",
+    "name": "Air Support"
+   },
+   {
+    "id": "IC04",
+    "kind": "event_lt_zvika",
+    "name": "Lt. Zvika"
+   }
+  ]
+ },
+ "turns": {
+  "2": {
+   "syrian": {
+    "units": [
+     {
+      "id": "S24",
+      "name": "47th",
+      "entry": [
+       "V"
+      ]
+     }
+    ],
+    "chits": [
+     {
+      "id": "S29",
+      "name": "Syrian Special Action",
+      "reusable": true
+     },
+     {
+      "id": "SC20",
+      "kind": "armor_asset",
+      "name": "7th Tank"
+     },
+     {
+      "id": "SC21",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     },
+     {
+      "id": "SC22",
+      "kind": "infantry_asset",
+      "name": "Druze",
+      "copies": 2
+     },
+     {
+      "id": "SC23",
+      "kind": "commando",
+      "name": "182nd Cdo"
+     }
+    ]
+   },
+   "israeli": {
+    "units": [
+     {
+      "id": "I02",
+      "name": "Golani",
+      "entry": [
+       "A"
+      ]
+     },
+     {
+      "id": "I09",
+      "name": "179th",
+      "entry": [
+       "A"
+      ],
+      "steps": 2
+     },
+     {
+      "id": "I10",
+      "name": "179th",
+      "entry": [
+       "A"
+      ],
+      "steps": 2
+     }
+    ],
+    "chits": [
+     {
+      "id": "I34",
+      "name": "Israeli Special Action",
+      "reusable": true
+     },
+     {
+      "id": "IC13",
+      "kind": "event_king_hassan",
+      "name": "King Hassan's Troublemakers"
+     },
+     {
+      "id": "IC14",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     },
+     {
+      "id": "IC15",
+      "kind": "infantry_asset",
+      "name": "Militia"
+     }
+    ]
+   }
+  },
+  "3": {
+   "syrian": {
+    "units": [
+     {
+      "id": "S25",
+      "name": "58th",
+      "entry": [
+       "W"
+      ]
+     },
+     {
+      "id": "S26",
+      "name": "91st",
+      "entry": [
+       "W"
+      ]
+     }
+    ],
+    "chits": [
+     {
+      "id": "SC24",
+      "kind": "artillery",
+      "name": "64th"
+     },
+     {
+      "id": "SC25",
+      "kind": "air_mission",
+      "name": "Air Support"
+     },
+     {
+      "id": "SC26",
+      "kind": "event_counterbattery",
+      "name": "Counterbattery"
+     },
+     {
+      "id": "SC27",
+      "kind": "event_ew",
+      "name": "EW"
+     },
+     {
+      "id": "SC28",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     },
+     {
+      "id": "SC29",
+      "kind": "command_staff",
+      "name": "Staff Asset"
+     },
+     {
+      "id": "SC30",
+      "kind": "commando",
+      "name": "181st Cdo"
+     }
+    ]
+   },
+   "israeli": {
+    "units": [
+     {
+      "id": "I11",
+      "name": "4th",
+      "entry": [
+       "A"
+      ],
+      "steps": 3
+     },
+     {
+      "id": "I12",
+      "name": "4th",
+      "entry": [
+       "A"
+      ],
+      "steps": 3
+     },
+     {
+      "id": "I13",
+      "name": "679th",
+      "entry": [
+       "A"
+      ],
+      "steps": 2
+     },
+     {
+      "id": "I14",
+      "name": "679th",
+      "entry": [
+       "A"
+      ],
+      "steps": 2
+     }
+    ],
+    "chits": [
+     {
+      "id": "IC16",
+      "kind": "air_mission",
+      "name": "Air Support"
+     },
+     {
+      "id": "IC17",
+      "kind": "engineer",
+      "name": "36th"
+     },
+     {
+      "id": "IC18",
+      "kind": "event_arriving_battalion",
+      "name": "Battalion only for 179th Arm Bde"
+     },
+     {
+      "id": "IC19",
+      "kind": "replacement_arm",
+      "name": "Armor Replacement"
+     },
+     {
+      "id": "IC20",
+      "kind": "event_dugman5",
+      "name": "Operation Dugman 5"
+     },
+     {
+      "id": "IC21",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     },
+     {
+      "id": "IC22",
+      "kind": "command_staff",
+      "name": "Staff Asset"
+     }
+    ]
+   }
+  },
+  "4": {
+   "syrian": {
+    "units": [
+     {
+      "id": "S27",
+      "name": "76th",
+      "entry": [
+       "V",
+       "W"
+      ]
+     },
+     {
+      "id": "S28",
+      "name": "1st Recon",
+      "entry": [
+       "V",
+       "W"
+      ]
+     }
+    ],
+    "chits": [
+     {
+      "id": "SC31",
+      "kind": "artillery",
+      "name": "13th"
+     },
+     {
+      "id": "SC32",
+      "kind": "event_ew",
+      "name": "EW"
+     },
+     {
+      "id": "SC33",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     },
+     {
+      "id": "SC34",
+      "kind": "rocket_artillery",
+      "name": "66th"
+     },
+     {
+      "id": "SC35",
+      "kind": "commando",
+      "name": "184th Cdo"
+     }
+    ]
+   },
+   "israeli": {
+    "units": [
+     {
+      "id": "I15",
+      "name": "9th",
+      "entry": [
+       "B"
+      ]
+     },
+     {
+      "id": "I16",
+      "name": "9th",
+      "entry": [
+       "B"
+      ]
+     }
+    ],
+    "chits": [
+     {
+      "id": "IC23",
+      "kind": "armor_asset",
+      "name": "Moshe"
+     },
+     {
+      "id": "IC24",
+      "kind": "artillery",
+      "name": "212th"
+     },
+     {
+      "id": "IC25",
+      "kind": "engineer",
+      "name": "210th"
+     },
+     {
+      "id": "IC26",
+      "kind": "event_arriving_battalion",
+      "name": "Battalion only for 179th Arm Bde"
+     },
+     {
+      "id": "IC27",
+      "kind": "event_arriving_battalion",
+      "name": "Battalion only for 4th Mech Bde"
+     },
+     {
+      "id": "IC28",
+      "kind": "event_arriving_battalion",
+      "name": "Battalion only for 679th Arm Bde"
+     },
+     {
+      "id": "IC29",
+      "kind": "replacement_arm",
+      "name": "Armor Replacement"
+     },
+     {
+      "id": "IC30",
+      "kind": "event_counterbattery",
+      "name": "Counterbattery"
+     },
+     {
+      "id": "IC31",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     },
+     {
+      "id": "IC32",
+      "kind": "infantry_asset",
+      "name": "Militia"
+     },
+     {
+      "id": "IC33",
+      "kind": "rocket_artillery",
+      "name": "270th"
+     }
+    ]
+   }
+  },
+  "5": {
+   "syrian": {
+    "units": [],
+    "chits": [
+     {
+      "id": "SC36",
+      "kind": "replacement_arm",
+      "name": "Armor Replacement"
+     },
+     {
+      "id": "SC37",
+      "kind": "replacement_mech",
+      "name": "Mech Replacement"
+     },
+     {
+      "id": "SC38",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     },
+     {
+      "id": "SC39",
+      "kind": "rocket_artillery",
+      "name": "68th"
+     },
+     {
+      "id": "SC40",
+      "kind": "commando",
+      "name": "185th Cdo"
+     }
+    ]
+   },
+   "israeli": {
+    "units": [
+     {
+      "id": "I17",
+      "name": "205th",
+      "entry": [
+       "B"
+      ]
+     },
+     {
+      "id": "I18",
+      "name": "205th",
+      "entry": [
+       "B"
+      ]
+     },
+     {
+      "id": "I19",
+      "name": "317th",
+      "entry": [
+       "A",
+       "B"
+      ]
+     },
+     {
+      "id": "I20",
+      "name": "317th",
+      "entry": [
+       "A",
+       "B"
+      ]
+     }
+    ],
+    "chits": [
+     {
+      "id": "IC34",
+      "kind": "artillery",
+      "name": "282nd"
+     },
+     {
+      "id": "IC35",
+      "kind": "replacement_arm",
+      "name": "Armor Replacement"
+     },
+     {
+      "id": "IC36",
+      "kind": "event_ew",
+      "name": "EW"
+     },
+     {
+      "id": "IC37",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     },
+     {
+      "id": "IC38",
+      "kind": "infantry_asset",
+      "name": "Militia"
+     }
+    ]
+   }
+  },
+  "6": {
+   "syrian": {
+    "units": [],
+    "chits": [
+     {
+      "id": "SC41",
+      "kind": "armor_asset",
+      "name": "3rd Recon"
+     },
+     {
+      "id": "SC42",
+      "kind": "event_release",
+      "name": "Assad Gd Tank Brigade Released"
+     },
+     {
+      "id": "SC43",
+      "kind": "replacement_mech",
+      "name": "Mech Replacement"
+     }
+    ]
+   },
+   "israeli": {
+    "units": [
+     {
+      "id": "I21",
+      "name": "670th",
+      "entry": [
+       "B"
+      ]
+     },
+     {
+      "id": "I22",
+      "name": "670th",
+      "entry": [
+       "B"
+      ]
+     }
+    ],
+    "chits": [
+     {
+      "id": "IC39",
+      "kind": "armor_asset",
+      "name": "Hanon"
+     },
+     {
+      "id": "IC40",
+      "kind": "artillery",
+      "name": "213th"
+     },
+     {
+      "id": "IC41",
+      "kind": "engineer",
+      "name": "146th"
+     },
+     {
+      "id": "IC42",
+      "kind": "replacement_arm",
+      "name": "Armor Replacement"
+     },
+     {
+      "id": "IC43",
+      "kind": "event_counterbattery",
+      "name": "Counterbattery"
+     },
+     {
+      "id": "IC44",
+      "kind": "replacement_mech",
+      "name": "Mech Replacement"
+     },
+     {
+      "id": "IC45",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     }
+    ]
+   }
+  },
+  "7": {
+   "syrian": {
+    "units": [],
+    "chits": [
+     {
+      "id": "SC44",
+      "kind": "event_release",
+      "name": "141st Tank Brigade Released"
+     },
+     {
+      "id": "SC45",
+      "kind": "replacement_arm",
+      "name": "Armor Replacement"
+     },
+     {
+      "id": "SC46",
+      "kind": "event_ssm_strike",
+      "name": "SSM Strike"
+     }
+    ]
+   },
+   "israeli": {
+    "units": [],
+    "chits": [
+     {
+      "id": "IC46",
+      "kind": "replacement_arm",
+      "name": "Armor Replacement"
+     },
+     {
+      "id": "IC47",
+      "kind": "event_ew",
+      "name": "EW"
+     },
+     {
+      "id": "IC48",
+      "kind": "replacement_mech",
+      "name": "Mech Replacement"
+     },
+     {
+      "id": "IC49",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     },
+     {
+      "id": "IC50",
+      "kind": "infantry_asset",
+      "name": "Sayeret Egoz"
+     }
+    ]
+   }
+  },
+  "8": {
+   "syrian": {
+    "units": [],
+    "chits": [
+     {
+      "id": "SC47",
+      "kind": "armor_asset",
+      "name": "88th"
+     },
+     {
+      "id": "SC48",
+      "kind": "event_release",
+      "name": "62nd Mech Brigade Released"
+     }
+    ]
+   },
+   "israeli": {
+    "units": [],
+    "chits": [
+     {
+      "id": "IC51",
+      "kind": "replacement_arm",
+      "name": "Armor Replacement"
+     },
+     {
+      "id": "IC52",
+      "kind": "replacement_mech",
+      "name": "Mech Replacement"
+     },
+     {
+      "id": "IC53",
+      "kind": "special_action_event",
+      "name": "Special Action",
+      "copies": 2
+     }
+    ]
+   }
+  },
+  "9": {
+   "syrian": {
+    "units": [],
+    "chits": []
+   },
+   "israeli": {
+    "units": [],
+    "chits": [
+     {
+      "id": "IC54",
+      "kind": "replacement_arm",
+      "name": "Armor Replacement"
+     },
+     {
+      "id": "IC55",
+      "kind": "special_action_event",
+      "name": "Special Action",
+      "copies": 2
+     }
+    ]
+   }
+  },
+  "operational_reserve": [
+   {
+    "id": "S18",
+    "name": "15th",
+    "entry": [
+     "X",
+     "Y"
+    ],
+    "release_order": 1
+   },
+   {
+    "id": "S19",
+    "name": "81st",
+    "entry": [
+     "Y",
+     "Z"
+    ],
+    "release_order": 2
+   },
+   {
+    "id": "S20",
+    "name": "65th",
+    "entry": [
+     "Y",
+     "Z"
+    ],
+    "release_order": 3
+   }
+  ],
+  "strategic_reserve": [
+   {
+    "id": "S21",
+    "name": "Assad",
+    "entry": [
+     "V",
+     "W",
+     "X",
+     "Y",
+     "Z"
+    ],
+    "event": "SC42"
+   },
+   {
+    "id": "S22",
+    "name": "141st",
+    "entry": [
+     "V",
+     "W",
+     "X",
+     "Y",
+     "Z"
+    ],
+    "event": "SC44"
+   },
+   {
+    "id": "S23",
+    "name": "62nd",
+    "entry": [
+     "V",
+     "W",
+     "X",
+     "Y",
+     "Z"
+    ],
+    "event": "SC48"
+   }
+  ],
+  "air_assault": [
+   {
+    "id": "S17",
+    "name": "82nd Para"
+   }
+  ],
+  "conditional": {
+   "israeli": [
+    {
+     "id": "IC10",
+     "kind": "air_mission",
+     "name": "Air Support",
+     "copies": 3,
+     "trigger": "sam_eliminated",
+     "start_box": "air_support_holding"
+    },
+    {
+     "id": "IC11",
+     "kind": "task_force",
+     "name": "Task Force (armor)",
+     "copies": 4,
+     "trigger": "strongpoint_evacuated",
+     "start_box": "evacuated_strongpoints"
+    },
+    {
+     "id": "IC12",
+     "kind": "task_force",
+     "name": "Task Force (infantry)",
+     "copies": 4,
+     "trigger": "strongpoint_evacuated",
+     "start_box": "evacuated_strongpoints"
+    }
+   ]
+  }
+ }
+}
