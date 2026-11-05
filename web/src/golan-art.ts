@@ -3,15 +3,18 @@
 // Syrian chits the gold frame of the Golan sheet; blocks are cyan (Israel) and green (Syria) wood.
 import { chitSvg, CHIT_KIT, CHIT_ART, mapMarkerSvg, type Counter } from './chits';
 import { blockFace, frame, sticker, word, hex, PIP } from './block-kit';
-import { GOLAN_SCANS } from './golan-chit-scans';
+import { GOLAN_PICTURES } from './golan-chit-pictures';
 
-/** Counters shown as printed: cut from the Set-up Card scans (tools/golan73/chit_scans.py), loaded once before any chit is drawn. */
-const SCAN: Record<string, string> = {};
+/** The pictures printed on the counters (photos, drawings), cut from the Set-up Card scans (tools/golan73/chit_pictures.py);
+ *  everything else on a chit is vector. Loaded once before any chit is drawn. */
+type PicName = keyof typeof GOLAN_PICTURES;
+const PIC: Partial<Record<PicName, string>> = {};
 export async function loadGolanChitArt(base = './golan73/chit/') {
   const uri = (b: Blob) => new Promise<string>((ok, bad) => { const r = new FileReader(); r.onload = () => ok(r.result as string); r.onerror = () => bad(r.error); r.readAsDataURL(b); });
-  await Promise.all(GOLAN_SCANS.map(async (id) => { const r = await fetch(`${base}${id}.jpg`); if (r.ok) SCAN[id] = await uri(await r.blob()); }));
+  await Promise.all((Object.keys(GOLAN_PICTURES) as PicName[]).map(async (n) => { const r = await fetch(`${base}${n}.png`); if (r.ok) PIC[n] = await uri(await r.blob()); }));
 }
-const scanned = (href: string) => `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 160 160"><image href="${href}" width="160" height="160"/></svg>`;
+/** A printed picture in its place on the 160-unit chit. */
+const picture = (n: PicName) => { const h = PIC[n], [x, y, w, hh] = GOLAN_PICTURES[n]; return h ? `<image href="${h}" x="${x}" y="${y}" width="${w}" height="${hh}" preserveAspectRatio="none"/>` : ''; };
 
 const { txt, open, flat, panel, turn, square, star, MK, wrap, QDOT, INK, CX, CY } = CHIT_KIT;
 export type GSide = 'israeli' | 'syrian';
@@ -20,6 +23,10 @@ export const GOLAN_WOOD: Record<GSide, number> = { israeli: 0x2ea1d5, syrian: 0x
 /** Block label paper and unit-square colours. */
 const LABEL: Record<GSide, string> = { israeli: '#cdc49e', syrian: '#d8a43c' };
 const CREAM: Record<GSide, string> = { israeli: '#f3f0e2', syrian: '#f8efc8' };
+/** Printed colours (sampled from the counters): the plain asset ground, the event panel inside its white line, the Syrian unit boxes. */
+const GROUND: Record<GSide, string> = { israeli: '#d3c598', syrian: '#dba43f' };
+const EVENT: Record<GSide, string> = { israeli: '#b6b188', syrian: '#dec046' };
+const SY_BOX = '#f7f7c8', SY_CDO = '#f7d653';
 export const ECH_GOLAN: Record<string, string> = { is_northern_command: CREAM.israeli, sy_golan_front: CREAM.syrian };
 
 /* ---------- emblems and pictures, all vector ---------- */
@@ -42,8 +49,9 @@ const moroccoFlag = (x: number, y: number, w: number, h: number) => { const cx =
 const X = (cy = CY, s = 34) => `<path d="M${CX - s} ${cy - s}L${CX + s} ${cy + s}M${CX + s} ${cy - s}L${CX - s} ${cy + s}" stroke="${INK}" stroke-width="2.4"/>`;
 const OVAL = (cy = CY) => `<rect x="${CX - 26.5}" y="${cy - 17}" width="53" height="34" rx="17" fill="none" stroke="${INK}" stroke-width="3.4"/>`;
 /** Special forces / commando: the X with arrow tips on the upper arms. */
-const SF = (cy = CY) => `${X(cy)}<path d="M${CX - 34} ${cy - 34}l14 2-12 12zM${CX + 34} ${cy - 34}l-14 2 12 12z" fill="${INK}"/>`;
-const AT = (cy = CY) => `<path d="M${CX - 30} ${cy + 26}L${CX} ${cy - 20}L${CX + 30} ${cy + 26}" fill="none" stroke="${INK}" stroke-width="3.4"/>`;
+const SF = (cy = CY) => `${X(cy)}<path d="M${CX - 32} ${cy - 32}l20 3-17 17zM${CX + 32} ${cy - 32}l-20 3 17 17z" fill="${INK}"/>`;      // arrowheads on the upper arms, as printed
+const AT = (cy = CY) => `<path d="M${CX - 34} ${cy - 34}L${CX} ${cy + 34}L${CX + 34} ${cy - 34}" fill="none" stroke="${INK}" stroke-width="3.4"/><circle cx="${CX}" cy="${cy - 6}" r="4.2" fill="${INK}"/>`;     // as printed: a V from the top corners, a dot inside
+const RECON = (cy = CY) => `<path d="M${CX - 34} ${cy + 34}L${CX + 34} ${cy - 34}" stroke="${INK}" stroke-width="2.4"/>${OVAL(cy)}`;
 
 export type GCounter = { id: string; kind: string; side: GSide | 'none'; echelon?: string; turn?: number | string | null; name: string; quality?: string | null; subtype?: string | null; symbol?: string; area?: number; brigade?: string };
 const T = (t: GCounter['turn']) => (t === 'scenario' ? null : t) as number | 'S' | null;
@@ -55,37 +63,63 @@ const eventChit = (c: GCounter, fill: string, pic: string, lines: string[], o: {
 const emblem = (side: GSide, x: number, y: number, r: number) => side === 'israeli' ? davidStar(x, y, r) : crescent(x, y, r * 0.8, '#fff', SIDE_BG[side]);
 const SIDE_BG: Record<GSide, string> = { israeli: '#0f55b5', syrian: '#3d5a2c' };
 
+/** A chit with a printed picture: the plain ground (assets) or the event panel in its white line, the turn, the picture, the lettering. */
+function pictureChit(c: GCounter, pic: PicName, label: string, o: { event?: boolean; size?: number; y?: number; top?: string; dot?: string } = {}) {
+  const side = c.side as GSide, ev = !!o.event;
+  return `${open(side, [GROUND[side], side === 'israeli' ? '#e2d8b6' : '#e9bf6c', side === 'israeli' ? '#a99e76' : '#a97a26'])}${ev ? panelLine(EVENT[side]) : ''}${picture(pic)}${turn(T(c.turn), ev ? 17 : 9, ev ? 38 : 33, 30)}${o.dot ? dotAt(o.dot, 80, 26) : ''}${o.top ? txt(o.top, 90, 36, 19, { italic: true, anchor: 'middle', max: 96 }) : ''}${txt(label, 80, o.y ?? 143, o.size ?? 26, { w: 'b', italic: true, anchor: 'middle', max: 128 })}</svg>`;
+}
+/** The event panel as printed: a white line just inside the frame, the panel colour within. */
+const panelLine = (fill: string) => `<rect x="12" y="12" width="136" height="136" fill="#fff"/><rect x="15.5" y="15.5" width="129" height="129" fill="${fill}"/>`;
+/** An event panel with lines of lettering. */
+const eventLines = (c: GCounter, lines: string[], o: { y0: number; dy: number; size: number; bold?: boolean; italic?: boolean; extra?: string }) => { const side = c.side as GSide;
+  return `${open(side, [GROUND[side], side === 'israeli' ? '#e2d8b6' : '#e9bf6c', side === 'israeli' ? '#a99e76' : '#a97a26'])}${panelLine(EVENT[side])}${o.extra ?? ''}${turn(T(c.turn), 17, 38, 30)}${lines.map((l, i) => txt(l, 82, o.y0 + i * o.dy, o.size, { w: o.bold === false ? 'r' : 'b', italic: o.italic, anchor: 'middle', max: 124 })).join('')}</svg>`; };
+/** The HQ Staff asset: Israeli light blue box with dark letters, Syrian dark green box with white letters. */
+const staffChit = (c: GCounter) => { const side = c.side as GSide, is = side === 'israeli';
+  return `${open(side, [GROUND[side], is ? '#e2d8b6' : '#e9bf6c', is ? '#a99e76' : '#a97a26'])}${turn(T(c.turn), 9, 33, 30)}<rect x="42" y="38" width="76" height="72" fill="${is ? '#bed9ee' : '#46603d'}" stroke="${is ? '#14191c' : '#46603d'}" stroke-width="${is ? 4 : 0}"/>${txt('HQ', 80, 92, 46, { w: 'b', anchor: 'middle', fill: is ? '#1d262b' : '#fff', stroke: is ? undefined : '#1d262b', sw: 50, max: 64 })}${txt('Staff Asset', 80, 143, 23, { w: 'b', anchor: 'middle', max: 124 })}</svg>`; };
+/** 4.21 / 17.21 arriving battalion: the brigade's colour stripe behind its unit box, as on the brigade's blocks. */
+const battalionChit = (c: GCounter) => { const mech = /Mech/.test(c.name), col = STRIPE[c.brigade ?? ''] ?? '#999', m = c.name.match(/^Battalion only for (.+)$/);
+  const box = `<rect x="15.5" y="47" width="129" height="13" fill="${col}"/><path d="M76 30V36M84 30V36" stroke="#111" stroke-width="2.4"/><rect x="56" y="37" width="48" height="30" fill="#fff" stroke="#111" stroke-width="3"/><rect x="64" y="43" width="32" height="18" rx="9" fill="none" stroke="#111" stroke-width="2.6"/>${mech ? '<path d="M56 37L104 67M104 37L56 67" stroke="#111" stroke-width="2"/>' : ''}`;
+  return eventLines(c, ['Battalion', 'only for', m ? m[1] : c.name], { y0: 97, dy: 22, size: 19, bold: false, extra: box }); };
+/** Syrian replacements as printed: a small unit box over two lines. */
+const replacementChit = (c: GCounter) => { const mech = c.kind === 'replacement_mech';
+  const box = `<rect x="57" y="34" width="46" height="28" fill="#fff" stroke="#111" stroke-width="3"/><rect x="64" y="40" width="32" height="16" rx="8" fill="none" stroke="#111" stroke-width="2.4"/>${mech ? '<path d="M57 34L103 62M103 34L57 62" stroke="#111" stroke-width="2"/>' : ''}`;
+  return eventLines(c, [mech ? 'Mech' : 'Armor', 'Replacement'], { y0: 98, dy: 28, size: 24, extra: box }); };
+/** The Syrian reserve marker: the flag (red, white, black with the gold hawk) over two lines. */
+const syReserve = () => `${open('syrian', [GROUND.syrian, '#e9bf6c', '#a97a26'])}<rect x="34" y="20" width="92" height="16" fill="#cf2a2c"/><rect x="34" y="36" width="92" height="16" fill="#fff"/><rect x="34" y="52" width="92" height="16" fill="#141414"/><path d="M74 39H86L84 44L88 46H72L76 44Z M78 46H82V50H78Z" fill="#c9a23a"/><rect x="34" y="20" width="92" height="48" fill="none" stroke="#2b2618" stroke-width="1.5"/>${txt('Syrian Army', 80, 104, 23, { w: 'b', anchor: 'middle', fill: '#2b2618', max: 128 })}${txt('Reserve Unit', 80, 134, 23, { w: 'b', anchor: 'middle', fill: '#2b2618', max: 128 })}</svg>`;
+
 /** The SVG of one Golan counter (asset, event or marker), 160 x 160 units. */
 export function golanChitSvg(c: GCounter): string {
-  if (SCAN[c.id]) return scanned(SCAN[c.id]);
   const side = c.side as GSide, k = c.kind;
   const asBulge = (over: Partial<Counter> = {}) => chitSvg({ id: c.id, kind: k, name: c.name, side: c.side, ech: c.echelon ?? 'none', turn: T(c.turn), q: c.quality ?? null, ...over } as Counter);
   switch (k) {
-    case 'artillery': case 'rocket_artillery': case 'engineer': case 'armor_asset': case 'command_staff': case 'special_action_event': case 'replacement_arm': return asBulge();
-    case 'infantry_asset': return c.subtype === 'anti_tank' ? unitChit(c, AT()) : c.subtype === 'special_forces' ? unitChit(c, SF()) : asBulge();
-    case 'commando': return unitChit(c, SF());
-    case 'event_release': { const m = c.name.replace(/ Released$/, '').match(/^(.*?) ((?:Tank|Mech|Inf)\b.*)$/), ls = m ? [m[1], m[2], 'Released'] : [c.name];
-      return `${open(side)}${panel('#f07a17')}${turn(T(c.turn), 22, 52, 32)}${ls.map((l, i) => txt(l, 84, 82 + i * 28, i === 0 ? 29 : 24, { anchor: 'middle', max: 108 })).join('')}</g></svg>`; }      // below the turn number
+    case 'command_staff': return staffChit(c);
+    case 'special_action_event': return asBulge(side === 'syrian' ? { ech: 'sy_sa' } : {});               // the series' Special Action, on the Syrian event panel colour
+    case 'armor_asset': return side === 'syrian' ? unitChit({ ...c, name: c.name.replace(/ Recon$/, '') }, RECON(), SY_BOX) : asBulge();               // the Syrian recon battalion, as printed
+    case 'replacement_arm': return side === 'syrian' ? replacementChit(c) : asBulge();
+    case 'artillery': case 'rocket_artillery': case 'engineer': return asBulge();
+    case 'infantry_asset': return c.subtype === 'anti_tank' ? unitChit({ ...c, name: c.name.replace(/ AT$/, '') }, AT(), side === 'syrian' ? SY_BOX : undefined) : c.subtype === 'special_forces' ? unitChit(c, SF()) : asBulge();
+    case 'commando': return unitChit(c, SF(), SY_CDO);
+    case 'event_release': { const m = c.name.match(/^(.*?) ((?:Tank|Mech|Inf) Brigade) Released$/), ls = m ? [m[1], m[2], 'Released'] : [c.name];
+      return eventLines(c, ls, { y0: 60, dy: 30, size: 25, italic: true }); }
     case 'garrison': return `${open(side)}<rect x="14" y="17" width="21" height="38" fill="#fff"/>${txt(String(c.area ?? ''), 30, 51, 21, { rot: -90 })}${dotAt(c.quality, CX + 2, 19)}${square(CREAM[side], CY + 2, 70)}${X(CY + 2, 35)}${txt(c.name, CX, 145, 21, { anchor: 'middle', max: 112 })}</svg>`;
     case 'task_force': return unitChit({ ...c, name: 'Task Force' }, c.symbol === 'armor' ? OVAL() : X());
-    case 'replacement_mech': { const ls = ['Mech', 'Replacement']; return `${open(side)}${panel(CREAM[side])}${turn(T(c.turn), 22, 52, 32)}<rect x="61" y="40" width="43" height="29" fill="#fff" stroke="#111" stroke-width="2.4"/><path d="M61 40L104 69M104 40L61 69" stroke="#111" stroke-width="1.6"/><rect x="68" y="46" width="29" height="17" rx="8.5" fill="none" stroke="#111" stroke-width="1.8"/>${ls.map((l, i) => txt(l, 82, 99 + i * 28, 27, { anchor: 'middle', max: 108 })).join('')}</g></svg>`; }
-    case 'event_arriving_battalion': { const m = c.name.match(/^(Battalion only for) (.+)$/), lines = m ? [m[1], m[2]] : wrap(c.name);
-      return `${open(side)}${panel('#a9d37a')}${turn(T(c.turn), 22, 52, 32)}${txt('II', 79, 46, 14, { w: 'b', anchor: 'middle', max: 22 })}<rect x="57" y="53" width="44" height="26" fill="#fff" stroke="#111" stroke-width="2.4"/><rect x="65" y="58" width="28" height="16" rx="8" fill="none" stroke="#111" stroke-width="1.8"/>${lines.map((l, i) => txt(l, 81, 107 + i * 28, 21, { anchor: 'middle', max: 118 })).join('')}</g></svg>`; }
-    case 'air_mission': return `${flat('#1f5db0')}<rect x="8" y="8" width="144" height="144" fill="#9fcff0" stroke="#fff" stroke-width="3"/>${turn(T(c.turn), 16, 44, 32)}<g transform="translate(108 34)">${side === 'israeli' ? davidStar(0, 0, 15, '#1f5db0', 3) : crescent(0, 0, 12, '#3d5a2c', '#9fcff0')}</g>${jetPic(80, 78, 1.25)}${txt('Air', 80, 120, 32, { w: 'b', anchor: 'middle', fill: '#fff', stroke: '#222', sw: 130 })}${txt('Support', 80, 148, 30, { w: 'b', anchor: 'middle', fill: '#fff', stroke: '#222', sw: 130, max: 130 })}</svg>`;
-    case 'sam': return eventChit(c, '#bfe0f4', samPic(80, 66, 1.05), ['SAM'], { size: 30 });
-    case 'event_ew': return eventChit(c, '#bfe0f4', bolt(80, 64, 1), ['EW'], { size: 30 });
-    case 'event_counterbattery': return eventChit(c, '#bfe0f4', gunPic(78, 66, 1.05), ['Counter-', 'battery'], { size: 23 });
-    case 'event_ssm_strike': return eventChit(c, '#bfe0f4', ssmPic(82, 62, 1.05), ['SSM Strike'], { size: 24 });
-    case 'event_dugman5': return eventChit(c, '#bfe0f4', jetPic(82, 62, 1.15), ['Operation', 'Dugman 5'], { size: 23 });
-    case 'event_lt_zvika': return unitChit({ ...c, quality: c.quality ?? 'elite' }, tankPic(CX, CY + 4, 0.95, INK), '#bfe0f4');
+    case 'replacement_mech': return side === 'syrian' ? replacementChit(c) : asBulge();
+    case 'event_arriving_battalion': return battalionChit(c);
+    case 'air_mission': return pictureChit(c, side === 'israeli' ? 'air_is' : 'air_sy', 'Air Support');
+    case 'sam': return pictureChit(c, 'sam', 'SAM', { size: 30 });
+    case 'event_ew': return pictureChit(c, side === 'israeli' ? 'ew_is' : 'ew_sy', 'EW', { event: true, size: 30, y: 140 });
+    case 'event_counterbattery': return pictureChit(c, side === 'israeli' ? 'cb_is' : 'cb_sy', side === 'israeli' ? 'Counter-battery' : 'Counterbattery', { event: true, size: 19, y: 137 });
+    case 'event_ssm_strike': return pictureChit(c, 'ssm', 'SSM Strike', { event: true, size: 22, y: 140 });
+    case 'event_dugman5': return pictureChit(c, 'dugman', 'Dugman 5', { event: true, size: 26, y: 137, top: 'Operation' });
+    case 'event_lt_zvika': return pictureChit(c, 'zvika', 'Lt. Zvika', { event: true, dot: 'elite' });
     case 'event_king_hassan': return eventChit(c, CREAM[side], moroccoFlag(54, 46, 54, 36), ["King Hassan's", 'Troublemakers'], { size: 19 });
     case 'event_ssm': return eventChit(c, '#bfe0f4', ssmPic(82, 62, 1), ['SSM Strike']);
-    case 'minefield': return MK(`<rect x="8" y="8" width="144" height="144" fill="#b9a776" stroke="#8a7a4e" stroke-width="2"/>${txt('DANGER', 80, 42, 28, { w: 'b', anchor: 'middle', fill: '#a3261c', max: 120 })}<rect x="40" y="52" width="80" height="60" rx="6" fill="#3a2e24"/>${skull(80, 80)}${txt('MINEFIELD', 80, 140, 25, { w: 'b', anchor: 'middle', fill: INK, max: 128 })}`, '#8a7a4e');
+    case 'minefield': return `${open('israeli', [GROUND.israeli, '#e2d8b6', '#a99e76'])}${picture('skull')}${txt('DANGER', 80, 35, 25, { w: 'b', anchor: 'middle', fill: '#3a2e24', max: 120 })}${txt('MINEFIELD', 80, 147, 25, { w: 'b', anchor: 'middle', fill: '#3a2e24', max: 132 })}</svg>`;
     case 'marker_at_ditch_bridged': {                                   // as printed: the AT ditch (a grey barbed line) with a bridge (two splayed brackets) across it
       const teeth = [26, 50, 110, 134].map((x) => `M${x - 10} 78L${x} 98L${x + 10} 78Z`).join('');
       return `${open('syrian', ['#c9a043', '#dfbb63', '#9c7a28'])}${txt('AT Ditch', 80, 46, 30, { w: 'b', italic: true, anchor: 'middle', max: 124 })}<path d="M12 70H148V79H12Z${teeth}" fill="#6f6c66"/><path d="M58 50L68 63V97L58 110M102 50L92 63V97L102 110" fill="none" stroke="#2f302e" stroke-width="5" stroke-linejoin="miter"/>${txt('Bridged', 80, 140, 31, { w: 'b', italic: true, anchor: 'middle', max: 124 })}</svg>`; }
     case 'marker_control': return golanControl(side === 'syrian' ? 'syrian' : 'israeli');
-    case 'reserve_marker': { const s = side === 'syrian' ? 'syrian' : 'israeli', [a, b] = s === 'israeli' ? ['Northern Cmd', 'Reserve Unit'] : ['Syrian Army', 'Reserve Unit'];
+    case 'reserve_marker': { if (side === 'syrian') return syReserve(); const s = 'israeli', [a, b] = s === 'israeli' ? ['Northern Cmd', 'Reserve Unit'] : ['Syrian Army', 'Reserve Unit'];
       return `${flat(SIDE_BG[s])}${emblem(s, 80, 40, 24)}${txt(a, 80, 100, 32, { w: 'b', anchor: 'middle', fill: '#fff', max: 130 })}${txt(b, 80, 134, 24, { anchor: 'middle', fill: '#fff', max: 130 })}</svg>`; }
     case 'field_works': return CHIT_KIT.marker('Field Works')!;
     case 'marker': {

@@ -3,7 +3,7 @@ import type { Unit } from '../../engine/src';
 import { blockFace, hex } from './block-kit';
 import scen from '../../data/bulge/scenarios.json';
 
-export const ECH: Record<string, string> = { de_5pz: '#d6d8db', de_6pz: '#8e2d82', de_7a: '#3fa0dc', de_sr: '#f07f1e', us_1a: '#b9dc8c', us_3a: '#4d5b2c', us_sr: '#a6d6f3', br_xxx: '#e0412e', is_northern_command: '#f3f0e2', sy_golan_front: '#f8efc8' };
+export const ECH: Record<string, string> = { sy_sa: '#dec046', de_5pz: '#d6d8db', de_6pz: '#8e2d82', de_7a: '#3fa0dc', de_sr: '#f07f1e', us_1a: '#b9dc8c', us_3a: '#4d5b2c', us_sr: '#a6d6f3', br_xxx: '#e0412e', is_northern_command: '#f3f0e2', sy_golan_front: '#f8efc8' };
 // Block faces follow the series rule (block-kit.ts); colours sampled from the printed Bulge sticker sheet (docs/game-pieces/Sticker_Sheet.jpg).
 /** Sticker paper: German grey (the 6th Panzer Army and three reserve divisions on the darker grey, the paratroopers on blue), US green, British tan. */
 const PAPER = { german: '#b5bcd3', germanDark: '#958c97', fj: '#86c3ee', us: '#93a536', british: '#e1b563' };
