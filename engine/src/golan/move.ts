@@ -74,8 +74,9 @@ function step(u: GMoveUnit, ctx: GMoveCtx, from: number, to: number, first: bool
   if (ctx.interdicted?.(from) === enemy) cost += 1;                                              // 16.31b +1 to leave
   if (ctx.interdicted?.(to) === enemy) cost += 1;                                                // and +1 to enter
   let stop = intoEnemy;
-  if (u.side === 'israeli' && ctx.raids?.has(to)) { cost += 1; trigger = 'raid'; stop = true; }  // 16.11a
-  if (ctx.roadblocks?.get(to) === enemy) { cost += 1; stop = true; }                             // 4.34
+  const empty = occ(to) === 0;                                                                   // these +1s are not added to the +1 for an occupied area (series 4.34 note)
+  if (u.side === 'israeli' && ctx.raids?.has(to)) { if (empty) cost += 1; trigger = 'raid'; stop = true; }  // 16.11a
+  if (ctx.roadblocks?.get(to) === enemy) { if (empty) cost += 1; stop = true; }                  // 4.34
   if (all) cost = Math.max(cost, allowance);
   return { cost, all, limited, trigger, stop };
 }

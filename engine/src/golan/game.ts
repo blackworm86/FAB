@@ -10,9 +10,9 @@ import { pathCost, reachable, stratReachable, type GMoveCtx, type GReach } from 
 import { moraleSn, type Quality } from './combat';
 import type { GBattle } from './battle';
 
-export type GPhase = 'reinforcement' | 'admin' | 'movement' | 'strategic' | 'combat' | 'reaction' | 'btMove' | 'btCombat' | 'supply';
+export type GPhase = 'deploy' | 'reinforcement' | 'admin' | 'movement' | 'strategic' | 'combat' | 'reaction' | 'btMove' | 'btCombat' | 'supply';
 export const PHASES: GPhase[] = ['admin', 'movement', 'strategic', 'combat', 'reaction', 'btMove', 'btCombat', 'supply'];
-export type Box = 'map' | 'future' | 'arriving' | 'operational_reserve' | 'strategic_reserve' | 'air_assault' | 'eliminated' | 'strongpoint_pool' | 'evacuated';
+export type Box = 'map' | 'deploy' | 'future' | 'arriving' | 'operational_reserve' | 'strategic_reserve' | 'air_assault' | 'eliminated' | 'strongpoint_pool' | 'evacuated';
 export type ChitBox = 'future' | 'cup' | 'available' | 'used' | 'eliminated' | 'map' | 'air_support_holding' | 'evacuated_strongpoints';
 
 export interface GUnit {
@@ -24,14 +24,24 @@ export interface GUnit {
   unsupplied: boolean; reserve: boolean; exploit: boolean; revealed: boolean;
   movedThisPhase?: boolean; spent?: number; minefieldFailed?: boolean;
   from?: number;                           // area it came from into a newly contested area (14.01a: an aborted assault goes back there)
+  saMove?: boolean;                        // activated by a Special Action for a one-area Breakthrough move (8.21)
 }
-export interface GChit { id: string; counter: string; name: string; kind: string; side: GSide | 'none'; quality?: Quality; turn: number | string | null; box: ChitBox; area?: number }
+export interface GChit { id: string; counter: string; name: string; kind: string; side: GSide | 'none'; quality?: Quality; turn: number | string | null; box: ChitBox; area?: number;
+  stand?: boolean;                         // stands in its area like a unit: garrison, commando raid, Lt. Zvika, defended roadblock
+  direct?: boolean;                        // 17.34: comes back straight to the Available Box on its turn
+  mission?: 'interdiction' | 'recon';      // an air support asset placed in the Admin Phase (16.31b/c)
+  raid?: 'pending' | 'success' | 'partial'; // a commando raid (16.11a)
+  brigade?: string;                        // arriving battalions (17.21)
+}
 export interface GLog { turn: number; side: GSide | null; phase: GPhase; text: string }
 export interface GGame {
   scenario: 'badr' | 'badr_alt'; turn: number; lastTurn: number; player: GSide; phase: GPhase; rng: number;
   units: GUnit[]; chits: GChit[]; control: Record<number, GSide>;
   minefields: string[]; bridgedDitch: string[]; blownBridges: string[]; fieldWorks: number[]; riverAssault: number[]; raids: number[];
-  interdicted: Record<number, GSide>; crossed: string[]; reserveMarkers: Record<GSide, number>;
+  interdicted: Record<number, GSide>; crossed: string[]; reserveMarkers: Record<GSide, number>; roadblocks: Record<number, GSide>;
+  kingHassan: boolean;                     // 17.24 in effect
+  recoverable: Partial<Record<GSide, string[]>>;   // 4.1a: assets the unused reusable Special Action may bring back this turn
+  intel?: { side: GSide; units: string[] };        // 8.32 / 16.31c: enemy blocks revealed to `side` for the rest of the phase
   freeCombatRound: number;                 // 22.17: Syrian free Breakthrough combat rounds left on turn 1
   purpleLineCrossed: boolean; airReleased: number; hermonLost: boolean;
   eliminatedLarge: Record<GSide, number>;  // large units lost by each side (19.2)
@@ -43,7 +53,7 @@ export interface GGame {
 
 type RawUnit = { id: string; name: string; side: GSide; cls?: string; symbol?: string; kind?: string; steps?: number; quality_by_step?: Quality[]; division?: string | null; brigade?: string;
   start_area?: number; arrival_turn?: number; entry?: string[]; initial_steps?: number; start_box?: string };
-type RawChit = { id: string; ids: string[]; kind: string; side: GSide | 'none'; name: string; turn: number | string | null; quality?: Quality; area?: number; start_box?: string; symbol?: string };
+type RawChit = { id: string; ids: string[]; kind: string; side: GSide | 'none'; name: string; turn: number | string | null; quality?: Quality; area?: number; start_box?: string; symbol?: string; brigade?: string };
 type Setup = { units: { id: string; area?: number; box?: string }[]; reduced?: Record<string, number>; holding_boxes?: Record<string, string[]>; available?: Record<GSide, string[]>;
   garrisons?: { id: string; area: number }[]; strongpoints?: { suggested_historical: { area: number; id: string }[] }; minefields?: { fixed: number[][] }; riverAssault?: number[];
   reserve?: { syrian?: string[] }; turns: number };
@@ -59,7 +69,7 @@ function random(g: GGame): number {
 }
 export const roll = (g: GGame) => 1 + Math.floor(random(g) * 10);
 const ok = (die: number, sn: number) => die === 1 || (die !== 10 && die <= sn);
-const say = (g: GGame, text: string) => g.log.push({ turn: g.turn, side: g.player, phase: g.phase, text });
+export const say = (g: GGame, text: string) => g.log.push({ turn: g.turn, side: g.player, phase: g.phase, text });
 
 /** Entry letters on a label are a range: "VW" or ["V","W"] → V and W; Israeli letters are the Assembly areas (14.21, 14.22). */
 export function entryAreas(u: GUnit): number[] {
@@ -92,7 +102,7 @@ export function newGolanGame(seed = 1, scenario: 'badr' | 'badr_alt' = 'badr'): 
     if (NOT_CHITS.has(c.kind) || c.side === 'none') continue;
     for (const id of c.ids?.length ? c.ids : [c.id]) {
       const box: ChitBox = garrison.has(c.id) ? 'map' : inHold(id) ?? (c.turn === 'S' || avail.has(id) ? 'available' : 'future');
-      chits.push({ id, counter: c.id, name: c.name, kind: c.kind, side: c.side, quality: c.quality ?? undefined, turn: c.turn, box, area: garrison.get(c.id) });
+      chits.push({ id, counter: c.id, name: c.name, kind: c.kind, side: c.side, quality: c.quality ?? undefined, turn: c.turn, box, area: garrison.get(c.id), stand: garrison.has(c.id) || undefined, brigade: c.brigade });
     }
   }
   for (const u of UNITS.filter((x) => x.kind === 'special_action_block'))      // the reusable Special Action blocks (8.1), from turn 2
@@ -102,12 +112,16 @@ export function newGolanGame(seed = 1, scenario: 'badr' | 'badr_alt' = 'badr'): 
   const g: GGame = {
     scenario, turn: 1, lastTurn: S.turns, player: 'syrian', phase: scenario === 'badr' ? 'combat' : 'movement', rng: seed | 0,
     units, chits, control, minefields: (S.minefields?.fixed ?? []).map(([a, b]) => edgeKey(a, b)), bridgedDitch: [], blownBridges: [], fieldWorks: [],
-    riverAssault: scenario === 'badr' ? [...(S.riverAssault ?? [])] : [], raids: [], interdicted: {}, crossed: [], reserveMarkers: { israeli: 4, syrian: 2 },
+    riverAssault: scenario === 'badr' ? [...(S.riverAssault ?? [])] : [], raids: [], interdicted: {}, crossed: [], reserveMarkers: { israeli: 4, syrian: 2 }, roadblocks: {}, kingHassan: false, recoverable: {},
     freeCombatRound: scenario === 'badr' ? 2 : 0, purpleLineCrossed: false, airReleased: 0, hermonLost: false, eliminatedLarge: { israeli: 0, syrian: 0 },
     vp: { syrian: 0, israeli: 0, net: 0, leader: null }, result: null, log: [], battle: null, fought: [],
   };
   for (const a of g.riverAssault) for (const u of onMap(g, a)) if (u.side === 'syrian') u.from = neighbors(a).find((n) => connection(a, n)!.atDitch && g.control[n] === 'syrian');   // the bridgeheads came across the ditch
   for (const id of S.reserve?.syrian ?? []) if (scenario === 'badr') { unit(g, id).reserve = true; g.reserveMarkers.syrian--; }
+  if (scenario === 'badr_alt') {                                                              // 22.24/22.25: the players place their regular units
+    for (const u of g.units) if (u.box === 'map' && !u.kind && u.id !== 'S17') { u.box = 'deploy'; u.area = null; u.from = undefined; }
+    g.riverAssault = []; g.phase = 'deploy'; g.player = 'israeli';
+  }
   computeVictory(g);
   say(g, scenario === 'badr' ? 'Operation Badr: the Syrian assault has crossed the Purple Line; the game opens with the Syrian Combat Phase of turn 1.' : 'Operation Badr, alternate set-up.');
   return g;
@@ -119,14 +133,14 @@ export const chit = (g: GGame, id: string) => { const c = g.chits.find((x) => x.
 export const onMap = (g: GGame, a: number) => g.units.filter((u) => u.box === 'map' && u.area === a);
 export const count = (g: GGame, a: number): Record<GSide, number> => { const r = { israeli: 0, syrian: 0 }; for (const u of onMap(g, a)) r[u.side]++; return r; };
 export const contested = (g: GGame, a: number) => { const c = count(g, a); return c.israeli > 0 && c.syrian > 0; };
-const assetsAt = (g: GGame, a: number): Record<GSide, number> => { const r = { israeli: 0, syrian: 0 }; for (const c of g.chits) if (c.box === 'map' && c.area === a && c.side !== 'none') r[c.side]++; return r; };
+const assetsAt = (g: GGame, a: number): Record<GSide, number> => { const r = { israeli: 0, syrian: 0 }; for (const c of g.chits) if (c.stand && c.box === 'map' && c.area === a && c.side !== 'none') r[c.side]++; return r; };
 export const isNight = (g: GGame) => TRACK[g.turn]?.night ?? false;
 
 export function moveCtx(g: GGame): GMoveCtx {
   return {
     turn: g.turn, units: (a) => (isAssembly(a) ? { israeli: 0, syrian: 0 } : count(g, a)), assets: (a) => assetsAt(g, a), controller: (a) => (isAssembly(a) ? 'israeli' : g.control[a]),
     bridgedDitch: new Set(g.bridgedDitch), blownBridges: new Set(g.blownBridges), minefields: new Set(g.minefields), crossedThisPhase: new Set(g.crossed),
-    interdicted: (a) => g.interdicted[a], raids: new Set(g.raids),
+    interdicted: (a) => g.interdicted[a], raids: new Set(g.raids), roadblocks: new Map(Object.entries(g.roadblocks).map(([a, s]) => [+a, s])),
   };
 }
 const asMover = (u: GUnit) => ({ side: u.side, cls: u.cls, area: u.area!, supplied: !u.unsupplied, disordered: u.disorder === 1, immobile: !!u.kind, adjacentOnly: u.exploit, spent: u.spent, minefieldFailed: u.minefieldFailed });
@@ -136,8 +150,9 @@ export function moveOptions(g: GGame, id: string): GReach[] {
   const u = unit(g, id);
   const mover = g.phase === 'reaction' ? enemyOf(g.player) : g.player;
   if (u.box !== 'map' || u.side !== mover || u.movedThisPhase) return [];
-  if (g.phase === 'movement') return reachable(asMover(u), moveCtx(g));
-  if (g.phase === 'btMove' && (u.reserve || u.exploit)) return reachable({ ...asMover(u), adjacentOnly: u.exploit && !u.reserve }, moveCtx(g));
+  const kh = (rs: GReach[]) => (g.kingHassan && u.id === 'S07' ? rs.filter((r) => r.path.slice(1).every((a) => isAssembly(a) || g.control[a] !== 'israeli')) : rs);   // 17.24
+  if (g.phase === 'movement') return kh(reachable(asMover(u), moveCtx(g)));
+  if (g.phase === 'btMove' && (u.reserve || u.exploit || u.saMove)) return kh(reachable({ ...asMover(u), adjacentOnly: !u.reserve }, moveCtx(g)));
   if (g.phase === 'reaction' && u.reserve) return reachable(asMover(u), moveCtx(g)).filter((r) => contested(g, r.area) || count(g, r.area)[enemyOf(u.side)] === 0);
   return [];
 }
@@ -158,16 +173,22 @@ export function move(g: GGame, id: string, to: number, path?: number[]) {
       say(g, `${u.name} crosses the minefield (${die} vs ${sn}).`);
     }
     at = next;
-    if (u.side === 'israeli' && g.raids.includes(next)) {                                         // 16.11a
-      const die = roll(g);
-      if (die >= 6) { const c = g.chits.find((x) => x.box === 'map' && x.area === next && x.kind === 'commando'); if (c) c.box = 'eliminated'; g.raids = g.raids.filter((a) => a !== next); say(g, `Commando raid in ${next} fails (${die}).`); }
-      else { if (die >= 3) (g.raidPartial ??= []).push(next); say(g, `Commando raid in ${next} ${die <= 2 ? 'succeeds' : 'partly succeeds'} (${die}): ${u.name} stops.`); break; }
+    if (u.side === 'israeli' && g.raids.includes(next)) {                                         // 16.11a: the first Israeli unit in triggers the raid
+      const die = roll(g), c = g.chits.find((x) => x.box === 'map' && x.area === next && x.kind === 'commando');
+      g.raids = g.raids.filter((a) => a !== next);
+      if (die >= 6) { if (c) { c.box = 'eliminated'; c.area = undefined; c.stand = undefined; c.raid = undefined; } say(g, `Commando raid in ${next} fails (${die}): the helicopters are shot down.`); }
+      else { if (c) c.raid = die <= 2 ? 'success' : 'partial'; if (die >= 3) (g.raidPartial ??= []).push(next); say(g, `Commando raid in ${next} ${die <= 2 ? 'succeeds' : 'partly succeeds'} (${die}): ${u.name} stops and must fight it.`); break; }
     }
+    if (u.side === 'syrian') for (const c of g.chits) if (c.kind === 'commando' && c.stand && c.area === next) {     // relieved by a Syrian unit
+      c.box = 'used'; c.area = undefined; c.stand = undefined; c.raid = undefined; g.raids = g.raids.filter((a) => a !== next); g.raidPartial = (g.raidPartial ?? []).filter((a) => a !== next);
+      say(g, `${u.name} relieves the commandos in ${next}.`);
+    }
+    if (g.roadblocks[next] === enemyOf(u.side)) { delete g.roadblocks[next]; say(g, `${u.name} is held up by the roadblock in ${next}.`); }   // 4.34
   }
   for (const l of priced.limited) if (!g.crossed.includes(l)) g.crossed.push(l);
   if (u.area != null && !isAssembly(u.area) && area(u.area).syria === false && !isAssembly(at) && area(at).syria && u.side === 'israeli' && !g.purpleLineCrossed) purpleLineCrossed(g);
   if (count(g, at)[enemyOf(u.side)] > 0 && !onMap(g, at).some((x) => x.revealed)) u.from = route[route.indexOf(at) - 1];
-  u.area = at; u.movedThisPhase = true; u.reserve = false;                                  // 5.21: the marker goes when the unit moves
+  u.area = at; u.movedThisPhase = true; u.reserve = false; u.saMove = false; if (g.phase === 'btMove') u.exploit = false;                                  // 5.21: the marker goes when the unit moves
   evacuateStrongpoints(g, route[0], u);
   updateControl(g, at);
   say(g, `${u.name} moves to ${at}.`);
@@ -211,12 +232,22 @@ export function placeArrival(g: GGame, id: string, a: number) {
   const u = unit(g, id); u.box = 'map'; u.area = a; updateControl(g, a); say(g, `${u.name} arrives in ${isAssembly(a) ? (a === ASSEMBLY.A ? 'Assembly Area A' : 'Assembly Area B') : a}.`);
 }
 
+/* ---------- Special Actions (8.1): the reusable block (to the Used Box) or a single-use Special Action event (to the Eliminated Box) ---------- */
+export const saAvailable = (g: GGame, side: GSide) => g.chits.filter((c) => c.side === side && c.box === 'available' && (c.kind === 'sa_block' || c.kind === 'special_action_event'));
+export function spendSA(g: GGame, side: GSide, why: string, chitId?: string) {
+  const c = chitId ? chit(g, chitId) : saAvailable(g, side).sort((x, y) => +(x.kind === 'sa_block') - +(y.kind === 'sa_block'))[0];
+  if (!c || c.side !== side || c.box !== 'available' || (c.kind !== 'sa_block' && c.kind !== 'special_action_event')) throw new Error('no Special Action available');
+  c.box = c.kind === 'sa_block' ? 'used' : 'eliminated';
+  say(g, `${side === 'syrian' ? 'Syrian' : 'Israeli'} Special Action: ${why}.`);
+}
+
 /* ---------- Reinforcement (4.1) and Admin (4.2a) ---------- */
 function reinforcementPhase(g: GGame) {
   g.phase = 'reinforcement';
   for (const side of ['syrian', 'israeli'] as GSide[]) {
     const sa = g.chits.find((c) => c.kind === 'sa_block' && c.side === side);
-    if (sa?.box === 'used') sa.box = 'available';                                                   // 4.1a
+    g.recoverable[side] = sa?.box === 'available' ? g.chits.filter((c) => c.side === side && c.box === 'used' && c.kind !== 'sa_block').map((c) => c.id) : [];   // 4.1a: the SA was not used
+    if (sa?.box === 'used') sa.box = 'available';
     if (side === 'syrian') {                                                                        // 16.12 SAM barrier reduction
       const sams = g.chits.filter((c) => c.kind === 'sam' && c.box === 'used');
       const rolls = sams.map(() => roll(g));
@@ -224,7 +255,7 @@ function reinforcementPhase(g: GGame) {
     }
     for (const c of g.chits) if (c.side === side && c.box === 'used' && c.kind !== 'sa_block') c.box = 'cup';                       // 4.1b
     for (const u of g.units) if (u.side === side && u.box === 'future' && u.arrival === g.turn) u.box = 'arriving';                  // 4.1c
-    for (const c of g.chits) if (c.side === side && c.box === 'future' && c.turn === g.turn) c.box = c.kind === 'sa_block' ? 'available' : 'cup';   // 4.1d
+    for (const c of g.chits) if (c.side === side && c.box === 'future' && c.turn === g.turn) { c.box = c.kind === 'sa_block' || c.direct ? 'available' : 'cup'; c.direct = undefined; }   // 4.1d, 17.34
   }
 }
 /** 16.23: the first three SAM losses each bring a conditional Israeli air support asset into the cup. */
@@ -239,6 +270,22 @@ function adminDraw(g: GGame) {
   for (const side of ['syrian', 'israeli'] as GSide[]) {
     const cup = g.chits.filter((c) => c.side === side && c.box === 'cup');
     for (let n = t.draws[side][i]; n > 0 && cup.length; n--) { const k = Math.floor(random(g) * cup.length); cup.splice(k, 1)[0].box = 'available'; }
+  }
+  const dugman = g.chits.find((c) => c.kind === 'event_dugman5' && c.box === 'available');     // 17.22: must be played when drawn
+  if (dugman) resolveDugman(g, dugman);
+}
+/** 17.22 Operation Dugman 5: one die per Syrian SAM in the Available Box. */
+export function resolveDugman(g: GGame, c: GChit) {
+  c.box = 'eliminated';
+  for (const sam of g.chits.filter((x) => x.kind === 'sam' && x.box === 'available')) {
+    const die = roll(g);
+    if (die === 1) { sam.box = 'eliminated'; samEliminated(g); say(g, `Dugman 5: ${die}, great success: a SAM battery is destroyed.`); }
+    else if (die <= 3) { sam.box = 'cup'; say(g, `Dugman 5: ${die}, limited success: a SAM goes back into the cup.`); }
+    else if (die <= 9) say(g, `Dugman 5: ${die}, failure.`);
+    else {
+      const air = g.chits.find((x) => x.kind === 'air_mission' && x.side === 'israeli' && x.box === 'available') ?? g.chits.find((x) => x.kind === 'air_mission' && x.side === 'israeli' && x.box === 'cup');
+      if (air) air.box = 'eliminated'; say(g, `Dugman 5: ${die}, a really bad idea: an Israeli air asset is lost.`);
+    }
   }
 }
 
@@ -303,7 +350,12 @@ function supplyPhase(g: GGame) {
   }
   for (const a of [...g.fieldWorks]) if (contested(g, a)) g.fieldWorks = g.fieldWorks.filter((x) => x !== a);           // 9.5
   g.riverAssault = []; g.units.forEach((u) => { u.exploit = false; if (u.side !== g.player) u.reserve = false; });
-  if (g.player === 'israeli') for (const k of Object.keys(g.interdicted)) delete g.interdicted[+k];                         // 16.31b
+  if (g.player === 'israeli') {                                                                   // 16.31b: interdiction lasts to the second player's Supply Phase
+    for (const k of Object.keys(g.interdicted)) delete g.interdicted[+k];
+    for (const c of g.chits) if (c.mission === 'interdiction' && c.box === 'map') { c.box = 'used'; c.area = undefined; c.mission = undefined; }
+  }
+  g.roadblocks = {};                                                                              // 9.5: roadblocks and defended roadblocks go
+  for (const c of g.chits) if (c.stand && c.kind === 'engineer' && c.box === 'map') { c.box = 'used'; c.area = undefined; c.stand = undefined; }
 }
 export function eliminate(g: GGame, u: GUnit) {
   u.box = 'eliminated'; u.area = null;
@@ -311,7 +363,7 @@ export function eliminate(g: GGame, u: GUnit) {
 }
 
 /** Newly contested areas (2.4): contested with blocks not yet face-up, or a raid an Israeli unit ran into. */
-const holdsAsset = (g: GGame, a: number, side: GSide) => g.chits.some((c) => c.box === 'map' && c.area === a && c.side === side && (c.kind === 'garrison' || c.kind === 'commando'));
+const holdsAsset = (g: GGame, a: number, side: GSide) => g.chits.some((c) => c.stand && c.box === 'map' && c.area === a && c.side === side);
 export const newlyContested = (g: GGame) => [...new Set([
   ...g.units.filter((u) => u.box === 'map' && u.area != null && !isAssembly(u.area) && !u.revealed && (contested(g, u.area) || holdsAsset(g, u.area, enemyOf(u.side)))).map((u) => u.area!),
   ...g.raids.filter((a) => count(g, a).israeli > 0 && !g.units.some((u) => u.area === a && u.revealed))])];
@@ -327,6 +379,10 @@ export function endPhase(g: GGame) {
   if (g.phase === 'reinforcement' && g.units.some((u) => u.box === 'arriving' && arrivalOptions(g, u.id).length)) throw new Error('place the arriving units first');
   for (const u of g.units) { u.movedThisPhase = false; if (g.phase === 'movement' || g.phase === 'btMove') { u.spent = 0; } }
   if (g.phase === 'movement' || g.phase === 'btMove') g.crossed = [];
+  if (g.phase === 'deploy') {
+    if (g.units.some((u) => u.box === 'deploy')) throw new Error('place every unit first');
+    g.phase = 'movement'; g.player = 'syrian'; return;                                          // 22.27: the alternate set-up starts with the Syrian Operational Movement Phase
+  }
   if (g.phase === 'reinforcement') { g.phase = 'admin'; g.player = 'syrian'; adminDraw(g); return; }
   const i = PHASES.indexOf(g.phase);
   if (g.phase !== 'supply') { g.phase = PHASES[i + 1]; if (g.phase === 'supply') supplyPhase(g); return; }
