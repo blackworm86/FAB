@@ -796,3 +796,8 @@ input::placeholder { color: #9a9a8a; opacity: 1; }
 .faces i { position: relative; } .faces i s { position: absolute; right: -3px; top: -6px; font: 700 9px var(--sf); text-decoration: none; background: #0b0d08; border-radius: 6px; padding: 0 2px; }
 .bdg.war { background: #b8351f !important; }     /* a little more contrast for the white text */
 .faces i s .ic { width: 8px; height: 8px; display: block; }
+
+@media (max-height: 500px) and (orientation: landscape) {      /* phones held sideways: the block panel is a slim column on the left, the map stays in view */
+  .c-dispatch { width: min(300px, 42vw) !important; left: 8px !important; right: auto !important; bottom: 8px !important; max-height: calc(100% - 16px) !important; overflow: auto; padding: 6px 10px !important; }
+  .c-dispatch h3 { font-size: 18px !important; margin: 0 !important; } .c-dispatch .row button { min-height: 36px !important; padding: 4px 10px !important; }
+}
