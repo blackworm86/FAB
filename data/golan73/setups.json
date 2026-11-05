@@ -902,5 +902,286 @@
     }
    ]
   }
+ },
+ "alowda": {
+  "name": "Operation Al-Owda (20.3)",
+  "map": "golan73",
+  "turns": 6,
+  "first_player": "syrian",
+  "startPhase": "deploy",
+  "source": "FAB_Golan73_Al-Owda_ScenarioRules.pdf (20.3) and the Al-Owda Setup Cards (FAB_Golan_Israeli/Syrian_Setup_Card_Al-Owda.pdf)",
+  "turn_names": {
+   "1": "October 6th AM",
+   "2": "October 6th PM",
+   "3": "October 7th AM",
+   "4": "October 7th PM",
+   "5": "October 8th AM",
+   "6": "October 8th PM"
+  },
+  "out_of_play": {
+   "units": [
+    "S24",
+    "S22",
+    "S17",
+    "S23"
+   ],
+   "note": "20.36: the 47th, 141st Tank, 82nd Airborne and 62nd Mech are left out; Mt Hermon (83) starts Syrian, its garrison is not used"
+  },
+  "israeli": {
+   "available": [
+    "IC01",
+    "IC02",
+    "IC03",
+    "IC04"
+   ],
+   "air_support_holding": [
+    "IC10a",
+    "IC10b"
+   ],
+   "garrisons": [
+    46,
+    42,
+    30,
+    22
+   ],
+   "fixed_reinforcements": {
+    "2": [
+     {
+      "id": "I09",
+      "entry": [
+       "A"
+      ]
+     },
+     {
+      "id": "I10",
+      "entry": [
+       "A"
+      ]
+     },
+     {
+      "id": "I02",
+      "entry": [
+       "A"
+      ]
+     }
+    ]
+   },
+   "draw_cup": {
+    "start": [
+     "I11",
+     "I12",
+     "I13",
+     "I14",
+     "I15",
+     "I16"
+    ],
+    "ghosts": 2,
+    "added": {
+     "3": [
+      "I17",
+      "I18"
+     ],
+     "4": [
+      "I19",
+      "I20"
+     ],
+     "5": [
+      "I21",
+      "I22"
+     ]
+    },
+    "draws": {
+     "2": 1,
+     "3": 4,
+     "4": 4,
+     "5": 3,
+     "6": 2
+    },
+    "entry": {
+     "I11": [
+      "A"
+     ],
+     "I12": [
+      "A"
+     ],
+     "I13": [
+      "A"
+     ],
+     "I14": [
+      "A"
+     ],
+     "I15": [
+      "B"
+     ],
+     "I16": [
+      "B"
+     ],
+     "I17": [
+      "B"
+     ],
+     "I18": [
+      "B"
+     ],
+     "I19": [
+      "A",
+      "B"
+     ],
+     "I20": [
+      "A",
+      "B"
+     ],
+     "I21": [
+      "B"
+     ],
+     "I22": [
+      "B"
+     ]
+    },
+    "note": "20.36: six units and two ghosts (replaced at start by blank spares) in the Reinforcements Draw Cup; units listed for turns 3-5 go into the cup at the start of that Reinforcement Phase, before the draw; drawn units arrive in the Assembly Area on their label, drawn ghosts are set aside"
+   },
+   "chits": {
+    "2": [
+     "IC14",
+     "IC13",
+     "IC15",
+     "IC10c",
+     "IC24"
+    ],
+    "3": [
+     "IC21",
+     "IC19",
+     "IC20",
+     "IC18",
+     "IC22",
+     "IC16",
+     "IC17",
+     "IC28",
+     "IC27"
+    ],
+    "4": [
+     "IC31",
+     "IC29",
+     "IC26",
+     "IC30",
+     "IC33",
+     "IC23",
+     "IC25",
+     "IC32",
+     "IC49"
+    ],
+    "5": [
+     "IC37",
+     "IC35",
+     "IC36",
+     "IC34",
+     "IC38",
+     "IC53a",
+     "IC50",
+     "IC46"
+    ],
+    "6": [
+     "IC45",
+     "IC42",
+     "IC44",
+     "IC39",
+     "IC40",
+     "IC41",
+     "IC43",
+     "IC55a"
+    ]
+   },
+   "reserve_markers": 4,
+   "vp": 3
+  },
+  "syrian": {
+   "available": [
+    "SC02",
+    "SC03",
+    "SC10",
+    "SC12",
+    "SC07",
+    "SC06",
+    "SC08",
+    "SC11",
+    "SC05",
+    "SC04",
+    "SC18",
+    "SC09",
+    "SC01",
+    "SC17a",
+    "SC17b",
+    "SC17c",
+    "SC17d",
+    "SC17e",
+    "SC14a",
+    "SC14b",
+    "SC14c",
+    "SC25",
+    "SC16",
+    "SC15",
+    "SC13a",
+    "SC13b",
+    "SC19",
+    "SC35",
+    "SC40"
+   ],
+   "commando_landing": [
+    "SC30",
+    "SC23"
+   ],
+   "reinforcements": {
+    "2": [
+     "S26",
+     "S25",
+     "S27",
+     "S28"
+    ],
+    "3": [
+     "S18",
+     "S19",
+     "S20"
+    ],
+    "4": [
+     "S21"
+    ]
+   },
+   "entry": [
+    "V",
+    "W",
+    "X",
+    "Y",
+    "Z"
+   ],
+   "chits": {
+    "2": [
+     "SC21",
+     "SC22a",
+     "SC22b",
+     "SC20",
+     "SC24",
+     "SC34"
+    ],
+    "3": [
+     "SC28",
+     "SC27",
+     "SC26",
+     "SC31",
+     "SC39",
+     "SC29",
+     "SC41"
+    ],
+    "4": [
+     "SC33",
+     "SC32"
+    ],
+    "5": [
+     "SC38",
+     "SC36",
+     "SC37"
+    ]
+   },
+   "reserve_markers": 2
+  },
+  "estimates": "The Al-Owda Turn Track and Reference Map are not in the repository: the chit draws use the Badr track (turn 1 none, then turns 2-6), and the Israeli VP Line is taken as the Purple Line."
  }
 }

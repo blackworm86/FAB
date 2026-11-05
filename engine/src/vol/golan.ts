@@ -31,7 +31,7 @@ export interface GolanState {
   purpleLineCrossed: boolean; airReleased: number; hermonLost: boolean;
   airAssaultArea?: number; samTarget?: string;            // 15.3; 16.12: the Israeli air mission a SAM may answer now
   nafakh?: { s03Free: boolean; golani: boolean; staffOut: boolean };   // 22.46: the 33rd held back, Golani's release, the HQ Staff lost with Nafakh
-  alowda?: { raids: number };                                          // 20.35: the commandos landed at the start
+  alowda?: { raids: number; cup?: string[]; drawn?: string[] };       // 20.35 the commandos landed at the start; 20.36 the Israeli Reinforcements Draw Cup
 }
 export interface GolanBattle { event: Partial<Record<Side, string>>; counterbattery: Partial<Record<Side, string>>; ew?: { pending: boolean }; defLocked?: boolean; engBridge?: string }
 export const state = (g: Game) => g.vol as unknown as GolanState;
@@ -183,37 +183,68 @@ function nafakhResult(g: Game) {
 }
 
 /* ================= 20.3 Operation Al-Owda (hypothetical): the whole map but Mt Hermon, six turns, the Syrians place their own units =================
-   From the scenario rules (docs/games/golan73/scenarios). The Al-Owda Setup Card, Turn Track and Reference Map are not in the repository, so three
-   things are estimates until they are: the reinforcement turns (the printed label turns, which line up with this dawn start; the 3rd Tank
-   Division and the Assad Guards on turn 3), the chit draws (Badr's track without its night turn) and the Israeli VP line (the Purple Line). */
-const ALOWDA_OUT = ['S24', 'S22', 'S17', 'S23'];                 // 20.36: the 47th, 141st, 82nd and 62nd are left out
-const ALOWDA_LATE: Record<string, number> = { S18: 3, S19: 3, S20: 3, S21: 3 };   // 20.37: no Operational or Strategic Reserve; they come as reinforcements (turn estimated)
-export const ALOWDA_ESTIMATES = 'Set-up card, turn track and VP reference map missing: reinforcement turns, chit draws and the Israeli VP line are estimates';
+   From the scenario rules and the Al-Owda Setup Cards (data/golan73/setups.json "alowda"). Two things remain estimates, the Al-Owda Turn Track
+   and Reference Map not being in the repository: the chit draws (the Badr track) and the Israeli VP Line (the Purple Line). */
+type SideCard = { available: string[]; chits: Record<string, string[]>; reserve_markers: number };
+type AlOwda = { turns: number; out_of_play: { units: string[] }; estimates: string;
+  israeli: SideCard & { air_support_holding: string[]; garrisons: number[]; vp: number; fixed_reinforcements: Record<string, { id: string; entry: string[] }[]>;
+    draw_cup: { start: string[]; ghosts: number; added: Record<string, string[]>; draws: Record<string, number>; entry: Record<string, string[]> } };
+  syrian: SideCard & { commando_landing: string[]; reinforcements: Record<string, string[]>; entry: string[] } };
+const ALO = (setupsJson as unknown as Record<string, AlOwda>).alowda;
+export const ALOWDA_ESTIMATES = ALO.estimates.replace(/\.$/, '');
 function alowdaSetup(g: Game): Game {
-  g.opts = { scenario: 'alowda', fuel: false }; g.lastTurn = 6; g.phase = 'deploy'; g.phasing = 'syrian'; g.log = [];
+  g.opts = { scenario: 'alowda', fuel: false }; g.lastTurn = ALO.turns; g.phase = 'deploy'; g.phasing = 'syrian'; g.log = [];
   g.inPlay = [...areas.keys()].filter((a) => a !== HERMON && a !== REAR && a !== NAF_NORTH);           // 20.37: Mt Hermon is already Syrian; no sudden death
-  const rows = [1, 2, 3, 4, 5, 6].map((t) => TRACK[String(t)] as unknown as { draws: Record<Side, number[]> });
+  const rows = Array.from({ length: ALO.turns }, (_, i) => TRACK[String(i + 1)] as unknown as { draws: Record<Side, number[]> });
   g.track = rows.map((r, i) => ({ ge: i === 0 ? [0, 0] : r.draws.syrian, al: i === 0 ? [0, 0] : r.draws.israeli, sd: null }));
   g.riverAssault = []; g.control[HERMON] = 'syrian';
-  const V = state(g); V.freeCombatRound = 0; V.alowda = { raids: 0 };
-  g.units = g.units.filter((u) => !ALOWDA_OUT.includes(u.id) && !(u.area === HERMON));                  // nor the Hermon garrison
-  g.chits = g.chits.filter((c) => !(c.kind === 'garrison' && c.area === HERMON));
+  const V = state(g); V.freeCombatRound = 0;
+  const I = ALO.israeli, S = ALO.syrian, cup = I.draw_cup;
+  V.alowda = { raids: 0, cup: [...cup.start, ...Array.from({ length: cup.ghosts }, (_, k) => `ghost${k + 1}`)], drawn: [] };
+  const fixed = new Map(Object.entries(I.fixed_reinforcements).flatMap(([t, l]) => l.map((r) => [r.id, { turn: +t, entry: r.entry }] as const)));
+  const syArr = new Map(Object.entries(S.reinforcements).flatMap(([t, l]) => l.map((id) => [id, +t] as const)));
+  const cupIds = new Set([...cup.start, ...Object.values(cup.added).flat()]);
+  g.units = g.units.filter((u) => !ALO.out_of_play.units.includes(u.id) && !(u.garrison && !I.garrisons.includes(u.area ?? -1)));   // garrisons: only those on the card (not Mt Hermon)
   for (const u of g.units) {
     u.reserve = null; u.from = undefined;
     if (u.side === 'syrian' && regular(u) && u.area != null) { u.box = 'deploy'; u.area = null; }       // 20.35: the sixteen at the player's discretion
-    if (ALOWDA_LATE[u.id]) { u.box = undefined; u.area = null; u.arrival = ALOWDA_LATE[u.id]; }
+    if (syArr.has(u.id)) { u.box = undefined; u.area = null; u.arrival = syArr.get(u.id); u.entry = [...S.entry]; }       // 20.36: any friendly Entry Area V-Z; no Operational or Strategic Reserve
+    if (fixed.has(u.id)) { u.arrival = fixed.get(u.id)!.turn; u.entry = fixed.get(u.id)!.entry; }
+    if (cupIds.has(u.id)) { u.arrival = undefined; u.entry = cup.entry[u.id]; u.box = cup.start.includes(u.id) ? 'draw_cup' : 'draw_later'; }
   }
-  for (const c of g.chits) if (c.kind === 'commando' && c.side === 'syrian') { c.box = 'available'; c.turn = 'S'; }      // 20.31: all five commando battalions from the start
-  g.markers = { syrian: { res: 2 }, israeli: { res: 4 } };
-  say(g, 'Operation Al-Owda: the Syrian plan to attack at dawn. Syria places its sixteen units, one per tank-symbol area, and may land two commandos; then the Syrian Movement Phase of turn 1.');
+  const avail = new Set([...I.available, ...S.available]), holding = new Set(I.air_support_holding), landing = new Set(S.commando_landing);
+  const at = new Map<string, number>(); for (const side of [I, S]) for (const [t, l] of Object.entries(side.chits)) for (const id of l) at.set(id, +t);
+  g.chits = g.chits.filter((c) => c.kind === 'sa_block' || c.box === 'evacuated_strongpoints' || (c.kind === 'garrison' && c.box === 'map' && I.garrisons.includes(c.area ?? -1)) || avail.has(c.id) || holding.has(c.id) || landing.has(c.id) || at.has(c.id));
+  for (const c of g.chits) {
+    if (c.kind === 'sa_block' || c.box === 'evacuated_strongpoints' || c.kind === 'garrison') continue;
+    if (avail.has(c.id) || landing.has(c.id)) { c.box = 'available'; c.turn = 'S'; }
+    else if (holding.has(c.id)) c.box = 'air_support_holding';
+    else { c.box = 'future'; c.turn = at.get(c.id)!; }                                                    // the turn on the card, not the label (20.36)
+  }
+  g.markers = { syrian: { res: S.reserve_markers }, israeli: { res: I.reserve_markers } };
+  say(g, 'Operation Al-Owda: the Syrian plan to attack at dawn. Syria places its sixteen units, one per tank-symbol area, and lands the 181st and 182nd commandos; then the Syrian Movement Phase of turn 1.');
   return g;
 }
+/** 20.36: at the start of each Israeli Reinforcement Phase, the listed units go into the Draw Cup, then the listed number is drawn at random; drawn ghosts are set aside. */
+function alowdaDraw(g: Game) {
+  const V = state(g), A = V.alowda, cup = ALO.israeli.draw_cup; if (!isAlOwda(g) || !A?.cup) return;
+  for (const id of cup.added[String(g.turn)] ?? []) { A.cup.push(id); unit(g, id).box = 'draw_cup'; }
+  const n = Math.min(cup.draws[String(g.turn)] ?? 0, A.cup.length), got: string[] = [];
+  for (let k = 0; k < n; k++) {
+    const pick = A.cup.splice((rollDie(g) * 7919 + k * 131 + g.turn) % A.cup.length, 1)[0]; A.drawn!.push(pick);
+    if (pick.startsWith('ghost')) { got.push('a ghost (set aside)'); continue; }
+    const u = unit(g, pick); u.box = undefined; u.arrival = g.turn; got.push(u.name);
+  }
+  if (n) say(g, `Reinforcements Draw Cup: ${got.join(', ')} (20.36)`, 'israeli');
+}
 /** 20.35: while setting up, Syria lands up to two commandos in vacant Israeli-held areas east of the Jordan, not on Mt Hermon or Ma'agan. */
-export const alowdaRaidAreas = (g: Game) => (isAlOwda(g) && g.phase === 'deploy' && (state(g).alowda?.raids ?? 2) < 2
+/** The two commandos the card lands at the start, still to place. */
+export const alowdaCommandos = (g: Game) => (isAlOwda(g) && g.phase === 'deploy' ? g.chits.filter((c) => ALO.syrian.commando_landing.includes(c.id) && c.box === 'available') : []);
+export const alowdaRaidAreas = (g: Game) => (isAlOwda(g) && g.phase === 'deploy' && alowdaCommandos(g).length > 0
   ? [...areas.keys()].filter((a) => !isAssembly(a) && a !== HERMON && a !== 17 && ![6, 7, 8].includes(a) && g.control[a] === 'israeli' && vacant(g, a)) : []);
 export function alowdaRaid(g: Game, chitId: string, a: number) {
   need(alowdaRaidAreas(g).includes(a), 'a vacant Israeli-held area east of the Jordan (not Mt Hermon or Ma\'agan)');
-  const c = chit(g, chitId); need(c.kind === 'commando' && c.side === 'syrian' && c.box === 'available', 'a Syrian commando from the Available Box');
+  const c = chit(g, chitId); need(ALO.syrian.commando_landing.includes(c.id) && c.box === 'available', 'the 181st or 182nd commandos (Al-Owda Setup Card)');
   c.box = 'map'; c.area = a; g.units.push(asGarrison(c, 'R', a, 'infantry', c.q ?? 'veteran')); state(g).raids.push(a); state(g).alowda!.raids++;
   say(g, `Commandos land in ${nameOf(a)} (20.35)`, 'syrian');
 }
@@ -307,7 +338,7 @@ function golanVictory(g: Game): Record<Side, number> & { net: number } {
     if (ctl === 'syrian' && unitsIn(g, a.id, 'syrian').some(regular)) pts.syrian += a.vp.syrian + (a.vp.mutual ? 1 : 0);
     if (ctl === 'israeli') pts.israeli += (a.vp.mutual ? 1 : 0) + (garea(a.id).syria ? 1 : 0);
   }
-  if (isAlOwda(g)) pts.israeli += 3;                                                                // 20.37: Israel starts with 3 VPs
+  if (isAlOwda(g)) pts.israeli += ALO.israeli.vp;                                                                // 20.37: Israel starts with 3 VPs
   return { ...pts, net: pts.syrian - pts.israeli };
 }
 const finalResult = (g: Game, net: number) => isNafakh(g) ? nafakhResult(g) : (net === 0 ? 'Draw (0 net VP)' : `${net > 0 ? 'Syrian' : 'Israeli'} ${Math.abs(net) >= 3 ? 'Operational' : 'Marginal'} Victory (${Math.abs(net)} net VP)`);
@@ -329,6 +360,7 @@ function onPhase(g: Game, phase: string, when: 'start' | 'mid' | 'end') {
 }
 /** The Reinforcement Phase's Golan extras: the SAM barrier reduction (16.12) and the units released into the Arriving box. */
 function reinforce(g: Game, side: Side) {
+  if (side === 'israeli') alowdaDraw(g);
   if (side === 'syrian') {
     const sams = g.chits.filter((c) => c.kind === 'sam' && c.box === 'used'), rolls = sams.map(() => rollDie(g));
     if (rolls.some((r) => r >= 6)) { sams[0].box = 'eliminated'; samEliminated(g); say(g, `SAM reduction rolls ${rolls.join(', ')}: one SAM asset is eliminated (16.12)`, side); }
