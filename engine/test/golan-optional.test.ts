@@ -25,6 +25,12 @@ describe('Golan optional rules (18.x)', () => {
     const off = fire(false), on = fire(true);
     expect(on.at).toBe(off.at + 1); expect(on.tank).toBe(off.tank - 1);
   });
+  it('anti-tank assets in Al-Owda (its own sheet, A18.6): only a defending Syrian AT asset gets +1, and Israeli armour has no −1', () => {
+    const fire = (on: boolean, attacker?: string) => { const { g, b } = attack50({ atAssets: on }); g.opts.scenario = 'alowda'; give(g, 'SC02'); assign(g, b, 'SC02'); if (attacker) b.attacker = attacker; return { at: sn(g, b, 'syrian', 'ground', 'SC02')!, tank: sn(g, b, 'israeli', 'ground', 'I05')! }; };
+    const off = fire(false), on = fire(true);
+    expect(on.at).toBe(off.at + 1); expect(on.tank).toBe(off.tank);
+    expect(fire(true, 'syrian').at).toBe(fire(false, 'syrian').at);
+  });
   it('T-62 tanks: one extra MP on a field connection, roads unchanged', () => {
     const field = connections().find((c) => c.kind === 'field' && c.a < 100 && c.b < 100 && !c.atDitch && !c.river && !c.escarpment && !c.rugged && !c.wadi && !c.sector)!;
     const ctx = { turn: 5, units: () => ({ israeli: 0, syrian: 0 }) };
@@ -84,6 +90,18 @@ describe('Golan optional rules (18.x)', () => {
     const others = unitsIn(g, at, 'israeli').filter((u) => u !== ghost); for (const o of others) o.area = null;
     const from = neighbors(at)[0]; Object.assign(sy, { area: at, moved: true, spent: 0 }); VOLUMES.golan73.afterMove!(g, sy, { area: at, cost: 2, fuel: false, mustStop: true, path: [from, at] });
     expect(ghost.area).toBeNull(); expect(sy.moved).toBe(false); expect(sy.spent).toBe(2);
+  });
+  it('advanced ghosts overstack by one: at most three Israeli units, at most two regular and at most two ghosts', () => {
+    const g = newGolanGame(6), room = VOLUMES.golan73.stackRoom!;
+    const regs = g.units.filter((u) => u.side === 'israeli' && !u.garrison && !u.fort && !u.ghost).slice(0, 3), ghosts = g.units.filter((u) => u.ghost).slice(0, 3);
+    const a = 42, put = (us: typeof regs) => { for (const u of g.units) if (u.area === a && u.side === 'israeli') u.area = null; for (const u of us) u.area = a; };
+    put([regs[0], regs[1]]);
+    expect(room(g, ghosts[0], a)).toBeUndefined();                                                     // option off: the usual count
+    g.opts.advGhosts = true;
+    expect(room(g, ghosts[0], a)).toBe(true); expect(room(g, regs[2], a)).toBe(false);                   // two regulars: a ghost may join, a regular may not
+    put([regs[0], ghosts[0]]); expect(room(g, regs[1], a)).toBe(true); expect(room(g, ghosts[1], a)).toBe(true);
+    put([regs[0], regs[1], ghosts[0]]); expect(room(g, regs[2], a)).toBe(false); expect(room(g, ghosts[1], a)).toBe(false);
+    put([ghosts[0], ghosts[1]]); expect(room(g, regs[0], a)).toBe(true); expect(room(g, ghosts[2], a)).toBe(false);
   });
   it('commando raid modifier: −1 to the die east of the SAM barrier (a 3, partly successful, becomes a 2, a success)', () => {
     for (const on of [false, true]) {

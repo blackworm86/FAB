@@ -76,6 +76,8 @@ export interface Volume {
   vpHist?: (g: Game, v: Record<Side, number> & { net: number }) => number;
   /** How many blocks of one side an area holds (5.1: two; Golan's Assembly areas: any number). */
   stackLimit?: (g: Game, area: number) => number;
+  /** Whether unit `u` may end in area `a` under the stacking limit; undefined = the usual count against stackLimit. */
+  stackRoom?: (g: Game, u: Unit, area: number) => boolean | undefined;
   /** The entry areas a unit may be rerouted to or placed in when its own are blocked (14.2). */
   appropriate?: (g: Game, u: Unit) => number[];
   isNight?: (g: Game) => boolean;

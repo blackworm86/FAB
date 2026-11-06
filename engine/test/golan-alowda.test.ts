@@ -4,7 +4,9 @@ import { endPhase, victory, golan, type Game } from '../src';
 import { newGolanGame, unit, chit, playOut, runTo } from './golan-helpers';
 
 const alowda = (seed = 4): Game => newGolanGame(seed, 'alowda' as 'badr');
-const placeAll = (g: Game) => { golan.autoStrongpoints(g, 'historical'); for (const u of g.units.filter((x) => x.box === 'deploy')) golan.deploy(g, u.id, golan.deployOptions(g, u.id)[0]); golan.autoMinefields(g); golan.autoReserves(g); };
+const placeAll = (g: Game) => { golan.autoStrongpoints(g, 'historical'); for (const u of g.units.filter((x) => x.box === 'deploy')) golan.deploy(g, u.id, golan.deployOptions(g, u.id)[0]); golan.autoMinefields(g); golan.autoReserves(g); land(g); };
+/** 20.35: land both commandos, each in the first area allowed. */
+const land = (g: Game) => { for (const c of golan.alowdaCommandos(g)) golan.alowdaRaid(g, c.id, golan.alowdaRaidAreas(g)[0]); };
 
 describe('Operation Al-Owda (20.3)', () => {
   it('sets up from the cards: six turns, Mt Hermon Syrian, sixteen Syrian units to place, the cards\' garrisons', () => {
@@ -56,6 +58,8 @@ describe('Operation Al-Owda (20.3)', () => {
     golan.deployReserve(g, 'I05'); expect(golan.reservesLeft(g, 'israeli')).toBe(3);
     golan.autoReserves(g); expect(golan.reservesLeft(g, 'israeli')).toBe(0); expect(golan.reservesLeft(g, 'syrian')).toBe(0);
     expect(g.units.filter((u) => u.reserve && u.side === 'israeli')).toHaveLength(4); expect(g.units.filter((u) => u.reserve && u.side === 'syrian')).toHaveLength(2);
+    expect(() => endPhase(g)).toThrow(/commandos/);                                                    // 20.35: both commandos must land
+    land(g); expect(golan.alowdaCommandos(g)).toHaveLength(0);
     endPhase(g); expect(g.phase).toBe('movement'); expect(g.phasing).toBe('syrian');
   });
   it('the Al-Owda Turn Track: draws 0/0 on turn 1, then 8/2, 7/2, 6/2, 6/2, 6/2 for Syria and 2/4, 4/5, 5/7, 5/8, 5/9 for Israel; no sudden death', () => {

@@ -248,7 +248,7 @@ function alowdaDraw(g: Game) {
   }
   if (n) say(g, `Reinforcements Draw Cup: ${got.join(', ')} (20.36)`, 'israeli');
 }
-/** 20.35: while setting up, Syria lands up to two commandos in vacant Israeli-held areas east of the Jordan, not on Mt Hermon or Ma'agan. */
+/** 20.35: while setting up, Syria lands its two commandos in vacant Israeli-held areas east of the Jordan, not on Mt Hermon or Ma'agan. */
 /** The two commandos the card lands at the start, still to place. */
 export const alowdaCommandos = (g: Game) => (isAlOwda(g) && g.phase === 'deploy' ? g.chits.filter((c) => ALO.syrian.commando_landing.includes(c.id) && c.box === 'available') : []);
 export const alowdaRaidAreas = (g: Game) => (isAlOwda(g) && g.phase === 'deploy' && alowdaCommandos(g).length > 0
@@ -271,7 +271,8 @@ function moveCtx(g: Game): GMoveCtx {
 const asMover = (g: Game, u: Unit, one: boolean): GMoveUnit => ({ slowField: !!g.opts.t62 && T62.has(u.id), side: u.side as GSide, cls: u.cls, area: u.area!, supplied: !u.unsupplied, disordered: u.disorder > 0, adjacentOnly: one || !!u.adjOnly, spent: u.spent, minefieldFailed: state(g).minefieldFailed.includes(u.id) });
 function golanReach(g: Game, u: Unit, one: boolean): Opt[] {
   if (isNafakh(g) && u.id === 'S03' && !state(g).nafakh?.s03Free) return [];                       // 22.46: the 33rd holds Tel Fazra
-  let r = u.ghost ? ghostReach(g, u, one) : reachable(asMover(g, u, one), moveCtx(g));
+  const ctx = { ...moveCtx(g), room: g.opts.advGhosts ? (a: number) => ghostRoom(g, u, a) : undefined };
+  let r = u.ghost ? ghostReach(g, u, one, ctx) : reachable(asMover(g, u, one), ctx);
   if (state(g).kingHassan && u.id === 'S07') r = r.filter((x) => x.path.slice(1).every((a) => isAssembly(a) || g.control[a] !== 'israeli'));   // 17.24: the Moroccans keep out of Israeli-controlled areas
   return r.map((x) => ({ area: x.area, cost: x.cost, fuel: false, mustStop: x.mustStop, path: x.path, triggers: x.triggers, limited: x.limited }));
 }
@@ -384,6 +385,7 @@ function onPhase(g: Game, phase: string, when: 'start' | 'mid' | 'end') {
   if (phase === 'deploy' && when === 'end' && g.units.some((u) => u.box === 'deploy')) throw new Error('place every unit first');
   if (phase === 'deploy' && when === 'end' && V.minesLeft) throw new Error(`place the Israeli minefields first (${V.minesLeft} left, 14.02)`);
   if (phase === 'deploy' && when === 'end') for (const sd of sidesOf(g)) if (setupReserves(g, sd).all && reservesLeft(g, sd)) throw new Error(`place the ${sd === 'israeli' ? 'Israeli' : 'Syrian'} reserve markers first (${reservesLeft(g, sd)} left)`);
+  if (phase === 'deploy' && when === 'end' && alowdaRaidAreas(g).length) throw new Error(`land the Syrian commandos first (${alowdaCommandos(g).length} left, 20.35)`);
   if (phase === 'admin' && when === 'end') V.intel = undefined;
   if (phase === 'supply' && when === 'mid' && g.phasing === 'israeli') {                              // 16.31b: interdiction lasts to the second player's Supply Phase
     g.interdicted = {};
@@ -500,7 +502,7 @@ function afterFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground') {
 
 /* ================= additional optional rules (the Battle for Nafakh and Al-Owda scenario sheets, 18.x) ================= */
 export const GOLAN_OPTIONAL: OptionalRule[] = [
-  { key: 'atAssets', rule: '18.6', name: 'Anti-tank assets', text: 'Syrian AT assets fire +1 when the enemy point unit is armour. When Syria defends with an AT asset assigned, Israeli armour fires −1.' },
+  { key: 'atAssets', rule: '18.6', name: 'Anti-tank assets', text: 'Syrian AT assets fire +1 when the enemy point unit is armour. When Syria defends with an AT asset assigned, Israeli armour fires −1. In Al-Owda (its own sheet): only a defending Syrian AT asset gets the +1, and there is no −1.' },
   { key: 't62', rule: '18.7', name: 'Syrian T-62 tanks', text: 'The 65th, 76th, 81st, 91st and Assad armoured units pay one extra MP to cross a field connection.' },
   { key: 'artyArmor', rule: '18.8', name: 'Artillery vs armour', text: 'Armour takes a recovery marker instead of a step loss from artillery; each marker is −1 in ground fire. After the battle one marker stays (the unit is recovering) until the Supply Phase.' },
   { key: 'zvikaCup', rule: '18.9', name: 'Lt. Zvika variant', text: 'In the Supply Phase Israel may take Lt. Zvika back off the map into the Selection Cup, to play him again when drawn.' },
@@ -518,8 +520,9 @@ function optionalFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground', l
   const o = g.opts, B = battleState(b), enemyPoint = pointOf(g, b, other(side));
   if (o.chemical && kind === 'arty' && B.chem) for (const f of list) if (f.key === B.chem) bump(f, 2, 'chemical warfare');
   if (kind !== 'ground') return;
-  if (o.atAssets && side === 'syrian' && enemyPoint?.cls === 'armor') for (const f of list) if (f.isAsset && b.assets.syrian.includes(f.key) && isAT(chit(g, f.key))) bump(f, 1, 'AT asset vs armour (18.6)');
-  if (o.atAssets && side === 'israeli' && b.attacker === 'israeli' && b.assets.syrian.some((id) => isAT(chit(g, id)))) for (const f of list) { const u = g.units.find((x) => x.id === f.key); if (u?.cls === 'armor' && !f.isAsset) bump(f, -1, 'Syrian AT defence (18.6)'); }
+  const atNarrow = isAlOwda(g);                                                                       // A18.6: in Al-Owda only a defending Syrian AT asset gets +1, and no −1; N18.6 elsewhere
+  if (o.atAssets && side === 'syrian' && enemyPoint?.cls === 'armor' && (!atNarrow || b.attacker === 'israeli')) for (const f of list) if (f.isAsset && b.assets.syrian.includes(f.key) && isAT(chit(g, f.key))) bump(f, 1, 'AT asset vs armour (18.6)');
+  if (o.atAssets && !atNarrow && side === 'israeli' && b.attacker === 'israeli' && b.assets.syrian.some((id) => isAT(chit(g, id)))) for (const f of list) { const u = g.units.find((x) => x.id === f.key); if (u?.cls === 'armor' && !f.isAsset) bump(f, -1, 'Syrian AT defence (18.6)'); }
   if (o.artyArmor) for (const f of list) { const u = g.units.find((x) => x.id === f.key); if (u?.rec) bump(f, -u.rec, `${u.rec} recovery marker${u.rec > 1 ? 's' : ''}`); }
   if (o.flank && B.flank && side === b.attacker) for (const f of list) if (f.key === B.flank) bump(f, 1, 'flanking (18.8)');
 }
@@ -569,10 +572,18 @@ export function zvikaToCup(g: Game) {
 }
 export const zvikaOnMap = (g: Game) => (g.opts.zvikaCup && g.phase === 'supply' ? g.units.find((u) => u.area != null && u.chitId && chit(g, u.chitId).kind === 'event_lt_zvika') : undefined);
 /** Advanced ghosts: the best of an armour and an infantry move, never into an area that would become contested. */
-function ghostReach(g: Game, u: Unit, one: boolean) {
+function ghostReach(g: Game, u: Unit, one: boolean, ctx: GMoveCtx) {
   const all = new Map<number, ReturnType<typeof reachable>[number]>();
-  for (const cls of ['armor', 'infantry'] as const) for (const r of reachable({ ...asMover(g, u, one), cls }, moveCtx(g))) { const o = all.get(r.area); if (!o || r.cost < o.cost) all.set(r.area, r); }
+  for (const cls of ['armor', 'infantry'] as const) for (const r of reachable({ ...asMover(g, u, one), cls }, ctx)) { const o = all.get(r.area); if (!o || r.cost < o.cost) all.set(r.area, r); }
   return [...all.values()].filter((r) => !(unitsIn(g, r.area, 'syrian').length && !contested(g, r.area)));
+}
+/** Advanced ghosts (A 18.10): a ghost may overstack by one, so an area holds at most three Israeli units, of which at most two
+ *  are regular (non-ghost) and at most two are ghosts. Without the option, the usual two-unit count. */
+function ghostRoom(g: Game, u: Unit, a: number) {
+  if (isAssembly(a)) return true;
+  const here = unitsIn(g, a, u.side).filter((x) => !x.garrison && x.id !== u.id), gh = here.filter((x) => x.ghost).length;
+  if (here.length >= 3) return false;
+  return u.ghost ? gh < 2 : here.length - gh < 2 && (here.length < 2 || gh > 0);
 }
 /** Advanced ghosts: a Syrian unit entering an area held only by ghosts reveals and removes them, and may go on with what MP it has left. */
 function ghostsMet(g: Game, u: Unit, to: number, cost: number) {
@@ -933,5 +944,5 @@ registerHooks('golan73', {
   successNumber: golanSuccessNumber, adjustFire, canAssign, moraleSn: golanMoraleSn, retreatOk, retreatPrefer, onRetreat,
   sources, supplyStep, supplyFree: (_g, _s, a) => isAssembly(a) || a === HERMON, alwaysSupplied: (_g, u) => !!u.ghost || u.id === 'S17',
   victory: golanVictory, finalResult, onPhase, onBattle, freeBattle, assault, reinforce, afterDraw: (g) => { nafakhStaff(g); const d = g.chits.find((c) => c.kind === 'event_dugman5' && c.box === 'available'); if (d) resolveDugman(g, d); },
-  afterDeploy, onUnassign, keepAssigned, optional: GOLAN_OPTIONAL, absorbLoss, lossOk, recoverOk, ghostsMove: (g) => !!g.opts.advGhosts, reinforceOk: (g, b, u) => reinforceOptions(g, b).includes(u.id), stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2), appropriate: (g, u) => (isNafakh(g) ? (u.side === 'israeli' ? [NAF_NORTH] : [REAR, NAF.sheet.entry.Z]) : u.side === 'israeli' ? [ASSEMBLY.A, ASSEMBLY.B] : Object.values(ENTRY)), isNight, onAssign, beforeBegin, beforeFire, afterFire,
+  afterDeploy, onUnassign, keepAssigned, optional: GOLAN_OPTIONAL, absorbLoss, lossOk, recoverOk, ghostsMove: (g) => !!g.opts.advGhosts, reinforceOk: (g, b, u) => reinforceOptions(g, b).includes(u.id), stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2), stackRoom: (g, u, a) => (g.opts.advGhosts && u.side === 'israeli' ? ghostRoom(g, u, a) : undefined), appropriate: (g, u) => (isNafakh(g) ? (u.side === 'israeli' ? [NAF_NORTH] : [REAR, NAF.sheet.entry.Z]) : u.side === 'israeli' ? [ASSEMBLY.A, ASSEMBLY.B] : Object.values(ENTRY)), isNight, onAssign, beforeBegin, beforeFire, afterFire,
 } as Partial<Volume>);

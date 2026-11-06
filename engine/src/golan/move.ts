@@ -25,6 +25,7 @@ export interface GMoveCtx {
   interdicted?: (a: number) => GSide | undefined;                  // owner of an interdiction air mission in the area (16.31b)
   raids?: Set<number>;                                             // Syrian commando raid areas (16.11a)
   roadblocks?: Map<number, GSide>;                                 // roadblock owner (4.34)
+  room?: (a: number) => boolean;                                    // may the mover end here under the stacking limit (default: fewer than two friendly units)
 }
 export type Trigger = 'minefield' | 'raid';
 export interface GReach { area: number; cost: number; path: number[]; mustStop: boolean; canEnd: boolean; triggers: Trigger[]; limited: string[] }
@@ -120,7 +121,7 @@ export function reachable(u: GMoveUnit, ctx: GMoveCtx): GReach[] {
       const old = best.get(to);
       if (old && old.cost <= cost) continue;
       const friendly = ctx.units(to)[u.side];
-      best.set(to, { area: to, cost, path: [...cur.path, to], mustStop: !!s.stop, canEnd: friendly < 2 && !isAssembly(to),
+      best.set(to, { area: to, cost, path: [...cur.path, to], mustStop: !!s.stop, canEnd: (ctx.room ? ctx.room(to) : friendly < 2) && !isAssembly(to),
         triggers: s.trigger ? [...cur.triggers, s.trigger] : cur.triggers, limited: s.limited ? [...cur.limited, s.limited] : cur.limited, left: true });
       todo.push(to);
     }

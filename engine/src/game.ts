@@ -113,6 +113,8 @@ const APPROPRIATE: Record<string, string> = { de_5pz: 'XYZ', de_6pz: 'YZ', de_7a
 const appropriateAreas = (u: Unit, g?: Game) => (g && CUR.appropriate ? CUR.appropriate(g, u) : [...(APPROPRIATE[u.ech ?? ''] ?? '')].map((l) => ENTRY[l]?.area).filter((a): a is number => a != null && (!g?.inPlay || g.inPlay.includes(a))));
 /** 5.1: two blocks of a side per area, unless the volume says otherwise (Golan's Assembly areas hold any number). */
 const stackMax = (g: Game, a: number) => CUR.stackLimit?.(g, a) ?? 2;
+/** Room for unit `u` to end in area `a` (5.1); a volume may count some units differently (Golan's advanced ghosts overstack by one). */
+const roomFor = (g: Game, u: Unit, a: number) => CUR.stackRoom?.(g, u, a) ?? blocks(g, a, u.side).filter((x) => x.id !== u.id).length < stackMax(g, a);
 /** The two sides of a game, First Player first (an older saved Bulge game has none). */
 export const sidesOf = (g: { sides?: [Side, Side] }): [Side, Side] => g.sides ?? CUR.sides;
 export const other = (s: Side): Side => (s === CUR.sides[0] ? CUR.sides[1] : CUR.sides[0]);
@@ -418,7 +420,7 @@ export function moveOptions(g: Game, id: string): Opt[] {
   if (one) r = r.filter((x) => !g.blown.includes(keyOf(x.path[0], x.path[1])));                        // 7.31 no crossing of a blown bridge
   return r.filter((x) => {
     if (CUR.moveOk && !CUR.moveOk(g, u, x.area)) return false;
-    if (blocks(g, x.area, u.side).length >= stackMax(g, x.area)) return false;                        // 5.1
+    if (!roomFor(g, u, x.area)) return false;                                                          // 5.1
     const en = unitsIn(g, x.area, enemy).length > 0, cont = contested(g, x.area);
     if (g.phase === 'reaction' && en && !cont) return false;                                           // 7.2: reaction never creates a newly contested area
     const last = connection(x.path[x.path.length - 2], x.area)!;
@@ -504,7 +506,7 @@ export function stratOptions(g: Game, id: string): number[] {
     seen.add(n); if (step !== 'end') q.push(n);                                                   // 'end': reachable, but not a way through (The Bulge: an interdicted area)
   } }
   seen.delete(u.area);
-  return [...seen].filter((a) => (!CUR.moveOk || CUR.moveOk(g, u, a)) && blocks(g, a, u.side).length < stackMax(g, a) && inSupply(g, u.side, a));
+  return [...seen].filter((a) => (!CUR.moveOk || CUR.moveOk(g, u, a)) && roomFor(g, u, a) && inSupply(g, u.side, a));
 }
 /** The Bulge: one German strat-move per phase and it costs fuel (16.13); never across the restricted boundary; not through an interdicted area (17.2). */
 const bulgeStratAllowed = (g: Game, u: Unit) => !(u.side === 'german' && (g.stratMoves >= 1 || (g.opts.fuel && !fuelChits(g).length)));
@@ -971,7 +973,7 @@ export function retreatOptions(g: Game, b: Battle): number[] {
   setPlayArea(g.inPlay);
   const r = b.retreat; if (!r) return [];
   const u = g.units.find((x) => x.id === r.queue[0]);                                        // the unit retreating now
-  const opts = neighbors(b.area).filter((n) => g.control[n] === r.side && !unitsIn(g, n, other(r.side)).length && blocks(g, n, r.side).length < stackMax(g, n) && (!u || !CUR.retreatOk || CUR.retreatOk(g, u, b.area, n)));
+  const opts = neighbors(b.area).filter((n) => g.control[n] === r.side && !unitsIn(g, n, other(r.side)).length && (u ? roomFor(g, u, n) : blocks(g, n, r.side).length < stackMax(g, n)) && (!u || !CUR.retreatOk || CUR.retreatOk(g, u, b.area, n)));
   return u && CUR.retreatPrefer ? CUR.retreatPrefer(g, u, b.area, opts) : opts;
 }
 /** 14.1: armor never crosses the restricted boundary (Schnee Eifel), not even to retreat. */
@@ -1047,7 +1049,7 @@ export function defenderRetreatSA(g: Game, b: Battle, chitId?: string) {
 export function defenderReinforceSA(g: Game, b: Battle, unitId: string, chitId?: string) {
   if (b.stage !== 'setup') throw new Error('only before the first roll'); const def = other(b.attacker), u = g.units.find((x) => x.id === unitId)!;
   if (unitsIn(g, b.area, def).some((x) => x.id.startsWith('DR-'))) throw new Error('a defended roadblock may not be reinforced (4.35)');
-  if (u.side !== def || u.area == null || !neighbors(b.area).includes(u.area) || contested(g, u.area) || u.disorder || u.garrison || u.fort || u.ghost || blocks(g, b.area, def).length >= stackMax(g, b.area)) throw new Error('not a legal reinforcement');
+  if (u.side !== def || u.area == null || !neighbors(b.area).includes(u.area) || contested(g, u.area) || u.disorder || u.garrison || u.fort || u.ghost || !roomFor(g, u, b.area)) throw new Error('not a legal reinforcement');
   if (CUR.reinforceOk && !CUR.reinforceOk(g, b, u)) throw new Error('not a legal reinforcement here (8.23)');
   spendSA(g, def, u.ech, 'reinforce a battle', chitId); b.locked = true; clearInterdict(g, u); const from = u.area; u.area = b.area; u.from = from; updateControl(g, from); say(g, `${u.name} reinforces ${areas.get(b.area)!.name}`);
 }
@@ -1257,7 +1259,7 @@ export function playAirSupply(g: Game, id: string, area: number) {
 /** 8.27 Reroute a reinforcing unit (Reinforcement Phase, one Special Action). */
 export function rerouteOptions(g: Game, unitId: string): number[] {
   const u = g.units.find((x) => x.id === unitId); if (!u || g.phase !== 'reinforcement' || !g.arrived.includes(u.id) || u.area == null || !saAvailable(g, u.side, u.ech).length) return [];
-  return [...new Set(appropriateAreas(u, g))].filter((a) => a !== u.area && (g.control[a] === u.side || !unitsIn(g, a).length) && blocks(g, a, u.side).length < stackMax(g, a) && !unitsIn(g, a, other(u.side)).length);
+  return [...new Set(appropriateAreas(u, g))].filter((a) => a !== u.area && (g.control[a] === u.side || !unitsIn(g, a).length) && roomFor(g, u, a) && !unitsIn(g, a, other(u.side)).length);
 }
 export function reroute(g: Game, unitId: string, area: number, chitId?: string) {
   if (!rerouteOptions(g, unitId).includes(area)) throw new Error('not a legal entry area');
@@ -1268,7 +1270,7 @@ export function reroute(g: Game, unitId: string, area: number, chitId?: string) 
 /* ================= arrivals (4.1c) ================= */
 const listedEntries = (u: Unit) => (u.entry ?? []).map((l) => (l.startsWith('#') ? +l.slice(1) : CUR.entries[l]?.area)).filter(Boolean) as number[];
 const stackFree = (g: Game, u: Unit, a: number) => CUR.id === 'bulge' && g.turn === 4 && u.side === 'german' && a === ENTRY.Z.area;                // 15.3
-const entryOpen = (g: Game, u: Unit, a: number) => (!g.inPlay || g.inPlay.includes(a)) && (g.control[a] === u.side || !unitsIn(g, a).length) && (blocks(g, a, u.side).length < stackMax(g, a) || stackFree(g, u, a)) && !unitsIn(g, a, other(u.side)).length;
+const entryOpen = (g: Game, u: Unit, a: number) => (!g.inPlay || g.inPlay.includes(a)) && (g.control[a] === u.side || !unitsIn(g, a).length) && (roomFor(g, u, a) || stackFree(g, u, a)) && !unitsIn(g, a, other(u.side)).length;
 /** Entry areas a block that has not arrived yet may be placed in. Areas outside its listed ones cost a Special Action (8.27). */
 export function arrivalOptions(g: Game, id: string): { area: number; sa: boolean }[] {
   const u = g.units.find((x) => x.id === id); if (!u || !g.pendingArrivals.includes(id)) return [];
@@ -1282,7 +1284,7 @@ export function placeArrival(g: Game, id: string, area: number, chitId?: string)
   u.area = area; g.control[area] = u.side; g.arrived.push(id); g.pendingArrivals = g.pendingArrivals.filter((x) => x !== id); say(g, `${u.name} arrives in ${areas.get(area)!.name}`, u.side);
 }
 function autoArrive(g: Game, id: string) {
-  const u = g.units.find((x) => x.id === id)!, opts = listedEntries(u), to = opts.find((a) => g.control[a] === u.side && (blocks(g, a, u.side).length < stackMax(g, a) || stackFree(g, u, a))) ?? opts.find((a) => !unitsIn(g, a).length);
+  const u = g.units.find((x) => x.id === id)!, opts = listedEntries(u), to = opts.find((a) => g.control[a] === u.side && (roomFor(g, u, a) || stackFree(g, u, a))) ?? opts.find((a) => !unitsIn(g, a).length);
   g.pendingArrivals = g.pendingArrivals.filter((x) => x !== id);
   if (to == null) { u.arrival = g.turn + 1; u.delayed = true; say(g, `${u.name} delayed one turn (entry blocked)`); return; }
   u.area = to; g.control[to] = u.side; g.arrived.push(id); say(g, `${u.name} arrives in ${areas.get(to)!.name}`, u.side);

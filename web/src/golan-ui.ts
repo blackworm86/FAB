@@ -154,7 +154,7 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
   if (G.isAlOwda(g) && g.phase === 'deploy') {
     const at = G.alowdaRaidAreas(g), cmd = G.alowdaCommandos(g);
     const land = at.length && cmd.length && ctx.mine('syrian');
-    out.push(`<div class="volpanel">${land ? `<b>${ctx.ico('air_mission')} Commando landings (20.35)</b><span>Land the ${esc(cmd.map((c) => c.name).join(' and '))} in vacant Israeli-held areas east of the Jordan (not Mt Hermon or Ma'agan), or skip them.</span><div class="row">${ctx.ubtn('Choose a landing area', () => ctx.pickArea(`Land the ${cmd[0]?.name ?? 'commandos'}`, at, (a) => G.alowdaRaid(live(), cmd[0].id, a)), 'primary')}</div>` : ''}</div>`);
+    out.push(`<div class="volpanel">${land ? `<b>${ctx.ico('air_mission')} Commando landings (20.35)</b><span>Land the ${esc(cmd.map((c) => c.name).join(' and '))} in vacant Israeli-held areas east of the Jordan (not Mt Hermon or Ma'agan). Both must land before the set-up ends.</span><div class="row">${ctx.ubtn('Choose a landing area', () => ctx.pickArea(`Land the ${cmd[0]?.name ?? 'commandos'}`, at, (a) => G.alowdaRaid(live(), cmd[0].id, a)), 'primary')}</div>` : ''}</div>`);
   }
   if (!b && g.phase === 'combat' && ctx.mine('syrian')) {
     const aa = G.airAssaultTargets(g);
