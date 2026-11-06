@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { newGame, startBattle, mustFight, useGame, golan, type Game } from '../src';
+import { newGame, startBattle, mustFight, useGame, golan, setPlayArea, inPlay, type Game } from '../src';
 import { attackerChoice, defenderChoice, chooseFirstLoss, chooseRetreat, retreatOptions, declineExploit, autoRecover, endPhase, visibleTo } from '../src';
 import { toPublic, compose, secretsOf, revealsIn, freshReveals, isPlaceholder, setReady, type Priv } from '../src';
 describe('split hidden blocks (no server)', () => {
@@ -161,5 +161,9 @@ describe('withdrawing a reveal is not a move', () => {
     const back = compose(pub, { salt: 'salt-i', secrets: secretsOf(g, 'israeli') }, {}).game;
     expect(back.units.find((u) => u.id === ghost.id)!.ghost).toBe(true); expect(back.units.find((u) => u.id === fort.id)!.fort).toBe(fort.fort);
     useGame('bulge');
+  });
+  it('switching volume clears the area of play (a Nuts! sheet must not carry over to another map)', () => {
+    useGame('bulge'); newGame(1, { scenario: 'intro' }); setPlayArea([1, 2, 3]); expect(inPlay(40)).toBe(false);
+    useGame('golan73'); expect(inPlay(40)).toBe(true); useGame('bulge');
   });
 });
