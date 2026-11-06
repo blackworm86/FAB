@@ -128,6 +128,10 @@ def build(game):
                 if part.get('prefix'): s['ref'] = s['id']; s['id'] = part['prefix'] + s['id']
             got = correct(got, fixes.get(part.get('pdf') or part.get('md'), []))
             secs += got
+        for x in secs:                                                                  # rules this game plays by a later series edition (corrections.json "updates")
+            u = fixes.get('updates', {}).get(game, {}).get(x['id'])
+            if u and u.get('note') and b['id'] == u.get('book'): x['paras'] = x['paras'] + ['_Note: ' + u['note'] + '_']
+            if u and 'paras' in u and b['id'] == 'series': x['paras'] = u['paras'] + ["_Updated to the 2016 series rules (Golan '73 Rule Book), which this game follows. The Bulge Rule Book read:_"] + ['_' + w + '_' for w in u['was']]
         books.append(dict(id=b['id'], title=b['title'], sub=b['sub'], sections=secs))
     pdf, a, z = INDEXES[game]
     ids = {sec['id'] for bk in books for sec in bk['sections']}

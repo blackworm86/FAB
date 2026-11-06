@@ -47,7 +47,7 @@ const L_BLOCKS: Lesson = { id: 'blocks', topic: 'Reading a block', chapter: CH1,
     figure: (g) => strengths([4, 3, 2, 1].map((s) => bulgeBlock(g, '2 Pz', s)), bulgeWood(g, '2 Pz')) },
   tapUnit('2 Pz', 'Tap a block', '<b>Tap the 2nd Panzer in Marnach.</b> Its panel opens: name, steps and quality, what it can do now. The areas it can move to light up.', { rule: '5.3 Movement' }),
   { title: 'Status markers', text: `Small tags float above blocks that are in trouble:
-    <ul><li><b>DIS</b> disordered: it absorbed a hit by falling back. It fights worse and may not build works. It recovers at the start of its own next turn.</li><li><b>OOS</b> out of supply: it failed to trace a line to its entry areas.</li><li><b>E</b> exploitation, <b>R</b> reserve: it may move again in Breakthrough.</li></ul>`, rule: '2.3 Unit status' },
+    <ul><li><b>DIS</b> disordered: it absorbed a hit by falling back. It fights worse, moves only one area and never into an area with enemy blocks, and may not attack or build works. It recovers at the start of its own next turn.</li><li><b>OOS</b> out of supply: it failed to trace a line to its entry areas.</li><li><b>E</b> exploitation, <b>R</b> reserve: it may move again in Breakthrough.</li></ul>`, rule: '2.3 Unit status' },
   { title: 'Garrisons', text: 'Some towns start with a <b>garrison</b>: a flat chit standing in the area. Alone, it defends like a roadblock; with blocks beside it, it adds to their fight.', rule: '15.2 Garrisons', figure: () => pieces([{ svg: bulgeGarrison('St. Vith'), cap: 'The St. Vith garrison' }]) },
   recap(['Pips on the top edge are the steps; a hit turns the block one quarter.', 'Pip colour is quality: red elite, black veteran, white green.', 'Oval armour, X infantry, both mechanised.', 'Your opponent sees only the colour of your blocks until a battle.']),
 ] };
@@ -260,9 +260,9 @@ const L_BREAK: Lesson = { id: 'breakthrough', topic: 'Reaction and Breakthrough'
 ] };
 
 const L_SUPPLY: Lesson = { id: 'supply', topic: 'Supply', chapter: CH2, ref: '23.8', goal: 'Tracing a supply line, and what happens when it breaks', minutes: 5, side: 'german', setup: () => {
-  const g = bulgeTable(3, 'german', 'btCombat', { Peiper: 51, '18 VG': 34, 'CCB/9': 34, '1SS(-)': 33, '3 FJ': 25, '62 VG': 24, '1 Inf': 53 });
-  for (const a of [5, 6, 10, 23, 24, 25, 33, 51, 52]) g.control[a] = 'german';
-  for (const a of [34, 50, 35, 53]) g.control[a] = 'allied';
+  const g = bulgeTable(3, 'german', 'btCombat', { Peiper: 51, '18 VG': 34, 'CCB/9': 34, '1SS(-)': 33, '3 FJ': 25, '62 VG': 24, '1 Inf': 52 });                                    // the Play Book has the 1st Infantry in Aywaille; under the 2016 series rules (9.31) it must hold Stoumont to cut Peiper off
+  for (const a of [5, 6, 10, 23, 24, 25, 33, 51]) g.control[a] = 'german';
+  for (const a of [34, 50, 35, 52, 53]) g.control[a] = 'allied';
   g.blown = [E.keyOf(34, 24), E.keyOf(34, 33), E.keyOf(25, 23)];
   const eng = C(g, 'L88.0'); eng.box = 'map';
   g.units.push({ id: 'DR-L88.0', name: '168th (defended roadblock)', side: 'allied', cls: 'infantry', q: ['green'], max: 1, str: 1, area: 50, garrison: true, disorder: 0, unsupplied: false, moved: true, reserve: null, exploit: false, ech: eng.ech, chitId: 'L88.0' });
@@ -270,15 +270,15 @@ const L_SUPPLY: Lesson = { id: 'supply', topic: 'Supply', chapter: CH2, ref: '23
   E.endPhase(g); g.log = []; return g;
 }, steps: [
   situation('The Supply step', `Turn 3. <b>KG Peiper</b> raced to Werbomont, counting on the 18th VG to clear Trois Ponts behind him. The 18th failed.
-    <p>In the Supply step each of your blocks must trace a <b>line</b> back to one of your entry areas: through areas you control, not over a blown bridge, not into or next to an area where enemy blocks stand uncontested.</p>`, { look: 51 }),
+    <p>In the Supply step each of your blocks must trace a <b>line</b> back to one of your entry areas: through areas you control (contested ones too), never into an area the enemy controls, and not over a blown bridge.</p>`, { look: 51 }),
   { title: 'The supply colours', text: '<b>Tap View.</b>', target: { el: '[data-tint]', label: 'View button' }, done: (_g, q) => q('.modal .chip[title^="Supply"]') },
   { title: 'Supply', text: '<b>Turn on Supply.</b> Your supplied areas stay light; cut-off ones turn red.', target: { el: '.modal .chip[title^="Supply"]', label: 'Supply chip' }, done: (_g, q) => q('.modal .chip.on[title^="Supply"]') },
   closeModal(),
-  tapUnit('1SS(-)', 'Malmedy', '<b>Tap the 1st SS in Malmedy.</b> Its panel shows the line: through Ligneuville back to Entry Area Z, no blown bridge, no enemy next to it.', { rule: '9.31 Supply paths' }),
+  tapUnit('1SS(-)', 'Malmedy', '<b>Tap the 1st SS in Malmedy.</b> Its panel shows the line: through Ligneuville back to Entry Area Z, no blown bridge, no enemy-held area on the way.', { rule: '9.31 Supply paths' }),
   tapUnit('62 VG', 'Vielsalm', '<b>Tap the 62nd VG.</b> It traces through St. Vith and Bucholz.'),
-  tapUnit('Peiper', 'Werbomont', '<b>Tap KG Peiper.</b> Stoumont is next to the 1st Infantry, Manhay holds the 168th Engineers\' roadblock, Trois Ponts is enemy-controlled: <b>cut off</b>. The panel says why.', { why: 'A line may run out of a contested area you do not control (9.31b), but never into an empty area next to an uncontested enemy block (9.31c).' }),
+  tapUnit('Peiper', 'Werbomont', '<b>Tap KG Peiper.</b> The 1st Infantry has retaken Stoumont, Manhay holds the 168th Engineers\' roadblock, Trois Ponts is enemy-controlled: every way out of Werbomont is held by the enemy. <b>Cut off</b>. The panel says why.', { why: 'A line may run out of a contested area you do not control (9.31b) and through contested areas you do control (9.31c), but never into or through an area the enemy controls.' }),
   { title: 'Supply checks', text: 'Each cut-off block rolls a <b>morale check</b> now; failing it, it loses a step. Until it is supplied again it moves one area at a time and gets no assets. <b>Tap Roll supply checks.</b>', rule: '9.4 Supply checks', target: { el: ['.c-bar.b .go', '.c-bar.b button'], text: 'Roll', label: 'Roll button' }, enter: (g) => queue(g, [9, 9, 9]), done: (g) => !g.supplyPending, act: (g) => E.rollSupply(g) },
-  recap(['A supply line runs to an entry area through friendly areas, not over blown bridges, never next to an uncontested enemy block.', 'Cut-off blocks check morale in their own Supply step and lose a step when they fail.', 'Turn the Supply view on before you move far ahead.']),
+  recap(['A supply line runs to an entry area through areas you control, contested or not, never through enemy-held ones or over blown bridges.', 'Cut-off blocks check morale in their own Supply step and lose a step when they fail.', 'Turn the Supply view on before you move far ahead.']),
 ] };
 
 const L_VICTORY: Lesson = { id: 'victory', topic: 'The Allied turn and victory', chapter: CH2, ref: '23.9–23.10', goal: 'The second player turn, the victory check, your first game', minutes: 3, side: 'german', setup: () => {

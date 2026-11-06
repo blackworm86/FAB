@@ -11,5 +11,44 @@
     "FAB: Bulge – Player Aid D": "Actions & Events",
     "Fast Action Battles: Golan": "Actions & Events",
     "Fast Action Battle Series – Getting Started": "Getting Started"
+  },
+  "updates": {
+    "bulge": {
+      "9.31": {
+        "paras": [
+          "Supply is checked for both players during each player’s Supply Phase. A unit’s or area’s supply status remains valid until the next Supply Phase. A supply path is traced from any given friendly unit or friendly-controlled area towards any valid supply source (14.9).",
+          "**a)** The supply path is traced through friendly-controlled areas, and it may only trace over a blown bridge if the tracing unit/area is adjacent to that blown bridge.",
+          "**b)** A supply path may be traced out of enemy-controlled areas, but never into or through them.",
+          "**c)** Supply may be traced into or through contested friendly-controlled areas."
+        ],
+        "was": [
+          "c) A supply path cannot pass through a vacant area that is adjacent to an enemy-controlled area with one or more uncontested enemy units.",
+          "d) Supply may always be traced into and through occupied friendly-controlled areas, regardless of enemy units."
+        ]
+      },
+      "9.33": {
+        "paras": [
+          "**a)** Units may only move one area during a Movement Phase, complying with rule 5.34 when appropriate.",
+          "**b)** Units may not build field works or be placed in reserve.",
+          "**c)** Units have a –1 Success Number modifier when firing and when making a morale check. These modifiers are cumulative when a unit is both unsupplied and disordered.",
+          "**d)** Disordered units (only) may not attack, nor may they enter an area containing enemy units/assets (they may remain in such an area if already there). They may defend with the Success Number modifier specified in (c) above."
+        ],
+        "was": [
+          "d) Disordered units (only) may not attack. They may defend with the Success Number modifier specified in (c) above."
+        ]
+      },
+      "9.35": {
+        "paras": [
+          "For all their disordered and recovering units that are able to trace a supply path (9.31), both players remove all recovering markers and then flip disordered markers over to the ‘recovering’ side."
+        ],
+        "was": [
+          "For all their disordered and recovering units that are able to trace a supply path (9.1), both players remove all recovering markers and then flip disordered markers over to the ‘recovering’ side."
+        ]
+      },
+      "23.8": {
+        "book": "examples",
+        "note": "Under the 2016 series rules that this game follows (9.31), a vacant friendly area next to enemy units no longer blocks a supply path. So in this example Stoumont [52] is open: the 18th VG may also trace through it, the 62nd VG case about Bleialf [11] no longer applies, and KG Peiper traces Werbomont [51] > Stoumont [52] > Malmedy [33] > Ligneuville [25] to Entry Area Z and is in supply. To cut him off, the Allies must control Stoumont (the tutorial's Supply lesson has the US 1st Infantry there)."
+      }
+    }
   }
 }

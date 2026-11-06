@@ -272,11 +272,9 @@ export const SCEN_NAME: Record<string, string> = { tournament: 'Tournament', cam
 const supN = (g: Game, a: number) => (g.supplyOnly ? allNeighbors(a).filter((n) => g.inPlay!.includes(n) || g.supplyOnly!.includes(n)) : neighbors(a));
 const bulgeSources = (g: Game, side: Side) => g.inPlay && g.opts.scenario === 'intro' ? new Set(g.inPlay.filter((a) => allNeighbors(a).some((n) => !g.inPlay!.includes(n)) || EDGE_INTRO.includes(a)))      // 24.36 any area at the edge of the play area
   : new Set(Object.values(CUR.entries).filter((e) => sideOf(e.side) === side && (!g.supplyOnly || g.inPlay!.includes(e.area) || g.supplyOnly.includes(e.area))).map((e) => e.area));
-/** The Bulge's supply path rules: never over a blown bridge except from the first area, and (Vol. 1 9.31c) not into a vacant area watched by uncontested enemy units. */
-function bulgeSupplyStep(g: Game, side: Side, a: number, n: number, first: boolean) {
-  const enemy = other(side);
-  const blocked = !unitsIn(g, n).length && supN(g, n).some((x) => g.control[x] === enemy && unitsIn(g, x, enemy).length && !unitsIn(g, x, side).length);
-  if (blocked && !unitsIn(g, n, side).length) return false;
+/** The Bulge's supply path step, by the latest series rules (Golan '73 rulebook, 9.31): through friendly-controlled areas (contested ones too, 9.31c),
+ *  never over a blown bridge except from the first area (9.31a). The Bulge's own book had a further 9.31c (no vacant area next to uncontested enemy units): dropped. */
+function bulgeSupplyStep(g: Game, _side: Side, a: number, n: number, first: boolean) {
   return !(g.blown.includes(keyOf(a, n)) && !first);
 }
 export function inSupply(g: Game, side: Side, start: number) {
@@ -423,6 +421,7 @@ export function moveOptions(g: Game, id: string): Opt[] {
   return r.filter((x) => {
     if (CUR.moveOk && !CUR.moveOk(g, u, x.area)) return false;
     if (!roomFor(g, u, x.area)) return false;                                                          // 5.1
+    if (u.disorder > 0 && unitsIn(g, x.area, enemy).length) return false;                              // 9.33d: a disordered unit may not enter an area with enemy units or assets
     const en = unitsIn(g, x.area, enemy).length > 0, cont = contested(g, x.area);
     if (g.phase === 'reaction' && en && !cont) return false;                                           // 7.2: reaction never creates a newly contested area
     const last = connection(x.path[x.path.length - 2], x.area)!;
@@ -1363,5 +1362,5 @@ export function supplyWhy(g: Game, side: Side, start: number): string {
   const enemy = other(side), held = neighbors(start).filter((n) => g.control[n] === enemy).map((n) => areas.get(n)!.name);
   const blown = neighbors(start).filter((n) => g.blown.includes(keyOf(start, n))).map((n) => areas.get(n)!.name);
   const parts = [held.length ? `held by the enemy: ${held.join(', ')}` : '', blown.length ? `blown bridge to ${blown.join(', ')}` : ''].filter(Boolean);
-  return parts.length ? `No friendly path to a supply source (${parts.join('; ')}).` : 'No friendly path to a supply source: the way out runs through enemy-held or enemy-watched areas.';
+  return parts.length ? `No friendly path to a supply source (${parts.join('; ')}).` : 'No friendly path to a supply source: every way out runs through enemy-held areas.';
 }
