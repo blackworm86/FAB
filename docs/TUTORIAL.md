@@ -1,86 +1,118 @@
-# Tutorial script (draft for review)
+# The tutorial
 
-An interactive tutorial built on the Play Book's Examples of Play (23.1–23.10). The examples are separate scenes ("the narrative is not continuous"), so the tutorial is a short chain of **lessons**, each loading its own position from the book, with the book's dice. A coach bubble says what to do and why; the target (button, block, area, card) glows; everything else is locked until the player does it. Each lesson ends with a one-line recap. The player can leave at any step and resume later.
+An interactive course for each volume, built on the Play Book's Examples of Play and woven into the digital interface.
+A coach card tells the player what is happening and what to do; a spotlight marks the one thing to tap; everything else is locked.
+Works offline, needs no account, and ends by opening a first real game.
 
-Notation: **[tap X]** = the player must do it; *(auto)* = the coach does it while explaining; **UI:** = an interface lesson woven in.
+Address: `?tutorial=<course id>` (the home page's *Learn to play* card and the in-game *Learn* buttons link there).
 
-## Lesson 0 · The table (1 min)
-1. Welcome. "This is The Bulge, December 1944. You play the Germans first." *(camera flies over the front)*
-2. **UI:** the top bar: steps of the turn (Prepare › Move › Fight › Breakthrough › Supply), turn and side. **[tap the step names]** to see what each does.
-3. **UI:** the VP strip under it. **[tap it]** → VP sheet opens; close it.
-4. **UI:** View: map layers (TDN, VP, names). **[tap View]**, turn on Terrain defence, close.
-5. **UI:** the ⓘ button: short or full explanations. Keep full for the tutorial.
+## Courses
 
-## Lesson 1 · Reinforcement (23.1)
-Position: start of Turn 2, German Available/Used boxes as in Figure 1.
-1. "Each turn starts by managing your resources." **UI:** the Pieces window. **[tap Pieces]** → Boxes: Available, Used, Cup.
-2. Artillery attrition (16.12): **[pick the 408th]** to eliminate.
-3. *(auto)* the Used Box goes back to the cup; the Special Action block and Turn 2 chits arrive. Recap.
-4. Allied side, shown *(auto)*: Task Force placed in Houffalize [36]; 10th Arm, 7th Arm, 1st Inf (1 step) arrive. **UI:** the arrival tray: **[drag the 7th Arm]** onto lit entry area B.
+| Course id | Volume | For whom | Lessons |
+| --- | --- | --- | --- |
+| `bulge` | The Bulge | a first game of the series | 13, about 65 min |
+| `golan73` | Golan '73 | a first game, on the Golan | 18, about 95 min |
+| `golan73-new` | Golan '73 | players who know The Bulge: "what's new?" | 16, about 85 min |
 
-## Lesson 2 · Admin: chits (23.2)
-Position: Turn 2, German draws 9 (book result).
-1. **UI:** the hand. "Glowing cards can be played now." **[tap Greif Team Bridge]** → chit bar opens; ⓘ shows the rule.
-2. **[tap the Marnach–Lullange border]** to place it.
-3. **[tap Non-Elite Infantry Replacement]** → **[tap 12 VG]** in Udenbreth: it gains a step.
-4. Allied side *(auto)*: Delayed Response; engineers 35th and 168th blow four bridges around Ligneuville and Vielsalm. Blown-bridge markers appear.
-5. **UI:** End prepare / Done between the two players.
+Sicily will get the same pair (`sicily`, `sicily-new`) once its engine module exists.
 
-## Lesson 3 · Movement (23.3, Figures 4–6)
-Position: Prüm [4] with one infantry and one armour block, 2nd Pz in Marnach.
-1. **UI:** select a block **[tap the infantry in Prüm]**: green areas = reachable, orange = must stop there; the route shows the cost.
-2. **[tap Losheim]**: road 1 MP + 2 MP leaving its army zone → must stop. Recap: army zones.
-3. **UI:** Undo **[tap Undo]**: "moves can be taken back until something is revealed or rolled".
-4. **[move it into Bleialf]**: the Schnee Eifel ridge takes the whole allowance; armour may not cross at all.
-5. Armour: **[move it via Pronsfeld, Lutzkampen to St. Vith]**: 3 MP, no fuel needed. Recap: roads, fuel over 3 MP.
-6. River crossing: **[move 2nd Pz into Lullange]**: the Allied player tries to blow the Greif bridge (needs a 1, an engineer helps) *(book dice: blown)* → river assault, all MP spent.
-7. **UI:** reserve: **[tap Pz Lehr]** → **[Reserve]**. **UI:** the Can move / Fortify / Reserve shortcuts.
+## Principles
 
-## Lesson 4 · Strategic movement (23.4, Figure 7)
-Position: Allied Turn 3, 82nd at Givet [96] with a 5/6 reserve marker, 101st at La Chapelle [87] with a Zone 7 marker.
-1. "Reserve units can strat-move through friendly, uncontested areas." **[tap 82nd]** → **[tap La Roche]**.
-2. **[tap 101st]** → **[tap Champlon]**. Recap: limits (3 Allied, 1 German + fuel).
+- **Playbook first.** Every "turn of play" lesson is one of the Play Book's examples, with the book's position and the book's dice, so the result on screen is the result on the page (the tests check it). Where our map differs from the book (an adjacency, a garrison), the lesson says so in a line.
+- **Interface woven in.** The lesson that teaches a rule also teaches the control that applies it: the hand and the chit bar, the dispatch buttons (Reserve, Fortify, Roll, Take losses…), the arrival tray, the Pieces window, Undo, the score sheet.
+- **One idea per card.** Short text, the action in bold, the rule reference folded under a *why* note for players who want the paragraph. No card asks for more than one tap.
+- **Three card kinds.** A *situation* card opens each lesson (who you play, the position, the goal, minutes). Steps follow. A *recap* card closes it with the three or four things to keep. A *try* step is a small challenge the player solves alone, with a hint folded away and a *Do it for me* escape.
+- **Figures with the real art.** Blocks, chits and markers are drawn by the game's own renderers (`art.ts`, `golan-art.ts`), with callouts for steps, quality and type, so the player learns the pieces they will see on the table.
+- **Both sides.** The player plays the side the example is about (the `side` of the lesson); the camera looks from that side's edge. The coach plays the other side with *Show me* steps.
+- **Progress.** The lesson list (the *Lessons* button) shows the chapters, what is done, and lets the player jump. Progress is kept per course in `localStorage` (`fab-tut:<course>`), so *Resume* on the home card picks up where they left.
+- **Back works.** Every player action is also written in engine terms (`act`), so *Back* replays the lesson up to the previous step instead of guessing at undo.
 
-## Lesson 5 · Combat (23.5, Figures 8–9)
-Position: St. Vith [23]: 18 VG attacking 106 Inf + garrison; CCB/9 in Ligneuville.
-1. **UI:** fight: **[tap St. Vith]** → **[Fight St. Vith]**. The battle table: both sides, odds.
-2. Allied Special Action *(auto, explained)*: Reinforce (SA) brings CCB/9 in.
-3. **UI:** point units (gold mark), assets row, Ready. **[tap Begin combat]**.
-4. Defensive fire *(book dice 5, 5, 1)*: **UI:** the fire report, reading SN and modifiers (+1 armour, −1 green vs veteran). **[tap Roll]**.
-5. Two hits: first is a step loss; **[choose Abort]** for the second → attackers disordered. Recap: hit priorities, abort.
+## The Bulge course (`bulge`)
 
-## Lesson 6 · Combat with exploitation (23.6, Figures 10–12)
-Position: Weiswampach [22]: 116 Pz vs 112/28, artillery available.
-1. **UI:** assigning assets: **[tap 15th Rocket]**, **[tap 401st]** (one regular + one rocket, 16.12). Refused combos explain why.
-2. Artillery *(book dice)*, then ground fire: 116 Pz rolls 1, 6, 5 → three hits.
-3. Defender: retreat absorbs one, the second eliminates, one excess. **UI:** the hit-choice bubble.
-4. Exploitation morale check *(rolls 6, needs 7)* → 116 Pz marked for exploitation. Recap.
+Chapter **Before you start**
 
-## Lesson 7 · Reaction and breakthrough (23.7, Figure 13)
-Position: as in Figure 13.
-1. Reaction: "the Allies have no eligible reserves this turn". **UI:** the Reaction step.
-2. Breakthrough movement, three ways:
-   - **[move 116 Pz]** (exploitation) one area to Houffalize.
-   - **[move Pz Lehr]** (reserve) Marnach → Weiswampach, **[spend fuel]**, on to Vielsalm.
-   - **UI:** the Breakthrough (SA) shortcut and SA tags: **[activate 150 Pz]** into Weiswampach.
-3. Breakthrough combat in Houffalize and Vielsalm *(book dice)*, newly contested = free; already contested would need a Special Action (tags show it).
+| Lesson | Side | Goal |
+| --- | --- | --- |
+| Welcome to the Ardennes | German | What the game is about and how you win |
+| Reading a block | German | Steps, quality, unit type, and what a block shows you |
+| The map | German | Areas, roads and fields, rivers, zones, who holds what |
+| Chits: assets and events | German | The hand, the cup and the boxes, Special Actions |
 
-## Lesson 8 · Supply (23.8, Figure 14)
-Position: Figure 14 (Peiper in Werbomont, 18 VG in Trois Ponts, …).
-1. **UI:** View › Colour › Supply: your supplied areas tint blue, cut-off red. **[turn it on]**.
-2. **[tap 1SS]**, **[tap 62 VG]**, **[tap Peiper]**: the supply line or "cut off" with the reason (9.31a–d).
-3. The Supply check panel: **[Roll supply checks]**: Peiper rolls morale. Recap.
+Chapter **A turn of play** (Play Book 23.1–23.10)
 
-## Lesson 9 · Second player turn and victory (23.9–23.10)
-1. "Now the Allies play the same sequence." **UI:** online: whose turn it is, Waiting…, chat.
-2. Victory check: the VP sheet with the Turn 4 example (net Allied 4 vs sudden death 5). **[open the VP sheet]**.
-3. Finish: "You know the whole turn." Buttons: **Start a Nuts! game** (3 turns, Bastogne) · **Start the campaign** · **Back home**.
+| Lesson | Ref | Side | Goal |
+| --- | --- | --- | --- |
+| Reinforcement | 23.1 | German | New units and chits arrive; the German artillery attrition |
+| Prepare: drawing and playing chits | 23.2 | German | Draw from the cup, play events and assets, end the step |
+| Movement | 23.3 | German | Roads and fields, zones, ridges, fuel, bridges, reserves |
+| Strategic movement | 23.4 | Allied | Reserves race along the roads |
+| Combat | 23.5 | German | The round of combat, the fire report, hits and the abort |
+| Artillery and exploitation | 23.6 | German | Committing assets, the defender's hits, the exploitation check |
+| Reaction and Breakthrough | 23.7 | German | The enemy reacts, then three ways to press on |
+| Supply | 23.8 | German | Tracing a supply line, and what happens when it breaks |
+| The Allied turn and victory | 23.9–23.10 | German | The second player turn, the victory check, your first game |
 
-## Free play (optional)
-After lesson 9: "Now you try": the rest of a Turn 2 from the Campaign position with hints kept on (the coach suggests but does not lock).
+Ends with: *Start a Nuts! game* (intro scenario), *Start the Tournament*.
 
-## Open questions for review
-1. Lesson order and length (≈ 35 steps, 15–20 min). Cut or merge anything?
-2. Should the player always be German first, or choose a side?
-3. Book dice: always forced (same story as the book), or a "real dice" option?
-4. Any Play Book point missing that you want taught (e.g. field works building, roadblocks, Greif Interdict, air missions)?
+## Golan '73 course (`golan73`)
+
+Chapter **Before you start**
+
+| Lesson | Ref | Side | Goal |
+| --- | --- | --- | --- |
+| Welcome to the Golan | | Syrian | The battle, the two sides and how you win |
+| Blocks on the Golan | | Syrian | Stripes, brigades and divisions, strongpoints and ghosts |
+| The map | | Syrian | The Purple Line, the escarpment, wadis, rugged ground, sectors, Mt Hermon |
+| Chits on the Golan | | Syrian | The hand, the boxes, air support, SAMs and commandos |
+| Setting up Operation Badr | 22.1 | Israeli | Strongpoints, ghosts and minefields are placed by the Israeli player |
+
+Chapter **The Golan turn** (Play Book examples 1–15)
+
+| Lesson | Ref | Side | Goal |
+| --- | --- | --- | --- |
+| Reinforcement and Prepare | Ex 1, 2 | Syrian | The Syrian resource boxes, SAM attrition, interdiction answered by SAMs |
+| Moving up the heights | Ex 3 | Israeli | Bridges, the escarpment, wadis, occupied and enemy areas |
+| Ditches, minefields and rugged ground | Ex 4, 5, 6 | Syrian | The Syrian side of movement |
+| Strategic movement | Ex 7 | Israeli | Reserves race by road; the assembly areas |
+| Combat with brigade integrity | Ex 8 | Israeli | A full round: artillery, close air support, hits, the brigade's extra die |
+| Crossing assault on a strongpoint | Ex 9 | Syrian | Strongpoints in defence, the assault penalty, bridging the ditch in battle |
+| Air assault | Ex 10 | Syrian | The 82nd Para drops behind the line |
+| Combat events: jamming and counterbattery | Ex 11, 12 | Syrian | The one event per side in a battle |
+| Prepare: engineers, reserves, events | 14.5, 14.61, 17.x | Syrian | Bridge the ditch, release the 3rd Tank Division, Lt. Zvika, arriving battalions |
+| Commando raids | Ex 13 | Syrian | A raid behind the line, and what it costs the Israelis |
+| Reaction and Breakthrough | Ex 14 | Israeli | The Syrian reaction, then three Israeli ways to press on |
+| Supply on the Golan | Ex 15 | Syrian | Ditches, escarpments and minefields in the supply line |
+| Victory on the Golan | 19.0 | Syrian | The victory check, sudden death and the Jordan |
+
+Ends with: *Start Operation Badr* (historical set-up), *Badr, free set-up*.
+
+Where the book and our map part: Example 8's 91st Tank falls back to Keshet, not Tel Faris (Hushniyah does not touch Tel Faris on our map); Example 15's position is rebuilt on our adjacencies with the same lesson (a ditch, an escarpment and a minefield in the line).
+
+## Golan '73: what's new (`golan73-new`)
+
+One chapter, **What changes on the Golan**: an opening lesson *Same engine, new ground* (what a Bulge player must unlearn: no fuel, no army zones, no Greif; what is new: the Purple Line, the ditch, strongpoints and ghosts, brigades, SAMs and air, commandos, sudden death) and then the Golan lessons above without *Welcome*, *Chits* and *Strategic movement*, which the series player knows.
+
+## Code
+
+- `web/src/tutorial-kit.ts` — the model (`Course` › `Lesson` › `Step`), the position builders (`bulgeTable`, `golanTable`: a clean table with only the book's blocks on it), the book's dice (`bookDice` nudges the dice queue to the book's verdicts), the figures (`pieces`, `blockAnatomy`, `strengths`), and the coach's helpers (`autoFight`, `runTo`).
+- `web/src/tutorial-bulge.ts`, `web/src/tutorial-golan.ts` — the lessons.
+- `web/src/tutorial-script.ts` — the registry (`COURSES`, `courseFor`, `coursesOf`) and `replay`.
+- `web/src/tutorial.ts` — the runner: coach card, spotlight, lock, lesson list, Back, progress. `main.ts` gives it a host API (`TutHost`) and asks `gate` before a map tap.
+- `web/test/tutorial.test.ts` — for every course: unique ids, every step reaches its goal, Back's replay never throws and every figure renders; the book's outcomes (Bulge 23.5–23.8, Golan Ex 2, 3, 6, 8, 9, 15).
+
+### A step
+
+```ts
+{ title: 'Commit the artillery', text: '<b>Tap the 405th+55th.</b>', rule: '6.25 Artillery',
+  why: 'Artillery fires once, before the blocks, and is spent for the turn.',
+  target: { el: ['.card2[data-chit="IC01"]', '.handtab button'], label: '405th+55th card' },
+  done: (g) => !!g.battle?.assets.israeli.includes('IC01'), act: (g) => E.assign(g, g.battle!, 'IC01') }
+```
+
+`target` is a DOM element (first selector found, optionally with a text), a block, or an area; `done` ends the step from the game state (or from the screen through `q`); `tap` ends it on the tap itself; `auto` is what the coach plays on *Show me*; `act` is the player's action for Back and the tests; `skip` drops a step the game did not ask for; `enter` queues the book's dice; `kind` picks the situation / recap / try card.
+
+### Adding a volume
+
+1. A `tutorial-<volume>.ts` with a `<VOLUME>_COURSE` (and a `<volume>-new` course for series players, mapping the shared lessons into one chapter).
+2. Register it in `COURSES`; the home card and the in-game Learn buttons follow from `coursesOf(game)`.
+3. Run the tests: they iterate every course.

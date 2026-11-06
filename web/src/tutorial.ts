@@ -1,27 +1,36 @@
-/** The interactive tutorial (?tutorial=1): a coach bubble, a spotlight on the one thing to do, and a lock on everything else.
- *  The lessons themselves are in tutorial-script.ts; main.ts gives this module a small host API and asks `gate` before a map tap. */
+/** The interactive tutorial (?tutorial=<course>): a coach card, a spotlight on the one thing to do, and a lock on everything else.
+ *  The courses themselves are in tutorial-script.ts (one per volume, plus "what's new" courses); main.ts gives this module a small
+ *  host API and asks `gate` before a map tap. */
 import type * as E from '../../engine/src';
-import { LESSONS, U, replay, type Step, type Target } from './tutorial-script';
+import { U, replay, type Course, type Step, type Target } from './tutorial-script';
 
 export interface TutHost {
   game(): E.Game; load(g: E.Game): void; act(f: () => void, label: string): void;
   unitScreen(id: string): { x: number; y: number; rad: number } | null; areaScreen(a: number): { x: number; y: number } | null;
   lookAt(a: number): void; pan(dx: number, dy: number): void; /** the finger is on the map */ moving(): boolean; fold(): void; select(id: string): void; toast(t: string): void; busy(): boolean;
-  guide(): 'full' | 'short'; setGuide(v: 'full' | 'short'): void; home(scenario?: string): void;
+  guide(): 'full' | 'short'; setGuide(v: 'full' | 'short'): void;
+  /** Look at the table from this side's edge (the side the lesson's player plays). */
+  view(side: string): void;
+  /** Leave the tutorial: back to the home page, opening a new game of the course's volume when `to` is given. */
+  home(to?: { game: string; scenario: string }): void;
 }
-const KEY = 'fab-tut', GKEY = 'fab-tut-guide';
+const GKEY = 'fab-tut-guide';
 let entered = 0;
 const store = { get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k: string, v: string | null) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* private mode */ } } };
 const q = (s: string, text?: string) => Array.from(document.querySelectorAll(s)).some((e) => !text || (e.textContent ?? '').includes(text));
 const visible = (e: Element) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; };
+const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+const SIDE_NAME: Record<string, string> = { german: 'Germany', allied: 'the Allies', israeli: 'Israel', syrian: 'Syria', axis: 'the Axis' };
 
-export function initTutorial(h: TutHost) {
-  let li = Math.max(0, Math.min(LESSONS.length - 1, Number(store.get(KEY) ?? 0) || 0)), si = 0, tapped = false, last = 0;
+export function initTutorial(h: TutHost, course: Course) {
+  const KEY = `fab-tut:${course.id}`, DKEY = `${KEY}:done`, LESSONS = course.lessons;
+  let li = Math.max(0, Math.min(LESSONS.length - 1, Number(store.get(KEY) ?? 0) || 0)), si = 0, tapped = false, last = 0, menu = false;
+  const done = new Set((store.get(DKEY) ?? '').split(',').filter(Boolean));
   if (store.get(GKEY) == null) store.set(GKEY, h.guide()); h.setGuide('full');
   const coach = document.body.appendChild(Object.assign(document.createElement('div'), { className: 'tut-coach', role: 'dialog' }));
   const ring = document.body.appendChild(Object.assign(document.createElement('div'), { className: 'tut-ring' }));
   const dim = document.body.appendChild(Object.assign(document.createElement('div'), { className: 'tut-dim' }));
-  coach.setAttribute('aria-live', 'polite');
+  coach.setAttribute('aria-live', 'polite'); coach.setAttribute('aria-label', `Tutorial: ${course.title}`);
   const step = (): Step | undefined => LESSONS[li]?.steps[si];
 
   /** The element a DOM target points at: the first selector that finds a visible element (with the text, when given). */
@@ -37,8 +46,10 @@ export function initTutorial(h: TutHost) {
   const hint = (s: Step) => s.target ? `Tap the glowing ${label(s.target)}` : 'Tap Next to go on';
 
   function start(l: number, upTo = 0) {
-    li = l; si = upTo; store.set(KEY, String(l));
-    h.load(upTo ? replay(l, upTo) : LESSONS[l].setup());
+    const fresh = l !== li || upTo === 0;
+    li = l; si = upTo; menu = false; store.set(KEY, String(l));
+    h.load(upTo ? replay(course, l, upTo) : LESSONS[l].setup());
+    if (fresh && LESSONS[l].side) h.view(LESSONS[l].side!);
     enter();
   }
   function enter(): void {
@@ -56,43 +67,74 @@ export function initTutorial(h: TutHost) {
   function next(): void {
     const L = LESSONS[li];
     if (si + 1 < L.steps.length) { si++; return enter(); }
+    done.add(L.id); store.set(DKEY, Array.from(done).join(','));
     if (li + 1 < LESSONS.length) return start(li + 1);
-    finish('');
+    finish();
   }
   function onNext() {
     const s = step(); if (!s || h.busy()) return;
     if (s.auto) h.act(() => s.auto!(h.game()), s.title);
     next();
   }
+  /** "Do it for me" on a try step: the coach plays the player's action. */
+  function skipTry() {
+    const s = step(); if (!s || h.busy()) return;
+    if (s.act) h.act(() => s.act!(h.game()), s.title);
+    next();
+  }
   function back() {
     if (h.busy()) return;
     let l = li, k = si - 1;
-    while (k >= 0 && LESSONS[l].steps[k].skip?.(replay(l, k))) k--;
+    while (k >= 0 && LESSONS[l].steps[k].skip?.(replay(course, l, k))) k--;
     if (k < 0) { if (l === 0) return; l--; k = 0; }
     start(l, k);
   }
-  function finish(scenario: string) {
-    store.set(KEY, scenario === 'exit' ? String(li) : null);
+  function finish(to?: { game: string; scenario: string }, exit = false) {
+    store.set(KEY, exit ? String(li) : null);
     const g0 = store.get(GKEY); if (g0 === 'short' || g0 === 'full') h.setGuide(g0); store.set(GKEY, null);
-    h.home(scenario === 'exit' ? '' : scenario);
+    h.home(to);
   }
 
+  /* ---------- the card ---------- */
+  const btn = (t: string, text: string, cls = '', title = '') => `<button data-t="${t}" class="${cls}" ${title ? `title="${esc(title)}"` : ''}>${text}</button>`;
+  function menuHtml() {
+    const chapters = Array.from(new Set(LESSONS.map((l) => l.chapter)));
+    const rows = chapters.map((ch) => `<h5>${esc(ch)}</h5><ol>${LESSONS.map((l, i) => l.chapter !== ch ? '' : `<li class="${i === li ? 'now' : done.has(l.id) ? 'done' : ''}"><button data-l="${i}"><span class="n">${done.has(l.id) ? '✓' : i + 1}</span><b>${esc(l.topic)}</b><small>${esc(l.goal)} · ${l.minutes} min</small></button></li>`).join('')}</ol>`).join('');
+    const total = LESSONS.reduce((a, l) => a + l.minutes, 0);
+    return `<div class="k"><span>${esc(course.title)}</span><i>${done.size} / ${LESSONS.length} done · ${total} min</i></div><div class="tut-body tut-menu">${rows}</div><div class="row">${btn('exit', 'Exit')}<span class="grow"></span>${btn('resume', 'Back to the lesson →', 'tut-go')}</div>`;
+  }
+  function stepHtml(L: typeof LESSONS[number], s: Step) {
+    const g = h.game(), lastStep = si === L.steps.length - 1, end = lastStep && li === LESSONS.length - 1, wait = !!s.target && !s.auto && (!!s.done || !!s.tap);
+    const kind = s.kind ?? 'step', figure = (() => { try { return s.figure?.(g) ?? ''; } catch (e) { console.error(e); return ''; } })();
+    const meta = kind === 'situation' ? `<div class="tut-meta">${L.side ? `<span>You play <b>${esc(SIDE_NAME[L.side] ?? L.side)}</b></span>` : ''}<span>${L.minutes} min</span>${L.ref ? `<span>Play Book ${esc(L.ref)}</span>` : ''}</div>` : '';
+    const why = s.why ? `<details class="tut-why"><summary>${kind === 'try' ? 'Hint' : esc(s.rule ?? 'Why?')}</summary><p>${s.why}</p></details>` : s.rule ? `<small class="tut-rule">${esc(s.rule)}</small>` : '';
+    const goLabel = kind === 'situation' ? 'Start →' : s.auto ? 'Show me →' : lastStep ? (li + 1 < LESSONS.length ? 'Next lesson →' : 'Finish →') : 'Next →';
+    const buttons = end
+      ? `<div class="tut-end">${course.end.map((e, i) => btn(`end:${i}`, esc(e.label), e.primary ? 'tut-go' : '')).join('')}${btn('home', 'Back home')}</div>`
+      : `<div class="row">${btn('menu', 'Lessons', '', 'All the lessons')}${li || si ? btn('back', 'Back') : ''}<span class="grow"></span>${wait ? `<span class="tut-hint">${hint(s)}</span>${kind === 'try' && s.act ? btn('skip', 'Do it for me') : ''}` : btn('next', goLabel, 'tut-go')}</div>`;
+    const stepsLeft = L.steps.length - si - 1;
+    return `<div class="bar" title="${stepsLeft} steps to go"><i style="width:${Math.round(((si + 1) / L.steps.length) * 100)}%"></i></div>
+      <div class="k"><span>${esc(L.chapter)} · ${li + 1}/${LESSONS.length}</span><i>${esc(L.topic)}</i></div>
+      <div class="tut-body ${kind}"><h4>${s.title}</h4>${meta}${figure}<div class="tut-text">${s.text}</div>${why}</div>${buttons}`;
+  }
   function draw() {
     const L = LESSONS[li], s = step(); if (!L || !s) return;
-    const lastStep = si === L.steps.length - 1, end = lastStep && li === LESSONS.length - 1, wait = !!s.target && !s.auto && (!!s.done || !!s.tap);
-    const pct = Math.round(((si + 1) / L.steps.length) * 100);
-    const buttons = end
-      ? `<div class="tut-end"><button data-t="intro" class="tut-go">Start a Nuts! game</button><button data-t="campaign">Start the campaign</button><button data-t="home">Back home</button></div>`
-      : `<div class="row"><button data-t="exit">Exit</button>${li || si ? '<button data-t="back">Back</button>' : ''}<span class="grow"></span>${wait ? `<span class="tut-hint">${hint(s)}</span>` : `<button data-t="next" class="tut-go">${s.auto ? 'Show me' : lastStep ? 'Next lesson' : 'Next'} →</button>`}</div>`;
-    coach.innerHTML = `<div class="bar"><i style="width:${pct}%"></i></div><div class="k">Lesson ${li} · ${L.topic}${L.ref ? ` (${L.ref})` : ''} <i>${si + 1} / ${L.steps.length}</i></div><h4>${s.title}</h4><p>${s.text}</p>${s.rule ? `<small>${s.rule}</small>` : ''}${buttons}`;
-    coach.querySelectorAll<HTMLElement>('[data-t]').forEach((b) => (b.onclick = () => { const t = b.dataset.t!; if (t === 'next') onNext(); else if (t === 'back') back(); else if (t === 'exit') finish('exit'); else finish(t === 'home' ? '' : t); }));
+    coach.className = `tut-coach ${menu ? 'is-menu' : `is-${s.kind ?? 'step'}`}`;
+    coach.innerHTML = menu ? menuHtml() : stepHtml(L, s);
+    coach.querySelectorAll<HTMLElement>('[data-t]').forEach((b) => (b.onclick = () => {
+      const t = b.dataset.t!;
+      if (t === 'next') onNext(); else if (t === 'skip') skipTry(); else if (t === 'back') back(); else if (t === 'exit') finish(undefined, true);
+      else if (t === 'menu') { menu = true; draw(); } else if (t === 'resume') { menu = false; draw(); } else if (t === 'home') finish();
+      else if (t.startsWith('end:')) { const e = course.end[Number(t.slice(4))]; finish({ game: course.game, scenario: e.scenario }); }
+    }));
+    coach.querySelectorAll<HTMLElement>('[data-l]').forEach((b) => (b.onclick = () => { if (!h.busy()) start(Number(b.dataset.l)); }));
     place();
   }
 
   /** The spotlight follows its target every frame (the camera moves); the coach sits next to it, never over it. */
   function place() {
     const s = step(); if (!s) return;
-    const g = h.game(), t = s.target; let r: { x: number; y: number; w: number; h: number } | null = null;
+    const g = h.game(), t = menu ? undefined : s.target; let r: { x: number; y: number; w: number; h: number } | null = null;
     if (t && 'unit' in t) { const p = h.unitScreen(U(g, t.unit).id); if (p) r = { x: p.x - p.rad - 8, y: p.y - p.rad - 8, w: 2 * p.rad + 16, h: 2 * p.rad + 16 }; }
     else if (t && 'area' in t) { const p = h.areaScreen(t.area); if (p) r = { x: p.x - 40, y: p.y - 40, w: 80, h: 80 }; }
     else { const e = targetEl(t); if (e) { let b = e.getBoundingClientRect(); if (b.right > innerWidth || b.left < 0 || b.bottom > innerHeight) { e.scrollIntoView({ block: 'nearest', inline: 'center' }); b = e.getBoundingClientRect(); } r = { x: b.left - 4, y: b.top - 4, w: b.width + 8, h: b.height + 8 }; } }
@@ -101,6 +143,7 @@ export function initTutorial(h: TutHost) {
     if (r) Object.assign(ring.style, { left: `${r.x}px`, top: `${r.y}px`, width: `${r.w}px`, height: `${r.h}px`, borderRadius: t && !('el' in t) ? '50%' : '10px' });
     const W = innerWidth, H = innerHeight, top = (document.querySelector('#ui .tops')?.getBoundingClientRect().bottom ?? 80) + 8, bot = (document.querySelector('#ui .c-bar.b')?.getBoundingClientRect().top ?? H) - 8;
     coach.style.visibility = busy ? 'hidden' : 'visible';
+    coach.style.maxHeight = `${Math.max(200, bot - top)}px`;
     const cw = coach.offsetWidth, ch = coach.offsetHeight;
     let x: number, y: number;
     if (W < 700) {                                                                                  // phones: under the top bar, or above the bottom bar when the target is up there
@@ -123,16 +166,16 @@ export function initTutorial(h: TutHost) {
   const free = (el: Element) => !!el.closest('.tut-coach') || !el.closest('#ui') || !!el.closest('.c-ledger.tight');
   function guard(ev: Event) {
     const s = step(), el = ev.target as Element | null; if (!s || !el?.closest || free(el)) return;
-    const te = targetEl(s.target);
+    const te = menu ? null : targetEl(s.target);
     if (te && te.contains(el) && (s.done || s.tap)) { if (ev.type === 'click' && s.tap) { tapped = true; setTimeout(() => { if (step() === s) next(); }, 60); } return; }
     ev.stopPropagation(); ev.preventDefault();
-    if (ev.type === 'click') h.toast(`${hint(s)}.`);
+    if (ev.type === 'click') h.toast(menu ? 'Close the lesson list first.' : `${hint(s)}.`);
   }
   for (const ty of ['pointerdown', 'mousedown', 'touchstart', 'click', 'dblclick']) window.addEventListener(ty, guard, { capture: true, passive: false });
 
   /** A block or area hidden behind the coach or a panel slides into the clear band of the screen. */
   function keep(s: Step) {
-    const t = s.target, g = h.game(); if (!t || 'el' in t || h.busy() || h.moving() || performance.now() - entered < 1300) return;   // after the camera's glide to it
+    const t = s.target, g = h.game(); if (!t || 'el' in t || menu || h.busy() || h.moving() || performance.now() - entered < 1300) return;   // after the camera's glide to it
     const p = 'unit' in t ? h.unitScreen(U(g, t.unit).id) : h.areaScreen(t.area); if (!p) return;
     const W = innerWidth, H = innerHeight, top = (document.querySelector('#ui .tops')?.getBoundingClientRect().bottom ?? 0);
     const obs = [coach, ...Array.from(document.querySelectorAll<HTMLElement>('#ui .c-dispatch, #ui .c-hand, #ui .c-ledger, #ui .c-bar.b, #ui .arrtray, #ui .modal'))].filter(visible).map((e) => e.getBoundingClientRect()).filter((b) => b.left < p.x + 30 && b.right > p.x - 30).sort((a, b) => a.top - b.top);
@@ -148,16 +191,20 @@ export function initTutorial(h: TutHost) {
     requestAnimationFrame(loop);
     const s = step(); if (!s) return;
     keep(s); place();
-    if (now - last < 200 || h.busy() || tapped) return; last = now;
+    if (menu || now - last < 200 || h.busy() || tapped) return; last = now;
     if (s.done && s.done(h.game(), q)) next();
   }
   start(li);
   requestAnimationFrame(loop);
 
   return {
+    /** Dev and checks: jump to a step of a lesson; what the coach points at now, and whether it is on screen. */
+    jump(l: number, upTo = 0) { if (l >= 0 && l < LESSONS.length && upTo >= 0 && upTo < LESSONS[l].steps.length) start(l, upTo); },
+    where() { const s = step(); const t = s?.target; return { lesson: li, step: si, title: s?.title, target: t ? label(t) : null, found: !t || !('el' in t) || !!targetEl(t), skipped: !!s?.skip?.(h.game()) }; },
     /** A tap on the map: false = blocked; otherwise the block and area to use (a tap on a stack or on a block standing in the area counts). */
     gate(unit: string | undefined, area: number | null): { unit?: string; area?: number } | false {
       const s = step(); if (!s) return {};
+      if (menu) { h.toast('Close the lesson list first.'); return false; }
       const t = s.target, g = h.game(), on = unit ? g.units.find((u) => u.id === unit)?.area ?? null : null;
       const ok = t && 'unit' in t ? (() => { const u = U(g, t.unit); return unit === u.id || (u.area != null && (area === u.area || on === u.area)) ? { unit: u.id, area: u.area ?? undefined } : null; })()
         : t && 'area' in t && (area === t.area || on === t.area) ? { area: t.area } : null;
