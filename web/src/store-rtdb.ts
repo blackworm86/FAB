@@ -1,4 +1,5 @@
 import type { ChatMsg, Seats, Store, StateDoc, Account, Match } from './online';
+import { gameInfo } from './games';
 import { initSplit, toTree, fromTree, diffTree, type Game, type Priv, type Reveals, type Side, type Tree } from '../../engine/src';
 const msg = (e: unknown) => { const c = (e as { code?: string })?.code ?? ''; const m = String((e as { message?: string })?.message ?? e); return c.includes('invalid-credential') || c.includes('wrong-password') || c.includes('user-not-found') ? 'Wrong email or password' : c.includes('email-already') ? 'That email already has an account, sign in instead' : c.includes('weak-password') ? 'The password needs at least 6 characters' : c.includes('popup-closed') ? 'Sign-in was cancelled' : c.includes('unauthorized-domain') ? 'This site is not in the Firebase authorized domains' : m; };
 
@@ -111,7 +112,9 @@ export async function rtdbStore(table: string): Promise<Store | null> {
       type Row = { meta?: Record<string, unknown>; names?: Record<string, string>; seats?: Record<string, string>; f?: Record<string, string>; stop: () => void };
       const rows = new Map<string, Row>();
       /** Who must act, from a few top-level fields of the shared state (not the whole game): mirrors the engine's actorOf. */
-      const move = (r: Row) => { const f = r.f, P = (k: string) => { try { return f?.[k] ? JSON.parse(f[k]) : null; } catch { return null; } }; if (!f || P('over')) return {}; const phase = P('phase') as string, phasing = P('phasing') as Side, b = P('battle') as { stage: string; attacker: Side } | null, oth = (x: Side): Side => (x === 'german' ? 'allied' : 'german');
+      const move = (r: Row) => { const f = r.f, P = (k: string) => { try { return f?.[k] ? JSON.parse(f[k]) : null; } catch { return null; } }; if (!f || P('over')) return {};
+        const second = gameInfo(String(r.meta?.game ?? 'bulge'))?.sides[1] ?? 'allied', key = (x: string): Side => (x === second ? 'allied' : 'german');     // the state names the volume's sides; the seats keep the keys german/allied
+        const phase = P('phase') as string, phasing = key(P('phasing') as string), b0 = P('battle') as { stage: string; attacker: string } | null, b = b0 && { stage: b0.stage, attacker: key(b0.attacker) }, oth = (x: Side): Side => (x === 'german' ? 'allied' : 'german');
         const actor = P('pendingBlow') ? 'both' : b ? (b.stage === 'setup' ? 'both' : ['defArty', 'defFire', 'defChoice', 'retreat'].includes(b.stage) ? oth(b.attacker) : b.attacker) : phase === 'admin' || phase === 'reinforcement' ? 'both' : phase === 'reaction' ? oth(phasing) : phasing;
         const mySides = (['german', 'allied'] as Side[]).filter((x) => r.seats?.[x] === account.uid), other = r.seats && Object.keys(r.seats).length === 2;
         return { myMove: !!other && mySides.length > 0 && (actor === 'both' || mySides.includes(actor as Side)), turn: Number(P('turn') ?? 0) || undefined, step: phase ?? undefined }; };

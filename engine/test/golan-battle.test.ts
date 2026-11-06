@@ -1,6 +1,6 @@
 // Golan '73 combat rounds on the series engine: Badr turn 1 bridgeheads, Play Book examples 8–10, ghosts, strongpoints, garrisons, air and SAM.
 import { describe, expect, it } from 'vitest';
-import { startBattle, beginCombat, roll_step as rollStep, chooseFirstLoss, attackerChoice, defenderChoice, fireList, assign, canAssign, mustFight, golan } from '../src';
+import { startBattle, beginCombat, roll_step as rollStep, chooseFirstLoss, attackerChoice, defenderChoice, fireList, assign, canAssign, mustFight, golan, unassign, cancelBattle } from '../src';
 import { fight, playOut, newGolanGame, unit, chit, onMap, count } from './golan-helpers';
 
 describe('Operation Badr, turn 1: the crossing assaults', () => {
@@ -70,6 +70,14 @@ describe('air assault (15.3) and air support (16.12, 16.22)', () => {
     const b = startBattle(g, 83); expect(b.riverAssault).toBe(true); expect(golan.state(g).airAssaultArea).toBe(83);
     expect(b.defPoint).toBe('G-IC09');
     g.turn = 2; expect(golan.airAssaultTargets(g)).toEqual([]);
+  });
+  it('the pending SAM answer goes when the air mission is taken back or the battle withdrawn', () => {
+    const g = newGolanGame(6); g.phasing = 'israeli';
+    Object.assign(unit(g, 'I05'), { area: 50 });
+    const air = g.chits.find((c) => c.kind === 'air_mission' && c.side === 'israeli' && c.box === 'available')!;
+    let b = startBattle(g, 50); assign(g, b, air.id, 'arty'); expect(golan.state(g).samTarget).toBe(air.id);
+    unassign(g, b, air.id); expect(golan.state(g).samTarget).toBeUndefined(); expect(() => beginCombat(g, b)).not.toThrow();
+    g.battle = null; b = startBattle(g, 50); assign(g, b, air.id, 'arty'); cancelBattle(g); expect(golan.state(g).samTarget).toBeUndefined();
   });
   it('an Israeli air mission east of the SAM barrier can be answered by a SAM', () => {
     const g = newGolanGame(6); g.phasing = 'israeli';

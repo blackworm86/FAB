@@ -31,6 +31,12 @@ describe('M3 rules', () => {
     g.phase = 'btCombat'; endPhase(g);
     expect(eng.box).toBe('used'); expect(unitsIn(g, a).length).toBe(0);
   });
+  it('the same engineer makes a second defended roadblock later: one unit with that id, not two', () => {
+    const g = toAdmin(4), eng = give(g, 'engineer', 'allied'), a = roadblockAreas(g, 'allied')[0];
+    g.phasing = 'allied'; roadblock(g, eng.id, a, true); g.phase = 'btCombat'; endPhase(g);
+    eng.box = 'available'; g.phase = 'admin'; g.phasing = 'allied'; const a2 = roadblockAreas(g, 'allied')[0]; roadblock(g, eng.id, a2, true);
+    expect(g.units.filter((u) => u.id === `DR-${eng.id}`)).toHaveLength(1); expect(unitsIn(g, a2, 'allied')[0].garrison).toBe(true);
+  });
   it('Interdiction (17.2): Germans pay +1 to enter and leave, no strat-move through, the event goes at Supply', () => {
     const g = toAdmin(5, 2, true), air = give(g, 'air_mission', 'allied');
     asGermanMover(g); const u = g.units.find((x) => x.side === 'german' && x.area != null && !x.garrison && moveOptions(g, x.id).length)!, o = moveOptions(g, u.id)[0];

@@ -13,7 +13,7 @@ import { reachable, type GMoveCtx, type GMoveUnit } from '../golan/move';
 import { assetLimits, brigadeExtraDie, moraleSn as gMoraleSn, samResult, successNumber as gSuccessNumber, type GShooter, type GTarget, type Quality } from '../golan/combat';
 import { isArty, isBattleAsset, type Chit } from '../chits';
 import { registerHooks, type Volume } from '../volumes';
-import { airOf, blocks, buildFieldWorks, chit, contested, dropAir, dropReserve, eliminate, fighters, inSupply, moraleCheck, needAdmin, other, quality, rollDie, say, saAvailable, sidesOf, spendSA, supplied, unitsIn, updateControl,
+import { airOf, blocks, buildFieldWorks, chit, contested, dropAir, dropReserve, eliminate, fighters, inSupply, moraleCheck, needAdmin, other, quality, rngf, rollDie, say, secureRandom, saAvailable, sidesOf, spendSA, supplied, unitsIn, updateControl,
   type Battle, type Game, type Opt, type Side, type Unit, type Fire } from '../game';
 import type { Shooter, Target, Setting } from '../combat';
 export { ASSEMBLY, HERMON, NAF_NORTH, REAR, isAssembly, eastOfSam };
@@ -232,7 +232,7 @@ function alowdaDraw(g: Game) {
   for (const id of cup.added[String(g.turn)] ?? []) { A.cup.push(id); unit(g, id).box = 'draw_cup'; }
   const n = Math.min(cup.draws[String(g.turn)] ?? 0, A.cup.length), got: string[] = [];
   for (let k = 0; k < n; k++) {
-    const pick = A.cup.splice((rollDie(g) * 7919 + k * 131 + g.turn) % A.cup.length, 1)[0]; A.drawn!.push(pick);
+    const pick = A.cup.splice(Math.floor(rngf(g) * A.cup.length), 1)[0]; A.drawn!.push(pick);              // a uniform draw that spends no dice
     if (pick.startsWith('ghost')) { got.push('a ghost (set aside)'); continue; }
     const u = unit(g, pick); u.box = undefined; u.arrival = g.turn; got.push(u.name);
   }
@@ -246,7 +246,7 @@ export const alowdaRaidAreas = (g: Game) => (isAlOwda(g) && g.phase === 'deploy'
 export function alowdaRaid(g: Game, chitId: string, a: number) {
   need(alowdaRaidAreas(g).includes(a), 'a vacant Israeli-held area east of the Jordan (not Mt Hermon or Ma\'agan)');
   const c = chit(g, chitId); need(ALO.syrian.commando_landing.includes(c.id) && c.box === 'available', 'the 181st or 182nd commandos (Al-Owda Setup Card)');
-  c.box = 'map'; c.area = a; g.units.push(asGarrison(c, 'R', a, 'infantry', c.q ?? 'veteran')); state(g).raids.push(a); state(g).alowda!.raids++;
+  c.box = 'map'; c.area = a; g.units = g.units.filter((x) => x.id !== `R-${c.id}`); g.units.push(asGarrison(c, 'R', a, 'infantry', c.q ?? 'veteran')); state(g).raids.push(a); state(g).alowda!.raids++;
   say(g, `Commandos land in ${nameOf(a)} (20.35)`, 'syrian');
 }
 
@@ -423,6 +423,8 @@ const samAvailable = (g: Game) => g.chits.some((c) => c.kind === 'sam' && c.box 
 /** 16.12: an Israeli air asset placed east of the SAM barrier may be answered at once by an available SAM. */
 function onAssign(g: Game, b: Battle, c: Chit) { if (c.kind === 'air_mission' && c.side === 'israeli' && eastOfSam(b.area) && samAvailable(g)) state(g).samTarget = c.id; }
 function beforeBegin(g: Game) { if (state(g).samTarget) throw new Error('the SAM answer to the air mission is pending (16.12)'); }
+/** The air mission taken back (or its battle withdrawn): no SAM answer is pending any more. */
+function onUnassign(g: Game, _b: Battle, c: Chit) { const V = state(g); if (V.samTarget === c.id) V.samTarget = undefined; }
 function onBattle(g: Game, b: Battle, when: 'begin' | 'end') {
   const V = state(g);
   if (when === 'begin') for (const u of unitsIn(g, b.area)) if (u.ghost) { u.area = null; u.str = 0; say(g, `A Ghost is revealed in ${areas.get(b.area)!.name} and removed (15.7)`); }
@@ -577,7 +579,7 @@ export function finishRecon(g: Game, c: Chit) {
 export function placeRaid(g: Game, chitId: string, a: number) {
   needAdmin(g); const c = avail(g, chitId, ['commando']);
   need(!isAssembly(a) && g.control[a] === 'israeli' && vacant(g, a) && neighbors(a).some((n) => blocks(g, n, 'syrian').some(regular)), 'a vacant Israeli-controlled area next to a Syrian-occupied area');
-  c.box = 'map'; c.area = a; g.units.push(asGarrison(c, 'R', a, 'infantry', c.q ?? 'veteran')); state(g).raids.push(a);
+  c.box = 'map'; c.area = a; g.units = g.units.filter((x) => x.id !== `R-${c.id}`); g.units.push(asGarrison(c, 'R', a, 'infantry', c.q ?? 'veteran')); state(g).raids.push(a);
   say(g, `Commandos land in ${nameOf(a)} (16.11a)`, 'syrian');
 }
 /** 16.12: the Syrian player answers the Israeli air mission with an available SAM (or declines). */
@@ -751,7 +753,7 @@ export function deploy(g: Game, unitId: string, a: number) {
 const PURPLE = SETUPS.badr.strongpoints!.areas!;
 const SUGGESTED = SETUPS.badr.strongpoints!.suggested_historical;
 /** A seeded shuffle that spends no dice (the set-up must not change the game's rolls). */
-const shuffled = <T,>(g: Game, xs: T[], salt: number) => { let h = (g.seed ^ salt) >>> 0; const a = [...xs]; for (let i = a.length - 1; i > 0; i--) { h = (Math.imul(h ^ (h >>> 15), 2246822507) + 0x9e3779b9) >>> 0; const j = h % (i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const shuffled = <T,>(g: Game, xs: T[], salt: number) => { const sr = secureRandom(); let h = ((sr == null ? g.seed : Math.floor(sr * 2 ** 32)) ^ salt) >>> 0; /* online: not from the shared seed, which the other player can read */ const a = [...xs]; for (let i = a.length - 1; i > 0; i--) { h = (Math.imul(h ^ (h >>> 15), 2246822507) + 0x9e3779b9) >>> 0; const j = h % (i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 /** 15.7 quick placement of the strongpoints and ghosts still to place: the errata's rough historical set-up, or shuffled face-down ("most players prefer"). */
 export function autoStrongpoints(g: Game, how: 'historical' | 'shuffle') {
   need(g.phase === 'deploy', 'only while setting up');
@@ -800,5 +802,5 @@ registerHooks('golan73', {
   successNumber: golanSuccessNumber, adjustFire, canAssign, moraleSn: golanMoraleSn, retreatOk, retreatPrefer, onRetreat,
   sources, supplyStep, supplyFree: (_g, _s, a) => isAssembly(a) || a === HERMON, alwaysSupplied: (_g, u) => !!u.ghost || u.id === 'S17',
   victory: golanVictory, finalResult, onPhase, onBattle, freeBattle, assault, reinforce, afterDraw: (g) => { nafakhStaff(g); const d = g.chits.find((c) => c.kind === 'event_dugman5' && c.box === 'available'); if (d) resolveDugman(g, d); },
-  afterDeploy, stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2), appropriate: (g, u) => (isNafakh(g) ? (u.side === 'israeli' ? [NAF_NORTH] : [REAR, NAF.sheet.entry.Z]) : u.side === 'israeli' ? [ASSEMBLY.A, ASSEMBLY.B] : Object.values(ENTRY)), isNight, onAssign, beforeBegin, beforeFire, afterFire,
+  afterDeploy, onUnassign, reinforceOk: (g, b, u) => reinforceOptions(g, b).includes(u.id), stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2), appropriate: (g, u) => (isNafakh(g) ? (u.side === 'israeli' ? [NAF_NORTH] : [REAR, NAF.sheet.entry.Z]) : u.side === 'israeli' ? [ASSEMBLY.A, ASSEMBLY.B] : Object.values(ENTRY)), isNight, onAssign, beforeBegin, beforeFire, afterFire,
 } as Partial<Volume>);

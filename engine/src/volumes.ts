@@ -81,6 +81,10 @@ export interface Volume {
   isNight?: (g: Game) => boolean;
   /** An asset was just assigned to a battle (an air mission may draw SAM fire). */
   onAssign?: (g: Game, b: Battle, c: Chit, mode?: string, unit?: string) => void;
+  /** An asset taken back before the first roll, or a battle withdrawn (the volume drops what hung on the asset, e.g. a pending SAM answer). */
+  onUnassign?: (g: Game, b: Battle, c: Chit) => void;
+  /** 8.23: may this block reinforce the defender now (the series check has passed)? */
+  reinforceOk?: (g: Game, b: Battle, u: Unit) => boolean;
   /** Combat may not begin yet (a SAM answer or a jamming roll is pending): throw. */
   beforeBegin?: (g: Game, b: Battle) => void;
   /** Before and after one side's dice of a firing step (an engineer bridging instead of firing; a counterbattery strike). */

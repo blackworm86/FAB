@@ -57,11 +57,13 @@ export const online = {
   mode: 'off' as 'off' | 'local' | 'remote', uid: '', seats: {} as Seats, rev: 0, error: '', sync: 'connecting' as string, ready: false,
   lastBy: '', chat: [] as ChatMsg[], devSeat: 'both' as DevSeat, enemyAlias: new Map<string, string>(), account: null as Account | null, admin: false, hasAccounts: false,
   mySide(): Side | null {
-    if ((DEV || SANDBOX) && this.mode !== 'off') return this.devSeat !== 'both' && this.devSeat !== 'watch' ? this.devSeat : null;
+    if (this.devSwitch()) return this.devSeat !== 'both' && this.devSeat !== 'watch' ? this.devSeat : null;
     return this.seats.german === this.uid && this.uid ? seatSide('german') : this.seats.allied === this.uid && this.uid ? seatSide('allied') : null;
   },
   /** True when this client may act for whoever's turn it is (the development "both" seat). */
-  both() { return this.mode === 'off' || ((DEV || SANDBOX) && this.devSeat === 'both'); },
+  both() { return this.mode === 'off' || (this.devSwitch() && this.devSeat === 'both'); },
+  /** The seat switch exists only where no real opponent can be harmed: the sandbox, the two-tab fake store, a local development table. Never on a shared table, whatever the address says. */
+  devSwitch() { return SANDBOX || DEV_FAKE || (DEV && this.mode === 'local'); },
   get active() { return this.mode !== 'off'; },
 };
 

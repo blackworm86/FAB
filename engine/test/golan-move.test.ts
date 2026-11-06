@@ -100,6 +100,9 @@ describe('Example 6: minefields', () => {
     expect(r.path).toEqual([48, 40, 41, 47]);
     expect(r.cost).toBe(4);                          // the printed map has a road on 40/41 (the example says 5)
   });
+  it('after a failed check the allowance is spent: no further one-area move beyond it (5.33 only on the first step)', () => {
+    expect(at({ ...syr('infantry', 48), spent: 3 }, ctx({}, mines), 40)).toBeUndefined();
+  });
   it('minefields do not affect Israeli units', () => { expect(at(isr('armor', 48), ctx({}, mines), 47)!.cost).toBe(1); });
 });
 

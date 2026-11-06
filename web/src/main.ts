@@ -78,7 +78,7 @@ const areaName = (a: number) => E.areas.get(a)!.name;
 
 /* ---------- state ---------- */
 let tut: ReturnType<typeof initTutorial> | null = null;
-let g: E.Game = (() => { const s = load(); return s && (s.game ?? 'bulge') === VOL.id ? s : E.newGame(undefined, VOL.defaultOpts); })();
+let g: E.Game = (() => { const s = HAS_TABLE && !SANDBOX && !TUTORIAL ? null : load(); return s && (s.game ?? 'bulge') === VOL.id ? s : E.newGame(undefined, VOL.defaultOpts); })();   // a shared table starts from what the database sends, never from an old local copy
 let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, previewArea: number | null = null, hoverArea: number | null = null, newOpts: E.Opts = { scenario: VOL.defaultOpts.scenario ?? 'tournament', fuel: !!VOL.defaultOpts.fuel };
 /** A prompt of the volume asked for an area (an air assault landing): the legal ones light up, a tap runs it. */
 let areaPick: { label: string; areas: Set<number>; run: (a: number) => void } | null = null;
@@ -275,13 +275,13 @@ function battleSpot(b: E.Battle, sd: E.Side, kind: 'unit' | 'asset', i: number, 
   return { x: base.x + (col - (inRow - 1) / 2) * (kind === 'unit' ? 1.95 : 1.75), z: base.z + dir * depth };
 }
 /** The battle on the table: each side's assigned assets as cardboard counters in a row behind its blocks, with a red cross to take one back before the battle starts. */
-function drawBattleTable(b: E.Battle, spot: (id: number, x: number, z: number, r: number) => { x: number; z: number }) {
+function drawBattleTable(b: E.Battle) {
   const base = toWorld(...POLE.get(b.area)!);
   for (const sd of VOL.sides) {
     const live = sd === b.attacker ? ['setup', 'attArty'] : ['setup', 'attArty', 'defArty'], spent = (arty: boolean) => arty && !live.includes(b.stage);
     const airs = E.airOf(b, sd), all = [...b.assets[sd], ...airs.map((a) => a.id)], ids = all.filter((id) => { const c = E.chit(g, id); return !spent(E.isArty(c) || (c.kind === 'air_mission' && airs.find((a) => a.id === id)?.mode === 'arty')); }), dir = first(sd) ? 1 : -1;     // artillery leaves the table once it has fired
     ids.forEach((id, i) => {
-      const m = chit3d(E.chit(g, id)), at = battleSpot(b, sd, 'asset', i, ids.length), x = at.x, z = at.z; void spot; m.userData.chit = id; m.position.set(x, 0.06, z); pieces.add(m);
+      const m = chit3d(E.chit(g, id)), at = battleSpot(b, sd, 'asset', i, ids.length), x = at.x, z = at.z; m.userData.chit = id; m.position.set(x, 0.06, z); pieces.add(m);
       if (b.stage === 'setup' && mine(sd)) { const d = disc('x', 0.42); d.position.set(x + 0.5, 0.2, z - 0.5); d.userData.chit = id; pieces.add(d); }
       if (tgt?.units.has(id)) { const ring = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.25, 40), new THREE.MeshBasicMaterial({ color: MAPC.ring, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.14, z); markers.add(ring); }
     });
@@ -290,7 +290,7 @@ function drawBattleTable(b: E.Battle, spot: (id: number, x: number, z: number, r
 /** The point unit of each side carries a gold target (after the blocks are placed). */
 function drawPointMarks(b: E.Battle) {
   for (const [uid, sd] of [[b.attPoint, b.attacker], [b.defPoint, other(b.attacker)]] as const) {                  // the point unit carries a gold target
-    const o = pieces.children.find((x) => x.userData.unit === uid); const u = g.units.find((x) => x.id === uid); if (!o || !u || !seen(u)) continue; void sd;
+    const o = pieces.children.find((x) => x.userData.unit === uid); const u = g.units.find((x) => x.id === uid); if (!o || !u || !seen(u)) continue;;
     const d = discSprite('point', 0.26), c = farSide() ? -1 : 1; d.position.set(o.position.x + 0.58 * c, o.position.y > 0.6 ? 1.95 : 0.9, o.position.z - 0.58 * c); d.userData.anchor = uid; markers.add(d);                 // a back corner of the block, clear of its pips and symbol d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
   }
 }
@@ -319,7 +319,7 @@ function drawPieces() {
     edgeTaken.push({ ...spot, r }); return spot;
   };
   const rows = new Map<number, { base: THREE.Vector3; cont: boolean }>();
-  if (g.battle) drawBattleTable(g.battle, inArea);                                                      // counters first, so blocks make room around them and nothing hides one
+  if (g.battle) drawBattleTable(g.battle);                                                      // counters first, so blocks make room around them and nothing hides one
   for (const a of MAP.areas) {
     const us = E.unitsIn(g, a.id), base = toWorld(...POLE.get(a.id)!), cont = E.contestedAreas(g).includes(a.id); rows.set(a.id, { base, cont });
     const lab = us.length && g.battle?.area !== a.id ? labelSpots(a.id) : []; if (lab.length) taken.set(a.id, [...(taken.get(a.id) ?? []), ...lab]);
@@ -479,7 +479,7 @@ function paintAreas() {
     if (id === selArea && !selUnit) { c = MAPC.sel; o = Math.max(o, 0.3); }
     if (id === kbArea && document.activeElement === canvas && o < 0.3) { c = 0xffffff; o = 0.3; }              // the keyboard cursor
     if (dragTargets.includes(id)) { c = MAPC.reach; o = 0.5; }
-    if (tgt) { if (tgt.areas.has(id) || (tgt.any && false)) { c = tgt.color.get(id) ?? MAPC.reach; o = 0.5; } else if (tgt.pick.has(id) && (!tgt.focus || tgt.color.has(id))) { c = tgt.color.get(id) ?? 0xe7b04a; o = 0.45; } else if (o === 0) { c = 0x000000; o = 0.28; } }       // a chit in hand: what it can act on glows, the rest dims
+    if (tgt) { if (tgt.areas.has(id)) { c = tgt.color.get(id) ?? MAPC.reach; o = 0.5; } else if (tgt.pick.has(id) && (!tgt.focus || tgt.color.has(id))) { c = tgt.color.get(id) ?? 0xe7b04a; o = 0.45; } else if (o === 0) { c = 0x000000; o = 0.28; } }       // a chit in hand: what it can act on glows, the rest dims
     const ar = arr.get(id); if (ar) { c = ar.sa ? MAPC.stop : MAPC.reach; o = 0.45; }
     if (ret.has(id)) { c = MAPC.reach; o = 0.5; }
     if (areaPick) { if (areaPick.areas.has(id)) { c = MAPC.reach; o = 0.5; } else if (o === 0) { c = 0x000000; o = 0.28; } }
@@ -553,10 +553,9 @@ function chitBar(c: E.Chit): string {
 }
 function chitPanel(c: E.Chit): string {
   const a = selArea, out: string[] = [];
-  const head = '';
-  if (c.box !== 'available') return head + '<p class="hint">Only chits in the Available Box can be used.</p>';
-  if (g.phase !== 'admin') return head + `<p class="hint">${E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission' ? 'This chit is assigned to a battle during the Combat Phase.' : c.kind === 'fuel' ? 'Fuel is spent automatically when a German unit moves more than 3 MP or strategic-moves.' : c.kind === 'sa_block' || c.kind === 'special_action_event' ? 'Special Actions are spent in battles (reinforce / retreat), Breakthrough phases and the Admin Phase.' : 'Events are played in the Admin Phase.'}</p>`;
-  if (VOL.id !== 'bulge') return head;                                                              // the other volumes offer everything through the glowing targets and buttons
+  if (c.box !== 'available') return '<p class="hint">Only chits in the Available Box can be used.</p>';
+  if (g.phase !== 'admin') return `<p class="hint">${E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission' ? 'This chit is assigned to a battle during the Combat Phase.' : c.kind === 'fuel' ? 'Fuel is spent automatically when a German unit moves more than 3 MP or strategic-moves.' : c.kind === 'sa_block' || c.kind === 'special_action_event' ? 'Special Actions are spent in battles (reinforce / retreat), Breakthrough phases and the Admin Phase.' : 'Events are played in the Admin Phase.'}</p>`;
+  if (VOL.id !== 'bulge') return '';                                                              // the other volumes offer everything through the glowing targets and buttons
   if (c.kind.startsWith('replacement') || c.kind === 'event_arriving_regiment' || c.kind.startsWith('rebuild')) {
     const el = g.units.filter((x) => E.eligibleForStep(c, x));                                       // blocks on the map light up; eliminated ones come back from the chips above
     if (!el.length) out.push('<p class="hint">No reduced, supplied unit of the right class and Higher Echelon.</p>');
@@ -564,7 +563,7 @@ function chitPanel(c: E.Chit): string {
   } else if (c.kind === 'event_bodenplatte') { out.push(btn(`Strike Allied air missions (${E.boxOf(g, 'allied', 'available').filter((x) => x.kind === 'air_mission').length} in the Available Box)`, () => E.playBodenplatte(g, c.id), 'primary')); }
   else if (c.kind === 'fuel') out.push('<p class="hint gx">Fuel is spent automatically when a German unit moves more than 3 MP or strategic-moves.</p>');
   if (E.isEvent(c) && c.kind !== 'sa_block' && c.kind !== 'event_delayed_response' && E.boxOf(g, c.side, 'eliminated').some(E.isAsset)) out.push(btn('Alternate use', () => E.alternateUse(g, c.id), '', false, '4.21: return 2 assets to the cup instead'));
-  return head + `<div class="row">${out.join('')}</div>`;
+  return `<div class="row">${out.join('')}</div>`;
 }
 
 /* ---------- flow ---------- */
@@ -609,6 +608,7 @@ let pendingFx: Fx[] = [], rollNoted = false;
 function noteFx(a: ReturnType<typeof snap>, x: E.Game, fresh?: boolean) { const d = diffFx(a, x); if (!d.length) return; battleFx.push(...d); if (fresh) { rollFx = d; pendingFx = d; } else showFx(d); }       // after a roll the effects wait for the dice to settle
 function act(f: () => void, after = '') {
   if (!allowed()) return say(notYou());
+  if (online.mode === 'remote' && !online.rev) return say('The game is still loading…');
   if (heldNext) commitRoll();
   const before = g.battle ? snap(g) : null, ck0 = g.checks?.length ?? 0;
   const r = hist.run(g, () => { f(); auto(); }, (a, b) => after || (b.log.slice(a.log.length).at(-1) ?? '').replace(new RegExp(`^T\\d+ (\\[\\w+\\] )?((${TAGRE}) \\w+: )?`), '').slice(0, 60), lockOf);
@@ -628,7 +628,7 @@ function lockOf(a: E.Game, b: E.Game): string {
   if (b.turn !== a.turn || b.phase !== a.phase || b.phasing !== a.phasing) return 'new phase';
   return '';
 }
-function undo() { if (!allowed()) return say(notYou()); const lbl = hist.label, r = hist.undo(g); if (!r.game) return say(r.why ?? 'Nothing to undo'); const p = r.game; p.log.push(`T${p.turn} ${nm(online.mySide() ?? p.phasing)} undid ${lbl ? '“' + lbl + '”' : 'an action'}`); g = p; selUnit = selChit = selArr = previewArea = hoverArea = null; note = ''; save(); refresh(); }
+function undo() { if (!allowed()) return say(notYou()); if (heldNext) return say('Wait for the dice to land'); const lbl = hist.label, r = hist.undo(g); if (!r.game) return say(r.why ?? 'Nothing to undo'); const p = r.game; p.log.push(`T${p.turn} ${nm(online.mySide() ?? p.phasing)} undid ${lbl ? '“' + lbl + '”' : 'an action'}`); g = p; selUnit = selChit = selArr = previewArea = hoverArea = null; note = ''; save(); refresh(); }
 window.addEventListener('keydown', (e) => {
   const t = e.target as HTMLElement | null, typing = !!t?.matches?.('input,select,textarea');
   if (e.key === 'Escape') { if (modal) { modal = null; render(); } else if (selUnit || selArr || selChit || selArea != null) { selUnit = selArr = selChit = null; selArea = null; previewArea = null; refresh(); } return; }
@@ -841,7 +841,7 @@ function supplyLine(path: number[]) {
     else if (i) { disc(c.x, c.z, 0.36, 0.5, rgb(deep, 0.9), 0.05, 8); disc(c.x, c.z, 0.39, 0.47, rgb(blue, 1), 0.06, 9); } });
 }
 function drawRoute() {
-  route.clear(); if (!selUnit || g.battle) return;
+  disposeAll(route); if (!selUnit || g.battle) return;
   const u = g.units.find((x) => x.id === selUnit); if (!u || u.area == null) return;
   const to = previewArea ?? hoverArea;
   if (to == null) { const p = seen(u) && !u.garrison ? E.supplyPath(g, u.side, u.area) : null; if (p && p.length > 1) supplyLine(p); return; }   // no destination chosen: the way the block traces supply (9.3)
@@ -891,7 +891,7 @@ function renderFocus() {
   if (!on) return;
   if (!renderer2) { renderer2 = new THREE.WebGLRenderer({ canvas: canvas2, antialias: true, alpha: true }); renderer2.setPixelRatio(Math.min(2, devicePixelRatio)); }
   const r = canvas.getBoundingClientRect(); if (canvas2.width !== Math.round(r.width * renderer2.getPixelRatio()) || canvas2.height !== Math.round(r.height * renderer2.getPixelRatio())) renderer2.setSize(r.width, r.height, false);
-  if (!focusMesh || focusFor !== b!.area) { focusMesh?.geometry.dispose(); focusMesh = new THREE.Mesh(focusGeometry(b!.area), new THREE.MeshStandardMaterial({ roughness: 0.9 })); focusMesh.rotation.x = -Math.PI / 2; focusMesh.position.y = 0.002; focusFor = b!.area; scene.add(focusMesh); }
+  if (!focusMesh || focusFor !== b!.area) { if (focusMesh) { scene.remove(focusMesh); focusMesh.geometry.dispose(); (focusMesh.material as THREE.Material).dispose(); } focusMesh = new THREE.Mesh(focusGeometry(b!.area), new THREE.MeshStandardMaterial({ roughness: 0.9 })); focusMesh.rotation.x = -Math.PI / 2; focusMesh.position.y = 0.002; focusFor = b!.area; scene.add(focusMesh); }
   (focusMesh.material as THREE.MeshStandardMaterial).map = (board.material as THREE.MeshStandardMaterial).map; (focusMesh.material as THREE.MeshStandardMaterial).needsUpdate = true;
   const poly = areaWorld(b!.area), hidden: THREE.Object3D[] = [], bg = scene.background;
   const hide = (o: THREE.Object3D) => { if (o.visible) { o.visible = false; hidden.push(o); } };
@@ -1136,7 +1136,7 @@ function drag(ev: PointerEvent, el: HTMLElement) {
     const z = at(e) ?? null; if (z !== over) { over?.classList.remove('over'); over = z; over?.classList.add('over'); }
   };
   const up = (e: PointerEvent) => {
-    window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); ghost?.remove(); over?.classList.remove('over'); document.querySelectorAll('.slot.legal').forEach((sl) => sl.classList.remove('legal'));
+    window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', cancel); ghost?.remove(); over?.classList.remove('over'); document.querySelectorAll('.slot.legal').forEach((sl) => sl.classList.remove('legal'));
     const b = g.battle;
     if (!b && dragTargets.length) {                                                                    // an event or asset dropped on the map
       const cands = dragTargets; dragTargets = [];
@@ -1162,15 +1162,15 @@ function drag(ev: PointerEvent, el: HTMLElement) {
     if (why) { refusal = `${c.name}: ${why}`; return render(); } refusal = '';
     act(() => { if (VOL.playInBattle(g, b, c)) return; if (c.kind === 'air_mission') { if (unit) E.assign(g, b, id, 'support', unit); else E.assign(g, b, id, 'arty'); } else E.assign(g, b, id); });
   };
-  window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
-  window.addEventListener('pointercancel', () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); ghost?.remove(); dragTargets = []; refresh(); }, { once: true });
+  const cancel = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); ghost?.remove(); dragTargets = []; refresh(); };
+  window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', cancel, { once: true });
 }
 
 /* ---------- views ---------- */
 function topBar() {
-  const v = E.victory(g), tr = (g.track ?? E.VOLUME.track)[g.turn - 1], i = first(g.phasing) ? 0 : 1, at = STEP_OF[g.phase], pAt = PHASE_OF[g.phase], phaseLabel = g.phase === 'deploy' ? 'Set-up' : PHASES[pAt]; void at; void v;
+  const tr = (g.track ?? E.VOLUME.track)[g.turn - 1], i = first(g.phasing) ? 0 : 1, pAt = PHASE_OF[g.phase], phaseLabel = g.phase === 'deploy' ? 'Set-up' : PHASES[pAt];
   return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game" aria-label="Menu, log and new game">${ico('menu')}</button><div class="c-crumbs">${PHASES.map((s, k) => `<span class="${k === pAt ? 'on' : k < pAt ? 'done' : ''}" title="${k + 1}. ${s}">${s}</span>`).join('')}</div>
-    <div class="c-stat"><span class="tp" title="Turn ${g.turn}, ${nm(g.phasing)} player turn">T${g.turn} · <b class="${g.phasing}">${nm(g.phasing).toUpperCase()}</b><i class="ph"> · ${phaseLabel.toUpperCase()} <small>${pAt + 1}/8</small></i></span>${online.active && online.mode === 'remote' ? `<span class="syncdot ${/NOT SAVED/.test(online.sync) ? 'bad' : /saving|connecting/.test(online.sync) ? 'wait' : 'ok'}" title="${esc(online.sync)}" aria-label="${esc(online.sync)}"></span>` : ''}${online.active ? `<span>YOU<b class="${online.mySide() ?? ''}">${online.both() ? 'BOTH' : (online.mySide() ?? 'WATCHING').toUpperCase()}</b></span>` : ''}${DEV || SANDBOX ? `<button class="ico dev" data-seat title="Developer: switch seat (${nm(P1)}, ${nm(P2)}, both, watching)" aria-label="Switch seat">${ico('swap')}<span class="bl">Seat</span></button>` : ''}${g.phase === 'admin' || g.phase === 'reinforcement' ? `<span title="Chits drawn this turn (${nm(P1)} / ${nm(P2)})">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span>` : ''}${chatBtn()}<button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="View: map layers, colours, reset the camera" aria-label="View">${ico('eye')}<span class="bl">View</span></button><button class="ico" data-modal="boxes" title="Pieces: boxes, arrivals" aria-label="Pieces">${ico('boxes')}<span class="bl">Pieces</span></button></div></div>`;
+    <div class="c-stat"><span class="tp" title="Turn ${g.turn}, ${nm(g.phasing)} player turn">T${g.turn} · <b class="${g.phasing}">${nm(g.phasing).toUpperCase()}</b><i class="ph"> · ${phaseLabel.toUpperCase()} <small>${pAt + 1}/8</small></i></span>${online.active && online.mode === 'remote' ? `<span class="syncdot ${/NOT SAVED/.test(online.sync) ? 'bad' : /saving|connecting/.test(online.sync) ? 'wait' : 'ok'}" title="${esc(online.sync)}" aria-label="${esc(online.sync)}"></span>` : ''}${online.active ? `<span>YOU<b class="${online.mySide() ?? ''}">${online.both() ? 'BOTH' : (online.mySide() ?? 'WATCHING').toUpperCase()}</b></span>` : ''}${online.devSwitch() ? `<button class="ico dev" data-seat title="Developer: switch seat (${nm(P1)}, ${nm(P2)}, both, watching)" aria-label="Switch seat">${ico('swap')}<span class="bl">Seat</span></button>` : ''}${g.phase === 'admin' || g.phase === 'reinforcement' ? `<span title="Chits drawn this turn (${nm(P1)} / ${nm(P2)})">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span>` : ''}${chatBtn()}<button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="View: map layers, colours, reset the camera" aria-label="View">${ico('eye')}<span class="bl">View</span></button><button class="ico" data-modal="boxes" title="Pieces: boxes, arrivals" aria-label="Pieces">${ico('boxes')}<span class="bl">Pieces</span></button></div></div>`;
 }
 const COARSE = matchMedia('(pointer: coarse)').matches;
 /** The verb matches the device: tap on touch screens, click with a mouse. */
@@ -1225,14 +1225,14 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
   if (b) {
     if (b.stage === 'setup') {
       const solo = !online.active || online.both(), me = online.mySide();
-      if (solo) { const why = VOL.blocksBegin(g); return { label: why ? 'Begin combat' : 'Begin combat', fn: () => (why ? say(why) : act(() => E.beginCombat(g, b))), dis: !!why }; }
+      if (solo) { const why = VOL.blocksBegin(g); return { label: why ? 'Begin combat' : 'Begin combat', fn: () => (why ? say(why) : act(() => E.beginCombat(g, g.battle!))), dis: !!why }; }
       if (!me) return null;
       const on = b.ready?.includes(me);
-      return { label: on ? 'Waiting… tap to undo' : 'Ready', fn: () => act(() => E.setReady(g, b, me, !on)) };
+      return { label: on ? 'Waiting… tap to undo' : 'Ready', fn: () => act(() => { if (g.battle) E.setReady(g, g.battle, me, !on); }), dis: !on && !!VOL.blocksBegin(g) };   // the live battle: a remote write may have replaced the one this button was drawn for
     }
     if (b.stage === 'done') return { label: 'Close battle', fn: () => act(() => { E.closeBattle(g); selArea = null; }) };
     if (b.stage.endsWith('Choice') || b.stage === 'retreat' || b.stage === 'attFirst') return null;
-    return { label: `Roll ${STAGE_NAME[b.stage].toLowerCase()}`, fn: () => rollStage(b) };
+    return { label: `Roll ${STAGE_NAME[b.stage].toLowerCase()}`, fn: () => rollStage(g.battle!) };
   }
   const must = E.mustFight(g);
   if (g.phase === 'combat' || g.phase === 'btCombat') {                                              // the player picks the battle and starts it; nothing opens by itself
@@ -1347,7 +1347,7 @@ function piecesHtml() {
   return `<div class="modal"><div class="sheet wide"><h3>${seatedView() ? (sd === viewSide() ? 'My pieces' : 'Opponent\'s pieces') : nm(sd) + ' pieces'} <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3><div class="chips tabrow">${tabs}</div>${body}</div></div>`;
 }
 /** What the volume's own prompts may use: buttons, who is mine, an area pick on the map. */
-const panelCtx = (): PanelCtx => ({ btn, ubtn, mine, areaName, ico, pickArea: (label, areas, run) => { areaPick = { label, areas: new Set(areas), run }; selUnit = selChit = selArr = null; refresh(); } });
+const panelCtx = (): PanelCtx => ({ get: () => g, btn, ubtn, mine, areaName, ico, pickArea: (label, areas, run) => { areaPick = { label, areas: new Set(areas), run }; selUnit = selChit = selArr = null; refresh(); } });
 function dispatch() {
   if (g.battle || g.over) return '';
   const row = (k: string, v: string, c = '') => `<div class="r"><span>${k}</span><b class="${c}">${v}</b></div>`;
@@ -1402,15 +1402,15 @@ function dragArrival(ev: PointerEvent, el: HTMLElement) {
     if (ghost) { ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px'; }
   };
   const up = (e: PointerEvent) => {
-    window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
+    window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', cancel);
     if (!ghost) return; ghost.remove(); e.preventDefault(); const clean = () => { if (selArr === id) { selArr = null; refresh(); } };
     const top = document.elementFromPoint(e.clientX, e.clientY);
     if (top !== canvas && top?.closest('.dock, .c-bar, .c-dispatch, .modal, .legend')) { say('Drop it on a highlighted entry area of the map'); return clean(); }
     const area = pick(e).area; if (area == null || !arrOpts().some((o) => o.area === area)) { say('That is not a legal entry area for this block'); return clean(); }
     selArr = null; act(() => arrive(id, area));
   };
-  window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
-  window.addEventListener('pointercancel', () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); ghost?.remove(); }, { once: true });
+  const cancel = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); ghost?.remove(); };
+  window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', cancel, { once: true });
 }
 /** A block drawn as a real 3D object (front label, right and top faces), for the tray and the battle view. */
 const unitFace = (u: E.Unit) => svgUri(VOL.unitSvg(u, g));
@@ -1436,7 +1436,7 @@ function handCards() {
     const cs = ([b.attacker, other(b.attacker)] as E.Side[]).filter(mine).sort().flatMap((s) => E.boxOf(g, s, 'available').filter((c) => VOL.battleCard(c)));
     const ok = cs.filter((c) => !VOL.battleUse(g, b, c));
     const bad = cs.filter((c) => VOL.battleUse(g, b, c));
-    return `<div class="handtab">${mine(b.attacker) ? btn(`${ico('close')}<span class="bl">Cancel</span>`, () => { E.cancelBattle(g); }, 'ico danger', !!b.locked, b.locked ? 'A Special Action was spent, so the battle must be fought' : 'Withdraw the attack and return every assigned asset') : ''}<button class="ico ${handInfo ? 'on' : ''}" data-ui="${reg(() => { handInfo = !handInfo; if (!handInfo) handInspect = null; })}" aria-pressed="${handInfo}" title="Rules: tap a card to read what it does instead of adding it" aria-label="Rules">${ico('info')}</button>${ok.length ? btn(`${ico('wand')}<span class="bl">Auto-fill</span>`, () => autoFill(b), 'ico', false, 'Auto-fill: place every asset that can legally join, artillery first') : ''}</div>${handInfo ? cardTip() : ''}<div class="c-hand" ${handStyle(ok.length + bad.length)}>${fan([...ok.map((c) => card(c)), ...bad.map((c) => card(c, 0, VOL.battleUse(g, b, c)))])}</div>`;
+    return `<div class="handtab">${mine(b.attacker) ? btn(`${ico('close')}<span class="bl">Cancel</span>`, () => { E.cancelBattle(g); }, 'ico danger', !!b.locked, b.locked ? 'A Special Action was spent, so the battle must be fought' : 'Withdraw the attack and return every assigned asset') : ''}<button class="ico ${handInfo ? 'on' : ''}" data-ui="${reg(() => { handInfo = !handInfo; if (!handInfo) handInspect = null; })}" aria-pressed="${handInfo}" title="Rules: tap a card to read what it does instead of adding it" aria-label="Rules">${ico('info')}</button>${ok.length ? btn(`${ico('wand')}<span class="bl">Auto-fill</span>`, () => autoFill(g.battle!), 'ico', false, 'Auto-fill: place every asset that can legally join, artillery first') : ''}</div>${handInfo ? cardTip() : ''}<div class="c-hand" ${handStyle(ok.length + bad.length)}>${fan([...ok.map((c) => card(c)), ...bad.map((c) => card(c, 0, VOL.battleUse(g, b, c)))])}</div>`;
   }
   if (g.phase !== 'admin') return '';
   const own = online.active && !online.both() ? online.mySide() : null, s = handSide ?? own ?? (g.battle && !mine(g.phasing) ? other(g.phasing) : g.phasing), cs = [...E.boxOf(g, s, 'available')].sort((x, y) => x.kind.localeCompare(y.kind) || x.name.localeCompare(y.name));
@@ -1573,7 +1573,7 @@ function homeHtml() {
   const head = `<header><h1>Fast Action Battles</h1><p>Board-game battles with the series rules, played online.</p></header>${shelfHtml()}`, learn = !ready ? soonCard(info!) : tutCard(form.game);
   if (!online.ready) return `<div class="homepage" style="background-image: radial-gradient(ellipse at 55% 35%, #0b0d0866 0%, #0b0d08d9 62%, #0b0d08 100%), url('./home-table.jpg')"><div class="homein">${head}<p class="hint">Connecting…</p></div></div>`;
   if (online.mode !== 'remote' || !online.hasAccounts) return `<div class="homepage" style="background-image: radial-gradient(ellipse at 55% 35%, #0b0d0866 0%, #0b0d08d9 62%, #0b0d08 100%), url('./home-table.jpg')"><div class="homein">${head}<section class="card"><p class="hint">Online play is not set up on this site.${online.error ? ' ' + esc(online.error) : ''}</p></section>${learn}</div></div>`;
-  if (!signed) return `<div class="homepage" style="background-image: radial-gradient(ellipse at 55% 35%, #0b0d0866 0%, #0b0d08d9 62%, #0b0d08 100%), url('./home-table.jpg')"><div class="homein">${head}<section class="card"><h2>Sign in</h2>${sessionStorage.getItem('fab-next') ? '<p class="hint">You will go straight back to the game you were invited to.</p>' : '<p class="hint">To create a game or join one. Anyone can watch a game from its link.</p>'}${accountHtml()}</section>${learn}${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}</div></div>`;
+  if (!signed) return `<div class="homepage" style="background-image: radial-gradient(ellipse at 55% 35%, #0b0d0866 0%, #0b0d08d9 62%, #0b0d08 100%), url('./home-table.jpg')"><div class="homein">${head}<section class="card"><h2>Sign in</h2>${(() => { try { return sessionStorage.getItem('fab-next'); } catch { return null; } })() ? '<p class="hint">You will go straight back to the game you were invited to.</p>' : '<p class="hint">To create a game or join one. Anyone can watch a game from its link.</p>'}${accountHtml()}</section>${learn}${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}</div></div>`;
   const mine = matches.filter((m) => (m.game ?? 'bulge') === form.game).sort((x, y) => +!!y.myMove - +!!x.myMove).map((m, mi) => `<div class="matchrow ${m.myMove ? 'yours' : ''}"><button class="open" data-do="${reg(() => { location.href = tableUrl(m.id, m.game ?? 'bulge'); })}"><b>${esc(m.title)}${m.myMove ? '<span class="stampy">Your move</span>' : ''}</b><small class="seats"><span class="st ${m.germanName && m.alliedName ? 'live' : 'wait'}" aria-hidden="true"></span><small class="stw">${esc(stateOf(m))}</small><b>${info!.tag[info!.sides[0]]}</b> ${esc(m.germanName || '—')} <b>${info!.tag[info!.sides[1]]}</b> ${esc(m.alliedName || '—')}</small><small class="mrules">${SCEN_NAME[(m.opts as Partial<E.Opts> | undefined)?.scenario ?? 'tournament'] ?? ''}${(m.opts as Partial<E.Opts> | undefined)?.fuel === false ? ' · no fuel rule' : ''}${optOn(m.opts as Partial<E.Opts>).length ? ` · optional ${optOn(m.opts as Partial<E.Opts>).map((r) => r.rule).join(', ')}` : ''}</small></button><div class="row">${btn(`${ico('share')}`, () => { void share(m.id, m.title); }, 'ico', false, 'Invite a player')}${btn(`${ico('trash')}`, () => { void dropMatch(m); }, 'ico danger', false, m.owner === online.uid || online.admin ? 'Delete this game for everyone' : 'Remove from my list')}</div>${m.myMove ? `<button class="${mi === 0 ? 'go' : 'primary'} resume" data-do="${reg(() => { location.href = tableUrl(m.id, m.game ?? 'bulge'); })}">Resume${m.turn ? ` turn ${m.turn}` : ''}${m.step && STEP_NAME[m.step] ? ` · ${STEP_NAME[m.step]}` : ''}${ico('next')}</button>` : ''}</div>`).join('') || '<p class="hint">No games yet.</p>';
   const tile = (v: string, label: string, tag: string) => `<button class="tile ${form.side === v ? 'on' : ''} ${v}" aria-pressed="${form.side === v}" data-ui="${reg(() => { form.side = v; })}" title="${label}"><b>${tag}</b><small>${label}</small></button>`;
   const create = creating ? `<div class="sheetbox"><div class="lh"><h3>${ico('plus')} New game</h3>${ubtn(ico('close'), () => { creating = false; }, 'ico', false, 'Cancel')}</div>
@@ -1673,7 +1673,7 @@ function modalHtml() {
     const body = menuTab === 'Log' ? logHtml()
       : menuTab === 'Settings' ? `<h4>Dice</h4><div class="row">${ubtn(`<span class="sw ${autoRoll ? 'on' : ''}">${autoRoll ? 'AUTO' : 'WAIT'}</span> After a roll, move on by itself (decisions still wait for you)`, () => { autoRoll = !autoRoll; try { localStorage.setItem('fab-autoroll', autoRoll ? '1' : '0'); } catch { /* private mode */ } }, autoRoll ? 'on' : '')}</div><h4>Keyboard</h4><dl class="keys"><dt>Tab</dt><dd>to the map (or “Skip to the map” first)</dd><dt>← ↑ → ↓</dt><dd>move between neighbouring areas</dd><dt>Enter</dt><dd>select or move there; on a button, press it</dd><dt>N</dt><dd>next block that can move</dd><dt>Esc</dt><dd>clear the selection, close a window</dd><dt>Ctrl+Z</dt><dd>undo</dd></dl><h4>Rules in use</h4><p>${rulesInUse(g.opts)}</p>${coursesOf(VOL.id).length ? `<h4>Learn</h4><div class="row">${coursesOf(VOL.id).map((c) => ubtn(`${ico('info')} ${esc(c.title)}`, () => { location.href = tutUrl(c.id); })).join('')}</div>` : ''}<h4>Map</h4><div class="row">${ubtn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${ubtn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Explanations</h4><div class="row">${ubtn(`<span class="sw ${guide === 'full' ? 'on' : ''}">${guide === 'full' ? 'FULL' : 'SHORT'}</span> Explain each option and rule`, () => setGuide(guide === 'full' ? 'short' : 'full'), guide === 'full' ? 'on' : '')}</div><h4>Opponent</h4><div class="row">${ubtn(`<span class="sw ${followFoe ? 'on' : ''}">${followFoe ? 'ON' : 'OFF'}</span> Point the camera at the other player's moves`, () => { followFoe = !followFoe; try { localStorage.setItem('fab-follow', followFoe ? '1' : '0'); } catch { /* private mode */ } }, followFoe ? 'on' : '')}</div>
         ${online.active && !online.admin && !online.both() ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as E.Opts['scenario']; })}">${VOL.scenarios.filter((sc) => SANDBOX || !sc.testing).map((sc) => `<option value="${sc.id}" ${newOpts.scenario === sc.id ? 'selected' : ''}>${esc(sc.name)} (${esc(sc.sub)})</option>`).join('')}</select>
-        ${VOL.features.fuel ? `<label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label>` : ''}</div>${VOL.features.optional ? optChooser(newOpts) : ''}<div class="row">${btn('Restart', () => { if (!confirm('Restart and lose the current game?')) return; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; }, 'danger')}</div>`}`
+        ${VOL.features.fuel ? `<label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label>` : ''}</div>${VOL.features.optional ? optChooser(newOpts) : ''}<div class="row">${ubtn('Restart', () => { if (!confirm('Restart and lose the current game?')) return; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; save(); refresh(); }, 'danger')}</div>`}`
       : menuTab === 'Admin' ? `<div class="row">${ubtn(`${ico('wand')} Sandbox`, () => { location.href = `${homeUrl()}?sandbox=1`; })}${ubtn('Update rules', () => { modal = 'rules'; })}${VOL.sides.map((sd) => ubtn(`Free ${nm(sd)} seat`, () => { void auth.freeSeat(sd); })).join('')}</div>`
       : online.mode === 'remote' ? (() => {
         const a = online.account, signed = !!a && !a.guest, me = online.mySide(), title = matches.find((m) => m.id === TABLE)?.title ?? TABLE, m = matches.find((x) => x.id === TABLE), own = !!m && (m.owner === online.uid || online.admin);
@@ -1760,10 +1760,10 @@ function syncView() {
 }
 /** Split tables: publish the blocks the other side may now see, and (attacker's seat) start combat once both sides are ready and their blocks are known. */
 function driveSplit() {
-  const me = online.mySide(); if (online.mode !== 'remote' || !me) return;
+  const me = online.mySide(); if (online.mode !== 'remote' || !me || !online.rev) return;
   void publishReveals(g);
   const b = g.battle;
-  if (b && b.stage === 'setup' && b.ready?.length === 2 && g.deferBegin && me === b.attacker && E.unitsIn(g, b.area).every((u) => u.name !== 'Hidden block')) act(() => E.beginCombat(g, b));
+  if (b && b.stage === 'setup' && b.ready?.length === 2 && g.deferBegin && me === b.attacker && E.unitsIn(g, b.area).every((u) => u.name !== 'Hidden block') && !VOL.blocksBegin(g)) act(() => E.beginCombat(g, b));
 }
 let ctlKey = '', tgtKey = '';
 let playKey: string | null = null;
@@ -1832,11 +1832,11 @@ const onNet = (): void => {
   const next = (() => { try { return sessionStorage.getItem('fab-next'); } catch { return null; } })();
   if (next && !HAS_TABLE && online.account && !online.account.guest) { try { sessionStorage.removeItem('fab-next'); } catch { /* private mode */ } location.href = `${homeUrl()}?table=${next}`; }     // back to the invite that sent you to sign in
 };
-void startOnline((rg) => { if (heldNext) commitRoll(); const prevG = g;
+void startOnline((rg) => { applyingRemote = true; if (heldNext) commitRoll(); const prevG = g;                      // a roll still on screen is finished locally, never pushed back over what arrived
   if ((rg.game ?? 'bulge') !== VOL.id) { const u = new URL(location.href); u.searchParams.set('game', rg.game ?? 'bulge'); location.replace(u.href); return; }      // a shared table of another game: this page is built for one game, so it reloads as that one
   { const by = online.lastBy, w: E.Side | null = online.seats.german === by ? P1 : online.seats.allied === by ? P2 : null;           // referee-lite: check what the other browser wrote
     if (by && by !== online.uid && prevG.turn) { const p = E.auditChange(prevG, rg, w); if (p.length) { auditWarn = [...auditWarn, ...p].slice(-6); console.warn('rules check', p); } } } const ckLast = JSON.stringify(g.checks?.at(-1) ?? null); const was = g.battle, n0 = was?.rolls.length ?? 0, st0 = was?.stage, pre = was ? snap(g) : null; applyingRemote = true; g = rg;
-  const nb = g.battle; const rolled = !!(was && nb && nb.area === was.area && nb.rolls.length > n0); if (pre) { try { noteFx(pre, g, rolled); } catch (e) { console.error(e); } }                  // a failure while describing the changes must never stop the screen from updating
+  const nb = g.battle; if (nb && !was) { battleFx = []; rollFx = []; } const rolled = !!(was && nb && nb.area === was.area && nb.rolls.length > n0); if (pre) { try { noteFx(pre, g, rolled); } catch (e) { console.error(e); } }                  // a failure while describing the changes must never stop the screen from updating
   if (was && nb && nb.area === was.area && nb.rolls.length > n0 && st0 && STAGE_NAME[st0]) {      // the other player rolled: show their dice here too
     const side = st0 === 'attArty' || st0 === 'offFire' || st0 === 'exploit' ? nb.attacker : other(nb.attacker);
     rollView = { remote: true, morale: st0 === 'exploit', title: `${nm(side)} ${STAGE_NAME[st0]}`, pos: null, groups: nb.rolls.slice(n0).map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : first(side) ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: [] })) };
@@ -1847,7 +1847,7 @@ void startOnline((rg) => { if (heldNext) commitRoll(); const prevG = g;
     const keep = (prev: E.Game, id: string | null, f: (x: E.Game) => unknown) => (same && id && JSON.stringify(f(prev)) === JSON.stringify(f(g)) ? id : null);   // the other player's write keeps what you picked, unless it changed that very piece
     selUnit = keep(prevG, selUnit, (x) => x.units.find((u) => u.id === selUnit)); selChit = keep(prevG, selChit, (x) => x.chits.find((c) => c.id === selChit));
     selArr = keep(prevG, selArr, (x) => [x.pendingArrivals.includes(selArr!), x.units.find((u) => u.id === selArr)?.area]);
-    if (!same) selArea = null; if (!selUnit) previewArea = null; hoverArea = null; } hist.remote(prevG, g, lockOf); if (followFoe && online.lastBy && online.lastBy !== online.uid && !g.battle) { const mv = g.units.find((u) => { const o = prevG.units.find((x) => x.id === u.id); return o && u.area != null && o.area !== u.area; }); if (mv) lookAt(mv.area!); } try { save(); } finally { applyingRemote = false; } refresh();
+    if (!same) selArea = null; if (!selUnit) previewArea = null; hoverArea = null; } hist.remote(prevG, g, lockOf); if (rolled) hist.clear('dice rolled'); if (followFoe && online.lastBy && online.lastBy !== online.uid && !g.battle) { const mv = g.units.find((u) => { const o = prevG.units.find((x) => x.id === u.id); return o && u.area != null && o.area !== u.area; }); if (mv) lookAt(mv.area!); } try { save(); } finally { applyingRemote = false; } refresh();
   { const cs = g.checks ?? [], k = cs.findIndex((c) => JSON.stringify(c) === ckLast); const fresh = ckLast === 'null' ? [] : k >= 0 ? cs.slice(k + 1) : []; if (fresh.length) showChecks(fresh); } }, () => { onNet(); syncView(); render(); }, say, () => { try { sessionStorage.setItem('fab-notice', 'That game was deleted by its creator.'); } catch { /* private mode */ } location.href = homeUrl(); });       // the table is gone: nobody stays inside it
 /** Every drawn symbol and counter as SVG, for the editable sheets (docs/maps/vector/fab-*.svg). */
 function sheets() {
@@ -1859,4 +1859,4 @@ function sheets() {
   for (const m of ['X', 'FW', 'RA', 'RB', 'DIS', 'REC', 'E', 'B', 'P', 'R5', 'R6', 'R7', 'A7', 'A56', 'GI', 'G', 'OOS', 'AIR']) add('markers', m, m, VOL.markSvg(m));
   return out;
 }
-if (DEV || SANDBOX || TUTORIAL) Object.assign(window, { __fab: { tut: () => tut, unitAt: (id: string) => { const m = pieces.children.find((o) => o.userData.unit === id || o.userData.chit === id); if (!m) return null; const r = canvas.getBoundingClientRect(), v = m.getWorldPosition(new THREE.Vector3()).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, game: () => g, setGame: (x: E.Game) => { g = x; hist.clear(); save(); refresh(); }, at: (a: number) => { const p = center(a), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(p.x, 0, p.z).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, project: (x: number, y: number, z: number) => { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height }; }, online, setMatches: (m: Match[]) => { matches = m; }, iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets, setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, rel: () => ({ tris: renderer.info.render.triangles, calls: renderer.info.render.calls, trees: (REL?.props.children[0] as THREE.InstancedMesh | undefined)?.count }), board: () => boardCv.toDataURL("image/png"), view: (x: number, z: number, d: number, pt: number, yw: number) => { goal = { t: new THREE.Vector3(x, 0, z), dist: d, pitch: pt, fast: true }; yaw = yw; }, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
+if (import.meta.env.DEV || DEV_FAKE || SANDBOX || TUTORIAL) Object.assign(window, { __fab: { tut: () => tut, unitAt: (id: string) => { const m = pieces.children.find((o) => o.userData.unit === id || o.userData.chit === id); if (!m) return null; const r = canvas.getBoundingClientRect(), v = m.getWorldPosition(new THREE.Vector3()).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, game: () => g, setGame: (x: E.Game) => { g = x; hist.clear(); save(); refresh(); }, at: (a: number) => { const p = center(a), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(p.x, 0, p.z).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, project: (x: number, y: number, z: number) => { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height }; }, online, setMatches: (m: Match[]) => { matches = m; }, iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets, setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, rel: () => ({ tris: renderer.info.render.triangles, calls: renderer.info.render.calls, trees: (REL?.props.children[0] as THREE.InstancedMesh | undefined)?.count }), board: () => boardCv.toDataURL("image/png"), view: (x: number, z: number, d: number, pt: number, yw: number) => { goal = { t: new THREE.Vector3(x, 0, z), dist: d, pitch: pt, fast: true }; yaw = yw; }, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });

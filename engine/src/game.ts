@@ -119,7 +119,9 @@ export const boxOf = (g: Game, side: Side, box: Chit['box']) => g.chits.filter((
 /** Online the dice must not be predictable from the shared game, so the client plugs in a secure random source; tests and offline play use the seed. */
 let secure: (() => number) | null = null;
 export const setRandom = (f: (() => number) | null) => { secure = f; };
-const roll = (g: Game) => (g.force?.length ? (g.rolls++, g.force.shift()!) : secure ? (g.rolls++, 1 + Math.floor(secure() * 10)) : d10(rng(g.seed * 7919 + g.rolls++)));
+/** The secure source when one is set (online), for choices that must not be reproducible from the shared seed. */
+export const secureRandom = () => secure?.() ?? null;
+const roll = (g: Game) => (secure ? (g.rolls++, 1 + Math.floor(secure() * 10)) : g.force?.length ? (g.rolls++, g.force.shift()!) : d10(rng(g.seed * 7919 + g.rolls++)));   // online the queue is ignored: a client must not write its own dice
 /** A log line, labelled with the side that acted (in Prepare and Reinforcement both sides act). */
 export const say = (g: Game, s: string, side: Side = g.phasing) => { g.log.push(`T${g.turn} ${CUR.tag[side] ?? side} ${g.phase}: ${s}`); if (g.log.length > 400) g.log.splice(0, g.log.length - 300); };   // the log only has to be read, so it stays short
 const AIRBORNE = new Set(['82', '101', '517']);                                                // 18.5
@@ -294,7 +296,7 @@ function drawChits(g: Game, side: Side, n: number) {
     if (c.kind === 'event_delayed_response') { c.box = 'eliminated'; say(g, `${side} drew Delayed Response (no effect)`, side); } else { c.box = 'available'; c.drawn = g.turn * 10 + (g.phasing === sidesOf(g)[0] ? 1 : 2); }
   }
 }
-const rngf = (g: Game) => (secure ? (g.rolls++, secure()) : rng(g.seed * 104729 + g.rolls++)());
+export const rngf = (g: Game) => (secure ? (g.rolls++, secure()) : rng(g.seed * 104729 + g.rolls++)());
 /** 4.1b-c: the Used Box goes back to the cup (German artillery attrition first, 16.12). */
 /** 16.12 (Cold Shoulder P.6: turns 5+): the German player eliminates one regular artillery asset of his choice from the Used Box; true while he has to choose. */
 function bulgeBeforeRecycle(g: Game, side: Side) {
@@ -692,7 +694,7 @@ export function startBattle(g: Game, a: number, viaSA = false, chitId?: string):
   if (!att.length) throw new Error('no attacker in good order');
   let lockedAtStart = false;
   if (bt && !newlyContested(g).includes(a)) {
-    if (CUR.freeBattle?.(g, a)) say(g, 'a free Breakthrough combat round');
+    if (CUR.freeBattle?.(g, a)) { say(g, 'a free Breakthrough combat round'); lockedAtStart = true; }           // the round is spent: the battle cannot be withdrawn
     else { if (!viaSA) throw new Error('re-engaging an already contested area costs a Special Action'); spendSA(g, g.phasing, undefined, 'breakthrough combat', chitId); lockedAtStart = true; }
   }
   const pick = (us: Unit[]) => [...us].sort(pointOrder)[0]?.id ?? '', empty = <T,>(v: T) => Object.fromEntries(sidesOf(g).map((s) => [s, structuredClone(v)])) as Record<Side, T>;
@@ -748,7 +750,7 @@ export function assign(g: Game, b: Battle, id: string, mode?: 'arty' | 'support'
 }
 export function unassign(g: Game, b: Battle, id: string) {
   const c = chit(g, id); if (b.stage !== 'setup') return; c.box = 'available';
-  b.assets[c.side] = b.assets[c.side].filter((x) => x !== id); dropAir(b, c.side, id);
+  b.assets[c.side] = b.assets[c.side].filter((x) => x !== id); dropAir(b, c.side, id); CUR.onUnassign?.(g, b, c);
 }
 /** The air assets a side committed to a battle (one, or two in Golan '73). */
 export const airOf = (b: Battle, side: Side) => [b.air[side], b.air2?.[side]].filter((a): a is { id: string; mode: 'arty' | 'support'; unit?: string } => !!a);
@@ -908,7 +910,7 @@ export function attackerChoice(g: Game, b: Battle, abort: boolean) {
   if (b.stage !== 'attChoice') throw new Error('no choice pending');
   if (abort) {
     const us = unitsIn(g, b.area, b.attacker).filter((u) => !u.garrison);
-    if (b.riverAssault) for (const u of us) { const from = u.from; if (from != null && g.control[from] === b.attacker && !unitsIn(g, from, other(b.attacker)).length && blocks(g, from, b.attacker).length < 2) { u.area = from; } else if (from != null) stepLoss(g, b, b.attacker, u.id); }
+    if (b.riverAssault) for (const u of us) { const from = u.from; if (from != null && g.control[from] === b.attacker && !unitsIn(g, from, other(b.attacker)).length && blocks(g, from, b.attacker).length < stackMax(g, from) && (!CUR.retreatOk || CUR.retreatOk(g, u, b.area, from))) { u.area = from; CUR.onRetreat?.(g, u, b.area, from); } else if (from != null) stepLoss(g, b, b.attacker, u.id); }
     for (const u of us) if (u.area != null) u.disorder = 1;                                      // the ones that fell back are disordered too
     b.queue = []; return end(g, b, 'Attack aborted: attackers disordered' + (b.riverAssault ? ' and back across the river' : ''));
   }
@@ -916,7 +918,7 @@ export function attackerChoice(g: Game, b: Battle, abort: boolean) {
 }
 function hitDefender(g: Game, b: Battle, h: number, kind: 'arty' | 'ground') {
   const def = other(b.attacker); { const p = point(g, b, def); if (p && p.area === b.area) b.lastDefPoint = { ...p }; }
-  if (h > 0 && g.fieldWorks.includes(b.area)) { g.fieldWorks = g.fieldWorks.filter((x) => x !== b.area); h--; say(g, 'field works absorb 1 hit'); }
+  if (h > 0 && g.fieldWorks.includes(b.area) && (g.fwOwner[b.area] ?? def) === def) { g.fieldWorks = g.fieldWorks.filter((x) => x !== b.area); h--; say(g, 'field works absorb 1 hit'); }
   b.pending = h; b.pendingKind = kind;
   const real = fighters(g, b.area, def, false).filter((u) => !u.garrison);
   const canDis = kind === 'arty' && real.some((u) => u.disorder !== 1);
@@ -1021,13 +1023,15 @@ export function defenderRetreatSA(g: Game, b: Battle, chitId?: string) {
   if (b.stage !== 'setup') throw new Error('only before the first roll'); const def = other(b.attacker);
   const us = unitsIn(g, b.area, def).filter((u) => !u.garrison && !u.fort && !u.ghost); if (!us.length) throw new Error('only units retreat: garrisons, defended roadblocks and strongpoints stay (16.21, 4.35, 15.6)');
   spendSA(g, def, us[0].ech, 'retreat before combat', chitId);
-  for (const id of [...b.assets[def], ...airOf(b, def).map((a) => a.id)]) unassign(g, b, id);               // assets already assigned go back to the Available Box b.locked = true; us.forEach((x) => clearInterdict(g, x));
+  for (const id of [...b.assets[def], ...airOf(b, def).map((a) => a.id)]) unassign(g, b, id);               // assets already assigned go back to the Available Box
+  b.locked = true; us.forEach((x) => clearInterdict(g, x));
   b.retreat = { side: def, queue: us.map((u) => u.id), moved: false, after: 'sa', h: 0, excess: 0 }; advanceRetreat(g, b);
 }
 export function defenderReinforceSA(g: Game, b: Battle, unitId: string, chitId?: string) {
   if (b.stage !== 'setup') throw new Error('only before the first roll'); const def = other(b.attacker), u = g.units.find((x) => x.id === unitId)!;
   if (unitsIn(g, b.area, def).some((x) => x.id.startsWith('DR-'))) throw new Error('a defended roadblock may not be reinforced (4.35)');
   if (u.side !== def || u.area == null || !neighbors(b.area).includes(u.area) || contested(g, u.area) || u.disorder || u.garrison || u.fort || u.ghost || blocks(g, b.area, def).length >= stackMax(g, b.area)) throw new Error('not a legal reinforcement');
+  if (CUR.reinforceOk && !CUR.reinforceOk(g, b, u)) throw new Error('not a legal reinforcement here (8.23)');
   spendSA(g, def, u.ech, 'reinforce a battle', chitId); b.locked = true; clearInterdict(g, u); const from = u.area; u.area = b.area; u.from = from; updateControl(g, from); say(g, `${u.name} reinforces ${areas.get(b.area)!.name}`);
 }
 /** 18.3: Peiper, exploiting in a Breakthrough Movement Phase on or before turn 3, may move with its full allowance once per game. */
@@ -1050,7 +1054,7 @@ function retreatExcess(g: Game) {
   for (const side of sidesOf(g)) for (const a of areas.keys()) {
     const us = blocks(g, a, side).filter((u) => !u.fort && !u.ghost); while (us.length > stackMax(g, a)) {
       const u = us.pop()!, to = neighbors(a).find((n) => g.control[n] === side && !unitsIn(g, n, other(side)).length && blocks(g, n, side).length < stackMax(g, n) && (!CUR.retreatOk || CUR.retreatOk(g, u, a, n)));
-      if (to == null) { u.str = 0; eliminate(g, u); } else { u.area = to; u.disorder = 1; say(g, `${u.name} retreats from overstacking to ${areas.get(to)!.name}`); }
+      if (to == null) { u.str = 0; eliminate(g, u); } else { u.area = to; u.disorder = 1; CUR.onRetreat?.(g, u, a, to); updateControl(g, to); say(g, `${u.name} retreats from overstacking to ${areas.get(to)!.name}`); }
     }
   }
 }
@@ -1194,6 +1198,7 @@ export function roadblock(g: Game, id: string, area: number, defended: boolean) 
   needAdmin(g); const c = chit(g, id);
   if (c.kind !== 'engineer' || c.box !== 'available' || !assetZoneOk(g, c, area) || !vacantSupplied(g, c.side, area) || g.roadblocks[area]) throw new Error('needs a supplied, friendly, vacant area with a Terrain Difficulty Number of 1 or more');
   if (defended) {
+    g.units = g.units.filter((x) => x.id !== `DR-${id}`);                                            // the engineer's earlier roadblock (spent, area null) must not share the id
     g.units.push({ id: `DR-${id}`, name: `${c.name} (defended roadblock)`, side: c.side, cls: 'infantry', q: [c.q ?? 'green'], max: 1, str: 1, area, garrison: true, disorder: 0, unsupplied: false, moved: true, reserve: null, exploit: false, ech: c.ech, chitId: id });
     c.box = 'map';
   } else { g.roadblocks[area] = c.side; c.box = 'used'; }

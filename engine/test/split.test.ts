@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { newGame, startBattle, mustFight, type Game } from '../src';
+import { newGame, startBattle, mustFight, useGame, golan, type Game } from '../src';
 import { attackerChoice, defenderChoice, chooseFirstLoss, chooseRetreat, retreatOptions, declineExploit, autoRecover, endPhase, visibleTo } from '../src';
 import { toPublic, compose, secretsOf, revealsIn, freshReveals, isPlaceholder, setReady, type Priv } from '../src';
 describe('split hidden blocks (no server)', () => {
@@ -151,5 +151,15 @@ describe('withdrawing a reveal is not a move', () => {
     expect(auditChange(prev, next, 'allied')).toEqual([]);
     next.units.find((u) => u.name === 'Hidden block')!.area = 999;                     // a real move by the wrong side is still flagged
     expect(auditChange(prev, next, 'allied').length).toBe(1);
+  });
+  it('a Golan ghost or strongpoint shows nothing of what it is in the shared copy', () => {
+    useGame('golan73'); const g = newGame(3, { scenario: 'badr' }); golan.autoStrongpoints(g, 'historical');
+    const ghost = g.units.find((u) => u.ghost && u.area != null)!, fort = g.units.find((u) => u.fort && u.area != null)!;
+    const pub = JSON.parse(toPublic(g, 'israeli', 'salt-i', new Map())) as Game;
+    for (const u of pub.units.filter((x) => isPlaceholder(x))) { expect(u.ghost).toBeUndefined(); expect(u.fort).toBeUndefined(); expect(u.kind).toBeUndefined(); expect(u.division).toBeUndefined(); }
+    expect(pub.units.some((u) => u.id === ghost.id || u.id === fort.id)).toBe(false);
+    const back = compose(pub, { salt: 'salt-i', secrets: secretsOf(g, 'israeli') }, {}).game;
+    expect(back.units.find((u) => u.id === ghost.id)!.ghost).toBe(true); expect(back.units.find((u) => u.id === fort.id)!.fort).toBe(fort.fort);
+    useGame('bulge');
   });
 });

@@ -73,7 +73,7 @@ export function golanTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): Tg
       if (side === 'syrian' && works(g, (x) => G.releaseOperationalReserve(x, id))) list.push({ id: 'release', icon: 'next', label: 'Release the next 3rd Tank Division unit (14.61b)', apply: () => { t.buttons.push({ icon: 'next', label: 'Release the next unit', fn: run((x) => G.releaseOperationalReserve(x, id)) }); t.hint = '15th, 81st, 65th, in that order'; } });
       const lost = g.chits.find((x) => x.side === side && x.box === 'eliminated' && x.kind === (side === 'syrian' ? 'sam' : 'air_mission'));
       if (lost) list.push({ id: 'asset', icon: 'air_mission', label: side === 'syrian' ? 'Replace a lost SAM (14.61c)' : 'Replace a lost air asset (14.61d)', apply: () => { t.buttons.push({ icon: 'undo', label: `Bring back ${lost.name}`, fn: run((x) => G.replaceAsset(x, side, lost.id, id)) }); t.hint = 'From the Eliminated Box back into the cup'; } });
-      modes(list.filter((m) => m.id !== 'merge' || ctx.mode.startsWith('merge') || true));
+      modes(list);
       break;
     }
     case 'command_staff': modes([
@@ -107,20 +107,20 @@ export const golanBattleCard = (c: E.Chit) => E.isArty(c) || E.isBattleAsset(c) 
 
 /** What the shared screen hands the volume's prompts. */
 export interface PanelCtx { btn: (label: string, f: () => void, cls?: string, dis?: boolean, title?: string) => string; ubtn: (label: string, f: () => void, cls?: string, dis?: boolean, title?: string) => string;
-  mine: (s: E.Side) => boolean; pickArea: (label: string, areas: number[], run: (a: number) => void) => void; areaName: (a: number) => string; ico: (k: string) => string }
+  /** The game as it is now (a remote write may have replaced the one the panel was drawn for). */ get: () => Game; mine: (s: E.Side) => boolean; pickArea: (label: string, areas: number[], run: (a: number) => void) => void; areaName: (a: number) => string; ico: (k: string) => string }
 /** The volume's own prompts, above the hand: the SAM answer, the air assault, the engineer's bridging choice, the jamming answer. */
 export function golanPanel(g: Game, ctx: PanelCtx): string {
-  const V = G.state(g), b = g.battle, out: string[] = [];
+  const V = G.state(g), b = g.battle, out: string[] = [], live = ctx.get;                            // the buttons act on the game as it is when tapped, not as it was drawn
   if (V.samTarget) {
     const air = E.chit(g, V.samTarget), sams = g.chits.filter((c) => c.kind === 'sam' && c.box === 'available'), own = ctx.mine('syrian');
-    out.push(`<div class="volpanel sam"><b>${ctx.ico('warn')} SAM fire (16.12)</b><span>Syria may answer the Israeli ${esc(air.name)}${air.area != null && air.area < 100 ? ` over ${esc(ctx.areaName(air.area))}` : ''}.</span><div class="row">${sams.length ? ctx.btn(`Fire a SAM (${sams.length} ready)`, () => { G.fireSam(g, sams[0].id); }, 'primary', !own) : ''}${ctx.btn('Let it fly', () => G.declineSam(g), '', !own)}</div></div>`);
+    out.push(`<div class="volpanel sam"><b>${ctx.ico('warn')} SAM fire (16.12)</b><span>Syria may answer the Israeli ${esc(air.name)}${air.area != null && air.area < 100 ? ` over ${esc(ctx.areaName(air.area))}` : ''}.</span><div class="row">${sams.length ? ctx.btn(`Fire a SAM (${sams.length} ready)`, () => { G.fireSam(live(), sams[0].id); }, 'primary', !own) : ''}${ctx.btn('Let it fly', () => G.declineSam(g), '', !own)}</div></div>`);
   }
   if (b && b.stage === 'setup') {
     const B = G.battleState(b), def = E.other(b.attacker);
-    if (B.ew?.pending) out.push(`<div class="volpanel"><b>${ctx.ico('warn')} Jamming (17.33)</b><span>${nm(def)}: each defending unit rolls, 5 or less disordered. Play your EW card for +2 to each roll, or roll without it.</span><div class="row">${ctx.btn('Roll without countermeasures', () => G.answerJamming(g, b), 'primary', !ctx.mine(def))}</div></div>`);
+    if (B.ew?.pending) out.push(`<div class="volpanel"><b>${ctx.ico('warn')} Jamming (17.33)</b><span>${nm(def)}: each defending unit rolls, 5 or less disordered. Play your EW card for +2 to each roll, or roll without it.</span><div class="row">${ctx.btn('Roll without countermeasures', () => G.answerJamming(live(), b), 'primary', !ctx.mine(def))}</div></div>`);
     if (b.attacker === 'syrian' && b.area < 100 && !G.isAssembly(b.area) && b.assets.syrian.some((id) => E.chit(g, id).kind === 'engineer')) {
       const ditch = E.neighbors(b.area).filter((n) => n < 100 && E.connection(b.area, n)?.atDitch && !V.bridgedDitch.includes(E.edgeKey(b.area, n)));
-      if (ditch.length) out.push(`<div class="volpanel"><b>${ctx.ico('engineer')} Engineer (14.51b)</b><span>Bridge the AT ditch instead of firing (if it survives both fire steps):</span><div class="row">${ditch.map((n) => ctx.btn(`towards ${esc(ctx.areaName(n))}`, () => G.setEngineerBridge(g, b, B.engBridge === E.edgeKey(b.area, n) ? null : n), B.engBridge === E.edgeKey(b.area, n) ? 'on' : '', !ctx.mine('syrian'))).join('')}</div></div>`);
+      if (ditch.length) out.push(`<div class="volpanel"><b>${ctx.ico('engineer')} Engineer (14.51b)</b><span>Bridge the AT ditch instead of firing (if it survives both fire steps):</span><div class="row">${ditch.map((n) => ctx.btn(`towards ${esc(ctx.areaName(n))}`, () => G.setEngineerBridge(live(), b, B.engBridge === E.edgeKey(b.area, n) ? null : n), B.engBridge === E.edgeKey(b.area, n) ? 'on' : '', !ctx.mine('syrian'))).join('')}</div></div>`);
     }
     for (const s of E.sidesOf(g)) if (B.event[s]) out.push(`<div class="volpanel"><small>${nm(s)} event: ${esc(E.chit(g, B.event[s]!).name)}</small></div>`);
   }
@@ -135,25 +135,25 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
   }
   if (g.phase === 'deploy' && ctx.mine('israeli')) {                                                // 15.7 and 14.02: what the Israeli player places before the first phase
     const sp = g.units.filter((u) => (u.fort || u.ghost) && u.box === 'deploy').length, mines = V.minesLeft ?? 0;
-    if (sp) out.push(`<div class="volpanel"><b>${ctx.ico('lock')} Strongpoints and ghosts (15.7)</b><span>${sp} to place face-down, one in each area next to the Purple Line: drag them from the tray, or place them all at once.</span><div class="row">${ctx.btn('Shuffle face-down', () => G.autoStrongpoints(g, 'shuffle'), 'primary', false, 'Random, as most players do (errata)')}${ctx.btn('Historical placement', () => G.autoStrongpoints(g, 'historical'), '', false, "The errata's rough historical set-up")}</div></div>`);
+    if (sp) out.push(`<div class="volpanel"><b>${ctx.ico('lock')} Strongpoints and ghosts (15.7)</b><span>${sp} to place face-down, one in each area next to the Purple Line: drag them from the tray, or place them all at once.</span><div class="row">${ctx.btn('Shuffle face-down', () => G.autoStrongpoints(live(), 'shuffle'), 'primary', false, 'Random, as most players do (errata)')}${ctx.btn('Historical placement', () => G.autoStrongpoints(live(), 'historical'), '', false, "The errata's rough historical set-up")}</div></div>`);
     if (mines) {
       const keys = G.minefieldOptions(g).map((k) => k.split('-').map(Number)), ends = [...new Set(keys.flat())];
       const second = (a: number) => keys.filter((k) => k.includes(a)).map((k) => (k[0] === a ? k[1] : k[0]));
-      out.push(`<div class="volpanel"><b>${ctx.ico('warn')} Minefields (14.02)</b><span>${mines} of 3 still to lay, on any boundary but the AT ditch, escarpment, river, Mt Hermon or rugged ones; no area may have two mined boundaries.</span><div class="row">${ctx.ubtn('Lay a minefield', () => ctx.pickArea('Minefield: first area', ends, (a) => ctx.pickArea(`Minefield from ${ctx.areaName(a)}: the area across the boundary`, second(a), (b) => G.placeMinefield(g, a, b))), 'primary')}${ctx.btn('Lay the rest at random', () => G.autoMinefields(g))}</div></div>`);
+      out.push(`<div class="volpanel"><b>${ctx.ico('warn')} Minefields (14.02)</b><span>${mines} of 3 still to lay, on any boundary but the AT ditch, escarpment, river, Mt Hermon or rugged ones; no area may have two mined boundaries.</span><div class="row">${ctx.ubtn('Lay a minefield', () => ctx.pickArea('Minefield: first area', ends, (a) => ctx.pickArea(`Minefield from ${ctx.areaName(a)}: the area across the boundary`, second(a), (b) => G.placeMinefield(live(), a, b))), 'primary')}${ctx.btn('Lay the rest at random', () => G.autoMinefields(g))}</div></div>`);
     }
   }
   if (g.phase === 'deploy' && g.opts.scenario === 'badr_alt' && ctx.mine('syrian')) {                // 22.25: two reserve markers on placed units
     const left = g.markers.syrian?.res ?? 0, placed = [...new Set(g.units.filter((u) => u.side === 'syrian' && u.area != null && !u.garrison && !u.reserve).map((u) => u.area!))];
-    out.push(`<div class="volpanel"><b>${ctx.ico('next')} Reserve markers (22.25)</b><span>${left} of 2 left to put on Syrian units you have placed.</span><div class="row">${ctx.ubtn('Mark a unit as reserve', () => ctx.pickArea('Reserve marker', placed, (a) => G.deployReserve(g, g.units.find((u) => u.side === 'syrian' && u.area === a && !u.garrison && !u.reserve)!.id)), '', !left || !placed.length)}</div></div>`);
+    out.push(`<div class="volpanel"><b>${ctx.ico('next')} Reserve markers (22.25)</b><span>${left} of 2 left to put on Syrian units you have placed.</span><div class="row">${ctx.ubtn('Mark a unit as reserve', () => ctx.pickArea('Reserve marker', placed, (a) => G.deployReserve(live(), g.units.find((u) => u.side === 'syrian' && u.area === a && !u.garrison && !u.reserve)!.id)), '', !left || !placed.length)}</div></div>`);
   }
   if (G.isAlOwda(g) && g.phase === 'deploy') {
     const at = G.alowdaRaidAreas(g), cmd = G.alowdaCommandos(g);
     const land = at.length && cmd.length && ctx.mine('syrian');
-    out.push(`<div class="volpanel">${land ? `<b>${ctx.ico('air_mission')} Commando landings (20.35)</b><span>Land the ${esc(cmd.map((c) => c.name).join(' and '))} in vacant Israeli-held areas east of the Jordan (not Mt Hermon or Ma'agan), or skip them.</span><div class="row">${ctx.ubtn('Choose a landing area', () => ctx.pickArea(`Land the ${cmd[0]?.name ?? 'commandos'}`, at, (a) => G.alowdaRaid(g, cmd[0].id, a)), 'primary')}</div>` : ''}<small>${ctx.ico('warn')} Draft scenario: ${esc(G.ALOWDA_ESTIMATES)}.</small></div>`);
+    out.push(`<div class="volpanel">${land ? `<b>${ctx.ico('air_mission')} Commando landings (20.35)</b><span>Land the ${esc(cmd.map((c) => c.name).join(' and '))} in vacant Israeli-held areas east of the Jordan (not Mt Hermon or Ma'agan), or skip them.</span><div class="row">${ctx.ubtn('Choose a landing area', () => ctx.pickArea(`Land the ${cmd[0]?.name ?? 'commandos'}`, at, (a) => G.alowdaRaid(live(), cmd[0].id, a)), 'primary')}</div>` : ''}<small>${ctx.ico('warn')} Draft scenario: ${esc(G.ALOWDA_ESTIMATES)}.</small></div>`);
   }
   if (!b && g.phase === 'combat' && ctx.mine('syrian')) {
     const aa = G.airAssaultTargets(g);
-    if (aa.length) out.push(`<div class="volpanel"><b>${ctx.ico('air_mission')} 82nd Para (15.3)</b><span>The paratroop battalion may air-assault east of the SAM barrier or onto Mt Hermon, before any battle.</span><div class="row">${ctx.ubtn('Choose the landing area', () => ctx.pickArea('Air assault: tap the landing area', aa, (a) => G.airAssault(g, a)), 'primary')}</div></div>`);
+    if (aa.length) out.push(`<div class="volpanel"><b>${ctx.ico('air_mission')} 82nd Para (15.3)</b><span>The paratroop battalion may air-assault east of the SAM barrier or onto Mt Hermon, before any battle.</span><div class="row">${ctx.ubtn('Choose the landing area', () => ctx.pickArea('Air assault: tap the landing area', aa, (a) => G.airAssault(live(), a)), 'primary')}</div></div>`);
   }
   return out.length ? `<div class="volstack">${out.join('')}</div>` : '';
 }

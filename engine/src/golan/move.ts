@@ -115,7 +115,7 @@ export function reachable(u: GMoveUnit, ctx: GMoveCtx): GReach[] {
         if (!fresh && (contested(to) || ctx.units(to)[enemy] > 0)) continue;
       }
       let cost = cur.cost + s.cost + (startContested && steps === 0 ? 1 : 0);                   // 5.32 +1 to leave a contested area
-      if (cost > allowance && !(steps === 0)) continue;                                         // 5.33 one area may always be entered
+      if (cost > allowance && !first) continue;                                                 // 5.33 one area may always be entered, as the first move of the phase
       const old = best.get(to);
       if (old && old.cost <= cost) continue;
       const friendly = ctx.units(to)[u.side];
