@@ -60,6 +60,13 @@ jobs:
         run: |
           nohup npx vite --port 5199 > vite.log 2>&1 &
           for i in $(seq 1 60); do curl -sf http://localhost:5199/ > /dev/null && break; sleep 2; done
+      - name: Build and serve the production site (for the home page check)
+        run: |
+          npm run build
+          nohup npx vite preview --port 5300 > preview.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:5300/ > /dev/null && break; sleep 1; done
       - run: npm run e2e
+        env:
+          HOME_URL: http://localhost:5300/
       - if: failure()
         run: tail -50 vite.log

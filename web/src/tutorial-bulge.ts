@@ -1,5 +1,6 @@
 /** The Bulge course (docs/TUTORIAL.md): four lessons of basics, then the Play Book's Examples of Play 23.1-23.10 as a turn played step by step.
  *  Engine only (no DOM), so the tests play every step. The player is the German side; the coach plays the Allies in the book's words. */
+import { infoOf } from './tutorial-list';
 import * as E from '../../engine/src';
 import entryJson from '../../data/bulge/entry_areas.json';
 import { type Course, type Lesson, type Step, type G, U, C, area, avail, sa, queue, stage, begin, roll, fightAt, GO, bookDice, tapUnit, moveTo, closeStep, recap, situation, next, bulgeTable, pieces, blockAnatomy, strengths, bulgeBlock, bulgeWood, bulgeChit, bulgeGarrison } from './tutorial-kit';
@@ -297,8 +298,7 @@ const L_VICTORY: Lesson = { id: 'victory', topic: 'The Allied turn and victory',
 ] };
 
 export const BULGE_COURSE: Course = {
-  id: 'bulge', game: 'bulge', title: 'The Bulge: learn to play', sub: '13 lessons · about 65 minutes', minutes: 66,
-  blurb: 'The pieces, the map and the score, then a whole turn played step by step on the Play Book\'s examples. You play the Germans; the coach plays the Allies.',
+  ...infoOf('bulge'),
   lessons: [L_WELCOME, L_BLOCKS, L_MAP, L_CHITS, L_REINF, L_ADMIN, L_MOVE, L_STRAT, L_COMBAT, L_EXPLOIT, L_BREAK, L_SUPPLY, L_VICTORY],
   end: [{ label: 'Start a Nuts! game', scenario: 'intro', primary: true }, { label: 'Start the Tournament', scenario: 'tournament' }],
 };

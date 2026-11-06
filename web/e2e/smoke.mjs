@@ -1,5 +1,5 @@
 // Browser smoke test: each playable game, on desktop and on a phone, opens without errors, steps a few phases,
-// fights a battle and opens the rules reader. Run with the dev server up:  npm run e2e  (BASE=http://localhost:5199 by default).
+// fights a battle and opens the rules reader. Run with the dev server up:  npm run e2e  (BASE=http://localhost:5199 by default; HOME_URL=<a vite preview address> adds the home page).
 import { chromium, devices } from 'playwright';
 
 const BASE = process.env.BASE ?? 'http://localhost:5199/';
@@ -52,6 +52,20 @@ for (const game of GAMES) for (const [size, opts] of Object.entries(SIZES)) {
   await page.click('#rules [data-act="close"]').catch(() => {}); await page.waitForTimeout(300);
   check(!(await page.locator('#rules').count()), 'the reader closes');
 
+  check(!errors.length, `no errors in the page${errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''}`);
+  await page.close();
+}
+// the home page of a production build (HOME_URL=http://localhost:5300/, vite preview): it shows the shelf and the learn card without the 3D table
+if (process.env.HOME_URL) for (const [size, opts] of Object.entries(SIZES)) {
+  console.log(`home · ${size}`);
+  const page = await (await browser.newContext(opts)).newPage(), errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(process.env.HOME_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  check(await page.waitForSelector('.homepage .tutcard', { timeout: 60000 }).then(() => true, () => false), 'the home page shows the learn card');
+  await page.waitForTimeout(1000);
+  check(await page.evaluate(() => !window.__fab && getComputedStyle(document.getElementById('gl')).display === 'none'), 'the 3D table is not loaded');
+  await page.locator('.tutcard button', { hasText: 'Open' }).click();
+  check(await page.waitForSelector('#rules', { timeout: 20000 }).then(() => true, () => false), 'the rules reader opens from the home page');
   check(!errors.length, `no errors in the page${errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''}`);
   await page.close();
 }

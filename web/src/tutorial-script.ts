@@ -8,7 +8,7 @@ export { U } from './tutorial-kit';
 
 export const COURSES: Course[] = [BULGE_COURSE, GOLAN_COURSE, GOLAN_NEW_COURSE];
 export const courseFor = (id: string | null | undefined) => COURSES.find((c) => c.id === id) ?? COURSES[0];
-export const coursesOf = (game: string) => COURSES.filter((c) => c.game === game);
+export { coursesOf } from './tutorial-list';
 
 /** Play the first `upTo` steps of a lesson in engine terms (Back, and the tests). */
 export function replay(course: Course, i: number, upTo: number): G {

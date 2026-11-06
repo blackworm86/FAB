@@ -1,5 +1,6 @@
 /** The Golan '73 lessons (docs/TUTORIAL.md), built on the Exclusive Rules and the Play Book's Examples 1-15. Two courses share them:
  *  "learn to play" for a first game, and "what's new" for players who know The Bulge. Engine only (no DOM), so the tests play every step. */
+import { infoOf } from './tutorial-list';
 import * as E from '../../engine/src';
 import { type Course, type Lesson, type Step, type G, U, C, area, avail, sa, saChit, queue, stage, begin, roll, fightAt, GO, bookDice, tapUnit, moveTo, closeStep, recap, situation, golanTable, pieces, blockAnatomy, strengths, golanBlock, golanWood, golanChit, autoFight, runTo } from './tutorial-kit';
 
@@ -346,14 +347,12 @@ const L_NEW: Lesson = { id: 'g-new', topic: 'Same engine, new ground', chapter: 
 ] };
 
 export const GOLAN_COURSE: Course = {
-  id: 'golan73', game: 'golan73', title: "Golan '73: learn to play", sub: '18 lessons · about 95 minutes', minutes: 94,
-  blurb: 'The sides, the ground and the score, then every phase of the Golan turn on the Play Book\'s examples, on both sides of the line.',
+  ...infoOf('golan73'),
   lessons: [L_WELCOME, L_BLOCKS, L_MAP, L_CHITS, L_SETUP, L_REINF, L_MOVE_IS, L_MOVE_SY, L_STRAT, L_COMBAT, L_ASSAULT, L_AIR, L_EVENTS, L_ADMIN, L_RAID, L_BREAK, L_SUPPLY, L_VICTORY],
   end: [{ label: 'Start Operation Badr', scenario: 'badr', primary: true }, { label: 'Badr, free set-up', scenario: 'badr_alt' }],
 };
 export const GOLAN_NEW_COURSE: Course = {
-  id: 'golan73-new', game: 'golan73', title: "Golan '73: what's new", sub: '16 lessons · about 85 minutes', minutes: 87,
-  blurb: 'For players who know The Bulge: the new ground, the new units and assets, and the Golan examples, without the series basics.',
+  ...infoOf('golan73-new'),
   lessons: [L_NEW, L_BLOCKS, L_MAP, L_SETUP, L_REINF, L_MOVE_IS, L_MOVE_SY, L_COMBAT, L_ASSAULT, L_AIR, L_EVENTS, L_ADMIN, L_RAID, L_BREAK, L_SUPPLY, L_VICTORY].map((l) => ({ ...l, chapter: CHN })),
   end: [{ label: 'Start Operation Badr', scenario: 'badr', primary: true }, { label: 'Badr, free set-up', scenario: 'badr_alt' }],
 };
