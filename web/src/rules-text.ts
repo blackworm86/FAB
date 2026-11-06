@@ -15,7 +15,7 @@ export const RULE: Record<string, [string, string]> = {
 • Blow up bridges (4.31): from a supplied, friendly, uncontested area, blow up to TWO bridges on that area's river boundaries.
 • Repair a bridge (4.32): control both sides (or one side and contest the other); the repairing area must be supplied and uncontested.
 • Field works (4.33): in a supplied, friendly, uncontested area with a friendly unit of the engineer's Higher Echelon. Defenders there absorb one hit.
-• Roadblock (4.34): in a supplied, friendly, vacant area with Terrain Difficulty 1+. The first enemy unit entering pays +1 MP and stops.
+• Roadblock (4.34): in a supplied, friendly, vacant area with Terrain Difficulty 1+. The first enemy unit entering pays +1 MP and stops. Friendly units may pass through without removing it.
 • Defended roadblock (4.35): the engineer chit itself stays in the area as a roadblock that is not removed by entry; it defends like a unit and may try to blow bridges.
 Combat (6.32, 6.33): as a battle asset it fires in ground combat, or (attacker) removes the enemy field works instead of firing.
 German engineers work in their own army's zone (14.52); an army without its engineer may borrow another for bridging only.`],
@@ -27,7 +27,7 @@ German engineers work in their own army's zone (14.52); an army without its engi
 • A hit eliminates it; otherwise it goes to the Used Box after the battle.`],
   task_force: ['Task Force (Allied, turns 2-5)', `Reinforcement Phase (16.22): place it in any uncontested, friendly-controlled, supplied area (other friendly forces may be there). It then acts exactly like a garrison (16.21):
 • It never moves. Alone it defends like a defended roadblock (4.35); with Allied units it is their battle asset.
-• It cannot retreat; it is eliminated by a hit or a failed out-of-supply morale check, and cannot be returned by the alternate event use (4.21).`],
+• It cannot retreat: if the units beside it retreat, it is destroyed and counts as one hit (6.42c). A hit or a failed out-of-supply morale check also eliminates it. It cannot be returned by the alternate event use (4.21).`],
   fuel: ['Fuel asset (German, 16.13)', `With the fuel rule, a German unit that moves more than 3 movement points, or strat-moves, spends one fuel asset (it goes to the Used Box).
 • With no fuel available, German units may move only up to 3 MP and may not strat-move.
 • Fuel is spent automatically when you move.`],

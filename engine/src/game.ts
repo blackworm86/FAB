@@ -435,7 +435,7 @@ function bulgeReach(g: Game, u: Unit, one: boolean): Opt[] {
   const garr = new Set(g.units.filter((x) => x.garrison && x.side === enemy && x.area != null && !blocks(g, x.area, enemy).length).map((x) => x.area!));
   const r = reachable({ side: u.side as 'german' | 'allied', cls: u.cls, area: u.area!, supplied: !u.unsupplied, disordered: u.disorder > 0, adjacentOnly: one || !!u.adjOnly, spent: u.spent, ownZone: one ? undefined : (ARMY(u) as 5 | 6 | 7 | undefined), boundaryPreauthorized: u.bcross },
     { occupants: occ, blownBridges: new Set(g.blown), roadblocks: new Set([...garr, ...markerAreas(g, enemy)]), controller: (a) => g.control[a] as 'german' | 'allied' | undefined,
-      extraCost: (f, t) => (markerAreas(g, enemy).includes(t) ? 1 : 0) + (u.side === 'allied' && unitsIn(g, t, 'german').some((x) => x.heydte) ? 1 : 0) + (u.side === 'german' && (g.interdicted[f] || g.interdicted[t]) ? 1 : 0) });
+      extraCost: (f, t) => (markerAreas(g, enemy).includes(t) ? 1 : 0) + (unitsIn(g, t).length && !blocks(g, t, 'german').length && !blocks(g, t, 'allied').length ? 1 : 0) + (u.side === 'german' && (g.interdicted[f] || g.interdicted[t]) ? 1 : 0) });
   return r.filter((x) => !(u.side === 'german' && x.fuel && g.opts.fuel && !fuelChits(g).length));    // 16.13
 }
 /** 17.11 Greif interdict: the unit rolls morale before it moves; failing, it may only move one area. */
@@ -450,7 +450,7 @@ function bulgeAfterMove(g: Game, u: Unit, opt: Opt) {
   paradropReveal(g, opt.area, u);
 }
 function finishMove(g: Game, u: Unit, opt: Opt, bridgeBlown: boolean) {
-  for (const a of opt.path.slice(1)) delete g.roadblocks[a];                                  // 4.34 a roadblock goes when anyone enters
+  for (const a of opt.path.slice(1)) if (g.roadblocks[a] && g.roadblocks[a] !== u.side) delete g.roadblocks[a];   // 4.34 (2016): a roadblock goes when an enemy unit pays its penalty, not when a friendly unit enters
   u.bcross = false;                                                                          // 14.62a the marker goes when the unit next moves
   const from = u.area!, to = opt.area, last = connection(opt.path[opt.path.length - 2], to)!, enemy = other(u.side);
   const intoEnemy = unitsIn(g, to, enemy).length > 0;
@@ -756,7 +756,7 @@ function bulgeCanAssign(g: Game, b: Battle, side: Side, c: Chit): string | null 
     if (side === 'german' && arts.length >= 1 && (arts[0].kind === c.kind || arts[0].ech !== c.ech)) return 'two German artillery assets need one regular and one rocket asset of the same army (16.12)';
     return null;
   }
-  if (isBattleAsset(c)) return lim.battle ? null : 'battle assets need units of one Higher Echelon';
+  if (isBattleAsset(c)) { if (!lim.battle) return 'battle assets need units of one Higher Echelon'; const cap = att ? 8 : 5; return cur.filter(isBattleAsset).length >= cap ? `at most ${cap} battle assets for the ${att ? 'Attacker' : 'Defender'} (${att ? '6.22' : '6.23'})` : null; }
   return 'this chit cannot be assigned to a battle';
 }
 export function assign(g: Game, b: Battle, id: string, mode?: 'arty' | 'support', unit?: string) {
@@ -955,6 +955,7 @@ export function defenderChoice(g: Game, b: Battle, use: boolean) {
 function applyDef(g: Game, b: Battle, h: number, kind: 'arty' | 'ground', retreat: boolean) {
   const def = other(b.attacker);
   if (retreat) h--;
+  if (retreat && CUR.noRetreat) for (const a of unitsIn(g, b.area, def).filter((x) => CUR.noRetreat!(g, x))) { say(g, `${a.name} cannot retreat: destroyed, counting as a hit (6.42c)`); eliminate(g, a); h = Math.max(0, h - 1); }   // 6.42c (2016)
   const excess = allocate(g, b, def, h);
   b.pending = 0;
   if (retreat) { b.retreat = { side: def, queue: unitsIn(g, b.area, def).filter((x) => !x.garrison && !x.fort && !x.ghost).map((x) => x.id), moved: false, after: kind, h, excess }; return advanceRetreat(g, b); }
@@ -969,13 +970,30 @@ function finishDef(g: Game, b: Battle, kind: 'arty' | 'ground', retreated: boole
   }
   next(g, b);
 }
-/** Where a retreating block may go: adjacent, friendly-controlled, free of enemies, room for one more block (6.5). */
+/** Where a retreating block may go (6.6, 2016): an adjoining, uncontested, friendly-controlled area with room (one unit or fewer); when every such area
+ *  is full, onward through them to the nearest uncontested friendly area with room. None: the block takes a step loss instead. */
 export function retreatOptions(g: Game, b: Battle): number[] {
   setPlayArea(g.inPlay);
   const r = b.retreat; if (!r) return [];
   const u = g.units.find((x) => x.id === r.queue[0]);                                        // the unit retreating now
-  const opts = neighbors(b.area).filter((n) => g.control[n] === r.side && !unitsIn(g, n, other(r.side)).length && (u ? roomFor(g, u, n) : blocks(g, n, r.side).length < stackMax(g, n)) && (!u || !CUR.retreatOk || CUR.retreatOk(g, u, b.area, n)));
+  const room = (n: number) => (u ? roomFor(g, u, n) : blocks(g, n, r.side).length < stackMax(g, n));
+  const opts = [...retreatPaths(g, b, r.side, u).keys()].filter(room);
   return u && CUR.retreatPrefer ? CUR.retreatPrefer(g, u, b.area, opts) : opts;
+}
+/** The retreat routes from the battle area: each reachable destination and the way there (adjoining areas with room first; past full ones only when all are full). */
+function retreatPaths(g: Game, b: Battle, side: Side, u: Unit | undefined): Map<number, number[]> {
+  const ok = (f: number, n: number) => g.control[n] === side && !unitsIn(g, n, other(side)).length && (!u || !CUR.retreatOk || CUR.retreatOk(g, u, f, n));
+  const room = (n: number) => (u ? roomFor(g, u, n) : blocks(g, n, side).length < stackMax(g, n));
+  const out = new Map<number, number[]>(), first = neighbors(b.area).filter((n) => ok(b.area, n));
+  for (const n of first) if (room(n)) out.set(n, [b.area, n]);
+  if (out.size || !first.length) return out;
+  let ring = first.map((n) => [b.area, n]); const seen = new Set([b.area, ...first]);
+  while (ring.length && !out.size) {                                                          // breadth first: the nearest areas with room
+    const next: number[][] = [];
+    for (const p of ring) for (const n of neighbors(p[p.length - 1])) { if (seen.has(n) || !ok(p[p.length - 1], n)) continue; seen.add(n); const q = [...p, n]; if (room(n)) out.set(n, q); else next.push(q); }
+    ring = next;
+  }
+  return out;
 }
 /** 14.1: armor never crosses the restricted boundary (Schnee Eifel), not even to retreat. */
 const bulgeRetreatOk = (_g: Game, u: Unit, from: number, to: number) => !(u.cls === 'armor' && connection(from, to)?.restricted);
@@ -994,9 +1012,10 @@ function advanceRetreat(g: Game, b: Battle) {
 }
 function moveRetreat(g: Game, b: Battle, u: Unit, to: number) {
   if (u.area == null) return;
-  const from = u.area; u.area = to; if (b.retreat!.after !== 'sa') u.disorder = 1; b.retreat!.moved = true;                  // 8.24 a retreat before combat does not disorder
-  CUR.onRetreat?.(g, u, from, to);
-  updateControl(g, from); updateControl(g, to); say(g, `${u.name} retreats to ${areas.get(to)!.name}`);
+  const path = retreatPaths(g, b, b.retreat!.side, u).get(to) ?? [u.area, to];               // past full areas when it must (6.6)
+  if (b.retreat!.after !== 'sa') u.disorder = 1; b.retreat!.moved = true;                    // 8.24 a retreat before combat does not disorder
+  for (let i = 1; i < path.length && u.area != null; i++) { const from = path[i - 1]; u.area = path[i]; CUR.onRetreat?.(g, u, from, path[i]); updateControl(g, from); updateControl(g, path[i]); }
+  if (u.area != null) say(g, `${u.name} retreats to ${areas.get(u.area)!.name}${path.length > 2 ? ` (through ${path.slice(1, -1).map((a) => areas.get(a)!.name).join(', ')}, full)` : ''}`);
 }
 export function chooseRetreat(g: Game, b: Battle, to: number) {
   if (b.stage !== 'retreat' || !b.retreat) throw new Error('no retreat pending');
@@ -1033,7 +1052,7 @@ function end(g: Game, b: Battle, result: string) {
   CUR.onBattle?.(g, b, 'end');
   g.fought.push(b.area); for (const n of [b.area, ...neighbors(b.area)]) updateControl(g, n);
   say(g, `${areas.get(b.area)!.name}: ${result}`); g.battles = (g.battles ?? 0) + 1;
-  const cand = b.exploit && !b.bt && !b.riverAssault ? unitsIn(g, b.area, b.attacker).filter((x) => x.cls === 'armor' && !x.garrison).map((x) => x.id) : [];      // 6.8: never from river assaults or Breakthrough combat
+  const cand = b.exploit && !b.bt && !b.riverAssault ? unitsIn(g, b.area, b.attacker).filter((x) => x.cls === 'armor' && !x.garrison && !x.unsupplied).map((x) => x.id) : [];      // 6.8: never from river assaults or Breakthrough combat; never an out-of-supply unit (2016)
   if (cand.length) { b.stage = 'exploit'; b.exploitIds = cand; say(g, `exploitation opportunity: ${b.attacker} may roll a morale check for ${cand.length} armor-class unit(s) (6.8)`); }
 }
 /** 6.8: the attacker may decline the exploitation opportunity (and keep the blocks hidden). */
@@ -1355,6 +1374,7 @@ registerHooks('bulge', {
   newGame: bulgeNewGame, markerKey: bulgeMarkerKey, reach: bulgeReach, moveOk: (_g, u, a) => britishOk(u, a), beforeMove: bulgeBeforeMove, afterMove: bulgeAfterMove,
   stratAllowed: bulgeStratAllowed, stratStep: bulgeStratStep, afterStrat: bulgeAfterStrat, successNumber, canAssign: bulgeCanAssign, moraleSn: bulgeMoraleSn,
   retreatOk: bulgeRetreatOk, sources: bulgeSources, supplyStep: bulgeSupplyStep, supplyFree: (g, side, a) => g.airSupply?.side === side && g.airSupply.area === a,
+  noRetreat: (_g, u) => !!u.garrison && (u.id.startsWith('G') || u.id.startsWith('TF-')),       // 16.21, 16.22: garrisons and task forces never retreat
   victory: seriesVictory, finalResult: bulgeFinal, onPhase: bulgeSupplyHook, beforeRecycle: bulgeBeforeRecycle, vpHist: (g, v) => (g.opts.scenario === 'cold' ? coldAreas(g) : v.net),
 } as Partial<Volume>);
 /** Why a cut-off area has no supply, in plain words: the friendly neighbours it could not pass and the enemy that holds the way. */

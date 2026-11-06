@@ -941,7 +941,8 @@ export const specialActions = (g: Game, side: Side) => saAvailable(g, side);
 registerHooks('golan73', {
   newGame: newGolanGame as Volume['newGame'], markerKey: () => 'res', reach: golanReach, beforeMove, afterMove,
   stratAllowed: (g, u) => interdictedBy(g, u.area!) !== other(u.side), stratStep,
-  successNumber: golanSuccessNumber, adjustFire, canAssign, moraleSn: golanMoraleSn, retreatOk, retreatPrefer, onRetreat,
+  successNumber: golanSuccessNumber, adjustFire, canAssign, moraleSn: golanMoraleSn, retreatOk, retreatPrefer, onRetreat, noRetreat: (_g, u) => !!u.garrison,     // 16.24: garrisons never retreat (6.42c)
+  
   sources, supplyStep, supplyFree: (_g, _s, a) => isAssembly(a) || a === HERMON, alwaysSupplied: (_g, u) => !!u.ghost || u.id === 'S17',
   victory: golanVictory, finalResult, onPhase, onBattle, freeBattle, assault, reinforce, afterDraw: (g) => { nafakhStaff(g); const d = g.chits.find((c) => c.kind === 'event_dugman5' && c.box === 'available'); if (d) resolveDugman(g, d); },
   afterDeploy, onUnassign, keepAssigned, optional: GOLAN_OPTIONAL, absorbLoss, lossOk, recoverOk, ghostsMove: (g) => !!g.opts.advGhosts, reinforceOk: (g, b, u) => reinforceOptions(g, b).includes(u.id), stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2), stackRoom: (g, u, a) => (g.opts.advGhosts && u.side === 'israeli' ? ghostRoom(g, u, a) : undefined), appropriate: (g, u) => (isNafakh(g) ? (u.side === 'israeli' ? [NAF_NORTH] : [REAR, NAF.sheet.entry.Z]) : u.side === 'israeli' ? [ASSEMBLY.A, ASSEMBLY.B] : Object.values(ENTRY)), isNight, onAssign, beforeBegin, beforeFire, afterFire,

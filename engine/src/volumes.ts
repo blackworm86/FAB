@@ -54,6 +54,8 @@ export interface Volume {
   canAssign: (g: Game, b: Battle, side: Side, c: Chit, mode?: 'arty' | 'support') => string | null;
   moraleSn: (g: Game, u: Unit, why: 'exploit' | 'supply' | 'check') => number;
   retreatOk?: (g: Game, u: Unit, from: number, to: number) => boolean;
+  /** 6.42c (2016): an asset the Exclusive Rules do not allow to retreat; when its side retreats it is destroyed, counting as a hit. */
+  noRetreat?: (g: Game, u: Unit) => boolean;
   retreatPrefer?: (g: Game, u: Unit, from: number, opts: number[]) => number[];
   onRetreat?: (g: Game, u: Unit, from: number, to: number) => void;
   sources: (g: Game, side: Side) => Set<number>;
