@@ -11,7 +11,7 @@ import { vpStrip, vpSheet, endPanel } from './score';
 import * as SBU from './sandbox-ui';
 import { online, startOnline, push, sit, sendChat, setChatListener, type ChatMsg, setDevSeat, auth, lobby, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, SANDBOX, TUTORIAL, seatOf, seatName, type DevSeat, type Match } from './online';
 import { gameInfo, GAMES } from './games';
-import { coverArt, BOXES, boxFront, boxSpine } from './covers';
+import { BOXES, boxFront, boxSpine } from './covers';
 import { ICONS, ico } from './icons';
 import { esc, nm } from './util';
 import { drawLabel, drawEntry, drawRestricted } from './board-art';
