@@ -104,6 +104,8 @@ export interface Game {
   peiperUsed?: boolean;   /** 18.3 used */
   pz150Done?: boolean;    /** 18.4 the 150th has been in its first battle */
   vol?: Record<string, unknown>;   /** a volume's own state (Golan: minefields, bridged ditches, raids…) */
+  /** Online: set when a player's rules check put the game back to the last legal position (`why`: what the check found). */
+  restored?: { t: number; why: string[] };
   checks?: Check[];   /** morale checks rolled outside battles (supply, Greif interdict), newest last, so the table can show the dice */   /** 16.12: the German player must choose which used artillery asset is eliminated */   /** sandbox: die results to use before the seeded ones */
 }
 type RawUnit = { id: string; name: string; side: string; echelon?: string; symbol?: string; cls?: string; steps?: number; quality_by_step?: Quality[]; start_area?: number; arrival_turn?: number; entry?: string[]; kind?: string };
@@ -1320,6 +1322,7 @@ const clock = (g: Game) => g.turn * 1000 + (g.phasing === sidesOf(g)[0] ? 0 : 50
  *  `writer` is the side whose account wrote the change (null: an admin or unknown). Returns plain-language problems, empty when all is well. */
 export function auditChange(prev: Game, next: Game, writer: Side | null): string[] {
   const out: string[] = [];
+  if (isRestore(prev, next)) return [];                                                               // a restore is reported on its own (restoreNote)
   if (next.turn === 1 && next.log.length < prev.log.length && clock(next) < clock(prev)) return ['The game was restarted.'];
   if (clock(next) < clock(prev)) out.push(`The game went back from turn ${prev.turn} ${prev.phase} to turn ${next.turn} ${next.phase}.`);
   if (next.rolls < prev.rolls) out.push('The dice counter went backwards: rolls were undone.');
@@ -1331,6 +1334,8 @@ export function auditChange(prev: Game, next: Game, writer: Side | null): string
   return out;
 }
 
+/** True when `next` is a restore: the other player's rules check put the game back to the last legal position. */
+export const isRestore = (prev: Game, next: Game) => !!next.restored && next.restored.t !== prev.restored?.t;
 /** The chain of areas a block traces supply through (9.3), source last; or null when it is cut off. Same rule as inSupply. */
 export function supplyPath(g: Game, side: Side, start: number): number[] | null {
   setPlayArea(g.inPlay);

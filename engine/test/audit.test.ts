@@ -28,6 +28,14 @@ describe('referee-lite: checking what the other browser wrote', () => {
     const { g } = playChecked(5, 30), prev = structuredClone(g), next = structuredClone(g);
     expect(prev.turn).toBeGreaterThan(1); next.turn = prev.turn - 1; next.log = [...prev.log]; expect(E.auditChange(prev, next, prev.phasing).join()).toMatch(/went back/);
   });
+  it('a restore (the other player\'s rules check put the game back) is not flagged as going back', () => {
+    const { g } = playChecked(5, 30), back = structuredClone(g);
+    const now = structuredClone(g); now.turn = g.turn + 1;                                       // the change the check refused
+    back.restored = { t: 1, why: ['The dice counter went backwards: rolls were undone.'] };
+    expect(E.isRestore(now, back)).toBe(true); expect(E.auditChange(now, back, g.phasing)).toEqual([]);
+    const again = structuredClone(back); again.turn = g.turn - 1;                                // the same restore marker again is an ordinary write
+    expect(E.isRestore(back, again)).toBe(false); expect(E.auditChange(back, again, g.phasing).join()).toMatch(/went back/);
+  });
   it('flags a change by the side that was not supposed to act', () => {
     const g = E.newGame(6); g.phase = 'movement'; g.phasing = 'german';
     const next = structuredClone(g); next.units.find((u) => u.side === 'allied' && u.area != null)!.area = 47;

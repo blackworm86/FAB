@@ -24,7 +24,7 @@ export function fakeStore(side: Side): Store {
     uid: 'u-' + side,
     watchSeats: (next) => next(seats), sit: async () => '',
     watchState: (next) => on(P, () => next(get<StateDoc>(P))),
-    setState: async (d) => put(P, d),
+    setState: async (d) => put(P, { ...d, by: 'u-' + side }),                      // like the database: each write is signed by its writer
     watchPriv: (next) => on(V(side), () => next(get<Priv>(V(side)))), setPriv: async (p) => put(V(side), p),
     watchChat: (next) => on('fab-fake-chat', () => next(get<ChatMsg[]>('fab-fake-chat') ?? [])),
     sendChat: async (s, text) => { put('fab-fake-chat', [...(get<ChatMsg[]>('fab-fake-chat') ?? []), { id: String(Date.now()), uid: 'u-' + s, side: s, name: s, text, t: Date.now() }].slice(-100)); return ''; },

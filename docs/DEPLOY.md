@@ -31,7 +31,7 @@ Everything of one game is under `games/<id>`:
 
 In the shared game, every block nobody may see (6.24) is a placeholder with an opaque id and no name, strength or quality. Each browser puts its own details back, runs the rules on its own copy and writes the changes.
 
-Security: `database.rules.json` lets a player take a free seat only for themself, never both sides, never someone else's seat; only the two seated players write the game (each write is signed with the writer's id); each seat alone reads its own block details. Each browser checks the other's moves and warns ("Rules check") if the game went back in time, dice changed, or the wrong side wrote. Online dice come from a secure random source. See `docs/ARCHITECTURE.md` §3–§5. A modified browser can still write a false game: only a server could stop it (roadmap, §9).
+Security: `database.rules.json` lets a player take a free seat only for themself, never both sides, never someone else's seat; only the two seated players write the game (each write is signed with the writer's id); each seat alone reads its own block details. Each browser checks the other's moves ("Rules check": the game went back in time, dice changed, or the wrong side wrote). A change that fails is held back: the board keeps the last legal position, and the player chooses to restore it for both (marked as a restore, so the other browser does not take it for going back in time) or to accept the change. Online dice come from a secure random source. See `docs/ARCHITECTURE.md` §3–§5. A modified browser can still write a false game: only a server could stop it (roadmap, §9).
 
 ## 6. Development
 ```bash
