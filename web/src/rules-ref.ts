@@ -79,7 +79,7 @@ function mount(D: RulesData, PIECE: Record<string, string[]>, o: RulesOptions) {
   for (const s of all) for (const m of s.paras.join(' ').matchAll(/\b(\d{1,2}\.\d{1,3})[a-z]?\b/g)) { const r = resolve(m[1]); if (r && r !== s.id) (citedBy.get(r) ?? citedBy.set(r, new Set()).get(r)!).add(s.id); }
 
   /* ---------- the rulebook's light markup to HTML ---------- */
-  const inline = (t: string) => sym(esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[\s(>])_(.+?)_(?=[\s).,;:!<]|$)/g, '$1<i>$2</i>')
+  const inline = (t: string) => sym(esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[\s(>])_(.+?)_(?=[\s).,;:!<—–-]|$)/g, '$1<i>$2</i>')
     .replace(/\b(\d{1,2}\.\d{1,3}[a-z]?)\b/g, (m) => { const r = resolve(m); return r ? `<a href="#" data-go="${r}">${m}</a>` : m; }));      // the drawn symbols go in last: their path data holds numbers like 8.5
   function body(paras: string[]) {
     let out = '', list: string[] = [], rows: string[] = [];
