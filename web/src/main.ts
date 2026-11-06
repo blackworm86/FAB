@@ -9,11 +9,14 @@ import { History } from './history';
 import * as SB from './sandbox';
 import { vpStrip, vpSheet, endPanel } from './score';
 import * as SBU from './sandbox-ui';
-import { online, startOnline, push, sit, sendChat, setChatListener, type ChatMsg, setDevSeat, auth, lobby, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, SANDBOX, TUTORIAL, seatOf, seatName, type DevSeat, type Match } from './online';
+import { online, startOnline, push, sit, setDevSeat, auth, lobby, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, SANDBOX, TUTORIAL, seatOf, seatName, type DevSeat, type Match } from './online';
 import { gameInfo, GAMES } from './games';
 import { BOXES, boxFront, boxSpine } from './covers';
 import { ICONS, ico } from './icons';
 import { esc, nm } from './util';
+import { sheets } from './sheets';
+import { pips, ABBR, chitLabel, BTN_ICON, iconify, STAGE_NAME, ok10, faces, modIcon, modWord } from './table-text';
+import { initChat, chatBtn, chatHtml, bindChat } from './chat';
 import { acts, actv, resetActs, reg, regv, ubtn, btn, chip } from './ui-kit';
 import { optChooser, optOn } from './opt-rules';
 import { STEP_NAME, homeUrl, tutUrl, share, dropMatch, rulesHtml, accountHtml, bindAuth } from './home';
@@ -531,16 +534,9 @@ function areaAt(ray: THREE.Raycaster): number | null {
 function inside(x: number, y: number, poly: [number, number][]) { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; }
 
 /* ---------- ui helpers ---------- */
-const pips = (u: E.Unit) => Array.from({ length: u.str }, () => `<i class="pip ${E.quality(u)}"></i>`).join('');
-const ABBR: Record<string, string> = { artillery: 'Arty', rocket_artillery: 'Rkt', engineer: 'Eng', armor_asset: 'Armor', infantry_asset: 'Inf', task_force: 'TF', fuel: 'Fuel', command_staff: 'Staff', sa_block: 'SA', replacement_inf: 'Repl inf', replacement_arm: 'Repl arm',
-  rebuild_or_replace_inf: 'Rebuild inf', rebuild_or_replace_arm: 'Rebuild arm', event_arriving_regiment: 'Regt', special_action_event: 'SA event', air_mission: 'Air', event_release: 'Release', event_greif_bridge: 'Greif bridge', event_greif_interdict: 'Greif interdict', event_bodenplatte: 'Bodenplatte', event_delayed_response: 'Delayed' };
-const chitLabel = (c: E.Chit) => `${ABBR[c.kind] ?? c.kind}${['fuel', 'sa_block', 'special_action_event', 'air_mission', 'replacement_inf', 'replacement_arm', 'event_delayed_response'].includes(c.kind) || c.name.length > 14 ? '' : ' ' + c.name}${c.turn !== 'S' && E.isEvent(c) ? ' T' + c.turn : ''}`;
 /* ---------- playing a chit: the blocks or areas it can be used on light up, and a tap applies it ---------- */
 let tgt: Tgt | null = null, infoOpen = false, infoFor = '', tgtMode = '';
 const abtn = (icon: string, label: string, fn: () => void, cls = '', dis = false, title = '') => btn(`${ico(icon)}<span>${esc(label)}</span>`, fn, 'ab ' + cls, dis, title || label);
-const BTN_ICON: [RegExp, string][] = [[/blow|bridge.*bridge/i, 'xbold'], [/repair/i, 'engineer'], [/field works|fortify/i, 'gear'], [/roadblock|rally/i, 'flag'], [/interdict/i, 'warn'], [/alternate/i, 'swap'], [/pool/i, 'task_force'], [/intelligence/i, 'info'], [/reserve/i, 'sa_block'], [/replacement/i, 'infantry_asset'], [/drop|enter|place|boundary/i, 'next'], [/strike/i, 'air_mission']];
-/** Give a chit action its icon so the buttons read at a glance; the text stays as the label. */
-const iconify = (html: string) => html.replace(/<button class="([^"]*)" (data-do="[^"]+") ([^>]*)>([^<]*)<\/button>/g, (m, cls, d, rest, text) => { const ic = BTN_ICON.find(([re]) => re.test(text))?.[1]; return ic ? `<button class="${cls} ab" ${d} ${rest}>${ico(ic)}<span>${text}</span></button>` : m; });
 /** The selected chit: a slim bar with its picture, a one-line instruction, an info toggle and the actions as icon buttons. */
 function chitBar(c: E.Chit): string {
   if (!mine(c.side)) return `<div class="c-dispatch chitbar ${infoOpen ? 'open' : ''}"><div class="cbhead"><span class="cbimg">${chitPic(c)}</span><div class="cbt"><b>${esc(c.name)}</b><small>The other side's piece: you can only look</small></div><button class="ico" data-ui="${reg(() => { selChit = null; })}" aria-label="Put away" title="Put away">${ico('close')}</button></div><div class="inspect slimcard">${ruleHtml(VOL.ruleKey(c.kind), E.isEvent(c))}</div></div>`;
@@ -653,7 +649,6 @@ function arrive(id: string, area: number) {
  *  Runs inside an action: with one choice it pays at once, otherwise it opens the chooser and the chosen counter pays in a new action. */
 const ARMY_NAME: Record<string, string> = { de_5pz: '5th Panzer Army', de_6pz: '6th Panzer Army', de_7a: '7th Army', de_sr: 'Strategic Reserve', us_1a: 'US 1st Army', us_3a: 'US 3rd Army', us_sr: 'US reserve', br_xxx: 'British' };
 /* ---------- chat between the two players; watchers read it ---------- */
-const chatOn = () => online.mode === 'remote' || DEV_FAKE;
 /* ---------- the action feed: the newest log lines, fading, above the dock ---------- */
 let followFoe = (() => { try { return localStorage.getItem('fab-follow') !== '0'; } catch { return true; } })();
 let feed: { t: number; text: string; side: string }[] = [], feedLen = -1;
@@ -663,30 +658,6 @@ function feedHtml(): string {
   feedLen = n; const now = Date.now(); feed = feed.filter((f) => now - f.t < 9000).slice(-3); if (g.battle) return '';         // the battle has its own report
   if (feed.length) setTimeout(() => { if (feed.some((f) => Date.now() - f.t >= 9000)) render(); }, 9100);
   return feed.length ? `<div class="feed ${g.phase === 'admin' || g.phase === 'reinforcement' ? 'top' : ''}" aria-live="polite">${feed.map((f) => `<div class="fl2 ${f.side}" style="animation-delay:${-(now - f.t) / 1000}s">${sideTag(f.text)}</div>`).join('')}</div>` : '';
-}
-let chatOpen = false, chatDraft = '', chatSeen = (() => { try { return Number(localStorage.getItem('fab-chat-seen-' + TABLE) ?? 0); } catch { return 0; } })();
-const QUICK = ['Your turn', 'Ready', 'One moment', 'Nice move', 'Good game'];
-const unread = () => online.chat.filter((m) => m.t > chatSeen && m.uid !== online.uid).length;
-const markSeen = () => { const last = online.chat.at(-1)?.t ?? 0; if (last > chatSeen) { chatSeen = last; try { localStorage.setItem('fab-chat-seen-' + TABLE, String(last)); } catch { /* private mode */ } } };
-let chatKnown = -1;
-setChatListener((m: ChatMsg[]) => {                                                                   // a short banner for a new message while the chat is closed
-  const fresh = chatKnown < 0 ? [] : m.filter((x) => x.t > chatKnown && x.uid !== online.uid); chatKnown = Math.max(chatKnown, m.at(-1)?.t ?? 0);
-  if (chatOpen) { markSeen(); const l = document.getElementById('chat-list'); if (l) { l.innerHTML = chatRows(); l.scrollTop = l.scrollHeight; } } else if (fresh.length) { const x = fresh.at(-1)!; say(`${nm(x.side)}: ${x.text}`); }
-});
-async function chatSend(text: string) { const e = await sendChat(text); if (e) { say(/permission/i.test(e) ? 'Chat not allowed by the database: the game\'s security rules need publishing (Admin > Update rules).' : e); render(); } else { chatDraft = ''; const i = document.getElementById('chat-in') as HTMLInputElement | null; if (i) i.value = ''; } }
-function chatBtn() { if (!chatOn()) return ''; const n = unread(); return `<button class="ico chatbtn ${chatOpen ? 'on' : ''}" data-ui="${reg(() => { chatOpen = !chatOpen; if (chatOpen) markSeen(); })}" title="Chat" aria-label="Chat${n ? `, ${n} new` : ''}">${ico('chat')}${n ? `<i class="unread">${n > 9 ? '9+' : n}</i>` : ''}<span class="bl">Chat</span></button>`; }
-function chatRows() {
-  const time = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  return online.chat.map((m) => `<div class="cm ${m.side} ${m.uid === online.uid ? 'me' : ''}"><small>${m.name && m.name.toLowerCase() !== m.side ? `<b>${esc(m.name)}</b> · ` : ''}<span class="sd">${nm(m.side)}</span> · ${time(m.t)}</small><p>${esc(m.text)}</p></div>`).join('') || '<p class="hint">No messages yet.</p>';
-}
-function chatHtml() {
-  if (!chatOn() || !chatOpen) return '';
-  const me = online.mySide(), rows = chatRows();
-  return `<aside class="chat" aria-label="Chat"><div class="chead"><b>${ico('chat')} Chat</b><button class="ico" data-ui="${reg(() => { chatOpen = false; })}" aria-label="Close chat">${ico('close')}</button></div>
-    <div class="clist" id="chat-list">${rows}</div>
-    ${me ? `<div class="cquick">${QUICK.map((q) => `<button data-ui="${reg(() => { void chatSend(q); })}">${q}</button>`).join('')}</div>
-    <div class="cin authform"><input id="chat-in" maxlength="300" placeholder="Message to your opponent" value="${esc(chatDraft)}" autocomplete="off" enterkeyhint="send"><button class="primary" id="chat-send" aria-label="Send">${ico('next')}</button></div>`
-    : '<p class="hint cwatch">You are watching: only the two players can write.</p>'}</aside>`;
 }
 let scoreOpen = false, endHidden = false;                                                      // VP breakdown sheet; the end panel can be put aside to look at the final map
 let auditWarn: string[] = [];                                                                         // problems found in moves written by the other browser
@@ -1006,7 +977,6 @@ function placeBadges() {
 interface RollView { remote?: boolean; morale?: boolean; check?: boolean; title: string; groups: (DiceGroup & { parts: [string, number][]; hits: number })[]; pos: { x: number; y: number; group: number; v: number }[] | null }
 let menuTab = 'Players';
 let rollView: RollView | null = null, modal: 'menu' | 'boxes' | 'rules' | 'layers' | null = null, handSide: E.Side | null = null;
-const STAGE_NAME: Record<string, string> = { exploit: 'Exploitation morale check', attArty: 'artillery', defArty: 'artillery', defFire: 'Defensive fire', offFire: 'Offensive fire' };
 function rollStage(b: E.Battle) {
   if (!allowed()) return say(notYou());
   const side = b.stage === 'attArty' || b.stage === 'offFire' || b.stage === 'exploit' ? b.attacker : other(b.attacker), kind = b.stage.endsWith('Arty') ? 'arty' : 'ground', fl = b.stage === 'exploit' ? [] : E.fireList(g, b, side, kind), n0 = b.rolls.length, stage = b.stage;
@@ -1469,9 +1439,6 @@ function engChoice(b: E.Battle): string {
   return `<div class="engch"><b>Engineer (6.33)</b>${gx(' · the defenders sit in field works. If the engineer survives artillery and defensive fire, it can remove them just before your units fire (no −1 then), instead of firing itself. Choose before offensive fire:', ' vs FW:')}<div class="row">${pickB(false, gx('Fire with the ground units', 'Fire'))}${pickB(true, gx('Remove the field works', 'Remove FW'))}</div></div>`;
 }
 let refusal = '', saOpen = false;      // the last refused battle chit, shown in the set-up panel
-/** Die faces as small tiles: green when the die succeeds against the Success Number (a 1 always does, a 10 never), salmon when it misses. */
-const ok10 = (d: number, sn: number) => d === 1 || (d !== 10 && d <= sn);
-const faces = (dice: number[], sn: number) => `<span class="faces">${dice.map((d) => `<i class="${ok10(d, sn) ? 'h' : 'm'}" title="${ok10(d, sn) ? 'hit' : 'miss'}" aria-label="${d}, ${ok10(d, sn) ? 'hit' : 'miss'}">${d}<s aria-hidden="true">${ico(ok10(d, sn) ? 'check' : 'close')}</s></i>`).join('')}</span>`;
 /** Every roll of this battle so far, newest first: who rolled, against what, and the faces; it stays with the battle until it ends. */
 function rollRecord(b: E.Battle, open = false) {
   if (!b.rolls.length) return '';
@@ -1526,10 +1493,6 @@ function seatBar() {
   if (!s.german || !s.allied) return `<div class="seatbar"><span>Waiting for your opponent.</span>${ubtn(`${ico('share')} Invite`, () => { void share(TABLE, title, say); }, 'primary')}</div>`;
   return '';
 }
-/** A Success Number modifier as a small icon chip: the sign and size are the data, the full reason is the tooltip. */
-const modIcon = (why: string) => /base/i.test(why) ? 'target' : /strongpoint/i.test(why) ? 'shield' : /brigade/i.test(why) ? 'users' : /armor|infantry|class/i.test(why) ? 'armor_asset' : /green|veteran|elite|quality/i.test(why) ? 'star' : /terrain|tdn/i.test(why) ? 'tree' : /field/i.test(why) ? 'gear' : /river|assault/i.test(why) ? 'wave' : /disorder/i.test(why) ? 'disorder' : /supply/i.test(why) ? 'warn' : /night/i.test(why) ? 'eye' : /air|asset|artillery|rocket/i.test(why) ? 'air_mission' : 'info';
-/** A short word for a modifier, shown beside its icon with full explanations on; a tap names it in full. */
-const modWord = (why: string) => /base/i.test(why) ? 'base' : /strongpoint/i.test(why) ? 'strongpoint' : /brigade/i.test(why) ? 'brigade' : /night/i.test(why) ? 'night' : /assault/i.test(why) ? 'assault' : /armor/i.test(why) ? 'armor' : /infantry/i.test(why) ? 'infantry' : /green|veteran|elite|quality/i.test(why) ? 'quality' : /terrain|tdn/i.test(why) ? 'terrain' : /field/i.test(why) ? 'field works' : /river/i.test(why) ? 'river' : /disorder/i.test(why) ? 'disordered' : /supply/i.test(why) ? 'supply' : /rocket/i.test(why) ? 'rocket' : /air/i.test(why) ? 'air' : /artillery/i.test(why) ? 'artillery' : /defender/i.test(why) ? 'defender' : '';
 const modChips = (parts: [string, number][]) => parts.map(([w, v]) => `<span class="m2 ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}" role="button" tabindex="0" data-ui="${reg(() => say(`${v > 0 ? '+' : '−'}${Math.abs(v)}: ${w}`, true))}" title="${esc(w)}" aria-label="${esc(`${v > 0 ? 'plus' : 'minus'} ${Math.abs(v)}, ${w}`)}">${ico(modIcon(w))}${v > 0 ? '+' : v < 0 ? '−' : ''}${v ? Math.abs(v) : ''}${modWord(w) ? ` <small>${modWord(w)}</small>` : ''}</span>`).join('');
 /** A toggle chip. With `icon` the icon replaces the tick; with an empty label it is icon-only and `title` names it. */
 const relayer = () => { saveLayers(); paintBoard(); paintAreas(); };
@@ -1636,10 +1599,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
   ui.querySelectorAll<HTMLElement>('[data-modal]').forEach((e) => (e.onclick = () => { inspectId = null; modal = (e.dataset.modal || null) as typeof modal; render(); }));                          // a window opens with nothing selected
   ui.querySelectorAll<HTMLElement>('[data-sel]').forEach((e) => (e.onchange = () => { const f = actv[e.dataset.sel!]; if (f) { f(e instanceof HTMLInputElement && e.type === 'checkbox' ? (e.checked ? 'on' : 'off') : (e as HTMLSelectElement).value); save(); } }));
   ui.querySelectorAll<HTMLInputElement>('#lb-q').forEach((e) => { const run = () => { SBU.st.sbFilter = e.value; const w = SBU.st.sbFilter.toLowerCase().split(/\s+/).filter(Boolean); ui.querySelectorAll<HTMLElement>('.lbgrid .lbt').forEach((t) => { t.style.display = w.every((x) => t.dataset.k!.includes(x)) ? '' : 'none'; }); }; e.oninput = run; run(); });
-  { const i = ui.querySelector<HTMLInputElement>('#chat-in'), b = ui.querySelector<HTMLElement>('#chat-send'), l = ui.querySelector<HTMLElement>('#chat-list');
-    if (l) l.scrollTop = l.scrollHeight;
-    if (i) { i.oninput = () => { chatDraft = i.value; }; i.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); void chatSend(i.value); } }; }
-    if (b && i) b.onclick = () => { void chatSend(i.value); }; }
+  bindChat(ui);
   ui.querySelectorAll<HTMLTextAreaElement>('#sb-note').forEach((e) => (e.oninput = () => { SBU.st.sbDraft = e.value; }));
   ui.querySelectorAll<HTMLElement>('[data-arr]').forEach((e) => (e.onpointerdown = (ev) => dragArrival(ev, e)));
   ui.querySelectorAll<HTMLElement>('[data-arr]').forEach((e) => (e.onclick = () => { selArr = selArr === e.dataset.arr ? null : e.dataset.arr!; refresh(); frameArrival(); }));
@@ -1709,6 +1669,7 @@ SBU.initSandboxUi({
   scenarios: VOL.scenarios, defaultOpts: VOL.defaultOpts, optional: VOL.features.optional,
 });
 initTouch(document.body);
+initChat(say, render);
 const toScreen = (p: THREE.Vector3) => { const r = canvas.getBoundingClientRect(), v = p.clone().project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; };
 tut = TUT ? initTutorial({
   game: () => g, act,
@@ -1750,14 +1711,4 @@ void startOnline((rg) => { applyingRemote = true; if (heldNext) commitRoll(); co
     selArr = keep(prevG, selArr, (x) => [x.pendingArrivals.includes(selArr!), x.units.find((u) => u.id === selArr)?.area]);
     if (!same) selArea = null; if (!selUnit) previewArea = null; hoverArea = null; } hist.remote(prevG, g, lockOf); if (rolled) hist.clear('dice rolled'); if (followFoe && online.lastBy && online.lastBy !== online.uid && !g.battle) { const mv = g.units.find((u) => { const o = prevG.units.find((x) => x.id === u.id); return o && u.area != null && o.area !== u.area; }); if (mv) lookAt(mv.area!); } try { save(); } finally { applyingRemote = false; } refresh();
   { const cs = g.checks ?? [], k = cs.findIndex((c) => JSON.stringify(c) === ckLast); const fresh = ckLast === 'null' ? [] : k >= 0 ? cs.slice(k + 1) : []; if (fresh.length) showChecks(fresh); } }, () => { onNet(); syncView(); render(); }, say, () => { try { sessionStorage.setItem('fab-notice', 'That game was deleted by its creator.'); } catch { /* private mode */ } location.href = homeUrl(); });       // the table is gone: nobody stays inside it
-/** Every drawn symbol and counter as SVG, for the editable sheets (docs/maps/vector/fab-*.svg). */
-function sheets() {
-  const seenSvg = new Set<string>(), out: Record<string, { id: string; label: string; svg: string }[]> = { chits: [], blocks: [], markers: [] };
-  const add = (k: string, id: string, label: string, svg: string | null) => { if (svg && !seenSvg.has(svg)) { seenSvg.add(svg); out[k].push({ id, label, svg }); } };
-  const cg = E.newGame(5, VOL.id === 'bulge' ? { scenario: 'campaign', fuel: true } : VOL.defaultOpts);
-  for (const c of cg.chits) add('chits', c.id, `${c.side} ${c.name}${c.turn != null ? ' t' + c.turn : ''}`, VOL.chitSvg(c));
-  for (const u of cg.units) add('blocks', u.id, `${u.name}${u.code ? ' ' + u.code : ''}`, VOL.unitSvg(u, cg));
-  for (const m of ['X', 'FW', 'RA', 'RB', 'DIS', 'REC', 'E', 'B', 'P', 'R5', 'R6', 'R7', 'A7', 'A56', 'GI', 'G', 'OOS', 'AIR']) add('markers', m, m, VOL.markSvg(m));
-  return out;
-}
-if (import.meta.env.DEV || DEV_FAKE || SANDBOX || TUTORIAL) Object.assign(window, { __fab: { tut: () => tut, unitAt: (id: string) => { const m = pieces.children.find((o) => o.userData.unit === id || o.userData.chit === id); if (!m) return null; const r = canvas.getBoundingClientRect(), v = m.getWorldPosition(new THREE.Vector3()).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, game: () => g, setGame: (x: E.Game) => { g = x; hist.clear(); save(); refresh(); }, at: (a: number) => { const p = center(a), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(p.x, 0, p.z).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, project: (x: number, y: number, z: number) => { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height }; }, online, setMatches: (m: Match[]) => { matches = m; }, iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets, setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, rel: () => ({ tris: renderer.info.render.triangles, calls: renderer.info.render.calls, trees: (REL?.props.children[0] as THREE.InstancedMesh | undefined)?.count }), board: () => boardCv.toDataURL("image/png"), view: (x: number, z: number, d: number, pt: number, yw: number) => { goal = { t: new THREE.Vector3(x, 0, z), dist: d, pitch: pt, fast: true }; yaw = yw; }, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
+if (import.meta.env.DEV || DEV_FAKE || SANDBOX || TUTORIAL) Object.assign(window, { __fab: { tut: () => tut, unitAt: (id: string) => { const m = pieces.children.find((o) => o.userData.unit === id || o.userData.chit === id); if (!m) return null; const r = canvas.getBoundingClientRect(), v = m.getWorldPosition(new THREE.Vector3()).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, game: () => g, setGame: (x: E.Game) => { g = x; hist.clear(); save(); refresh(); }, at: (a: number) => { const p = center(a), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(p.x, 0, p.z).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, project: (x: number, y: number, z: number) => { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height }; }, online, setMatches: (m: Match[]) => { matches = m; }, iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets: () => sheets(VOL), setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, rel: () => ({ tris: renderer.info.render.triangles, calls: renderer.info.render.calls, trees: (REL?.props.children[0] as THREE.InstancedMesh | undefined)?.count }), board: () => boardCv.toDataURL("image/png"), view: (x: number, z: number, d: number, pt: number, yw: number) => { goal = { t: new THREE.Vector3(x, 0, z), dist: d, pitch: pt, fast: true }; yaw = yw; }, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });

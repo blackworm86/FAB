@@ -12,7 +12,7 @@ Technical reference for maintaining FAB: The Bulge and building the next games o
 | Hosting | GitHub Pages | Serves the built files only; runs no code. `.github/workflows/pages.yml` tests and publishes on every push to `main`. |
 | Shared storage | Firebase Realtime Database (free Spark plan) | Stores each game and pushes changes live to every open browser. Also Firebase Authentication (Google, email, anonymous guests). |
 
-Main client files: `main.ts` (scene, screens, input, chat panel), `online.ts` (connection, seats, saving), `store-rtdb.ts` (all database reads and writes), `sandbox.ts` + `sandbox-ui.ts` (admin test table and hotseat), `chit-play.ts` (what a chit can be played on), `chits.ts` / `art.ts` (counter art; drawn markers and Special Action art are PNGs in `public/chit`, loaded at start), `dice3d.ts`, `fx.ts` (effect pop-ups), `rules-text.ts` (chit descriptions).
+Main client files: `boot.ts` (entry: the home page, or the table on a game page), `home.ts` (home page, sign-in, invites; loads without three.js), `main.ts` (the table: scene, screens, input), `chat.ts` (chat panel), `ui-kit.ts` (the button registry both pages share), `table-text.ts` (abbreviations, button icons, die faces), `opt-rules.ts` (optional-rules chooser), `online.ts` (connection, seats, saving), `store-rtdb.ts` (all database reads and writes), `sandbox.ts` + `sandbox-ui.ts` (admin test table and hotseat), `chit-play.ts` (what a chit can be played on), `chits.ts` / `art.ts` (counter art; drawn markers and Special Action art are PNGs in `public/chit`, loaded at start), `dice3d.ts`, `fx.ts` (effect pop-ups), `rules-text.ts` (chit descriptions).
 
 ## 2. Who runs the game
 

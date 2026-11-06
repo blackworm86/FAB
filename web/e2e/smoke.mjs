@@ -48,7 +48,7 @@ for (const game of GAMES) for (const [size, opts] of Object.entries(SIZES)) {
   await page.keyboard.press('Shift+Slash');
   check(await page.waitForSelector('#rules', { timeout: 20000 }).then(() => true, () => false), 'the rules reader opens');
   await page.fill('#rules input', RULE[game]); await page.waitForTimeout(600); await page.keyboard.press('Enter'); await page.waitForTimeout(800);   // the search settles first
-  check((await page.locator('#rules h2').first().textContent().catch(() => ''))?.includes(RULE[game]), `rule ${RULE[game]} opens`);
+  check(await page.waitForFunction((r) => document.querySelector('#rules h2')?.textContent?.includes(r), RULE[game], { timeout: 10000 }).then(() => true, () => false), `rule ${RULE[game]} opens`);
   await page.click('#rules [data-act="close"]').catch(() => {}); await page.waitForTimeout(300);
   check(!(await page.locator('#rules').count()), 'the reader closes');
 
