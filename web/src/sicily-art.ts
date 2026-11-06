@@ -135,7 +135,7 @@ export function sicilyChitSvg(c: SCounter): string {
     case 'marker_control': return sicilyControl('allied');
     case 'field_works': return CHIT_KIT.marker('Field Works')!;
     case 'marker': {
-      if (c.name === 'Game Turn' || c.name === 'VPs') return sicilyTrack(c.name, 'allied');
+      if (c.name === 'Game Turn' || c.name === 'VPs') return sicilyTrack(c.name, c.name === 'VPs' ? 'axis' : 'allied');          // two-sided: Game Turn Allied / Axis, VPs Axis / Allied (counter_backs.json)
       const code: Record<string, string> = { 'River Assault': 'RA', 'Disordered': 'DIS', 'Exploitation': 'E', 'Out of Supply': 'OOS', 'Blown Bridge': 'X', 'Road Block': 'RB' };
       return (code[c.name] && mapMarkerSvg(code[c.name])) || chitSvg({ id: c.id, kind: 'marker', name: c.name, side: 'none', ech: 'none' } as Counter);
     }
