@@ -150,7 +150,8 @@ export function initTutorial(h: TutHost, course: Course) {
       x = 10; y = top;
       if (t && !('el' in t)) y = Math.max(top, bot - ch);                                            // a block or area: the coach sits low, the map slides into the clear band above it (keep())
       else if (r && r.y < y + ch + 6 && r.y + r.h > y) y = Math.max(top, bot - ch);                   // a button up there: the coach goes down
-    } else if (!r) { x = (W - cw) / 2; y = top + 8; }
+    } else if (!r && document.querySelector('#ui .modal')) { x = W - cw - 10; y = bot - ch; }                 // a sheet is open: the coach keeps to the corner so the sheet can be read
+    else if (!r) { x = (W - cw) / 2; y = top + 8; }
     else {
       const cands: [number, number][] = [[r.x + r.w + 18, r.y + r.h / 2 - ch / 2], [r.x - cw - 18, r.y + r.h / 2 - ch / 2], [r.x + r.w / 2 - cw / 2, r.y + r.h + 18], [r.x + r.w / 2 - cw / 2, r.y - ch - 18], [W - cw - 10, top], [10, top], [(W - cw) / 2, top]];
       const avoid = [{ left: r.x, top: r.y, right: r.x + r.w, bottom: r.y + r.h }, ...Array.from(document.querySelectorAll('#ui .c-ledger')).filter(visible).map((e) => e.getBoundingClientRect())];   // the target and the fire report stay readable
@@ -200,6 +201,9 @@ export function initTutorial(h: TutHost, course: Course) {
   return {
     /** Dev and checks: jump to a step of a lesson; what the coach points at now, and whether it is on screen. */
     jump(l: number, upTo = 0) { if (l >= 0 && l < LESSONS.length && upTo >= 0 && upTo < LESSONS[l].steps.length) start(l, upTo); },
+    /** Dev and checks: play the current step the way the player would in engine terms (the coach's part, or the player's act) and go on. */
+    advance() { const s = step(); if (!s || h.busy()) return; if (s.auto) return onNext(); if (s.act) { h.act(() => s.act!(h.game()), s.title); if (!s.done) next(); return; } if (!s.done) next(); },
+    targetEl() { return targetEl(step()?.target); },
     where() { const s = step(); const t = s?.target; return { lesson: li, step: si, title: s?.title, target: t ? label(t) : null, found: !t || !('el' in t) || !!targetEl(t), skipped: !!s?.skip?.(h.game()) }; },
     /** A tap on the map: false = blocked; otherwise the block and area to use (a tap on a stack or on a block standing in the area counts). */
     gate(unit: string | undefined, area: number | null): { unit?: string; area?: number } | false {
