@@ -1,10 +1,10 @@
-<!-- FAB: Golan '73 Play Book (scan), transcribed and proofread against the page images. Words marked [?word?] could not be read for certain. -->
+<!-- FAB: Golan '73 Play Book (scan), transcribed and proofread against the page images. -->
 
 ## 20.0 Designer’s Notes
 
 I started working on _FAB: Golan ’73_ back in 2009 after becoming interested in this conflict. I wanted to have a game on the subject and after playing _FAB: The Bulge_ I was thinking “hey, this system would be perfect for a game on the battle for Golan.” So, I started working on the OOB, which was very difficult since all the sources varied so much. Both the Syrians and the Israelis are very careful and restrictive about information on the forces involved and I had to change the OOB several times. I’m proud of the final result and I think it’s one of the best OOB in games covering the battle. The scale of using brigades was pretty easy, however, to reflect the superior Israeli combat strength and their flexibility I decided to have each brigade representing two units. Syrian brigades are represented by one unit. So each pip represents one battalion for the Syrians and about a half battalion for the Israelis.
 
-The most challenging design issue with this game was the map[?;?] the northern Golan Heights area is very poor tank country as it’s filled with lava rocks and slopes. The southern end on the other hand is pretty clear terrain and more suitable for mechanized warfare. There are also lots of “tels” (lava hills) spread over the Golan Heights which affects combat across the region.
+The most challenging design issue with this game was the map; the northern Golan Heights area is very poor tank country as it’s filled with lava rocks and slopes. The southern end on the other hand is pretty clear terrain and more suitable for mechanized warfare. There are also lots of “tels” (lava hills) spread over the Golan Heights which affects combat across the region.
 
 I struggled with the design for some time and eventually I asked Rick if he was interested to join me as a co-designer. After that the game really took a boost. I must admit, if it wasn’t for him, I doubt the game would ever have been published! During the work we had a very good dialogue and we shared many ideas and thoughts. I really hope that the players will enjoy _FAB: Golan ’73_ and I also hope we see lots of more volumes in the Fast Action Battle Series.
 
@@ -18,8 +18,8 @@ In _FAB: Golan ’73_ the emphasis is on mechanized warfare; there are more armo
 
 | Unit Class | _The Bulge_ (Volume) | _Sicily_ (Volume) | _Golan’73_ (Volume) |
 |---|---|---|---|
-| Armor-class | [?33?] | [?11?] | [?39?] |
-| Infantry-class | [?40?] | [?60?] | [?13?] |
+| Armor-class | 33 | 11 | 39 |
+| Infantry-class | 40 | 60 | 13 |
 
 The unit mix is mostly mechanized, but the terrain is not at all favorable to a lightning strike. The mobile capability will still prove useful to rush reserves to the decision point.
 
@@ -101,7 +101,7 @@ The Yom Kippur War opened on October 6, 1973, with coordinated operations by Egy
 
 ## 22.21 Overview
 
-This alternate scenario gives both players more latitude in choosing the plan of battle in two ways[?;?] some freedom where to emphasize the point of attack or defense and some more freedom in movement prior to the first combat. In general, units are located in the historical sectors, but players can vary the specific placement and concentration to suit the style of play and the opponent.
+This alternate scenario gives both players more latitude in choosing the plan of battle in two ways; some freedom where to emphasize the point of attack or defense and some more freedom in movement prior to the first combat. In general, units are located in the historical sectors, but players can vary the specific placement and concentration to suit the style of play and the opponent.
 
 ## 22.22 Scenario Length
 
@@ -400,7 +400,7 @@ In the Combat Phase the raid is resolved.
 
 **D—** The Israeli player decides to use the Reusable Special Action (placing the block into the Used Box) to advance the 670th Mech unit in Tel Saki [27] one area forward into Juhader [28] to pressure a weak part of the Syrian position. Note that if this unit had been marked in reserve, it could have made a dramatic operational movement into Tel Faris [30], surrounding units in the Syrian line.
 
-**E—** Finally the Israeli player decides to move the [?205th?] Armor unit marked in reserve in [?Ma’ale?] Gamla [24] forward to Yonatan [26] costing 1 MP (road connection) and then on to Einot Peham [31] costing 3 MP (2 MP for the field connection and +1 MP for entering an occupied area). The Northern Command reserve marker is removed. Note that limits on reserve units apply only to Strategic Movement — both moves with the reserve units were operational moves.
+**E—** Finally the Israeli player decides to move the 205th Armor unit marked in reserve in Ma’ale Gamla [24] forward to Yonatan [26] costing 1 MP (road connection) and then on to Einot Peham [31] costing 3 MP (2 MP for the field connection and +1 MP for entering an occupied area). The Northern Command reserve marker is removed. Note that limits on reserve units apply only to Strategic Movement — both moves with the reserve units were operational moves.
 
 ### Example 15 — Supply
 
