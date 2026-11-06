@@ -1,0 +1,986 @@
+{
+ "source": "Vassal set-up cards (SetupStacks on the boards \"Allied Forces\", \"Allied Reinforcements\", \"Axis Forces/ Reinforcements\"; asset file names carry the same turn codes) = printed player aid pages 7, 10, 12 and the sticker / counter sheets; S = at start (Available Box), C = conditional, Inv = invasion landing on turn 1",
+ "turn_names": {
+  "1": "July 10-11",
+  "2": "July 12-13",
+  "3": "July 14-15",
+  "4": "July 16-17",
+  "5": "July 18-19",
+  "6": "July 20-22",
+  "7": "July 23-25",
+  "8": "July 26-28",
+  "9": "July 29-31"
+ },
+ "start_assets": {
+  "allied": [
+   {
+    "id": "USC01",
+    "kind": "infantry_asset",
+    "name": "1st Ranger"
+   },
+   {
+    "id": "USC02",
+    "kind": "infantry_asset",
+    "name": "3rd Ranger"
+   },
+   {
+    "id": "USC03",
+    "kind": "infantry_asset",
+    "name": "4th Ranger"
+   },
+   {
+    "id": "USC04",
+    "kind": "infantry_asset",
+    "name": "3rd"
+   },
+   {
+    "id": "USC05",
+    "kind": "infantry_asset",
+    "name": "45th"
+   },
+   {
+    "id": "USC06",
+    "kind": "air_mission",
+    "name": "Air Support",
+    "copies": 2
+   },
+   {
+    "id": "USC07",
+    "kind": "naval_support",
+    "name": "Naval Support",
+    "copies": 2
+   },
+   {
+    "id": "BRC01",
+    "kind": "infantry_asset",
+    "name": "3rd CDO"
+   },
+   {
+    "id": "BRC02",
+    "kind": "infantry_asset",
+    "name": "RYL Marines"
+   },
+   {
+    "id": "BRC03",
+    "kind": "infantry_asset",
+    "name": "5th"
+   },
+   {
+    "id": "BRC04",
+    "kind": "infantry_asset",
+    "name": "50th"
+   },
+   {
+    "id": "BRC05",
+    "kind": "armor_asset",
+    "name": "46 RTR"
+   },
+   {
+    "id": "BRC06",
+    "kind": "armor_asset",
+    "name": "50 RTR"
+   },
+   {
+    "id": "BRC07",
+    "kind": "infantry_asset",
+    "name": "1st Canadian"
+   },
+   {
+    "id": "BRC08",
+    "kind": "air_mission",
+    "name": "Air Support",
+    "copies": 2
+   },
+   {
+    "id": "BRC09",
+    "kind": "naval_support",
+    "name": "Naval Support",
+    "copies": 2
+   }
+  ],
+  "axis": [
+   {
+    "id": "IT01",
+    "name": "Livorno",
+    "area": 40
+   },
+   {
+    "id": "IT02",
+    "name": "Livorno",
+    "area": 40
+   },
+   {
+    "id": "IT03",
+    "name": "Assietta",
+    "area": 53
+   },
+   {
+    "id": "IT04",
+    "name": "Assietta",
+    "area": 60
+   },
+   {
+    "id": "IT05",
+    "name": "Aosta",
+    "area": 57
+   },
+   {
+    "id": "IT06",
+    "name": "Aosta",
+    "area": 58
+   },
+   {
+    "id": "IT07",
+    "name": "Napoli",
+    "area": 11
+   },
+   {
+    "id": "IT08",
+    "name": "Napoli",
+    "area": 15
+   },
+   {
+    "id": "GE01",
+    "name": "15th PG",
+    "area": 25,
+    "reserve_marker": true
+   },
+   {
+    "id": "GE02",
+    "name": "15th PG",
+    "area": 59
+   },
+   {
+    "id": "GE03",
+    "name": "15th PG",
+    "area": 59
+   },
+   {
+    "id": "GE04",
+    "name": "HG",
+    "area": 17
+   },
+   {
+    "id": "GE05",
+    "name": "HG",
+    "area": 17
+   },
+   {
+    "id": "GEC01",
+    "kind": "armor_asset",
+    "name": "15th Pz Gren"
+   },
+   {
+    "id": "GEC02",
+    "kind": "armor_asset",
+    "name": "HG Pz",
+    "copies": 2
+   },
+   {
+    "id": "GEC03",
+    "kind": "artillery",
+    "name": "33rd"
+   },
+   {
+    "id": "GEC04",
+    "kind": "air_mission",
+    "name": "Air Support"
+   },
+   {
+    "id": "ITC01",
+    "kind": "armor_asset",
+    "name": "Mobile A"
+   },
+   {
+    "id": "ITC02",
+    "kind": "armor_asset",
+    "name": "Mobile C"
+   },
+   {
+    "id": "ITC03",
+    "kind": "artillery",
+    "name": "12th"
+   },
+   {
+    "id": "ITC04",
+    "kind": "infantry_asset",
+    "name": "58th Bers."
+   },
+   {
+    "id": "ITC05",
+    "kind": "infantry_asset",
+    "name": "177th Bers."
+   },
+   {
+    "id": "ITC06",
+    "kind": "engineer",
+    "name": "XII"
+   },
+   {
+    "id": "ITC07",
+    "kind": "engineer",
+    "name": "XVI"
+   }
+  ]
+ },
+ "turns": {
+  "2": {
+   "allied": {
+    "units": [
+     {
+      "id": "US02",
+      "name": "2nd Armored",
+      "entry": null
+     },
+     {
+      "id": "US10",
+      "name": "82nd Airborne",
+      "entry": null
+     }
+    ],
+    "chits": [
+     {
+      "id": "AL01",
+      "name": "Allied Special Action",
+      "reusable": true
+     },
+     {
+      "id": "USC09",
+      "kind": "infantry_asset",
+      "name": "1st"
+     },
+     {
+      "id": "USC10",
+      "kind": "artillery",
+      "name": "58th"
+     },
+     {
+      "id": "USC11",
+      "kind": "artillery",
+      "name": "62nd"
+     },
+     {
+      "id": "USC12",
+      "kind": "engineer",
+      "name": "39th"
+     },
+     {
+      "id": "USC13",
+      "kind": "event_asset_delayed",
+      "name": "Asset Delayed"
+     },
+     {
+      "id": "USC14",
+      "kind": "replacement_inf",
+      "name": "US Inf Non-Elite Repl"
+     },
+     {
+      "id": "USC15",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     },
+     {
+      "id": "BRC11",
+      "kind": "engineer",
+      "name": "XXX"
+     },
+     {
+      "id": "BRC12",
+      "kind": "artillery",
+      "name": "24th"
+     },
+     {
+      "id": "BRC13",
+      "kind": "artillery",
+      "name": "98th"
+     },
+     {
+      "id": "BRC14",
+      "kind": "infantry_asset",
+      "name": "51st"
+     },
+     {
+      "id": "BRC15",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     },
+     {
+      "id": "BRC16",
+      "kind": "replacement_inf",
+      "name": "Br Inf Non-Elite Repl"
+     },
+     {
+      "id": "BRC17",
+      "kind": "command_staff",
+      "name": "Staff Asset"
+     }
+    ]
+   },
+   "axis": {
+    "units": [],
+    "chits": [
+     {
+      "id": "AX01",
+      "name": "Axis Special Action",
+      "reusable": true
+     },
+     {
+      "id": "GEC05",
+      "kind": "artillery",
+      "name": "29th"
+     },
+     {
+      "id": "GEC06",
+      "kind": "infantry_asset",
+      "name": "1/3rd FJ"
+     },
+     {
+      "id": "GEC07",
+      "kind": "infantry_asset",
+      "name": "2/3rd FJ"
+     },
+     {
+      "id": "GEC08",
+      "kind": "infantry_asset",
+      "name": "3/3rd FJ"
+     },
+     {
+      "id": "GEC09",
+      "kind": "air_mission",
+      "name": "Air Support"
+     },
+     {
+      "id": "GEC10",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     },
+     {
+      "id": "ITC08",
+      "kind": "armor_asset",
+      "name": "Mobile B"
+     },
+     {
+      "id": "ITC09",
+      "kind": "armor_asset",
+      "name": "Mobile D"
+     },
+     {
+      "id": "ITC10",
+      "kind": "infantry_asset",
+      "name": "23rd Dismnt."
+     },
+     {
+      "id": "ITC11",
+      "kind": "command_staff",
+      "name": "Staff Asset"
+     },
+     {
+      "id": "ITC12",
+      "kind": "artillery",
+      "name": "40th"
+     }
+    ]
+   }
+  },
+  "3": {
+   "allied": {
+    "units": [
+     {
+      "id": "US11",
+      "name": "9th Infantry",
+      "entry": null
+     },
+     {
+      "id": "BR12",
+      "name": "1st Airborne",
+      "entry": null
+     }
+    ],
+    "chits": [
+     {
+      "id": "USC16",
+      "kind": "artillery",
+      "name": "17th"
+     },
+     {
+      "id": "USC17",
+      "kind": "artillery",
+      "name": "65th"
+     },
+     {
+      "id": "USC18",
+      "kind": "infantry_asset",
+      "name": "82nd Airborne"
+     },
+     {
+      "id": "USC19",
+      "kind": "engineer",
+      "name": "540th"
+     },
+     {
+      "id": "USC20",
+      "kind": "armor_asset",
+      "name": "2nd"
+     },
+     {
+      "id": "USC21",
+      "kind": "armor_asset",
+      "name": "70th"
+     },
+     {
+      "id": "USC22",
+      "kind": "event_asset_delayed",
+      "name": "Asset Delayed"
+     },
+     {
+      "id": "USC23",
+      "kind": "event_army_release",
+      "name": "US 7th Army Release"
+     },
+     {
+      "id": "USC24",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     },
+     {
+      "id": "BRC18",
+      "kind": "artillery",
+      "name": "111th"
+     },
+     {
+      "id": "BRC19",
+      "kind": "artillery",
+      "name": "57th"
+     },
+     {
+      "id": "BRC20",
+      "kind": "infantry_asset",
+      "name": "1st Airbourne"
+     },
+     {
+      "id": "BRC21",
+      "kind": "engineer",
+      "name": "XIII"
+     }
+    ]
+   },
+   "axis": {
+    "units": [],
+    "chits": [
+     {
+      "id": "GEC11",
+      "kind": "air_mission",
+      "name": "Air Support"
+     },
+     {
+      "id": "ITC13",
+      "kind": "armor_asset",
+      "name": "Mobile F"
+     },
+     {
+      "id": "ITC14",
+      "kind": "infantry_asset",
+      "name": "Mobile G"
+     },
+     {
+      "id": "ITC15",
+      "kind": "infantry_asset",
+      "name": "Palermitani"
+     }
+    ]
+   }
+  },
+  "4": {
+   "allied": {
+    "units": [],
+    "chits": [
+     {
+      "id": "USC25",
+      "kind": "artillery",
+      "name": "36th"
+     },
+     {
+      "id": "USC26",
+      "kind": "artillery",
+      "name": "77th"
+     },
+     {
+      "id": "USC27",
+      "kind": "infantry_asset",
+      "name": "30 RCT (-)"
+     },
+     {
+      "id": "USC28",
+      "kind": "event_asset_delayed",
+      "name": "Asset Delayed"
+     },
+     {
+      "id": "USC29",
+      "kind": "replacement_inf",
+      "name": "US Inf Non-Elite Repl"
+     },
+     {
+      "id": "USC30",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     },
+     {
+      "id": "BRC22",
+      "kind": "artillery",
+      "name": "58th"
+     },
+     {
+      "id": "BRC23",
+      "kind": "artillery",
+      "name": "78th"
+     },
+     {
+      "id": "BRC24",
+      "kind": "replacement_inf",
+      "name": "Br Inf Non-Elite Repl"
+     },
+     {
+      "id": "BRC25",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     }
+    ]
+   },
+   "axis": {
+    "units": [
+     {
+      "id": "GE06",
+      "name": "29th PG",
+      "entry": null
+     }
+    ],
+    "chits": [
+     {
+      "id": "GEC12",
+      "kind": "infantry_asset",
+      "name": "1/4th FJ"
+     },
+     {
+      "id": "GEC13",
+      "kind": "infantry_asset",
+      "name": "2/4th FJ"
+     },
+     {
+      "id": "GEC14",
+      "kind": "infantry_asset",
+      "name": "3/4th FJ"
+     },
+     {
+      "id": "ITC16",
+      "kind": "armor_asset",
+      "name": "Carmito"
+     },
+     {
+      "id": "ITC17",
+      "kind": "armor_asset",
+      "name": "Mobile E"
+     },
+     {
+      "id": "ITC18",
+      "kind": "infantry_asset",
+      "name": "173rd Blackshirt"
+     },
+     {
+      "id": "ITC19",
+      "kind": "infantry_asset",
+      "name": "185th"
+     }
+    ]
+   }
+  },
+  "5": {
+   "allied": {
+    "units": [],
+    "chits": [
+     {
+      "id": "USC31",
+      "kind": "infantry_asset",
+      "name": "30 RCT (-)"
+     },
+     {
+      "id": "USC32",
+      "kind": "artillery",
+      "name": "178th"
+     },
+     {
+      "id": "USC33",
+      "kind": "armor_asset",
+      "name": "753rd"
+     },
+     {
+      "id": "USC34",
+      "kind": "replacement_arm",
+      "name": "US Armor Non-Elite Repl"
+     },
+     {
+      "id": "USC35",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     },
+     {
+      "id": "BRC26",
+      "kind": "artillery",
+      "name": "142nd"
+     }
+    ]
+   },
+   "axis": {
+    "units": [],
+    "chits": [
+     {
+      "id": "GEC15",
+      "kind": "artillery",
+      "name": "1st FJ"
+     },
+     {
+      "id": "GEC16",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     },
+     {
+      "id": "GEC17",
+      "kind": "event_tactical_extract",
+      "name": "Axis Tactical Extract"
+     },
+     {
+      "id": "ITC20",
+      "kind": "armor_asset",
+      "name": "230th"
+     },
+     {
+      "id": "ITC21",
+      "kind": "infantry_asset",
+      "name": "17th Blackshirt"
+     },
+     {
+      "id": "ITC22",
+      "kind": "infantry_asset",
+      "name": "10th Bers."
+     }
+    ]
+   }
+  },
+  "6": {
+   "allied": {
+    "units": [
+     {
+      "id": "BR13",
+      "name": "1st Canadian Armoured",
+      "entry": null
+     }
+    ],
+    "chits": [
+     {
+      "id": "USC36",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     },
+     {
+      "id": "USC37",
+      "kind": "replacement_inf",
+      "name": "US Inf Non-Elite Repl"
+     },
+     {
+      "id": "BRC27",
+      "kind": "replacement_inf",
+      "name": "Br Inf Non-Elite Repl"
+     },
+     {
+      "id": "BRC28",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     }
+    ]
+   },
+   "axis": {
+    "units": [
+     {
+      "id": "GE07",
+      "name": "29th PG",
+      "entry": null
+     }
+    ],
+    "chits": [
+     {
+      "id": "ITC23",
+      "kind": "infantry_asset",
+      "name": "19th Blackshirt"
+     },
+     {
+      "id": "ITC24",
+      "kind": "infantry_asset",
+      "name": "51st Bers."
+     }
+    ]
+   }
+  },
+  "7": {
+   "allied": {
+    "units": [],
+    "chits": [
+     {
+      "id": "USC38",
+      "kind": "infantry_asset",
+      "name": "9th"
+     },
+     {
+      "id": "USC39",
+      "kind": "armor_asset",
+      "name": "756th"
+     },
+     {
+      "id": "USC40",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     },
+     {
+      "id": "BRC29",
+      "kind": "infantry_asset",
+      "name": "78th"
+     }
+    ]
+   },
+   "axis": {
+    "units": [],
+    "chits": [
+     {
+      "id": "GEC18",
+      "kind": "event_asset_delayed",
+      "name": "Asset Delayed"
+     }
+    ]
+   }
+  },
+  "8": {
+   "allied": {
+    "units": [
+     {
+      "id": "US12",
+      "name": "9th Infantry",
+      "entry": null
+     },
+     {
+      "id": "BR09",
+      "name": "78th Infantry",
+      "entry": null
+     },
+     {
+      "id": "BR10",
+      "name": "78th Infantry",
+      "entry": null
+     }
+    ],
+    "chits": [
+     {
+      "id": "USC41",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     },
+     {
+      "id": "USC42",
+      "kind": "replacement_inf",
+      "name": "US Inf Non-Elite Repl"
+     },
+     {
+      "id": "BRC30",
+      "kind": "replacement_inf",
+      "name": "Br Inf Non-Elite Repl"
+     },
+     {
+      "id": "BRC31",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     }
+    ]
+   },
+   "axis": {
+    "units": [],
+    "chits": [
+     {
+      "id": "GEC19",
+      "kind": "armor_asset",
+      "name": "29th Pz Gren"
+     },
+     {
+      "id": "GEC20",
+      "kind": "event_asset_delayed",
+      "name": "Asset Delayed"
+     },
+     {
+      "id": "GEC21",
+      "kind": "event_patton_slap",
+      "name": "Patton Soldier Slap"
+     },
+     {
+      "id": "GEC22",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     }
+    ]
+   }
+  },
+  "9": {
+   "allied": {
+    "units": [],
+    "chits": [
+     {
+      "id": "USC43",
+      "kind": "special_action_event",
+      "name": "Special Action"
+     }
+    ]
+   },
+   "axis": {
+    "units": [],
+    "chits": [
+     {
+      "id": "GEC23",
+      "kind": "event_asset_delayed",
+      "name": "Asset Delayed"
+     }
+    ]
+   }
+  }
+ },
+ "invasion": {
+  "allied": [
+   {
+    "id": "US01",
+    "name": "2nd Armored"
+   },
+   {
+    "id": "US03",
+    "name": "1st Infantry"
+   },
+   {
+    "id": "US04",
+    "name": "1st Infantry"
+   },
+   {
+    "id": "US05",
+    "name": "3rd Infantry"
+   },
+   {
+    "id": "US06",
+    "name": "3rd Infantry"
+   },
+   {
+    "id": "US07",
+    "name": "45th Infantry"
+   },
+   {
+    "id": "US08",
+    "name": "45th Infantry"
+   },
+   {
+    "id": "US09",
+    "name": "82nd Airborne"
+   },
+   {
+    "id": "BR01",
+    "name": "1st Canadian"
+   },
+   {
+    "id": "BR02",
+    "name": "1st Canadian"
+   },
+   {
+    "id": "BR03",
+    "name": "5th Infantry"
+   },
+   {
+    "id": "BR04",
+    "name": "5th Infantry"
+   },
+   {
+    "id": "BR05",
+    "name": "50th Infantry"
+   },
+   {
+    "id": "BR06",
+    "name": "50th Infantry"
+   },
+   {
+    "id": "BR07",
+    "name": "51st Infantry"
+   },
+   {
+    "id": "BR08",
+    "name": "51st Infantry"
+   },
+   {
+    "id": "BR11",
+    "name": "1st Airborne"
+   },
+   {
+    "id": "BR14",
+    "name": "4th Armoured"
+   },
+   {
+    "id": "BR15",
+    "name": "231st Infantry"
+   }
+  ],
+  "note": "Arriving Units (sticker code Inv): land on game turn 1 at the beaches of the landing plan chosen; the Beachhead markers go out per that plan"
+ },
+ "untried": {
+  "axis": [
+   "IT09",
+   "IT10",
+   "IT11",
+   "IT12",
+   "IT13",
+   "IT14",
+   "IT15",
+   "IT16",
+   "IT17",
+   "IT18",
+   "IT19",
+   "IT20",
+   "IT21",
+   "IT22",
+   "IT23",
+   "IT24",
+   "IT25",
+   "IT26",
+   "IT27",
+   "IT28",
+   "IT29",
+   "IT30",
+   "IT31",
+   "IT32",
+   "IT33",
+   "IT34",
+   "IT35",
+   "IT36",
+   "IT37"
+  ],
+  "note": "sticker code S*: the Coastal/Garrison blocks go into a cup and are set up face down at random (campaign placement areas: Play Book, not available)"
+ },
+ "conditional": {
+  "allied": [
+   {
+    "id": "USC08",
+    "kind": "air_mission",
+    "name": "Air Support",
+    "copies": 2
+   },
+   {
+    "id": "ALC01",
+    "kind": "event_fading_morale",
+    "name": "Fading Italian Morale",
+    "copies": 3
+   },
+   {
+    "id": "BRC10",
+    "kind": "air_mission",
+    "name": "Air Support"
+   }
+  ]
+ }
+}

@@ -47,7 +47,9 @@ export function unitBox(kind: string | undefined, fill: string) {
   const slash = `<path d="M${L} ${B}L${R} ${T}" stroke="#111" stroke-width="2.1"/>`;
   const extra: Record<string, string> = { inf: x, armor: oval, mech: x + oval, recon: slash + oval, cavalry: slash + oval,
     airborne: x + '<path d="M38.5 66q5.75-9 11.5 0q5.75-9 11.5 0" fill="none" stroke="#111" stroke-width="1.9"/>',
-    mountain: x + `<path d="M43 ${B}L50 ${B - 9}L57 ${B}Z" fill="#111"/>` };
+    mountain: x + `<path d="M43 ${B}L50 ${B - 9}L57 ${B}Z" fill="#111"/>`,
+    motorized: x + `<circle cx="42" cy="${B - 4.5}" r="2.6" fill="#fff" stroke="#111" stroke-width="1.6"/><circle cx="58" cy="${B - 4.5}" r="2.6" fill="#fff" stroke="#111" stroke-width="1.6"/>`,
+    garrison: `<text x="50" y="${T + 31}" font-size="27" text-anchor="middle" ${FONT} fill="#111">G</text>` };
   return box + (extra[kind ?? 'inf'] ?? x);
 }
 /** One edge's pips drawn as if that edge were on top, then turned into place: centred on cx, the yellow arrow at the far end. */

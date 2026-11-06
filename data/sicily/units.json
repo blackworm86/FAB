@@ -1,0 +1,2074 @@
+[
+ {
+  "id": "US01",
+  "name": "2nd Armored",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "green"
+  ],
+  "division": "us_2nd_arm",
+  "size": "division",
+  "sticker_code": "Inv",
+  "arrival": "invasion",
+  "arrival_turn": 1,
+  "entry": null,
+  "colours": {
+   "stripe": "#92268f",
+   "box": "#727d42",
+   "sticker": "#a0b35f"
+  },
+  "vassal_images": [
+   "Block_US_2nd Arm a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "US02",
+  "name": "2nd Armored",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "green"
+  ],
+  "division": "us_2nd_arm",
+  "size": "division",
+  "sticker_code": "2",
+  "arrival_turn": 2,
+  "entry": null,
+  "colours": {
+   "stripe": "#92268f",
+   "box": "#727d42",
+   "sticker": "#a0b35f"
+  },
+  "vassal_images": [
+   "Block_US_2nd Arm b.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "US03",
+  "name": "1st Infantry",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "us_1st_inf",
+  "size": "division",
+  "sticker_code": "Inv",
+  "arrival": "invasion",
+  "arrival_turn": 1,
+  "entry": null,
+  "colours": {
+   "stripe": "#f04d3d",
+   "box": "#6f7b49",
+   "sticker": "#a0b25e"
+  },
+  "vassal_images": [
+   "Block_US_1st Inf a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "US04",
+  "name": "1st Infantry",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "us_1st_inf",
+  "size": "division",
+  "sticker_code": "Inv",
+  "arrival": "invasion",
+  "arrival_turn": 1,
+  "entry": null,
+  "colours": {
+   "stripe": "#f04d3d",
+   "box": "#6f7b49",
+   "sticker": "#a0b25e"
+  },
+  "vassal_images": [
+   "Block_US_1st Inf a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "US05",
+  "name": "3rd Infantry",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "us_3rd_inf",
+  "size": "division",
+  "sticker_code": "Inv",
+  "arrival": "invasion",
+  "arrival_turn": 1,
+  "entry": null,
+  "colours": {
+   "stripe": "#96784a",
+   "box": "#727b44",
+   "sticker": "#a1b25f"
+  },
+  "vassal_images": [
+   "Block_US_3rd Inf a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "US06",
+  "name": "3rd Infantry",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "us_3rd_inf",
+  "size": "division",
+  "sticker_code": "Inv",
+  "arrival": "invasion",
+  "arrival_turn": 1,
+  "entry": null,
+  "colours": {
+   "stripe": "#96784a",
+   "box": "#727b44",
+   "sticker": "#a1b25f"
+  },
+  "vassal_images": [
+   "Block_US_3rd Inf a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "US07",
+  "name": "45th Infantry",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "elite",
+   "elite"
+  ],
+  "division": "us_45th_inf",
+  "size": "division",
+  "sticker_code": "Inv",
+  "arrival": "invasion",
+  "arrival_turn": 1,
+  "entry": null,
+  "colours": {
+   "stripe": "#929fa8",
+   "box": "#6d7949",
+   "sticker": "#a1b25f"
+  },
+  "vassal_images": [
+   "Block_US_45th Inf a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "US08",
+  "name": "45th Infantry",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "elite",
+   "elite"
+  ],
+  "division": "us_45th_inf",
+  "size": "division",
+  "sticker_code": "Inv",
+  "arrival": "invasion",
+  "arrival_turn": 1,
+  "entry": null,
+  "colours": {
+   "stripe": "#929fa8",
+   "box": "#6d7949",
+   "sticker": "#a1b25f"
+  },
+  "vassal_images": [
+   "Block_US_45th Inf a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "US09",
+  "name": "82nd Airborne",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "symbol": "airborne",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "green"
+  ],
+  "division": "us_82nd_ab",
+  "size": "division",
+  "sticker_code": "Inv",
+  "arrival": "invasion",
+  "arrival_turn": 1,
+  "entry": null,
+  "colours": {
+   "stripe": "#b8e4fb",
+   "box": "#fae04e",
+   "sticker": "#a1b25f"
+  },
+  "vassal_images": [
+   "Block_US_82nd AB a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "US10",
+  "name": "82nd Airborne",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "symbol": "airborne",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "green"
+  ],
+  "division": "us_82nd_ab",
+  "size": "division",
+  "sticker_code": "2",
+  "arrival_turn": 2,
+  "entry": null,
+  "colours": {
+   "stripe": "#b8e4fb",
+   "box": "#fae04e",
+   "sticker": "#a1b25f"
+  },
+  "vassal_images": [
+   "Block_US_82nd AB b.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "US11",
+  "name": "9th Infantry",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "green",
+   "green"
+  ],
+  "division": "us_9th_inf",
+  "size": "division",
+  "sticker_code": "3",
+  "arrival_turn": 3,
+  "entry": null,
+  "colours": {
+   "stripe": "#fefbcc",
+   "box": "#6e7a3c",
+   "sticker": "#a0b35f"
+  },
+  "vassal_images": [
+   "Block_US_9th Inf a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "US12",
+  "name": "9th Infantry",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "green",
+   "green"
+  ],
+  "division": "us_9th_inf",
+  "size": "division",
+  "sticker_code": "8",
+  "arrival_turn": 8,
+  "entry": null,
+  "colours": {
+   "stripe": "#fefbcc",
+   "box": "#6e7a3c",
+   "sticker": "#a0b35f"
+  },
+  "vassal_images": [
+   "Block_US_9th Inf b.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "BR01",
+  "name": "1st Canadian",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "br_1st_cdn",
+  "size": "division",
+  "sticker_code": "Inv",
+  "arrival": "invasion",
+  "arrival_turn": 1,
+  "entry": null,
+  "canadian": true,
+  "colours": {
+   "stripe": "#7ed1f9",
+   "box": "#ff574d",
+   "sticker": "#e1c08b"
+  },
+  "vassal_images": [
+   "Block_BR_1st Cdn a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "BR02",
+  "name": "1st Canadian",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "br_1st_cdn",
+  "size": "division",
+  "sticker_code": "Inv",
+  "arrival": "invasion",
+  "arrival_turn": 1,
+  "entry": null,
+  "canadian": true,
+  "colours": {
+   "stripe": "#7ed1f9",
+   "box": "#ff574d",
+   "sticker": "#e1c08b"
+  },
+  "vassal_images": [
+   "Block_BR_1st Cdn a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "BR03",
+  "name": "5th Infantry",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "green"
+  ],
+  "division": "br_5th_inf",
+  "size": "division",
+  "sticker_code": "Inv",
+  "arrival": "invasion",
+  "arrival_turn": 1,
+  "entry": null,
+  "colours": {
+   "stripe": "#ba88bb",
+   "box": "#bda569",
+   "sticker": "#e2c18c"
+  },
+  "vassal_images": [
+   "Block_BR_5th Inf a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "BR04",
+  "name": "5th Infantry",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "green"
+  ],
+  "division": "br_5th_inf",
+  "size": "division",
+  "sticker_code": "Inv",
+  "arrival": "invasion",
+  "arrival_turn": 1,
+  "entry": null,
+  "colours": {
+   "stripe": "#ba88bb",
+   "box": "#bda569",
+   "sticker": "#e2c18c"
+  },
+  "vassal_images": [
+   "Block_BR_5th Inf a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "BR05",
+  "name": "50th Infantry",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "br_50th_inf",
+  "size": "division",
+  "sticker_code": "Inv",
+  "arrival": "invasion",
+  "arrival_turn": 1,
+  "entry": null,
+  "colours": {
+   "stripe": "#ccd3db",
+   "box": "#bfa56c",
+   "sticker": "#e2c289"
+  },
+  "vassal_images": [
+   "Block_BR_50th Inf a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "BR06",
+  "name": "50th Infantry",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "br_50th_inf",
+  "size": "division",
+  "sticker_code": "Inv",
+  "arrival": "invasion",
+  "arrival_turn": 1,
+  "entry": null,
+  "colours": {
+   "stripe": "#ccd3db",
+   "box": "#bfa56c",
+   "sticker": "#e2c289"
+  },
+  "vassal_images": [
+   "Block_BR_50th Inf a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "BR07",
+  "name": "51st Infantry",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "elite",
+   "elite"
+  ],
+  "division": "br_51st_inf",
+  "size": "division",
+  "sticker_code": "Inv",
+  "arrival": "invasion",
+  "arrival_turn": 1,
+  "entry": null,
+  "colours": {
+   "stripe": "#bfc434",
+   "box": "#b99c64",
+   "sticker": "#e1bd8b"
+  },
+  "vassal_images": [
+   "Block_BR_51st Inf a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "BR08",
+  "name": "51st Infantry",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "elite",
+   "elite"
+  ],
+  "division": "br_51st_inf",
+  "size": "division",
+  "sticker_code": "Inv",
+  "arrival": "invasion",
+  "arrival_turn": 1,
+  "entry": null,
+  "colours": {
+   "stripe": "#bfc434",
+   "box": "#b99c64",
+   "sticker": "#e1bd8b"
+  },
+  "vassal_images": [
+   "Block_BR_51st Inf a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "BR09",
+  "name": "78th Infantry",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "br_78th_inf",
+  "size": "division",
+  "sticker_code": "8",
+  "arrival_turn": 8,
+  "entry": null,
+  "colours": {
+   "stripe": "#fef9cf",
+   "box": "#af9c5a",
+   "sticker": "#e2be8a"
+  },
+  "vassal_images": [
+   "Block_BR_78th Inf a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "BR10",
+  "name": "78th Infantry",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "br_78th_inf",
+  "size": "division",
+  "sticker_code": "8",
+  "arrival_turn": 8,
+  "entry": null,
+  "colours": {
+   "stripe": "#fef9cf",
+   "box": "#af9c5a",
+   "sticker": "#e2be8a"
+  },
+  "vassal_images": [
+   "Block_BR_78th Inf a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "BR11",
+  "name": "1st Airborne",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "symbol": "airborne",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "green"
+  ],
+  "division": "br_1st_ab",
+  "size": "division",
+  "sticker_code": "Inv",
+  "arrival": "invasion",
+  "arrival_turn": 1,
+  "entry": null,
+  "colours": {
+   "stripe": "#0081d2",
+   "box": "#fff231",
+   "sticker": "#e0bf89"
+  },
+  "vassal_images": [
+   "Block_BR_1st AB a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "BR12",
+  "name": "1st Airborne",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "symbol": "airborne",
+  "cls": "infantry",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "green"
+  ],
+  "division": "br_1st_ab",
+  "size": "division",
+  "sticker_code": "3",
+  "arrival_turn": 3,
+  "entry": null,
+  "colours": {
+   "stripe": "#0081d2",
+   "box": "#fff231",
+   "sticker": "#e0bf89"
+  },
+  "vassal_images": [
+   "Block_BR_1st AB b.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "BR13",
+  "name": "1st Canadian Armoured",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "green"
+  ],
+  "division": "br_1st_cdn_arm",
+  "size": "brigade",
+  "sticker_code": "6",
+  "arrival_turn": 6,
+  "entry": null,
+  "canadian": true,
+  "colours": {
+   "stripe": null,
+   "box": "#fc5140",
+   "sticker": "#e1c08b"
+  },
+  "vassal_images": [
+   "Block_BR_1st Cdn c.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "BR14",
+  "name": "4th Armoured",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "symbol": "armor",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "br_4th_arm",
+  "size": "brigade",
+  "sticker_code": "Inv",
+  "arrival": "invasion",
+  "arrival_turn": 1,
+  "entry": null,
+  "colours": {
+   "stripe": null,
+   "box": "#b39f64",
+   "sticker": "#e2be8a"
+  },
+  "vassal_images": [
+   "Block_BR_4th Arm.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "BR15",
+  "name": "231st Infantry",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "br_231st",
+  "size": "brigade",
+  "sticker_code": "Inv",
+  "arrival": "invasion",
+  "arrival_turn": 1,
+  "entry": null,
+  "colours": {
+   "stripe": null,
+   "box": "#a49156",
+   "sticker": "#e2c287"
+  },
+  "vassal_images": [
+   "Block_BR_231st.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT01",
+  "name": "Livorno",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "motorized_inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "it_livorno",
+  "size": "division",
+  "sticker_code": "40",
+  "start_area": 40,
+  "motorized": true,
+  "colours": {
+   "stripe": "#53b7e8",
+   "box": "#cde29d",
+   "sticker": "#f5951c"
+  },
+  "vassal_images": [
+   "Block_IT_Livorno a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT02",
+  "name": "Livorno",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "motorized_inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "it_livorno",
+  "size": "division",
+  "sticker_code": "40",
+  "start_area": 40,
+  "motorized": true,
+  "colours": {
+   "stripe": "#53b7e8",
+   "box": "#cde29d",
+   "sticker": "#f5951c"
+  },
+  "vassal_images": [
+   "Block_IT_Livorno a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT03",
+  "name": "Assietta",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "mountain_inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "it_assietta",
+  "size": "division",
+  "sticker_code": "53",
+  "start_area": 53,
+  "colours": {
+   "stripe": "#977245",
+   "box": "#d1e59e",
+   "sticker": "#f79518"
+  },
+  "vassal_images": [
+   "Block_IT_Assietta a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT04",
+  "name": "Assietta",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "mountain_inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "it_assietta",
+  "size": "division",
+  "sticker_code": "60",
+  "start_area": 60,
+  "colours": {
+   "stripe": "#977245",
+   "box": "#d1e59e",
+   "sticker": "#f79518"
+  },
+  "vassal_images": [
+   "Block_IT_Assietta b.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT05",
+  "name": "Aosta",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "green"
+  ],
+  "division": "it_aosta",
+  "size": "division",
+  "sticker_code": "57",
+  "start_area": 57,
+  "colours": {
+   "stripe": "#fff488",
+   "box": "#cbe79c",
+   "sticker": "#f5921b"
+  },
+  "vassal_images": [
+   "Block_IT_Aosta a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT06",
+  "name": "Aosta",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "green"
+  ],
+  "division": "it_aosta",
+  "size": "division",
+  "sticker_code": "58",
+  "start_area": 58,
+  "colours": {
+   "stripe": "#fff488",
+   "box": "#cbe79c",
+   "sticker": "#f5921b"
+  },
+  "vassal_images": [
+   "Block_IT_Aosta b.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT07",
+  "name": "Napoli",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "green",
+   "green",
+   "veteran"
+  ],
+  "division": "it_napoli",
+  "size": "division",
+  "sticker_code": "11",
+  "start_area": 11,
+  "colours": {
+   "stripe": "#ccd4df",
+   "box": "#cde8a3",
+   "sticker": "#f69417"
+  },
+  "vassal_images": [
+   "Block_IT_Napoli a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT08",
+  "name": "Napoli",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "inf",
+  "cls": "infantry",
+  "steps": 3,
+  "quality_by_step": [
+   "green",
+   "green",
+   "veteran"
+  ],
+  "division": "it_napoli",
+  "size": "division",
+  "sticker_code": "15",
+  "start_area": 15,
+  "colours": {
+   "stripe": "#ccd4df",
+   "box": "#cde8a3",
+   "sticker": "#f69417"
+  },
+  "vassal_images": [
+   "Block_IT_Napoli b.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT09",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT10",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT11",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT12",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT13",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT14",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT15",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT16",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT17",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT18",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT19",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT20",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT21",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT22",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT23",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT24",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT25",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT26",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT27",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT28",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT29",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT30",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT31",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT32",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 1,
+  "quality_by_step": [
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 1Green (x24).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT33",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "green",
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 2Green (x4).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT34",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "green",
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 2Green (x4).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT35",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "green",
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 2Green (x4).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT36",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "green",
+   "green"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 2Green (x4).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "IT37",
+  "name": "Coastal/Garrison",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "symbol": "garrison",
+  "cls": "infantry",
+  "steps": 2,
+  "quality_by_step": [
+   "veteran",
+   "veteran"
+  ],
+  "division": "it_coastal",
+  "size": "garrison",
+  "sticker_code": "S*",
+  "arrival": "untried_setup",
+  "kind": "untried",
+  "colours": {
+   "stripe": null,
+   "box": "#c8e5a2",
+   "sticker": "#f99116"
+  },
+  "vassal_images": [
+   "Block_IT_Garrison 2Vet (x1).png"
+  ],
+  "image": null
+ },
+ {
+  "id": "GE01",
+  "name": "15th PG",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "elite",
+   "elite"
+  ],
+  "division": "ge_15th_pg",
+  "size": "division",
+  "sticker_code": "25R",
+  "start_area": 25,
+  "start_reserve": true,
+  "colours": {
+   "stripe": "#f34d41",
+   "box": "#d5d6db",
+   "sticker": "#b2c3cb"
+  },
+  "vassal_images": [
+   "Block_GE_15th PG a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "GE02",
+  "name": "15th PG",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "elite",
+   "elite"
+  ],
+  "division": "ge_15th_pg",
+  "size": "division",
+  "sticker_code": "59",
+  "start_area": 59,
+  "colours": {
+   "stripe": "#f34d41",
+   "box": "#d5d6db",
+   "sticker": "#b2c3cb"
+  },
+  "vassal_images": [
+   "Block_GE_15th PG b.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "GE03",
+  "name": "15th PG",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "elite",
+   "elite"
+  ],
+  "division": "ge_15th_pg",
+  "size": "division",
+  "sticker_code": "59",
+  "start_area": 59,
+  "colours": {
+   "stripe": "#f34d41",
+   "box": "#d5d6db",
+   "sticker": "#b2c3cb"
+  },
+  "vassal_images": [
+   "Block_GE_15th PG b.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "GE04",
+  "name": "HG",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "green"
+  ],
+  "division": "ge_hg",
+  "size": "division",
+  "sticker_code": "17",
+  "start_area": 17,
+  "colours": {
+   "stripe": "#acdef9",
+   "box": "#74bad3",
+   "sticker": "#b2c3cb"
+  },
+  "vassal_images": [
+   "Block_GE_HG a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "GE05",
+  "name": "HG",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 4,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran",
+   "green"
+  ],
+  "division": "ge_hg",
+  "size": "division",
+  "sticker_code": "17",
+  "start_area": 17,
+  "colours": {
+   "stripe": "#acdef9",
+   "box": "#74bad3",
+   "sticker": "#b2c3cb"
+  },
+  "vassal_images": [
+   "Block_GE_HG a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "GE06",
+  "name": "29th PG",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "ge_29th_pg",
+  "size": "division",
+  "sticker_code": "4",
+  "arrival_turn": 4,
+  "entry": null,
+  "colours": {
+   "stripe": "#ffdf4d",
+   "box": "#d5d6da",
+   "sticker": "#b2c3cb"
+  },
+  "vassal_images": [
+   "Block_GE_29th PG a.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "GE07",
+  "name": "29th PG",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "symbol": "mech",
+  "cls": "armor",
+  "steps": 3,
+  "quality_by_step": [
+   "veteran",
+   "veteran",
+   "veteran"
+  ],
+  "division": "ge_29th_pg",
+  "size": "division",
+  "sticker_code": "6",
+  "arrival_turn": 6,
+  "entry": null,
+  "colours": {
+   "stripe": "#ffdf4d",
+   "box": "#d5d6da",
+   "sticker": "#b2c3cb"
+  },
+  "vassal_images": [
+   "Block_GE_29th PG b.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "AL01",
+  "name": "Allied Special Action",
+  "side": "allied",
+  "nation": null,
+  "echelon": "allied",
+  "kind": "special_action_block",
+  "arrival_turn": 2,
+  "red_flag": true,
+  "vassal_images": [
+   "Block_Special Action.png"
+  ],
+  "image": null
+ },
+ {
+  "id": "AX01",
+  "name": "Axis Special Action",
+  "side": "axis",
+  "nation": null,
+  "echelon": "it_6th_army",
+  "kind": "special_action_block",
+  "arrival_turn": 2,
+  "red_flag": true,
+  "vassal_images": [
+   "Block_Axis Special Action.png"
+  ],
+  "image": null
+ }
+]

@@ -1,0 +1,3283 @@
+[
+ {
+  "id": "USC01",
+  "kind": "infantry_asset",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": "S",
+  "name": "1st Ranger",
+  "quality": "elite",
+  "class": "infantry",
+  "symbol": "ranger",
+  "subtype": "ranger",
+  "copies": 1,
+  "ids": [
+   "USC01"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Allies_S_1st Ranger.png",
+  "image": null
+ },
+ {
+  "id": "USC02",
+  "kind": "infantry_asset",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": "S",
+  "name": "3rd Ranger",
+  "quality": "elite",
+  "class": "infantry",
+  "symbol": "ranger",
+  "subtype": "ranger",
+  "copies": 1,
+  "ids": [
+   "USC02"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Allies_S_3rd Ranger.png",
+  "image": null
+ },
+ {
+  "id": "USC03",
+  "kind": "infantry_asset",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": "S",
+  "name": "4th Ranger",
+  "quality": "elite",
+  "class": "infantry",
+  "symbol": "ranger",
+  "subtype": "ranger",
+  "copies": 1,
+  "ids": [
+   "USC03"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Allies_S_4th Ranger.png",
+  "image": null
+ },
+ {
+  "id": "USC04",
+  "kind": "infantry_asset",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": "S",
+  "name": "3rd",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "inf",
+  "division": "us_3rd_inf",
+  "copies": 1,
+  "ids": [
+   "USC04"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Allies_S_3rd.png",
+  "image": null
+ },
+ {
+  "id": "USC05",
+  "kind": "infantry_asset",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": "S",
+  "name": "45th",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "inf",
+  "division": "us_45th_inf",
+  "copies": 1,
+  "ids": [
+   "USC05"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Allies_S_45th.png",
+  "image": null
+ },
+ {
+  "id": "USC06",
+  "kind": "air_mission",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": "S",
+  "name": "Air Support",
+  "red_flag": true,
+  "copies": 2,
+  "ids": [
+   "USC06a",
+   "USC06b"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:air_mission",
+  "vassal_image": "Asset_Allies_S_US Air Support (x2).png",
+  "image": null
+ },
+ {
+  "id": "USC07",
+  "kind": "naval_support",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": "S",
+  "name": "Naval Support",
+  "red_flag": true,
+  "copies": 2,
+  "ids": [
+   "USC07a",
+   "USC07b"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "new",
+  "vassal_image": "Asset_Allies_S_US Naval Support (x2).png",
+  "image": null
+ },
+ {
+  "id": "USC08",
+  "kind": "air_mission",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": "C",
+  "name": "Air Support",
+  "conditional": "airfield_captured",
+  "start_box": "captured_airfields",
+  "red_flag": true,
+  "copies": 2,
+  "ids": [
+   "USC08a",
+   "USC08b"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:air_mission",
+  "vassal_image": "Asset_Allies_C_US Air Support (x2).png",
+  "image": null
+ },
+ {
+  "id": "USC09",
+  "kind": "infantry_asset",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 2,
+  "name": "1st",
+  "quality": "elite",
+  "class": "infantry",
+  "symbol": "inf",
+  "division": "us_1st_inf",
+  "copies": 1,
+  "ids": [
+   "USC09"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Allies_2_1st.png",
+  "image": null
+ },
+ {
+  "id": "USC10",
+  "kind": "artillery",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 2,
+  "name": "58th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "USC10"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_Allies_2_58th Arty.png",
+  "image": null
+ },
+ {
+  "id": "USC11",
+  "kind": "artillery",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 2,
+  "name": "62nd",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "USC11"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_Allies_2_62nd Arty.png",
+  "image": null
+ },
+ {
+  "id": "USC12",
+  "kind": "engineer",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 2,
+  "name": "39th",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "engineer",
+  "copies": 1,
+  "ids": [
+   "USC12"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:engineer",
+  "vassal_image": "Asset_Allies_2_39th Eng.png",
+  "image": null
+ },
+ {
+  "id": "USC13",
+  "kind": "event_asset_delayed",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 2,
+  "name": "Asset Delayed",
+  "copies": 1,
+  "ids": [
+   "USC13"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "new",
+  "vassal_image": "Asset_Allies_2_Delayed.png",
+  "image": null
+ },
+ {
+  "id": "USC14",
+  "kind": "replacement_inf",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 2,
+  "name": "US Inf Non-Elite Repl",
+  "elite_allowed": false,
+  "copies": 1,
+  "ids": [
+   "USC14"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:replacement_inf",
+  "vassal_image": "Asset_Allies_2_US Inf Repl.png",
+  "image": null
+ },
+ {
+  "id": "USC15",
+  "kind": "special_action_event",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 2,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "USC15"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_Allies_2_US Special Action.png",
+  "image": null
+ },
+ {
+  "id": "USC16",
+  "kind": "artillery",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 3,
+  "name": "17th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "USC16"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_Allies_3_17th Arty.png",
+  "image": null
+ },
+ {
+  "id": "USC17",
+  "kind": "artillery",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 3,
+  "name": "65th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "USC17"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_Allies_3_65th Arty.png",
+  "image": null
+ },
+ {
+  "id": "USC18",
+  "kind": "infantry_asset",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 3,
+  "name": "82nd Airborne",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "airborne",
+  "division": "us_82nd_ab",
+  "airborne": true,
+  "copies": 1,
+  "ids": [
+   "USC18"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Allies_3_82nd AB.png",
+  "image": null
+ },
+ {
+  "id": "USC19",
+  "kind": "engineer",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 3,
+  "name": "540th",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "engineer",
+  "copies": 1,
+  "ids": [
+   "USC19"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:engineer",
+  "vassal_image": "Asset_Allies_3_540th Eng.png",
+  "image": null
+ },
+ {
+  "id": "USC20",
+  "kind": "armor_asset",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 3,
+  "name": "2nd",
+  "quality": "green",
+  "class": "armor",
+  "symbol": "armor",
+  "division": "us_2nd_arm",
+  "copies": 1,
+  "ids": [
+   "USC20"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_Allies_3_2nd Arm.png",
+  "image": null
+ },
+ {
+  "id": "USC21",
+  "kind": "armor_asset",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 3,
+  "name": "70th",
+  "quality": "green",
+  "class": "armor",
+  "symbol": "armor",
+  "copies": 1,
+  "ids": [
+   "USC21"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_Allies_3_70th Arm.png",
+  "image": null
+ },
+ {
+  "id": "USC22",
+  "kind": "event_asset_delayed",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 3,
+  "name": "Asset Delayed",
+  "copies": 1,
+  "ids": [
+   "USC22"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "new",
+  "vassal_image": "Asset_Allies_3_Delay.png",
+  "image": null
+ },
+ {
+  "id": "USC23",
+  "kind": "event_army_release",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 3,
+  "name": "US 7th Army Release",
+  "releases": "us_7th_army",
+  "zones": [
+   "A",
+   "C",
+   "D"
+  ],
+  "copies": 1,
+  "ids": [
+   "USC23"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "new",
+  "vassal_image": "Asset_Allies_3_US 7th Army Release.png",
+  "image": null
+ },
+ {
+  "id": "USC24",
+  "kind": "special_action_event",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 3,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "USC24"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_Allies_3_US Special Action.png",
+  "image": null
+ },
+ {
+  "id": "USC25",
+  "kind": "artillery",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 4,
+  "name": "36th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "USC25"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_Allies_4_36th Arty.png",
+  "image": null
+ },
+ {
+  "id": "USC26",
+  "kind": "artillery",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 4,
+  "name": "77th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "USC26"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_Allies_4_77th Arty.png",
+  "image": null
+ },
+ {
+  "id": "USC27",
+  "kind": "infantry_asset",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 4,
+  "name": "30 RCT (-)",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "inf",
+  "flanking_invasion": true,
+  "copies": 1,
+  "ids": [
+   "USC27"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Allies_4_30 RCT.png",
+  "image": null
+ },
+ {
+  "id": "USC28",
+  "kind": "event_asset_delayed",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 4,
+  "name": "Asset Delayed",
+  "copies": 1,
+  "ids": [
+   "USC28"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "new",
+  "vassal_image": "Asset_Allies_4_Delayed.png",
+  "image": null
+ },
+ {
+  "id": "USC29",
+  "kind": "replacement_inf",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 4,
+  "name": "US Inf Non-Elite Repl",
+  "elite_allowed": false,
+  "copies": 1,
+  "ids": [
+   "USC29"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:replacement_inf",
+  "vassal_image": "Asset_Allies_4_US Inf Repl.png",
+  "image": null
+ },
+ {
+  "id": "USC30",
+  "kind": "special_action_event",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 4,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "USC30"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_Allies_4_US Special Action.png",
+  "image": null
+ },
+ {
+  "id": "USC31",
+  "kind": "infantry_asset",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 5,
+  "name": "30 RCT (-)",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "inf",
+  "flanking_invasion": true,
+  "copies": 1,
+  "ids": [
+   "USC31"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Allies_5_30 RCT.png",
+  "image": null
+ },
+ {
+  "id": "USC32",
+  "kind": "artillery",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 5,
+  "name": "178th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "USC32"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_Allies_5_178th Arty.png",
+  "image": null
+ },
+ {
+  "id": "USC33",
+  "kind": "armor_asset",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 5,
+  "name": "753rd",
+  "quality": "green",
+  "class": "armor",
+  "symbol": "armor",
+  "copies": 1,
+  "ids": [
+   "USC33"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_Allies_5_753rd Arm.png",
+  "image": null
+ },
+ {
+  "id": "USC34",
+  "kind": "replacement_arm",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 5,
+  "name": "US Armor Non-Elite Repl",
+  "elite_allowed": false,
+  "copies": 1,
+  "ids": [
+   "USC34"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:replacement_arm",
+  "vassal_image": "Asset_Allies_5_US Armor Repl.png",
+  "image": null
+ },
+ {
+  "id": "USC35",
+  "kind": "special_action_event",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 5,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "USC35"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_Allies_5_US Special Action.png",
+  "image": null
+ },
+ {
+  "id": "USC36",
+  "kind": "special_action_event",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 6,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "USC36"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_Allies_6_US Special Action.png",
+  "image": null
+ },
+ {
+  "id": "USC37",
+  "kind": "replacement_inf",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 6,
+  "name": "US Inf Non-Elite Repl",
+  "elite_allowed": false,
+  "copies": 1,
+  "ids": [
+   "USC37"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:replacement_inf",
+  "vassal_image": "Asset_Allies_6_US Inf Repl.png",
+  "image": null
+ },
+ {
+  "id": "USC38",
+  "kind": "infantry_asset",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 7,
+  "name": "9th",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "inf",
+  "division": "us_9th_inf",
+  "copies": 1,
+  "ids": [
+   "USC38"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Allies_7_9th.png",
+  "image": null
+ },
+ {
+  "id": "USC39",
+  "kind": "armor_asset",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 7,
+  "name": "756th",
+  "quality": "green",
+  "class": "armor",
+  "symbol": "armor",
+  "copies": 1,
+  "ids": [
+   "USC39"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_Allies_7_756th Arm.png",
+  "image": null
+ },
+ {
+  "id": "USC40",
+  "kind": "special_action_event",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 7,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "USC40"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_Allies_7_US Special Action.png",
+  "image": null
+ },
+ {
+  "id": "USC41",
+  "kind": "special_action_event",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 8,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "USC41"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_Allies_8_US Special Action.png",
+  "image": null
+ },
+ {
+  "id": "USC42",
+  "kind": "replacement_inf",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 8,
+  "name": "US Inf Non-Elite Repl",
+  "elite_allowed": false,
+  "copies": 1,
+  "ids": [
+   "USC42"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:replacement_inf",
+  "vassal_image": "Asset_Allies_8_US Inf Repl.png",
+  "image": null
+ },
+ {
+  "id": "USC43",
+  "kind": "special_action_event",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": 9,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "USC43"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_Allies_9_US Special Action.png",
+  "image": null
+ },
+ {
+  "id": "ALC01",
+  "kind": "event_fading_morale",
+  "side": "allied",
+  "nation": null,
+  "echelon": "allied",
+  "turn": "C",
+  "name": "Fading Italian Morale",
+  "conditional": "port_or_mutual_vp_captured",
+  "start_box": "captured_ports_vp",
+  "copies": 3,
+  "ids": [
+   "ALC01a",
+   "ALC01b",
+   "ALC01c"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "new",
+  "vassal_image": "Asset_Allies_C_Fading Italian Morale (x3).png",
+  "image": null
+ },
+ {
+  "id": "BRC01",
+  "kind": "infantry_asset",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": "S",
+  "name": "3rd CDO",
+  "quality": "elite",
+  "class": "infantry",
+  "symbol": "ranger",
+  "subtype": "commando",
+  "flanking_invasion": "once_per_game",
+  "copies": 1,
+  "ids": [
+   "BRC01"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Allies_S_3rd Cdo.png",
+  "image": null
+ },
+ {
+  "id": "BRC02",
+  "kind": "infantry_asset",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": "S",
+  "name": "RYL Marines",
+  "quality": "elite",
+  "class": "infantry",
+  "symbol": "marine",
+  "subtype": "marines",
+  "copies": 1,
+  "ids": [
+   "BRC02"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Allies_S_Ryl Marines.png",
+  "image": null
+ },
+ {
+  "id": "BRC03",
+  "kind": "infantry_asset",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": "S",
+  "name": "5th",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "inf",
+  "division": "br_5th_inf",
+  "copies": 1,
+  "ids": [
+   "BRC03"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Allies_S_5th.png",
+  "image": null
+ },
+ {
+  "id": "BRC04",
+  "kind": "infantry_asset",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": "S",
+  "name": "50th",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "inf",
+  "division": "br_50th_inf",
+  "copies": 1,
+  "ids": [
+   "BRC04"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Allies_S_50th.png",
+  "image": null
+ },
+ {
+  "id": "BRC05",
+  "kind": "armor_asset",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": "S",
+  "name": "46 RTR",
+  "quality": "veteran",
+  "class": "armor",
+  "symbol": "armor",
+  "copies": 1,
+  "ids": [
+   "BRC05"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_Allies_S_46th RTR.png",
+  "image": null
+ },
+ {
+  "id": "BRC06",
+  "kind": "armor_asset",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": "S",
+  "name": "50 RTR",
+  "quality": "veteran",
+  "class": "armor",
+  "symbol": "armor",
+  "copies": 1,
+  "ids": [
+   "BRC06"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_Allies_S_50th RTR.png",
+  "image": null
+ },
+ {
+  "id": "BRC07",
+  "kind": "infantry_asset",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": "S",
+  "name": "1st Canadian",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "inf",
+  "division": "br_1st_cdn",
+  "canadian": true,
+  "copies": 1,
+  "ids": [
+   "BRC07"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Allies_S_1st Canadian.png",
+  "image": null
+ },
+ {
+  "id": "BRC08",
+  "kind": "air_mission",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": "S",
+  "name": "Air Support",
+  "red_flag": true,
+  "copies": 2,
+  "ids": [
+   "BRC08a",
+   "BRC08b"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:air_mission",
+  "vassal_image": "Asset_Allies_S_BR Air Support (x2).png",
+  "image": null
+ },
+ {
+  "id": "BRC09",
+  "kind": "naval_support",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": "S",
+  "name": "Naval Support",
+  "red_flag": true,
+  "copies": 2,
+  "ids": [
+   "BRC09a",
+   "BRC09b"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "new",
+  "vassal_image": "Asset_Allies_S_BR Naval Support (x2).png",
+  "image": null
+ },
+ {
+  "id": "BRC10",
+  "kind": "air_mission",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": "C",
+  "name": "Air Support",
+  "conditional": "airfield_captured",
+  "start_box": "captured_airfields",
+  "red_flag": true,
+  "copies": 1,
+  "ids": [
+   "BRC10"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:air_mission",
+  "vassal_image": "Asset_Allies_C_BR Air Support.png",
+  "image": null
+ },
+ {
+  "id": "BRC11",
+  "kind": "engineer",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 2,
+  "name": "XXX",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "engineer",
+  "copies": 1,
+  "ids": [
+   "BRC11"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:engineer",
+  "vassal_image": "Asset_Allies_2_XXX Eng.png",
+  "image": null
+ },
+ {
+  "id": "BRC12",
+  "kind": "artillery",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 2,
+  "name": "24th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "BRC12"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_Allies_2_24th Arty.png",
+  "image": null
+ },
+ {
+  "id": "BRC13",
+  "kind": "artillery",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 2,
+  "name": "98th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "BRC13"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_Allies_2_98th Arty.png",
+  "image": null
+ },
+ {
+  "id": "BRC14",
+  "kind": "infantry_asset",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 2,
+  "name": "51st",
+  "quality": "elite",
+  "class": "infantry",
+  "symbol": "inf",
+  "division": "br_51st_inf",
+  "copies": 1,
+  "ids": [
+   "BRC14"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Allies_2_51st.png",
+  "image": null
+ },
+ {
+  "id": "BRC15",
+  "kind": "special_action_event",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 2,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "BRC15"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_Allies_2_BR Special Action.png",
+  "image": null
+ },
+ {
+  "id": "BRC16",
+  "kind": "replacement_inf",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 2,
+  "name": "Br Inf Non-Elite Repl",
+  "elite_allowed": false,
+  "copies": 1,
+  "ids": [
+   "BRC16"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:replacement_inf",
+  "vassal_image": "Asset_Allies_2_BR Inf Repl.png",
+  "image": null
+ },
+ {
+  "id": "BRC17",
+  "kind": "command_staff",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 2,
+  "name": "Staff Asset",
+  "red_flag": true,
+  "copies": 1,
+  "ids": [
+   "BRC17"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:command_staff",
+  "vassal_image": "Asset_Allies_2_Staff Asset.png",
+  "image": null
+ },
+ {
+  "id": "BRC18",
+  "kind": "artillery",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 3,
+  "name": "111th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "BRC18"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_Allies_3_111th Arty.png",
+  "image": null
+ },
+ {
+  "id": "BRC19",
+  "kind": "artillery",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 3,
+  "name": "57th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "BRC19"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_Allies_3_57th Arty.png",
+  "image": null
+ },
+ {
+  "id": "BRC20",
+  "kind": "infantry_asset",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 3,
+  "name": "1st Airbourne",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "airborne",
+  "division": "br_1st_ab",
+  "airborne": true,
+  "copies": 1,
+  "ids": [
+   "BRC20"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Allies_3_1st AB.png",
+  "image": null
+ },
+ {
+  "id": "BRC21",
+  "kind": "engineer",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 3,
+  "name": "XIII",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "engineer",
+  "copies": 1,
+  "ids": [
+   "BRC21"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:engineer",
+  "vassal_image": "Asset_Allies_3_XIII Eng.png",
+  "image": null
+ },
+ {
+  "id": "BRC22",
+  "kind": "artillery",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 4,
+  "name": "58th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "BRC22"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_Allies_4_58th Arty.png",
+  "image": null
+ },
+ {
+  "id": "BRC23",
+  "kind": "artillery",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 4,
+  "name": "78th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "BRC23"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_Allies_4_78th Arty.png",
+  "image": null
+ },
+ {
+  "id": "BRC24",
+  "kind": "replacement_inf",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 4,
+  "name": "Br Inf Non-Elite Repl",
+  "elite_allowed": false,
+  "copies": 1,
+  "ids": [
+   "BRC24"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:replacement_inf",
+  "vassal_image": "Asset_Allies_4_BR Inf Repl.png",
+  "image": null
+ },
+ {
+  "id": "BRC25",
+  "kind": "special_action_event",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 4,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "BRC25"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_Allies_4_BR Special Action.png",
+  "image": null
+ },
+ {
+  "id": "BRC26",
+  "kind": "artillery",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 5,
+  "name": "142nd",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "BRC26"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_Allies_5_142nd Arty.png",
+  "image": null
+ },
+ {
+  "id": "BRC27",
+  "kind": "replacement_inf",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 6,
+  "name": "Br Inf Non-Elite Repl",
+  "elite_allowed": false,
+  "copies": 1,
+  "ids": [
+   "BRC27"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:replacement_inf",
+  "vassal_image": "Asset_Allies_6_BR Inf Repl.png",
+  "image": null
+ },
+ {
+  "id": "BRC28",
+  "kind": "special_action_event",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 6,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "BRC28"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_Allies_6_BR Special Action.png",
+  "image": null
+ },
+ {
+  "id": "BRC29",
+  "kind": "infantry_asset",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 7,
+  "name": "78th",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "inf",
+  "division": "br_78th_inf",
+  "copies": 1,
+  "ids": [
+   "BRC29"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Allies_7_78th.png",
+  "image": null
+ },
+ {
+  "id": "BRC30",
+  "kind": "replacement_inf",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 8,
+  "name": "Br Inf Non-Elite Repl",
+  "elite_allowed": false,
+  "copies": 1,
+  "ids": [
+   "BRC30"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:replacement_inf",
+  "vassal_image": "Asset_Allies_8_BR Inf Repl.png",
+  "image": null
+ },
+ {
+  "id": "BRC31",
+  "kind": "special_action_event",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": 8,
+  "name": "Special Action",
+  "copies": 1,
+  "ids": [
+   "BRC31"
+  ],
+  "limit": "limited",
+  "back": "back_allied_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_Allies_8_BR Special Action.png",
+  "image": null
+ },
+ {
+  "id": "GEC01",
+  "kind": "armor_asset",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": "S",
+  "name": "15th Pz Gren",
+  "quality": "elite",
+  "class": "armor",
+  "symbol": "armor",
+  "division": "ge_15th_pg",
+  "copies": 1,
+  "ids": [
+   "GEC01"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_Axis_S_15th Pz Gren.png",
+  "image": null
+ },
+ {
+  "id": "GEC02",
+  "kind": "armor_asset",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": "S",
+  "name": "HG Pz",
+  "quality": "veteran",
+  "class": "armor",
+  "symbol": "armor",
+  "division": "ge_hg",
+  "copies": 2,
+  "ids": [
+   "GEC02a",
+   "GEC02b"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_Axis_S_HG Pz (x2).png",
+  "image": null
+ },
+ {
+  "id": "GEC03",
+  "kind": "artillery",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": "S",
+  "name": "33rd",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "GEC03"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_Axis_S_33rd Arty.png",
+  "image": null
+ },
+ {
+  "id": "GEC04",
+  "kind": "air_mission",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": "S",
+  "name": "Air Support",
+  "red_flag": true,
+  "copies": 1,
+  "ids": [
+   "GEC04"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:air_mission",
+  "vassal_image": "Asset_Axis_S_Air Support.png",
+  "image": null
+ },
+ {
+  "id": "GEC05",
+  "kind": "artillery",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": 2,
+  "name": "29th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "GEC05"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_Axis_2_29th Arty.png",
+  "image": null
+ },
+ {
+  "id": "GEC06",
+  "kind": "infantry_asset",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": 2,
+  "name": "1/3rd FJ",
+  "quality": "elite",
+  "class": "infantry",
+  "symbol": "airborne",
+  "subtype": "paratroop",
+  "airborne": true,
+  "copies": 1,
+  "ids": [
+   "GEC06"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Axis_2_1-3rd FJ.png",
+  "image": null
+ },
+ {
+  "id": "GEC07",
+  "kind": "infantry_asset",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": 2,
+  "name": "2/3rd FJ",
+  "quality": "elite",
+  "class": "infantry",
+  "symbol": "airborne",
+  "subtype": "paratroop",
+  "airborne": true,
+  "copies": 1,
+  "ids": [
+   "GEC07"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Axis_2_2-3rd FJ.png",
+  "image": null
+ },
+ {
+  "id": "GEC08",
+  "kind": "infantry_asset",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": 2,
+  "name": "3/3rd FJ",
+  "quality": "elite",
+  "class": "infantry",
+  "symbol": "airborne",
+  "subtype": "paratroop",
+  "airborne": true,
+  "copies": 1,
+  "ids": [
+   "GEC08"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Axis_2_3-3rd FJ.png",
+  "image": null
+ },
+ {
+  "id": "GEC09",
+  "kind": "air_mission",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": 2,
+  "name": "Air Support",
+  "red_flag": true,
+  "copies": 1,
+  "ids": [
+   "GEC09"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:air_mission",
+  "vassal_image": "Asset_Axis_2_Air Support.png",
+  "image": null
+ },
+ {
+  "id": "GEC10",
+  "kind": "special_action_event",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": 2,
+  "name": "Special Action",
+  "red_flag": true,
+  "copies": 1,
+  "ids": [
+   "GEC10"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_Axis_2_Special Action.png",
+  "image": null
+ },
+ {
+  "id": "GEC11",
+  "kind": "air_mission",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": 3,
+  "name": "Air Support",
+  "red_flag": true,
+  "copies": 1,
+  "ids": [
+   "GEC11"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:air_mission",
+  "vassal_image": "Asset_Axis_3_Air Support.png",
+  "image": null
+ },
+ {
+  "id": "GEC12",
+  "kind": "infantry_asset",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": 4,
+  "name": "1/4th FJ",
+  "quality": "elite",
+  "class": "infantry",
+  "symbol": "airborne",
+  "subtype": "paratroop",
+  "airborne": true,
+  "copies": 1,
+  "ids": [
+   "GEC12"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Axis_4_1-4th FJ.png",
+  "image": null
+ },
+ {
+  "id": "GEC13",
+  "kind": "infantry_asset",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": 4,
+  "name": "2/4th FJ",
+  "quality": "elite",
+  "class": "infantry",
+  "symbol": "airborne",
+  "subtype": "paratroop",
+  "airborne": true,
+  "copies": 1,
+  "ids": [
+   "GEC13"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Axis_4_2-4th FJ.png",
+  "image": null
+ },
+ {
+  "id": "GEC14",
+  "kind": "infantry_asset",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": 4,
+  "name": "3/4th FJ",
+  "quality": "elite",
+  "class": "infantry",
+  "symbol": "airborne",
+  "subtype": "paratroop",
+  "airborne": true,
+  "copies": 1,
+  "ids": [
+   "GEC14"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Axis_4_3-4th FJ.png",
+  "image": null
+ },
+ {
+  "id": "GEC15",
+  "kind": "artillery",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": 5,
+  "name": "1st FJ",
+  "class": "infantry",
+  "symbol": "artillery",
+  "subtype": "paratroop",
+  "copies": 1,
+  "ids": [
+   "GEC15"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_Axis_5_1 FJ Arty.png",
+  "image": null
+ },
+ {
+  "id": "GEC16",
+  "kind": "special_action_event",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": 5,
+  "name": "Special Action",
+  "red_flag": true,
+  "copies": 1,
+  "ids": [
+   "GEC16"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_Axis_5_Special Action.png",
+  "image": null
+ },
+ {
+  "id": "GEC17",
+  "kind": "event_tactical_extract",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": 5,
+  "name": "Axis Tactical Extract",
+  "nation_scope": "german",
+  "red_flag": true,
+  "copies": 1,
+  "ids": [
+   "GEC17"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "new",
+  "vassal_image": "Asset_Axis_5_Tactical Extract.png",
+  "image": null
+ },
+ {
+  "id": "GEC18",
+  "kind": "event_asset_delayed",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": 7,
+  "name": "Asset Delayed",
+  "copies": 1,
+  "ids": [
+   "GEC18"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "new",
+  "vassal_image": "Asset_Axis_7_Delayed.png",
+  "image": null
+ },
+ {
+  "id": "GEC19",
+  "kind": "armor_asset",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": 8,
+  "name": "29th Pz Gren",
+  "quality": "veteran",
+  "class": "armor",
+  "symbol": "armor",
+  "division": "ge_29th_pg",
+  "copies": 1,
+  "ids": [
+   "GEC19"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_Axis_8_29th Pz Gren.png",
+  "image": null
+ },
+ {
+  "id": "GEC20",
+  "kind": "event_asset_delayed",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": 8,
+  "name": "Asset Delayed",
+  "copies": 1,
+  "ids": [
+   "GEC20"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "new",
+  "vassal_image": "Asset_Axis_8_Delayed.png",
+  "image": null
+ },
+ {
+  "id": "GEC21",
+  "kind": "event_patton_slap",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": 8,
+  "name": "Patton Soldier Slap",
+  "target": "us_7th_army",
+  "red_flag": true,
+  "copies": 1,
+  "ids": [
+   "GEC21"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "new",
+  "vassal_image": "Asset_Axis_8_Patton Slap.png",
+  "image": null
+ },
+ {
+  "id": "GEC22",
+  "kind": "special_action_event",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": 8,
+  "name": "Special Action",
+  "red_flag": true,
+  "copies": 1,
+  "ids": [
+   "GEC22"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:special_action_event",
+  "vassal_image": "Asset_Axis_8_Special Action.png",
+  "image": null
+ },
+ {
+  "id": "GEC23",
+  "kind": "event_asset_delayed",
+  "side": "axis",
+  "nation": "german",
+  "echelon": "it_6th_army",
+  "turn": 9,
+  "name": "Asset Delayed",
+  "copies": 1,
+  "ids": [
+   "GEC23"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "new",
+  "vassal_image": "Asset_Axis_9_Delayed.png",
+  "image": null
+ },
+ {
+  "id": "ITC01",
+  "kind": "armor_asset",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": "S",
+  "name": "Mobile A",
+  "quality": "green",
+  "class": "armor",
+  "symbol": "armor",
+  "subtype": "mobile_group",
+  "copies": 1,
+  "ids": [
+   "ITC01"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_Axis_S_Mobile A.png",
+  "image": null
+ },
+ {
+  "id": "ITC02",
+  "kind": "armor_asset",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": "S",
+  "name": "Mobile C",
+  "quality": "green",
+  "class": "armor",
+  "symbol": "armor",
+  "subtype": "mobile_group",
+  "copies": 1,
+  "ids": [
+   "ITC02"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_Axis_S_Mobile C.png",
+  "image": null
+ },
+ {
+  "id": "ITC03",
+  "kind": "artillery",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": "S",
+  "name": "12th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "ITC03"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_Axis_S_12th Arty.png",
+  "image": null
+ },
+ {
+  "id": "ITC04",
+  "kind": "infantry_asset",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": "S",
+  "name": "58th Bers.",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "inf",
+  "subtype": "bersaglieri",
+  "copies": 1,
+  "ids": [
+   "ITC04"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Axis_S_58th Bers.png",
+  "image": null
+ },
+ {
+  "id": "ITC05",
+  "kind": "infantry_asset",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": "S",
+  "name": "177th Bers.",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "inf",
+  "subtype": "bersaglieri",
+  "copies": 1,
+  "ids": [
+   "ITC05"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Axis_S_177 Bers.png",
+  "image": null
+ },
+ {
+  "id": "ITC06",
+  "kind": "engineer",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": "S",
+  "name": "XII",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "engineer",
+  "red_flag": true,
+  "copies": 1,
+  "ids": [
+   "ITC06"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:engineer",
+  "vassal_image": "Asset_Axis_S_XII Eng.png",
+  "image": null
+ },
+ {
+  "id": "ITC07",
+  "kind": "engineer",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": "S",
+  "name": "XVI",
+  "quality": "veteran",
+  "class": "infantry",
+  "symbol": "engineer",
+  "red_flag": true,
+  "copies": 1,
+  "ids": [
+   "ITC07"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:engineer",
+  "vassal_image": "Asset_Axis_S_XVI Eng.png",
+  "image": null
+ },
+ {
+  "id": "ITC08",
+  "kind": "armor_asset",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": 2,
+  "name": "Mobile B",
+  "quality": "green",
+  "class": "armor",
+  "symbol": "armor",
+  "subtype": "mobile_group",
+  "copies": 1,
+  "ids": [
+   "ITC08"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_Axis_2_Mobile B.png",
+  "image": null
+ },
+ {
+  "id": "ITC09",
+  "kind": "armor_asset",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": 2,
+  "name": "Mobile D",
+  "quality": "green",
+  "class": "armor",
+  "symbol": "armor",
+  "subtype": "mobile_group",
+  "copies": 1,
+  "ids": [
+   "ITC09"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_Axis_2_Mobile D.png",
+  "image": null
+ },
+ {
+  "id": "ITC10",
+  "kind": "infantry_asset",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": 2,
+  "name": "23rd Dismnt.",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "inf",
+  "copies": 1,
+  "ids": [
+   "ITC10"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Axis_2_23rd Dismounted.png",
+  "image": null
+ },
+ {
+  "id": "ITC11",
+  "kind": "command_staff",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": 2,
+  "name": "Staff Asset",
+  "red_flag": true,
+  "copies": 1,
+  "ids": [
+   "ITC11"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:command_staff",
+  "vassal_image": "Asset_Axis_2_Staff Asset.png",
+  "image": null
+ },
+ {
+  "id": "ITC12",
+  "kind": "artillery",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": 2,
+  "name": "40th",
+  "class": "infantry",
+  "symbol": "artillery",
+  "copies": 1,
+  "ids": [
+   "ITC12"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:artillery",
+  "vassal_image": "Asset_Axis_2_40th Arty.png",
+  "image": null
+ },
+ {
+  "id": "ITC13",
+  "kind": "armor_asset",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": 3,
+  "name": "Mobile F",
+  "quality": "green",
+  "class": "armor",
+  "symbol": "armor",
+  "subtype": "mobile_group",
+  "copies": 1,
+  "ids": [
+   "ITC13"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_Axis_3_Mobile F.png",
+  "image": null
+ },
+ {
+  "id": "ITC14",
+  "kind": "infantry_asset",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": 3,
+  "name": "Mobile G",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "inf",
+  "subtype": "mobile_group",
+  "copies": 1,
+  "ids": [
+   "ITC14"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Axis_3_Mobile G.png",
+  "image": null
+ },
+ {
+  "id": "ITC15",
+  "kind": "infantry_asset",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": 3,
+  "name": "Palermitani",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "recon",
+  "copies": 1,
+  "ids": [
+   "ITC15"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Axis_3_Palermitani.png",
+  "image": null
+ },
+ {
+  "id": "ITC16",
+  "kind": "armor_asset",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": 4,
+  "name": "Carmito",
+  "quality": "green",
+  "class": "armor",
+  "symbol": "armor",
+  "copies": 1,
+  "ids": [
+   "ITC16"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_Axis_4_Carmite.png",
+  "image": null
+ },
+ {
+  "id": "ITC17",
+  "kind": "armor_asset",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": 4,
+  "name": "Mobile E",
+  "quality": "green",
+  "class": "armor",
+  "symbol": "armor",
+  "subtype": "mobile_group",
+  "copies": 1,
+  "ids": [
+   "ITC17"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_Axis_4_Mobile E.png",
+  "image": null
+ },
+ {
+  "id": "ITC18",
+  "kind": "infantry_asset",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": 4,
+  "name": "173rd Blackshirt",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "inf",
+  "subtype": "blackshirt",
+  "copies": 1,
+  "ids": [
+   "ITC18"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Axis_4_173rd Blackshirt.png",
+  "image": null
+ },
+ {
+  "id": "ITC19",
+  "kind": "infantry_asset",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": 4,
+  "name": "185th",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "inf",
+  "copies": 1,
+  "ids": [
+   "ITC19"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Axis_4_185th.png",
+  "image": null
+ },
+ {
+  "id": "ITC20",
+  "kind": "armor_asset",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": 5,
+  "name": "230th",
+  "quality": "green",
+  "class": "armor",
+  "symbol": "armor",
+  "copies": 1,
+  "ids": [
+   "ITC20"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:armor_asset",
+  "vassal_image": "Asset_Axis_5_230th Arm.png",
+  "image": null
+ },
+ {
+  "id": "ITC21",
+  "kind": "infantry_asset",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": 5,
+  "name": "17th Blackshirt",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "inf",
+  "subtype": "blackshirt",
+  "copies": 1,
+  "ids": [
+   "ITC21"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Axis_5_17th Blackshirt.png",
+  "image": null
+ },
+ {
+  "id": "ITC22",
+  "kind": "infantry_asset",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": 5,
+  "name": "10th Bers.",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "inf",
+  "subtype": "bersaglieri",
+  "copies": 1,
+  "ids": [
+   "ITC22"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Axis_5_10th Bers.png",
+  "image": null
+ },
+ {
+  "id": "ITC23",
+  "kind": "infantry_asset",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": 6,
+  "name": "19th Blackshirt",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "inf",
+  "subtype": "blackshirt",
+  "copies": 1,
+  "ids": [
+   "ITC23"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Axis_6_19th Blackshirt.png",
+  "image": null
+ },
+ {
+  "id": "ITC24",
+  "kind": "infantry_asset",
+  "side": "axis",
+  "nation": "italian",
+  "echelon": "it_6th_army",
+  "turn": 6,
+  "name": "51st Bers.",
+  "quality": "green",
+  "class": "infantry",
+  "symbol": "inf",
+  "subtype": "bersaglieri",
+  "copies": 1,
+  "ids": [
+   "ITC24"
+  ],
+  "limit": "limited",
+  "back": "back_axis_asset",
+  "art": "bulge:infantry_asset",
+  "vassal_image": "Asset_Axis_6_51st Bers.png",
+  "image": null
+ },
+ {
+  "id": "M01",
+  "kind": "reserve_marker",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": null,
+  "name": "7th Army Reserve",
+  "back": "same",
+  "copies": 2,
+  "ids": [
+   "M01a",
+   "M01b"
+  ],
+  "limit": "limited",
+  "art": "bulge:reserve_marker",
+  "vassal_image": "Allies_Reserve_7th Army (x2).png",
+  "image": null
+ },
+ {
+  "id": "M02",
+  "kind": "reserve_marker",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": null,
+  "name": "8th Army Reserve",
+  "back": "same",
+  "copies": 2,
+  "ids": [
+   "M02a",
+   "M02b"
+  ],
+  "limit": "limited",
+  "art": "bulge:reserve_marker",
+  "vassal_image": "Allies_Reserve_8th Army (x2).png",
+  "image": null
+ },
+ {
+  "id": "M03",
+  "kind": "reserve_marker",
+  "side": "axis",
+  "nation": null,
+  "echelon": "it_6th_army",
+  "turn": null,
+  "name": "6th Army Reserve",
+  "back": "same",
+  "copies": 2,
+  "ids": [
+   "M03a",
+   "M03b"
+  ],
+  "limit": "limited",
+  "art": "bulge:reserve_marker",
+  "vassal_image": "Axis_Reserve_6th Army (x2).png",
+  "image": null
+ },
+ {
+  "id": "M04",
+  "kind": "marker_restricted",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": null,
+  "name": "Restricted 82nd Airborne",
+  "back": "back_released",
+  "division": "us_82nd_ab",
+  "restricts": [
+   "US09",
+   "US10"
+  ],
+  "vassal_faces": [
+   "Marker_Restricted_US_82nd AB.png",
+   "Marker_Restricted_US_82nd AB-b.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M04"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_Restricted_US_82nd AB.png",
+  "image": null
+ },
+ {
+  "id": "M05",
+  "kind": "marker_restricted",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": null,
+  "name": "Restricted 45th Infantry",
+  "back": "back_released",
+  "division": "us_45th_inf",
+  "restricts": [
+   "US07",
+   "US08"
+  ],
+  "vassal_faces": [
+   "Marker_Restricted_US_45th Inf.png",
+   "Marker_Restricted_US_45th Inf-b.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M05"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_Restricted_US_45th Inf.png",
+  "image": null
+ },
+ {
+  "id": "M06",
+  "kind": "marker_restricted",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": null,
+  "name": "Restricted 9th Infantry",
+  "back": "back_released",
+  "division": "us_9th_inf",
+  "restricts": [
+   "US11",
+   "US12"
+  ],
+  "vassal_faces": [
+   "Marker_Restricted_US_9th Inf.png",
+   "Marker_Restricted_US_9th Inf-b.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M06"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_Restricted_US_9th Inf.png",
+  "image": null
+ },
+ {
+  "id": "M07",
+  "kind": "marker_restricted",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": null,
+  "name": "Restricted 3rd Infantry",
+  "back": "back_released",
+  "division": "us_3rd_inf",
+  "restricts": [
+   "US05",
+   "US06"
+  ],
+  "vassal_faces": [
+   "Marker_Restricted_US_3rd Inf.png",
+   "Marker_Restricted_US_3rd Inf-b.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M07"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_Restricted_US_3rd Inf.png",
+  "image": null
+ },
+ {
+  "id": "M08",
+  "kind": "marker_restricted",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": null,
+  "name": "Restricted 2nd Armor",
+  "back": "back_released",
+  "division": "us_2nd_arm",
+  "restricts": [
+   "US01",
+   "US02"
+  ],
+  "vassal_faces": [
+   "Marker_Restricted_US_2nd Arm.png",
+   "Marker_Restricted_US_2nd Arm-b.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M08"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_Restricted_US_2nd Arm.png",
+  "image": null
+ },
+ {
+  "id": "M09",
+  "kind": "marker_restricted",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": null,
+  "name": "Restricted 1st Infantry",
+  "back": "back_released",
+  "division": "us_1st_inf",
+  "restricts": [
+   "US03",
+   "US04"
+  ],
+  "vassal_faces": [
+   "Marker_Restricted_US_1st Inf.png",
+   "Marker_Restricted_US_1st Inf-b.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M09"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_Restricted_US_1st Inf.png",
+  "image": null
+ },
+ {
+  "id": "M10",
+  "kind": "marker_restricted",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": null,
+  "name": "Restricted 1st Canadian",
+  "back": "back_released",
+  "division": "br_1st_cdn",
+  "restricts": [
+   "BR01",
+   "BR02"
+  ],
+  "vassal_faces": [
+   "Marker_Restricted_BR_1st Cdn.png",
+   "Marker_Restricted_BR_1st Cdn-b.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M10"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_Restricted_BR_1st Cdn.png",
+  "image": null
+ },
+ {
+  "id": "M11",
+  "kind": "marker_restricted",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": null,
+  "name": "Restricted 50th Infantry",
+  "back": "back_released",
+  "division": "br_50th_inf",
+  "restricts": [
+   "BR05",
+   "BR06"
+  ],
+  "vassal_faces": [
+   "Marker_Restricted_BR_50th.png",
+   "Marker_Restricted_BR_50th-b.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M11"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_Restricted_BR_50th.png",
+  "image": null
+ },
+ {
+  "id": "M12",
+  "kind": "marker_restricted",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": null,
+  "name": "Restricted 51st Infantry",
+  "back": "back_released",
+  "division": "br_51st_inf",
+  "restricts": [
+   "BR07",
+   "BR08"
+  ],
+  "vassal_faces": [
+   "Marker_Restricted_BR_51st.png",
+   "Marker_Restricted_BR_51st-b.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M12"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_Restricted_BR_51st.png",
+  "image": null
+ },
+ {
+  "id": "M13",
+  "kind": "marker_restricted",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": null,
+  "name": "Restricted 78th Infantry",
+  "back": "back_released",
+  "division": "br_78th_inf",
+  "restricts": [
+   "BR09",
+   "BR10"
+  ],
+  "vassal_faces": [
+   "Marker_Restricted_BR_78th.png",
+   "Marker_Restricted_BR_78th-b.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M13"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_Restricted_BR_78th.png",
+  "image": null
+ },
+ {
+  "id": "M14",
+  "kind": "marker_restricted",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": null,
+  "name": "Restricted 5th Infantry",
+  "back": "back_released",
+  "division": "br_5th_inf",
+  "restricts": [
+   "BR03",
+   "BR04"
+  ],
+  "vassal_faces": [
+   "Marker_Restricted_BR_5th.png",
+   "Marker_Restricted_BR_5th-b.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M14"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_Restricted_BR_5th.png",
+  "image": null
+ },
+ {
+  "id": "M15",
+  "kind": "marker_restricted",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": null,
+  "name": "Restricted 1st Airbourne",
+  "back": "back_released",
+  "division": "br_1st_ab",
+  "restricts": [
+   "BR11",
+   "BR12"
+  ],
+  "vassal_faces": [
+   "Marker_Restricted_BR_1st AB.png",
+   "Marker_Restricted_BR_1st AB-b.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M15"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_Restricted_BR_1st AB.png",
+  "image": null
+ },
+ {
+  "id": "M16",
+  "kind": "marker_restricted",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": null,
+  "name": "Restricted 1st Canadian (Arm Bde)",
+  "back": "back_released",
+  "division": "br_1st_cdn_arm",
+  "restricts": [
+   "BR13"
+  ],
+  "vassal_faces": [
+   "Marker_Restricted_BR_1st Cdn Arm.png",
+   "Marker_Restricted_BR_1st Cdn Arm-b.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M16"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_Restricted_BR_1st Cdn Arm.png",
+  "image": null
+ },
+ {
+  "id": "M17",
+  "kind": "marker_restricted",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": null,
+  "name": "Restricted 4th Armour",
+  "back": "back_released",
+  "division": "br_4th_arm",
+  "restricts": [
+   "BR14"
+  ],
+  "vassal_faces": [
+   "Marker_Restricted_BR_4th Arm.png",
+   "Marker_Restricted_BR_4th Arm-b.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M17"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_Restricted_BR_4th Arm.png",
+  "image": null
+ },
+ {
+  "id": "M18",
+  "kind": "marker_restricted",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": null,
+  "name": "Restricted 231st Infantry",
+  "back": "back_released",
+  "division": "br_231st",
+  "restricts": [
+   "BR15"
+  ],
+  "vassal_faces": [
+   "Marker_Restricted_BR_231st.png",
+   "Marker_Restricted_BR_231st-b.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M18"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_Restricted_BR_231st.png",
+  "image": null
+ },
+ {
+  "id": "M19",
+  "kind": "marker_beachhead",
+  "side": "allied",
+  "nation": "us",
+  "echelon": "us_7th_army",
+  "turn": null,
+  "name": "US Beach Head",
+  "back": "same",
+  "copies": 4,
+  "ids": [
+   "M19a",
+   "M19b",
+   "M19c",
+   "M19d"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_US Beach Head (x4).png",
+  "image": null
+ },
+ {
+  "id": "M20",
+  "kind": "marker_beachhead",
+  "side": "allied",
+  "nation": "british",
+  "echelon": "br_8th_army",
+  "turn": null,
+  "name": "Br Beach Head",
+  "back": "same",
+  "copies": 5,
+  "ids": [
+   "M20a",
+   "M20b",
+   "M20c",
+   "M20d",
+   "M20e"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_BR Beach Head (x5).png",
+  "image": null
+ },
+ {
+  "id": "M21",
+  "kind": "marker_port_damage",
+  "side": "none",
+  "nation": null,
+  "echelon": "none",
+  "turn": null,
+  "name": "Palermo Damage",
+  "back": "back_palermo_damage_2",
+  "port": "palermo",
+  "vassal_faces": [
+   "Marker_Palermo Damage 1.png",
+   "Marker_Palermo Damage 2.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M21"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_Palermo Damage 1.png",
+  "image": null
+ },
+ {
+  "id": "M22",
+  "kind": "marker_port_damage",
+  "side": "none",
+  "nation": null,
+  "echelon": "none",
+  "turn": null,
+  "name": "Syracuse Damage",
+  "back": "back_syracuse_damage_2",
+  "port": "syracuse",
+  "vassal_faces": [
+   "Marker_Syracuse Damage 1.png",
+   "Marker_Syracuse Damage 2.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M22"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_Syracuse Damage 1.png",
+  "image": null
+ },
+ {
+  "id": "M23",
+  "kind": "marker_port_damage",
+  "side": "none",
+  "nation": null,
+  "echelon": "none",
+  "turn": null,
+  "name": "Catania Damage",
+  "back": "back_catania_damage_2",
+  "port": "catania",
+  "vassal_faces": [
+   "Marker_Catania Damage 1.png",
+   "Marker_Catania Damage 2.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M23"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_Catania Damage 1.png",
+  "image": null
+ },
+ {
+  "id": "M24",
+  "kind": "marker_control",
+  "side": "none",
+  "nation": null,
+  "echelon": "none",
+  "turn": null,
+  "name": "Control",
+  "back": "back_control_axis",
+  "vassal_faces": [
+   "Marker_Control_Allies.png",
+   "Marker_Control_Axis.png"
+  ],
+  "copies": 9,
+  "ids": [
+   "M24a",
+   "M24b",
+   "M24c",
+   "M24d",
+   "M24e",
+   "M24f",
+   "M24g",
+   "M24h",
+   "M24i"
+  ],
+  "limit": "limited",
+  "art": "new",
+  "vassal_image": "Marker_Control_Allies.png",
+  "image": null
+ },
+ {
+  "id": "M25",
+  "kind": "marker",
+  "side": "none",
+  "nation": null,
+  "echelon": "none",
+  "turn": null,
+  "name": "Game Turn",
+  "back": "back_game_turn_axis",
+  "vassal_faces": [
+   "Marker_Game Turn_Allies.png",
+   "Marker_Game Turn_Axis.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M25"
+  ],
+  "limit": "limited",
+  "art": "bulge:marker",
+  "vassal_image": "Marker_Game Turn_Allies.png",
+  "image": null
+ },
+ {
+  "id": "M26",
+  "kind": "marker",
+  "side": "none",
+  "nation": null,
+  "echelon": "none",
+  "turn": null,
+  "name": "VPs",
+  "back": "back_vps_allies",
+  "vassal_faces": [
+   "Marker_VPs_Axis.png",
+   "Marker_VPs_Allies.png"
+  ],
+  "copies": 1,
+  "ids": [
+   "M26"
+  ],
+  "limit": "limited",
+  "art": "bulge:marker",
+  "vassal_image": "Marker_VPs_Axis.png",
+  "image": null
+ },
+ {
+  "id": "M27",
+  "kind": "marker",
+  "side": "none",
+  "nation": null,
+  "echelon": "none",
+  "turn": null,
+  "name": "River Assault",
+  "back": "back_road_block",
+  "copies": 9,
+  "ids": [
+   "M27a",
+   "M27b",
+   "M27c",
+   "M27d",
+   "M27e",
+   "M27f",
+   "M27g",
+   "M27h",
+   "M27i"
+  ],
+  "limit": "limited",
+  "art": "bulge:marker",
+  "vassal_image": "Marker_River Assault.png",
+  "image": null
+ },
+ {
+  "id": "M28",
+  "kind": "marker",
+  "side": "none",
+  "nation": null,
+  "echelon": "none",
+  "turn": null,
+  "name": "Exploitation",
+  "back": "back_out_of_supply",
+  "copies": 4,
+  "ids": [
+   "M28a",
+   "M28b",
+   "M28c",
+   "M28d"
+  ],
+  "limit": "limited",
+  "art": "bulge:marker",
+  "vassal_image": "Marker_Exploitation.png",
+  "image": null
+ },
+ {
+  "id": "M29",
+  "kind": "marker",
+  "side": "none",
+  "nation": null,
+  "echelon": "none",
+  "turn": null,
+  "name": "Disordered",
+  "back": "back_recovering",
+  "vassal_faces": [
+   "Marker_Disordered.png",
+   "Marker_Disordered-b.png"
+  ],
+  "copies": 18,
+  "ids": [
+   "M29a",
+   "M29b",
+   "M29c",
+   "M29d",
+   "M29e",
+   "M29f",
+   "M29g",
+   "M29h",
+   "M29i",
+   "M29j",
+   "M29k",
+   "M29l",
+   "M29m",
+   "M29n",
+   "M29o",
+   "M29p",
+   "M29q",
+   "M29r"
+  ],
+  "limit": "limited",
+  "art": "bulge:marker",
+  "vassal_image": "Marker_Disordered.png",
+  "image": null
+ },
+ {
+  "id": "M30",
+  "kind": "field_works",
+  "side": "none",
+  "nation": null,
+  "echelon": "none",
+  "turn": null,
+  "name": "Field Works",
+  "back": "back_blown_bridge",
+  "copies": 23,
+  "ids": [
+   "M30a",
+   "M30b",
+   "M30c",
+   "M30d",
+   "M30e",
+   "M30f",
+   "M30g",
+   "M30h",
+   "M30i",
+   "M30j",
+   "M30k",
+   "M30l",
+   "M30m",
+   "M30n",
+   "M30o",
+   "M30p",
+   "M30q",
+   "M30r",
+   "M30s",
+   "M30t",
+   "M30u",
+   "M30v",
+   "M30w"
+  ],
+  "limit": "limited",
+  "art": "bulge:field_works",
+  "vassal_image": "Marker_Field Works.png",
+  "image": null
+ }
+]

@@ -1,0 +1,635 @@
+{
+ "campaign": {
+  "name": "Sicily campaign (July 10-31, 1943)",
+  "map": "sicily",
+  "turns": 9,
+  "first_player": "allied",
+  "startPhase": "movement",
+  "source": "At Start cards (player aids p. 10 Allied, p. 12 Axis; Vassal \"Allied Forces\" and \"Axis Forces/ Reinforcements\" boards); main-map tracks from the Vassal map. Scenario rules: Play Book (not available)",
+  "admin_skipped_turn1": [
+   "allied",
+   "axis"
+  ],
+  "units": [
+   {
+    "id": "IT01",
+    "area": 40
+   },
+   {
+    "id": "IT02",
+    "area": 40
+   },
+   {
+    "id": "IT03",
+    "area": 53
+   },
+   {
+    "id": "IT04",
+    "area": 60
+   },
+   {
+    "id": "IT05",
+    "area": 57
+   },
+   {
+    "id": "IT06",
+    "area": 58
+   },
+   {
+    "id": "IT07",
+    "area": 11
+   },
+   {
+    "id": "IT08",
+    "area": 15
+   },
+   {
+    "id": "GE01",
+    "area": 25
+   },
+   {
+    "id": "GE02",
+    "area": 59
+   },
+   {
+    "id": "GE03",
+    "area": 59
+   },
+   {
+    "id": "GE04",
+    "area": 17
+   },
+   {
+    "id": "GE05",
+    "area": 17
+   },
+   {
+    "id": "US01",
+    "box": "at_sea"
+   },
+   {
+    "id": "US03",
+    "box": "at_sea"
+   },
+   {
+    "id": "US04",
+    "box": "at_sea"
+   },
+   {
+    "id": "US05",
+    "box": "at_sea"
+   },
+   {
+    "id": "US06",
+    "box": "at_sea"
+   },
+   {
+    "id": "US07",
+    "box": "at_sea"
+   },
+   {
+    "id": "US08",
+    "box": "at_sea"
+   },
+   {
+    "id": "US09",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR01",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR02",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR03",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR04",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR05",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR06",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR07",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR08",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR11",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR14",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR15",
+    "box": "at_sea"
+   }
+  ],
+  "reserve": {
+   "axis": [
+    "GE01"
+   ]
+  },
+  "untried": {
+   "ids": [
+    "IT09",
+    "IT10",
+    "IT11",
+    "IT12",
+    "IT13",
+    "IT14",
+    "IT15",
+    "IT16",
+    "IT17",
+    "IT18",
+    "IT19",
+    "IT20",
+    "IT21",
+    "IT22",
+    "IT23",
+    "IT24",
+    "IT25",
+    "IT26",
+    "IT27",
+    "IT28",
+    "IT29",
+    "IT30",
+    "IT31",
+    "IT32",
+    "IT33",
+    "IT34",
+    "IT35",
+    "IT36",
+    "IT37"
+   ],
+   "placement": "face down at random; areas per the Play Book (not available)"
+  },
+  "field_works": {
+   "rule": "Axis card: place on units starting in Invasion-capable Areas",
+   "available": 23
+  },
+  "holding_boxes": {
+   "allied_reserve_markers": [
+    "M01a",
+    "M01b",
+    "M02a",
+    "M02b"
+   ],
+   "axis_reserve_markers": [
+    "M03b"
+   ],
+   "restricted_7th_army": [
+    "M04",
+    "M05",
+    "M06",
+    "M07",
+    "M08",
+    "M09"
+   ],
+   "restricted_8th_army": [
+    "M10",
+    "M11",
+    "M12",
+    "M13",
+    "M14",
+    "M15",
+    "M16",
+    "M17",
+    "M18"
+   ],
+   "captured_airfields": [
+    "USC08a",
+    "USC08b",
+    "BRC10"
+   ],
+   "captured_ports_vp": [
+    "ALC01a",
+    "ALC01b",
+    "ALC01c"
+   ],
+   "beachhead_markers": [
+    "M19a",
+    "M19b",
+    "M19c",
+    "M19d",
+    "M20a",
+    "M20b",
+    "M20c",
+    "M20d",
+    "M20e"
+   ]
+  },
+  "reserve_markers_on_units": {
+   "M03a": "GE01"
+  },
+  "available": {
+   "allied": [
+    "USC01",
+    "USC02",
+    "USC03",
+    "USC04",
+    "USC05",
+    "USC06a",
+    "USC06b",
+    "USC07a",
+    "USC07b",
+    "BRC01",
+    "BRC02",
+    "BRC03",
+    "BRC04",
+    "BRC05",
+    "BRC06",
+    "BRC07",
+    "BRC08a",
+    "BRC08b",
+    "BRC09a",
+    "BRC09b"
+   ],
+   "axis": [
+    "GEC01",
+    "GEC02a",
+    "GEC02b",
+    "GEC03",
+    "GEC04",
+    "ITC01",
+    "ITC02",
+    "ITC03",
+    "ITC04",
+    "ITC05",
+    "ITC06",
+    "ITC07"
+   ]
+  },
+  "port_damage": {
+   "palermo": 0,
+   "syracuse": 0,
+   "catania": 0
+  },
+  "vp": {
+   "marker": 8,
+   "note": "Vassal sets the VPs marker on space 8 of the General Information Track (Axis face up); the Play Book is not available to confirm"
+  },
+  "game_turn": 1
+ },
+ "sunrise_bridge": {
+  "name": "Sunrise Bridge",
+  "map": "sicily",
+  "turns": 4,
+  "first_player": "allied",
+  "startPhase": "movement",
+  "source": "player aids p. 8 (status boxes and turn track), p. 9 (scenario map), p. 11 (set-up); not in the Vassal module",
+  "turn_names": {
+   "1": "July 10-11",
+   "2": "July 12-13",
+   "3": "July 14-15",
+   "4": "July 16-17"
+  },
+  "areas_in_play": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16,
+   17,
+   25,
+   26
+  ],
+  "admin_skipped_turn1": [
+   "allied",
+   "axis"
+  ],
+  "track": {
+   "1": {
+    "allied": [
+     0,
+     0
+    ],
+    "axis": [
+     0,
+     0
+    ]
+   },
+   "2": {
+    "allied": [
+     6,
+     3
+    ],
+    "axis": [
+     5,
+     3
+    ]
+   },
+   "3": {
+    "allied": [
+     6,
+     3
+    ],
+    "axis": [
+     5,
+     2
+    ]
+   },
+   "4": {
+    "allied": [
+     6,
+     3
+    ],
+    "axis": [
+     4,
+     2
+    ]
+   }
+  },
+  "units": [
+   {
+    "id": "IT07",
+    "area": 11
+   },
+   {
+    "id": "IT08",
+    "area": 15
+   },
+   {
+    "id": "GE04",
+    "area": 17
+   },
+   {
+    "id": "GE05",
+    "area": 17
+   },
+   {
+    "id": "BR01",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR02",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR03",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR04",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR05",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR06",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR07",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR08",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR11",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR14",
+    "box": "at_sea"
+   },
+   {
+    "id": "BR15",
+    "box": "at_sea"
+   }
+  ],
+  "invasion": {
+   "allied": [
+    "BR01",
+    "BR02",
+    "BR03",
+    "BR04",
+    "BR05",
+    "BR06",
+    "BR07",
+    "BR08",
+    "BR11",
+    "BR14",
+    "BR15"
+   ],
+   "beachheads": [
+    "B1",
+    "B2",
+    "B3",
+    "B4",
+    "B5"
+   ],
+   "note": "Arriving (July 10-11): enter at Beachheads B1 through B5 with Assets Available; skip first Admin Phase; x5 Br Beach Head on Landing Boxes B1-B5"
+  },
+  "untried": {
+   "ids": [
+    "IT09",
+    "IT10",
+    "IT11",
+    "IT12",
+    "IT13",
+    "IT14",
+    "IT15",
+    "IT33",
+    "IT34",
+    "IT37"
+   ],
+   "mix": {
+    "1 green": 7,
+    "2 green": 2,
+    "2 veteran": 1
+   },
+   "areas": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    13,
+    14,
+    26
+   ],
+   "rule": "randomly place Untried Units face down, one per area"
+  },
+  "field_works": {
+   "rule": "place on units starting in Invasion-capable Areas"
+  },
+  "available": {
+   "allied": [
+    "BRC09a",
+    "BRC09b",
+    "BRC08a",
+    "BRC08b",
+    "BRC01",
+    "BRC02",
+    "BRC03",
+    "BRC04",
+    "BRC05",
+    "BRC06",
+    "BRC07"
+   ],
+   "axis": [
+    "ITC01",
+    "ITC03",
+    "ITC06",
+    "GEC02a",
+    "GEC02b",
+    "GEC03",
+    "GEC04"
+   ]
+  },
+  "holding_boxes": {
+   "allied_reserve_markers": [
+    "M02a"
+   ],
+   "axis_reserve_markers": [
+    "M03a"
+   ],
+   "restricted_8th_army": [
+    "M10",
+    "M11",
+    "M12",
+    "M13",
+    "M14",
+    "M15",
+    "M16",
+    "M17",
+    "M18"
+   ],
+   "beachhead_markers": [
+    "M20a",
+    "M20b",
+    "M20c",
+    "M20d",
+    "M20e"
+   ]
+  },
+  "reinforcements": {
+   "2": {
+    "allied": {
+     "units": [],
+     "chits": [
+      "AL01",
+      "BRC11",
+      "BRC12",
+      "BRC13",
+      "BRC14",
+      "BRC15",
+      "BRC16",
+      "BRC17",
+      "USC13"
+     ]
+    },
+    "axis": {
+     "units": [
+      {
+       "id": "IT01",
+       "entry": [
+        16,
+        17,
+        25
+       ]
+      },
+      {
+       "id": "IT02",
+       "entry": [
+        16,
+        17,
+        25
+       ]
+      }
+     ],
+     "chits": [
+      "AX01",
+      "ITC11",
+      "ITC10",
+      "ITC12",
+      "ITC08",
+      "GEC05",
+      "GEC06",
+      "GEC07",
+      "GEC08"
+     ]
+    }
+   },
+   "3": {
+    "allied": {
+     "units": [
+      {
+       "id": "BR12",
+       "entry": null
+      }
+     ],
+     "chits": [
+      "BRC19",
+      "BRC18",
+      "BRC20",
+      "BRC21"
+     ]
+    },
+    "axis": {
+     "units": [],
+     "chits": []
+    }
+   },
+   "4": {
+    "allied": {
+     "units": [],
+     "chits": [
+      "BRC22",
+      "BRC23",
+      "BRC24",
+      "BRC25"
+     ]
+    },
+    "axis": {
+     "units": [
+      {
+       "id": "GE06",
+       "entry": [
+        25,
+        26
+       ]
+      }
+     ],
+     "chits": [
+      "GEC12",
+      "GEC13",
+      "GEC14"
+     ]
+    }
+   }
+  },
+  "note": "Livorno arrives on turn 2 here (it starts in area 40 in the campaign); the Allied turn 2 row includes the green US \"Asset Delayed\" (2). Victory conditions and VP areas: Play Book (not available)."
+ }
+}

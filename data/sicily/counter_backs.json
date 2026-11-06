@@ -1,0 +1,119 @@
+[
+ {
+  "id": "back_allied_asset",
+  "name": "Asset or Event (Allied)",
+  "kind": "back_generic",
+  "vassal_image": "Asset_Allies_Back.png",
+  "art": "bulge:back_green_asset",
+  "copies": 82,
+  "image": null
+ },
+ {
+  "id": "back_axis_asset",
+  "name": "Asset or Event (Axis)",
+  "kind": "back_generic",
+  "vassal_image": "Asset_Axis_Back.png",
+  "art": "bulge:back_grey_asset",
+  "copies": 48,
+  "image": null
+ },
+ {
+  "id": "back_released",
+  "name": "Released (back of each Restricted marker, same division)",
+  "kind": "marker_restricted",
+  "vassal_image": null,
+  "art": "new",
+  "copies": 15,
+  "image": null
+ },
+ {
+  "id": "back_palermo_damage_2",
+  "name": "Palermo Damage 2",
+  "kind": "marker_port_damage",
+  "vassal_image": "Marker_Palermo Damage 2.png",
+  "art": "new",
+  "copies": 1,
+  "image": null
+ },
+ {
+  "id": "back_syracuse_damage_2",
+  "name": "Syracuse Damage 2",
+  "kind": "marker_port_damage",
+  "vassal_image": "Marker_Syracuse Damage 2.png",
+  "art": "new",
+  "copies": 1,
+  "image": null
+ },
+ {
+  "id": "back_catania_damage_2",
+  "name": "Catania Damage 2",
+  "kind": "marker_port_damage",
+  "vassal_image": "Marker_Catania Damage 2.png",
+  "art": "new",
+  "copies": 1,
+  "image": null
+ },
+ {
+  "id": "back_control_axis",
+  "name": "Control (Axis side)",
+  "kind": "marker_control",
+  "vassal_image": "Marker_Control_Axis.png",
+  "art": "new",
+  "copies": 9,
+  "image": null
+ },
+ {
+  "id": "back_game_turn_axis",
+  "name": "Game Turn (Axis side)",
+  "kind": "marker",
+  "vassal_image": "Marker_Game Turn_Axis.png",
+  "art": "bulge:back_game_turn",
+  "copies": 1,
+  "image": null
+ },
+ {
+  "id": "back_vps_allies",
+  "name": "VPs (Allied side)",
+  "kind": "marker",
+  "vassal_image": "Marker_VPs_Allies.png",
+  "art": "bulge:back_vps",
+  "copies": 1,
+  "image": null
+ },
+ {
+  "id": "back_road_block",
+  "name": "Road Block (back of River Assault)",
+  "kind": "marker",
+  "vassal_image": "Marker_Road Block.png",
+  "art": "bulge:marker",
+  "copies": 9,
+  "image": null
+ },
+ {
+  "id": "back_out_of_supply",
+  "name": "Out of Supply (back of Exploitation)",
+  "kind": "marker",
+  "vassal_image": "Marker_Out of Supply.png",
+  "art": "bulge:marker",
+  "copies": 4,
+  "image": null
+ },
+ {
+  "id": "back_recovering",
+  "name": "Recovering (back of Disordered)",
+  "kind": "marker",
+  "vassal_image": "Marker_Disordered-b.png",
+  "art": "bulge:marker",
+  "copies": 18,
+  "image": null
+ },
+ {
+  "id": "back_blown_bridge",
+  "name": "Blown Bridge (back of Field Works)",
+  "kind": "marker",
+  "vassal_image": "Marker_Blown Bridge.png",
+  "art": "bulge:marker",
+  "copies": 23,
+  "image": null
+ }
+]
