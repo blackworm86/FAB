@@ -118,7 +118,7 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
           float c2 = vMet / 100., f2 = fwidth(c2), m2 = (1. - clamp(abs(fract(c2 + .5) - .5) / max(f2, 1e-4) - .3, 0., 1.)) * smoothstep(2., 5., 1. / max(f2, 1e-4));
           diffuseColor.rgb = mix(diffuseColor.rgb, lc, max(m1 * .32, m2 * .58) * (1. - texture2D(tLab, vMapUv).r));      /* no contour lines across the printed numbers and names */
           /* area highlights (moves, battles, tints) painted straight onto the ground, so they follow every fold of it */
-          float id = floor(texture2D(tId, vMapUv).r * 255. + .5); vec4 t = texture2D(tTint, vec2((id + .5) / 128., .5)); diffuseColor.rgb = mix(diffuseColor.rgb, t.rgb, min(1., t.a * 1.45)); }`);   // a little stronger than on the flat board, so snow and woods do not show through as spots
+          float id = floor(texture2D(tId, vMapUv).r * 255. + .5); vec4 t = texture2D(tTint, vec2((id + .5) / 256., .5)); diffuseColor.rgb = mix(diffuseColor.rgb, t.rgb, min(1., t.a * 1.45)); }`);   // a little stronger than on the flat board, so snow and woods do not show through as spots
     };
     mat.customProgramCacheKey = () => 'relief';
     mat.needsUpdate = true;
@@ -133,7 +133,7 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
           #endif
           vAU = vec2(wpA.x / uBoard.x + .5, .5 - wpA.z / uBoard.y);`);
         sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vAU; uniform sampler2D tId, tTint;').replace('#include <color_fragment>', `#include <color_fragment>
-          { float id = floor(texture2D(tId, vAU).r * 255. + .5); vec4 t = texture2D(tTint, vec2((id + .5) / 128., .5)); diffuseColor.rgb = mix(diffuseColor.rgb, t.rgb, min(1., t.a * .9)); }`);      // trees and houses only take a little of the tint: the area's own colour carries it
+          { float id = floor(texture2D(tId, vAU).r * 255. + .5); vec4 t = texture2D(tTint, vec2((id + .5) / 256., .5)); diffuseColor.rgb = mix(diffuseColor.rgb, t.rgb, min(1., t.a * .9)); }`);      // trees and houses only take a little of the tint: the area's own colour carries it
       };
       m.customProgramCacheKey = () => 'relief-prop'; m.needsUpdate = true;
     }

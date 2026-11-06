@@ -143,11 +143,19 @@ export function deploy(g: Game, unitId: string, a: number) {
   need(deployOptions(g, unitId).includes(a), 'not a set-up area for this unit');
   const u = unit(g, unitId); u.box = undefined; u.area = a; if (!isBox(a)) updateControl(g, a);
 }
-/** The quick set-up: the garrisons at random and the invasion units two per beachhead. */
+/** The quick set-up: the garrisons at random, the historical plan from B1, the invasion units two per beachhead. */
 export function autoDeploy(g: Game) {
   need(g.phase === 'deploy', 'only while setting up');
-  for (const u of shuffled(g, g.units.filter((x) => x.untried && x.box === 'deploy'), 17)) { const o = deployOptions(g, u.id); if (o.length) deploy(g, u.id, shuffled(g, o, u.id.charCodeAt(2) + u.id.charCodeAt(3))[0]); }
+  autoGarrisons(g);
   if (!state(g).plan) choosePlan(g, 'historical', 'B1', 'D1');
+  autoLanding(g);
+}
+/** 22.24: the Axis garrisons still to place go at random (one per area, never with two tried units). */
+export function autoGarrisons(g: Game) {
+  for (const u of shuffled(g, g.units.filter((x) => x.untried && x.box === 'deploy'), 17)) { const o = deployOptions(g, u.id); if (o.length) deploy(g, u.id, shuffled(g, o, u.id.charCodeAt(2) + u.id.charCodeAt(3))[0]); }
+}
+/** 14.24: the invasion units still to place go two per beachhead of their nationality. */
+export function autoLanding(g: Game) {
   for (const u of g.units.filter((x) => x.box === 'deploy' && !x.untried)) { const o = deployOptions(g, u.id); if (o.length) deploy(g, u.id, o[0]); }
 }
 /** 22.25 / 22.26: the landing plan. `british` is the first of the five consecutive British boxes, `us` the first of the four US boxes (alternate plan only). */

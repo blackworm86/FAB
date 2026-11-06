@@ -81,6 +81,26 @@ German engineers work in their own army's zone (14.52); an army without its engi
   event_ew: ['Electronic warfare (17.33)', `Battle set-up, before the Defender assigns anything: the Attacker jams the defence. Each defending unit rolls: 5 or less, disordered. The Defender may answer with his own EW card (+2 to each roll). If every defender is disordered, no defending assets, air or SAMs.`],
   event_counterbattery: ['Counterbattery (17.34)', `Battle set-up, as the side's one event: after the enemy artillery fires, roll. 1–5: one enemy artillery asset goes that many turns down the track, then straight back to the Available Box.`],
   garrison: ['Garrison (16.24)', `A standing asset in its area: it defends like a defended roadblock, alone or beside Israeli units. It is destroyed by a hit or when the units leave it behind in a retreat.`],
+  naval_support: ['Naval support (16.21)', `Combat: an artillery asset that fires only in coastal areas.
+• Shock and Awe: instead of firing, one naval asset removes the defending field works, first thing in the battle.
+• Reduction of support: each Reinforcement Phase one naval asset in the Used Box is eliminated.`],
+  event_asset_delayed: ['Asset Delayed (17.32)', `No effect: when drawn it is eliminated at once, and it counts as one of the draws.`],
+  event_fading_morale: ['Fading Italian Morale (17.21)', `Conditional: it enters the Allied cup when a port is captured undamaged or a yellow-star area falls for the first time. Played in the Admin Phase: Italian morale fades one level (1-3).
+• The Axis, then the Allies, eliminate Italian assets from the Available Box (one; one each; two each).
+• Italian units in every battle are disordered or check morale by the level; a failed check at level 2-3 costs a step, and a 10 (veteran) or 8-10 (green) is a surrender.`],
+  event_army_release: ['US 7th Army Release (17.23)', `Admin Phase: all six American divisions are released from their army boundaries (never into zone B).`],
+  event_patton_slap: ['Patton Soldier Slap (17.11)', `Admin Phase, for the rest of the game: a US single-use Special Action costs two events (the reusable block and the British are unaffected).`],
+  event_tactical_extract: ['Axis Tactical Extract (17.12)', `Admin Phase: in the following Movement Phase German units may move out of a contested area into an adjacent enemy-controlled or contested area (not newly contested, not farther from Messina); they end the move recovering.`],
+  'sicily:air_mission': ['Air support (16.3)', `Regardless of supply. Combat (16.32): one per side, as extra artillery or +2 to one unit. Dogfighting (16.31): the other player may cancel it with an air asset of his own; both are used.
+• Interdiction (16.33, Admin Phase): +1 MP to enter and leave the area, no strat-move in or out, until your Supply Phase.
+• Air supply (16.34, Supply Phase): an unsupplied area gets no morale checks and may recover (still no assets).
+• Captured airfields (16.4): each Allied capture adds a conditional air asset to the Allied cup; the next Axis air asset drawn fills the empty box.`],
+  'sicily:engineer': ['Engineer asset', `Admin Phase, one function per engineer (4.3), then it goes to the Used Box:
+• Blow up bridges (4.31): from a supplied, friendly, uncontested area, up to two bridges on its river boundaries.
+• Repair a bridge (4.32); field works (4.33) where a friendly unit of its army stands (Axis engineers: any Axis unit, 14.53).
+• Ports (14.51): the Axis damages, the Allies repair, Syracuse, Catania or Palermo one level per Admin Phase (the port friendly, supplied, uncontested; the Allies need a unit of the right army there). Messina cannot be damaged.
+Combat (6.32, 6.33): a battle asset that fires in ground combat, or (attacker) removes the enemy field works instead of firing.`],
+  'sicily:command_staff': ['Staff asset', `Admin Phase, one staff function (8.3): intelligence gathering, a reserve marker, or replacements found (Allied: a non-elite step to an infantry-class unit; Axis, 14.63: an eliminated Italian infantry asset back to the Available Box).`],
   air_mission: ['Allied Air Mission', `One of three missions (17.21), then it goes to the Eliminated Box. It may be played on unsupplied areas.
 • Combat support: the battle's one event; either fires as artillery (outside the artillery limit), or gives +2 to one Allied unit's Success Number. It cannot take a step-loss.
 • Interdiction (Admin): mark an area; Germans pay +1 MP to enter AND to leave it and may not strat-move through it, until the Supply Phase.

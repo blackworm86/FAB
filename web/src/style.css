@@ -116,6 +116,7 @@ button.ico.on { border-color: var(--gold); color: var(--gold); }
 .b3 .r { top: 0; left: calc(var(--s) / 2 - var(--d) / 2); width: var(--d); height: var(--s); transform: rotateY(90deg) translateZ(calc(var(--s) / 2)); background: #565a5e; }
 .b3 .t { left: 0; top: calc(var(--s) / 2 - var(--d) / 2); width: var(--s); height: var(--d); transform: rotateX(90deg) translateZ(calc(var(--s) / 2)); background: #8e9298; }
 .b3.allied .r { background: #4b6a33; } .b3.allied .t { background: #7f9a5a; } .b3.british .r { background: #2d4f86; } .b3.british .t { background: #5b82c0; }
+.b3.us .r { background: #4b6a33; } .b3.us .t { background: #7f9a5a; } .b3.italian .r { background: #b84a12; } .b3.italian .t { background: #f08a4a; }
 .b3.flat { --d: calc(var(--s) * .12); } .b3.flat .r { background: #8a8472; } .b3.flat .t { background: #c9c3b0; }
 .arr .b3 { --s: 76px; } .arrtray .why { align-self: center; max-width: 150px; font-size: 11px; } .arr small { margin-top: 6px; }
 .blk { width: auto; height: auto; background: none; box-shadow: none; padding: 0; display: block; }
@@ -135,7 +136,7 @@ button.ico { min-width: 40px; min-height: 40px; display: inline-flex; align-item
 @media (max-width: 1300px) { .c-stat span:nth-child(n+4) { display: none; } }
 /* battle strip: blocks shown face-on with a visible thickness, so every label is legible and identical in shape */
 .blk .b3 { --s: 60px; transform: none; transform-style: flat; margin: 0 8px 8px 0; filter: none; box-shadow: 6px 6px 0 #555a60, 9px 12px 12px #000a; background: var(--ge); }
-.blk .b3.allied { box-shadow: 6px 6px 0 #4b6a33, 9px 12px 12px #000a; } .blk .b3.british { box-shadow: 6px 6px 0 #2d4f86, 9px 12px 12px #000a; } .blk .b3.flat { box-shadow: 3px 4px 0 #8a8472, 5px 8px 8px #000a; }
+.blk .b3.allied { box-shadow: 6px 6px 0 #4b6a33, 9px 12px 12px #000a; } .blk .b3.british { box-shadow: 6px 6px 0 #2d4f86, 9px 12px 12px #000a; } .blk .b3.us { box-shadow: 6px 6px 0 #4b6a33, 9px 12px 12px #000a; } .blk .b3.italian { box-shadow: 6px 6px 0 #b84a12, 9px 12px 12px #000a; } .blk .b3.flat { box-shadow: 3px 4px 0 #8a8472, 5px 8px 8px #000a; }
 .blk .b3 .f { transform: none; } .blk .b3 .r, .blk .b3 .t { display: none; }
 .blk .b3 .f img { display: block; }
 @media (max-width: 860px) { .blk .b3 { --s: 48px; } }

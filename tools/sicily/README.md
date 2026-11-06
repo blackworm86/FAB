@@ -23,3 +23,16 @@ Unzip `docs/games/sicily/other/FAB_Sicily.vmod` to a scratch folder `<vmod>` fir
 3. `mapdraft.py`: adjacency from the label image (two areas are neighbours when they share at least 30 px of edge; a point contact is not an edge) and the values read off the map by hand, kept as tables at the top of the script (TDN plates, VP symbols, airfields, ports, roads, rivers, restricted and army boundaries, landing-box arrows, Sunrise Bridge squares, turn track). Detectors for river, dashes, road crossings and plate shapes back the tables up; the script prints `check:` for any disagreement not already settled by eye (listed in `ROAD_SEEN`).
 
 Review overlay (scratch only, never committed): `python3 -I tools/sicily/review.py data/sicily/map_vassal.json <image> <out.png> [a b c d e f]` draws the polygons, ids, TDN, zone, VPs, ports, airfields, landing boxes and every edge (green road, red field, blue band river, brown band restricted, magenta army boundary, green circles where a road crosses) over the Vassal map, or over another image given the 2x3 affine from that image's px to Vassal px (printed scan: 1.36112 -0.0000116 -0.395 -0.0000279 1.36174 -0.293, fitted with SIFT, 0.5 px rms).
+
+## The game map (from the hand-drawn SVG)
+
+`docs/games/sicily/maps/SicilyMap.svg` (and its `.ai` source) is the map redrawn by hand in layers: AREAS (filled by terrain difficulty: yellow 0, brown 1, grey 2, black 3), OPEN_BOUNDARY, RIVERS, RESTRICTED_TERRAIN_BOUNDARY, ARMY_BOUNDARY, ROADS, CITIES, the three VP symbol layers, PORTS, PORST_DAMAGE, PORTS_AREAS (the landing and port boxes), AIRFIELDS, BORDER, EXITING_AXIS_UNITS_ZONE. Run from the repo root, with `<s>` a scratch folder:
+
+1. `python3 -I tools/sicily/svgmap.py docs/games/sicily/maps/SicilyMap.svg data/sicily/map_vassal.json data/sicily/map.json data/sicily/map_art.json`
+   Each drawn area is paired with its Vassal zone (ids and names) by overlap; everything else comes from the layers (TDN, VPs, ports, airfields, the boxes paired with the Vassal boxes for their codes and arrow targets, adjacency, river / restricted / army-boundary edges, road crossings, the army zones by flood fill). The Exclusive Rules settle Mount Etna and the Nebrodi ridges (14.1) and Messina's two zones (14.41).
+2. `python3 -I tools/sicily/terrain.py <s>`: the real elevation (Terrarium tiles, AWS open data, zoom 11) bent onto the game map by a thin-plate spline through the towns the areas are named after, then refitted to the drawn coast (about 300 m); writes `<s>/real.npy`.
+   `python3 -I tools/sicily/board.py data/sicily web/public/sicily <s>/real.npy`: the board in the series look (`map-base.svg`: the sea, a July ground shaded by the relief, Etna, the mainland, the landing and port boxes with their arrows, cities, anchors, airfields; `map-lines.svg`: borders, roads, rivers, the coast, hachured restricted terrain, dashed army boundaries, the Messina exit arrows).
+   `python3 -I tools/sicily/relief.py <s>`: the 3D map (`web/public/sicily/relief/`): real metres (Etna compressed above 1500 m), a flat sea, groves and woods.
+3. `python3 -I tools/sicily/labels.py data/sicily`: where each area's label and piece spot go (`labels.json`).
+
+After editing the SVG, run the three steps again.

@@ -12,10 +12,12 @@ export interface RulesOptions { game: string; title: string; at?: string; q?: st
 const LOAD: Record<string, () => Promise<{ default: unknown }>> = {
   bulge: () => import('../../data/bulge/rules.json'),
   golan73: () => import('../../data/golan73/rules.json'),
+  sicily: () => import('../../data/sicily/rules.json'),
 };
 const PIECES: Record<string, () => Promise<{ default: unknown }>> = {
   bulge: () => import('../../tools/rules/icons-bulge.json'),
   golan73: () => import('../../tools/rules/icons-golan73.json'),
+  sicily: () => import('../../tools/rules/icons-sicily.json'),
 };
 export const hasRules = (game: string) => game in LOAD;
 

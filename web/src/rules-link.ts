@@ -4,7 +4,7 @@ import type { Art } from './rules-ref';
 
 type Ctx = { game: string; title: string; art: (key: string) => Art | null; onOpen?: () => void; onClose?: () => void };
 let ctx: Ctx | null = null;
-export const RULES_GAMES = ['bulge', 'golan73'];
+export const RULES_GAMES = ['bulge', 'golan73', 'sicily'];
 /** The game the reader shows (each game has its own rulebooks). */
 export const setRulesContext = (c: Ctx) => { ctx = c; };
 /** Open the reader, at a rule ('14.02'), on a search, or where the player left it. */

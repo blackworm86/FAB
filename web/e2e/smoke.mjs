@@ -3,9 +3,9 @@
 import { chromium, devices } from 'playwright';
 
 const BASE = process.env.BASE ?? 'http://localhost:5199/';
-const GAMES = ['bulge', 'golan73'];
+const GAMES = ['bulge', 'golan73', 'sicily'];
 const SIZES = { desktop: { viewport: { width: 1380, height: 860 } }, phone: { ...devices['iPhone 13'] } };
-const RULE = { bulge: '4.33', golan73: '14.02' };
+const RULE = { bulge: '4.33', golan73: '14.02', sicily: '14.22' };
 let failed = 0;
 const check = (ok, what) => { if (!ok) { failed++; console.log(`  FAIL ${what}`); } else console.log(`  ok   ${what}`); };
 
@@ -22,6 +22,9 @@ for (const game of GAMES) for (const [size, opts] of Object.entries(SIZES)) {
   await page.click('[title="Hide the sandbox tools"]', { timeout: 3000 }).catch(() => {});
   check(await page.evaluate((id) => window.__fab.g.game === id || (id === 'bulge' && !window.__fab.g.game), game), 'the right game is loaded');
 
+  // a game that starts with a set-up step (Sicily): the quick set-up first
+  await page.evaluate(() => { const F = window.__fab, g = structuredClone(F.g); if (g.phase === 'deploy' && F.E.sicily && g.game === 'sicily') { F.E.sicily.autoDeploy(g); F.E.endPhase(g); F.setGame(g); } });
+  await page.waitForTimeout(500);
   // a few steps of the turn: press the main button while it is enabled
   for (let i = 0; i < 4; i++) { const go = page.locator('.c-bar button.go:not([disabled])'); if (!(await go.count())) break; await go.click().catch(() => {}); await page.waitForTimeout(400); }
   check(!(await page.locator('text=Display problem').count()), 'phases step without a display problem');

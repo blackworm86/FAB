@@ -21,11 +21,11 @@ const RAW = mapJson as unknown as { areas: SArea[]; connections: RawConn[]; boxe
 
 export const areas = new Map<number, SArea>(RAW.areas.map((a) => [a.id, a]));
 export const area = (id: number) => areas.get(id)!;
-/** Box ids: landing boxes 201… in the printed order A1-A4, B1-B6, D1-D13; port boxes 301-304. */
-export const boxId = (code: string) => (code.startsWith('P') ? 300 + PORT_ORDER.indexOf(code) + 1 : 200 + LANDING_ORDER.indexOf(code) + 1);
-export const isBox = (a: number) => a >= 200;
-export const isLandingBox = (a: number) => a >= 200 && a < 300;
-export const isPortBox = (a: number) => a >= 300 && a < 400;
+/** Box ids (all below 256, as the board's area-id texture needs): landing boxes 101-123 in the printed order A1-A4, B1-B6, D1-D13; port boxes 131-134. */
+export const boxId = (code: string) => (code.startsWith('P') ? 130 + PORT_ORDER.indexOf(code) + 1 : 100 + LANDING_ORDER.indexOf(code) + 1);
+export const isBox = (a: number) => a >= 100;
+export const isLandingBox = (a: number) => a > 100 && a < 130;
+export const isPortBox = (a: number) => a > 130 && a < 140;
 const portNation = (code: string): 'us' | 'british' | 'axis' => (code === 'P3' ? 'us' : code === 'P4' ? 'axis' : 'british');
 export const boxes: SBox[] = RAW.boxes.map((b) => ({ id: boxId(b.box), box: b.box, kind: b.kind, group: b.group, area: b.area, name: b.name, ...(b.kind === 'port' ? { nation: portNation(b.box) } : {}) }));
 export const BOX = new Map<number, SBox>(boxes.map((b) => [b.id, b]));

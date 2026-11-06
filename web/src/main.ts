@@ -3,6 +3,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import * as E from '../../engine/src';
 import { loadChitArt, garrisonChit } from './chits';
 import { loadGolanChitArt } from './golan-art';
+import { loadSicilyChitArt } from './sicily-art';
 import { useVolume, type LabelBox } from './vol';
 import type { PanelCtx } from './golan-ui';
 import { History } from './history';
@@ -139,7 +140,7 @@ const areaIdTex = (() => { const d = new Uint8Array(MW * MH * 4);               
       for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i], [xj, yj] = P[j]; if ((yi > yc) !== (yj > yc)) xs.push(xi + ((yc - yi) * (xj - xi)) / (yj - yi)); }
       xs.sort((u, v) => u - v); for (let k = 0; k + 1 < xs.length; k += 2) for (let x = Math.max(0, Math.round(xs[k])); x < Math.min(MW, Math.round(xs[k + 1])); x++) d[((MH - 1 - y) * MW + x) * 4] = a.id; } }
   const t = new THREE.DataTexture(d, MW, MH); t.magFilter = t.minFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
-const tintData = new Uint8Array(128 * 4), tintTex = new THREE.DataTexture(tintData, 128, 1); tintTex.needsUpdate = true;
+const tintData = new Uint8Array(256 * 4), tintTex = new THREE.DataTexture(tintData, 256, 1); tintTex.needsUpdate = true;
 const relPixels = (im: HTMLImageElement) => { let c = relArt.get(im); if (!c) { c = document.createElement('canvas'); c.width = boardCv.width; c.height = boardCv.height; c.getContext('2d')!.drawImage(im, 0, 0, c.width, c.height); relArt.set(im, c); } return c; };
 const show3d = () => map3d && !!REL;
 /** Phones and small tablets: the 3D map is drawn lighter (fewer pixels, no shadows, a coarser ground, fewer trees). */
@@ -194,7 +195,7 @@ const svgTex = (key: string, svg: string) => { if (!labelTex.has(key)) { const t
 
 function block(u: E.Unit, hidden = false) {
   const w = 1.6, h = 1.6, d = 0.8;                                    // 16 x 16 x 8 mm block
-  const wood = new THREE.MeshStandardMaterial({ color: VOL.cssSide(u) === 'british' ? 0x3f6fb8 : VOL.wood[u.side], roughness: 0.75 });
+  const wood = new THREE.MeshStandardMaterial({ color: VOL.wood[VOL.cssSide(u)] ?? (VOL.cssSide(u) === 'british' ? 0x3f6fb8 : VOL.wood[u.side]), roughness: 0.75 });      // the wood by the block's class (Sicily: its nationality), else by its side
   if (u.garrison) {
     const chit = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new RoundedBoxGeometry(1.43, 0.12, 1.43, 2, 0.1), [chit, chit, new THREE.MeshStandardMaterial({ map: svgTex(u.id, VOL.unitSvg(u, g)), roughness: 0.7 }), chit, chit, chit]);      // a counter, like the other chits // 9/16 in chit
     m.position.y = 0.06; m.castShadow = true; m.rotation.y = viewRot(); return m;
@@ -437,7 +438,7 @@ function paintBoard() {
   }
   {
     c.save(); c.scale(k, k);
-    for (const [a, b] of RESTRICTED) drawRestricted(c, sharedBorder(a, b));
+    if (VOL.id === 'bulge') for (const [a, b] of RESTRICTED) drawRestricted(c, sharedBorder(a, b));                       // the other volumes print their restricted terrain in their line work
     if (layers.numbers) for (const e of MAP.entries) { c.save(); c.translate(e.x, e.y); c.rotate(viewRot()); drawEntry(c, e, VOL.art.entryDark(e.side)); c.restore(); }
     c.restore();
   }
@@ -450,7 +451,7 @@ function buildLabels() {
   labelsGrp.children.forEach((o) => { (o as THREE.Mesh).geometry.dispose(); ((o as THREE.Mesh).material as THREE.Material).dispose(); }); labelsGrp.clear();
   const PAD = 12, lk = `${+layers.numbers}${+layers.tdn}${+layers.vp}${+layers.names}${Object.values(vpIcons).every((i) => i.naturalWidth > 0)}`, K = 4;
   for (const a of MAP.areas) {
-    const L = LAB[a.id]; if (!L || (!layers.numbers && !layers.tdn && !layers.vp && !layers.names)) continue;
+    const L = LAB[a.id]; if (!L || L.mode === 'none' || (!layers.numbers && !layers.tdn && !layers.vp && !layers.names)) continue;      // a box prints its own code on the board
     let t = labelTexCache.get(a.id + lk);
     if (!t) { const cv = document.createElement('canvas'); cv.width = Math.ceil((L.w + 2 * PAD) * K); cv.height = Math.ceil((L.h + 2 * PAD) * K); const c = cv.getContext('2d')!; c.scale(K, K); c.translate(L.w / 2 + PAD, L.h / 2 + PAD); drawLabel(c, a, layers, vpIcons, L);
       t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; labelTexCache.set(a.id + lk, t); }
@@ -1699,7 +1700,7 @@ tut = TUT ? initTutorial({
   home: (to) => { try { if (to) sessionStorage.setItem('fab-new', `${to.game}:${to.scenario}`); } catch { /* private mode */ } location.href = homeUrl(); },
 }, TUT) : null;
 frame();
-Promise.all([loadChitArt(), VOL.id === 'golan73' ? loadGolanChitArt() : null]).catch((e) => console.error(e)).finally(() => { auto(); refresh(); });
+Promise.all([loadChitArt(), VOL.id === 'golan73' ? loadGolanChitArt() : null, VOL.id === 'sicily' ? loadSicilyChitArt() : null]).catch((e) => console.error(e)).finally(() => { auto(); refresh(); });
 let lobbyUid = '';
 const onNet = (): void => {
   if (online.mode !== 'remote' || !online.hasAccounts) return;

@@ -10,9 +10,16 @@ import golanLabels from '../../data/golan73/labels.json';
 import golanUnits from '../../data/golan73/units.json';
 import golanCounters from '../../data/golan73/counters.json';
 import golanEntries from '../../data/golan73/entry_marks.json';
+import sicilyMap from '../../data/sicily/map.json';
+import sicilyLabels from '../../data/sicily/labels.json';
+import sicilyArt from '../../data/sicily/map_art.json';
+import sicilyUnits from '../../data/sicily/units.json';
+import sicilyCounters from '../../data/sicily/counters.json';
 import { labelSvg, BULGE_WOOD } from './art';
 import { chitSvg, garrisonChit, mapMarkerSvg, saBlockSvg } from './chits';
 import { golanChitSvg, golanBlockSvg, GOLAN_WOOD, type GCounter, type GUnit } from './golan-art';
+import { sicilyChitSvg, sicilyBlockSvg, SICILY_WOOD, type SCounter, type SUnit } from './sicily-art';
+import { sicilyTargets, sicilyPanel, sicilyBlocksBegin, sicilyBattleCard, SICILY_BOXES } from './sicily-ui';
 import { targetsFor as bulgeTargets, type Tgt, type TgtCtx } from './chit-play';
 import { golanTargets, golanBattleUse, golanPlayInBattle, golanBattleCard, golanPanel, golanBlocksBegin, golanEdgeMarks, GOLAN_BOXES, type PanelCtx } from './golan-ui';
 import { GAMES, gameInfo, type GameInfo, type ScenarioInfo } from './games';
@@ -126,11 +133,51 @@ function golan(): VolView {
   };
 }
 
+/** Sicily: the hand-drawn map with its landing and port boxes as areas, the Sicily counters and blocks (sicily-art.ts), its own prompts (sicily-ui.ts). */
+function sicily(): VolView {
+  const m = sicilyMap as unknown as { size: [number, number]; areas: MapArea[] }, info = gameInfo('sicily')!, S = E.sicily;
+  const boxes = (sicilyArt as unknown as { boxes: { box: string; rect: [number, number, number, number] }[] }).boxes.map((b) => ({ id: S.boxId(b.box), rect: b.rect }));
+  const areas: MapArea[] = [...m.areas.map((a) => ({ id: a.id, label: a.label, polygon: a.polygon })), ...boxes.map((b) => { const [x0, y0, x1, y1] = b.rect; return { id: b.id, label: [(x0 + x1) / 2, (y0 + y1) / 2 + 8] as [number, number], polygon: [[x0, y0], [x1, y0], [x1, y1], [x0, y1]] as [number, number][] }; })];
+  const labels: Record<string, LabelBox> = { ...(sicilyLabels as unknown as Record<string, LabelBox>) };
+  for (const b of boxes) { const [x0, y0, x1, y1] = b.rect, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2; labels[b.id] = { mode: 'none', x: cx, y: cy, w: 0, h: 0, px: cx, py: cy + 8, pr: Math.min(x1 - x0, y1 - y0) / 2 - 4 }; }   // the box prints its own code; pieces stand in its middle
+  const RAW_UNITS = new Map((sicilyUnits as unknown as SUnit[]).map((u) => [u.id, u])), RAW_COUNTERS = new Map((sicilyCounters as unknown as (SCounter & { ids?: string[] })[]).map((c) => [c.id, c]));
+  const GARRISON: SUnit = { id: 'untried', name: 'Coastal/Garrison', side: 'axis', nation: 'italian', symbol: 'garrison', steps: 1, quality_by_step: ['green'], sticker_code: 'S*', colours: { stripe: null, box: '#c8e5a2', sticker: '#f99116' } };
+  const unitArt = (u: E.Unit) => {
+    if (u.untried) return sicilyBlockSvg(GARRISON, 1);                                                      // 15.3: face down, unknown to both players
+    const raw = RAW_UNITS.get(u.id);
+    return sicilyBlockSvg({ ...(raw ?? { id: u.id, name: u.name, side: u.side as 'allied' | 'axis' }), name: u.name, side: u.side as 'allied' | 'axis', nation: (u.nation ?? raw?.nation) as SUnit['nation'], steps: u.max, quality_by_step: u.q, symbol: u.symbol ?? raw?.symbol }, u.str);
+  };
+  const chitArt = (c: E.Chit) => {
+    if (c.kind === 'sa_block') return sicilyBlockSvg({ id: c.id, name: c.name, side: c.side as 'allied' | 'axis', nation: c.nation as SUnit['nation'], kind: 'special_action_block' });
+    const raw = RAW_COUNTERS.get(c.counter ?? c.id);
+    return sicilyChitSvg({ ...(raw ?? { id: c.id, kind: c.kind, side: c.side as 'allied' | 'axis', name: c.name }), id: c.id, kind: c.kind, side: c.side as 'allied' | 'axis', name: c.name, turn: c.turn, quality: c.q ?? raw?.quality, nation: (c.nation ?? raw?.nation) as SCounter['nation'] });
+  };
+  return {
+    id: 'sicily', name: 'Sicily', info, sides: ['allied', 'axis'], bottom: 'allied', tag: info.tag, sideName: info.sideName,
+    wood: { ...SICILY_WOOD, allied: SICILY_WOOD.us, axis: SICILY_WOOD.german }, ink: { allied: '#7fb3e8', axis: '#b9bcc0' }, controlCol: { allied: 0x3f7fc8, axis: 0x8a9096 },
+    map: { size: m.size, areas, connections: E.VOLUMES.sicily.map.connections, entries: [] },
+    labels,
+    art: { base: './sicily/map-base.svg', lines: './sicily/map-lines.svg', vpIcons: { german: './icons/vp-german.svg', allied: './icons/vp-allied.svg', mutual: './icons/vp-mutual.svg' }, relief: './sicily/', reliefName: 'Sicily in relief, from the Etna to the western capes, with contour lines, groves and woods', entryDark: () => false },
+    features: { fuel: false, zones: false, optional: true, tutorial: false },
+    scenarios: info.scenarios, defaultOpts: { scenario: 'tournament', fuel: false },
+    unitSvg: (u, g) => (u.garrison && u.chitId ? chitArt(E.chit(g, u.chitId)) : unitArt(u)), chitSvg: chitArt,
+    cssSide: (u) => u.nation ?? (u.side === 'axis' ? 'german' : 'us'),
+    reserveTag: (u) => (u.side === 'axis' ? 'R' : u.nation === 'british' ? 'R8' : 'R7'),
+    ruleKey: (k) => (['air_mission', 'engineer', 'command_staff'].includes(k) ? `sicily:${k}` : k), targetsFor: sicilyTargets,
+    battleCard: sicilyBattleCard, battleUse: (g, b, c) => E.canAssign(g, b, c.side, c), playInBattle: () => false,
+    ruleArt: (key) => { const u = RAW_UNITS.get(key); if (u) return { svg: sicilyBlockSvg(u), wood: hexc(SICILY_WOOD[u.nation ?? 'us']), name: u.name }; const c = RAW_COUNTERS.get(key); return c ? { svg: sicilyChitSvg(c), name: c.name } : null; },
+    panel: sicilyPanel, blocksBegin: sicilyBlocksBegin, edgeMarks: () => [], markSvg: (code) => mapMarkerSvg(code), boxes: SICILY_BOXES,
+    fieldWorks: (g, id) => S.unitFieldWorks(g, id),
+    limits: (_g, b, s) => ({ arty: s === b.attacker ? 2 : 1, assets: null }),
+    placeOptions: (g, id) => (g.phase === 'deploy' ? S.deployOptions(g, id) : []), pendingPlace: (g) => (g.phase === 'deploy' ? g.units.filter((u) => u.box === 'deploy').map((u) => u.id) : []), place: (g, id, a) => S.deploy(g, id, a),
+  };
+}
+
 /** Pick the volume this page runs and switch the engine to it. Done once, before anything reads the map. */
 export function useVolume(id: string | null | undefined): VolView {
   const gid = GAMES.some((x) => x.id === id && x.ready) ? id! : 'bulge';
   E.useGame(gid);
-  const v = gid === 'golan73' ? golan() : bulge();
+  const v = gid === 'golan73' ? golan() : gid === 'sicily' ? sicily() : bulge();
   document.documentElement.style.setProperty('--ge', v.ink[v.sides[0]]); document.documentElement.style.setProperty('--al', v.ink[v.sides[1]]);
   if (v.id !== 'bulge') aliasSideCss({ german: v.sides[0], allied: v.sides[1] });
   document.title = `FAB: ${v.name}`;

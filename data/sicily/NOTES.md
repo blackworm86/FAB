@@ -49,6 +49,8 @@ Counts: 73 blocks (US 12, British 15, Allied Special Action 1; Italian 8 + 29 un
 
 ## Map
 
+The game map is now `data/sicily/map.json` + `map_art.json`, read from the owner's hand-drawn layered SVG (`docs/games/sicily/maps/SicilyMap.svg`) by `tools/sicily/svgmap.py`; the Vassal draft below is kept for the area ids and names and as a cross-check (every one of its 65 areas, 144 connections, 25 rivers, 7 restricted edges, 25 army-boundary edges, zones, VPs, ports, airfields and 27 boxes agrees with the drawing). The engine gives the landing boxes the ids 101-123 (A1-A4, B1-B6, D1-D13) and the port boxes 131-134 (P1-P4).
+
 Draft model `data/sicily/map_vassal.json`, built by `tools/sicily/zones.py`, `segment.py` and `mapdraft.py` (see `tools/sicily/README.md`), as `data/golan73/map_vassal.json` was for Golan: a cross-check for the hand-drawn SVG to come. Sources: the module's "Main Map" (image 3332 x 2156 px, 145 zones), the printed map scan `docs/games/sicily/maps/SICILYmap-FINAL-72.jpg`, the Sunrise Bridge scenario map (player aids p. 9), the legend and the movement table (aids p. 3). The printed scan is the same map as the module's, scaled by 1/1.361 (fitted at 0.5 px rms); compared pixel by pixel, the two differ only in ink colour, so every value below holds on both. The Sunrise Bridge map agrees with both on its 17 areas (boundaries, roads, rivers, plates, symbols).
 
 Counts: 65 areas; 144 shared edges (72 road, 72 field), 25 of them river (11 with a road), 7 restricted, 25 army boundary; 14 corner-only contacts; 34 coastal areas; 23 landing boxes, 4 port boxes (3 damage boxes), 52 other boxes and track spaces (50 Vassal zones + 2 printed boxes with no zone).

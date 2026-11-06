@@ -56,7 +56,7 @@ describe('Landings (14.24-14.27)', () => {
     const stuck = E.unitsIn(g, S.boxId('B2'))[0]; expect(E.moveOptions(g, stuck.id)).toEqual([]);           // Pachino is full
     endPhase(g); expect(stuck.box).toBe('at_sea'); expect(stuck.area).toBeNull();
     runTo(g, 2, 'allied', 'reinforcement'); expect(g.pendingArrivals).toContain(stuck.id);
-    expect(E.arrivalOptions(g, stuck.id).map((x) => x.area).every((x) => x >= 200)).toBe(true);
+    expect(E.arrivalOptions(g, stuck.id).map((x) => x.area).every((x) => x >= 100)).toBe(true);
   });
   it('airborne units wait in the Airborne Assault box and drop next to two areas of their army at the start of the Combat Phase; no abort', () => {
     const g = newSicilyGame(9); const para = unit(g, 'US09'); expect(para.box).toBe('airborne_assault');

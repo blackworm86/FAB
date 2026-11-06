@@ -81,7 +81,12 @@ np.save(os.path.join(os.path.dirname(REAL), 'sicily-ground.npy'), np.clip(np.whe
 
 # ---------- the printed items beside the areas: landing and port boxes with their arrows, cities, anchors, airfields, the mainland ----------
 font = 'font-family="Saira Condensed, Arial Narrow, sans-serif"'
-txt = lambda x, y, s, size, fill, extra='': f'<text x="{x:.1f}" y="{y:.1f}" text-anchor="middle" {font} font-weight="700" font-size="{size}" fill="{fill}" {extra}>{s}</text>'
+from xml.sax.saxutils import escape
+def txt(x, y, s, size, fill, extra=''):
+    attrs = {'text-anchor': 'middle', 'font-weight': '700'}
+    for k in list(attrs):
+        if k in extra: del attrs[k]                                                     # what `extra` sets wins; no attribute twice
+    return f'<text x="{x:.1f}" y="{y:.1f}" {" ".join(f"{k}=\"{v}\"" for k, v in attrs.items())} {font} font-size="{size}" fill="{fill}" {extra}>{escape(s)}</text>'
 AREA = {a['id']: Polygon(a['polygon']) for a in M['areas']}
 def arrow(b):
     x0, y0, x1, y1 = b['rect']; c = Point((x0 + x1) / 2, (y0 + y1) / 2); P = AREA[b['area']]
