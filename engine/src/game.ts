@@ -763,7 +763,7 @@ export function assign(g: Game, b: Battle, id: string, mode?: 'arty' | 'support'
   CUR.onAssign?.(g, b, c, mode, unit);
 }
 export function unassign(g: Game, b: Battle, id: string) {
-  const c = chit(g, id); if (b.stage !== 'setup') return; c.box = 'available';
+  const c = chit(g, id); if (b.stage !== 'setup' || CUR.keepAssigned?.(g, b, c)) return; c.box = 'available';
   b.assets[c.side] = b.assets[c.side].filter((x) => x !== id); dropAir(b, c.side, id); CUR.onUnassign?.(g, b, c);
 }
 /** The air assets a side committed to a battle (one, or two in Golan '73). */

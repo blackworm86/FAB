@@ -35,7 +35,7 @@ export interface GolanState {
   alowda?: { raids: number; cup?: string[]; drawn?: string[] };
   chem?: number; ghostsMade?: number;    // optional rules: chemical attacks so far (each one after the first gives Israel a VP); ghosts drawn from the Al-Owda cup       // 20.35 the commandos landed at the start; 20.36 the Israeli Reinforcements Draw Cup
 }
-export interface GolanBattle { event: Partial<Record<Side, string>>; counterbattery: Partial<Record<Side, string>>; ew?: { pending: boolean }; defLocked?: boolean; engBridge?: string; chem?: string; flank?: string }
+export interface GolanBattle { event: Partial<Record<Side, string>>; counterbattery: Partial<Record<Side, string>>; ew?: { pending: boolean }; defLocked?: boolean; engBridge?: string; chem?: string; flank?: string; spSwap?: string }
 export const state = (g: Game) => g.vol as unknown as GolanState;
 export const battleState = (b: Battle) => (b.vol ??= { event: {}, counterbattery: {} }) as unknown as GolanBattle;
 
@@ -309,6 +309,24 @@ function resolveRaid(g: Game, u: Unit, a: number) {
   say(g, `Commando raid in ${areas.get(a)!.name} ${r <= 2 ? 'succeeds' : 'partly succeeds'} (${r}): ${u.name} stops and must fight it`);
 }
 /** 15.6: once the regular units leave a contested area, its strongpoint is evacuated and a matching Task Force goes into the Israeli cup. */
+/** Errata (9/2017): an Israeli attack in an area holding an Israeli strongpoint. The strongpoint may take part only by being removed from play
+ *  and replaced at once by its Task Force (armor or infantry supported, as for evacuation, 15.6), committed to the battle; this cannot be undone. */
+export function strongpointSwapOption(g: Game): { unit: string; chit: string } | null {
+  const b = g.battle; if (!b || b.stage !== 'setup' || b.attacker !== 'israeli' || battleState(b).spSwap) return null;
+  const sp = unitsIn(g, b.area, 'israeli').find((u) => u.fort && !u.ghost); if (!sp) return null;
+  const tf = g.chits.find((c) => c.box === 'evacuated_strongpoints' && c.kind === 'task_force' && c.name.includes(sp.fort === 'armor' ? 'armor' : 'infantry'));
+  if (!tf) return null;
+  const lim = limits(g, b, 'israeli'); if (b.assets.israeli.filter((id) => isBattleAsset(chit(g, id))).length >= lim.battle) return null;
+  return { unit: sp.id, chit: tf.id };
+}
+export function swapStrongpointIntoAttack(g: Game) {
+  const o = strongpointSwapOption(g); need(!!o, 'no strongpoint of the attack to commit (errata: Israeli attack in an area with a strongpoint)');
+  const b = g.battle!, sp = unit(g, o!.unit), tf = chit(g, o!.chit);
+  sp.area = null; sp.box = 'evacuated'; tf.box = 'map'; b.assets.israeli.push(tf.id); battleState(b).spSwap = tf.id; b.locked = true;
+  say(g, `The strongpoint in ${nameOf(b.area)} joins the attack as the ${tf.name} (errata): it is removed from play for good`, 'israeli');
+}
+/** The Task Force that replaced a strongpoint stays in its battle. */
+const keepAssigned = (_g: Game, b: Battle, c: Chit) => battleState(b).spSwap === c.id;
 function evacuateStrongpoint(g: Game, a: number) {
   const sp = unitsIn(g, a, 'israeli').find((u) => u.fort); if (!sp || !unitsIn(g, a, 'syrian').some(regular) || unitsIn(g, a, 'israeli').some(regular)) return;
   sp.area = null; sp.box = 'evacuated';
@@ -915,5 +933,5 @@ registerHooks('golan73', {
   successNumber: golanSuccessNumber, adjustFire, canAssign, moraleSn: golanMoraleSn, retreatOk, retreatPrefer, onRetreat,
   sources, supplyStep, supplyFree: (_g, _s, a) => isAssembly(a) || a === HERMON, alwaysSupplied: (_g, u) => !!u.ghost || u.id === 'S17',
   victory: golanVictory, finalResult, onPhase, onBattle, freeBattle, assault, reinforce, afterDraw: (g) => { nafakhStaff(g); const d = g.chits.find((c) => c.kind === 'event_dugman5' && c.box === 'available'); if (d) resolveDugman(g, d); },
-  afterDeploy, onUnassign, optional: GOLAN_OPTIONAL, absorbLoss, lossOk, recoverOk, ghostsMove: (g) => !!g.opts.advGhosts, reinforceOk: (g, b, u) => reinforceOptions(g, b).includes(u.id), stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2), appropriate: (g, u) => (isNafakh(g) ? (u.side === 'israeli' ? [NAF_NORTH] : [REAR, NAF.sheet.entry.Z]) : u.side === 'israeli' ? [ASSEMBLY.A, ASSEMBLY.B] : Object.values(ENTRY)), isNight, onAssign, beforeBegin, beforeFire, afterFire,
+  afterDeploy, onUnassign, keepAssigned, optional: GOLAN_OPTIONAL, absorbLoss, lossOk, recoverOk, ghostsMove: (g) => !!g.opts.advGhosts, reinforceOk: (g, b, u) => reinforceOptions(g, b).includes(u.id), stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2), appropriate: (g, u) => (isNafakh(g) ? (u.side === 'israeli' ? [NAF_NORTH] : [REAR, NAF.sheet.entry.Z]) : u.side === 'israeli' ? [ASSEMBLY.A, ASSEMBLY.B] : Object.values(ENTRY)), isNight, onAssign, beforeBegin, beforeFire, afterFire,
 } as Partial<Volume>);

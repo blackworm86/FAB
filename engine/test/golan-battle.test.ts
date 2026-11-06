@@ -116,4 +116,23 @@ describe('brigade integrity in a battle (15.51)', () => {
 
 describe('a whole game with every battle fought', () => {
   it('plays to a result', () => { const g = newGolanGame(21); playOut(g); expect(g.over).toMatch(/victory|draw/i); });
+  it('errata: Israel attacking in a strongpoint area may commit the strongpoint only as its Task Force, for good', () => {
+    const g = newGolanGame(6); g.phasing = 'israeli';
+    const sp = g.units.find((u) => u.fort && u.fort === 'armor' && u.area != null && g.units.some((x) => x.side === 'syrian' && x.area === u.area && !x.garrison))!;
+    const a = sp.area!; Object.assign(unit(g, 'I05'), { area: a, disorder: 0 }); golan.state(g).samTarget = undefined;
+    const b = startBattle(g, a), o = golan.strongpointSwapOption(g)!;
+    expect(o.unit).toBe(sp.id); expect(chit(g, o.chit).name).toMatch(/armor/);
+    expect(fireList(g, b, 'israeli', 'ground').some((f) => f.key === sp.id)).toBe(false);          // a strongpoint never attacks by itself
+    golan.swapStrongpointIntoAttack(g);
+    expect(sp.area).toBeNull(); expect(chit(g, o.chit).box).toBe('map'); expect(b.assets.israeli).toContain(o.chit);
+    expect(fireList(g, b, 'israeli', 'ground').some((f) => f.key === o.chit)).toBe(true);           // it fires as a battle asset
+    unassign(g, b, o.chit); expect(b.assets.israeli).toContain(o.chit);                              // cannot be taken back
+    expect(() => cancelBattle(g)).toThrow(); expect(golan.strongpointSwapOption(g)).toBeNull();
+    beginCombat(g, b); for (let i = 0; i < 40 && b.stage !== 'done'; i++) { if (b.stage === 'attFirst') chooseFirstLoss(g, b, b.attPoint); else if (b.stage === 'attChoice') attackerChoice(g, b, false); else if (b.stage === 'defChoice') defenderChoice(g, b, false); else rollStep(g, b); }
+    const c = chit(g, o.chit); expect(['used', 'eliminated']).toContain(c.box);
+  });
+  it('errata swap: not offered when Syria attacks, nor for a ghost', () => {
+    const g = newGolanGame(6); g.phasing = 'syrian'; const a = g.units.find((u) => u.fort && u.area != null && g.units.some((x) => x.side === 'syrian' && x.area === u.area))!.area!;
+    startBattle(g, a); expect(golan.strongpointSwapOption(g)).toBeNull();
+  });
 });

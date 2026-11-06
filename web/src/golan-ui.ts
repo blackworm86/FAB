@@ -123,6 +123,8 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
       if (ditch.length) out.push(`<div class="volpanel"><b>${ctx.ico('engineer')} Engineer (14.51b)</b><span>Bridge the AT ditch instead of firing (if it survives both fire steps):</span><div class="row">${ditch.map((n) => ctx.btn(`towards ${esc(ctx.areaName(n))}`, () => G.setEngineerBridge(live(), b, B.engBridge === E.edgeKey(b.area, n) ? null : n), B.engBridge === E.edgeKey(b.area, n) ? 'on' : '', !ctx.mine('syrian'))).join('')}</div></div>`);
     }
     for (const s of E.sidesOf(g)) if (B.event[s]) out.push(`<div class="volpanel"><small>${nm(s)} event: ${esc(E.chit(g, B.event[s]!).name)}</small></div>`);
+    const sw = ctx.mine('israeli') ? G.strongpointSwapOption(g) : null;
+    if (sw) out.push(`<div class="volpanel"><b>${ctx.ico('lock')} Strongpoint in the attack (errata)</b><span>The strongpoint here may join your attack only as its ${esc(E.chit(g, sw.chit).name)}: it is removed from play and the Task Force is committed to this battle. This cannot be undone, and the attack can no longer be withdrawn.</span><div class="row">${ctx.btn('Commit the strongpoint as its Task Force', () => G.swapStrongpointIntoAttack(live()))}</div></div>`);
   }
   const N = V.nafakh;
   if (N && !N.s03Free && g.phasing === 'syrian' && (g.phase === 'admin' || g.phase === 'movement') && ctx.mine('syrian') && g.units.some((u) => u.id === 'S03' && u.area != null)) {

@@ -93,6 +93,8 @@ export interface Volume {
   recoverOk?: (g: Game, u: Unit) => boolean;
   /** Ghost blocks move like units (an optional rule). */
   ghostsMove?: (g: Game) => boolean;
+  /** An asset committed for good (it may not be taken back before the first roll). */
+  keepAssigned?: (g: Game, b: Battle, c: Chit) => boolean;
   /** 8.23: may this block reinforce the defender now (the series check has passed)? */
   reinforceOk?: (g: Game, b: Battle, u: Unit) => boolean;
   /** Combat may not begin yet (a SAM answer or a jamming roll is pending): throw. */
