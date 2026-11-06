@@ -18,10 +18,12 @@ const FRAMES: Record<Nation | 'allied', string[]> = {
   german: ['#b9bcc4', '#d9dbe0', '#8e919a'], italian: ['#f39a24', '#f8b75a', '#c4720c'],
 };
 /** The unit square of an asset, by nation (Italian assets print a pale green square on their orange chit). */
-const SQUARE: Record<Nation, string> = { us: '#c5e184', british: '#e8d6a6', german: '#d6d8db', italian: '#d4e9a8' };
+const SQUARE: Record<Nation, string> = { us: '#c5e184', british: '#c9a76a', german: '#d6d8db', italian: '#d4e9a8' };
+/** The German paratroopers (FJ) print a steel-blue square, artillery included. */
+const FJ_SQUARE = '#b9d3e0';
 /** Event and Special Action panels. */
 const EVENT: Record<Nation | 'allied', string> = { us: '#dfe9b8', allied: '#dfe9b8', british: '#efe1bd', german: '#dfe2e6', italian: '#fbe2b8' };
-const SKY = '#9fcff0', BLUE = '#1f6fc0', SLATE = '#4f6371';
+const BLUE = '#1f6fc0', SLATE = '#4f6371';
 
 export type SCounter = { id: string; kind: string; side: SSide | 'none'; nation?: Nation; echelon?: string; turn?: number | string | null; name: string; quality?: string | null;
   symbol?: string; subtype?: string; red_flag?: boolean; flanking_invasion?: string; division?: string; port?: string; airborne?: boolean };
@@ -30,8 +32,8 @@ const T = (t: SCounter['turn']) => (t == null || t === 'scenario' ? null : t) as
 const ox = (c: SCounter) => open('german', FRAMES[nationOf(c)] as never);
 
 /** The red pennant printed after the turn on some counters (air and naval support, staff, the German Special Actions...). */
-const pennant = (x: number, y: number) => `<path d="M${x} ${y - 24}V${y + 4}" stroke="#2b2b2b" stroke-width="2"/><path d="M${x + 1} ${y - 24}L${x + 22} ${y - 17}L${x + 1} ${y - 10}Z" fill="#e3222b"/>`;
-const head = (c: SCounter, x = 14, y = 36, size = 33) => { const t = T(c.turn); return `${turn(t, x, y, size)}${c.red_flag ? pennant(x + (t == null ? 0 : t === 'S' ? 26 : String(t).length * 19 + 4), y) : ''}`; };
+const pennant = (x: number, y: number) => `<path d="M${x} ${y - 25}V${y - 7}" stroke="#3a2a20" stroke-width="1.6"/><path d="M${x + 0.8} ${y - 25}L${x + 25} ${y - 18}L${x + 0.8} ${y - 11}Z" fill="#e3222b"/>`;
+const head = (c: SCounter, x = 14, y = 36, size = 33) => { const t = T(c.turn); return `${turn(t, x, y, size)}${c.red_flag ? pennant(x + (t == null ? 0 : t === 'S' ? 24 : String(t).length * size * 0.56 + 3), y) : ''}`; };
 const dotAt = (q: string | null | undefined, cx: number, cy: number) => { if (!q || !QDOT[q]) return ''; const [f, ring] = QDOT[q]; return `${ring ? `<circle cx="${cx}" cy="${cy}" r="10.5" fill="${ring}"/>` : ''}<circle cx="${cx}" cy="${cy}" r="${ring ? 8 : 7.5}" fill="${f}"/>`; };
 
 /* NATO symbols inside the 68-wide asset square (centre CX, CY). */
@@ -48,12 +50,13 @@ const symbolOf = (c: SCounter) => {
   if (c.subtype === 'mobile_group' || c.kind === 'armor_asset') return OVAL;
   if (c.symbol === 'recon' || c.name === 'Palermitani') return SLASH;
   if (c.airborne || c.symbol === 'airborne') return X() + WINGS;
-  if (['ranger', 'commando', 'marines'].includes(c.subtype ?? '')) return RAID;
+  if (c.subtype === 'marines') return `${X()}${anchorMark(CX, CY + 22, 9)}`;                // the Royal Marines: X with a small white anchor at the base
+  if (['ranger', 'commando'].includes(c.subtype ?? '')) return RAID;
   return X();
 };
 /** Rangers, commandos and paratroopers print on a light-blue square. */
 const squareFill = (c: SCounter, n: Nation) => (/Airborne|Airbourne/.test(c.name) ? '#f8e23c' : /Canadian/.test(c.name) ? '#ef4b3f'          // the airborne divisions' yellow, the Canadians' red, as on their blocks
-  : ['ranger', 'commando', 'marines', 'paratroop'].includes(c.subtype ?? '') || c.airborne ? '#a6d6f3' : SQUARE[n]);
+  : / FJ$/.test(c.name) ? FJ_SQUARE : ['ranger', 'commando'].includes(c.subtype ?? '') ? '#a6d6f3' : SQUARE[n]);
 /** The "Flanking Invasion" bracket printed up the left edge (3rd CDO, 30 RCT). */
 const flanking = (c: SCounter) => (c.flanking_invasion ? `<rect x="7" y="56" width="17" height="74" fill="#fff" opacity=".85"/>${txt('Flanking Inv', 20, 128, 13, { w: 'b', rot: -90, max: 70 })}` : '');
 const assetChit = (c: SCounter) => { const n = nationOf(c) as Nation;
@@ -63,7 +66,7 @@ const assetChit = (c: SCounter) => { const n = nationOf(c) as Nation;
 const textEvent = (c: SCounter, lines: string[]) => `${ox(c)}${panel(EVENT[nationOf(c)])}${head(c, 22, 52, 32)}${lines.map((l, i) => txt(l, 84, (lines.length === 3 ? 72 : 88) + i * 30, 27, { w: 'b', anchor: 'middle', max: 104 })).join('')}</g></svg>`;
 
 /* Pictures drawn as vectors. */
-const ship = (x: number, y: number, s: number) => `<g transform="translate(${x} ${y}) scale(${s})"><path d="M-58 4H58L48 16H-50Z" fill="#3b3f45"/><path d="M-40 4V-4H-20V-12H-8V-22H2V-12H14V-4H30V4Z" fill="#4b5058"/><path d="M-30 -6H-52M18 -6H44M-4 -16H-26" stroke="#3b3f45" stroke-width="2.4"/><path d="M-3 -22V-36M6 -22V-30" stroke="#3b3f45" stroke-width="2"/></g>`;
+const anchorMark = (x: number, y: number, r: number) => `<g fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><circle cx="${x}" cy="${y - r}" r="${r * 0.28}"/><path d="M${x} ${y - r * 0.72}V${y + r * 0.7}M${x - r * 0.45} ${y - r * 0.4}H${x + r * 0.45}M${x - r * 0.85} ${y + r * 0.1}Q${x - r * 0.7} ${y + r * 0.8} ${x} ${y + r * 0.7}Q${x + r * 0.7} ${y + r * 0.8} ${x + r * 0.85} ${y + r * 0.1}"/></g>`;
 const anchor = (x: number, y: number, r: number) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#2c8fd1" stroke="#fff" stroke-width="3"/><g fill="none" stroke="#fff" stroke-width="${(r * 0.12).toFixed(1)}" stroke-linecap="round"><circle cx="${x}" cy="${y - r * 0.5}" r="${r * 0.14}"/><path d="M${x} ${y - r * 0.36}V${y + r * 0.62}M${x - r * 0.32} ${y - r * 0.18}H${x + r * 0.32}M${x - r * 0.58} ${y + r * 0.2}Q${x - r * 0.5} ${y + r * 0.66} ${x} ${y + r * 0.62}Q${x + r * 0.5} ${y + r * 0.66} ${x + r * 0.58} ${y + r * 0.2}"/></g>`;
 const usFlag = (x: number, y: number, w: number, h: number) => `${Array.from({ length: 7 }, (_, i) => `<rect x="${x}" y="${(y + i * h / 6.5).toFixed(1)}" width="${w}" height="${(h / 13).toFixed(1)}" fill="#c8102e"/>`).join('')}<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="#fff" stroke-width=".5"/><rect x="${x}" y="${y}" width="${w * 0.42}" height="${h * 0.54}" fill="#2a3d8f"/>${Array.from({ length: 12 }, (_, i) => `<circle cx="${(x + 4 + (i % 4) * w * 0.1).toFixed(1)}" cy="${(y + 4 + Math.floor(i / 4) * h * 0.16).toFixed(1)}" r="1.4" fill="#fff"/>`).join('')}`;
 const ukFlag = (x: number, y: number, w: number, h: number) => `<svg x="${x}" y="${y}" width="${w}" height="${h}" viewBox="0 0 60 30" preserveAspectRatio="none"><rect width="60" height="30" fill="#012169"/><path d="M0 0L60 30M60 0L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0L60 30M60 0L0 30" stroke="#c8102e" stroke-width="2"/><path d="M30 0V30M0 15H60" stroke="#fff" stroke-width="10"/><path d="M30 0V30M0 15H60" stroke="#c8102e" stroke-width="6"/></svg>`;
@@ -72,9 +75,18 @@ const cross = (x: number, y: number, r: number) => { const a = r * 0.2, b = r * 
   return `<path d="M${p.map(([u, v]) => `${(x + u).toFixed(1)} ${(y + v).toFixed(1)}`).join('L')}Z" fill="#0d0d0f" stroke="#fff" stroke-width="${(r * 0.12).toFixed(1)}" stroke-linejoin="miter"/>`; };
 const burst = (x: number, y: number, r1: number, r2: number, n = 12) => `<path d="${Array.from({ length: n * 2 }, (_, i) => { const r = i % 2 ? r2 : r1, a = i * Math.PI / n; return `${i ? 'L' : 'M'}${(x + r * Math.sin(a)).toFixed(1)} ${(y - r * Math.cos(a)).toFixed(1)}`; }).join('')}Z" fill="#7fc1ea" opacity=".75"/>`;
 
+/** The printed pictures of Air and Naval Support, cut from the counter sheet scan (web/public/sicily/chit/); the rest of the counter is vector. */
+const PIC: Record<string, string> = {};
+const PICS = ['air_us', 'air_br', 'air_axis', 'naval_us', 'naval_br'] as const;
+export async function loadSicilyChitArt(base = './sicily/chit/') {
+  await Promise.all(PICS.map(async (k) => { const r = await fetch(`${base}${k}.png`); if (!r.ok) throw new Error(`sicily chit art ${k}: ${r.status}`); const b = await r.blob(); PIC[k] = await new Promise<string>((ok) => { const f = new FileReader(); f.onload = () => ok(String(f.result)); f.readAsDataURL(b); }); }));
+}
+/** The picture in the middle band of the counter, at its printed proportions (about 2.1 : 1). */
+const picture = (k: string) => (PIC[k] ? `<image href="${PIC[k]}" x="6" y="38" width="148" height="72" preserveAspectRatio="xMidYMid meet"/>` : '');
+const picKey = (c: SCounter, kind: 'air' | 'naval') => `${kind}_${c.side === 'axis' ? 'axis' : c.nation === 'british' ? 'br' : 'us'}`;
 /** Air Support: the Allied fighter over a sky panel (the Axis counter flies the same art on its grey frame). */
-const airChit = (c: SCounter) => `${ox(c)}<rect x="12" y="12" width="136" height="136" fill="${SKY}"/>${head(c, 16, 42, 32)}${CHIT_ART.air ? `<image href="${CHIT_ART.air}" x="20" y="34" width="120" height="70" preserveAspectRatio="xMidYMid meet"${c.side === 'axis' ? ' transform="translate(160 0) scale(-1 1)"' : ''}/>` : ''}${txt('Air Support', 80, 140, 26, { w: 'b', italic: true, anchor: 'middle', max: 128 })}</svg>`;
-const navalChit = (c: SCounter) => `${ox(c)}<rect x="12" y="12" width="136" height="136" fill="#eef4f8"/><rect x="12" y="92" width="136" height="20" fill="#5b8fb8"/>${head(c, 16, 42, 32)}${ship(82, 88, 0.95)}${txt('Naval Support', 80, 140, 24, { w: 'b', italic: true, anchor: 'middle', max: 128 })}</svg>`;
+const airChit = (c: SCounter) => `${ox(c)}${head(c)}${picture(picKey(c, 'air'))}${txt('Air Support', 80, 140, 26, { w: 'b', italic: true, anchor: 'middle', max: 128 })}</svg>`;
+const navalChit = (c: SCounter) => `${ox(c)}${head(c)}${picture(picKey(c, 'naval'))}${txt('Naval Support', 80, 140, 24, { w: 'b', italic: true, anchor: 'middle', max: 128 })}</svg>`;
 const delayed = (c: SCounter) => `${ox(c)}${head(c)}<rect x="40" y="44" width="80" height="56" fill="#e3222b"/>${txt('Asset', 80, 82, 28, { w: 'b', italic: true, anchor: 'middle', fill: '#fff', max: 72 })}${txt('Delayed', 80, 140, 30, { w: 'b', italic: true, anchor: 'middle', max: 128 })}</svg>`;
 const staff = (c: SCounter) => `${ox(c)}${head(c)}<rect x="48" y="44" width="64" height="58" fill="${c.nation === 'italian' ? '#8d969c' : '#3c7a3a'}" stroke="#fff" stroke-width="4"/>${txt('HQ', 80, 86, 36, { w: 'b', anchor: 'middle', fill: '#fff' })}${txt('Staff Asset', 80, 140, 25, { w: 'b', anchor: 'middle', max: 124 })}</svg>`;
 const specialAction = (c: SCounter) => c.red_flag ? `${ox(c)}${panel(EVENT[nationOf(c)])}${head(c, 22, 52, 32)}${CHIT_ART.saArrow ? `<svg x="18" y="52" width="122" height="72" viewBox="0 0 122 72"><image href="${CHIT_ART.saArrow}" width="130" height="72"/></svg>` : ''}${txt('Special Action', 82, 147, 24, { w: 'b', italic: true, anchor: 'middle', max: 120 })}</g></svg>`      // the German counters: pennant on top, the words below
@@ -97,7 +109,7 @@ export function restricted(c: SCounter, released = false, stripe?: string, symbo
   return `${ox(c)}<rect x="12" y="104" width="136" height="44" fill="${band}"/><rect x="12" y="12" width="20" height="92" fill="${released ? '#f3ecc8' : '#e3222b'}"/>${txt(released ? 'Released' : 'Restricted', 28, 100, 15, { w: 'b', rot: -90, fill: released ? '#3a3a2a' : '#fff', max: 84 })}${txt(brigade ? 'X' : 'XX', 84, 30, 20, { w: 'b', anchor: 'middle' })}<g transform="translate(4 -6) scale(.82) translate(${CX * 0.22} ${CY * 0.26})">${square(box ?? SQUARE[n as Nation] ?? '#ddd')}${sym}</g>${txt(name, 80, 138, 23, { anchor: 'middle', max: 128, fill: dark(band) ? '#fff' : '#111' })}</svg>`;
 }
 const portDamage = (c: SCounter, level = 1) => `${flat(level === 1 ? BLUE : '#0b4a86')}${burst(80, 64, 58, 22)}${txt(String(level), 80, 62, 46, { w: 'b', anchor: 'middle', fill: '#fff' })}${txt(c.name.replace(/ Damage.*$/, ''), 80, 104, 28, { w: 'b', anchor: 'middle', fill: '#fff', max: 128 })}${txt('Damage', 80, 136, 24, { w: 'b', anchor: 'middle', fill: '#cfe3f5', max: 120 })}</svg>`;
-export const sicilyControl = (side: SSide) => side === 'allied' ? `${flat(BLUE)}${star(80, 82, 62)}</svg>` : `${flat('#a6aaae')}${cross(80, 80, 60)}</svg>`;
+export const sicilyControl = (side: SSide) => side === 'allied' ? `${flat(BLUE)}${star(80, 82, 62)}</svg>` : `${flat(SLATE)}${cross(80, 80, 58)}</svg>`;          // the Axis side carries the VPs marker's cross
 export const sicilyTrack = (name: string, side: SSide) => { const bg = side === 'allied' ? BLUE : SLATE;
   return name === 'VPs' ? `${flat(bg)}${side === 'allied' ? star(80, 52, 30) : cross(80, 52, 30)}${txt('VPs', 80, 138, 50, { w: 'b', anchor: 'middle', fill: '#fff', max: 130 })}</svg>`
     : `${flat(bg)}${txt('Game', 80, 74, 52, { w: 'b', anchor: 'middle', fill: '#fff', max: 130 })}${txt('Turn', 80, 126, 52, { w: 'b', anchor: 'middle', fill: '#fff', max: 130 })}</svg>`; };

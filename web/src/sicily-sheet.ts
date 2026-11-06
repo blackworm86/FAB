@@ -2,7 +2,7 @@
 import units from '../../data/sicily/units.json';
 import counters from '../../data/sicily/counters.json';
 import backs from '../../data/sicily/counter_backs.json';
-import { sicilyChitSvg, sicilyBlockSvg, sicilyBackSvg, restricted, sicilyControl, sicilyTrack, SICILY_WOOD, type SCounter, type SUnit, type Nation } from './sicily-art';
+import { sicilyChitSvg, sicilyBlockSvg, sicilyBackSvg, restricted, sicilyControl, sicilyTrack, loadSicilyChitArt, SICILY_WOOD, type SCounter, type SUnit, type Nation } from './sicily-art';
 import { loadChitArt } from './chits';
 
 const svgUri = (s: string) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
@@ -34,4 +34,4 @@ function dump() {
     wood: SICILY_WOOD,
   };
 }
-loadChitArt().then(() => { sheets(); dump(); document.body.dataset.ready = '1'; });
+Promise.all([loadChitArt(), loadSicilyChitArt()]).then(() => { sheets(); dump(); document.body.dataset.ready = '1'; });
