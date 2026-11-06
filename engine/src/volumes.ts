@@ -11,6 +11,11 @@ import golanUnits from '../../data/golan73/units.json';
 import golanCounters from '../../data/golan73/counters.json';
 import golanSetups from '../../data/golan73/setups.json';
 import golanTrack from '../../data/golan73/turn_track.json';
+import sicilyUnits from '../../data/sicily/units.json';
+import sicilyCounters from '../../data/sicily/counters.json';
+import sicilySetups from '../../data/sicily/setups.json';
+import sicilyTrack from '../../data/sicily/turn_track.json';
+import { engineMap as sicilyEngineMap } from './sicily/map';
 import type { Game, Unit, Battle, Opts, Opt, OptionalRule } from './game';
 import type { Chit } from './chits';
 import type { Shooter, Target, Setting, Quality } from './combat';
@@ -22,7 +27,9 @@ export interface Area { id: number; name: string; tdn: number; zone: number; vp:
 export interface Conn { a: number; b: number; type: 'road' | 'field' | 'special'; mp: number; river: boolean; restricted: boolean; army_boundary: boolean;
   atDitch?: boolean; wadi?: boolean; escarpment?: boolean; rugged?: boolean; samBarrier?: boolean; sector?: boolean; hermon?: boolean;
   /** Printed only on this scenario's map sheet (with its own MP cost; once: one unit per Movement Phase). */
-  sheet?: string; once?: boolean }
+  sheet?: string; once?: boolean;
+  /** Sicily: the arrow from a landing box or a port box to its coastal area (14.21, 14.23). */
+  landing?: boolean; port?: boolean }
 export interface MapData { size: [number, number]; areas: Area[]; connections: Conn[] }
 export interface TrackRow { ge: number[]; al: number[]; sd: number[] | null }      // draws [first player's turn, second player's turn] for the first (ge) and second (al) player; sd: net VP for sudden death [first, second]
 
@@ -112,6 +119,21 @@ export interface Volume {
   /** The set-up step is over: true if the volume started the first phase itself (Golan's historical set-up opens with the Syrian Combat Phase). */
   afterDeploy?: (g: Game) => boolean;
   quality?: (u: Unit) => Quality;
+  /** A unit's own supply check in the Supply Phase (Sicily: by nationality, 14.92); default: inSupply of its side. */
+  unitSupply?: (g: Game, u: Unit) => boolean;
+  /** Extra Admin Phase draws for a side (Sicily 16.5: one per undamaged port held and occupied). */
+  extraDraws?: (g: Game, side: Side) => number;
+  /** 14.28 (Sicily): the unit may retreat to sea from this area when no other retreat is open. */
+  seaRetreat?: (g: Game, u: Unit, from: number) => boolean;
+  /** Why the attacker may not abort this battle (Sicily's airborne assault, 14.27a); null: it may. */
+  canAbort?: (g: Game, b: Battle) => string | null;
+  /** The Special Actions a side may use now, after the volume's own rules (Sicily 17.11: Patton's two-event cost). */
+  saFilter?: (g: Game, side: Side, list: Chit[], ech?: string) => Chit[];
+  onSpendSA?: (g: Game, side: Side, c: Chit) => void;
+  /** A battle may be opened here outside a Combat Phase (Sicily's Flanking Invasion lands into a defended area in the Admin Phase, 17.22). */
+  battleAllowed?: (g: Game, area: number) => boolean;
+  /** May this unit take a reserve marker (beyond the series conditions)? */
+  reserveOk?: (g: Game, u: Unit) => boolean;
 }
 
 export const VOLUMES: Record<string, Volume> = {};
@@ -140,6 +162,13 @@ VOLUMES.bulge = data({ id: 'bulge', name: 'The Bulge', sides: ['german', 'allied
         ...Object.entries(golanSetups as unknown as Record<string, { sheet?: { links: { a: number; b: number; mp: number; once?: boolean }[] } }>).flatMap(([id, sc]) => (sc.sheet?.links ?? []).map((l) => ({ a: l.a, b: l.b, type: 'field' as const, mp: l.mp, river: false, restricted: false, army_boundary: false, sheet: id, once: l.once })))] },
     units: golanUnits as unknown[], counters: golanCounters as unknown[], scenarios: golanSetups as unknown as Record<string, unknown>,
     entries: { ...Object.fromEntries(m.entries.map((e) => [e.letter, { side: 'syrian', area: e.area }])), A: { side: 'israeli', area: 101 }, B: { side: 'israeli', area: 102 } }, track });
+}
+{ // Sicily: the hand-drawn map with its landing and port boxes (engine/src/sicily/map.ts), the Vassal units and counters, the three Play Book scenarios, the turn track
+  const t = (sicilyTrack as unknown as { turns: Record<string, { allied: [number, number]; axis: [number, number]; sudden_death: [number, number] | null }> }).turns;
+  const track: TrackRow[] = Object.keys(t).sort((a, b) => +a - +b).map((k) => ({ ge: t[k].allied, al: t[k].axis, sd: t[k].sudden_death }));
+  VOLUMES.sicily = data({ id: 'sicily', name: 'Sicily', sides: ['allied', 'axis'], tag: { allied: 'AL', axis: 'AX' }, sideName: { allied: 'Allied', axis: 'Axis' },
+    map: sicilyEngineMap(), units: sicilyUnits as unknown[], counters: sicilyCounters as unknown[], scenarios: sicilySetups as unknown as Record<string, unknown>,
+    entries: {}, track });
 }
 CUR = VOLUMES.bulge;
 /** Attach a volume's rule hooks. */

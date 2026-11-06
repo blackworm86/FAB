@@ -81,7 +81,7 @@ describe('2016 series changes, The Bulge', () => {
   });
   it('6.22/6.23: at most eight battle assets for the Attacker', () => {
     E.useGame('bulge'); const g = E.newGame(3); const a = E.mustFight(g)[0], b = E.startBattle(g, a);
-    const att = b.attacker, ech = g.units.find((u) => u.area === a && u.side === att && !u.garrison)!.ech;
+    const att = b.attacker, ech = g.units.find((u) => u.area === a && u.side === att && !u.garrison)!.ech ?? '';
     const pool = g.chits.filter((c) => c.side === att && E.isBattleAsset(c)).slice(0, 10);
     for (const c of pool) { c.box = 'available'; c.ech = ech; }
     let n = 0, err: string | null = null;

@@ -1,0 +1,131 @@
+{
+ "source": "the Turn Record Chart printed on the map: Admin Phase draws per side [first Admin Phase of the turn (Allied player turn), second (Axis player turn)]; the Allies add one per undamaged port they hold and occupy (16.5); sudden death [Allied, Axis] net VPs from turn 4 (19.4)",
+ "turns": {
+  "1": {
+   "name": "July 10-11",
+   "allied": [
+    0,
+    0
+   ],
+   "axis": [
+    0,
+    0
+   ],
+   "sudden_death": null
+  },
+  "2": {
+   "name": "July 12-13",
+   "allied": [
+    11,
+    5
+   ],
+   "axis": [
+    10,
+    5
+   ],
+   "sudden_death": null
+  },
+  "3": {
+   "name": "July 14-15",
+   "allied": [
+    11,
+    5
+   ],
+   "axis": [
+    10,
+    5
+   ],
+   "sudden_death": null
+  },
+  "4": {
+   "name": "July 16-17",
+   "allied": [
+    11,
+    5
+   ],
+   "axis": [
+    9,
+    5
+   ],
+   "sudden_death": [
+    2,
+    8
+   ]
+  },
+  "5": {
+   "name": "July 18-19",
+   "allied": [
+    11,
+    5
+   ],
+   "axis": [
+    8,
+    4
+   ],
+   "sudden_death": [
+    3,
+    7
+   ]
+  },
+  "6": {
+   "name": "July 20-22",
+   "allied": [
+    11,
+    5
+   ],
+   "axis": [
+    7,
+    4
+   ],
+   "sudden_death": [
+    4,
+    6
+   ]
+  },
+  "7": {
+   "name": "July 23-25",
+   "allied": [
+    11,
+    5
+   ],
+   "axis": [
+    6,
+    3
+   ],
+   "sudden_death": [
+    5,
+    5
+   ]
+  },
+  "8": {
+   "name": "July 26-28",
+   "allied": [
+    11,
+    5
+   ],
+   "axis": [
+    5,
+    3
+   ],
+   "sudden_death": [
+    6,
+    4
+   ]
+  },
+  "9": {
+   "name": "July 29-31",
+   "allied": [
+    11,
+    5
+   ],
+   "axis": [
+    4,
+    2
+   ],
+   "sudden_death": [
+    7,
+    3
+   ]
+  }
+ }
+}

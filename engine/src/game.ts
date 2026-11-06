@@ -26,6 +26,7 @@ export interface Unit {
   box?: string;   /** an off-map holding box of the volume (Golan: Operational/Strategic Reserve, Air Assault, strongpoint pool, evacuated, deploy, arriving) */
   disorder: 0 | 1 | 2; unsupplied: boolean; moved: boolean; reserve: string | null; exploit: boolean; from?: number;
   arrival?: number; entry?: string[]; ech?: string; symbol?: string; code?: string;
+  nation?: string; untried?: boolean; motorized?: boolean;   /** Sicily: the block's nationality; an untried Italian garrison not yet in battle (15.3); the motorized Livorno (15.1) */
   chitId?: string; interdict?: string; adjOnly?: boolean; peiperFull?: boolean; spent?: number; delayed?: boolean; paradrop?: 'pending' | 'intact' | 'partial'; heydte?: boolean; bcross?: boolean;
   rec?: number;  /** recovery markers taken from artillery this round (Golan optional artillery vs armour) */
   up?: number;   /** area where the block lies face-up after a battle (6.24); it is upright, so hidden from the enemy, whenever it is elsewhere */
@@ -309,7 +310,7 @@ function drawChits(g: Game, side: Side, n: number) {
   for (let i = 0; i < n; i++) {
     const cup = boxOf(g, side, 'cup'); if (!cup.length) return;
     const c = cup[Math.floor(rngf(g) * cup.length)];
-    if (c.kind === 'event_delayed_response') { c.box = 'eliminated'; say(g, `${side} drew Delayed Response (no effect)`, side); } else { c.box = 'available'; c.drawn = g.turn * 10 + (g.phasing === sidesOf(g)[0] ? 1 : 2); }
+    if (c.kind === 'event_delayed_response' || c.kind === 'event_asset_delayed') { c.box = 'eliminated'; say(g, `${side} drew ${c.name} (no effect)`, side); } else { c.box = 'available'; c.drawn = g.turn * 10 + (g.phasing === sidesOf(g)[0] ? 1 : 2); }
   }
 }
 export const rngf = (g: Game) => (secure ? (g.rolls++, secure()) : rng(g.seed * 104729 + g.rolls++)());
@@ -394,7 +395,7 @@ export function placeTaskForce(g: Game, id: string, area: number) {
 const bulgeMarkerKey = (_g: Game, u: Unit) => (u.side === 'german' ? `z${zoneOf(u.area!)}` : zoneOf(u.area!) === 7 ? 'z7' : 'z56');
 const markerKey = (g: Game, u: Unit) => CUR.markerKey(g, u);
 export function canReserve(g: Game, u: Unit) {
-  return u.area != null && !u.garrison && !u.fort && (!u.ghost || !!CUR.ghostsMove?.(g)) && !u.reserve && !u.moved && !u.unsupplied && u.disorder === 0 && !contested(g, u.area) && (g.markers[u.side]?.[markerKey(g, u)] ?? 0) > 0;
+  return u.area != null && !u.garrison && !u.fort && (!u.ghost || !!CUR.ghostsMove?.(g)) && !u.reserve && !u.moved && !u.unsupplied && u.disorder === 0 && !contested(g, u.area) && (g.markers[u.side]?.[markerKey(g, u)] ?? 0) > 0 && (CUR.reserveOk?.(g, u) ?? true);
 }
 export function setReserve(g: Game, id: string, on: boolean) {
   const u = g.units.find((x) => x.id === id)!;
@@ -525,13 +526,14 @@ export function stratMove(g: Game, id: string, to: number) {
 export function saAvailable(g: Game, side: Side, ech?: string) {
   const blk = boxOf(g, side, 'available').find((c) => c.kind === 'sa_block');
   const ev = boxOf(g, side, 'available').filter((c) => c.kind === 'special_action_event' && (!ech || c.ech === ech || c.ech === 'us_sr' || ech === 'us_sr'));
-  return [...(blk ? [blk] : []), ...ev];
+  const list = [...(blk ? [blk] : []), ...ev];
+  return CUR.saFilter ? CUR.saFilter(g, side, list, ech) : list;
 }
 /** Spend a Special Action: the one the player chose (`chitId`), or else the first that fits (the reusable block first). */
 export function spendSA(g: Game, side: Side, ech?: string, why = 'Special Action', chitId?: string) {
   const ok = saAvailable(g, side, ech), c = chitId ? ok.find((x) => x.id === chitId) : ok[0];
   if (!c) throw new Error(chitId ? 'that Special Action cannot be used for this unit (8.1: an event only helps its own Higher Echelon)' : 'no Special Action available');
-  c.box = c.kind === 'sa_block' ? 'used' : 'eliminated'; say(g, `${side} spends ${c.kind === 'sa_block' ? 'the reusable Special Action' : 'a Special Action event'}: ${why}`, side); return c;
+  c.box = c.kind === 'sa_block' ? 'used' : 'eliminated'; say(g, `${side} spends ${c.kind === 'sa_block' ? 'the reusable Special Action' : 'a Special Action event'}: ${why}`, side); CUR.onSpendSA?.(g, side, c); return c;
 }
 const needAdmin = (g: Game) => { if (g.phase !== 'admin') throw new Error('only in the Admin Phase'); };
 export const suppliedArea = (g: Game, side: Side, a: number) => g.control[a] === side && inSupply(g, side, a) && !contested(g, a);
@@ -706,7 +708,7 @@ function fixPoint(g: Game, b: Battle) {
 export function startBattle(g: Game, a: number, viaSA = false, chitId?: string): Battle {
   if (g.battle) throw new Error('a battle is already open');
   const bt = g.phase === 'btCombat';
-  if ((g.phase !== 'combat' && !bt) || !contested(g, a) || g.fought.includes(a)) throw new Error('no battle here');
+  if ((g.phase !== 'combat' && !bt && !CUR.battleAllowed?.(g, a)) || !contested(g, a) || g.fought.includes(a)) throw new Error('no battle here');
   const att = fighters(g, a, g.phasing, true).filter((u) => !u.garrison), def = fighters(g, a, other(g.phasing), false);
   if (!att.length) throw new Error('no attacker in good order');
   let lockedAtStart = false;
@@ -929,6 +931,7 @@ export function chooseFirstLoss(g: Game, b: Battle, key: string) {
 export function attackerChoice(g: Game, b: Battle, abort: boolean) {
   if (b.stage !== 'attChoice') throw new Error('no choice pending');
   if (abort) {
+    { const why = CUR.canAbort?.(g, b); if (why) throw new Error(why); }
     const us = unitsIn(g, b.area, b.attacker).filter((u) => !u.garrison);
     if (b.riverAssault) for (const u of us) { const from = u.from; if (from != null && g.control[from] === b.attacker && !unitsIn(g, from, other(b.attacker)).length && blocks(g, from, b.attacker).length < stackMax(g, from) && (!CUR.retreatOk || CUR.retreatOk(g, u, b.area, from))) { u.area = from; CUR.onRetreat?.(g, u, b.area, from); } else if (from != null) stepLoss(g, b, b.attacker, u.id); }
     for (const u of us) if (u.area != null) u.disorder = 1;                                      // the ones that fell back are disordered too
@@ -978,8 +981,12 @@ export function retreatOptions(g: Game, b: Battle): number[] {
   const u = g.units.find((x) => x.id === r.queue[0]);                                        // the unit retreating now
   const room = (n: number) => (u ? roomFor(g, u, n) : blocks(g, n, r.side).length < stackMax(g, n));
   const opts = [...retreatPaths(g, b, r.side, u).keys()].filter(room);
-  return u && CUR.retreatPrefer ? CUR.retreatPrefer(g, u, b.area, opts) : opts;
+  let out = u && CUR.retreatPrefer ? CUR.retreatPrefer(g, u, b.area, opts) : opts;
+  if (!out.length && u && CUR.seaRetreat?.(g, u, b.area)) out = [SEA];                        // Sicily 14.28: to sea when nothing else is open
+  return out;
 }
+/** A retreat destination that is not an area: the sea (Sicily's At Sea box, 14.28). */
+export const SEA = -1;
 /** The retreat routes from the battle area: each reachable destination and the way there (adjoining areas with room first; past full ones only when all are full). */
 function retreatPaths(g: Game, b: Battle, side: Side, u: Unit | undefined): Map<number, number[]> {
   const ok = (f: number, n: number) => g.control[n] === side && !unitsIn(g, n, other(side)).length && (!u || !CUR.retreatOk || CUR.retreatOk(g, u, f, n));
@@ -1012,6 +1019,7 @@ function advanceRetreat(g: Game, b: Battle) {
 }
 function moveRetreat(g: Game, b: Battle, u: Unit, to: number) {
   if (u.area == null) return;
+  if (to === SEA) { const from = u.area; if (b.retreat!.after !== 'sa') u.disorder = 1; b.retreat!.moved = true; u.area = null; u.box = 'at_sea'; dropReserve(g, u); CUR.onRetreat?.(g, u, from, SEA); updateControl(g, from); say(g, `${u.name} retreats to sea (14.28)`); return; }
   const path = retreatPaths(g, b, b.retreat!.side, u).get(to) ?? [u.area, to];               // past full areas when it must (6.6)
   if (b.retreat!.after !== 'sa') u.disorder = 1; b.retreat!.moved = true;                    // 8.24 a retreat before combat does not disorder
   for (let i = 1; i < path.length && u.area != null; i++) { const from = path[i - 1]; u.area = path[i]; CUR.onRetreat?.(g, u, from, path[i]); updateControl(g, from); updateControl(g, path[i]); }
@@ -1109,7 +1117,7 @@ function placeRiverAssaults(g: Game) {
 function supplyPhase(g: Game) {
   CUR.onPhase?.(g, 'supply', 'start');
   for (const a of areas.keys()) updateControl(g, a);
-  for (const u of g.units.filter((x) => x.area != null && !x.garrison)) u.unsupplied = !(CUR.alwaysSupplied?.(g, u) || inSupply(g, u.side, u.area!));
+  for (const u of g.units.filter((x) => x.area != null && !x.garrison)) u.unsupplied = !(CUR.alwaysSupplied?.(g, u) || (CUR.unitSupply ? CUR.unitSupply(g, u) : inSupply(g, u.side, u.area!)));
   for (const u of g.units.filter((x) => x.area != null && x.fort)) u.unsupplied = false;                                   // strongpoints are always in supply (Golan 15.6)
   for (const u of g.units.filter((x) => x.area != null && !x.unsupplied && x.disorder)) if (!CUR.recoverOk || CUR.recoverOk(g, u)) u.disorder = u.disorder === 2 ? 0 : 2;
   g.riverAssault = [];
@@ -1201,8 +1209,9 @@ export function endPhase(g: Game) {
 }
 function drawFor(g: Game) {
   const [p1, p2] = sidesOf(g), i = g.phasing === p1 ? 0 : 1, t = (g.track ?? CUR.track)[g.turn - 1];
-  drawChits(g, p1, t.ge[i]); drawChits(g, p2, t.al[i]);
-  say(g, `Admin draws: ${CUR.sideName[p1]} ${t.ge[i]}, ${CUR.sideName[p2]} ${t.al[i]}`);
+  const x1 = CUR.extraDraws?.(g, p1) ?? 0, x2 = CUR.extraDraws?.(g, p2) ?? 0;
+  drawChits(g, p1, t.ge[i] + x1); drawChits(g, p2, t.al[i] + x2);
+  say(g, `Admin draws: ${CUR.sideName[p1]} ${t.ge[i] + x1}, ${CUR.sideName[p2]} ${t.al[i] + x2}`);
   CUR.afterDraw?.(g);
 }
 /** The Bulge's scenario results: the Introductory and Cold Shoulder sheets, else the Tournament or Campaign table. */
