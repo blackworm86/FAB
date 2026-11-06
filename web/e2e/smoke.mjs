@@ -3,7 +3,7 @@
 import { chromium, devices } from 'playwright';
 
 const BASE = process.env.BASE ?? 'http://localhost:5199/';
-const GAMES = ['bulge', 'golan73', 'sicily'];
+const GAMES = process.env.GAMES?.split(',') ?? ['bulge', 'golan73', 'sicily'];
 const SIZES = { desktop: { viewport: { width: 1380, height: 860 } }, phone: { ...devices['iPhone 13'] } };
 const RULE = { bulge: '4.33', golan73: '14.02', sicily: '14.22' };
 let failed = 0;
@@ -23,7 +23,9 @@ for (const game of GAMES) for (const [size, opts] of Object.entries(SIZES)) {
   check(await page.evaluate((id) => window.__fab.g.game === id || (id === 'bulge' && !window.__fab.g.game), game), 'the right game is loaded');
 
   // a game that starts with a set-up step (Sicily): the quick set-up first
-  await page.evaluate(() => { const F = window.__fab, g = structuredClone(F.g); if (g.phase === 'deploy' && F.E.sicily && g.game === 'sicily') { F.E.sicily.autoDeploy(g); F.E.endPhase(g); F.setGame(g); } });
+  await page.evaluate(() => { const F = window.__fab, E = F.E, g = structuredClone(F.g); if (g.phase === 'deploy' && g.game === 'sicily') { E.sicily.autoDeploy(g); E.endPhase(g);
+    for (const b of E.sicily.beachheads(g)) for (const u of E.unitsIn(g, b.id)) { const o = E.moveOptions(g, u.id); if (o.length) E.move(g, u.id, o[0].area); }      // the landings, so there are battles to fight
+    F.setGame(g); } });
   await page.waitForTimeout(500);
   // a few steps of the turn: press the main button while it is enabled
   for (let i = 0; i < 4; i++) { const go = page.locator('.c-bar button.go:not([disabled])'); if (!(await go.count())) break; await go.click().catch(() => {}); await page.waitForTimeout(400); }
