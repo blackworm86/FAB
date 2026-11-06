@@ -208,7 +208,7 @@ describe('alternate set-up (22.2)', () => {
     expect(() => endPhase(g)).toThrow(/place every unit/);
     golan.autoStrongpoints(g, 'shuffle');
     for (const u of g.units.filter((x) => x.box === 'deploy')) golan.deploy(g, u.id, golan.deployOptions(g, u.id)[0]);
-    golan.deployReserve(g, 'S01'); golan.deployReserve(g, 'S02'); expect(() => golan.deployReserve(g, 'S03')).toThrow(/both/);
+    golan.deployReserve(g, 'S01'); golan.deployReserve(g, 'S02'); expect(() => golan.deployReserve(g, 'S03')).toThrow(/every reserve marker/);
     expect(() => endPhase(g)).toThrow(/minefields/); golan.autoMinefields(g);
     endPhase(g); expect([g.turn, g.phasing, g.phase]).toEqual([1, 'syrian', 'movement']);
     playOut(g); expect(g.over).toMatch(/victory|draw/i);

@@ -4,7 +4,8 @@ import { moveOptions, inSupply, endPhase, victory, neighbors, setPlayArea, golan
 const finalResult = (g: Game, net: number) => VOLUMES.golan73.finalResult!(g, net);
 import { newGolanGame, unit, chit, move, runTo } from './golan-helpers';
 
-const nafakh = (seed = 3): Game => newGolanGame(seed, 'nafakh' as 'badr');
+/** The scenario as it starts play: Israel's minefield laid, then the Syrian Movement Phase of turn 1 (22.44). */
+const nafakh = (seed = 3): Game => { const g = newGolanGame(seed, 'nafakh' as 'badr'); golan.autoMinefields(g); endPhase(g); return g; };
 const to = (g: Game, id: string) => moveOptions(g, id).map((o) => o.area).sort((a, b) => a - b);
 
 describe('Battle for Nafakh (22.4)', () => {
@@ -63,5 +64,17 @@ describe('Battle for Nafakh (22.4)', () => {
   it('leaves Operation Badr untouched: no sheet links on the full map', () => {
     setPlayArea(null); expect(neighbors(48)).not.toContain(golan.REAR); expect(neighbors(36)).not.toContain(golan.ASSEMBLY.A);
     const g = newGolanGame(2); expect(g.inPlay).toBeUndefined(); expect(move).toBeTypeOf('function');
+  });
+  it('set-up (22.44): Israel lays one minefield besides the one at Ein Zivan-Bunker 109, and may mark one unit as reserve', () => {
+    const g = newGolanGame(3, 'nafakh' as 'badr'), V = golan.state(g);
+    expect(g.phase).toBe('deploy'); expect(V.minesLeft).toBe(1); expect(V.minefields).toContain('47-48');
+    expect(() => endPhase(g)).toThrow(/minefield/);
+    const opts = golan.minefieldOptions(g); expect(opts.length).toBeGreaterThan(0);
+    for (const k of opts) expect(k.split('-').map(Number).every((a) => g.inPlay!.includes(a))).toBe(true);            // on the sheet only
+    const [a, b] = opts[0].split('-').map(Number); golan.placeMinefield(g, a, b);
+    const mine = g.units.find((u) => u.side === 'israeli' && !u.garrison && u.area != null && u.area < 100)!, two = g.units.filter((u) => u.side === 'israeli' && !u.garrison && u.area != null && u.area < 100)[1];
+    golan.deployReserve(g, mine.id); expect(mine.reserve).toBe('res'); expect(() => golan.deployReserve(g, two.id)).toThrow(/every reserve marker/);
+    expect(() => golan.deployReserve(g, g.units.find((u) => u.side === 'syrian' && u.area != null && !u.garrison)!.id)).toThrow();   // Syria has none at start
+    endPhase(g); expect(g.phase).toBe('movement'); expect(g.phasing).toBe('syrian'); expect(mine.reserve).toBe('res');
   });
 });

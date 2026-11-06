@@ -139,12 +139,15 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
     if (mines) {
       const keys = G.minefieldOptions(g).map((k) => k.split('-').map(Number)), ends = [...new Set(keys.flat())];
       const second = (a: number) => keys.filter((k) => k.includes(a)).map((k) => (k[0] === a ? k[1] : k[0]));
-      out.push(`<div class="volpanel"><b>${ctx.ico('warn')} Minefields (14.02)</b><span>${mines} of 3 still to lay, on any boundary but the AT ditch, escarpment, river, Mt Hermon or rugged ones; no area may have two mined boundaries.</span><div class="row">${ctx.ubtn('Lay a minefield', () => ctx.pickArea('Minefield: first area', ends, (a) => ctx.pickArea(`Minefield from ${ctx.areaName(a)}: the area across the boundary`, second(a), (b) => G.placeMinefield(live(), a, b))), 'primary')}${ctx.btn('Lay the rest at random', () => G.autoMinefields(g))}</div></div>`);
+      out.push(`<div class="volpanel"><b>${ctx.ico('warn')} Minefields (14.02)</b><span>${mines} still to lay, on any boundary but the AT ditch, escarpment, river, Mt Hermon or rugged ones; no area may have two mined boundaries.</span><div class="row">${ctx.ubtn('Lay a minefield', () => ctx.pickArea('Minefield: first area', ends, (a) => ctx.pickArea(`Minefield from ${ctx.areaName(a)}: the area across the boundary`, second(a), (b) => G.placeMinefield(live(), a, b))), 'primary')}${ctx.btn('Lay the rest at random', () => G.autoMinefields(live()))}</div></div>`);
     }
   }
-  if (g.phase === 'deploy' && g.opts.scenario === 'badr_alt' && ctx.mine('syrian')) {                // 22.25: two reserve markers on placed units
-    const left = g.markers.syrian?.res ?? 0, placed = [...new Set(g.units.filter((u) => u.side === 'syrian' && u.area != null && !u.garrison && !u.reserve).map((u) => u.area!))];
-    out.push(`<div class="volpanel"><b>${ctx.ico('next')} Reserve markers (22.25)</b><span>${left} of 2 left to put on Syrian units you have placed.</span><div class="row">${ctx.ubtn('Mark a unit as reserve', () => ctx.pickArea('Reserve marker', placed, (a) => G.deployReserve(live(), g.units.find((u) => u.side === 'syrian' && u.area === a && !u.garrison && !u.reserve)!.id)), '', !left || !placed.length)}</div></div>`);
+  for (const sd of E.sidesOf(g)) {                                                                   // reserve markers placed at set-up (22.25, 20.34-20.35, 22.44)
+    const r = G.setupReserves(g, sd); if (!r.max || !ctx.mine(sd)) continue;
+    const left = G.reservesLeft(g, sd), marked = g.units.filter((u) => u.side === sd && u.reserve).length, ok = (u: E.Unit) => u.side === sd && u.area != null && u.area < 100 && !u.garrison && !u.fort && !u.ghost;
+    const free = [...new Set(g.units.filter((u) => ok(u) && !u.reserve).map((u) => u.area!))], on = [...new Set(g.units.filter((u) => ok(u) && u.reserve).map((u) => u.area!))];
+    const pick = (areas: number[], label: string, want: boolean) => ctx.pickArea(label, areas, (a) => { const x = live(), u = x.units.find((v) => ok(v) && v.area === a && !!v.reserve === want); if (u) G.deployReserve(x, u.id); });
+    out.push(`<div class="volpanel"><b>${ctx.ico('next')} Reserve markers</b><span>${r.all ? `${left} of ${r.max} still to place` : `You may mark ${r.max === 1 ? 'one unit' : `up to ${r.max} units`} (${left} left)`} on ${nm(sd)} units already on the map; reserves may move later in the turn.</span><div class="row">${ctx.ubtn('Mark a unit as reserve', () => pick(free, 'Reserve marker', false), r.all ? 'primary' : '', !left || !free.length)}${marked ? ctx.ubtn('Take one back', () => pick(on, 'Take the reserve marker off', true)) : ''}${r.all && left ? ctx.btn('Place the rest at random', () => G.autoReserves(live(), sd)) : ''}</div></div>`);
   }
   if (G.isAlOwda(g) && g.phase === 'deploy') {
     const at = G.alowdaRaidAreas(g), cmd = G.alowdaCommandos(g);

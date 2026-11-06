@@ -4,7 +4,7 @@ import { endPhase, victory, golan, type Game } from '../src';
 import { newGolanGame, unit, chit, playOut, runTo } from './golan-helpers';
 
 const alowda = (seed = 4): Game => newGolanGame(seed, 'alowda' as 'badr');
-const placeAll = (g: Game) => { golan.autoStrongpoints(g, 'historical'); for (const u of g.units.filter((x) => x.box === 'deploy')) golan.deploy(g, u.id, golan.deployOptions(g, u.id)[0]); golan.autoMinefields(g); };
+const placeAll = (g: Game) => { golan.autoStrongpoints(g, 'historical'); for (const u of g.units.filter((x) => x.box === 'deploy')) golan.deploy(g, u.id, golan.deployOptions(g, u.id)[0]); golan.autoMinefields(g); golan.autoReserves(g); };
 
 describe('Operation Al-Owda (20.3)', () => {
   it('sets up from the cards: six turns, Mt Hermon Syrian, sixteen Syrian units to place, the cards\' garrisons', () => {
@@ -14,7 +14,7 @@ describe('Operation Al-Owda (20.3)', () => {
     expect(g.units.filter((u) => u.box === 'deploy' && u.side === 'syrian').length).toBe(16); expect(g.units.filter((u) => u.box === 'deploy' && (u.fort || u.ghost)).length).toBe(11);
     for (const id of ['S24', 'S22', 'S17', 'S23']) expect(g.units.some((u) => u.id === id)).toBe(false);
     expect(g.units.filter((u) => u.garrison).map((u) => u.area).sort((a, b) => a! - b!)).toEqual([22, 30, 42, 46]);
-    expect(unit(g, 'I03').area).toBe(31);
+    expect(unit(g, 'I03').area).toBe(30);                                                     // the card prints 30 (Tel Faris) on the 53/188th(-)
     expect(golan.isNight(g)).toBe(false); g.turn = 2; expect(golan.isNight(g)).toBe(false);
   });
   it('reinforcements and chits arrive on the card\'s turns, not the labels', () => {
@@ -46,5 +46,16 @@ describe('Operation Al-Owda (20.3)', () => {
     const g = alowda(); expect(victory(g).israeli).toBeGreaterThanOrEqual(3);
     placeAll(g); endPhase(g); expect(g.phase).toBe('movement'); expect(g.turn).toBe(1);
     playOut(g); expect(g.over).toMatch(/Victory|Draw/); expect(g.turn).toBe(6);
+  });
+  it('set-up: the seven Israeli units in the areas printed on the card; both sides must place all their reserve markers (20.34-20.35)', () => {
+    const g = alowda();
+    expect(Object.fromEntries(['I05', 'I07', 'I08', 'I04', 'I01', 'I03', 'I06'].map((id) => [id, unit(g, id).area]))).toEqual({ I05: 42, I07: 52, I08: 52, I04: 37, I01: 2, I03: 30, I06: 51 });
+    golan.autoStrongpoints(g, 'historical'); for (const u of g.units.filter((x) => x.box === 'deploy')) golan.deploy(g, u.id, golan.deployOptions(g, u.id)[0]); golan.autoMinefields(g);
+    expect(golan.reservesLeft(g, 'israeli')).toBe(4); expect(golan.reservesLeft(g, 'syrian')).toBe(2);
+    expect(() => endPhase(g)).toThrow(/reserve markers/);
+    golan.deployReserve(g, 'I05'); expect(golan.reservesLeft(g, 'israeli')).toBe(3);
+    golan.autoReserves(g); expect(golan.reservesLeft(g, 'israeli')).toBe(0); expect(golan.reservesLeft(g, 'syrian')).toBe(0);
+    expect(g.units.filter((u) => u.reserve && u.side === 'israeli')).toHaveLength(4); expect(g.units.filter((u) => u.reserve && u.side === 'syrian')).toHaveLength(2);
+    endPhase(g); expect(g.phase).toBe('movement'); expect(g.phasing).toBe('syrian');
   });
 });

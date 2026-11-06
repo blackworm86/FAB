@@ -1292,7 +1292,7 @@ export function actorOf(g: Game): Side | 'both' {
   if (g.pendingBlow) { const u = g.units.find((x) => x.id === g.pendingBlow!.unit); return u ? other(u.side) : 'both'; }
   const b = g.battle;
   if (b) return b.stage === 'setup' ? 'both' : ['defArty', 'defFire', 'defChoice', 'retreat'].includes(b.stage) ? other(b.attacker) : b.attacker;
-  if (g.phase === 'admin' || g.phase === 'reinforcement') return 'both';
+  if (g.phase === 'admin' || g.phase === 'reinforcement' || g.phase === 'deploy') return 'both';         // the set-up: each side places its own pieces
   return g.phase === 'reaction' ? other(g.phasing) : g.phasing;
 }
 const PHASE_ORDER: Phase[] = ['reinforcement', 'admin', 'movement', 'strategic', 'combat', 'reaction', 'btMove', 'btCombat', 'supply'];

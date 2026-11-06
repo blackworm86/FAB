@@ -108,18 +108,18 @@ function newGolanGame(seed: number, opts: Partial<{ scenario: string }>): Game {
 
 /* ================= 22.4 Battle for Nafakh: its own map sheet, four turns, from the Syrian Movement Phase of turn 1 ================= */
 type Nafakh = { turns: number; areas_in_play: number[]; units: { id: string; area?: number; box?: string; recovering?: boolean }[]; reduced: Record<string, number>;
-  on_map_chits: { id: string; area: number }[]; garrisons: { id: string; area: number }[]; available: Record<Side, string[]>; minefields: { fixed: number[][] };
+  on_map_chits: { id: string; area: number }[]; garrisons: { id: string; area: number }[]; available: Record<Side, string[]>; minefields: { fixed: number[][]; player_placed?: number };
   reserve: { markers: Record<Side, number> }; special_action_release: { id: string; turns: number[] };
   reinforcements: Record<string, Record<Side, { units: { id: string; entry: string[]; steps?: number }[]; chits: string[] }>>;
   sheet: { entry: Record<string, number>; control_israeli: number[]; supply: Record<Side, number[]>; track: Record<string, Record<Side, number[]>> } };
 const NAF = (setupsJson as unknown as Record<string, Nafakh>).nafakh;
 const nafBox = (b: string) => (b === 'northern_assembly' ? NAF_NORTH : b === 'syrian_rear_area' ? REAR : NAF.sheet.entry[b]);
 function nafakhSetup(g: Game): Game {
-  g.opts = { scenario: 'nafakh', fuel: false }; g.lastTurn = NAF.turns; g.phasing = 'syrian'; g.phase = 'movement'; g.log = [];
+  g.opts = { scenario: 'nafakh', fuel: false }; g.lastTurn = NAF.turns; g.phasing = 'israeli'; g.phase = 'deploy'; g.log = [];          // 22.44: Israel lays its minefield and may mark one reserve, then the Syrian Movement Phase of turn 1
   g.inPlay = [...NAF.areas_in_play, NAF_NORTH, REAR];
   g.track = Array.from({ length: NAF.turns }, (_, i) => ({ ge: NAF.sheet.track[i + 1].syrian, al: NAF.sheet.track[i + 1].israeli, sd: null }));
   g.riverAssault = []; g.fieldWorks = []; g.markers = { syrian: { res: NAF.reserve.markers.syrian }, israeli: { res: NAF.reserve.markers.israeli } };
-  const V = state(g); V.freeCombatRound = 0; V.minefields = NAF.minefields.fixed.map(([a, b]) => edgeKey(a, b)); V.nafakh = { s03Free: false, golani: false, staffOut: false }; V.minesLeft = 0;
+  const V = state(g); V.freeCombatRound = 0; V.minefields = NAF.minefields.fixed.map(([a, b]) => edgeKey(a, b)); V.nafakh = { s03Free: false, golani: false, staffOut: false }; V.minesLeft = NAF.minefields.player_placed ?? 0; V.startAt = 'movement';
   const place = new Map(NAF.units.map((p) => [p.id, p])), arrive = new Map<string, { turn: number; entry: string[]; steps?: number }>();
   for (const [t, sides] of Object.entries(NAF.reinforcements)) for (const s of ['israeli', 'syrian'] as const) for (const r of sides[s].units) arrive.set(r.id, { turn: +t, entry: r.entry, steps: r.steps });
   g.units = g.units.filter((u) => !u.garrison && (place.has(u.id) || arrive.has(u.id) || u.id === NAF.special_action_release.id));
@@ -145,7 +145,7 @@ function nafakhSetup(g: Game): Game {
   }
   for (const a of NAF.areas_in_play) g.control[a] = NAF.sheet.control_israeli.includes(a) ? 'israeli' : 'syrian';   // 22.43
   g.control[NAF_NORTH] = 'israeli'; g.control[REAR] = 'syrian';
-  say(g, 'Battle for Nafakh, October 7th AM: the 1st Tank Division drives on the Israeli command centre. The game opens with the Syrian Movement Phase of turn 1.');
+  say(g, 'Battle for Nafakh, October 7th AM: the 1st Tank Division drives on the Israeli command centre. Israel lays one minefield (the one between Ein Zivan and Bunker 109 is already there) and may put a reserve marker on one unit; then the Syrian Movement Phase of turn 1.');
   return g;
 }
 /** 22.46: the 33rd may leave Tel Fazra only once a Special Action is spent on it. */
@@ -186,7 +186,7 @@ function nafakhResult(g: Game) {
 /* ================= 20.3 Operation Al-Owda (hypothetical): the whole map but Mt Hermon, six turns, the Syrians place their own units =================
    From the scenario rules and the Al-Owda Setup Cards (data/golan73/setups.json "alowda"). Two things remain estimates, the Al-Owda Turn Track
    and Reference Map not being in the repository: the chit draws (the Badr track) and the Israeli VP Line (the Purple Line). */
-type SideCard = { available: string[]; chits: Record<string, string[]>; reserve_markers: number };
+type SideCard = { available: string[]; chits: Record<string, string[]>; reserve_markers: number; start?: Record<string, number> };
 type AlOwda = { turns: number; out_of_play: { units: string[] }; estimates: string;
   israeli: SideCard & { air_support_holding: string[]; garrisons: number[]; vp: number; fixed_reinforcements: Record<string, { id: string; entry: string[] }[]>;
     draw_cup: { start: string[]; ghosts: number; added: Record<string, string[]>; draws: Record<string, number>; entry: Record<string, string[]> } };
@@ -210,6 +210,7 @@ function alowdaSetup(g: Game): Game {
     u.reserve = null; u.from = undefined;
     if (u.side === 'syrian' && regular(u) && u.area != null) { u.box = 'deploy'; u.area = null; }       // 20.35: the sixteen at the player's discretion
     if (syArr.has(u.id)) { u.box = undefined; u.area = null; u.arrival = syArr.get(u.id); u.entry = [...S.entry]; }       // 20.36: any friendly Entry Area V-Z; no Operational or Strategic Reserve
+    if (I.start?.[u.id] != null) { u.area = I.start[u.id]; u.box = undefined; }                          // 20.34: the area printed on the block on the card
     if (fixed.has(u.id)) { u.arrival = fixed.get(u.id)!.turn; u.entry = fixed.get(u.id)!.entry; }
     if (cupIds.has(u.id)) { u.arrival = undefined; u.entry = cup.entry[u.id]; u.box = cup.start.includes(u.id) ? 'draw_cup' : 'draw_later'; }
   }
@@ -223,7 +224,7 @@ function alowdaSetup(g: Game): Game {
     else { c.box = 'future'; c.turn = at.get(c.id)!; }                                                    // the turn on the card, not the label (20.36)
   }
   g.markers = { syrian: { res: S.reserve_markers }, israeli: { res: I.reserve_markers } };
-  say(g, 'Operation Al-Owda: the Syrian plan to attack at dawn. Syria places its sixteen units, one per tank-symbol area, and lands the 181st and 182nd commandos; then the Syrian Movement Phase of turn 1.');
+  say(g, 'Operation Al-Owda: the Syrian plan to attack at dawn. Israel places its strongpoints and ghosts and its four reserve markers; Syria places its sixteen units, one per tank-symbol area, its two reserve markers, and lands the 181st and 182nd commandos; then the Syrian Movement Phase of turn 1.');
   return g;
 }
 /** 20.36: at the start of each Israeli Reinforcement Phase, the listed units go into the Draw Cup, then the listed number is drawn at random; drawn ghosts are set aside. */
@@ -353,6 +354,7 @@ function onPhase(g: Game, phase: string, when: 'start' | 'mid' | 'end') {
   if ((phase === 'movement' || phase === 'btMove' || phase === 'reaction') && when === 'start') { V.crossed = []; V.assaultEntered = {}; }
   if (phase === 'deploy' && when === 'end' && g.units.some((u) => u.box === 'deploy')) throw new Error('place every unit first');
   if (phase === 'deploy' && when === 'end' && V.minesLeft) throw new Error(`place the Israeli minefields first (${V.minesLeft} left, 14.02)`);
+  if (phase === 'deploy' && when === 'end') for (const sd of sidesOf(g)) if (setupReserves(g, sd).all && reservesLeft(g, sd)) throw new Error(`place the ${sd === 'israeli' ? 'Israeli' : 'Syrian'} reserve markers first (${reservesLeft(g, sd)} left)`);
   if (phase === 'admin' && when === 'end') V.intel = undefined;
   if (phase === 'supply' && when === 'mid' && g.phasing === 'israeli') {                              // 16.31b: interdiction lasts to the second player's Supply Phase
     g.interdicted = {};
@@ -777,10 +779,24 @@ export function autoMinefields(g: Game) {
   const front = new Set(PURPLE.flatMap((a) => [a, ...neighbors(a)])), useful = (k: string) => k.split('-').map(Number).every((a) => g.control[a] === 'israeli' && !garea(a).syria && front.has(a));
   for (let k = 0; k < 5 && state(g).minesLeft; k++) { const all = minefieldOptions(g), o = shuffled(g, all.some(useful) ? all.filter(useful) : all, 31 + k); if (!o.length) break; const [a, b] = o[0].split('-').map(Number); placeMinefield(g, a, b); } }
 /** 22.25: in the alternate set-up Syria may put its two reserve markers on units it has placed (toggle). */
+/** Reserve markers placed during the set-up: how many a side may put on its units, and whether all of them must be placed (22.25, 20.34-20.35, 22.44). */
+export function setupReserves(g: Game, side: Side): { max: number; all: boolean } {
+  if (g.phase !== 'deploy') return { max: 0, all: false };
+  if (g.opts.scenario === 'badr_alt') return side === 'syrian' ? { max: 2, all: false } : { max: 0, all: false };
+  if (isAlOwda(g)) return { max: side === 'israeli' ? ALO.israeli.reserve_markers : ALO.syrian.reserve_markers, all: true };
+  if (isNafakh(g)) return side === 'israeli' ? { max: 1, all: false } : { max: 0, all: false };
+  return { max: 0, all: false };
+}
+/** The reserve markers still to place at set-up (0 when the scenario gives none, or all are placed). */
+export const reservesLeft = (g: Game, side: Side) => { const r = setupReserves(g, side); return Math.max(0, Math.min(g.markers[side]?.res ?? 0, r.max - g.units.filter((u) => u.side === side && u.reserve).length)); };
+/** The set-up reserve markers that must be placed, put on placed units at random (the quick set-up). */
+export function autoReserves(g: Game, only?: Side) {
+  for (const sd of sidesOf(g).filter((x) => !only || x === only)) { const pool = shuffled(g, g.units.filter((u) => u.side === sd && regular(u) && u.area != null && !isAssembly(u.area) && !u.reserve), 43); while (reservesLeft(g, sd) && pool.length) deployReserve(g, pool.shift()!.id); }
+}
 export function deployReserve(g: Game, unitId: string) {
-  const u = unit(g, unitId); need(g.phase === 'deploy' && g.opts.scenario === 'badr_alt' && u.side === 'syrian' && regular(u) && u.area != null, 'a placed Syrian unit, during the alternate set-up');
-  if (u.reserve) { u.reserve = null; g.markers.syrian.res++; return; }
-  need(g.markers.syrian.res > 0, 'both reserve markers are already placed'); u.reserve = 'res'; g.markers.syrian.res--;
+  const u = unit(g, unitId), r = setupReserves(g, u.side); need(r.max > 0 && regular(u) && u.area != null && !isAssembly(u.area), 'one of your placed units, during the set-up');
+  if (u.reserve) { u.reserve = null; g.markers[u.side].res++; return; }
+  need(reservesLeft(g, u.side) > 0, 'every reserve marker of the set-up is placed'); u.reserve = 'res'; g.markers[u.side].res--;
 }
 /** End of the set-up: the historical scenario opens with the Syrian Combat Phase (the Operational Movement Phase has taken place, 22.17). */
 function afterDeploy(g: Game) {
