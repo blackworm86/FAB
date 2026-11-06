@@ -349,6 +349,7 @@ function drawPieces() {
       pieces.add(m);
       const tags: [string, string][] = []; const top = flat ? 0.85 : 1.66;
       if (u.disorder && !u.garrison) tags.push([u.disorder === 1 ? 'DIS' : 'REC', u.disorder === 1 ? '#8a1f1f' : '#a8741a']);
+      if (u.rec) { if (u.rec <= 3) for (let k = 0; k < u.rec; k++) tags.push(['REC', '#a8741a']); else tags.push([`REC×${u.rec}`, '#a8741a']); }      // artillery vs armour (optional): one recovery marker per hit this battle
       if (u.reserve) tags.push([VOL.reserveTag(u), '#2d6cb0']); if (u.exploit) tags.push(['E', '#d9741c']); if (u.unsupplied && !u.garrison) tags.push(['OOS', '#b8312f']); if (u.interdict) tags.push(['GI', '#8a2f9c']); if (u.bcross) tags.push(['B', '#8a6a1c']); if (g.riverAssault.includes(a.id) && u.side === g.phasing && !u.garrison) tags.push(['RA', '#2a7fb8']);
       const dc = farSide() ? -1 : 1;
       tags.forEach(([t, c], i) => {               // status markers float in a row above the block, tilted toward the player (animated in frame())
@@ -1374,7 +1375,7 @@ function dispatch() {
   const u = selUnit ? g.units.find((x) => x.id === selUnit) : null;
   if (u) {
     const to = previewArea ?? hoverArea, o = to != null ? optsFor(u.id).find((x) => x.area === to) : null, n = fuelLeft(), strat = g.phase === 'strategic';
-    const tags = [u.disorder === 1 ? 'disordered' : u.disorder === 2 ? 'recovering' : '', u.unsupplied ? 'unsupplied' : '', u.reserve ? 'reserve' : '', u.exploit ? 'exploit' : '', u.interdict ? 'interdicted' : ''].filter(Boolean);
+    const tags = [u.disorder === 1 ? 'disordered' : u.disorder === 2 ? 'recovering' : '', u.rec ? `${u.rec} recovery marker${u.rec > 1 ? 's' : ''} (−${u.rec} to fire)` : '', u.unsupplied ? 'unsupplied' : '', u.reserve ? 'reserve' : '', u.exploit ? 'exploit' : '', u.interdict ? 'interdicted' : ''].filter(Boolean);
     let route = '';
     const sp = u.area != null && !u.garrison ? E.supplyPath(g, u.side, u.area) : null, supLine = u.area == null || u.garrison ? '' : sp ? `<p class="hint sup ok gx">${ico('fuel')} In supply: ${sp.length > 1 ? `traces through ${sp.length - 1} area${sp.length > 2 ? 's' : ''} to ${esc(areaName(sp.at(-1)!))} (blue line)` : 'it stands on a supply source'}.</p>` : `<p class="hint sup bad">${ico('warn')} Out of supply. ${esc(E.supplyWhy(g, u.side, u.area))}</p>`;
     if (o) route = `<div class="route"><p class="tline"><b>→ ${esc(areaName(o.area))}</b> · ${strat ? 'strategic' : `${o.cost} MP`}${VOL.features.fuel && first(u.side) && g.opts.fuel && o.fuel ? ' · <span class="bad">fuel −1</span>' : ''}${o.mustStop ? ' · <span class="bad">stops: battle</span>' : ''}</p><h4>→ ${esc(areaName(o.area))}</h4>${strat ? row('Strategic move', 'any distance') : row('Movement', `${o.cost} MP`)}${VOL.features.fuel && first(u.side) && g.opts.fuel ? row('Fuel', o.fuel ? `−1 &nbsp;(${n} → ${n - 1})` : 'not needed', o.fuel ? 'bad' : '') : ''}${o.mustStop ? row('Stops here', 'enemy present, battle follows', 'bad') : ''}${btn('Move here', () => { previewArea = o.area; confirmMove(); }, 'primary')}</div>`;

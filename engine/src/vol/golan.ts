@@ -189,20 +189,18 @@ function nafakhResult(g: Game) {
 }
 
 /* ================= 20.3 Operation Al-Owda (hypothetical): the whole map but Mt Hermon, six turns, the Syrians place their own units =================
-   From the scenario rules and the Al-Owda Setup Cards (data/golan73/setups.json "alowda"). Two things remain estimates, the Al-Owda Turn Track
-   and Reference Map not being in the repository: the chit draws (the Badr track) and the Israeli VP Line (the Purple Line). */
+   From the scenario rules, the Al-Owda Setup Cards, Turn Track and Reference Map (data/golan73/setups.json "alowda"). */
 type SideCard = { available: string[]; chits: Record<string, string[]>; reserve_markers: number; start?: Record<string, number> };
-type AlOwda = { turns: number; out_of_play: { units: string[] }; estimates: string;
+type AlOwda = { turns: number; out_of_play: { units: string[] }; track: Record<string, Record<Side, [number, number]>>; vp_line_east: number[];
   israeli: SideCard & { air_support_holding: string[]; garrisons: number[]; vp: number; fixed_reinforcements: Record<string, { id: string; entry: string[] }[]>;
     draw_cup: { start: string[]; ghosts: number; added: Record<string, string[]>; draws: Record<string, number>; entry: Record<string, string[]> } };
   syrian: SideCard & { commando_landing: string[]; reinforcements: Record<string, string[]>; entry: string[] } };
 const ALO = (setupsJson as unknown as Record<string, AlOwda>).alowda;
-export const ALOWDA_ESTIMATES = ALO.estimates.replace(/\.$/, '');
+const VP_EAST = new Set(ALO.vp_line_east);
 function alowdaSetup(g: Game): Game {
   g.opts = { scenario: 'alowda', fuel: false }; g.lastTurn = ALO.turns; g.phase = 'deploy'; g.phasing = 'syrian'; g.log = [];
   g.inPlay = [...areas.keys()].filter((a) => a !== HERMON && a !== REAR && a !== NAF_NORTH);           // 20.37: Mt Hermon is already Syrian; no sudden death
-  const rows = Array.from({ length: ALO.turns }, (_, i) => TRACK[String(i + 1)] as unknown as { draws: Record<Side, number[]> });
-  g.track = rows.map((r, i) => ({ ge: i === 0 ? [0, 0] : r.draws.syrian, al: i === 0 ? [0, 0] : r.draws.israeli, sd: null }));
+  g.track = Array.from({ length: ALO.turns }, (_, i) => ({ ge: ALO.track[String(i + 1)].syrian, al: ALO.track[String(i + 1)].israeli, sd: null }));    // the Al-Owda Turn Track: no sudden death
   g.riverAssault = []; g.control[HERMON] = 'syrian';
   const V = state(g); V.freeCombatRound = 0; V.startAt = 'movement';
   const I = ALO.israeli, S = ALO.syrian, cup = I.draw_cup;
@@ -350,7 +348,7 @@ function golanVictory(g: Game): Record<Side, number> & { net: number } {
     if (isAssembly(a.id)) continue;
     const ctl = g.control[a.id]; if (!ctl || !inSupply(g, ctl, a.id)) continue;
     if (ctl === 'syrian' && unitsIn(g, a.id, 'syrian').some(regular)) pts.syrian += a.vp.syrian + (a.vp.mutual ? 1 : 0);
-    if (ctl === 'israeli') pts.israeli += (a.vp.mutual ? 1 : 0) + (garea(a.id).syria ? 1 : 0);
+    if (ctl === 'israeli') pts.israeli += (a.vp.mutual ? 1 : 0) + ((isAlOwda(g) ? VP_EAST.has(a.id) : garea(a.id).syria) ? 1 : 0);   // 20.38: Al-Owda counts east of its Israeli VP Line, not the Purple Line
   }
   pts.israeli += Math.max(0, (state(g).chem ?? 0) - 1);                                                       // chemical warfare after the first use
   if (isAlOwda(g)) pts.israeli += ALO.israeli.vp;                                                                // 20.37: Israel starts with 3 VPs

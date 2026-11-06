@@ -909,7 +909,7 @@
     "turns": 6,
     "first_player": "syrian",
     "startPhase": "deploy",
-    "source": "FAB_Golan73_Al-Owda_ScenarioRules.pdf (20.3) and the Al-Owda Setup Cards (FAB_Golan_Israeli/Syrian_Setup_Card_Al-Owda.pdf)",
+    "source": "FAB_Golan73_Al-Owda_ScenarioRules.pdf (20.3) and the Al-Owda Setup Cards (FAB_Golan_Israeli/Syrian_Setup_Card_Al-Owda.pdf); the Al-Owda Turn Track and Reference Map (FAB_Golan_Al-Owda_Overlay_and_Screen.pdf, FAB_Golan_Al-Owda_VP_Map-sm.pdf)",
     "turn_names": {
       "1": "October 6th AM",
       "2": "October 6th PM",
@@ -1192,6 +1192,114 @@
       },
       "reserve_markers": 2
     },
-    "estimates": "The Al-Owda Turn Track and Reference Map are not in the repository: the chit draws use the Badr track (turn 1 none, then turns 2-6), and the Israeli VP Line is taken as the Purple Line."
+    "track": {
+      "1": {
+        "syrian": [
+          0,
+          0
+        ],
+        "israeli": [
+          0,
+          0
+        ]
+      },
+      "2": {
+        "syrian": [
+          8,
+          2
+        ],
+        "israeli": [
+          2,
+          4
+        ]
+      },
+      "3": {
+        "syrian": [
+          7,
+          2
+        ],
+        "israeli": [
+          4,
+          5
+        ]
+      },
+      "4": {
+        "syrian": [
+          6,
+          2
+        ],
+        "israeli": [
+          5,
+          7
+        ]
+      },
+      "5": {
+        "syrian": [
+          6,
+          2
+        ],
+        "israeli": [
+          5,
+          8
+        ]
+      },
+      "6": {
+        "syrian": [
+          6,
+          2
+        ],
+        "israeli": [
+          5,
+          9
+        ]
+      }
+    },
+    "track_note": "Al-Owda Turn Track (FAB_Golan_Al-Owda_Overlay_and_Screen.pdf): Admin Phase asset/event draws 1st/2nd per side; no sudden death (-/-)",
+    "vp_line_east": [
+      22,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      38,
+      39,
+      40,
+      41,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      56,
+      57,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82
+    ],
+    "vp_line_note": "20.38: the areas east of the Israeli VP Line on the Al-Owda Reference Map (FAB_Golan_Al-Owda_VP_Map-sm.pdf); the line runs Masada/Majdal Shams, Sikeik/El Rom, Wasit/Merom Golan, Oretal/Tel Abu Nida, Nafakh/Ein Zivan-Mt Yosifon, Sindiana-Kuzabia/Hushniyah, Zohar/Keshet-Einot Peham, Yonatan/Tel Saki, Natur/Ramat Magshimim (west/east)"
   }
 }

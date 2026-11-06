@@ -58,4 +58,18 @@ describe('Operation Al-Owda (20.3)', () => {
     expect(g.units.filter((u) => u.reserve && u.side === 'israeli')).toHaveLength(4); expect(g.units.filter((u) => u.reserve && u.side === 'syrian')).toHaveLength(2);
     endPhase(g); expect(g.phase).toBe('movement'); expect(g.phasing).toBe('syrian');
   });
+  it('the Al-Owda Turn Track: draws 0/0 on turn 1, then 8/2, 7/2, 6/2, 6/2, 6/2 for Syria and 2/4, 4/5, 5/7, 5/8, 5/9 for Israel; no sudden death', () => {
+    const g = alowda();
+    expect(g.track!.map((r) => r.ge)).toEqual([[0, 0], [8, 2], [7, 2], [6, 2], [6, 2], [6, 2]]);
+    expect(g.track!.map((r) => r.al)).toEqual([[0, 0], [2, 4], [4, 5], [5, 7], [5, 8], [5, 9]]);
+    expect(g.track!.every((r) => r.sd == null)).toBe(true);
+  });
+  it('20.38: Israel scores the areas it holds east of the Israeli VP Line (Tel Saki 27 counts, Yonatan 26 does not)', () => {
+    const g = alowda(); placeAll(g); endPhase(g);
+    const score = () => victory(g).israeli;
+    for (const a of [26, 27]) { g.units = g.units.filter((u) => u.area !== a); g.control[a] = 'syrian'; }
+    const base = score();
+    g.control[26] = 'israeli'; expect(score()).toBe(base);                         // west of the line
+    g.control[27] = 'israeli'; expect(score()).toBe(base + 1);                     // east of it
+  });
 });
