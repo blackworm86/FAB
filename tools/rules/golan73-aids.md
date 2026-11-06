@@ -1,3 +1,4 @@
+<!-- The Hit Priorities legend is corrected to match its own table and The Bulge's card ([ok] = absorb or avoid, [x] = step loss); the printed card has the two symbols swapped. -->
 <!-- FAB: Golan '73 player aid cards (scans in docs/games/golan73/player-aids), transcribed verbatim. Symbols: [ok] check, [x] cross, [elite]/[veteran]/[green] quality dots. -->
 
 # SEQUENCE OF PLAY
@@ -341,9 +342,9 @@ DR = 10 or DR > Net SN: **FAILURE**
 | 2b | [x] [x] **2b: Attacker Chooses to "Continue Attack"** all remaining hits are Step Losses [assets and/or units] | [ok] **2b: Avoid 1 Hit of Ground Fire** _first_ all units retreat _then_ good order & recovering units become disorderd |
 | 3 | | [x] [x] **3: Additional Hits** all remaining hits are Step Losses [assets and/or units] |
 
-[x] = Absorb or Avoid
+[ok] = Absorb or Avoid
 
-[ok] = Step Loss
+[x] = Step Loss
 
 **Hit Priorities** _(see 6.41 & 6.42)_
 
