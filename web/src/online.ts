@@ -100,6 +100,7 @@ export async function startOnline(remote: (g: Game) => void, changed: () => void
   setRandom(() => crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32);                       // shared games: dice nobody can predict from the shared seed
   online.ready = true; online.mode = 'remote'; online.uid = store.uid; online.hasAccounts = true;
   const sync = (a: Account) => { online.account = a; online.uid = a.uid; online.admin = a.admin; onChange(); }; sync(store.account()); store.onAccount(sync);
+  if (!HAS_TABLE && !DEV_FAKE) return;                                                                          // the home page plays no table: nothing to watch (and nothing to be refused while signing out)
   store.watchSeats((s) => { online.seats = s; onChange(); rebuild(); }, fail);
   store.watchPriv((p) => { const sp = mySeat(); if (sp) sp.priv = p; rebuild(); if (p && queued) { const q = queued; queued = null; void push(q); } });
   store.watchReveals((r) => { const sp = mySeat(); if (sp) sp.reveals = r; rebuild(); });
@@ -148,5 +149,5 @@ export const auth = {
 export const lobby = {
   create: async (m: Parameters<Store['createMatch']>[0], seat: SeatKey | null, json: string) => (store ? store.createMatch(m, seat, json) : '!Online play is not set up'),
   remove: (id: string) => run((s) => s.deleteMatch(id)), leave: (id: string) => run((s) => s.leaveMatch(id)),
-  watch: (next: (m: Match[]) => void) => store?.watchMyMatches(next, fail),
+  watch: (next: (m: Match[]) => void) => store?.watchMyMatches(next, (e) => { if (!/permission/i.test(e)) fail(e); }),     // the list of the account that just signed out is refused: not an error
 };
