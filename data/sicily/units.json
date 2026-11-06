@@ -19,7 +19,10 @@
   "sticker_code": "Inv",
   "arrival": "invasion",
   "arrival_turn": 1,
-  "entry": null,
+  "entry": [
+   "us_beachhead",
+   "P3"
+  ],
   "colours": {
    "stripe": "#92268f",
    "box": "#727d42",
@@ -49,7 +52,10 @@
   "size": "division",
   "sticker_code": "2",
   "arrival_turn": 2,
-  "entry": null,
+  "entry": [
+   "us_beachhead",
+   "P3"
+  ],
   "colours": {
    "stripe": "#92268f",
    "box": "#727d42",
@@ -80,7 +86,10 @@
   "sticker_code": "Inv",
   "arrival": "invasion",
   "arrival_turn": 1,
-  "entry": null,
+  "entry": [
+   "us_beachhead",
+   "P3"
+  ],
   "colours": {
    "stripe": "#f04d3d",
    "box": "#6f7b49",
@@ -111,7 +120,10 @@
   "sticker_code": "Inv",
   "arrival": "invasion",
   "arrival_turn": 1,
-  "entry": null,
+  "entry": [
+   "us_beachhead",
+   "P3"
+  ],
   "colours": {
    "stripe": "#f04d3d",
    "box": "#6f7b49",
@@ -142,7 +154,10 @@
   "sticker_code": "Inv",
   "arrival": "invasion",
   "arrival_turn": 1,
-  "entry": null,
+  "entry": [
+   "us_beachhead",
+   "P3"
+  ],
   "colours": {
    "stripe": "#96784a",
    "box": "#727b44",
@@ -173,7 +188,10 @@
   "sticker_code": "Inv",
   "arrival": "invasion",
   "arrival_turn": 1,
-  "entry": null,
+  "entry": [
+   "us_beachhead",
+   "P3"
+  ],
   "colours": {
    "stripe": "#96784a",
    "box": "#727b44",
@@ -204,7 +222,10 @@
   "sticker_code": "Inv",
   "arrival": "invasion",
   "arrival_turn": 1,
-  "entry": null,
+  "entry": [
+   "us_beachhead",
+   "P3"
+  ],
   "colours": {
    "stripe": "#929fa8",
    "box": "#6d7949",
@@ -235,7 +256,10 @@
   "sticker_code": "Inv",
   "arrival": "invasion",
   "arrival_turn": 1,
-  "entry": null,
+  "entry": [
+   "us_beachhead",
+   "P3"
+  ],
   "colours": {
    "stripe": "#929fa8",
    "box": "#6d7949",
@@ -266,7 +290,9 @@
   "sticker_code": "Inv",
   "arrival": "invasion",
   "arrival_turn": 1,
-  "entry": null,
+  "entry": [
+   "airborne_assault"
+  ],
   "colours": {
    "stripe": "#b8e4fb",
    "box": "#fae04e",
@@ -296,7 +322,9 @@
   "size": "division",
   "sticker_code": "2",
   "arrival_turn": 2,
-  "entry": null,
+  "entry": [
+   "airborne_assault"
+  ],
   "colours": {
    "stripe": "#b8e4fb",
    "box": "#fae04e",
@@ -326,7 +354,10 @@
   "size": "division",
   "sticker_code": "3",
   "arrival_turn": 3,
-  "entry": null,
+  "entry": [
+   "us_beachhead",
+   "P3"
+  ],
   "colours": {
    "stripe": "#fefbcc",
    "box": "#6e7a3c",
@@ -356,7 +387,10 @@
   "size": "division",
   "sticker_code": "8",
   "arrival_turn": 8,
-  "entry": null,
+  "entry": [
+   "us_beachhead",
+   "P3"
+  ],
   "colours": {
    "stripe": "#fefbcc",
    "box": "#6e7a3c",
@@ -387,7 +421,11 @@
   "sticker_code": "Inv",
   "arrival": "invasion",
   "arrival_turn": 1,
-  "entry": null,
+  "entry": [
+   "br_beachhead",
+   "P1",
+   "P2"
+  ],
   "canadian": true,
   "colours": {
    "stripe": "#7ed1f9",
@@ -419,7 +457,11 @@
   "sticker_code": "Inv",
   "arrival": "invasion",
   "arrival_turn": 1,
-  "entry": null,
+  "entry": [
+   "br_beachhead",
+   "P1",
+   "P2"
+  ],
   "canadian": true,
   "colours": {
    "stripe": "#7ed1f9",
@@ -451,7 +493,11 @@
   "sticker_code": "Inv",
   "arrival": "invasion",
   "arrival_turn": 1,
-  "entry": null,
+  "entry": [
+   "br_beachhead",
+   "P1",
+   "P2"
+  ],
   "colours": {
    "stripe": "#ba88bb",
    "box": "#bda569",
@@ -482,7 +528,11 @@
   "sticker_code": "Inv",
   "arrival": "invasion",
   "arrival_turn": 1,
-  "entry": null,
+  "entry": [
+   "br_beachhead",
+   "P1",
+   "P2"
+  ],
   "colours": {
    "stripe": "#ba88bb",
    "box": "#bda569",
@@ -513,7 +563,11 @@
   "sticker_code": "Inv",
   "arrival": "invasion",
   "arrival_turn": 1,
-  "entry": null,
+  "entry": [
+   "br_beachhead",
+   "P1",
+   "P2"
+  ],
   "colours": {
    "stripe": "#ccd3db",
    "box": "#bfa56c",
@@ -544,7 +598,11 @@
   "sticker_code": "Inv",
   "arrival": "invasion",
   "arrival_turn": 1,
-  "entry": null,
+  "entry": [
+   "br_beachhead",
+   "P1",
+   "P2"
+  ],
   "colours": {
    "stripe": "#ccd3db",
    "box": "#bfa56c",
@@ -575,7 +633,11 @@
   "sticker_code": "Inv",
   "arrival": "invasion",
   "arrival_turn": 1,
-  "entry": null,
+  "entry": [
+   "br_beachhead",
+   "P1",
+   "P2"
+  ],
   "colours": {
    "stripe": "#bfc434",
    "box": "#b99c64",
@@ -606,7 +668,11 @@
   "sticker_code": "Inv",
   "arrival": "invasion",
   "arrival_turn": 1,
-  "entry": null,
+  "entry": [
+   "br_beachhead",
+   "P1",
+   "P2"
+  ],
   "colours": {
    "stripe": "#bfc434",
    "box": "#b99c64",
@@ -636,7 +702,11 @@
   "size": "division",
   "sticker_code": "8",
   "arrival_turn": 8,
-  "entry": null,
+  "entry": [
+   "br_beachhead",
+   "P1",
+   "P2"
+  ],
   "colours": {
    "stripe": "#fef9cf",
    "box": "#af9c5a",
@@ -666,7 +736,11 @@
   "size": "division",
   "sticker_code": "8",
   "arrival_turn": 8,
-  "entry": null,
+  "entry": [
+   "br_beachhead",
+   "P1",
+   "P2"
+  ],
   "colours": {
    "stripe": "#fef9cf",
    "box": "#af9c5a",
@@ -697,7 +771,9 @@
   "sticker_code": "Inv",
   "arrival": "invasion",
   "arrival_turn": 1,
-  "entry": null,
+  "entry": [
+   "airborne_assault"
+  ],
   "colours": {
    "stripe": "#0081d2",
    "box": "#fff231",
@@ -727,7 +803,9 @@
   "size": "division",
   "sticker_code": "3",
   "arrival_turn": 3,
-  "entry": null,
+  "entry": [
+   "airborne_assault"
+  ],
   "colours": {
    "stripe": "#0081d2",
    "box": "#fff231",
@@ -756,7 +834,11 @@
   "size": "brigade",
   "sticker_code": "6",
   "arrival_turn": 6,
-  "entry": null,
+  "entry": [
+   "br_beachhead",
+   "P1",
+   "P2"
+  ],
   "canadian": true,
   "colours": {
    "stripe": null,
@@ -787,7 +869,11 @@
   "sticker_code": "Inv",
   "arrival": "invasion",
   "arrival_turn": 1,
-  "entry": null,
+  "entry": [
+   "br_beachhead",
+   "P1",
+   "P2"
+  ],
   "colours": {
    "stripe": null,
    "box": "#b39f64",
@@ -817,7 +903,11 @@
   "sticker_code": "Inv",
   "arrival": "invasion",
   "arrival_turn": 1,
-  "entry": null,
+  "entry": [
+   "br_beachhead",
+   "P1",
+   "P2"
+  ],
   "colours": {
    "stripe": null,
    "box": "#a49156",
@@ -2003,7 +2093,9 @@
   "size": "division",
   "sticker_code": "4",
   "arrival_turn": 4,
-  "entry": null,
+  "entry": [
+   "P4"
+  ],
   "colours": {
    "stripe": "#ffdf4d",
    "box": "#d5d6da",
@@ -2032,7 +2124,9 @@
   "size": "division",
   "sticker_code": "6",
   "arrival_turn": 6,
-  "entry": null,
+  "entry": [
+   "P4"
+  ],
   "colours": {
    "stripe": "#ffdf4d",
    "box": "#d5d6da",

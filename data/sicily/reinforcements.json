@@ -230,12 +230,17 @@
      {
       "id": "US02",
       "name": "2nd Armored",
-      "entry": null
+      "entry": [
+       "us_beachhead",
+       "P3"
+      ]
      },
      {
       "id": "US10",
       "name": "82nd Airborne",
-      "entry": null
+      "entry": [
+       "airborne_assault"
+      ]
      }
     ],
     "chits": [
@@ -388,12 +393,17 @@
      {
       "id": "US11",
       "name": "9th Infantry",
-      "entry": null
+      "entry": [
+       "us_beachhead",
+       "P3"
+      ]
      },
      {
       "id": "BR12",
       "name": "1st Airborne",
-      "entry": null
+      "entry": [
+       "airborne_assault"
+      ]
      }
     ],
     "chits": [
@@ -551,7 +561,9 @@
      {
       "id": "GE06",
       "name": "29th PG",
-      "entry": null
+      "entry": [
+       "P4"
+      ]
      }
     ],
     "chits": [
@@ -671,7 +683,11 @@
      {
       "id": "BR13",
       "name": "1st Canadian Armoured",
-      "entry": null
+      "entry": [
+       "br_beachhead",
+       "P1",
+       "P2"
+      ]
      }
     ],
     "chits": [
@@ -702,7 +718,9 @@
      {
       "id": "GE07",
       "name": "29th PG",
-      "entry": null
+      "entry": [
+       "P4"
+      ]
      }
     ],
     "chits": [
@@ -762,17 +780,28 @@
      {
       "id": "US12",
       "name": "9th Infantry",
-      "entry": null
+      "entry": [
+       "us_beachhead",
+       "P3"
+      ]
      },
      {
       "id": "BR09",
       "name": "78th Infantry",
-      "entry": null
+      "entry": [
+       "br_beachhead",
+       "P1",
+       "P2"
+      ]
      },
      {
       "id": "BR10",
       "name": "78th Infantry",
-      "entry": null
+      "entry": [
+       "br_beachhead",
+       "P1",
+       "P2"
+      ]
      }
     ],
     "chits": [
@@ -960,7 +989,7 @@
    "IT36",
    "IT37"
   ],
-  "note": "sticker code S*: the Coastal/Garrison blocks go into a cup and are set up face down at random (campaign placement areas: Play Book, not available)"
+  "note": "sticker code S*: the Coastal/Garrison blocks go into a cup and are set up face down at random (placement areas per scenario: Play Book 22.14, 22.24, 22.37)"
  },
  "conditional": {
   "allied": [
