@@ -14,12 +14,14 @@ D = lambda *p: os.path.join(ROOT, *p)
 # A book: what the reader shows as one tab. `parts` are the sources, in order.
 GAMES = {
   'bulge': [
+    dict(id='aids', title='Player Aids', sub='The Bulge player aid cards A–E', parts=[dict(aid='tools/rules/bulge-aids.md', label='The Bulge player aid cards')]),
     dict(id='series', title='Series Rules', sub='Fast Action Battles Series Rule Book', parts=[dict(pdf='docs/rules/FastActionBattleBulge.pdf')]),
     dict(id='exclusive', title='Exclusive Rules', sub='The Bulge Play Book, 11.0–19.0', parts=[dict(pdf='docs/rules/FAB_play-book_final.pdf', pages='2-24', only=(11, 19))]),
     dict(id='scenarios', title='Scenarios', sub='The Bulge Play Book, 24.0', parts=[dict(pdf='docs/rules/FAB_play-book_final.pdf', pages='2-24', only=(24, 24))]),
     dict(id='examples', title='Examples & Notes', sub='The Bulge Play Book, 20.0–23.0', parts=[dict(pdf='docs/rules/FAB_play-book_final.pdf', pages='2-24', only=(20, 23))]),
   ],
   'golan73': [
+    dict(id='aids', title='Player Aids', sub="Golan '73 player aid cards", parts=[dict(aid='tools/rules/golan73-aids.md', label="Golan '73 player aid cards")]),
     dict(id='series', title='Series Rules', sub="Golan '73 Series Rule Book (2016)", parts=[dict(pdf='docs/games/golan73/rules/FAB-G_Rules_FINAL.pdf', pages='1-22', only=(1, 10))]),
     dict(id='exclusive', title='Exclusive Rules', sub="Golan '73 Rule Book, 11.0–19.0", parts=[dict(pdf='docs/games/golan73/rules/FAB-G_Rules_FINAL.pdf', pages='1-22', only=(11, 19))]),
     dict(id='scenarios', title='Scenarios', sub="Play Book 22.0; Battle for Nafakh (22.4) and Operation Al-Owda (20.3) sheets", parts=[
@@ -60,6 +62,34 @@ def md_sections(path, label):
     flush()
     return secs
 
+def aid_sections(path, label):
+    """The player-aid cards, transcribed: '# Card title' + 'Card: C', then '## Box title' per box; boxes become C.1, C.2 ... under 'C.0'."""
+    secs, cur, para, card, n = [], None, [], None, 0
+    def flush():
+        if cur is not None and para: cur['paras'].append(' '.join(para).strip())
+        para.clear()
+    lines = open(D(path), encoding='utf-8').read().splitlines()
+    for k, line in enumerate(lines):
+        h1 = re.match(r'^#\s+(.*)$', line)
+        if h1:
+            flush(); title = h1.group(1).strip(); card = None
+            for j in range(k + 1, min(k + 4, len(lines))):
+                m = re.match(r'^Card:\s*([A-Z])', lines[j]); card = m.group(1) if m else card
+            card = card or chr(65 + len([x for x in secs if x['id'].endswith('.0')])); n = 0
+            cur = dict(id=f'{card}.0', title=title, source=label, paras=[]); secs.append(cur); continue
+        if re.match(r'^Card:\s*[A-Z]', line): continue
+        h2 = re.match(r'^#{2,3}\s+(.*)$', line)
+        if h2 and card:
+            flush(); n += 1; cur = dict(id=f'{card}.{n}', title=h2.group(1).strip(), source=label, paras=[]); secs.append(cur); continue
+        if cur is None: continue
+        if not line.strip(): flush(); continue
+        if re.match(r'^\s*[-*]\s', line): flush(); cur['paras'].append(('• ' if not line.startswith(' ') else '• ◦ ') + re.sub(r'^\s*[-*]\s+', '', line)); continue
+        if re.match(r'^\s*\d+\.\s', line): flush(); cur['paras'].append(line.strip()); continue
+        if line.startswith('|'): flush(); cur['paras'].append(line.strip()); continue
+        para.append(line.strip())
+    flush()
+    return secs
+
 def main_of(sid): return 23 if sid.startswith('Ex ') else int(sid.lstrip('NA').split('.')[0])
 def correct(secs, fixes):
     for s in secs:
@@ -75,6 +105,10 @@ def build(game):
         secs = []
         for part in b['parts']:
             label = part.get('label') or b['sub']
+            if 'aid' in part:
+                if not os.path.exists(D(part['aid'])): print('  missing', part['aid']); continue
+                got = aid_sections(part['aid'], label)
+                secs += got; continue
             if 'md' in part:
                 if not os.path.exists(D(part['md'])): print('  missing', part['md']); continue
                 got = md_sections(part['md'], label)

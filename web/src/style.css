@@ -912,3 +912,5 @@ a.rlink:hover { border-bottom-style: solid; }
 #rules .chip { background: #1d2114; border: 1px solid var(--rrule); color: var(--rlink); font: 600 12.5px var(--sfd); letter-spacing: .03em; padding: 1px 7px; cursor: pointer; font-variant-numeric: tabular-nums; }
 #rules .chip:hover { border-color: var(--gold); }
 #rules .see { color: var(--rdim); font-style: italic; } #rules .seebtn { color: var(--rlink); text-decoration: underline dotted; cursor: pointer; }
+#rules .sym { width: 15px; height: 15px; vertical-align: -3px; margin-right: 3px; } #rules .sym.dot { width: 11px; height: 11px; vertical-align: -1px; }
+#rules td.mod { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; color: #f1ead0; font-weight: 600; }
