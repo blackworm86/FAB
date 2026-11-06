@@ -27,6 +27,7 @@ export interface Unit {
   disorder: 0 | 1 | 2; unsupplied: boolean; moved: boolean; reserve: string | null; exploit: boolean; from?: number;
   arrival?: number; entry?: string[]; ech?: string; symbol?: string; code?: string;
   chitId?: string; interdict?: string; adjOnly?: boolean; peiperFull?: boolean; spent?: number; delayed?: boolean; paradrop?: 'pending' | 'intact' | 'partial'; heydte?: boolean; bcross?: boolean;
+  rec?: number;  /** recovery markers taken from artillery this round (Golan optional artillery vs armour) */
   up?: number;   /** area where the block lies face-up after a battle (6.24); it is upright, so hidden from the enemy, whenever it is elsewhere */
 }
 /** A morale check outside a battle: who rolled, against what, and the result. */
@@ -40,7 +41,7 @@ export interface Battle {
   queue: ('attArty' | 'defArty' | 'defFire' | 'offFire')[]; assets: Record<Side, string[]>; air: Partial<Record<Side, { id: string; mode: 'arty' | 'support'; unit?: string }>>;
   air2?: Partial<Record<Side, { id: string; mode: 'arty' | 'support'; unit?: string }>>;   /** a second air asset (Golan 16.22: one fires as artillery, the other supports a unit) */
   vol?: Record<string, unknown>;   /** a volume's own battle state (Golan: the events played, jamming, counterbattery, the ditch an engineer bridges) */
-  pending: number; pendingKind?: 'arty' | 'ground'; engFw: boolean; rolls: Roll[]; result?: string; exploit: boolean; unitHit: Record<Side, boolean>; mark: number; hit?: Record<Side, string[]>;
+  pending: number; pendingKind?: 'arty' | 'ground'; lossKind?: 'arty' | 'ground'; engFw: boolean; rolls: Roll[]; result?: string; exploit: boolean; unitHit: Record<Side, boolean>; mark: number; hit?: Record<Side, string[]>;
   ready?: Side[]; locked?: boolean;
   pz150?: string;   /** 18.4 the 150th's first battle: its id, cleared once the morale check is done */
   defStart?: string[]; unabsorbed?: number; byArty?: boolean; lastDefPoint?: Unit;   /** 18.7 bookkeeping */
@@ -54,9 +55,20 @@ export interface Opts { scenario: string; fuel: boolean; airborne?: boolean; adv
   overrun?: boolean;       /** 18.7 overrunning artillery */
   fwMaintain?: boolean;    /** 18.8 maintaining field works */
   randomReinf?: boolean;   /** 18.9 random reinforcements */
+  /* Golan '73 additional optional rules (the Battle for Nafakh and Al-Owda scenario sheets, 18.x) */
+  atAssets?: boolean;      /** Syrian AT assets: +1 against an armour point unit; defending with one, Israeli armour fires −1 */
+  t62?: boolean;           /** Syrian T-62 tanks: +1 MP to cross a field connection */
+  chemical?: boolean;      /** chemical warfare: the Syrian defender's reusable Special Action gives one artillery asset +2 */
+  flank?: boolean;         /** Israeli flank assault: a Special Action, the second unit fires +1 and takes no hits */
+  artyArmor?: boolean;     /** artillery vs armour: armour takes recovery markers instead of step losses from artillery */
+  zvikaCup?: boolean;      /** Lt. Zvika variant: back into the cup in the Supply Phase */
+  raidMod?: boolean;       /** commando raids east of the SAM barrier: −1 to the die */
+  battleRecovery?: boolean;/** battlefield recovery: recovering in a contested area takes a morale check */
+  advGhosts?: boolean;     /** advanced ghost units: they move, may be reserves, arrive from the cup */
 }
 /** The optional rules of Play Book 18, for menus and the 'rules in use' list. */
-export const OPTIONAL_RULES: { key: keyof Opts; rule: string; name: string; text: string }[] = [
+export type OptionalRule = { key: keyof Opts; rule: string; name: string; text: string };
+export const OPTIONAL_RULES: OptionalRule[] = [
   { key: 'bridgeLimit', rule: '18.1', name: 'Bridge repair limits', text: 'The Germans may repair at most six bridges.' },
   { key: 'bid', rule: '18.2', name: 'Bidding for sides', text: 'The agreed bid changes the German starting fuel: extra bid fuel assets (+) or fuel moved to the Used Box (−).' },
   { key: 'peiper', rule: '18.3', name: 'KG Peiper', text: 'Once, in a Breakthrough Movement Phase up to turn 3, exploiting Peiper may use its full movement.' },
@@ -118,6 +130,8 @@ export const boxOf = (g: Game, side: Side, box: Chit['box']) => g.chits.filter((
 /** Dice come from the game's seed; a test table can queue exact results in `force` (the sandbox). */
 /** Online the dice must not be predictable from the shared game, so the client plugs in a secure random source; tests and offline play use the seed. */
 let secure: (() => number) | null = null;
+/** The optional rules of the game being played (each volume has its own list). */
+export const optionalRules = (): OptionalRule[] => CUR.optional ?? OPTIONAL_RULES;
 export const setRandom = (f: (() => number) | null) => { secure = f; };
 /** The secure source when one is set (online), for choices that must not be reproducible from the shared seed. */
 export const secureRandom = () => secure?.() ?? null;
@@ -378,7 +392,7 @@ export function placeTaskForce(g: Game, id: string, area: number) {
 const bulgeMarkerKey = (_g: Game, u: Unit) => (u.side === 'german' ? `z${zoneOf(u.area!)}` : zoneOf(u.area!) === 7 ? 'z7' : 'z56');
 const markerKey = (g: Game, u: Unit) => CUR.markerKey(g, u);
 export function canReserve(g: Game, u: Unit) {
-  return u.area != null && !u.garrison && !u.fort && !u.ghost && !u.reserve && !u.moved && !u.unsupplied && u.disorder === 0 && !contested(g, u.area) && (g.markers[u.side]?.[markerKey(g, u)] ?? 0) > 0;
+  return u.area != null && !u.garrison && !u.fort && (!u.ghost || !!CUR.ghostsMove?.(g)) && !u.reserve && !u.moved && !u.unsupplied && u.disorder === 0 && !contested(g, u.area) && (g.markers[u.side]?.[markerKey(g, u)] ?? 0) > 0;
 }
 export function setReserve(g: Game, id: string, on: boolean) {
   const u = g.units.find((x) => x.id === id)!;
@@ -394,7 +408,7 @@ const markerAreas = (g: Game, owner: Side) => Object.keys(g.roadblocks).map(Numb
 export function moveOptions(g: Game, id: string): Opt[] {
   setPlayArea(g.inPlay);
   const u = g.units.find((x) => x.id === id)!;
-  if (u.area == null || u.garrison || u.fort || u.ghost || u.moved) return [];
+  if (u.area == null || u.garrison || u.fort || (u.ghost && !CUR.ghostsMove?.(g)) || u.moved) return [];
   const mover = g.phase === 'reaction' ? other(g.phasing) : g.phasing;
   const exploit = g.phase === 'btMove' && u.exploit, reserveBt = g.phase === 'btMove' && !!u.reserve;
   const ok = (g.phase === 'movement' && u.side === g.phasing) || (g.phase === 'reaction' && u.side === mover && !!u.reserve) || (g.phase === 'btMove' && u.side === g.phasing && (exploit || reserveBt));
@@ -792,7 +806,9 @@ function eliminate(g: Game, u: Unit) {
 function stepLoss(g: Game, b: Battle, side: Side, key: string) {
   const c = g.chits.find((x) => x.id === key);
   if (c) { c.box = 'eliminated'; b.assets[side] = b.assets[side].filter((x) => x !== key); say(g, `${c.name} eliminated`); return; }
-  const u = g.units.find((x) => x.id === key)!; u.str -= 1;
+  const u = g.units.find((x) => x.id === key)!;
+  if (!u.garrison && CUR.absorbLoss?.(g, b, side, u)) { b.unitHit[side] = true; return; }      // the volume takes the hit another way (a recovery marker)
+  u.str -= 1;
   if (u.str <= 0 || u.garrison) eliminate(g, u); else say(g, `${u.name} loses a step`);
   if (!u.garrison) b.unitHit[side] = true;
 }
@@ -806,6 +822,7 @@ function allocate(g: Game, b: Battle, side: Side, n: number) {
     let cand = ps.filter((p) => !hit.has(p.key)); if (!cand.length) { hit.clear(); cand = ps; }
     const pid = side === b.attacker ? b.attPoint : b.defPoint;
     if (!b.unitHit[side] && cand.some((p) => p.key === pid)) cand = cand.filter((p) => p.asset || p.key === pid);
+    if (CUR.lossOk) { const ok = cand.filter((p) => CUR.lossOk!(g, b, side, p.key)); if (ok.length) cand = ok; }        // e.g. a flanking unit takes no hits while its point unit stands
     cand.sort((x, y) => +!x.asset - +!y.asset || +(x.key !== pid) - +(y.key !== pid) || x.str - y.str);
     stepLoss(g, b, side, cand[0].key); hit.add(cand[0].key); b.hit[side] = [...hit];
   }
@@ -878,7 +895,7 @@ export function roll_step(g: Game, b: Battle) {
     b.exploitIds = undefined; b.stage = 'done'; return;
   }
   if (st === 'attArty') { const h = doFire(g, b, b.attacker, 'arty'); return hitDefender(g, b, h, 'arty'); }
-  if (st === 'defArty' || st === 'defFire') { const h = doFire(g, b, other(b.attacker), st === 'defArty' ? 'arty' : 'ground'); return hitAttacker(g, b, h); }
+  if (st === 'defArty' || st === 'defFire') { const h = doFire(g, b, other(b.attacker), st === 'defArty' ? 'arty' : 'ground'); b.lossKind = st === 'defArty' ? 'arty' : 'ground'; return hitAttacker(g, b, h); }
   if (st === 'offFire') {
     const eng = engRemovesFw(g, b);                                                                    // 6.33: after artillery and defensive fire, before the attackers fire; the engineer does not fire
     if (eng) { g.fieldWorks = g.fieldWorks.filter((x) => x !== b.area); say(g, 'engineer removes the field works (6.33)'); }
@@ -919,7 +936,7 @@ export function attackerChoice(g: Game, b: Battle, abort: boolean) {
 function hitDefender(g: Game, b: Battle, h: number, kind: 'arty' | 'ground') {
   const def = other(b.attacker); { const p = point(g, b, def); if (p && p.area === b.area) b.lastDefPoint = { ...p }; }
   if (h > 0 && g.fieldWorks.includes(b.area) && (g.fwOwner[b.area] ?? def) === def) { g.fieldWorks = g.fieldWorks.filter((x) => x !== b.area); h--; say(g, 'field works absorb 1 hit'); }
-  b.pending = h; b.pendingKind = kind;
+  b.pending = h; b.pendingKind = kind; b.lossKind = kind;
   const real = fighters(g, b.area, def, false).filter((u) => !u.garrison);
   const canDis = kind === 'arty' && real.some((u) => u.disorder !== 1);
   const canRet = kind === 'ground' && real.some((u) => !u.fort);                                     // strongpoints never retreat (Golan 15.6)
@@ -1072,7 +1089,7 @@ function supplyPhase(g: Game) {
   for (const a of areas.keys()) updateControl(g, a);
   for (const u of g.units.filter((x) => x.area != null && !x.garrison)) u.unsupplied = !(CUR.alwaysSupplied?.(g, u) || inSupply(g, u.side, u.area!));
   for (const u of g.units.filter((x) => x.area != null && x.fort)) u.unsupplied = false;                                   // strongpoints are always in supply (Golan 15.6)
-  for (const u of g.units.filter((x) => x.area != null && !x.unsupplied && x.disorder)) u.disorder = u.disorder === 2 ? 0 : 2;
+  for (const u of g.units.filter((x) => x.area != null && !x.unsupplied && x.disorder)) if (!CUR.recoverOk || CUR.recoverOk(g, u)) u.disorder = u.disorder === 2 ? 0 : 2;
   g.riverAssault = [];
   if (!g.opts.fwMaintain) g.fieldWorks = g.fieldWorks.filter((a) => !contested(g, a));
   else for (const a of g.fieldWorks.filter((x) => contested(g, x) && (g.fwOwner[x] ?? g.control[x]) === g.phasing)) {        // 18.8: in the owner's own Supply Phase, one unit (the best: the player's natural choice) checks morale

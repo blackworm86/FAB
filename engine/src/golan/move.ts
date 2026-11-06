@@ -4,6 +4,7 @@
 import { ASSEMBLY, HERMON, area, connection, edgeKey, enemyOf, isAssembly, neighbors, type GSide } from './map';
 
 export interface GMoveUnit {
+  slowField?: boolean;         // optional T-62: +1 MP to cross a field connection
   side: GSide; cls: 'armor' | 'infantry'; area: number;
   supplied?: boolean; disordered?: boolean;
   immobile?: boolean;          // strongpoints and ghosts (15.6, 15.7), garrisons
@@ -52,7 +53,7 @@ function step(u: GMoveUnit, ctx: GMoveCtx, from: number, to: number, first: bool
   const toArea = isAssembly(to) ? null : area(to);
   if (u.side === 'israeli' && toArea?.syria && ctx.units(to).syrian > 0) return null;           // 14.43: into Syria only if undefended
   const road = c.kind === 'road' || c.kind === 'assembly';
-  let cost = road ? 1 : 2, all = false, limited: string | undefined;
+  let cost = road ? 1 : u.slowField ? 3 : 2, all = false, limited: string | undefined;
   const intoEnemy = enemyIn(to);
   if (c.river) {                                                                                 // 5.32, 14.41: a bridge only where a road crosses
     if (!road || ctx.blownBridges?.has(key)) all = true;

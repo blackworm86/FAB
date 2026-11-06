@@ -14,7 +14,7 @@ import { assetLimits, brigadeExtraDie, moraleSn as gMoraleSn, samResult, success
 import { isArty, isBattleAsset, type Chit } from '../chits';
 import { registerHooks, type Volume } from '../volumes';
 import { airOf, blocks, buildFieldWorks, chit, contested, dropAir, dropReserve, eliminate, fighters, inSupply, moraleCheck, needAdmin, other, quality, rngf, rollDie, say, secureRandom, saAvailable, sidesOf, spendSA, supplied, unitsIn, updateControl,
-  type Battle, type Game, type Opt, type Side, type Unit, type Fire } from '../game';
+  type Battle, type Game, type Opt, type Opts, type Side, type Unit, type Fire, type OptionalRule } from '../game';
 import type { Shooter, Target, Setting } from '../combat';
 export { ASSEMBLY, HERMON, NAF_NORTH, REAR, isAssembly, eastOfSam };
 
@@ -32,9 +32,10 @@ export interface GolanState {
   airAssaultArea?: number; samTarget?: string;            // 15.3; 16.12: the Israeli air mission a SAM may answer now
   minesLeft?: number; startAt?: 'combat' | 'movement';    // 14.02: minefields the Israeli player still places at the start; the phase the scenario opens with once set up
   nafakh?: { s03Free: boolean; golani: boolean; staffOut: boolean };   // 22.46: the 33rd held back, Golani's release, the HQ Staff lost with Nafakh
-  alowda?: { raids: number; cup?: string[]; drawn?: string[] };       // 20.35 the commandos landed at the start; 20.36 the Israeli Reinforcements Draw Cup
+  alowda?: { raids: number; cup?: string[]; drawn?: string[] };
+  chem?: number; ghostsMade?: number;    // optional rules: chemical attacks so far (each one after the first gives Israel a VP); ghosts drawn from the Al-Owda cup       // 20.35 the commandos landed at the start; 20.36 the Israeli Reinforcements Draw Cup
 }
-export interface GolanBattle { event: Partial<Record<Side, string>>; counterbattery: Partial<Record<Side, string>>; ew?: { pending: boolean }; defLocked?: boolean; engBridge?: string }
+export interface GolanBattle { event: Partial<Record<Side, string>>; counterbattery: Partial<Record<Side, string>>; ew?: { pending: boolean }; defLocked?: boolean; engBridge?: string; chem?: string; flank?: string }
 export const state = (g: Game) => g.vol as unknown as GolanState;
 export const battleState = (b: Battle) => (b.vol ??= { event: {}, counterbattery: {} }) as unknown as GolanBattle;
 
@@ -61,7 +62,11 @@ const asGarrison = (c: Chit, prefix: string, a: number, cls: 'armor' | 'infantry
   ({ id: `${prefix}-${c.id}`, name: c.name, side: c.side, cls, q: [qual ?? c.q ?? 'green'], max: 1, str: 1, area: a, garrison: true, disorder: 0, unsupplied: false, moved: true, reserve: null, exploit: false, chitId: c.id });
 
 /* ================= set-up (22.1 Operation Badr, 22.2 the alternate set-up) ================= */
-function newGolanGame(seed: number, opts: Partial<{ scenario: string }>): Game {
+/** A new game: the scenario's own set-up, keeping the optional rules the players chose. */
+function newGolanGame(seed: number, opts: Partial<Opts>): Game {
+  const g = buildGolanGame(seed, opts); g.opts = { ...opts, scenario: g.opts.scenario, fuel: false }; return g;
+}
+function buildGolanGame(seed: number, opts: Partial<{ scenario: string }>): Game {
   setPlayArea(null);                                                                                 // whatever the last game played on
   if (opts.scenario === 'nafakh') { const g = nafakhSetup(newGolanGame(seed, { scenario: 'badr' })); setPlayArea(g.inPlay); return g; }
   if (opts.scenario === 'alowda') { const g = alowdaSetup(newGolanGame(seed, { scenario: 'badr' })); setPlayArea(g.inPlay); return g; }
@@ -228,13 +233,19 @@ function alowdaSetup(g: Game): Game {
   return g;
 }
 /** 20.36: at the start of each Israeli Reinforcement Phase, the listed units go into the Draw Cup, then the listed number is drawn at random; drawn ghosts are set aside. */
+/** Advanced ghosts: a ghost drawn from the cup arrives in either Assembly Area, like a unit. */
+function newGhost(g: Game): Unit {
+  const tpl = g.units.find((u) => u.ghost)!, V = state(g), n = (V.ghostsMade = (V.ghostsMade ?? 0) + 1);
+  const u: Unit = { ...JSON.parse(JSON.stringify(tpl)), id: `GH${n}`, area: null, box: undefined, str: 1, reserve: null, moved: false, disorder: 0, arrival: g.turn, entry: ['A', 'B'] };
+  g.units.push(u); return u;
+}
 function alowdaDraw(g: Game) {
   const V = state(g), A = V.alowda, cup = ALO.israeli.draw_cup; if (!isAlOwda(g) || !A?.cup) return;
   for (const id of cup.added[String(g.turn)] ?? []) { A.cup.push(id); unit(g, id).box = 'draw_cup'; }
   const n = Math.min(cup.draws[String(g.turn)] ?? 0, A.cup.length), got: string[] = [];
   for (let k = 0; k < n; k++) {
     const pick = A.cup.splice(Math.floor(rngf(g) * A.cup.length), 1)[0]; A.drawn!.push(pick);              // a uniform draw that spends no dice
-    if (pick.startsWith('ghost')) { got.push('a ghost (set aside)'); continue; }
+    if (pick.startsWith('ghost')) { if (g.opts.advGhosts) { got.push(newGhost(g).name); continue; } got.push('a ghost (set aside)'); continue; }
     const u = unit(g, pick); u.box = undefined; u.arrival = g.turn; got.push(u.name);
   }
   if (n) say(g, `Reinforcements Draw Cup: ${got.join(', ')} (20.36)`, 'israeli');
@@ -259,10 +270,10 @@ function moveCtx(g: Game): GMoveCtx {
     bridgedDitch: new Set(V.bridgedDitch), blownBridges: new Set(g.blown), minefields: new Set(V.minefields), crossedThisPhase: new Set(V.crossed),
     interdicted: (a) => interdictedBy(g, a) as GSide | undefined, raids: new Set(V.raids), roadblocks: new Map(Object.entries(g.roadblocks).map(([a, s]) => [+a, s as GSide])) };
 }
-const asMover = (g: Game, u: Unit, one: boolean): GMoveUnit => ({ side: u.side as GSide, cls: u.cls, area: u.area!, supplied: !u.unsupplied, disordered: u.disorder > 0, adjacentOnly: one || !!u.adjOnly, spent: u.spent, minefieldFailed: state(g).minefieldFailed.includes(u.id) });
+const asMover = (g: Game, u: Unit, one: boolean): GMoveUnit => ({ slowField: !!g.opts.t62 && T62.has(u.id), side: u.side as GSide, cls: u.cls, area: u.area!, supplied: !u.unsupplied, disordered: u.disorder > 0, adjacentOnly: one || !!u.adjOnly, spent: u.spent, minefieldFailed: state(g).minefieldFailed.includes(u.id) });
 function golanReach(g: Game, u: Unit, one: boolean): Opt[] {
   if (isNafakh(g) && u.id === 'S03' && !state(g).nafakh?.s03Free) return [];                       // 22.46: the 33rd holds Tel Fazra
-  let r = reachable(asMover(g, u, one), moveCtx(g));
+  let r = u.ghost ? ghostReach(g, u, one) : reachable(asMover(g, u, one), moveCtx(g));
   if (state(g).kingHassan && u.id === 'S07') r = r.filter((x) => x.path.slice(1).every((a) => isAssembly(a) || g.control[a] !== 'israeli'));   // 17.24: the Moroccans keep out of Israeli-controlled areas
   return r.map((x) => ({ area: x.area, cost: x.cost, fuel: false, mustStop: x.mustStop, path: x.path, triggers: x.triggers, limited: x.limited }));
 }
@@ -283,6 +294,7 @@ function afterMove(g: Game, u: Unit, opt: Opt) {
   if (u.side === 'israeli' && V.raids.includes(to)) resolveRaid(g, u, to);
   if (u.side === 'syrian') { const c = raidUnitAt(g, to); if (c) { chit(g, c.chitId!).box = 'used'; c.area = null; c.str = 0; V.raids = V.raids.filter((a) => a !== to); V.raidPartial = V.raidPartial.filter((a) => a !== to); say(g, `${u.name} relieves the commandos in ${areas.get(to)!.name}`); } }
   if (u.side === 'israeli' && regular(u)) evacuateStrongpoint(g, from);
+  ghostsMet(g, u, to, opt.cost);
 }
 /** 15.2, 15.4a: the first Israeli unit into Syria releases the 3rd Tank Division and two Strategic Reserve units. */
 function purpleLineCrossed(g: Game) {
@@ -293,7 +305,7 @@ function purpleLineCrossed(g: Game) {
 }
 /** 16.11a: the first Israeli unit into a raided area rolls: 1–2 the raid succeeds, 3–5 partly (the commandos do not fire back), 6+ the helicopters were shot down. */
 function resolveRaid(g: Game, u: Unit, a: number) {
-  const V = state(g), r = rollDie(g), c = raidUnitAt(g, a); V.raids = V.raids.filter((x) => x !== a);
+  const V = state(g), die = rollDie(g), r = g.opts.raidMod && eastOfSam(a) ? die - 1 : die, c = raidUnitAt(g, a); V.raids = V.raids.filter((x) => x !== a);   // optional: −1 east of the SAM barrier
   if (r >= 6) { if (c) eliminate(g, c); say(g, `Commando raid in ${areas.get(a)!.name} fails (${r}): the helicopters are shot down`); return; }
   if (r >= 3) V.raidPartial.push(a);
   say(g, `Commando raid in ${areas.get(a)!.name} ${r <= 2 ? 'succeeds' : 'partly succeeds'} (${r}): ${u.name} stops and must fight it`);
@@ -340,6 +352,7 @@ function golanVictory(g: Game): Record<Side, number> & { net: number } {
     if (ctl === 'syrian' && unitsIn(g, a.id, 'syrian').some(regular)) pts.syrian += a.vp.syrian + (a.vp.mutual ? 1 : 0);
     if (ctl === 'israeli') pts.israeli += (a.vp.mutual ? 1 : 0) + (garea(a.id).syria ? 1 : 0);
   }
+  pts.israeli += Math.max(0, (state(g).chem ?? 0) - 1);                                                       // chemical warfare after the first use
   if (isAlOwda(g)) pts.israeli += ALO.israeli.vp;                                                                // 20.37: Israel starts with 3 VPs
   return { ...pts, net: pts.syrian - pts.israeli };
 }
@@ -431,6 +444,7 @@ function onBattle(g: Game, b: Battle, when: 'begin' | 'end') {
   const V = state(g);
   if (when === 'begin') for (const u of unitsIn(g, b.area)) if (u.ghost) { u.area = null; u.str = 0; say(g, `A Ghost is revealed in ${areas.get(b.area)!.name} and removed (15.7)`); }
   if (when === 'end') {
+    for (const u of g.units) if (u.rec) { u.rec = 0; if (u.area != null && u.disorder === 0) u.disorder = 2; }        // artillery vs armour: one marker stays, the unit recovers in the Supply Phase
     if (V.airAssaultArea === b.area) V.airAssaultArea = undefined;
     V.raids = V.raids.filter((a) => raidUnitAt(g, a)); V.raidPartial = V.raidPartial.filter((a) => raidUnitAt(g, a));
     if (g.control[HERMON] === 'syrian') V.hermonLost = true;
@@ -438,6 +452,7 @@ function onBattle(g: Game, b: Battle, when: 'begin' | 'end') {
 }
 /** Brigade integrity (15.51), the Moroccans' passivity (17.24), a partly successful raid (16.11a) and an engineer bridging instead of firing (14.51b). */
 function adjustFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground', list: Fire[]) {
+  optionalFire(g, b, side, kind, list);
   if (kind !== 'ground') return;
   const V = state(g), B = battleState(b), drop = (f: (x: Fire) => boolean) => { for (let i = list.length - 1; i >= 0; i--) if (f(list[i])) list.splice(i, 1); };
   if (side === b.attacker && V.kingHassan) drop((f) => f.key === 'S07');
@@ -465,6 +480,90 @@ function afterFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground') {
   if (die > 5) return say(g, `Counterbattery: ${die}, no effect`, enemy);
   target.box = 'future'; target.turn = g.turn + die; target.direct = true; target.area = undefined; b.assets[side] = b.assets[side].filter((x) => x !== target.id);
   say(g, `Counterbattery: ${die}, ${target.name} is put back ${die} turn(s), to turn ${g.turn + die} (17.34)`, enemy);
+}
+
+/* ================= additional optional rules (the Battle for Nafakh and Al-Owda scenario sheets, 18.x) ================= */
+export const GOLAN_OPTIONAL: OptionalRule[] = [
+  { key: 'atAssets', rule: '18.6', name: 'Anti-tank assets', text: 'Syrian AT assets fire +1 when the enemy point unit is armour. When Syria defends with an AT asset assigned, Israeli armour fires −1.' },
+  { key: 't62', rule: '18.7', name: 'Syrian T-62 tanks', text: 'The 65th, 76th, 81st, 91st and Assad armoured units pay one extra MP to cross a field connection.' },
+  { key: 'artyArmor', rule: '18.8', name: 'Artillery vs armour', text: 'Armour takes a recovery marker instead of a step loss from artillery; each marker is −1 in ground fire. After the battle one marker stays (the unit is recovering) until the Supply Phase.' },
+  { key: 'zvikaCup', rule: '18.9', name: 'Lt. Zvika variant', text: 'In the Supply Phase Israel may take Lt. Zvika back off the map into the Selection Cup, to play him again when drawn.' },
+  { key: 'raidMod', rule: '18.10', name: 'Commando raid modifier', text: 'A commando raid east of the SAM barrier gets −1 on the die (better for Syria).' },
+  { key: 'battleRecovery', rule: '18.11', name: 'Battlefield recovery', text: 'Disordered or recovering units in a contested area improve in the Supply Phase only by passing a morale check.' },
+  { key: 'chemical', rule: 'A 18.7', name: 'Chemical warfare', text: 'As the defender, Syria spends the reusable Special Action: one artillery asset (or air support firing as artillery) fires +2. Every use after the first gives Israel 1 VP.' },
+  { key: 'flank', rule: 'A 18.8', name: 'Flank assault (Israelis)', text: 'Attacking with two units, Israel spends a Special Action: the second unit flanks, fires +1 and takes no hits while the point unit stands.' },
+  { key: 'advGhosts', rule: 'A 18.10', name: 'Advanced ghost units', text: 'Ghosts move (as armour or infantry), may be reserves, never create a contested area, overstack by one, and vanish when a Syrian unit enters their area alone. In Al-Owda a ghost drawn from the cup arrives in an Assembly Area.' },
+];
+const T62 = new Set(['S19', 'S20', 'S21', 'S26', 'S27']);                                            // 65th, 76th, 81st, 91st, Assad (all Elite)
+const isAT = (c: Chit) => c.side === 'syrian' && /\bAT$/.test(c.name);
+const pointOf = (g: Game, b: Battle, side: Side) => g.units.find((u) => u.id === (side === b.attacker ? b.attPoint : b.defPoint));
+const bump = (f: Fire, by: number, why: string) => { f.sn += by; f.parts.push([why, by]); };
+function optionalFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground', list: Fire[]) {
+  const o = g.opts, B = battleState(b), enemyPoint = pointOf(g, b, other(side));
+  if (o.chemical && kind === 'arty' && B.chem) for (const f of list) if (f.key === B.chem) bump(f, 2, 'chemical warfare');
+  if (kind !== 'ground') return;
+  if (o.atAssets && side === 'syrian' && enemyPoint?.cls === 'armor') for (const f of list) if (f.isAsset && b.assets.syrian.includes(f.key) && isAT(chit(g, f.key))) bump(f, 1, 'AT asset vs armour (18.6)');
+  if (o.atAssets && side === 'israeli' && b.attacker === 'israeli' && b.assets.syrian.some((id) => isAT(chit(g, id)))) for (const f of list) { const u = g.units.find((x) => x.id === f.key); if (u?.cls === 'armor' && !f.isAsset) bump(f, -1, 'Syrian AT defence (18.6)'); }
+  if (o.artyArmor) for (const f of list) { const u = g.units.find((x) => x.id === f.key); if (u?.rec) bump(f, -u.rec, `${u.rec} recovery marker${u.rec > 1 ? 's' : ''}`); }
+  if (o.flank && B.flank && side === b.attacker) for (const f of list) if (f.key === B.flank) bump(f, 1, 'flanking (18.8)');
+}
+/** Artillery vs armour: an armour unit hit by artillery takes a recovery marker instead of a step. */
+function absorbLoss(g: Game, b: Battle, _side: Side, u: Unit) {
+  if (!g.opts.artyArmor || b.lossKind !== 'arty' || u.cls !== 'armor' || u.fort || u.ghost) return false;
+  u.rec = (u.rec ?? 0) + 1; say(g, `${u.name} is buttoned up: a recovery marker instead of a step loss (artillery vs armour)`); return true;
+}
+/** Flank assault: the flanking unit takes no hits while the point unit is still in the battle. */
+function lossOk(g: Game, b: Battle, side: Side, key: string) {
+  const B = battleState(b); if (!g.opts.flank || !B.flank || side !== b.attacker || key !== B.flank) return true;
+  return !unitsIn(g, b.area, side).some((u) => u.id === b.attPoint);
+}
+/** Battlefield recovery: in a contested area a unit improves only by passing a morale check. */
+function recoverOk(g: Game, u: Unit) {
+  if (!g.opts.battleRecovery || u.area == null || !contested(g, u.area)) return true;
+  const sn = golanMoraleSn(g, u, 'check'), { r, ok } = moraleCheck(g, u, sn, 'Battlefield recovery (18.11)');
+  say(g, `${u.name} ${ok ? 'recovers' : 'stays as it is'} in the front line (${r} vs ${sn}, 18.11)`); return ok;
+}
+/** Chemical warfare: the Syrian defender spends the reusable Special Action; one artillery asset (or air support firing as artillery) fires +2 this battle. */
+export function playChemical(g: Game, assetId: string) {
+  const b = g.battle; need(!!g.opts.chemical && !!b && b.stage === 'setup' && b.attacker === 'israeli', 'as the Syrian defender, before the first roll (chemical warfare)');
+  const B = battleState(b!); need(!B.chem, 'one chemical attack per battle');
+  need(b!.assets.syrian.some((id) => id === assetId && isArty(chit(g, id))) || airOf(b!, 'syrian').some((a) => a.id === assetId && a.mode === 'arty'), 'a Syrian artillery asset (or air support firing as artillery) in this battle');
+  const blk = saAvailable(g, 'syrian').find((c) => c.kind === 'sa_block'); need(!!blk, 'the reusable Special Action is not available');
+  spendSA(g, 'syrian', undefined, 'chemical warfare', blk!.id); B.chem = assetId;
+  const V = state(g); V.chem = (V.chem ?? 0) + 1; say(g, `Chemical warfare: ${chit(g, assetId).name} fires +2${V.chem > 1 ? ' (Israel gains 1 VP)' : ''}`, 'syrian');
+}
+/** The Syrian artillery a chemical attack could use now (empty when it cannot be played). */
+export function chemicalOptions(g: Game): string[] {
+  const b = g.battle; if (!g.opts.chemical || !b || b.stage !== 'setup' || b.attacker !== 'israeli' || battleState(b).chem || !saAvailable(g, 'syrian').some((c) => c.kind === 'sa_block')) return [];
+  return [...b.assets.syrian.filter((id) => isArty(chit(g, id))), ...airOf(b, 'syrian').filter((a) => a.mode === 'arty').map((a) => a.id)];
+}
+/** Flank assault: attacking with two units, Israel spends a Special Action; the second unit flanks. */
+export function playFlank(g: Game, unitId: string, chitId?: string) {
+  need(flankOptions(g).includes(unitId), 'an Israeli unit beside the point unit, attacking, before the first roll (flank assault)');
+  const b = g.battle!, u = unit(g, unitId); spendSA(g, 'israeli', u.ech, 'flank assault', chitId); battleState(b).flank = unitId; say(g, `${u.name} flanks: +1 to its fire, the point unit takes the hits`, 'israeli');
+}
+export function flankOptions(g: Game): string[] {
+  const b = g.battle; if (!g.opts.flank || !b || b.stage !== 'setup' || b.attacker !== 'israeli' || battleState(b).flank || !saAvailable(g, 'israeli').length) return [];
+  const us = unitsIn(g, b.area, 'israeli').filter(regular); return us.length >= 2 ? us.filter((u) => u.id !== b.attPoint).map((u) => u.id) : [];
+}
+/** Lt. Zvika variant: in the Supply Phase Israel takes Lt. Zvika off the map, back into the Selection Cup. */
+export function zvikaToCup(g: Game) {
+  const z = zvikaOnMap(g); need(!!z, 'Lt. Zvika is not on the map in the Supply Phase (Lt. Zvika variant)');
+  z!.area = null; z!.str = 0; const c = chit(g, z!.chitId!); c.box = 'cup'; c.area = undefined; say(g, 'Lt. Zvika is taken back into the Selection Cup', 'israeli');
+}
+export const zvikaOnMap = (g: Game) => (g.opts.zvikaCup && g.phase === 'supply' ? g.units.find((u) => u.area != null && u.chitId && chit(g, u.chitId).kind === 'event_lt_zvika') : undefined);
+/** Advanced ghosts: the best of an armour and an infantry move, never into an area that would become contested. */
+function ghostReach(g: Game, u: Unit, one: boolean) {
+  const all = new Map<number, ReturnType<typeof reachable>[number]>();
+  for (const cls of ['armor', 'infantry'] as const) for (const r of reachable({ ...asMover(g, u, one), cls }, moveCtx(g))) { const o = all.get(r.area); if (!o || r.cost < o.cost) all.set(r.area, r); }
+  return [...all.values()].filter((r) => !(unitsIn(g, r.area, 'syrian').length && !contested(g, r.area)));
+}
+/** Advanced ghosts: a Syrian unit entering an area held only by ghosts reveals and removes them, and may go on with what MP it has left. */
+function ghostsMet(g: Game, u: Unit, to: number, cost: number) {
+  if (!g.opts.advGhosts || u.side !== 'syrian') return;
+  const here = unitsIn(g, to, 'israeli'); if (!here.length || !here.every((x) => x.ghost)) return;
+  for (const x of here) { x.area = null; x.str = 0; }
+  updateControl(g, to); u.moved = false; u.spent = cost; say(g, `Only a ghost was in ${nameOf(to)}: it is removed, and ${u.name} may move on`);
 }
 /** Retreats: no Assembly areas, boundaries the unit could not cross, no raided areas for Israelis (6.5, 14.1x, 16.11a). */
 function retreatOk(g: Game, u: Unit, from: number, to: number) {
@@ -818,5 +917,5 @@ registerHooks('golan73', {
   successNumber: golanSuccessNumber, adjustFire, canAssign, moraleSn: golanMoraleSn, retreatOk, retreatPrefer, onRetreat,
   sources, supplyStep, supplyFree: (_g, _s, a) => isAssembly(a) || a === HERMON, alwaysSupplied: (_g, u) => !!u.ghost || u.id === 'S17',
   victory: golanVictory, finalResult, onPhase, onBattle, freeBattle, assault, reinforce, afterDraw: (g) => { nafakhStaff(g); const d = g.chits.find((c) => c.kind === 'event_dugman5' && c.box === 'available'); if (d) resolveDugman(g, d); },
-  afterDeploy, onUnassign, reinforceOk: (g, b, u) => reinforceOptions(g, b).includes(u.id), stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2), appropriate: (g, u) => (isNafakh(g) ? (u.side === 'israeli' ? [NAF_NORTH] : [REAR, NAF.sheet.entry.Z]) : u.side === 'israeli' ? [ASSEMBLY.A, ASSEMBLY.B] : Object.values(ENTRY)), isNight, onAssign, beforeBegin, beforeFire, afterFire,
+  afterDeploy, onUnassign, optional: GOLAN_OPTIONAL, absorbLoss, lossOk, recoverOk, ghostsMove: (g) => !!g.opts.advGhosts, reinforceOk: (g, b, u) => reinforceOptions(g, b).includes(u.id), stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2), appropriate: (g, u) => (isNafakh(g) ? (u.side === 'israeli' ? [NAF_NORTH] : [REAR, NAF.sheet.entry.Z]) : u.side === 'israeli' ? [ASSEMBLY.A, ASSEMBLY.B] : Object.values(ENTRY)), isNight, onAssign, beforeBegin, beforeFire, afterFire,
 } as Partial<Volume>);

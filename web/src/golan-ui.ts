@@ -158,6 +158,12 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
     const aa = G.airAssaultTargets(g);
     if (aa.length) out.push(`<div class="volpanel"><b>${ctx.ico('air_mission')} 82nd Para (15.3)</b><span>The paratroop battalion may air-assault east of the SAM barrier or onto Mt Hermon, before any battle.</span><div class="row">${ctx.ubtn('Choose the landing area', () => ctx.pickArea('Air assault: tap the landing area', aa, (a) => G.airAssault(live(), a)), 'primary')}</div></div>`);
   }
+  {                                                                                                  // optional rules that ask for a decision
+    const chem = ctx.mine('syrian') ? G.chemicalOptions(g) : [], flank = ctx.mine('israeli') ? G.flankOptions(g) : [], zv = ctx.mine('israeli') ? G.zvikaOnMap(g) : undefined;
+    if (chem.length) out.push(`<div class="volpanel"><b>${ctx.ico('warn')} Chemical warfare (optional)</b><span>Spend the reusable Special Action: one of your artillery fires +2 in this battle.${(G.state(g).chem ?? 0) ? ' Israel gains 1 VP for this use.' : ' The first use is free; each later one gives Israel 1 VP.'}</span><div class="row">${chem.map((id) => ctx.btn(esc(E.chit(g, id).name), () => G.playChemical(live(), id))).join('')}</div></div>`);
+    if (flank.length) out.push(`<div class="volpanel"><b>${ctx.ico('next')} Flank assault (optional)</b><span>Spend a Special Action: the flanking unit fires +1, and the point unit takes the hits while it stands.</span><div class="row">${flank.map((id) => ctx.btn(`Flank with ${esc(g.units.find((u) => u.id === id)?.name ?? id)}`, () => G.playFlank(live(), id))).join('')}</div></div>`);
+    if (zv) out.push(`<div class="volpanel"><b>${ctx.ico('next')} Lt. Zvika (optional variant)</b><span>Take him off the map, back into the Selection Cup, to play him again when drawn.</span><div class="row">${ctx.btn('Back into the cup', () => G.zvikaToCup(live()))}</div></div>`);
+  }
   return out.length ? `<div class="volstack">${out.join('')}</div>` : '';
 }
 /** Why combat cannot begin yet, or null. */

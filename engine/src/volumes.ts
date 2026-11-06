@@ -11,7 +11,7 @@ import golanUnits from '../../data/golan73/units.json';
 import golanCounters from '../../data/golan73/counters.json';
 import golanSetups from '../../data/golan73/setups.json';
 import golanTrack from '../../data/golan73/turn_track.json';
-import type { Game, Unit, Battle, Opts, Opt } from './game';
+import type { Game, Unit, Battle, Opts, Opt, OptionalRule } from './game';
 import type { Chit } from './chits';
 import type { Shooter, Target, Setting, Quality } from './combat';
 
@@ -83,6 +83,16 @@ export interface Volume {
   onAssign?: (g: Game, b: Battle, c: Chit, mode?: string, unit?: string) => void;
   /** An asset taken back before the first roll, or a battle withdrawn (the volume drops what hung on the asset, e.g. a pending SAM answer). */
   onUnassign?: (g: Game, b: Battle, c: Chit) => void;
+  /** The volume's optional rules, for the chooser (the series list when missing). */
+  optional?: OptionalRule[];
+  /** A unit takes a hit some other way than a step loss (true: handled, no step lost). */
+  absorbLoss?: (g: Game, b: Battle, side: Side, u: Unit) => boolean;
+  /** May this unit or asset take the next loss? (only applied when some candidate may) */
+  lossOk?: (g: Game, b: Battle, side: Side, key: string) => boolean;
+  /** Supply Phase: may this disordered or recovering unit improve? (a morale check, say) */
+  recoverOk?: (g: Game, u: Unit) => boolean;
+  /** Ghost blocks move like units (an optional rule). */
+  ghostsMove?: (g: Game) => boolean;
   /** 8.23: may this block reinforce the defender now (the series check has passed)? */
   reinforceOk?: (g: Game, b: Battle, u: Unit) => boolean;
   /** Combat may not begin yet (a SAM answer or a jamming roll is pending): throw. */

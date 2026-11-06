@@ -108,7 +108,7 @@ function golan(): VolView {
     map: { size: m.size, areas, connections: m.connections, entries: (golanEntries as { letter: string; x: number; y: number }[]).map((e) => ({ ...e, side: 'syrian' })) },      // the letters sit in the printed triangles (tools/golan73/board.py)
     labels,
     art: { base: './golan73/map-base.svg', lines: './golan73/map-lines.svg', vpIcons: { syrian: './icons/vp-golan-syrian.svg', israeli: './icons/vp-mutual.svg', mutual: './icons/vp-mutual.svg' }, relief: './golan73/', reliefName: 'The Golan Heights in relief, from Mt Hermon to the Sea of Galilee, with contour lines', entryDark: () => false, sheetBoxes },
-    features: { fuel: false, zones: false, optional: false, tutorial: false },
+    features: { fuel: false, zones: false, optional: true, tutorial: true },
     scenarios: info.scenarios, defaultOpts: { scenario: 'badr', fuel: false },
     unitSvg: (u, g) => (u.garrison && u.chitId ? chitArt(E.chit(g, u.chitId)) : unitArt(u)), chitSvg: chitArt,
     cssSide: (u) => u.side,

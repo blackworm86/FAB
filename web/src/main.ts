@@ -1526,15 +1526,17 @@ async function dropMatch(m: { id: string; title: string; owner: string }) {
 }
 /* ---------- optional rules (Play Book 18): one chooser for every place a game is created ---------- */
 let optOpen = false;
-const optOn = (o: Partial<E.Opts>) => E.OPTIONAL_RULES.filter((r) => (r.key === 'bid' ? !!o.bid : !!o[r.key]));
+/** The optional rules of a game (each volume has its own list). */
+const rulesOf = (game: string = VOL.id) => E.VOLUMES[game]?.optional ?? E.OPTIONAL_RULES;
+const optOn = (o: Partial<E.Opts>, game: string = VOL.id) => rulesOf(game).filter((r) => (r.key === 'bid' ? !!o.bid : !!o[r.key]));
 const SCEN_NAME: Record<string, string> = Object.fromEntries(GAMES.flatMap((x) => x.scenarios.map((sc) => [sc.id, sc.name])));
 const tableUrl = (id: string, game: string) => `${homeUrl()}?table=${id}${game && game !== 'bulge' ? `&game=${game}` : ''}`;
-function optChooser(o: Partial<E.Opts>): string {
-  const n = optOn(o).length, bid = o.bid ?? 0;
-  const rows = E.OPTIONAL_RULES.map((r) => r.key === 'bid'
+function optChooser(o: Partial<E.Opts>, game: string = VOL.id): string {
+  const n = optOn(o, game).length, bid = o.bid ?? 0;
+  const rows = rulesOf(game).map((r) => r.key === 'bid'
     ? `<div class="orow"><span class="orn">${r.rule}</span><span class="ort"><b>${r.name}</b><small>${esc(r.text)}</small></span><span class="ostep" role="group" aria-label="Agreed bid">${ubtn('−', () => { o.bid = Math.max(-5, bid - 1) || undefined; }, '', bid <= -5, 'Bid to be the Germans: fewer starting fuel')}<b>${bid > 0 ? '+' : ''}${bid}</b>${ubtn('+', () => { o.bid = Math.min(5, bid + 1) || undefined; }, '', bid >= 5, 'Bid to be the Allies: extra German bid fuel')}</span></div>`
     : `<button class="orow tog ${o[r.key] ? 'on' : ''}" aria-pressed="${!!o[r.key]}" data-ui="${reg(() => { (o as Record<string, unknown>)[r.key] = !o[r.key] || undefined; })}"><span class="orn">${r.rule}</span><span class="ort"><b>${r.name}</b><small>${esc(r.text)}</small></span><span class="sw ${o[r.key] ? 'on' : ''}">${o[r.key] ? 'ON' : 'OFF'}</span></button>`).join('');
-  return `<div class="optrules"><button class="ohead" aria-expanded="${optOpen}" data-ui="${reg(() => { optOpen = !optOpen; })}">${ico(optOpen ? 'minus' : 'plus')}<b>Optional rules (18)</b><span>${n ? `${n} on` : 'none'}</span></button>${optOpen ? `<div class="olist">${rows}</div>` : ''}</div>`;
+  return `<div class="optrules"><button class="ohead" aria-expanded="${optOpen}" data-ui="${reg(() => { optOpen = !optOpen; })}">${ico(optOpen ? 'minus' : 'plus')}<b>Optional rules</b><span>${n ? `${n} on` : 'none'}</span></button>${optOpen ? `<div class="olist">${rows}</div>` : ''}</div>`;
 }
 /** The optional rules a game uses, as short tags ('18.1 Bridge repair limits', 'bid +2'). */
 function rulesInUse(o: Partial<E.Opts>, extra = true): string {
@@ -1543,7 +1545,8 @@ function rulesInUse(o: Partial<E.Opts>, extra = true): string {
 }
 async function createGame() {
   const info = gameInfo(form.game); if (!info?.ready) return;
-  const opts: E.Opts = JSON.parse(JSON.stringify({ ...(info.optional ? form.rules : {}), scenario: form.scenario || info.defaultScenario, fuel: info.fuel ? form.fuel : false })), title = form.title.trim() || `${info.name} · ${new Date().toLocaleDateString()}`;
+  const keep = new Set(rulesOf(info.id).map((r) => r.key as string)), chosen = Object.fromEntries(Object.entries(form.rules).filter(([k]) => keep.has(k)));   // only this game's optional rules
+  const opts: E.Opts = JSON.parse(JSON.stringify({ ...(info.optional ? chosen : {}), scenario: form.scenario || info.defaultScenario, fuel: info.fuel ? form.fuel : false })), title = form.title.trim() || `${info.name} · ${new Date().toLocaleDateString()}`;
   homeMsg = 'Creating…'; render();
   E.useGame(info.id); const json = JSON.stringify(E.newGame(undefined, opts)); E.useGame(VOL.id);      // the new game is of the chosen volume; this page stays on its own
   const id = await lobby.create({ game: form.game, title, opts }, form.side ? (form.side === info.sides[0] ? 'german' : 'allied') : null, json);
@@ -1579,7 +1582,7 @@ function homeHtml() {
   const create = creating ? `<div class="sheetbox"><div class="lh"><h3>${ico('plus')} New game</h3>${ubtn(ico('close'), () => { creating = false; }, 'ico', false, 'Cancel')}</div>
       <div class="authform"><input placeholder="Name (optional)" value="${esc(form.title)}" data-sel="${regv((x) => { form.title = x; })}"></div>
       <div class="tiles">${info!.sides.map((sd) => tile(sd, info!.sideName[sd], info!.tag[sd])).join('')}${tile('', 'Later', '?')}</div>
-      <div class="chips"><div class="scens">${info!.scenarios.filter((sc) => !sc.testing).map((sc) => chip(`${esc(sc.name)}<small>${esc(sc.sub)}</small>`, form.scenario === sc.id, () => { form.scenario = sc.id; }, sc.title)).join('')}</div>${info!.fuel ? `<div class="optrules fuelrow"><button class="orow tog ${form.fuel ? 'on' : ''}" aria-pressed="${form.fuel}" data-ui="${reg(() => { form.fuel = !form.fuel; })}"><span class="orn">16.13</span><span class="ort"><b>German fuel</b><small>Moves over 3 MP and strategic moves spend a fuel asset.</small></span><span class="sw ${form.fuel ? 'on' : ''}">${form.fuel ? 'ON' : 'OFF'}</span></button></div>` : ''}</div>${info!.optional ? optChooser(form.rules) : ''}
+      <div class="chips"><div class="scens">${info!.scenarios.filter((sc) => !sc.testing).map((sc) => chip(`${esc(sc.name)}<small>${esc(sc.sub)}</small>`, form.scenario === sc.id, () => { form.scenario = sc.id; }, sc.title)).join('')}</div>${info!.fuel ? `<div class="optrules fuelrow"><button class="orow tog ${form.fuel ? 'on' : ''}" aria-pressed="${form.fuel}" data-ui="${reg(() => { form.fuel = !form.fuel; })}"><span class="orn">16.13</span><span class="ort"><b>German fuel</b><small>Moves over 3 MP and strategic moves spend a fuel asset.</small></span><span class="sw ${form.fuel ? 'on' : ''}">${form.fuel ? 'ON' : 'OFF'}</span></button></div>` : ''}</div>${info!.optional ? optChooser(form.rules, form.game) : ''}
       <div class="row createrow">${btn(`${ico('check')}<span>Create game</span>`, () => { void createGame(); }, 'primary', !info?.ready)}</div></div>` : '';
   return `<div class="homepage" style="background-image: radial-gradient(ellipse at 55% 35%, #0b0d0866 0%, #0b0d08d9 62%, #0b0d08 100%), url('./home-table.jpg')"><div class="homein">
     <header class="hbar"><div><h1>Fast Action Battles</h1><p>Board-game battles with the series rules, played online.</p></div><div class="who"><span class="avatar" title="${esc(a!.name || a!.email)}">${esc((a!.name || a!.email || '?').slice(0, 1).toUpperCase())}</span>${online.admin ? ubtn(ico('wand'), () => { location.href = `${homeUrl()}?sandbox=1&game=${VOL.id}${DEV ? '&dev=1' : ''}`; }, 'ico', false, 'Admin: sandbox test table') + ubtn(ico('lock'), () => { modal = 'rules'; }, 'ico', false, 'Admin: update the database rules') : ''}<button class="ico" data-auth="out" title="Sign out" aria-label="Sign out">${ico('logout')}</button></div></header>
