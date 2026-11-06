@@ -65,6 +65,14 @@ const assetChit = (c: SCounter) => { const n = nationOf(c) as Nation;
 /** Text event on a pale panel (Fading Italian Morale, Patton Soldier Slap, Axis Tactical Extract, US 7th Army Release). */
 const textEvent = (c: SCounter, lines: string[]) => `${ox(c)}${panel(EVENT[nationOf(c)])}${head(c, 22, 52, 32)}${lines.map((l, i) => txt(l, 84, (lines.length === 3 ? 72 : 88) + i * 30, 27, { w: 'b', anchor: 'middle', max: 104 })).join('')}</g></svg>`;
 
+/* The approved Special Action art (docs/maps/vector/special-action-blocks.svg / -events.svg, as on The Bulge): vector arrows,
+   white bold italic words, and the tank photo (Panzer for the Axis, Sherman for the Allies) in a 200 x 200 square. */
+const SA_FORK = '145.9,131.4 127.7,113.2 127.7,110.5 152.1,110.5 152.1,117.5 175.5,102.9 152.1,88.2 152.1,95.2 127.7,95.2 127.7,92.6 145.9,74.4 150.9,79.3 157,52.5 130.1,58.6 135.1,63.5 115.1,83.5 81.8,83.5 81.8,122.2 115.1,122.2 135.1,142.2 130.1,147.2 157,153.3 150.9,126.4';
+const SA_ARROW = '123.9,102.9 81.8,55.4 81.8,78.1 20,78.1 20,127.7 81.8,127.7 81.8,150.3';
+const saArt = (axis: boolean) => { const t = PIC[axis ? 'tank_axis' : 'tank_allied'], [x, y, w, h] = axis ? [25.5, 86.6, 78.1, 32.5] : [25.5, 85.1, 63.3, 35.5];
+  return `<polygon points="${SA_FORK}" fill="#000"/><polygon points="${SA_ARROW}" fill="#fff300" stroke="#000" stroke-width="2"/>${t ? `<image href="${t}" x="${x}" y="${y}" width="${w}" height="${h}"/>` : ''}${txt('Special', 100, 50, 38, { w: 'b', italic: true, anchor: 'middle', fill: '#fff', max: 128 })}${txt('Action', 100, 180, 38, { w: 'b', italic: true, anchor: 'middle', fill: '#fff', max: 128 })}`; };
+/** The Special Action event's panel (the command's colour), as approved for The Bulge. */
+const SA_PANEL: Record<Nation | 'allied', string> = { us: '#b9dc8c', allied: '#b9dc8c', british: '#c9a76a', german: '#d6d8db', italian: '#f2b25c' };
 /* Pictures drawn as vectors. */
 const anchorMark = (x: number, y: number, r: number) => `<g fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><circle cx="${x}" cy="${y - r}" r="${r * 0.28}"/><path d="M${x} ${y - r * 0.72}V${y + r * 0.7}M${x - r * 0.45} ${y - r * 0.4}H${x + r * 0.45}M${x - r * 0.85} ${y + r * 0.1}Q${x - r * 0.7} ${y + r * 0.8} ${x} ${y + r * 0.7}Q${x + r * 0.7} ${y + r * 0.8} ${x + r * 0.85} ${y + r * 0.1}"/></g>`;
 const anchor = (x: number, y: number, r: number) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#2c8fd1" stroke="#fff" stroke-width="3"/><g fill="none" stroke="#fff" stroke-width="${(r * 0.12).toFixed(1)}" stroke-linecap="round"><circle cx="${x}" cy="${y - r * 0.5}" r="${r * 0.14}"/><path d="M${x} ${y - r * 0.36}V${y + r * 0.62}M${x - r * 0.32} ${y - r * 0.18}H${x + r * 0.32}M${x - r * 0.58} ${y + r * 0.2}Q${x - r * 0.5} ${y + r * 0.66} ${x} ${y + r * 0.62}Q${x + r * 0.5} ${y + r * 0.66} ${x + r * 0.58} ${y + r * 0.2}"/></g>`;
@@ -77,7 +85,7 @@ const burst = (x: number, y: number, r1: number, r2: number, n = 12) => `<path d
 
 /** The printed pictures of Air and Naval Support, cut from the counter sheet scan (web/public/sicily/chit/); the rest of the counter is vector. */
 const PIC: Record<string, string> = {};
-const PICS = ['air_us', 'air_br', 'air_axis', 'naval_us', 'naval_br'] as const;
+const PICS = ['air_us', 'air_br', 'air_axis', 'naval_us', 'naval_br', 'tank_axis', 'tank_allied'] as const;
 export async function loadSicilyChitArt(base = './sicily/chit/') {
   await Promise.all(PICS.map(async (k) => { const r = await fetch(`${base}${k}.png`); if (!r.ok) throw new Error(`sicily chit art ${k}: ${r.status}`); const b = await r.blob(); PIC[k] = await new Promise<string>((ok) => { const f = new FileReader(); f.onload = () => ok(String(f.result)); f.readAsDataURL(b); }); }));
 }
@@ -89,8 +97,7 @@ const airChit = (c: SCounter) => `${ox(c)}${head(c)}${picture(picKey(c, 'air'))}
 const navalChit = (c: SCounter) => `${ox(c)}${head(c)}${picture(picKey(c, 'naval'))}${txt('Naval Support', 80, 140, 24, { w: 'b', italic: true, anchor: 'middle', max: 128 })}</svg>`;
 const delayed = (c: SCounter) => `${ox(c)}${head(c)}<rect x="40" y="44" width="80" height="56" fill="#e3222b"/>${txt('Asset', 80, 82, 28, { w: 'b', italic: true, anchor: 'middle', fill: '#fff', max: 72 })}${txt('Delayed', 80, 140, 30, { w: 'b', italic: true, anchor: 'middle', max: 128 })}</svg>`;
 const staff = (c: SCounter) => `${ox(c)}${head(c)}<rect x="48" y="44" width="64" height="58" fill="${c.nation === 'italian' ? '#8d969c' : '#3c7a3a'}" stroke="#fff" stroke-width="4"/>${txt('HQ', 80, 86, 36, { w: 'b', anchor: 'middle', fill: '#fff' })}${txt('Staff Asset', 80, 140, 25, { w: 'b', anchor: 'middle', max: 124 })}</svg>`;
-const specialAction = (c: SCounter) => c.red_flag ? `${ox(c)}${panel(EVENT[nationOf(c)])}${head(c, 22, 52, 32)}${CHIT_ART.saArrow ? `<svg x="18" y="52" width="122" height="72" viewBox="0 0 122 72"><image href="${CHIT_ART.saArrow}" width="130" height="72"/></svg>` : ''}${txt('Special Action', 82, 147, 24, { w: 'b', italic: true, anchor: 'middle', max: 120 })}</g></svg>`      // the German counters: pennant on top, the words below
-  : `${ox(c)}${panel(EVENT[nationOf(c)])}${head(c, 22, 52, 32)}${txt('Special', 92, 44, 26, { w: 'b', italic: true, anchor: 'middle', max: 74 })}${CHIT_ART.saArrow ? `<svg x="18" y="52" width="122" height="72" viewBox="0 0 122 72"><image href="${CHIT_ART.saArrow}" width="130" height="72"/></svg>` : ''}${txt('Action', 86, 147, 26, { w: 'b', italic: true, anchor: 'middle', max: 100 })}</g></svg>`;
+const specialAction = (c: SCounter) => `${ox(c)}<rect x="14" y="14" width="132" height="132" fill="${SA_PANEL[nationOf(c)]}" stroke="#fff" stroke-width="2.6"/><g transform="translate(22 27) scale(.6)">${saArt(c.side === 'axis')}</g>${head(c, 18, 44, 30)}</svg>`;
 const replacement = (c: SCounter) => { const arm = c.kind === 'replacement_arm', n = nationOf(c), ls = c.name.replace(/ Non-Elite Repl$/, '').split(' ').concat([]);
   const lines = [ls.join(' '), 'Non-Elite', 'Repl'];
   const sym = `<rect x="61" y="36" width="43" height="29" fill="#fff" stroke="#111" stroke-width="2.4"/>${arm ? '<rect x="68" y="42" width="29" height="17" rx="8.5" fill="none" stroke="#111" stroke-width="2"/>' : '<path d="M61 36L104 65M104 36L61 65" stroke="#111" stroke-width="1.6"/>'}`;
@@ -173,10 +180,10 @@ const SYMBOL: Record<string, string> = { motorized_inf: 'motorized', mountain_in
 /** 512 px SVG of a Sicily block face at strength str. */
 export function sicilyBlockSvg(u: SUnit, str = u.steps ?? 1): string {
   const n: Nation = u.nation ?? (u.side === 'axis' ? 'german' : 'us'), wood = hex(SICILY_WOOD[n]), paper = u.colours?.sticker ?? '#ccc', max = u.steps ?? 1;
-  if (u.kind === 'special_action_block') {
-    const ax = u.side === 'axis', w = hex(ax ? SICILY_WOOD.german : SICILY_WOOD.us), art = CHIT_ART.saArrow;
-    return `${frame(w)}${sticker(ax ? '#c9ccd2' : '#f2eedf')}<rect x="11" y="11" width="78" height="78" fill="${ax ? '#e4e6e9' : '#fbf7e8'}" stroke="#fff" stroke-width="3.4"/>${word(String(u.arrival_turn ?? 2), 16, 30, 16, 12)}<path d="M26 18V30" stroke="#2b2b2b" stroke-width="1"/><path d="M26.5 18L36 21L26.5 24Z" fill="#e3222b"/>${art ? `<svg x="13" y="33" width="74" height="40" viewBox="0 0 122 72"><image href="${art}" width="130" height="72"/></svg>` : ''}${word('Special Action', 50, 85, 14, 72, { anchor: 'middle', italic: true })}</svg>`;
+  if (u.kind === 'special_action_block') {                                   // the approved Special Action label: grey (Axis) or blue (Allied) with the tank photo
+    const ax = u.side === 'axis', w = hex(ax ? SICILY_WOOD.german : SICILY_WOOD.us);
+    return `${frame(w)}<rect x="5" y="5" width="90" height="90" fill="${ax ? '#b7bbc1' : '#0082ce'}"/><svg x="5" y="5" width="90" height="90" viewBox="0 0 200 200">${saArt(ax)}</svg></svg>`;
   }
   const c = u.sticker_code, code = !c ? null : c === 'Inv' ? { t: 'Inv', bg: '#fff' } : u.start_area != null ? { t: c, bg: '#f8e23c' } : { t: c };
-  return blockFace({ wood, paper, box: u.colours?.box ?? '#ddd', symbol: SYMBOL[u.symbol ?? ''] ?? u.symbol, steps: max, q: u.quality_by_step ?? [], name: printed(u), code, stripe: u.colours?.stripe ?? null }, str);
+  return blockFace({ wood, paper, box: u.colours?.box ?? '#ddd', symbol: SYMBOL[u.symbol ?? ''] ?? u.symbol, steps: max, q: u.quality_by_step ?? [], name: printed(u), code, stripe: u.colours?.stripe ?? null, stripeAt: [57.5, 13] }, str);
 }

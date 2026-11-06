@@ -20,6 +20,8 @@ export type BlockSpec = {
   edgeOf?: (s: number) => number;
   /** A picture that replaces the unit box, code, stripe and name (strongpoints and other special stickers). */
   body?: string;
+  /** The colour ribbon's top and height (Sicily prints it down to the bottom of the unit box). Default 54.5, 11.5. */
+  stripeAt?: [number, number];
   /** Type scale of the volume's stickers (The Bulge prints larger pips and lettering than Golan). */
   size?: Partial<Sizes>;
 };
@@ -77,7 +79,8 @@ export function blockFace(b: BlockSpec, str = b.steps): string {
     const c = b.code, f = z.code, h = c ? 7 + c.t.length * f * 0.51 : 0, bw = f + 1.5;
     const code = !c ? '' : `${c.bg ? `<rect x="8.5" y="11" width="${bw}" height="${h.toFixed(1)}" fill="${c.bg}"/>` : ''}${word(c.t, 8.5 + bw / 2 + f * 0.36, 11 + h / 2, f, h - 4, { anchor: 'middle', rot: -90 })}`;
     const nameBg = b.nameBg ? `<rect x="${(85 - nameW).toFixed(1)}" y="${88 - NAME * 0.82}" width="${(nameW + 3.5).toFixed(1)}" height="${NAME + 0.5}" fill="${b.nameBg}"/>` : '';
-    body = `${b.stripe ? `<rect x="5" y="54.5" width="90" height="11.5" fill="${b.stripe}"/>` : ''}${unitBox(b.symbol, b.box)}${code}${nameBg}${word(b.name, 86.5, 88, NAME, NAME_W, { anchor: 'end' })}`;
+    const [sy, sh] = b.stripeAt ?? [54.5, 11.5];
+    body = `${b.stripe ? `<rect x="5" y="${sy}" width="90" height="${sh}" fill="${b.stripe}"/>` : ''}${unitBox(b.symbol, b.box)}${code}${nameBg}${word(b.name, 86.5, 88, NAME, NAME_W, { anchor: 'end' })}`;
   }
   return `${frame(b.wood)}<g transform="rotate(${-90 * edgeOf(str)} 50 50)">${sticker(b.paper)}${body}${edges}</g></svg>`;
 }
