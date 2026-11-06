@@ -33,10 +33,17 @@ GAMES = {
       dict(pdf='docs/games/golan73/scenarios/FAB_Golan73_Al-Owda_ScenarioRules.pdf', pages='1-2', only=(18, 18), label='Al-Owda sheet', prefix='A')]),
     dict(id='examples', title='Examples & Notes', sub="Golan '73 Play Book, 20.0, 21.0, 23.0", parts=[dict(md='tools/rules/golan73-playbook.md', only=(20, 23), skip=(22,))]),
   ],
+  'sicily': [                                                                       # Sicily plays the 2016 series rules (the Golan '73 rule book); its own books are scans, transcribed
+    dict(id='series', title='Series Rules', sub="Fast Action Battles Series Rules (2016, Golan '73 Rule Book)", parts=[dict(pdf='docs/games/golan73/rules/FAB-G_Rules_FINAL.pdf', pages='1-22', only=(1, 9))]),
+    dict(id='exclusive', title='Exclusive Rules', sub='Sicily Rule Book, 10.0–19.0', parts=[dict(md='tools/rules/sicily-rules.md', only=(10, 19), label='Sicily Rule Book')]),
+    dict(id='scenarios', title='Scenarios', sub='Sicily Play Book, 22.0', parts=[dict(md='tools/rules/sicily-playbook.md', only=(22, 22), label='Sicily Play Book')]),
+    dict(id='examples', title='Examples & Notes', sub='Sicily Play Book, 20.0, 21.0, 23.0', parts=[dict(md='tools/rules/sicily-playbook.md', only=(20, 23), skip=(22,), label='Sicily Play Book')]),
+  ],
 }
 
 # The book's own printed index (Series Rules; in Golan '73 it covers the exclusive rules too). Pages from the table of contents.
-INDEXES = {'bulge': ('docs/rules/FastActionBattleBulge.pdf', 11, 12), 'golan73': ('docs/games/golan73/rules/FAB-G_Rules_FINAL.pdf', 23, 24)}
+INDEXES = {'bulge': ('docs/rules/FastActionBattleBulge.pdf', 11, 12), 'golan73': ('docs/games/golan73/rules/FAB-G_Rules_FINAL.pdf', 23, 24),
+           'sicily': ('docs/games/golan73/rules/FAB-G_Rules_FINAL.pdf', 23, 24, 9)}       # Sicily: the 2016 index, series rules only (its 11.0+ entries are Golan's)
 
 def md_sections(path, label):
     """The proofread transcription: '## 22.14 Title' headings, paragraphs, '- ' items, Markdown tables."""
@@ -140,11 +147,11 @@ def build(game):
             u = upd.get(x['id'])
             if u and u.get('note') and b['id'] == u.get('book'): x['paras'] = x['paras'] + ['_Note: ' + u['note'] + '_']
         books.append(dict(id=b['id'], title=b['title'], sub=b['sub'], sections=secs))
-    pdf, a, z = INDEXES[game]
+    pdf, a, z, *top = INDEXES[game]
     ids = {sec['id'] for bk in books for sec in bk['sections']}
     index = X.index_of(D(pdf), a, z)
     for e in index:
-        for sub in e['subs']: sub['refs'] = [r for r in sub['refs'] if re.sub(r'[a-z]$', '', r) in ids or r in ids]
+        for sub in e['subs']: sub['refs'] = [r for r in sub['refs'] if (re.sub(r'[a-z]$', '', r) in ids or r in ids) and (not top or (r.split('.')[0].isdigit() and int(r.split('.')[0]) <= top[0]))]
     out = dict(game=game, books=books, index=[e for e in index if any(sub['refs'] for sub in e['subs']) or e['see']], indexSource=os.path.basename(pdf))
     path = D('data', game, 'rules.json'); json.dump(out, open(path, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
     n = sum(len(b['sections']) for b in books)
