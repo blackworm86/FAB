@@ -10,8 +10,8 @@ import golanLabels from '../../data/golan73/labels.json';
 import golanUnits from '../../data/golan73/units.json';
 import golanCounters from '../../data/golan73/counters.json';
 import golanEntries from '../../data/golan73/entry_marks.json';
-import { labelSvg } from './art';
-import { chitSvg, garrisonChit, mapMarkerSvg } from './chits';
+import { labelSvg, BULGE_WOOD } from './art';
+import { chitSvg, garrisonChit, mapMarkerSvg, saBlockSvg } from './chits';
 import { golanChitSvg, golanBlockSvg, GOLAN_WOOD, type GCounter, type GUnit } from './golan-art';
 import { targetsFor as bulgeTargets, type Tgt, type TgtCtx } from './chit-play';
 import { golanTargets, golanBattleUse, golanPlayInBattle, golanBattleCard, golanPanel, golanBlocksBegin, golanEdgeMarks, GOLAN_BOXES, type PanelCtx } from './golan-ui';
@@ -32,6 +32,8 @@ export interface VolView {
     /** Off-map boxes printed only on a scenario's own sheet: drawn, and clickable, only while that scenario's play area includes them. */
     sheetBoxes?: { id: number; name: string; side: E.Side; x: number; y: number; w: number; h: number }[] };
   features: { fuel: boolean; zones: boolean; optional: boolean; tutorial: boolean };
+  /** A piece named by the rules reference (tools/rules/icons-<game>.json), drawn with this game's art. */
+  ruleArt: (key: string, g: E.Game) => { svg: string; wood?: string; name: string } | null;
   scenarios: ScenarioInfo[]; defaultOpts: Partial<E.Opts>;
   unitSvg: (u: E.Unit, g: E.Game) => string; chitSvg: (c: E.Chit) => string;
   /** CSS class of a block's wood: its side, or 'british' for The Bulge's British blocks. */
@@ -76,6 +78,7 @@ function bulge(): VolView {
     scenarios: info.scenarios, defaultOpts: { scenario: 'tournament', fuel: true },
     unitSvg: (u, g) => (u.garrison ? garrisonArt(u, g) : labelSvg(u)), chitSvg: (c) => chitSvg(c),
     cssSide: (u) => (u.side === 'german' ? 'german' : BRIT.has(u.name) ? 'british' : 'allied'),
+    ruleArt: bulgeRuleArt,
     reserveTag: (u) => (u.side === 'german' ? ({ z5: 'R5', z6: 'R6', z7: 'R7' } as Record<string, string>)[u.reserve ?? ''] ?? 'R5' : u.reserve === 'z7' ? 'A7' : 'A56'),
     ruleKey: (k) => k, targetsFor: bulgeTargets,
     battleCard: (c) => E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission', battleUse: (g, b, c) => E.canAssign(g, b, c.side, c), playInBattle: () => false,
@@ -115,6 +118,7 @@ function golan(): VolView {
     reserveTag: (u) => (u.side === 'syrian' ? 'R' : 'RI'),
     ruleKey: (k) => (k === 'air_mission' || k === 'event_release' ? `golan:${k}` : k), targetsFor: golanTargets,
     battleCard: golanBattleCard, battleUse: golanBattleUse, playInBattle: golanPlayInBattle,
+    ruleArt: golanRuleArt,
     panel: golanPanel, blocksBegin: golanBlocksBegin, edgeMarks: golanEdgeMarks, markSvg: (code) => EDGE[code]?.() ?? mapMarkerSvg(code), boxes: GOLAN_BOXES,
     fieldWorks: (g, id) => G.unitFieldWorks(g, id),
     limits: (g, b, s) => { const l = G.limits(g, b, s); return { arty: l.artillery, assets: l.battle }; },
@@ -144,4 +148,24 @@ function aliasSideCss(map: Record<string, string>) {
     }
   };
   for (const ss of Array.from(document.styleSheets)) { let rules: CSSRuleList; try { rules = ss.cssRules; } catch { continue; } walk(rules, ss); }      // Google Fonts is cross-origin: not readable, nothing of ours in it
+}
+
+/* ---------- the pieces the rules reference shows next to a rule ---------- */
+const hexc = (n: number) => '#' + n.toString(16).padStart(6, '0');
+const MARK_NAME: Record<string, string> = { DIS: 'Disordered', REC: 'Recovering', E: 'Exploitation', X: 'Blown Bridge', FW: 'Field Works', RA: 'River Assault', RB: 'Road Block', OOS: 'Out of Supply', B: 'Boundary Crossing',
+  R5: 'Zone 5 Reserve', R6: 'Zone 6 Reserve', R7: 'Zone 7 Reserve', A7: 'Zone 7 Reserve (Allied)', A56: 'Zones 5/6 Reserve (Allied)', GI: 'Greif Team Interdict', G: 'Greif Team Bridge', AIR: 'Air Mission' };
+/** The Bulge: u:<block name>, c:<chit id>, k:<chit kind> (the first of that kind), m:<marker code>, sa:<side>. */
+function bulgeRuleArt(key: string, g: E.Game) {
+  const [t, v] = [key.slice(0, key.indexOf(':')), key.slice(key.indexOf(':') + 1)];
+  if (t === 'u') { const u = g.units.find((x) => x.name === v); return u ? { svg: labelSvg(u), wood: hexc(BULGE_WOOD[u.side as 'german' | 'allied'] ?? 0x888888), name: u.name } : null; }
+  if (t === 'c' || t === 'k') { const c = g.chits.find((x) => (t === 'c' ? x.id === v || x.id.startsWith(v + '.') : x.kind === v)); return c ? { svg: chitSvg(c), name: c.name } : null; }
+  if (t === 'm') { const svg = mapMarkerSvg(v); return svg ? { svg, name: MARK_NAME[v] ?? v } : null; }
+  if (t === 'sa') return { svg: saBlockSvg(v as 'german' | 'allied'), name: `${v === 'german' ? 'German' : 'Allied'} Special Action` };
+  return null;
+}
+/** Golan '73: a block or counter id as printed (I23, SC17, M01). */
+const G_UNIT = new Map((golanUnits as unknown as GUnit[]).map((u) => [u.id, u])), G_COUNTER = new Map((golanCounters as unknown as GCounter[]).map((c) => [c.id, c]));
+function golanRuleArt(key: string) {
+  const u = G_UNIT.get(key); if (u) return { svg: golanBlockSvg(u), wood: hexc(GOLAN_WOOD[u.side as 'israeli' | 'syrian']), name: u.name };
+  const c = G_COUNTER.get(key); return c ? { svg: golanChitSvg(c), name: c.name } : null;
 }

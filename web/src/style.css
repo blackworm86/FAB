@@ -841,3 +841,74 @@ a.btnlink.primary { background: var(--gold); color: #1a1608; border-color: trans
 @media (max-width: 700px) { .sbfab { padding: 9px; top: 42%; } .sbfab span { display: none; } }
 .sbhead { padding-bottom: 6px; margin-bottom: 6px; border-bottom: 1px solid var(--line); } .sbhead > b { display: flex; align-items: center; gap: 6px; color: var(--gold); font: 700 13px var(--sfd); letter-spacing: .08em; text-transform: uppercase; } .sbhead b svg { width: 16px; height: 16px; }
 .sbhead .row select { flex: 1; min-width: 0; }
+
+/* ---------- rules reference (rules-ref.ts): a sheet on the right, the whole screen on a phone; scoped under #rules ---------- */
+a.rlink { color: var(--gold); text-decoration: none; border-bottom: 1px dotted currentColor; cursor: help; font-variant-numeric: tabular-nums; }
+a.rlink:hover { border-bottom-style: solid; }
+#rules { --rsheet: #0f120bf7; --rpanel: #151a0f; --rdim: #9a9c7c; --rrule: #2a2f20; --rlink: #f0c56d;
+  position: fixed; z-index: 230; top: 0; right: 0; bottom: 0; width: min(640px, 100%); display: flex; flex-direction: column; background: var(--rsheet); color: var(--ink); border-left: 1px solid var(--line);
+  box-shadow: -18px 0 40px #000a; font: 13.5px/1.55 var(--sf); padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) 0; }
+@media (max-width: 699px) { #rules { width: 100%; border-left: 0; --rsheet: #0f120b; } }           /* full screen on a phone: nothing of the game shows through */
+@media (prefers-reduced-motion: no-preference) { #rules { animation: rslide .22s ease-out; } @keyframes rslide { from { transform: translateX(24px); opacity: .6; } } }
+#rules button { font: inherit; color: inherit; background: transparent; border: 0; padding: 0; letter-spacing: normal; min-height: 0; text-transform: none; }
+#rules .hd { padding: 14px 16px 10px max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 10px; border-bottom: 1px solid var(--rrule); }
+#rules .top { display: flex; align-items: baseline; gap: 12px; }
+#rules h1 { margin: 0; font: 700 24px/1 var(--sfd); letter-spacing: .14em; text-transform: uppercase; }
+#rules .game { color: var(--gold); font: 600 15px var(--sfd); letter-spacing: .1em; text-transform: uppercase; }
+#rules .sp { flex: 1; }
+#rules .ib { border: 1px solid var(--line); min-width: 38px; height: 38px; padding: 0 10px; font: 600 12px var(--sfd); letter-spacing: .1em; text-transform: uppercase; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; }
+#rules .ib:hover { border-color: var(--gold); } #rules .ib svg { width: 16px; height: 16px; } #rules .ib[hidden] { display: none; }
+#rules :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+#rules .search { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: #0b0d08; padding: 0 10px; height: 40px; }
+#rules .search:focus-within { border-color: var(--gold); } #rules .search svg { width: 16px; height: 16px; color: var(--rdim); flex: none; }
+#rules .search input { flex: 1; min-width: 0; background: transparent; border: 0; color: var(--ink); font: 14px var(--sf); outline: none; padding: 0; }
+#rules .tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+#rules .tabs::-webkit-scrollbar { display: none; }
+#rules .tab { flex: none; border-bottom: 2px solid transparent; color: var(--rdim); font: 600 13.5px var(--sfd); letter-spacing: .1em; text-transform: uppercase; padding: 6px 9px; cursor: pointer; }
+#rules .tab[aria-selected="true"] { color: var(--gold); border-bottom-color: var(--gold); } #rules .tab:hover { color: var(--ink); }
+#rules .bd { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 6px 18px 28px max(18px, env(safe-area-inset-left, 0px)); outline: none; }
+#rules .bookhead { padding: 10px 0 6px; color: var(--rdim); font-size: 12px; }
+#rules .grp { margin-top: 12px; }
+#rules .grp > .row { font: 700 15px var(--sfd); letter-spacing: .06em; text-transform: uppercase; }
+#rules .row { width: 100%; display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; align-items: center; gap: 10px; text-align: left; border-bottom: 1px solid var(--rrule); padding: 7px 4px; cursor: pointer; }
+#rules .row:hover, #rules .hit:hover { background: #ffffff08; }
+#rules .row .n, #rules .hit .n { font: 600 13px var(--sfd); color: var(--gold); letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+#rules .row .t { min-width: 0; } #rules .row .t small { display: block; color: var(--rdim); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#rules .row .pcs { display: flex; gap: 3px; } #rules .row .pcs img { width: 22px; height: 22px; }
+#rules .row .pcs img.blk, #rules .art img.blk { border-radius: 3px; }
+#rules .sub .row { font-size: 13px; } #rules .sub .row .n { color: var(--line); }
+#rules .crumb { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 0 4px; color: var(--rdim); font-size: 12px; }
+#rules .crumb button { color: var(--rdim); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+#rules .sec h2 { margin: 6px 0 2px; display: flex; gap: 12px; align-items: baseline; font: 700 26px/1.1 var(--sfd); letter-spacing: .03em; text-wrap: balance; }
+#rules .sec h2 .num { color: var(--gold); flex: none; font-variant-numeric: tabular-nums; }
+#rules .src { color: var(--rdim); font-size: 11.5px; margin-bottom: 10px; }
+#rules .art { display: flex; flex-wrap: wrap; gap: 12px; padding: 10px 12px; margin: 6px 0 14px; background: var(--rpanel); border: 1px solid var(--rrule); }
+#rules .art figure { margin: 0; width: 76px; text-align: center; }
+#rules .art img { width: 64px; height: 64px; display: block; margin: 0 auto 4px; } #rules .art img.blk { padding: 5px; box-shadow: 0 3px 0 #0008; }
+#rules .art figcaption { font: 600 11px/1.2 var(--sfd); letter-spacing: .03em; color: var(--rdim); }
+#rules .txt { max-width: 64ch; } #rules .txt p { margin: 0 0 10px; } #rules .txt b { color: #f1ead0; } #rules .txt i { color: #c9c3a2; }
+#rules .txt ul { margin: 0 0 10px; padding-left: 18px; } #rules .txt li { margin: 0 0 5px; } #rules .txt li::marker { color: var(--gold); }
+#rules .txt a, #rules .cites a { color: var(--rlink); text-decoration: none; border-bottom: 1px dotted var(--rlink); font-variant-numeric: tabular-nums; }
+#rules .txt a:hover, #rules .cites a:hover { border-bottom-style: solid; }
+#rules .tw { overflow-x: auto; margin: 0 0 12px; } #rules table { border-collapse: collapse; font-size: 12.5px; }
+#rules td, #rules th { border: 1px solid var(--rrule); padding: 4px 8px; text-align: left; vertical-align: top; } #rules th { color: var(--gold); font: 600 13px var(--sfd); letter-spacing: .05em; }
+#rules .childs { margin: 4px 0 14px; }
+#rules .cites { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--rrule); color: var(--rdim); font-size: 12px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+#rules .cites b { font: 600 12px var(--sfd); letter-spacing: .12em; text-transform: uppercase; }
+#rules .pn { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; }
+#rules .pn .ib { max-width: 48%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; line-height: 36px; }
+#rules .hit { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 10px; text-align: left; border-bottom: 1px solid var(--rrule); padding: 9px 4px; font-size: 13px; cursor: pointer; width: 100%; }
+#rules .hit b.tt { display: block; font: 600 15px var(--sfd); letter-spacing: .03em; } #rules .hit small { display: block; color: var(--rdim); font-size: 11.5px; } #rules .hit .sn { display: block; color: #c8c2a3; font-size: 12.5px; margin-top: 2px; }
+#rules mark { background: #e7b04a40; color: inherit; padding: 0 1px; }
+#rules .empty { color: var(--rdim); padding: 24px 0; }
+#rules .az { display: flex; flex-wrap: wrap; gap: 2px; padding: 10px 0; position: sticky; top: -6px; background: var(--rsheet); z-index: 1; }
+#rules .az button { color: var(--rdim); font: 600 13px var(--sfd); width: 26px; height: 26px; border: 1px solid transparent; cursor: pointer; }
+#rules .az button:not(:disabled):hover { border-color: var(--line); color: var(--ink); } #rules .az button:disabled { opacity: .3; cursor: default; }
+#rules .letter { font: 700 20px var(--sfd); color: var(--gold); margin: 14px 0 4px; }
+#rules .ix { border-bottom: 1px solid var(--rrule); padding: 4px 0; }
+#rules .term { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 3px 0; }
+#rules .term.sub { padding-left: 16px; color: #c8c2a3; font-size: 12.5px; }
+#rules .refs { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
+#rules .chip { background: #1d2114; border: 1px solid var(--rrule); color: var(--rlink); font: 600 12.5px var(--sfd); letter-spacing: .03em; padding: 1px 7px; cursor: pointer; font-variant-numeric: tabular-nums; }
+#rules .chip:hover { border-color: var(--gold); }
+#rules .see { color: var(--rdim); font-style: italic; } #rules .seebtn { color: var(--rlink); text-decoration: underline dotted; cursor: pointer; }

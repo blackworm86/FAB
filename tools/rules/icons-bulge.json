@@ -1,0 +1,153 @@
+{
+ "2.2": [
+  "u:2 Pz",
+  "k:artillery",
+  "k:special_action_event",
+  "m:DIS"
+ ],
+ "2.3": [
+  "m:DIS",
+  "m:REC"
+ ],
+ "4.31": [
+  "m:X"
+ ],
+ "4.33": [
+  "m:FW"
+ ],
+ "4.34": [
+  "m:RB"
+ ],
+ "4.35": [
+  "k:engineer"
+ ],
+ "5.21": [
+  "m:R5",
+  "m:A7"
+ ],
+ "5.35": [
+  "m:RA"
+ ],
+ "6.31": [
+  "k:artillery",
+  "k:rocket_artillery"
+ ],
+ "6.32": [
+  "k:armor_asset",
+  "k:infantry_asset"
+ ],
+ "6.33": [
+  "k:engineer"
+ ],
+ "6.5": [
+  "m:DIS",
+  "m:REC"
+ ],
+ "6.8": [
+  "m:E"
+ ],
+ "8.0": [
+  "sa:german",
+  "sa:allied"
+ ],
+ "8.1": [
+  "sa:german",
+  "sa:allied",
+  "k:special_action_event"
+ ],
+ "8.3": [
+  "k:command_staff"
+ ],
+ "9.32": [
+  "m:OOS"
+ ],
+ "9.35": [
+  "m:DIS",
+  "m:REC"
+ ],
+ "14.62": [
+  "k:command_staff",
+  "m:B"
+ ],
+ "14.7": [
+  "m:R5",
+  "m:R6",
+  "m:R7",
+  "m:A7",
+  "m:A56"
+ ],
+ "14.71": [
+  "m:R5",
+  "m:R6",
+  "m:R7"
+ ],
+ "14.72": [
+  "m:A7",
+  "m:A56"
+ ],
+ "15.3": [
+  "u:Peiper"
+ ],
+ "16.11": [
+  "c:L11"
+ ],
+ "16.12": [
+  "k:artillery",
+  "k:rocket_artillery"
+ ],
+ "16.13": [
+  "k:fuel"
+ ],
+ "16.21": [
+  "k:garrison"
+ ],
+ "16.22": [
+  "k:task_force"
+ ],
+ "16.23": [
+  "k:artillery"
+ ],
+ "17.11": [
+  "m:GI"
+ ],
+ "17.12": [
+  "m:G"
+ ],
+ "17.13": [
+  "k:event_release"
+ ],
+ "17.14": [
+  "k:event_bodenplatte"
+ ],
+ "17.21": [
+  "m:AIR"
+ ],
+ "17.22": [
+  "k:rebuild_or_replace_inf",
+  "k:rebuild_or_replace_arm"
+ ],
+ "17.23": [
+  "k:event_arriving_regiment"
+ ],
+ "17.31": [
+  "k:replacement_inf"
+ ],
+ "17.32": [
+  "k:replacement_arm"
+ ],
+ "17.33": [
+  "k:special_action_event"
+ ],
+ "17.34": [
+  "k:event_delayed_response"
+ ],
+ "18.2": [
+  "k:fuel_bid"
+ ],
+ "18.3": [
+  "u:Peiper"
+ ],
+ "18.4": [
+  "u:150 Pz"
+ ]
+}

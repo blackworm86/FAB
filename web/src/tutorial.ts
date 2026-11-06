@@ -3,6 +3,7 @@
  *  host API and asks `gate` before a map tap. */
 import type * as E from '../../engine/src';
 import { U, replay, type Course, type Step, type Target } from './tutorial-script';
+import { linkRules } from './rules-link';
 
 export interface TutHost {
   game(): E.Game; load(g: E.Game): void; act(f: () => void, label: string): void;
@@ -121,6 +122,7 @@ export function initTutorial(h: TutHost, course: Course) {
     const L = LESSONS[li], s = step(); if (!L || !s) return;
     coach.className = `tut-coach ${menu ? 'is-menu' : `is-${s.kind ?? 'step'}`}`;
     coach.innerHTML = menu ? menuHtml() : stepHtml(L, s);
+    linkRules(coach); coach.querySelectorAll('.tut-rule, .tut-why summary').forEach((e) => linkRules(e, true));      // rule numbers open the rules reference
     coach.querySelectorAll<HTMLElement>('[data-t]').forEach((b) => (b.onclick = () => {
       const t = b.dataset.t!;
       if (t === 'next') onNext(); else if (t === 'skip') skipTry(); else if (t === 'back') back(); else if (t === 'exit') finish(undefined, true);
@@ -164,7 +166,7 @@ export function initTutorial(h: TutHost, course: Course) {
   }
 
   /* The lock: only the target (and the coach, and the dice report) take input. Pan and zoom stay free. */
-  const free = (el: Element) => !!el.closest('.tut-coach') || !el.closest('#ui') || !!el.closest('.c-ledger.tight');
+  const free = (el: Element) => !!el.closest('.tut-coach') || !el.closest('#ui') || !!el.closest('.c-ledger.tight') || !!el.closest('a.rlink');
   function guard(ev: Event) {
     const s = step(), el = ev.target as Element | null; if (!s || !el?.closest || free(el)) return;
     const te = menu ? null : targetEl(s.target);
