@@ -22,13 +22,13 @@ export const hasRules = (game: string) => game in LOAD;
 type X = Section & { book: number; i: number };
 /** The symbols printed on the player aids, drawn: the hit-priority marks and the troop-quality dots of the block labels. */
 const SYM: Record<string, string> = {
-  ok: '<svg class="sym" viewBox="0 0 16 16" role="img" aria-label="absorb or avoid"><rect x="1" y="1" width="14" height="14" rx="2" fill="none" stroke="#5d8b3a" stroke-width="1.6"/><path d="M4 8.5l3 3 5-7" fill="none" stroke="#8fd16a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  x: '<svg class="sym" viewBox="0 0 16 16" role="img" aria-label="step loss"><rect x="1" y="1" width="14" height="14" rx="2" fill="none" stroke="#b8312f" stroke-width="1.6"/><path d="M4.5 4.5l7 7M11.5 4.5l-7 7" stroke="#ff7a68" stroke-width="2.2" stroke-linecap="round"/></svg>',
+  ok: '<svg class="sym" viewBox="0 0 16 16" role="img" aria-label="check mark"><rect x="1" y="1" width="14" height="14" rx="2" fill="none" stroke="#5d8b3a" stroke-width="1.6"/><path d="M4 8.5l3 3 5-7" fill="none" stroke="#8fd16a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  x: '<svg class="sym" viewBox="0 0 16 16" role="img" aria-label="cross"><rect x="1" y="1" width="14" height="14" rx="2" fill="none" stroke="#b8312f" stroke-width="1.6"/><path d="M4.5 4.5l7 7M11.5 4.5l-7 7" stroke="#ff7a68" stroke-width="2.2" stroke-linecap="round"/></svg>',
   elite: '<svg class="sym dot" viewBox="0 0 12 12" role="img" aria-label="Elite"><circle cx="6" cy="6" r="4.6" fill="#d1432f" stroke="#fff" stroke-width="1"/></svg>',
   veteran: '<svg class="sym dot" viewBox="0 0 12 12" role="img" aria-label="Veteran"><circle cx="6" cy="6" r="4.6" fill="#111" stroke="#ddd" stroke-width="1"/></svg>',
   green: '<svg class="sym dot" viewBox="0 0 12 12" role="img" aria-label="Green"><circle cx="6" cy="6" r="4.4" fill="#fff" stroke="#888" stroke-width="1.2"/></svg>',
 };
-const sym = (h: string) => h.replace(/\[(ok|x|elite|veteran|green)\]/g, (_, k: string) => SYM[k]);
+const sym = (h: string) => h.replace(/&lt;br\s*\/?&gt;/g, '<br>').replace(/\[(ok|x|elite|veteran|green)\]/g, (_, k: string) => SYM[k]);
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 const reEsc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const label = (id: string) => (id.startsWith('Ex ') ? 'Ex ' + id.slice(3) : /^[A-Z]\.0$/.test(id) ? 'Card ' + id[0] : id.replace(/^[NA](?=\d)/, ''));
@@ -79,8 +79,8 @@ function mount(D: RulesData, PIECE: Record<string, string[]>, o: RulesOptions) {
   for (const s of all) for (const m of s.paras.join(' ').matchAll(/\b(\d{1,2}\.\d{1,3})[a-z]?\b/g)) { const r = resolve(m[1]); if (r && r !== s.id) (citedBy.get(r) ?? citedBy.set(r, new Set()).get(r)!).add(s.id); }
 
   /* ---------- the rulebook's light markup to HTML ---------- */
-  const inline = (t: string) => sym(esc(t)).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[\s(])_(.+?)_(?=[\s).,;:]|$)/g, '$1<i>$2</i>')
-    .replace(/\b(\d{1,2}\.\d{1,3}[a-z]?)\b/g, (m) => { const r = resolve(m); return r ? `<a href="#" data-go="${r}">${m}</a>` : m; });
+  const inline = (t: string) => sym(esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[\s(>])_(.+?)_(?=[\s).,;:!<]|$)/g, '$1<i>$2</i>')
+    .replace(/\b(\d{1,2}\.\d{1,3}[a-z]?)\b/g, (m) => { const r = resolve(m); return r ? `<a href="#" data-go="${r}">${m}</a>` : m; }));      // the drawn symbols go in last: their path data holds numbers like 8.5
   function body(paras: string[]) {
     let out = '', list: string[] = [], rows: string[] = [];
     const flush = () => {

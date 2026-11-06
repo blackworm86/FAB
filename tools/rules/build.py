@@ -76,13 +76,13 @@ def aid_sections(path, label):
             for j in range(k + 1, min(k + 4, len(lines))):
                 m = re.match(r'^Card:\s*([A-Z])', lines[j]); card = m.group(1) if m else card
             card = card or chr(65 + len([x for x in secs if x['id'].endswith('.0')])); n = 0
-            cur = dict(id=f'{card}.0', title=title, source=label, paras=[]); secs.append(cur); continue
+            cur = dict(id=f'{card}.0', title=X.tidy_title(title), source=label, paras=[]); secs.append(cur); continue
         if re.match(r'^Card:\s*[A-Z]', line): continue
         h3 = re.match(r'^###\s+(.*)$', line)
         if h3 and cur is not None: flush(); cur['paras'].append('### ' + h3.group(1).strip()); continue            # a sub-heading inside the box (a phase under its turn bar)
         h2 = re.match(r'^##\s+(.*)$', line)
         if h2 and card:
-            flush(); n += 1; cur = dict(id=f'{card}.{n}', title=h2.group(1).strip(), source=label, paras=[]); secs.append(cur); continue
+            flush(); n += 1; cur = dict(id=f'{card}.{n}', title=X.tidy_title(h2.group(1).strip()), source=label, paras=[]); secs.append(cur); continue
         if cur is None: continue
         if not line.strip(): flush(); continue
         if re.match(r'^\s*[-*]\s', line): flush(); cur['paras'].append(('• ' if not line.startswith(' ') else '• ◦ ') + re.sub(r'^\s*[-*]\s+', '', line)); continue
@@ -110,6 +110,7 @@ def build(game):
             if 'aid' in part:
                 if not os.path.exists(D(part['aid'])): print('  missing', part['aid']); continue
                 got = aid_sections(part['aid'], label)
+                for x in got: x['title'] = fixes.get('titles', {}).get(x['title'], x['title'])
                 secs += got; continue
             if 'md' in part:
                 if not os.path.exists(D(part['md'])): print('  missing', part['md']); continue
