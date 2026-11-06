@@ -91,7 +91,7 @@ function mount(D: RulesData, PIECE: Record<string, string[]>, o: RulesOptions) {
     for (const p of paras) {
       if (p.startsWith('• ')) { if (rows.length) flush(); list.push(p.slice(2)); continue; }
       if (p.startsWith('|')) { if (list.length) flush(); rows.push(p); continue; }
-      flush(); out += `<p>${inline(p)}</p>`;
+      flush(); out += p.startsWith('### ') ? `<h3>${inline(p.slice(4))}</h3>` : /^\d+\.\s/.test(p) ? `<p class="step">${inline(p)}</p>` : `<p>${inline(p)}</p>`;
     }
     flush(); return out;
   }

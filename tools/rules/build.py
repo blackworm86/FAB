@@ -78,7 +78,9 @@ def aid_sections(path, label):
             card = card or chr(65 + len([x for x in secs if x['id'].endswith('.0')])); n = 0
             cur = dict(id=f'{card}.0', title=title, source=label, paras=[]); secs.append(cur); continue
         if re.match(r'^Card:\s*[A-Z]', line): continue
-        h2 = re.match(r'^#{2,3}\s+(.*)$', line)
+        h3 = re.match(r'^###\s+(.*)$', line)
+        if h3 and cur is not None: flush(); cur['paras'].append('### ' + h3.group(1).strip()); continue            # a sub-heading inside the box (a phase under its turn bar)
+        h2 = re.match(r'^##\s+(.*)$', line)
         if h2 and card:
             flush(); n += 1; cur = dict(id=f'{card}.{n}', title=h2.group(1).strip(), source=label, paras=[]); secs.append(cur); continue
         if cur is None: continue

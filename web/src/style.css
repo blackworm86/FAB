@@ -914,3 +914,5 @@ a.rlink:hover { border-bottom-style: solid; }
 #rules .see { color: var(--rdim); font-style: italic; } #rules .seebtn { color: var(--rlink); text-decoration: underline dotted; cursor: pointer; }
 #rules .sym { width: 15px; height: 15px; vertical-align: -3px; margin-right: 3px; } #rules .sym.dot { width: 11px; height: 11px; vertical-align: -1px; }
 #rules td.mod { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; color: #f1ead0; font-weight: 600; }
+#rules .txt h3 { margin: 16px 0 6px; font: 700 15px var(--sfd); letter-spacing: .06em; text-transform: uppercase; color: var(--gold); }
+#rules .txt p.step { padding-left: 1.4em; text-indent: -1.4em; }
