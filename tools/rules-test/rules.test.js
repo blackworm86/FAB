@@ -57,6 +57,14 @@ describe('seats and factions', () => {
     await assertSucceeds(set(ref(user('alice'), `games/${G}/seatNames/german`), 'Alice'));
     await assertFails(set(ref(user('bob'), `games/${G}/seatNames/german`), 'Bob'));
   });
+  it('a Golan game uses the same two seats (german = Israel, allied = Syria) and the same flow', async () => {
+    const db = user('dave'), P = (p) => ref(db, `games/golan/${p}`);
+    await assertSucceeds(set(P('meta'), { title: 'Golan', game: 'golan73', owner: 'dave', created: 3, opts: { scenario: 'badr' } }));
+    await assertSucceeds(set(P('priv/german'), { salt: 'x' })); await assertSucceeds(set(P('priv/allied'), { salt: 'y' }));
+    await assertSucceeds(set(P('state'), { rev: 1, by: 'dave', f: { phasing: 'israeli' } }));
+    await assertSucceeds(update(P('seats'), { german: 'dave' })); await assertSucceeds(update(ref(user('erin'), 'games/golan/seats'), { allied: 'erin' }));
+    await assertFails(update(ref(user('erin'), 'games/golan/seats'), { syrian: 'erin' }));
+  });
   it('seats need an existing game', async () => { await assertFails(set(ref(user('bob'), 'games/nogame/seats'), { german: 'bob' })); });
 });
 

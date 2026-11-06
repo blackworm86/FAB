@@ -7,3 +7,4 @@ node_modules/
 skills-lock.json
 __pycache__/
 .vite/
+*-debug.log
