@@ -24,3 +24,11 @@ self.addEventListener('fetch', (e) => {
     return net;
   })());
 });
+// A tap on a "your move" notice opens (or focuses) that game.
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close(); const url = e.notification.data?.url || './';
+  e.waitUntil((async () => {
+    for (const c of await self.clients.matchAll({ type: 'window', includeUncontrolled: true })) if (c.url === url && 'focus' in c) return c.focus();
+    return self.clients.openWindow(url);
+  })());
+});

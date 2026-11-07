@@ -2,6 +2,7 @@
  *  which main.ts brings in only when a game opens. Some of its parts (the sign-in panel, invites, the rules window) also serve the table's menu. */
 import * as E from '../../engine/src';
 import { installKind, install, onInstallChange } from './install';
+import { moveNotice, noticesOn, noticesSupported, setNotices } from './notices';
 import { online, startOnline, auth, lobby, DEV, TABLE, type Match } from './online';
 import { gameInfo, GAMES } from './games';
 import { BOXES, boxFront, boxSpine } from './covers';
@@ -17,7 +18,7 @@ import { optChooser, optOn, rulesOf } from './opt-rules';
 export const STEP_NAME: Record<string, string> = { deploy: 'Set-up', reinforcement: 'Reinforcement', admin: 'Admin', movement: 'Movement', strategic: 'Strategic movement', combat: 'Combat', reaction: 'Reaction', btMove: 'Breakthrough movement', btCombat: 'Breakthrough combat', supply: 'Supply' };
 const GAME_PARAM = new URLSearchParams(location.search).get('game');
 const $ = (s: string) => document.querySelector(s) as HTMLElement;
-let matches: Match[] = [], modal: 'rules' | null = null, toast = '', toastInfo = false;
+let noticeMsg = '', watched = false, matches: Match[] = [], modal: 'rules' | null = null, toast = '', toastInfo = false;
 const form = { game: gameInfo(GAME_PARAM ?? '')?.ready ? GAME_PARAM! : 'bulge', title: '', side: '' as string, scenario: gameInfo(GAME_PARAM ?? '')?.defaultScenario ?? 'tournament', fuel: true, rules: {} as Partial<E.Opts> };
 let homeMsg: string;
 homeMsg = (() => { try { const m = sessionStorage.getItem('fab-notice') ?? ''; sessionStorage.removeItem('fab-notice'); return m; } catch { return ''; } })();
@@ -90,7 +91,7 @@ function homeHtml() {
 export function accountHtml() {
   if (!online.hasAccounts) return '';
   const a = online.account;
-  if (a && !a.guest) return `<h4>Account</h4><p class="hint">Signed in as <b>${esc(a.name || a.email)}</b>${a.email ? ' · ' + esc(a.email) : ''}${a.admin ? ' · <b>admin</b>' : ''}</p><div class="row"><button data-auth="out">Sign out</button></div>`;
+  if (a && !a.guest) return `<h4>Account</h4><p class="hint">Signed in as <b>${esc(a.name || a.email)}</b>${a.email ? ' · ' + esc(a.email) : ''}${a.admin ? ' · <b>admin</b>' : ''}</p><div class="row"><button data-auth="out">Sign out</button>${noticesSupported() ? ubtn(`<span class="sw ${noticesOn() ? 'on' : ''}">${noticesOn() ? 'ON' : 'OFF'}</span> Your-move notices`, () => { void setNotices(!noticesOn()).then((m) => { noticeMsg = m; document.dispatchEvent(new Event('fab-redraw')); }); }, noticesOn() ? 'on' : '', false, 'A system notice when the other player hands you the move, while a game or this page is open out of sight (this device only)') : ''}</div>${noticeMsg ? `<p class="hint">${esc(noticeMsg)}</p>` : ''}`;
   return `<div class="row"><button class="primary" data-auth="google">Continue with Google</button></div>
     <div class="authform"><input id="a-name" placeholder="Name (to register)" autocomplete="name"><input id="a-mail" type="email" placeholder="Email" autocomplete="email"><input id="a-pass" type="password" placeholder="Password (6+ characters)" autocomplete="current-password"></div>
     <div class="row"><button data-auth="in">Sign in</button><button data-auth="reg">Register</button><button data-auth="reset">Forgot password</button></div>`;
@@ -147,7 +148,7 @@ function render() {
 }
 /** Start the home page. `local`: no online play is set up on this site (development): open the local table instead. */
 export function startHome(local: () => void) {
-  onInstallChange(() => render());
+  onInstallChange(() => render()); document.addEventListener('fab-redraw', () => render());
   (document.getElementById('gl') as HTMLElement).style.display = 'none';
   document.addEventListener('pointerdown', (e) => { pressing = !!(e.target as HTMLElement).closest?.('#ui button, #ui [role=button]'); }, true);
   const release = () => { if (!pressing) return; pressing = false; if (waiting) setTimeout(() => { if (waiting && !pressing) render(); }, 0); };
@@ -157,7 +158,9 @@ export function startHome(local: () => void) {
   void startOnline(() => {}, () => {
     if (left) return;
     if (online.ready && online.mode === 'local') { left = true; local(); return; }
-    if (online.mode === 'remote' && online.hasAccounts && lobbyUid !== online.uid) { lobbyUid = online.uid; lobby.watch((m) => { matches = m; render(); }); }
+    if (online.mode === 'remote' && online.hasAccounts && lobbyUid !== online.uid) { lobbyUid = online.uid; lobby.watch((m) => { const was = new Set(matches.filter((x) => x.myMove).map((x) => x.id)), first = !watched; watched = true;      // 4.3: a game that just became this player's move
+      if (!first) for (const x of m) if (x.myMove && !was.has(x.id)) void moveNotice(`Your move · ${x.title}`, `Turn ${x.turn ?? ''}${x.step && STEP_NAME[x.step] ? ` · ${STEP_NAME[x.step]}` : ''}`, `fab-${x.id}`);
+      matches = m; render(); }); }
     const next = (() => { try { return sessionStorage.getItem('fab-next'); } catch { return null; } })();
     if (next && online.account && !online.account.guest) { try { sessionStorage.removeItem('fab-next'); } catch { /* private mode */ } location.href = `${homeUrl()}?table=${next}`; return; }     // back to the invite that sent you to sign in
     render();
