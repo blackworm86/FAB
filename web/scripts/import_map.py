@@ -135,6 +135,8 @@ for i in P_:
             g = P_[i].boundary.intersection(P_[j].buffer(2.5)).difference(wet)
             for ln in (getattr(g, 'geoms', None) or [g]):
                 if ln.geom_type == 'LineString' and ln.length > 6: army += '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in ln.coords) + '"/>'
+NB = 'docs/maps/vector/borders-national.json'                                         # the print's national borders along the east edge: German (magenta), Luxembourg (cyan); traced from the scan by position
+national = ''.join(f'<path d="M' + 'L'.join(f'{x} {y}' for x, y in pl) + f'" stroke="{col}"/>' for k, col in (('magenta', '#c2287f'), ('cyan', '#1aa3d6')) for pl in [json.load(open(NB))[k]]) if os.path.exists(NB) else ''
 head = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">'
 base = f'''{head}
 <rect id="frame" width="{W}" height="{H}" fill="#bccad3"/>
@@ -151,6 +153,7 @@ lines = f'''{head}
 <g id="cities" fill="url(#hatch)" stroke="#5a5f62" stroke-width="1.4">{cities}</g>
 <g id="towns">{towns}</g>
 <g id="outline" fill="none" stroke="#fbfbf6" stroke-width="4.6" stroke-linejoin="round">{outline}</g>
+<g id="national-borders" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">{national}</g>
 </svg>'''
 open('web/public/map-base.svg', 'w').write(base); open('web/public/map-lines.svg', 'w').write(lines); print('svg', (len(base) + len(lines)) // 1024, 'KB')
 out['entries'] = entry_marks; json.dump(out, open('data/bulge/map.json', 'w'), separators=(',', ':'))

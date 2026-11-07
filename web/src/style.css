@@ -917,3 +917,7 @@ a.rlink:hover { border-bottom-style: solid; }
 #rules td.mod { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; color: #f1ead0; font-weight: 600; }
 #rules .txt h3 { margin: 16px 0 6px; font: 700 15px var(--sfd); letter-spacing: .06em; text-transform: uppercase; color: var(--gold); }
 #rules .txt p.step { padding-left: 1.4em; text-indent: -1.4em; }
+
+/* phones: the volume's prompts fold to a handle so the map gets the screen */
+.volfold { display: none; }
+@media (max-width: 700px) { .volfold { display: flex; gap: 6px; align-items: center; justify-self: end; min-height: 36px; padding: 4px 10px; background: #0b0d08ee; border: 1px solid var(--line); color: var(--gold); font: 600 13px var(--sfd); letter-spacing: .08em; text-transform: uppercase; } .volfold .ic { width: 16px; height: 16px; } .volstack.folded { left: auto; max-height: none; overflow: visible; } }

@@ -70,6 +70,12 @@ HBANDS = np.array([(152, 124, 54), (128, 104, 44), (110, 90, 36), (97, 79, 31), 
 hb = np.digitize(nd.gaussian_filter(h, 3), hq)
 hcol = nd.gaussian_filter(HBANDS[hb], (1.2, 1.2, 0))
 ground = np.where(herm[..., None], hcol, ground)
+yy_, xx_ = np.mgrid[0:H, 0:W]; nolab = np.ones((H, W), bool)
+for a in M['areas']: x_, y_ = a['label']; nolab &= ((xx_ - x_) / 22) ** 2 + ((yy_ - y_) / 20) ** 2 > 1     # the printed TDN badges and symbols are not tels
+tel = land & nolab & (sr - sb > 70) & (sr > 170) & (sg > 110) & (sg < 185); tel = nd.binary_opening(tel, iterations=2)
+lab_, n_ = nd.label(tel); big = np.zeros(n_ + 1, bool); big[1:] = np.array(nd.sum(tel, lab_, range(1, n_ + 1))) >= 300; tel = big[lab_]
+TEL = med(tel, (188, 155, 93)); tsoft = nd.gaussian_filter(nd.binary_closing(tel, iterations=3).astype(np.float32), 2.0)[..., None]   # the tels (volcanic cones) where the print has them, in its orange-brown
+ground = ground * (1 - tsoft * .9) + TEL * tsoft * .9
 stone = nd.gaussian_filter(rng.standard_normal((H, W)), 1.1) * 2.5                  # the paper's grain
 img = ground + stone[..., None]
 cont = np.zeros((H, W), bool)                                                        # the print's faint brown contour lines, every 50 m

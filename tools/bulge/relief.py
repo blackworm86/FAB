@@ -34,20 +34,30 @@ gr = gr * (1 + nd.gaussian_filter(rng.standard_normal((H, W)), 6)[..., None] * 0
 offl = np.clip(nd.distance_transform_edt(~land) / 6, 0, 1)[..., None]                               # beyond the play areas: greyer snow, as before
 gr = gr * (1 - offl) + (gr * 0.55 + np.array([214, 218, 214.]) * 0.45) * offl
 gr = np.where(sheet[..., None], gr, np.array([200, 212, 220.]))                                     # the sheet's margin: pale blue-grey, as printed
-Image.fromarray(np.clip(gr, 0, 255).astype(np.uint8)).quantize(40, dither=Image.Dither.NONE).save(OUT + 'snow.png', optimize=True)   # a small palette keeps the file light for phones
+# print first: the 2D board's own ground (ground.py: paper washes and woods), the snowy February colours only as a wash over it, and a hillshade
+import os as _os
+meta.setdefault('metresOrig', meta['metres'])
+if not _os.path.exists(S + '/height-orig.bin'): import shutil as _sh; _sh.copy(OUT + 'height.bin', S + '/height-orig.bin')
+orig = np.fromfile(S + '/height-orig.bin', '<u2').reshape(meta['rows'], meta['cols']).astype(np.float32) / 65535 * meta['metresOrig']
+hfull = nd.zoom(orig, STEP, order=1)[:H, :W]; hfull = np.pad(hfull, ((0, H - hfull.shape[0]), (0, W - hfull.shape[1])), mode='edge')
+gy, gx = np.gradient(nd.gaussian_filter(hfull, 2.0)); shade = np.clip(1 + (-gx * 0.6 - gy * 0.8) / 30, 0.75, 1.15)
+paper = np.array(Image.open('docs/maps/vector/map-ground.jpg').convert('RGB')).astype(np.float32)
+gr = np.where(land[..., None], (paper * 0.68 + gr * 0.32) * shade[..., None], paper)
+Image.fromarray(np.clip(gr, 0, 255).astype(np.uint8)).quantize(64, dither=Image.Dither.NONE).save(OUT + 'snow.png', optimize=True)   # a small palette keeps the file light for phones
 
 entry = nd.binary_dilation(np.array(Image.open(OUT + 'entry.png').convert('RGBA'))[..., 3] > 20, iterations=6)   # no trees on the entry strips
 n = nd.gaussian_filter(rng.random((H, W)), 3); n = (n - n.min()) / (n.max() - n.min())
 dens = (np.where(lc == 10, 0.85, 0) + np.where(lc == 20, 0.3, 0)) * land * ~entry * (n > 0.2)
 wd = nd.uniform_filter(dens.astype(np.float32), STEP + 1)[::STEP, ::STEP]; np.round(np.clip(wd, 0, 1) * 255).astype(np.uint8).tofile(OUT + 'woods.bin')
 # the map stands proud of the sheet's margin, cut straight down at its edge (the old relief sloped down to the margin): from the original grid, kept once in <s>
-import os, shutil
-if not os.path.exists(S + '/height-orig.bin'): shutil.copy(OUT + 'height.bin', S + '/height-orig.bin')
-meta.setdefault('metresOrig', meta['metres'])                                       # the original grid's scale
-orig = np.fromfile(S + '/height-orig.bin', '<u2').reshape(meta['rows'], meta['cols']).astype(np.float32) / 65535 * meta['metresOrig']
-onmap = nd.binary_dilation(sheet, iterations=5)[::STEP, ::STEP][:meta['rows'], :meta['cols']]
+onmapF = nd.binary_dilation(sheet, iterations=5); onmap = onmapF[::STEP, ::STEP][:meta['rows'], :meta['cols']]
 PLINTH = 0.4 * 80 * (W / 86.36) / 4                                                 # 4 mm, in the relief's metres (80 m a pixel, shown four times higher)
-hg = np.where(onmap, orig + PLINTH, 0); meta['metres'] = float(hg.max()); np.round(hg / hg.max() * 65535).astype('<u2').tofile(OUT + 'height.bin')
+hg = orig + PLINTH; _, (iy, ix) = nd.distance_transform_edt(~onmap, return_indices=True); hg = np.where(onmap, hg, hg[iy, ix]);   # beyond the cut the ground carries on (the app cuts it along the map's outline)
+import cv2
+cs, _ = cv2.findContours(onmapF.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+meta['cut'] = [[[float(x), float(y)] for x, y in cv2.approxPolyDP(c, 1.0, True)[:, 0, :]] for c in cs if cv2.contourArea(c) > 1000]
+for r in meta['cut']: r.append(r[0])
+meta['metres'] = float(hg.max()); np.round(hg / hg.max() * 65535).astype('<u2').tofile(OUT + 'height.bin')
 meta['floatsFrom'] = 'map-base.svg'                                                 # the entry strips hover over the relief, out of the board file
 meta['ownLines'] = True; json.dump(meta, open(OUT + 'relief.json', 'w'), separators=(',', ':'))
 print('woods', round(float((dens > 0)[land].mean()), 2))

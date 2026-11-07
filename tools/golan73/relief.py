@@ -12,7 +12,7 @@ from scipy import ndimage as nd
 
 S = sys.argv[1]; OUT = 'web/public/golan73/relief/'; os.makedirs(OUT, exist_ok=True)
 M = json.load(open('data/golan73/map.json')); A = json.load(open('data/golan73/map_art.json')); W, H = [int(v) for v in M['size']]; STEP = 4
-MPP, EXAG = 31.0, 2.0                                                              # about 31 m of ground per map pixel; heights shown twice real
+MPP, EXAG = 31.0, 3.0                                                              # about 31 m of ground per map pixel; heights shown three times real, so the escarpment and the plateau read
 pts = lambda d: [tuple(map(float, q.split(','))) for q in re.findall(r'-?[\d.]+,-?[\d.]+', d)]
 def mask(polys):
     im = Image.new('L', (W, H), 0); d = ImageDraw.Draw(im)
@@ -32,7 +32,7 @@ lakes = [pts(p) for p in A['lakes']]; leja = [P for P in lakes if np.mean([p[1] 
 offmap = mask([pts(p) for p in A['offmap']]) | mask(leja); sheet = land | offmap | mask(water)
 
 h = nd.zoom(np.load(S + '/real.npy'), 2, order=1)[:H, :W].astype(np.float32)
-h = np.where(h > 1000, 1000 + (h - 1000) * 0.32, h)                                # Hermon: the summit compressed
+h = np.where(h > 1000, 1000 + (h - 1000) * 0.25, h)                                # Hermon: the summit compressed
 for P in water:                                                                     # each lake is flat, at the level of its shore
     m = mask([P]); ring = nd.binary_dilation(m, iterations=6) & ~m
     h = np.where(m, np.percentile(h[ring], 10) - 6, h)
@@ -42,7 +42,12 @@ h = nd.gaussian_filter(h, 1.0)
 lo = float(h[sheet].min()); h = h - lo
 PLINTH = 0.4 * MPP * (W / 86.36) / EXAG                                             # the map stands 4 mm proud of the sheet's margin, cut straight down at its edge
 onmap = nd.binary_dilation(sheet, iterations=6)                                     # the printed map edge line sits on top
-h = np.where(onmap, np.maximum(h, 0) + PLINTH, 0)
+h = np.maximum(h, 0) + PLINTH
+_, (iy, ix) = nd.distance_transform_edt(~onmap, return_indices=True); h = np.where(onmap, h, h[iy, ix])   # beyond the cut the ground carries on (the app cuts it away along the map's outline)
+import cv2
+cs, _ = cv2.findContours(onmap.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+CUT = [[[float(x), float(y)] for x, y in cv2.approxPolyDP(c, 1.0, True)[:, 0, :]] for c in cs if cv2.contourArea(c) > 1000]
+for r in CUT: r.append(r[0])
 g = h[::STEP, ::STEP]; hi = float(g.max()); rows, cols = g.shape
 np.round(g / hi * 65535).astype('<u2').tofile(OUT + 'height.bin')
 
@@ -65,11 +70,15 @@ gr = gr * (1 + nd.gaussian_filter(rng.standard_normal((H, W)), 7)[..., None] * 0
 gr = np.where((offmap & ~land)[..., None], gr * 0.55 + np.array([140, 138, 130], np.float32) * 0.45, gr)   # the off-map ground, greyed as printed
 gr = np.where(mask(water)[..., None], np.array([150, 197, 225], np.float32), gr)
 gr = np.where(sheet[..., None], gr, np.array([188, 172, 110], np.float32))          # the print's olive margin
+# print first: the 2D board's own ground (board.py), the October colours only as a light wash over the land, and a hillshade
+paper = np.load(S + '/golan-ground.npy').astype(np.float32)
+hs = nd.gaussian_filter(h, 2.0); gy, gx = np.gradient(hs); shade = np.clip(1 + (-gx * 0.6 - gy * 0.8) / 45, 0.72, 1.18)
+gr = np.where(land[..., None], paper * 0.78 + gr * 0.22, paper) * np.where(onmap, shade, 1.0)[..., None]
 Image.fromarray(np.clip(gr, 0, 255).astype(np.uint8)).save(OUT + 'snow.png', optimize=True)
 n = nd.gaussian_filter(rng.random((H, W)), 3); n = (n - n.min()) / (n.max() - n.min())
 dens = (np.where(lc == 10, 0.8, 0) + np.where(lc == 20, 0.3, 0)) * land * (n > 0.25) * ~mask(water)
 wd = nd.uniform_filter(dens.astype(np.float32), STEP + 1)[::STEP, ::STEP]; np.round(np.clip(wd, 0, 1) * 255).astype(np.uint8).tofile(OUT + 'woods.bin')
 towns = [[float(a['label'][0]), float(a['label'][1])] for a in M['areas'] if a['id'] != 83]
-json.dump({'outline': [[[0, 0], [W, 0], [W, H], [0, H], [0, 0]]], 'w': W, 'h': H, 'step': STEP, 'cols': cols, 'rows': rows, 'metres': hi, 'mpp': MPP, 'exag': EXAG,
+json.dump({'cut': CUT, 'outline': [[[0, 0], [W, 0], [W, H], [0, H], [0, 0]]], 'w': W, 'h': H, 'step': STEP, 'cols': cols, 'rows': rows, 'metres': hi, 'mpp': MPP, 'exag': EXAG,
            'dry': True, 'ownLines': True, 'overlay': 'map-base.svg', 'towns': towns, 'cities': []}, open(OUT + 'relief.json', 'w'), separators=(',', ':'))
 print(rows, cols, round(hi), 'm', {f: os.path.getsize(OUT + f) // 1024 for f in os.listdir(OUT)})

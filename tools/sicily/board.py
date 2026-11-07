@@ -32,6 +32,7 @@ def txt(x, y, s, size, fill, extra=''):
 # ---------- the printed palette, sampled from the scan ----------
 SEA = (137, 193, 216); RIM = '#ffffff'; RIVER = '#4f9fd8'; ROAD = '#a9a49c'; BORDER = '#6a6667'; ARMY = '#3b3b3b'; TREELINE = '#6b4a24'; ANCHOR = '#1e6fc0'; AIRFIELD = '#f4de3a'
 GROUP = {'A': '#3f9a3a', 'B': '#2a7fc8', 'D': '#1f6f3f', 'P': '#1e6fc0'}
+PORT_COL = {'P3': '#3f8a3a', 'P4': '#6d7378'}
 
 # ---------- the ground: the cardboard's island and mainland on the printed sea ----------
 ground = np.array(Image.open(GROUND).convert('RGB')).astype(np.float32)
@@ -68,11 +69,12 @@ def box_svg(b):
         st = 22
         s += (f'<rect x="{x0}" y="{y0}" width="{w:.1f}" height="{h:.1f}" rx="{r}" fill="#c9def0" stroke="#ffffff" stroke-width="3"/>'
               f'<path d="M{x0} {y1 - st}H{x1}V{y1 - r}A{r} {r} 0 0 1 {x1 - r} {y1}H{x0 + r}A{r} {r} 0 0 1 {x0} {y1 - r}Z" fill="{col}"/>'
-              + txt(x0 + 8, y1 - 6, b['box'], 16, '#fff', 'text-anchor="start"') + (txt(x1 - 8, y1 - 6, b['name'], 13, '#fff', 'text-anchor="end" font-weight="600"') if b.get('name') else ''))
+              + txt(x0 + 8, y1 - 6, b['box'], 16, '#fff', 'text-anchor="start"') + (txt(x1 - 8, y1 - 6, b['name'], 13, '#fff', 'text-anchor="end" font-weight="600"' + (f' textLength="{room:.0f}" lengthAdjust="spacingAndGlyphs"' if (room := w - 16 - len(b['box']) * 9 - 6) < len(b['name']) * 6.2 else '')) if b.get('name') else ''))   # a long beach name is squeezed to clear the box's code
         s = fl(x0, y0, x1, y1, flip((x0 + x1) / 2, (y0 + y1) / 2, s))
     else:
         who = 'Axis Control Required (6th Army only)' if b['box'] == 'P4' else f"Allied Control Required ({'7th' if b['box'] == 'P3' else '8th'} Army only)"
-        s += (f'<rect x="{x0}" y="{y0}" width="{w:.1f}" height="{h:.1f}" rx="{r}" fill="{col}" stroke="#ffffff" stroke-width="3"/>'
+        col = PORT_COL.get(b['box'], col)                                                # as printed: Palermo green (7th Army), Messina grey (Axis), the British ports blue
+        s += (f'<rect x="{x0}" y="{y0}" width="{w:.1f}" height="{h:.1f}" rx="{r}" fill="{col}" stroke="#1b2a3a" stroke-width="2.4"/>'
               + txt((x0 + x1) / 2, y0 + 24, b['box'], 20, '#fff') + txt((x0 + x1) / 2, y0 + 42, b['name'], 15, '#fff', 'font-weight="600"')
               + txt((x0 + x1) / 2, y1 - 20, who.split(' (')[0], 9.5, '#fff', 'font-weight="600"') + txt((x0 + x1) / 2, y1 - 8, '(' + who.split(' (')[1], 9.5, '#fff', 'font-weight="600"'))
         s = fl(x0, y0, x1, y1, flip((x0 + x1) / 2, (y0 + y1) / 2, s))
@@ -113,6 +115,15 @@ def tufts(d, gap=7.5, off=5.5, size=7.5):
                 out.append(f'M{c[0]:.1f} {c[1]:.1f}L{e[0]:.1f} {e[1]:.1f}')
     return ''.join(out)
 ARROW_COL = '#ffffff'
+def clear_of_town(x, y, r=17):                                                      # an anchor never sits on a town's hatching: pushed out of it, away from the town's middle
+    for c in A['cities']:
+        P = Polygon(pts(c['d']))
+        if P.is_valid and P.distance(Point(x, y)) < r:
+            cx, cy = P.centroid.x, P.centroid.y; d = np.array([x - cx, y - cy]); d = d / (np.hypot(*d) or 1)
+            for k in range(1, 80):
+                q = Point(x + d[0] * k, y + d[1] * k)
+                if P.distance(q) >= r: return q.x, q.y
+    return x, y
 def arrow_svg(a):
     v = [float(x) for x in re.findall(r'-?\d+\.?\d*', a['shaft'] + ' ' + a['head'])]; xs, ys = v[0::2], v[1::2]
     return fl(min(xs), min(ys), max(xs), max(ys), f'<path d="{a["shaft"]}" fill="none" stroke="{ARROW_COL}" stroke-width="6" stroke-dasharray="5 4" stroke-linecap="butt"/><path d="{a["head"]}" fill="{ARROW_COL}"/>', 8)
@@ -129,7 +140,7 @@ lines = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" view
          g('army-boundaries', '', f'<g stroke="#5a5a5a" stroke-width="7">{paths(A["army_boundary"])}</g><g stroke="#ffffff" stroke-width="2" stroke-linecap="butt" stroke-dasharray="6 5">{paths(A["army_boundary"])}</g>'),
          f'<g id="cities">{city}</g>',
          f'<g id="arrows">{arrows_svg}</g>',
-         '<g id="symbols">' + ''.join(anchor(p['x'], p['y']) for p in A['port_symbols']) + ''.join(airfield(a['x'], a['y'], a['r']) for a in A['airfields']) + '</g>',
+         '<g id="symbols">' + ''.join(anchor(*clear_of_town(p['x'], p['y'])) for p in A['port_symbols']) + ''.join(airfield(a['x'], a['y'], a['r']) for a in A['airfields']) + '</g>',
          '</svg>']
 open(os.path.join(OUT, 'map-lines.svg'), 'w').write('\n'.join(lines))
 print('board', W, H, os.path.getsize(os.path.join(OUT, 'map-base.svg')) // 1024, 'KB +', os.path.getsize(os.path.join(OUT, 'map-lines.svg')) // 1024, 'KB', len(A['boxes']), 'boxes')

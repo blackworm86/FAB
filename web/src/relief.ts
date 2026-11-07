@@ -9,6 +9,7 @@ type Meta = { outline: [number, number][][]; w: number; h: number; step: number;
   dry?: boolean;                 /** a dry country (Golan): round green trees, no snow */
   overlay?: string;              /** the printed items off and on the map (entry triangles, boxes, names) come from this board file, minus its ground */
   ownLines?: boolean;            /** the board's own line work is draped as drawn (Sicily: borders, army boundaries, coast in the print's style), not redrawn */
+  cut?: [number, number][][];   /** the map's own outline (Golan, The Bulge): the relief is cut straight down along it, with the sheet's flat margin outside */
   floatsFrom?: string;           /** a board file whose data-float items hover too (The Bulge: the entry strips of map-base.svg, instead of entry.png) */ };
 /** A printed item that hovers over the relief instead of being draped on it (arrows, entry triangles and strips, boxes): its box on the map and its picture, also turned for the far side. */
 export type Float = { x: number; y: number; w: number; h: number; img: HTMLImageElement; imgFlip: HTMLImageElement };
@@ -33,6 +34,8 @@ export type Relief = {
   /** Where a ray meets the ground. */
   hit(ray: THREE.Ray): THREE.Vector3 | null;
   floats: Float[];
+  /** The flat margin of the sheet outside a cut map (null when the map fills the sheet). */
+  margin: THREE.BufferGeometry | null;
 };
 
 const RELIEF = 4, BASE = 0.22;                               // BASE: even the lowest valley stands this high (cm) above the wooden base                                          // the relief is shown four times higher than real, as chosen on the mockup
@@ -76,20 +79,27 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
     return ((v(i, j) * (1 - fx) + v(i + 1, j) * fx) * (1 - fy) + (v(i, j + 1) * (1 - fx) + v(i + 1, j + 1) * fx) * fy) * K; };
   const hMap = (px: number, py: number) => grid(px / ST, py / ST) + BASE;
   const landPx = (() => { const c = document.createElement('canvas'); c.width = meta.w; c.height = meta.h; const x = c.getContext('2d')!; x.drawImage(snow, 0, 0); const d = x.getImageData(0, 0, meta.w, meta.h).data, out = new Uint8Array(meta.w * meta.h); for (let k = 0; k < out.length; k++) out[k] = d[k * 4 + 3] > 127 ? 1 : 0; return out; })();
-  const onLand = (px: number, py: number) => px >= 0 && py >= 0 && px < meta.w && py < meta.h && landPx[(py | 0) * meta.w + (px | 0)] === 1;
+  const cutCv = meta.cut ? (() => { const c = document.createElement('canvas'); c.width = meta.w; c.height = meta.h; const x = c.getContext('2d')!; x.fillStyle = '#000'; x.fillRect(0, 0, meta.w, meta.h); x.fillStyle = '#fff'; x.beginPath(); for (const r of meta.cut!) r.forEach(([a, b], i) => (i ? x.lineTo(a, b) : x.moveTo(a, b))); x.fill('evenodd'); return c; })() : null;
+  const cutPx = cutCv ? (() => { const d = cutCv.getContext('2d')!.getImageData(0, 0, meta.w, meta.h).data, out = new Uint8Array(meta.w * meta.h); for (let k = 0; k < out.length; k++) out[k] = d[k * 4] > 127 ? 1 : 0; return out; })() : null;
+  const inMap = (px: number, py: number) => px >= 0 && py >= 0 && px < meta.w && py < meta.h && (cutPx ? cutPx[(py | 0) * meta.w + (px | 0)] === 1 : landPx[(py | 0) * meta.w + (px | 0)] === 1);
+  const onLand = inMap;
   const wx = (px: number) => px / S - MW / (2 * S), wz = (py: number) => py / S - MH / (2 * S);
   const toMap = (x: number, z: number) => [(x + MW / (2 * S)) * S, (z + MH / (2 * S)) * S] as const;
-  const h = (x: number, z: number) => { const [px, py] = toMap(x, z); return onLand(px, py) ? hMap(px, py) : 0; };
+  const h = (x: number, z: number) => { const [px, py] = toMap(x, z); return onLand(px, py) ? hMap(px, py) : cutPx ? BASE : 0; };   // outside a cut map: the sheet's margin
 
   // the ground: one vertex per grid cell (4 map px)
   const G = lite ? 2 : 1, geometry = new THREE.PlaneGeometry(MW / S, MH / S, Math.ceil((C - 1) / G), Math.ceil((R - 1) / G)), pos = geometry.getAttribute('position') as THREE.BufferAttribute;
   for (let k = 0; k < pos.count; k++) { const [px, py] = toMap(pos.getX(k), -pos.getY(k)); pos.setZ(k, hMap(px, py)); }     // off the land the shader cuts the ground away
   geometry.computeVertexNormals(); geometry.computeBoundingSphere();
   const wp: number[] = [];
-  for (const ring of meta.outline) for (let k = 0; k + 1 < ring.length; k++) {
-    const [a, b] = [ring[k], ring[k + 1]], ha = hMap(a[0], a[1]), hb2 = hMap(b[0], b[1]), A = [wx(a[0]), wz(a[1])], B = [wx(b[0]), wz(b[1])];
+  const wall = (ring: [number, number][], top: (x: number, y: number) => number) => { for (let k = 0; k + 1 < ring.length; k++) {
+    const [a, b] = [ring[k], ring[k + 1]], ha = top(a[0], a[1]), hb2 = top(b[0], b[1]), A = [wx(a[0]), wz(a[1])], B = [wx(b[0]), wz(b[1])];
     wp.push(A[0], 0, A[1], B[0], 0, B[1], B[0], hb2, B[1], A[0], 0, A[1], B[0], hb2, B[1], A[0], ha, A[1]);
-  }
+  } };
+  for (const ring of meta.outline) wall(ring, cutPx ? () => BASE : hMap);                 // the sheet's edge: up to the margin when the map is cut, else up to the ground
+  for (const ring of meta.cut ?? []) wall(ring, hMap);                                  // the map's own edge, cut straight down from the ground to the margin
+  const margin = cutPx ? (() => { const m = new THREE.PlaneGeometry(MW / S, MH / S, 1, 1), q = m.getAttribute('position') as THREE.BufferAttribute; for (let k = 0; k < q.count; k++) q.setZ(k, BASE); m.computeVertexNormals(); return m; })() : null;
+  const cutTex = cutCv ? new THREE.CanvasTexture(cutCv) : null;
   const walls = new THREE.BufferGeometry(); walls.setAttribute('position', new THREE.Float32BufferAttribute(wp, 3)); walls.computeVertexNormals();
 
   // printed lines without towns, cities and borders; borders redrawn black on a white edge
@@ -137,9 +147,10 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
     const t = new THREE.CanvasTexture(c); t.flipY = true; return t; })();
   const patch = (mat: THREE.MeshStandardMaterial, areaId: THREE.Texture, tints: THREE.Texture) => {
     mat.onBeforeCompile = (sh) => {
-      sh.uniforms.uMetre = { value: 1 / ZS }; sh.uniforms.tId = { value: areaId }; sh.uniforms.tTint = { value: tints }; sh.uniforms.tLab = { value: labMask };
+      sh.uniforms.uMetre = { value: 1 / ZS }; sh.uniforms.tId = { value: areaId }; sh.uniforms.tTint = { value: tints }; sh.uniforms.tLab = { value: labMask }; sh.uniforms.tCut = { value: cutTex ?? labMask }; sh.uniforms.uCut = { value: cutTex ? 1 : 0 };
       sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying float vMet; uniform float uMetre;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvMet = transformed.z * uMetre;');
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vMet; uniform sampler2D tId, tTint, tLab;').replace('#include <map_fragment>', `#include <map_fragment>
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vMet; uniform sampler2D tId, tTint, tLab, tCut; uniform float uCut;').replace('#include <map_fragment>', `#include <map_fragment>
+        if (uCut > .5 && texture2D(tCut, vMapUv).r < .5) discard;      /* a cut map: the ground ends at the map's own outline, the margin is a flat sheet below */
         { /* contours: fine 25 m lines that fade where they crowd, a stronger line every 100 m; slate blue on snow, green in the woods */
           float wood = clamp((0.8 - diffuseColor.r) / 0.45, 0., 1.); vec3 lc = mix(vec3(.13,.21,.36), vec3(.03,.13,.05), wood);
           float c1 = vMet / 25., f1 = fwidth(c1), m1 = (1. - clamp(abs(fract(c1 + .5) - .5) / max(f1, 1e-4), 0., 1.)) * smoothstep(2.5, 7., 1. / max(f1, 1e-4));
@@ -176,5 +187,5 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
     return at(t1).clone();
   };
 
-  return { floats, h, geometry, walls, entry, entryFlip, props, snow, lines, linesFlip, borders, patch, hit, ownLines: !!meta.ownLines };
+  return { floats, margin, h, geometry, walls, entry, entryFlip, props, snow, lines, linesFlip, borders, patch, hit, ownLines: !!meta.ownLines };
 }

@@ -13,7 +13,7 @@ from scipy import ndimage as nd
 
 S = sys.argv[1]; OUT = 'web/public/sicily/relief/'; os.makedirs(OUT, exist_ok=True)
 M = json.load(open('data/sicily/map.json')); A = json.load(open('data/sicily/map_art.json')); W, H = [int(v) for v in M['size']]; STEP = 4
-MPP, EXAG = 126.0, 2.4                                                             # about 126 m of ground per map pixel; heights shown 2.4 times real
+MPP, EXAG = 126.0, 4.5                                                             # about 126 m of ground per map pixel; heights shown 4.5 times real, so Etna and the Nebrodi stand up
 pts = lambda d: [tuple(map(float, q.split(','))) for q in re.findall(r'-?[\d.]+,-?[\d.]+', d)]
 def mask(polys):
     im = Image.new('L', (W, H), 0); d = ImageDraw.Draw(im)
@@ -60,6 +60,10 @@ gr = gr * (1 - summit) + np.array([120, 112, 104], np.float32) * summit         
 gr = np.where(ground[..., None], gr, np.array([137, 193, 216], np.float32))          # the sea as printed
 mainland_only = ground & ~land
 gr = np.where(mainland_only[..., None], gr * 0.85 + np.array([150, 150, 145], np.float32) * 0.15, gr)
+# print first: the 2D board's own ground (ground.py), the July colours only as a light wash over the land, and a hillshade
+paper = np.array(Image.open(S + '/sicily-ground.png').convert('RGB').resize((W, H))).astype(np.float32)
+hs = nd.gaussian_filter(h, 2.0); gy, gx = np.gradient(hs); shade = np.clip(1 + (-gx * 0.6 - gy * 0.8) / 110, 0.7, 1.18)
+gr = np.where(land[..., None], paper * 0.75 + gr * 0.25, paper) * np.where(ground, shade, 1.0)[..., None]
 Image.fromarray(np.clip(gr, 0, 255).astype(np.uint8)).save(OUT + 'snow.png', optimize=True)
 
 # trees where the land cover says tree cover (dense) or shrubland (sparse), never on the summit or the sea
