@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { VOLUMES, endPhase, startBattle, canAssign, assign, stratOptions, stratMove, newGame, useGame, golan, type Game } from '../src';
 import { reachable, areas, connections, edgeKey, type GMoveCtx, type GSide } from '../src/golan';
 import { newGolanGame, unit, chit, give, move } from './golan-helpers';
+import * as E from '../src';
 
 const H = () => VOLUMES.golan73 as unknown as Record<string, (...a: unknown[]) => unknown>;
 type Occ = Partial<Record<number, Partial<Record<GSide, number>>>>;
@@ -117,5 +118,22 @@ describe('Golan rules sweep (2)', () => {
     expect(unit(g, 'I05').area).toBe(64);
     const u = unit(g, 'S18');
     expect(u.area != null || g.pendingArrivals.includes(u.id)).toBe(true);
+  });
+});
+
+describe('Golan rules sweep (minefields)', () => {
+  it('14.02: a failed minefield check costs only the extra 1 MP; the unit stays and may still move into a non-mined area', () => {
+    E.useGame('golan73'); const g = E.newGame(3, { scenario: 'badr' }); E.golan.autoStrongpoints(g, 'historical'); E.golan.state(g).minesLeft = 0; E.endPhase(g);
+    g.phase = 'movement'; g.phasing = 'syrian'; g.contestedAtMoveStart = [];
+    const [a, b] = E.golan.state(g).minefields[0].split('-').map(Number);
+    for (const x of [...E.unitsIn(g, a), ...E.unitsIn(g, b)]) x.area = null;
+    g.control[a] = 'syrian'; g.control[b] = 'syrian';
+    const u = g.units.find((x) => x.side === 'syrian' && x.cls === 'armor' && x.area == null && x.str > 0)!; Object.assign(u, { area: a, box: undefined, moved: false, spent: 0, disorder: 0, reserve: null, unsupplied: false });
+    expect(E.moveOptions(g, u.id).some((o) => o.area === b)).toBe(true);
+    g.force = [10]; E.move(g, u.id, b);
+    expect(u.area).toBe(a); expect(u.spent).toBe(1);
+    const left = E.moveOptions(g, u.id);
+    expect(left.some((o) => o.area === b)).toBe(false);
+    expect(left.length).toBeGreaterThan(0);
   });
 });

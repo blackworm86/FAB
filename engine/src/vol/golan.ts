@@ -276,13 +276,13 @@ function golanReach(g: Game, u: Unit, one: boolean): Opt[] {
   if (state(g).kingHassan && u.id === 'S07') r = r.filter((x) => x.path.slice(1).every((a) => isAssembly(a) || g.control[a] !== 'israeli'));   // 17.24: the Moroccans keep out of Israeli-controlled areas
   return r.map((x) => ({ area: x.area, cost: x.cost, fuel: false, mustStop: x.mustStop, path: x.path, triggers: x.triggers, limited: x.limited }));
 }
-/** 14.02: crossing a minefield from the starting area takes a morale check; failing, the unit stays and may not try another minefield this turn. */
+/** 14.02: crossing a minefield from the starting area costs +1 MP and a morale check; failing, the unit stays (having spent that 1 MP), may not try another minefield this turn, and may move on into a non-mined area. */
 function beforeMove(g: Game, u: Unit, opt: Opt) {
   if (u.side !== 'syrian') return;
   const key = edgeKey(opt.path[0], opt.path[1]); if (!state(g).minefields.includes(key)) return;
   const sn = golanMoraleSn(g, u, 'check'), { r, ok } = moraleCheck(g, u, sn, 'Minefield (14.02)');
   if (ok) { say(g, `${u.name} crosses the minefield (${r} vs ${sn})`); return; }
-  state(g).minefieldFailed.push(u.id); u.spent = (u.spent ?? 0) + (connection(opt.path[0], opt.path[1])!.type === 'road' ? 1 : 2) + 1;
+  state(g).minefieldFailed.push(u.id); u.spent = (u.spent ?? 0) + 1;   // only the attempt's extra MP: it never crossed, and may go on into a non-mined area
   say(g, `${u.name} fails the minefield check (${r} vs ${sn}) and stays in ${areas.get(opt.path[0])!.name}`); return 'minefield';
 }
 function afterMove(g: Game, u: Unit, opt: Opt) {
