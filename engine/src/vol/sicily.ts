@@ -498,7 +498,7 @@ function adjustFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground', lis
   if (kind === 'arty' && V.navalShock[key]) for (let i = list.length - 1; i >= 0; i--) if (list[i].key === V.navalShock[key]) list.splice(i, 1);
   if (kind !== 'ground') return;
   if (V.rangerFw[key] && side === b.attacker) for (let i = list.length - 1; i >= 0; i--) if (list[i].key === V.rangerFw[key]) list.splice(i, 1);
-  for (const f of list) { const u = g.units.find((x) => x.id === f.key); if (u?.untried && quality(u) === 'green') { f.parts = f.parts.filter(([, v]) => v <= 0); f.sn = f.parts.reduce((n, [, v]) => n + v, 0); } }
+  for (const f of list) { const u = g.units.find((x) => x.id === f.key); if (u?.untried && quality(u) === 'green') { f.parts = f.parts.filter(([why, v]) => why === 'base' || v <= 0); /* the base Success Number stays; only the bonuses go */ f.sn = f.parts.reduce((n, [, v]) => n + v, 0); } }
   const byDiv = new Map<string, Fire[]>();
   for (const f of list) { const u = g.units.find((x) => x.id === f.key); if (u && regular(u) && u.division && !u.untried) (byDiv.get(u.division) ?? byDiv.set(u.division, []).get(u.division)!).push(f); }
   for (const [d, fs] of byDiv) if (fs.length >= 2) list.push({ key: `division:${d}`, who: `${g.units.find((x) => x.id === fs[0].key)!.name}: divisional integrity`, shooter: { kind: 'unit', cls: 'infantry', dice: 1 }, dice: 1, sn: Math.min(...fs.map((f) => f.sn)), parts: [['divisional integrity extra die (15.2)', 0]], isAsset: true });

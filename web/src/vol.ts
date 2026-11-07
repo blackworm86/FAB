@@ -143,7 +143,7 @@ function sicily(): VolView {
   const RAW_UNITS = new Map((sicilyUnits as unknown as SUnit[]).map((u) => [u.id, u])), RAW_COUNTERS = new Map((sicilyCounters as unknown as (SCounter & { ids?: string[] })[]).map((c) => [c.id, c]));
   const GARRISON: SUnit = { id: 'untried', name: 'Coastal/Garrison', side: 'axis', nation: 'italian', symbol: 'garrison', steps: 1, quality_by_step: ['green'], sticker_code: 'S*', colours: { stripe: null, box: '#c8e5a2', sticker: '#f99116' } };
   const unitArt = (u: E.Unit) => {
-    if (u.untried) return sicilyBlockSvg(GARRISON, 1);                                                      // 15.3: face down, unknown to both players
+    // 15.3: an untried garrison is drawn face down on the table (main.ts) until a battle reveals it; then its own label shows
     const raw = RAW_UNITS.get(u.id);
     return sicilyBlockSvg({ ...(raw ?? { id: u.id, name: u.name, side: u.side as 'allied' | 'axis' }), name: u.name, side: u.side as 'allied' | 'axis', nation: (u.nation ?? raw?.nation) as SUnit['nation'], steps: u.max, quality_by_step: u.q, symbol: u.symbol ?? raw?.symbol }, u.str);
   };

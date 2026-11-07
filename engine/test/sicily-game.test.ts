@@ -119,3 +119,12 @@ describe('The scenarios play through', () => {
     const arrivedGe = unit(g, 'GE06'); expect(arrivedGe.area != null || arrivedGe.str === 0 || arrivedGe.box === 'evacuated' || arrivedGe.arrival != null).toBe(true);
   });
 });
+describe('Untried garrisons (15.3)', () => {
+  it('a green untried garrison keeps its base Success Number and loses only the bonuses', () => {
+    const g = newSicilyGame(31); const u = g.units.find((x) => x.untried && x.area != null && x.q[0] === 'green')!; const a = u.area!;
+    for (const x of E.unitsIn(g, a, 'axis')) if (x.id !== u.id) x.area = 30;
+    const att = unit(g, 'BR03'); att.area = a; g.phase = 'combat'; g.phasing = 'allied'; g.riverAssault = [a];
+    const b = E.startBattle(g, a); u.disorder = 0; const f = E.fireList(g, b, 'axis', 'ground').find((x) => x.key === u.id)!;
+    expect(f.parts[0]).toEqual(['base', 5]); expect(f.parts.every(([why, v]) => why === 'base' || v <= 0)).toBe(true); expect(f.sn).toBe(f.parts.reduce((n, [, v]) => n + v, 0));
+  });
+});

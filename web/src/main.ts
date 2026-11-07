@@ -194,6 +194,7 @@ function pumpTextures() { for (let n = 0; n < 6 && texQueue.length; n++) { const
 const svgTex = (key: string, svg: string) => { if (!labelTex.has(key)) { const t = new THREE.Texture(); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; texQueue.push([t, 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)]); labelTex.set(key, t); } return labelTex.get(key)!; };
 
 function block(u: E.Unit, hidden = false) {
+  const flat = hidden && !!u.untried;                                   // Sicily 15.3: an untried garrison lies face down on the table, its label against the map
   const w = 1.6, h = 1.6, d = 0.8;                                    // 16 x 16 x 8 mm block
   const wood = new THREE.MeshStandardMaterial({ color: VOL.wood[VOL.cssSide(u)] ?? (VOL.cssSide(u) === 'british' ? 0x3f6fb8 : VOL.wood[u.side]), roughness: 0.75 });      // the wood by the block's class (Sicily: its nationality), else by its side
   if (u.garrison) {
@@ -201,8 +202,8 @@ function block(u: E.Unit, hidden = false) {
     m.position.y = 0.06; m.castShadow = true; m.rotation.y = viewRot(); return m;
   }
   const face = hidden ? wood : new THREE.MeshStandardMaterial({ map: svgTex(`${u.id}-${u.str}`, VOL.unitSvg(u, g)), roughness: 0.6 });   // upright blocks show their blank back to the enemy
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [wood, wood, wood, wood, face, wood]); m.rotation.y = viewRot();
-  m.position.y = h / 2; m.castShadow = true;
+  const m = new THREE.Mesh(flat ? new THREE.BoxGeometry(w, d, h) : new THREE.BoxGeometry(w, h, d), [wood, wood, wood, wood, face, wood]); m.rotation.y = viewRot();
+  m.position.y = (flat ? d : h) / 2; m.castShadow = true;
   return m;
 }
 const markers = new THREE.Group(); scene.add(markers);
@@ -349,7 +350,7 @@ function drawPieces() {
     if (g.battle?.area === a.id) { const b = g.battle; lay.spots = order.map((u) => { const same = order.filter((x) => x.side === u.side); return battleSpot(b, u.side, 'unit', same.indexOf(u), same.length); }); }
     if (lab.some((l) => lay.spots.some((p) => Math.hypot(p.x - l.x, p.z - l.z) < l.r + 0.7))) coveredLabels.add(a.id);          // no room: the area's number and name ride on a tag above
     order.forEach((u, n) => {
-      const hid = !seen(u), m = block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
+      const hid = faceDown(u), m = block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
       const flat = cont && !hid && !u.garrison && u.up === a.id;                                                           // revealed blocks lie flat, label up, while the area is contested
       m.position.x = p.x; m.position.z = p.z;
       if (flat) { m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, viewRot(), 0); m.position.y = 0.4; }
@@ -403,6 +404,8 @@ const viewSide = (): E.Side => (online.active && !online.both() && online.mySide
 const farSide = () => viewSide() !== VOL.bottom;
 const fogSide = (): E.Side | 'spectator' | null => (online.active && !online.both() ? online.mySide() ?? 'spectator' : null);
 const seen = (u: E.Unit) => E.visibleTo(g, u, fogSide());
+/** Sicily's untried garrisons (15.3) stand face down for both players, the owner too, until a battle reveals them. */
+const faceDown = (u: E.Unit) => !seen(u) || (!!u.untried && u.up !== u.area);
 const viewRot = () => (farSide() ? Math.PI : 0);
 /** Restricted boundaries (14.1) and the border two areas share, as a polyline (vertices of one area lying on the other's outline). */
 const RESTRICTED: [number, number][] = [...E.areas.keys()].flatMap((a) => E.neighbors(a).filter((b) => b > a && E.connection(a, b)?.restricted).map((b): [number, number] => [a, b]));
@@ -1470,7 +1473,7 @@ function ledger() {
   if (b.stage === 'exploit') {                                                                         // 6.8: the attacker rolls a morale check for each armor-class unit, or declines
     const us = (b.exploitIds ?? []).map((id) => g.units.find((x) => x.id === id)!).filter((u) => u.area === b.area), mineStep = !online.active || online.both() || online.mySide() === b.attacker;
     return `<div class="c-ledger tight"><div class="lh"><h3 class="${b.attacker}">Exploitation!</h3></div><p class="resline">${esc(b.result ?? '')}</p><p class="hint gx">6.8: each attacking armor-class unit makes a morale check. A pass marks it for exploitation: it may move again in the Breakthrough Phase.</p>
-      ${us.map((u) => `<div class="fl"><span class="who">${esc(seen(u) ? u.name : 'Hidden block')}</span><span class="cnt">1${ico('dice')}</span><b class="sn">needs ${E.exploitSn(g, u)} or less</b></div>`).join('')}
+      ${us.map((u) => `<div class="fl"><span class="who">${esc(!faceDown(u) ? u.name : 'Hidden block')}</span><span class="cnt">1${ico('dice')}</span><b class="sn">needs ${E.exploitSn(g, u)} or less</b></div>`).join('')}
       ${mineStep ? `<div class="row">${btn('Decline (stay hidden)', () => E.declineExploit(g, b), '', false, '6.8: you may decline the opportunity and keep the blocks hidden')}</div>` : `<p class="hint">Waiting for the ${nm(b.attacker)} player to roll.</p>`}</div>`;
   }
   if (b.stage === 'done') return `<div class="c-ledger tight aar"><div class="lh"><h3>Battle over · ${esc(areaName(b.area))}</h3></div><p class="resline">${esc(b.result ?? '')}</p>${battleFx.length ? `<div class="aarfx">${battleFx.map(fxRow).join('')}</div>` : '<p class="hint">No losses on either side.</p>'}${rollRecord(b, true)}</div>`;
