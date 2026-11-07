@@ -9,6 +9,7 @@ type Meta = { outline: [number, number][][]; w: number; h: number; step: number;
   dry?: boolean;                 /** a dry country (Golan): round green trees, no snow */
   overlay?: string;              /** the printed items off and on the map (entry triangles, boxes, names) come from this board file, minus its ground */
   ownLines?: boolean;            /** the board's own line work is draped as drawn (Sicily: borders, army boundaries, coast in the print's style), not redrawn */
+  contour?: [number, number, number];   /** contour lines: the fine and the strong interval in metres, and their strength (default 25 m, 100 m, 1) */
   cut?: [number, number][][];   /** the map's own outline (Golan, The Bulge): the relief is cut straight down along it, with the sheet's flat margin outside */
   floatsFrom?: string;           /** a board file whose data-float items hover too (The Bulge: the entry strips of map-base.svg, instead of entry.png) */ };
 /** A printed item that hovers over the relief instead of being draped on it (arrows, entry triangles and strips, boxes): its box on the map and its picture, also turned for the far side. */
@@ -159,9 +160,9 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
         if (uCut > .5 && texture2D(tCut, vMapUv).r < .5) discard;      /* a cut map: the ground ends at the map's own outline, the margin is a flat sheet below */
         { /* contours: fine 25 m lines that fade where they crowd, a stronger line every 100 m; slate blue on snow, green in the woods */
           float wood = clamp((0.8 - diffuseColor.r) / 0.45, 0., 1.); vec3 lc = mix(vec3(.13,.21,.36), vec3(.03,.13,.05), wood);
-          float c1 = vMet / 25., f1 = fwidth(c1), m1 = (1. - clamp(abs(fract(c1 + .5) - .5) / max(f1, 1e-4), 0., 1.)) * smoothstep(2.5, 7., 1. / max(f1, 1e-4));
-          float c2 = vMet / 100., f2 = fwidth(c2), m2 = (1. - clamp(abs(fract(c2 + .5) - .5) / max(f2, 1e-4) - .3, 0., 1.)) * smoothstep(2., 5., 1. / max(f2, 1e-4));
-          diffuseColor.rgb = mix(diffuseColor.rgb, lc, max(m1 * .32, m2 * .58) * (1. - texture2D(tLab, vMapUv).r));      /* no contour lines across the printed numbers and names */
+          float c1 = vMet / ${(meta.contour?.[0] ?? 25).toFixed(1)}, f1 = fwidth(c1), m1 = (1. - clamp(abs(fract(c1 + .5) - .5) / max(f1, 1e-4), 0., 1.)) * smoothstep(2.5, 7., 1. / max(f1, 1e-4));
+          float c2 = vMet / ${(meta.contour?.[1] ?? 100).toFixed(1)}, f2 = fwidth(c2), m2 = (1. - clamp(abs(fract(c2 + .5) - .5) / max(f2, 1e-4) - .3, 0., 1.)) * smoothstep(2., 5., 1. / max(f2, 1e-4));
+          diffuseColor.rgb = mix(diffuseColor.rgb, lc, max(m1 * .32, m2 * .58) * ${(meta.contour?.[2] ?? 1).toFixed(2)} * (1. - texture2D(tLab, vMapUv).r));      /* no contour lines across the printed numbers and names */
           /* area highlights (moves, battles, tints) painted straight onto the ground, so they follow every fold of it */
           float id = floor(texture2D(tId, vMapUv).r * 255. + .5); vec4 t = texture2D(tTint, vec2((id + .5) / 256., .5)); diffuseColor.rgb = mix(diffuseColor.rgb, t.rgb, min(1., t.a * 1.45)); }`);   // a little stronger than on the flat board, so snow and woods do not show through as spots
     };
@@ -178,7 +179,7 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
           #endif
           vAU = vec2(wpA.x / uBoard.x + .5, .5 - wpA.z / uBoard.y);`);
         sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vAU; uniform sampler2D tId, tTint;').replace('#include <color_fragment>', `#include <color_fragment>
-          { float id = floor(texture2D(tId, vAU).r * 255. + .5); vec4 t = texture2D(tTint, vec2((id + .5) / 256., .5)); diffuseColor.rgb = mix(diffuseColor.rgb, t.rgb, min(1., t.a * .9)); }`);      // trees and houses only take a little of the tint: the area's own colour carries it
+          { float id = floor(texture2D(tId, vAU).r * 255. + .5); vec4 t = texture2D(tTint, vec2((id + .5) / 256., .5)); diffuseColor.rgb = mix(diffuseColor.rgb, t.rgb, min(1., t.a * .22)); }`);   /* only a hint: a battle tints the ground, not the trees pink */      // trees and houses only take a little of the tint: the area's own colour carries it
       };
       m.customProgramCacheKey = () => 'relief-prop'; m.needsUpdate = true;
     }

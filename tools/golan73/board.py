@@ -138,7 +138,8 @@ def triangle(e, side=40):
     xs, ys = [tip[0], b1[0], b2[0]], [tip[1], b1[1], b2[1]]
     return (f'<g data-float="{min(xs) - 4:.1f} {min(ys) - 4:.1f} {max(xs) - min(xs) + 8:.1f} {max(ys) - min(ys) + 8:.1f}" fill="#91a763" stroke="#5f7a3c" stroke-width="2" stroke-linejoin="round">'
             f'<path d="M{tip[0]:.1f} {tip[1]:.1f}L{b1[0]:.1f} {b1[1]:.1f}L{b2[0]:.1f} {b2[1]:.1f}Z"/></g>')
-tank = lambda x, y, col: (f'<g transform="translate({x:.1f} {y:.1f}) scale(.62)" fill="{col}" stroke="#2b2a26" stroke-width="2.2" stroke-linejoin="round">'      # the alternate set-up tanks, in the division's colour
+mute = lambda c: '#%02x%02x%02x' % tuple(int(int(c[i:i + 2], 16) * 0.62 + v * 0.38) for i, v in ((1, 168), (3, 160), (5, 132))) if re.match(r'#[0-9a-fA-F]{6}$', c) else c   # the print's set-up tanks are muted, small glyphs, not bright toys
+tank = lambda x, y, col: (f'<g transform="translate({x:.1f} {y:.1f}) scale(.44)" fill="{mute(col)}" stroke="#3a3830" stroke-width="2.2" stroke-linejoin="round">'      # the alternate set-up tanks, in the division's colour
                           '<rect x="-24" y="2" width="48" height="11" rx="5.5"/><path d="M-20 2L-15 -6H17L22 2Z"/><path d="M-8 -6V-12H9L11 -6Z"/><path d="M9 -10H30" fill="none" stroke-width="3.4"/></g>')
 font = 'font-family="Saira Condensed, Arial Narrow, sans-serif"'
 txt = lambda x, y, s, size, fill, extra='': f'<text x="{x:.0f}" y="{y:.0f}" text-anchor="middle" font-family="Crimson Pro, Times New Roman, serif" font-style="italic" font-weight="600" font-size="{size}" fill="{fill}" {extra}>{s}</text>'   # the print's water and basalt names: a quiet serif italic

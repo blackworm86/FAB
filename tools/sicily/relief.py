@@ -85,5 +85,5 @@ city_areas = {c['area'] for c in A2['cities']}
 # towns only where the printed map draws a city (its four hatched cities); no generic village at every area
 print(len(towns), 'towns', len(cities), 'cities')
 json.dump({'outline': [[[0, 0], [W, 0], [W, H], [0, H], [0, 0]]], 'w': W, 'h': H, 'step': STEP, 'cols': cols, 'rows': rows, 'metres': hi, 'mpp': MPP, 'exag': EXAG,
-           'dry': True, 'ownLines': True, 'overlay': 'map-base.svg', 'towns': towns, 'cities': cities}, open(OUT + 'relief.json', 'w'), separators=(',', ':'))
+           'dry': True, 'contour': [100, 500, 0.7], 'ownLines': True, 'overlay': 'map-base.svg', 'towns': towns, 'cities': cities}, open(OUT + 'relief.json', 'w'), separators=(',', ':'))
 print(rows, cols, round(hi), 'm', {f: os.path.getsize(OUT + f) // 1024 for f in os.listdir(OUT)})

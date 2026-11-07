@@ -44,6 +44,9 @@ gy, gx = np.gradient(nd.gaussian_filter(hfull, 2.0)); shade = np.clip(1 + (-gx *
 paper = np.array(Image.open('docs/maps/vector/map-ground.jpg').convert('RGB')).astype(np.float32)
 wash = np.array([232, 238, 246], np.float32)                                        # winter: a light cool wash on the print, never a re-skin
 gr = np.where(land[..., None], (paper * 0.93 + wash * 0.07) * shade[..., None] * 0.9, paper)   # a touch darker than the paper: the table's lights brighten it again
+_om = json.load(open('docs/maps/vector/offmap-bulge.json')); _im = Image.new('L', (W, H), 0); _d = ImageDraw.Draw(_im)
+for P in _om['polys']: _d.polygon([tuple(q) for q in P], fill=1)
+gr = np.where((np.array(_im) > 0)[..., None] & ~land[..., None], np.array([int(_om['colour'][i:i + 2], 16) for i in (1, 3, 5)], np.float32), gr)   # the print's dark grey off-map ground
 Image.fromarray(np.clip(gr, 0, 255).astype(np.uint8)).quantize(64, dither=Image.Dither.NONE).save(OUT + 'snow.png', optimize=True)   # a small palette keeps the file light for phones
 
 entry = nd.binary_dilation(np.array(Image.open(OUT + 'entry.png').convert('RGBA'))[..., 3] > 20, iterations=6)   # no trees on the entry strips

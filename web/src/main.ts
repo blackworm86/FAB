@@ -22,6 +22,7 @@ import { acts, actv, resetActs, reg, regv, ubtn, btn, chip } from './ui-kit';
 import { optChooser, optOn } from './opt-rules';
 import { STEP_NAME, homeUrl, tutUrl, share, dropMatch, rulesHtml, accountHtml, bindAuth } from './home';
 import { drawLabel, drawEntry, drawRestricted, setLabelFace } from './board-art';
+import { hasLegend, legendCard } from './map-legend';
 import { targetsFor, type Tgt } from './chit-play';
 import { snap, diffFx, FxLayer, fxRow, FX_SAMPLES, type Fx } from './fx';
 import { RULE, ruleHtml } from './rules-text';
@@ -475,13 +476,9 @@ function floatCards() {
       if (layers.numbers) for (const e of MAP.entries) if (floatAt(e.x, e.y) === f) { c.save(); c.scale(K, K); c.translate(e.x - f.x, e.y - f.y); c.rotate(textRot()); drawEntry(c, e, VOL.art.entryDark(e.side)); c.restore(); }      // the entry letter rides on its triangle or strip
       t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; labelTexCache.set(key, t);
     }
-    const nx = Math.max(1, Math.ceil(f.w / 24)), ny = Math.max(1, Math.ceil(f.h / 24)), geo = new THREE.PlaneGeometry(1, 1, nx, ny), pos = geo.getAttribute('position') as THREE.BufferAttribute;
-    const r = Math.max(f.w / nx, f.h / ny) / 2 + 8;                                               // each corner of the card clears the highest ground around it
-    for (let k = 0; k < pos.count; k++) {
-      const mx = f.x + (pos.getX(k) + 0.5) * f.w, my = f.y + (0.5 - pos.getY(k)) * f.h, p = toWorld(mx, my);
-      let y = 0; for (const dx of [-r, 0, r]) for (const dy of [-r, 0, r]) y = Math.max(y, REL!.h(p.x + dx / S, p.z + dy / S));
-      pos.setXYZ(k, p.x, y + 0.05, p.z);
-    }
+    const geo = new THREE.PlaneGeometry(1, 1, 1, 1), pos = geo.getAttribute('position') as THREE.BufferAttribute;
+    let top = 0; for (let i = 0; i <= 6; i++) for (let j = 0; j <= 6; j++) { const p = toWorld(f.x + (i / 6) * f.w, f.y + (j / 6) * f.h); top = Math.max(top, REL!.h(p.x, p.z)); }      // a printed card stays flat, as on the board: one level, just above the highest ground under it
+    for (let k = 0; k < pos.count; k++) { const p = toWorld(f.x + (pos.getX(k) + 0.5) * f.w, f.y + (0.5 - pos.getY(k)) * f.h); pos.setXYZ(k, p.x, top + 0.05, p.z); }
     pos.needsUpdate = true; geo.computeBoundingSphere();
     const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 }));
     m.renderOrder = 2; labelsGrp.add(m);
@@ -1447,11 +1444,18 @@ function dragArrival(ev: PointerEvent, el: HTMLElement) {
 const unitFace = (u: E.Unit) => svgUri(VOL.unitSvg(u, g));
 const b3 = (face: string, side: E.Side | 'british', chit = false) => `<span class="b3 ${side} ${chit ? 'flat' : ''}" aria-hidden="true"><i class="f"><img alt="" draggable="false" src="${face}"></i><i class="r"></i><i class="t"></i></span>`;
 const sideOfUnit = (u: E.Unit) => VOL.cssSide(u);
+/** The printed map's legend, redrawn (map-legend.ts): a chip at the map's top-left corner opens it. */
+let legendOpen = false;
+function mapLegend() {
+  if (!hasLegend(VOL.id)) return '';
+  const close = `<button class="ico" aria-label="Close the legend" data-ui="${reg(() => { legendOpen = false; })}">${ico('close')}</button>`;
+  return legendOpen ? legendCard(VOL.id, close) : `<button class="mlchip" aria-expanded="false" data-ui="${reg(() => { legendOpen = true; })}">${ico('info')}<span>Legend</span></button>`;
+}
 /** The volume's prompts (set-up, drops, evacuation…). On a phone they fold down to a handle so the map can have the screen; they open again on a tap. */
-let volFolded = false, volFoldKey = '';
+let volFolded = innerWidth <= 700, volFoldKey = '';
 function volPanel() {
   const html = VOL.panel(g, panelCtx()); if (!html) return '';
-  const k = `${g.turn}${g.phasing}${g.phase}`; if (k !== volFoldKey) { volFoldKey = k; volFolded = false; }      // a new step opens the prompts again
+  const k = `${g.turn}${g.phasing}${g.phase}`; if (k !== volFoldKey) { volFoldKey = k; volFolded = innerWidth <= 700; }      // phones: each step starts folded, the map first; a tap on the handle opens the prompts
   if (!html.includes('class="volstack"') || innerWidth > 700) return html;
   const n = (html.match(/class="volpanel"/g) ?? []).length, title = /<b>(?:<svg[\s\S]*?<\/svg>)?\s*([^<(]+)/.exec(html)?.[1]?.trim() ?? 'Instructions';
   const fold = `<button class="volfold" aria-expanded="${!volFolded}" data-ui="${reg(() => { volFolded = !volFolded; })}">${ico(volFolded ? 'next' : 'close')}<span>${volFolded ? esc(title) + (n > 1 ? ` +${n - 1}` : '') : 'Hide'}</span></button>`;
@@ -1663,7 +1667,7 @@ function renderInner() {
   const dockMain = alert || ledger() || handCards();
   const keepD = document.querySelector<HTMLElement>('#ui .c-dispatch')?.scrollTop ?? 0;           // a panel being read keeps its place when the screen updates
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = `<a class="skipmap" href="#" data-ui="${reg(() => { (document.getElementById('gl') as HTMLElement).focus(); })}">Skip to the map</a><div class="tops">${topBar()}${vpStrip(g, reg(() => { scoreOpen = true; }))}</div>` + `<div class="stage">${SANDBOX ? (SBU.st.sbOpen ? SBU.sandboxPanel() : SBU.sandboxFab()) : ''}${seatBar()}${heldBad ? heldBadBar() : ''}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${volPanel()}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${airPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} Map`, () => { endHidden = true; }) + ubtn(`${ico('plus')} New game`, () => { if (SANDBOX) { SBU.sbReset({ ...g.opts }); endHidden = false; } else location.href = homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}</button>${undoBtn()}${!p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
+  $('#ui').innerHTML = `<a class="skipmap" href="#" data-ui="${reg(() => { (document.getElementById('gl') as HTMLElement).focus(); })}">Skip to the map</a><div class="tops">${topBar()}${vpStrip(g, reg(() => { scoreOpen = true; }))}</div>` + `<div class="stage">${SANDBOX ? (SBU.st.sbOpen ? SBU.sandboxPanel() : SBU.sandboxFab()) : ''}${seatBar()}${heldBad ? heldBadBar() : ''}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${volPanel()}${mapLegend()}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${airPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} Map`, () => { endHidden = true; }) + ubtn(`${ico('plus')} New game`, () => { if (SANDBOX) { SBU.sbReset({ ...g.opts }); endHidden = false; } else location.href = homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}</button>${undoBtn()}${!p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
   const ui = $('#ui');
   { const d = ui.querySelector<HTMLElement>('.c-dispatch'); if (d) d.scrollTop = keepD; }
   bind(ui, keepH, keepA);
@@ -1742,7 +1746,7 @@ function frame() {
   { const f = Math.cos(yaw) < 0; if (f !== camFar) { camFar = f; paintBoard(); } }        // the camera has swung past the side: the printed words turn to face it
   { const tilt = show3d() ? Math.min(0.75, Math.max(0, 0.8 - pitch) * 1.3) : 0;              // a low look across the 3D table: the names stand up toward the player, as the hovering boxes do, so they stay readable
     if (Math.abs(tilt - labelTilt) > 0.005) { labelTilt = tilt; for (const l of labelsGrp.children) if (l.userData.lh) { l.rotation.x = -Math.PI / 2 + tilt; l.position.y = l.userData.y0 + Math.sin(tilt) * l.userData.lh / 2; } } }
-  if (!opened) { opened = true; if (!g.inPlay && !TUT) target.copy(openingTarget()); }      // the first frame looks at the front of this game
+  if (!opened) { opened = true; if (!g.inPlay && !TUT) { target.copy(openingTarget()); if (innerWidth <= 700) { const ps = g.units.filter((u) => u.area != null && MAP.areas.some((x) => x.id === u.area)).map((u) => center(u.area!)), span = ps.length ? Math.max(...ps.map((p) => p.x)) - Math.min(...ps.map((p) => p.x)) : 40; dist = clampDist(span * 1.25 + 8); } } }      // the first frame looks at the front of this game; a phone frames the front's width, not the whole sheet
   placeCam(); runAnims(); settle(); renderer.render(scene, cam); renderFocus(); placeBadges();
 }
 SBU.initSandboxUi({

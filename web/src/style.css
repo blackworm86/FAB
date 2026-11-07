@@ -690,7 +690,7 @@ button.go:disabled { background: #2a2d22; color: #8d9065; box-shadow: none; opac
 .m2 small { font: 500 10.5px var(--sf); opacity: .85; margin-left: 2px; } .m2[role=button] { cursor: pointer; }
 .c-vs .big .xs { font: 700 10px var(--sfd); letter-spacing: .08em; vertical-align: middle; margin: 0 4px; opacity: .85; } .c-vs .big .xs.al { color: var(--al); } .c-vs .big .xs.ge { color: var(--ge); }
 .c-vs .xcap { display: block; font: 500 10px var(--sf); color: #b3ad8b; text-align: center; margin-top: 1px; }
-.vtb i { font-size: 10.5px !important; }
+.vtb i { font-size: 12px !important; }
 .m2[role=button] { position: relative; min-height: 20px; } .m2[role=button]::after { content: ""; position: absolute; inset: -8px -2px; }     /* a finger-sized tap area around the small chip */
 .c-vs .big small.xs { display: inline !important; }
 
@@ -836,10 +836,10 @@ a.btnlink.primary { background: var(--gold); color: #1a1608; border-color: trans
 .blk .b3.israeli { box-shadow: 6px 6px 0 #1b80b4, 9px 12px 12px #000a; } .blk .b3.syrian { box-shadow: 6px 6px 0 #1d6131, 9px 12px 12px #000a; }
 .card2.wood.israeli { box-shadow: 0 5px 0 #1b80b4, 0 6px 0 #135c82, 0 12px 18px #000b; } .card2.wood.syrian { box-shadow: 0 5px 0 #1d6131, 0 6px 0 #144522, 0 12px 18px #000b; }
 /* admin sandbox: one floating button at the left edge (never in the top bar), and the game / scenario header of its panel */
-.sbfab { position: fixed; left: 10px; top: 112px; z-index: 25; display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: #0b0d08cc; color: var(--gold); border: 1px dashed var(--gold); border-radius: 22px; font: 700 12px var(--sfd); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; box-shadow: 0 4px 12px #000a; opacity: .78; }
+.sbfab { position: fixed; left: 10px; top: 164px; z-index: 25; display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: #0b0d08cc; color: var(--gold); border: 1px dashed var(--gold); border-radius: 22px; font: 700 12px var(--sfd); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; box-shadow: 0 4px 12px #000a; opacity: .78; }
 .sbfab:hover, .sbfab:focus-visible { opacity: 1; background: #0b0d08f2; }
 .sbfab svg { width: 18px; height: 18px; }
-@media (max-width: 700px) { .sbfab { padding: 9px; top: 104px; } .sbfab span { display: none; } }
+@media (max-width: 700px) { .sbfab { padding: 9px; top: 150px; } .sbfab span { display: none; } }
 .sbhead { padding-bottom: 6px; margin-bottom: 6px; border-bottom: 1px solid var(--line); } .sbhead > b { display: flex; align-items: center; gap: 6px; color: var(--gold); font: 700 13px var(--sfd); letter-spacing: .08em; text-transform: uppercase; } .sbhead b svg { width: 16px; height: 16px; }
 .sbhead .row select { flex: 1; min-width: 0; }
 
@@ -921,3 +921,15 @@ a.rlink:hover { border-bottom-style: solid; }
 /* phones: the volume's prompts fold to a handle so the map gets the screen */
 .volfold { display: none; }
 @media (max-width: 700px) { .volfold { display: flex; gap: 6px; align-items: center; justify-self: end; min-height: 36px; padding: 4px 10px; background: #0b0d08ee; border: 1px solid var(--line); color: var(--gold); font: 600 13px var(--sfd); letter-spacing: .08em; text-transform: uppercase; } .volfold .ic { width: 16px; height: 16px; } .volstack.folded { left: auto; max-height: none; overflow: visible; } }
+
+/* phones: the arrival and set-up tray is one slim row, so the map keeps the screen */
+@media (max-width: 700px) { .arrtray { gap: 10px; padding: 4px 8px 2px !important; } .arrtray .why { display: none; } .arr { gap: 4px; padding: 2px 3px; } .arr .b3 { --s: 38px !important; } .arr small { font-size: 10px; margin-top: 0; max-width: 66px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } }
+
+/* the printed map's legend: a chip at the map's corner, the card in the print's own manner (paper, small rows, dark ink) */
+.mlchip { position: absolute; left: 12px; top: 12px; z-index: 6; display: flex; gap: 6px; align-items: center; min-height: 34px; padding: 4px 11px; background: #0b0d08cc; border: 1px solid var(--line); color: var(--gold); font: 600 13px var(--sfd); letter-spacing: .1em; text-transform: uppercase; }
+.mlchip .ic { width: 16px; height: 16px; } .mlchip:hover, .mlchip:focus-visible { background: #0b0d08f2; border-color: var(--gold); }
+.maplegend { position: absolute; left: 12px; top: 12px; z-index: 30; width: min(300px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow: auto; background: #e9e4cf; color: #23251d; border: 1px solid #8d9065; box-shadow: 0 6px 18px #000a; padding: 8px 12px 10px; font: 12.5px/1.25 var(--body, sans-serif); }
+.maplegend .mlhead { display: flex; align-items: baseline; gap: 8px; } .maplegend .mlhead b { font: 700 17px var(--sfd); letter-spacing: .06em; } .maplegend .mlhead small { color: #5d5e4a; flex: 1; }
+.maplegend .mlhead .ico { color: #23251d; min-width: 32px; min-height: 32px; } .maplegend .mlsub { display: block; margin: 8px 0 2px; font: 700 13px var(--sfd); letter-spacing: .08em; text-transform: uppercase; color: #4a4b3a; }
+.maplegend ul { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 3px; } .maplegend li { display: flex; align-items: center; gap: 10px; } .maplegend li svg { flex: none; }
+.maplegend .tdn { grid-template-columns: 1fr 1fr; }

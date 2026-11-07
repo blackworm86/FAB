@@ -137,21 +137,37 @@ for i in P_:
                 if ln.geom_type == 'LineString' and ln.length > 6: army += '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in ln.coords) + '"/>'; army_segs.setdefault(tuple(sorted((zone[i], zone[j]))), []).append((ln, i))
 NB = 'docs/maps/vector/borders-national.json'                                         # the print's national borders along the east edge: German (magenta), Luxembourg (cyan); traced from the scan by position
 national = ''.join(f'<path d="M' + 'L'.join(f'{x} {y}' for x, y in pl) + f'" stroke="{col}"/>' for k, col in (('magenta', '#c2287f'), ('cyan', '#1aa3d6')) for pl in [json.load(open(NB))[k]]) if os.path.exists(NB) else ''
-ARMY = {5: '6th Panzer Army', 6: '5th Panzer Army', 7: '7th Army'}                     # as printed: each army's name along its boundary, on its own side
+ARMY = {5: '5th Panzer Army', 6: '6th Panzer Army', 7: '7th Army'}                     # as printed: each army's name along its boundary, on its own side, at the boundary's east end
 def army_caption(ln, za, zb):
-    L = ln.length; a, b = ln.interpolate(L / 2 - 6), ln.interpolate(L / 2 + 6); ang = math.degrees(math.atan2(b.y - a.y, b.x - a.x))
+    from shapely.geometry import LineString as _LS
+    L = ln.length; e = ln.interpolate(0).x > ln.interpolate(L).x; at = (44 if e else L - 44) if L > 120 else L / 2
+    a, b = ln.interpolate(at - 6), ln.interpolate(at + 6); ang = math.degrees(math.atan2(b.y - a.y, b.x - a.x))
     if ang > 90: ang -= 180
     if ang < -90: ang += 180
-    m = ln.interpolate(L / 2); r = math.radians(ang); nx, ny = -math.sin(r), math.cos(r); out = ''
+    m = ln.interpolate(at); r = math.radians(ang); nx, ny = -math.sin(r), math.cos(r); out = ''
     for sgn in (1, -1):
         px, py = m.x + nx * 11 * sgn, m.y + ny * 11 * sgn
         zn = next((zone[k] for k, P in P_.items() if P.contains(Point(px, py))), None)
         if zn in ARMY: out += f'<g data-flip="{px:.1f} {py:.1f}"><text x="{px:.1f}" y="{py + 3.5:.1f}" transform="rotate({ang:.1f} {px:.1f} {py:.1f})" text-anchor="middle" font-family="Arial Narrow, Arial, sans-serif" font-style="italic" font-weight="700" font-size="10" fill="#4a4d48">{ARMY[zn]}</text></g>'
     return out
-army_text = ''.join(army_caption(max(v, key=lambda t: t[0].length)[0], *k) for k, v in army_segs.items())
+from shapely.ops import linemerge as _lm
+def _east_line(segs):                                                               # each army boundary as one line; the caption sits near its east end (the front)
+    m = _lm(unary_union([t[0] for t in segs])); parts = list(m.geoms) if m.geom_type == 'MultiLineString' else [m]
+    return max(parts, key=lambda p: max(p.coords[0][0], p.coords[-1][0]) + p.length * 0.05)
+army_text = ''.join(army_caption(_east_line(v), *k) for k, v in army_segs.items())
+OM = 'docs/maps/vector/offmap-bulge.json'                                            # the print's dark grey off-map ground (beyond the Semois and past Echternach), traced from the scan by position
+_om = json.load(open(OM)) if os.path.exists(OM) else None
+offmap_g = f'<g id="offmap" fill="{_om["colour"]}">' + ''.join('<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in P) + 'Z"/>' for P in _om['polys']) + '</g>' if _om else ''
+def zone_strip(z):                                                                   # as printed: "ARMY ZONE n" running up the east margin beside its army's areas
+    ys = [y for a in out['areas'] if a['zone'] == z for x, y in a['polygon'] if x > 1690]
+    if not ys: return ''
+    cy = (min(ys) + max(ys)) / 2; x = 1729
+    return f'<g data-flip="{x} {cy:.1f}"><text x="{x}" y="{cy:.1f}" transform="rotate(90 {x} {cy:.1f})" text-anchor="middle" dy="3.5" font-family="Arial Narrow, Arial, sans-serif" font-weight="700" font-size="10" letter-spacing="1.5" fill="#4a4d48">ARMY ZONE {z}</text></g>'
+zone_strips = ''.join(zone_strip(z) for z in (5, 6, 7))
 head = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">'
 base = f'''{head}
 <rect id="frame" width="{W}" height="{H}" fill="#bccad3"/>
+{offmap_g}
 <g id="terrain"><path fill="{ground}" fill-rule="evenodd" d="{land_d}"/></g>
 {woods_g}
 <g id="entering-zones">{strips}</g>
@@ -160,6 +176,7 @@ lines = f'''{head}
 <g id="boundaries" fill="none" stroke="#fbfbf6" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">{bnd}</g>
 <g id="army" fill="none" stroke-linecap="butt" stroke-linejoin="round"><g stroke="#6d706c" stroke-width="9" stroke-dasharray="8 5">{army}</g><g stroke="#fbfbf6" stroke-width="3.4">{army}</g></g>
 <g id="army-names" stroke="#eef0e6" stroke-width="2.4" paint-order="stroke">{army_text}</g>
+<g id="zone-strips">{zone_strips}</g>
 <g id="rivers" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#ffffff">{rivers_c}</g><g stroke="#1c78c0">{rivers}</g></g>
 <g id="roads" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#e4e6d8" stroke-width="4.0" stroke-opacity="0.8">{roads_c}</g><g stroke="#585b56" stroke-width="2.4">{roads_c}</g></g>
 <defs><pattern id="hatch" width="4.5" height="4.5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4.5" height="4.5" fill="#aeb2b4"/><path d="M0 0V4.5" stroke="#6c7175" stroke-width="1.6"/></pattern></defs>

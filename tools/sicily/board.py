@@ -86,7 +86,7 @@ def box_svg(b):
 def anchor_glyph(x, y, k, col):
     return (f'<g transform="translate({x:.1f} {y:.1f}) scale({k})" fill="none" stroke="{col}" stroke-width="2.4" stroke-linecap="round"><circle cy="-8" r="2.4"/><path d="M0 -5.5V9M-6 -1.5H6M-9 3.5A9 9 0 0 0 9 3.5"/></g>')
 anchor = lambda x, y: f'<g transform="translate({x:.1f} {y:.1f})"><circle r="12.5" fill="{ANCHOR}" stroke="#ffffff" stroke-width="2"/>{anchor_glyph(0, 0.5, 1, "#ffffff")}</g>'
-airfield = lambda x, y, r: (f'<g transform="translate({x:.1f} {y:.1f})"><circle r="{r:.1f}" fill="{AIRFIELD}" stroke="#2b2a26" stroke-width="1.2"/>'
+airfield = lambda x, y, r: (f'<g transform="translate({x:.1f} {y:.1f}) scale(.8)" opacity=".9"><circle r="{r:.1f}" fill="{AIRFIELD}" stroke="#4a463c" stroke-width="1"/>'
                             f'<g transform="scale({r / 16:.3f})" fill="#2b2a26"><path d="M-1.6 -11h3.2l1 7 8.5 4.5v2.6l-8.5-2.2-.5 5.5 3 2v1.8L0 9.5l-5.2 .7V8.4l3-2-.5-5.5-8.5 2.2V.5l8.5-4.5z"/></g></g>')
 ML = M['mainland']; mlc = ML['label']
 hold = lambda x, y, w, h, title: fl(x, y, x + w, y + h, flip(x + w / 2, y + h / 2, f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="8" fill="#c9def0" stroke="#ffffff" stroke-width="3"/>'
@@ -132,8 +132,8 @@ def zone_captions():                                                            
                 px, py = m.x + nx * 13 * sgn, m.y + ny * 13 * sgn
                 zs = next((ZONE[k] for k, P in AREA.items() if P.contains(Point(px, py))), None)
                 if zs and len(zs) == 1:
-                    out += (f'<g data-flip="{px:.1f} {py:.1f}"><text x="{px:.1f}" y="{py + 4:.1f}" transform="rotate({ang:.1f} {px:.1f} {py:.1f})" text-anchor="middle" '
-                            f'font-family="Saira Condensed, Arial Narrow, sans-serif" font-weight="700" font-size="12" letter-spacing="1" fill="#4b4b4b" stroke="#ece6d2" stroke-width="2.4" paint-order="stroke">ZONE {zs[0]}</text></g>')
+                    out += (f'<g data-float="{px - 34:.1f} {py - 12:.1f} 68 24"><g data-flip="{px:.1f} {py:.1f}"><text x="{px:.1f}" y="{py + 4:.1f}" transform="rotate({ang:.1f} {px:.1f} {py:.1f})" text-anchor="middle" '
+                            f'font-family="Saira Condensed, Arial Narrow, sans-serif" font-weight="700" font-size="12" letter-spacing="1" fill="#4b4b4b" stroke="#ece6d2" stroke-width="2.4" paint-order="stroke">ZONE {zs[0]}</text></g></g>')   # hovers over the relief in 3D, like the area names
     return out
 def clear_of_town(x, y, r=17):                                                      # an anchor never sits on a town's hatching: pushed out of it, away from the town's middle
     for c in A['cities']:

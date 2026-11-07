@@ -41,8 +41,12 @@ h += 25 * np.exp(-(de / 6) ** 2) * (h > np.percentile(h[land], 30))
 h = nd.gaussian_filter(h, 1.0)
 lo = float(h[sheet].min()); h = h - lo
 PLINTH = 0.4 * MPP * (W / 86.36) / EXAG                                             # the map stands 4 mm proud of the sheet's margin, cut straight down at its edge
-onmap = nd.binary_dilation(sheet, iterations=6)                                     # the printed map edge line sits on top
+apron = np.zeros((H, W), bool)                                                      # the Israeli assembly boxes below the Sea of Galilee stand on the board too, not a step below it
+for v in M['assembly'].values():
+    x, y, w, hh = v['box']; apron[max(0, y - 8):min(H, y + hh + 52), max(0, x - 10):min(W, x + w + 10)] = True
+onmap = nd.binary_closing(nd.binary_dilation(sheet | apron, iterations=6), iterations=40) & nd.binary_dilation(sheet | apron, iterations=46)   # one board: the map, the lake and the boxes joined, the printed map edge line on top
 h = np.maximum(h, 0) + PLINTH
+lake = float(np.median(h[mask(water)])); h = np.where(onmap & ~sheet, lake, h)          # the box strip below the lake: one flat level with the water, as on the printed sheet
 _, (iy, ix) = nd.distance_transform_edt(~onmap, return_indices=True); h = np.where(onmap, h, h[iy, ix])   # beyond the cut the ground carries on (the app cuts it away along the map's outline)
 import cv2
 cs, _ = cv2.findContours(onmap.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
@@ -80,5 +84,5 @@ dens = np.zeros((H, W), np.float32)                                             
 wd = nd.uniform_filter(dens.astype(np.float32), STEP + 1)[::STEP, ::STEP]; np.round(np.clip(wd, 0, 1) * 255).astype(np.uint8).tofile(OUT + 'woods.bin')
 towns = []                                                                          # the printed map draws no town symbols: none in 3D either
 json.dump({'cut': CUT, 'outline': [[[0, 0], [W, 0], [W, H], [0, H], [0, 0]]], 'w': W, 'h': H, 'step': STEP, 'cols': cols, 'rows': rows, 'metres': hi, 'mpp': MPP, 'exag': EXAG,
-           'dry': True, 'ownLines': True, 'overlay': 'map-base.svg', 'towns': towns, 'cities': []}, open(OUT + 'relief.json', 'w'), separators=(',', ':'))
+           'dry': True, 'contour': [50, 200, 0.85], 'ownLines': True, 'overlay': 'map-base.svg', 'towns': towns, 'cities': []}, open(OUT + 'relief.json', 'w'), separators=(',', ':'))
 print(rows, cols, round(hi), 'm', {f: os.path.getsize(OUT + f) // 1024 for f in os.listdir(OUT)})
