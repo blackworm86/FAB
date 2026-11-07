@@ -1,160 +1,118 @@
-"""Sicily board art in the series look (The Bulge's board, Golan's palette rules), from data/sicily/map.json + map_art.json and the real relief.
+"""Sicily board art after the printed map: the cardboard's own ground (ground.py) under the game's lines, boxes and symbols drawn in the print's style.
 
-Usage: python3 -I tools/sicily/board.py data/sicily web/public/sicily <scratch>/real.npy
-Writes map-base.svg: the sheet, the sea, one ground for the island (summer straw lowlands, olive and tan hills, the dark Nebrodi
-and Madonie, Etna's lava cone) shaded by the real relief and speckled with maquis where the terrain is rough, the Italian mainland
-("Exiting Axis Units"), the landing boxes (A, B and D, with their beach names and arrows), the port boxes with their damage boxes,
-the four port cities, the anchors and the airfields. And map-lines.svg: the line work in the printed legend's styles drawn with The
-Bulge's vocabulary (white area borders, cased roads, rivers, the coast, hachured restricted terrain, the dashed army boundaries).
-Area numbers, names and VP symbols are printed at run time (labels.json). The unshaded ground is left in <scratch>/sicily-ground.npy for relief.py.
+Usage: python3 -I tools/sicily/board.py data/sicily web/public/sicily <scratch>/sicily-ground.png
+Writes map-base.svg: the printed ground of the island and the mainland on the printed sea, the landing boxes (A green, B blue, D dark green)
+and port boxes with their white dotted arrows, the damage boxes, the At Sea and Airborne Assault boxes. And map-lines.svg, in the print's
+order: rivers, roads, area borders, the restricted-terrain tree line, the army boundaries, the white coast rim, then the symbols above
+everything (anchors, airfields, the Messina exit arrows). Area numbers, names and VP symbols are printed at run time (labels.json).
+The unshaded ground is left beside the ground file as sicily-ground.npy for relief.py.
 """
 import base64, io, json, os, re, sys
+from xml.sax.saxutils import escape
 import numpy as np
 from PIL import Image, ImageDraw
 from scipy import ndimage as nd
-from shapely.geometry import LineString, Point, Polygon
+from shapely.geometry import Point, Polygon
 
-D, OUT, REAL = sys.argv[1:4]
+D, OUT, GROUND = sys.argv[1:4]
 M = json.load(open(os.path.join(D, 'map.json'))); A = json.load(open(os.path.join(D, 'map_art.json')))
 W, H = [int(v) for v in M['size']]
 os.makedirs(OUT, exist_ok=True)
-poly = lambda P: 'M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in P) + 'Z'
 paths = lambda ds, extra='': ''.join(f'<path d="{d}"{extra}/>' for d in ds if d)
 pts = lambda d: [tuple(map(float, q.split(','))) for q in re.findall(r'-?[\d.]+,-?[\d.]+', d)]
-
-# ---------- the series palette (The Bulge: margin #bccad3, borders #fbfbf6, roads #585b56 on #e4e6d8, rivers #1c78c0 in white; Golan's water 150,190,219) ----------
-MARGIN = (188, 202, 211); SEA = np.array([132, 178, 212], np.float32); SHALLOW = np.array([168, 204, 226], np.float32)
-PLAIN = np.array([226, 212, 162], np.float32); HILL = np.array([204, 188, 138], np.float32); MOUNT = np.array([150, 152, 110], np.float32); FOREST = np.array([136, 146, 104], np.float32)
-LAVA = np.array([112, 106, 100], np.float32); SUMMIT = np.array([178, 172, 166], np.float32); OFFMAP = np.array([176, 178, 166], np.float32)
-GROUP_COL = {'A': '#518f39', 'B': '#2589c5', 'D': '#137344', 'P': '#656567'}
-
-# ---------- masks ----------
-def mask(polys, fill=1):
-    im = Image.new('L', (W, H), 0); d = ImageDraw.Draw(im)
-    for P in polys:
-        if len(P) > 2: d.polygon([tuple(p) for p in P], fill=fill)
-    return np.array(im) > 0
-ids = Image.new('I', (W, H), 0); dd = ImageDraw.Draw(ids)
-for a in M['areas']: dd.polygon([tuple(p) for p in a['polygon']], fill=a['id'])
-ids = np.array(ids); land = ids > 0
-tdn = np.zeros(128, np.float32)
-for a in M['areas']: tdn[a['id']] = a['tdn']
-T = nd.gaussian_filter(tdn[ids] * land, 3)
-coast = mask([pts(p) for p in A['coast']]) | land
-islets = mask([pts(p) for p in A['islets']])
-mainland = mask([pts(p) for p in A['mainland']])
-ground_mask = coast | islets | mainland
-
-# ---------- relief: real metres on the map grid ----------
-h = nd.zoom(np.load(REAL), 2, order=1)[:H, :W]
-hs = nd.gaussian_filter(h, 3.0)
-gy, gx = np.gradient(hs)
-shade = np.clip(1 + (-gx * 0.62 - gy * 0.78) / 70, 0.7, 1.18)                       # light from the upper left, as on a printed map, softly: the board is read, not admired
-slope = np.hypot(gx, gy)
-
-# ---------- ground: a July island, from the straw-coloured plains up to the dark ridges and Etna's lava ----------
-hh = np.clip(h, 0, None)
-w_hill = np.clip((hh - 120) / 500, 0, 1)[..., None]; w_mount = np.clip((hh - 900) / 700, 0, 1)[..., None]
-ground = PLAIN * (1 - w_hill) + HILL * w_hill
-ground = ground * (1 - w_mount) + MOUNT * w_mount
-w_forest = np.clip((hh - 1000) / 400, 0, 1)[..., None] * (1 - nd.gaussian_filter((ids == 27).astype(np.float32), 6)[..., None])   # the Nebrodi and Madonie woods
-ground = ground * (1 - w_forest * .7) + FOREST * w_forest * .7
-etna = nd.gaussian_filter((ids == 27).astype(np.float32), 6)[..., None]
-w_lava = np.clip((hh - 1500) / 900, 0, 1)[..., None] * etna; w_top = np.clip((hh - 2700) / 500, 0, 1)[..., None] * etna
-ground = ground * (1 - w_lava) + LAVA * w_lava; ground = ground * (1 - w_top) + SUMMIT * w_top
-rng = np.random.default_rng(43)
-grain = nd.gaussian_filter(rng.standard_normal((H, W)), 0.7)                       # maquis and rock: dark specks, denser where the terrain is rough
-speck = (grain > 2.2 - 0.4 * T) & land
-stone = nd.gaussian_filter(rng.standard_normal((H, W)), 6) * 5
-img = ground + stone[..., None]
-img = np.where(speck[..., None], img * 0.74, img)
-unshaded = img.copy()
-img = img * shade[..., None]
-# the sea: deeper blue away from the shore, a pale band along the coast
-dsea = nd.distance_transform_edt(~ground_mask)
-sea = SHALLOW * np.clip(1 - dsea / 14, 0, 1)[..., None] + SEA * np.clip(dsea / 14, 0, 1)[..., None]
-img = np.where(ground_mask[..., None], img, sea)
-img = np.where((mainland & ~land)[..., None], (OFFMAP + stone[..., None]) * np.clip(shade, .85, 1.12)[..., None], img)
-buf = io.BytesIO(); Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)).save(buf, 'JPEG', quality=86, optimize=True)
-ground_uri = 'data:image/jpeg;base64,' + base64.b64encode(buf.getvalue()).decode()
-np.save(os.path.join(os.path.dirname(REAL), 'sicily-ground.npy'), np.clip(np.where(ground_mask[..., None], np.where((mainland & ~land)[..., None], OFFMAP + stone[..., None], unshaded), sea), 0, 255).astype(np.uint8))
-
-# ---------- the printed items beside the areas: landing and port boxes with their arrows, cities, anchors, airfields, the mainland ----------
+ring = lambda P: 'M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in P) + 'Z'
 font = 'font-family="Saira Condensed, Arial Narrow, sans-serif"'
-from xml.sax.saxutils import escape
 def txt(x, y, s, size, fill, extra=''):
     attrs = {'text-anchor': 'middle', 'font-weight': '700'}
     for k in list(attrs):
-        if k in extra: del attrs[k]                                                     # what `extra` sets wins; no attribute twice
-    return f'<text x="{x:.1f}" y="{y:.1f}" {" ".join(f"{k}=\"{v}\"" for k, v in attrs.items())} {font} font-size="{size}" fill="{fill}" {extra}>{escape(s)}</text>'
+        if k in extra: del attrs[k]
+    at = ' '.join(f'{k}="{v}"' for k, v in attrs.items())
+    return f'<text x="{x:.1f}" y="{y:.1f}" {at} {font} font-size="{size}" fill="{fill}" {extra}>{escape(s)}</text>'
+
+# ---------- the printed palette, sampled from the scan ----------
+SEA = (137, 193, 216); RIM = '#ffffff'; RIVER = '#4f9fd8'; ROAD = '#b3aea7'; BORDER = '#6a6667'; ARMY = '#3b3b3b'; TREELINE = '#6b4a24'; ANCHOR = '#1e6fc0'; AIRFIELD = '#f4de3a'
+GROUP = {'A': '#3f9a3a', 'B': '#2a7fc8', 'D': '#1f6f3f', 'P': '#1e6fc0'}
+
+# ---------- the ground: the cardboard's island and mainland on the printed sea ----------
+ground = np.array(Image.open(GROUND).convert('RGB')).astype(np.float32)
+def mask(polys):
+    im = Image.new('L', (W, H), 0); d = ImageDraw.Draw(im)
+    for P in polys:
+        if len(P) > 2: d.polygon([tuple(p) for p in P], fill=1)
+    return np.array(im) > 0
+land = mask([a['polygon'] for a in M['areas']]) | mask([pts(p) for p in A['coast']]) | mask([pts(p) for p in A['islets']]) | mask([pts(p) for p in A['mainland']])
+mainland = mask([pts(p) for p in A['mainland']])
+grey = np.median(ground[mainland].reshape(-1, 3), 0)                                                # the printed mainland: a flat grey (its text and legend are not ground)
+img = np.where(nd.binary_dilation(land, iterations=2)[..., None], ground, np.array(SEA, np.float32))
+rng = np.random.default_rng(7); img = np.where(mainland[..., None], grey + nd.gaussian_filter(rng.standard_normal((H, W)), 5)[..., None] * 6, img)
+buf = io.BytesIO(); Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)).save(buf, 'JPEG', quality=88, optimize=True)
+ground_uri = 'data:image/jpeg;base64,' + base64.b64encode(buf.getvalue()).decode()
+np.save(os.path.join(os.path.dirname(GROUND), 'sicily-ground.npy'), np.clip(img, 0, 255).astype(np.uint8))
+
+# ---------- the boxes, as printed: a pale rounded card with its coloured stripe, the white dotted arrow to the coast ----------
 AREA = {a['id']: Polygon(a['polygon']) for a in M['areas']}
-def arrow(b):
+def arrow(b, white=True):
     x0, y0, x1, y1 = b['rect']; c = Point((x0 + x1) / 2, (y0 + y1) / 2); P = AREA[b['area']]
-    tgt = P.exterior.interpolate(P.exterior.project(c))                            # the nearest point of the area's shore
-    v = np.array([tgt.x - c.x, tgt.y - c.y]); L = np.hypot(*v); n = v / L
-    # leave the box at its edge
-    t = min((abs(((x1 - x0) / 2) / n[0]) if n[0] else 9e9), (abs(((y1 - y0) / 2) / n[1]) if n[1] else 9e9)) + 3
-    s = np.array([c.x, c.y]) + n * t; e = np.array([tgt.x, tgt.y]) - n * 6
-    if np.hypot(*(e - s)) < 8: return ''
-    head = e + n * 7; p = np.array([-n[1], n[0]])
-    dash = ' stroke-dasharray="10 7"' if np.hypot(*(e - s)) > 240 else ''
-    return (f'<path d="M{s[0]:.1f} {s[1]:.1f}L{e[0]:.1f} {e[1]:.1f}" fill="none" stroke="#fbfbf6" stroke-width="7" stroke-linecap="round"/>'
-            f'<path d="M{s[0]:.1f} {s[1]:.1f}L{e[0]:.1f} {e[1]:.1f}" fill="none" stroke="#1d1d1b" stroke-width="3.2" stroke-linecap="round"{dash}/>'
-            f'<path d="M{head[0]:.1f} {head[1]:.1f}L{(e - n * 8 + p * 8)[0]:.1f} {(e - n * 8 + p * 8)[1]:.1f}L{(e - n * 8 - p * 8)[0]:.1f} {(e - n * 8 - p * 8)[1]:.1f}Z" fill="#1d1d1b" stroke="#fbfbf6" stroke-width="2" stroke-linejoin="round"/>')
-NAMES = {a['id']: a['name'] for a in M['areas']}
+    tgt = P.exterior.interpolate(P.exterior.project(c)); v = np.array([tgt.x - c.x, tgt.y - c.y]); n = v / np.hypot(*v)
+    t = min((abs(((x1 - x0) / 2) / n[0]) if n[0] else 9e9), (abs(((y1 - y0) / 2) / n[1]) if n[1] else 9e9)) + 4
+    s = np.array([c.x, c.y]) + n * t; e = np.array([tgt.x, tgt.y]) - n * 10
+    if np.hypot(*(e - s)) < 10: return ''
+    p = np.array([-n[1], n[0]]); tip = e + n * 12; b1 = e - n * 6 + p * 11; b2 = e - n * 6 - p * 11
+    return (f'<path d="M{s[0]:.1f} {s[1]:.1f}L{e[0]:.1f} {e[1]:.1f}" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="butt" stroke-dasharray="6 6"/>'
+            f'<path d="M{tip[0]:.1f} {tip[1]:.1f}L{b1[0]:.1f} {b1[1]:.1f}L{b2[0]:.1f} {b2[1]:.1f}Z" fill="#ffffff"/>')
 def box_svg(b):
-    x0, y0, x1, y1 = b['rect']; w, hh_ = x1 - x0, y1 - y0; col = GROUP_COL[b['group']]; r = 7
-    top = 24
-    s = (f'<rect x="{x0}" y="{y0}" width="{w:.1f}" height="{hh_:.1f}" rx="{r}" fill="#e8eef2" stroke="#fbfbf6" stroke-width="3.5"/>'
-         f'<path d="M{x0 + r} {y0}H{x1 - r}A{r} {r} 0 0 1 {x1} {y0 + r}V{y0 + top}H{x0}V{y0 + r}A{r} {r} 0 0 1 {x0 + r} {y0}Z" fill="{col}"/>')
+    x0, y0, x1, y1 = b['rect']; w, h = x1 - x0, y1 - y0; col = GROUP[b['group']]; r = 7; s = ''
     if b['kind'] == 'landing':
-        s += txt(x0 + 19, y0 + 18, b['box'], 16, '#fff', 'text-anchor="start"') + (txt(x1 - 6, y0 + 18, b['name'], 13, '#fff', 'text-anchor="end" font-weight="600" font-style="italic"') if b.get('name') else '')
-        s += txt((x0 + x1) / 2, y1 - 9, 'LANDING BOX', 9.5, '#5a6670', 'letter-spacing=".08em" font-weight="600"')
+        st = 22
+        s += (f'<rect x="{x0}" y="{y0}" width="{w:.1f}" height="{h:.1f}" rx="{r}" fill="#c9def0" stroke="#ffffff" stroke-width="3"/>'
+              f'<path d="M{x0} {y1 - st}H{x1}V{y1 - r}A{r} {r} 0 0 1 {x1 - r} {y1}H{x0 + r}A{r} {r} 0 0 1 {x0} {y1 - r}Z" fill="{col}"/>'
+              + txt(x0 + 8, y1 - 6, b['box'], 16, '#fff', 'text-anchor="start"') + (txt(x1 - 8, y1 - 6, b['name'], 13, '#fff', 'text-anchor="end" font-weight="600"') if b.get('name') else ''))
     else:
-        s += txt(x0 + 19, y0 + 18, b['box'], 16, '#fff', 'text-anchor="start"') + txt(x1 - 6, y0 + 18, b['name'], 14, '#fff', 'text-anchor="end"')
-        who = 'Axis control (6th Army)' if b['box'] == 'P4' else '8th Army only' if b['box'] in ('P1', 'P2') else '7th Army only'
-        s += txt((x0 + x1) / 2, y1 - 20, 'PORT BOX', 9.5, '#5a6670', 'letter-spacing=".08em" font-weight="600"') + txt((x0 + x1) / 2, y1 - 7, who, 10, '#2b3137', 'font-weight="600"')
+        who = 'Axis Control Required (6th Army only)' if b['box'] == 'P4' else f"Allied Control Required ({'7th' if b['box'] == 'P3' else '8th'} Army only)"
+        s += (f'<rect x="{x0}" y="{y0}" width="{w:.1f}" height="{h:.1f}" rx="{r}" fill="{col}" stroke="#ffffff" stroke-width="3"/>'
+              + txt((x0 + x1) / 2, y0 + 24, b['box'], 20, '#fff') + txt((x0 + x1) / 2, y0 + 42, b['name'], 15, '#fff', 'font-weight="600"')
+              + txt((x0 + x1) / 2, y1 - 20, who.split(' (')[0], 9.5, '#fff', 'font-weight="600"') + txt((x0 + x1) / 2, y1 - 8, '(' + who.split(' (')[1], 9.5, '#fff', 'font-weight="600"'))
         if b.get('damage_box'):
-            dx0, dy0, dx1, dy1 = b['damage_box']
-            s += (f'<rect x="{dx0}" y="{dy0}" width="{dx1 - dx0:.1f}" height="{dy1 - dy0:.1f}" rx="5" fill="#dfe6ec" stroke="#fbfbf6" stroke-width="3" stroke-dasharray="6 4"/>'
-                  + txt((dx0 + dx1) / 2, (dy0 + dy1) / 2 - 2, 'PORT', 9, '#5a6670', 'letter-spacing=".06em" font-weight="600"') + txt((dx0 + dx1) / 2, (dy0 + dy1) / 2 + 9, 'DAMAGE', 9, '#5a6670', 'letter-spacing=".06em" font-weight="600"'))
+            dx0, dy0, dx1, dy1 = b['damage_box']; cx = (dx0 + dx1) / 2
+            s += (f'<rect x="{dx0}" y="{dy0}" width="{dx1 - dx0:.1f}" height="{dy1 - dy0:.1f}" rx="6" fill="#dbe9f4" stroke="#ffffff" stroke-width="2.5"/>'
+                  + txt(cx, dy0 + 14, b['name'], 10, '#1b2a3a', 'font-weight="600"') + txt(cx, dy0 + 25, 'Damage', 9, '#1b2a3a', 'font-weight="600"') + anchor_glyph(cx, (dy0 + dy1) / 2 + 12, 0.9, '#1e6fc0'))
     return s + arrow(b)
-anchor = lambda x, y: (f'<g transform="translate({x:.1f} {y:.1f})"><circle r="12" fill="#2f78c8" stroke="#fbfbf6" stroke-width="2.4"/>'
-                       '<g fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><circle cy="-6" r="2"/><path d="M0 -4V7M-5 -1H5M-7 3A7 7 0 0 0 7 3"/></g></g>')
-airfield = lambda x, y, r: (f'<g transform="translate({x:.1f} {y:.1f})"><circle r="{r:.1f}" fill="#f3e23f" stroke="#fbfbf6" stroke-width="2.4"/>'
+def anchor_glyph(x, y, k, col):
+    return (f'<g transform="translate({x:.1f} {y:.1f}) scale({k})" fill="none" stroke="{col}" stroke-width="2.4" stroke-linecap="round"><circle cy="-8" r="2.4"/><path d="M0 -5.5V9M-6 -1.5H6M-9 3.5A9 9 0 0 0 9 3.5"/></g>')
+anchor = lambda x, y: f'<g transform="translate({x:.1f} {y:.1f})"><circle r="12.5" fill="{ANCHOR}" stroke="#ffffff" stroke-width="2"/>{anchor_glyph(0, 0.5, 1, "#ffffff")}</g>'
+airfield = lambda x, y, r: (f'<g transform="translate({x:.1f} {y:.1f})"><circle r="{r:.1f}" fill="{AIRFIELD}" stroke="#2b2a26" stroke-width="1.2"/>'
                             f'<g transform="scale({r / 16:.3f})" fill="#2b2a26"><path d="M-1.6 -11h3.2l1 7 8.5 4.5v2.6l-8.5-2.2-.5 5.5 3 2v1.8L0 9.5l-5.2 .7V8.4l3-2-.5-5.5-8.5 2.2V.5l8.5-4.5z"/></g></g>')
-cityd = lambda d: f'<path d="{d}" fill="#3b3a36" stroke="#fbfbf6" stroke-width="2.2" stroke-linejoin="round"/>'
 ML = M['mainland']; mlc = ML['label']
+hold = lambda x, y, w, h, title: (f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="8" fill="#c9def0" stroke="#ffffff" stroke-width="3"/>'
+                                  f'<path d="M{x} {y + h - 24}H{x + w}V{y + h - 8}A8 8 0 0 1 {x + w - 8} {y + h}H{x + 8}A8 8 0 0 1 {x} {y + h - 8}Z" fill="{GROUP["P"]}"/>' + txt(x + w / 2, y + h - 7, title, 15, '#fff'))
 base = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">',
         f'<image id="ground" href="{ground_uri}" width="{W}" height="{H}" preserveAspectRatio="none"/>',
-        '<g id="names">' + txt(mlc[0] + 40, mlc[1] - 150, 'ITALIAN', 22, '#3f3e3a', 'stroke="#d8dad2" stroke-width="3" paint-order="stroke" font-style="italic"')
-        + txt(mlc[0] + 40, mlc[1] - 126, 'MAINLAND', 22, '#3f3e3a', 'stroke="#d8dad2" stroke-width="3" paint-order="stroke" font-style="italic"')
-        + txt(mlc[0] + 40, mlc[1] - 100, 'Exiting Axis units', 15, '#3f3e3a', 'stroke="#d8dad2" stroke-width="3" paint-order="stroke" font-weight="600"')
-        + txt(1200, 1630, 'SICILY', 30, '#1d5f9a', 'stroke="#d8e8f3" stroke-width="3" paint-order="stroke" font-style="italic" letter-spacing=".3em"') + '</g>',
-        '<g id="boxes">' + ''.join(box_svg(b) for b in A['boxes']) + '</g>',
-        '<g id="cities">' + ''.join(cityd(c['d']) for c in A['cities']) + '</g>',
-        '<g id="ports">' + ''.join(anchor(p['x'], p['y']) for p in A['port_symbols']) + '</g>',
-        '<g id="airfields">' + ''.join(airfield(a['x'], a['y'], a['r']) for a in A['airfields']) + '</g>',
+        '<g id="names">' + txt(mlc[0] + 40, mlc[1] - 150, 'Exiting', 24, '#3f3e3a', 'stroke="#d8dad2" stroke-width="3" paint-order="stroke" font-style="italic"')
+        + txt(mlc[0] + 40, mlc[1] - 124, 'Axis Units', 24, '#3f3e3a', 'stroke="#d8dad2" stroke-width="3" paint-order="stroke" font-style="italic"') + '</g>',
+        '<g id="boxes">' + ''.join(box_svg(b) for b in A['boxes']) + hold(46, 1020, 170, 170, 'At Sea') + hold(236, 1020, 150, 170, 'Airborne Assault') + '</g>',
         '</svg>']
 open(os.path.join(OUT, 'map-base.svg'), 'w').write('\n'.join(base))
 
-# ---------- line work: the printed legend, in The Bulge's hand ----------
+# ---------- the line work, in the print's order; the symbols above everything ----------
 g = lambda gid, attrs, body: f'<g id="{gid}" fill="none" stroke-linecap="round" stroke-linejoin="round" {attrs}>{body}</g>'
 exit_arrows = ''
-mess = AREA[M['mainland']['exit_from']]; mp = Polygon(pts(A['mainland'][0]))
-for k in range(3):                                                                  # three white arrows from Messina to the mainland, as printed
-    s = mess.exterior.interpolate(0.52 + k * 0.03, normalized=True); t = mp.exterior.interpolate(mp.exterior.project(s))
-    v = np.array([t.x - s.x, t.y - s.y]); n = v / np.hypot(*v); p = np.array([-n[1], n[0]]); e = np.array([t.x, t.y]) - n * 4; st = np.array([s.x, s.y]) + n * 4
-    exit_arrows += f'<path d="M{st[0]:.1f} {st[1]:.1f}L{e[0]:.1f} {e[1]:.1f}"/><path d="M{(e + n * 6)[0]:.1f} {(e + n * 6)[1]:.1f}L{(e - n * 6 + p * 6)[0]:.1f} {(e - n * 6 + p * 6)[1]:.1f}L{(e - n * 6 - p * 6)[0]:.1f} {(e - n * 6 - p * 6)[1]:.1f}Z" fill="#fbfbf6"/>'
+mess = AREA[ML['exit_from']]; mp = Polygon(pts(A['mainland'][0]))
+near = sorted(((mp.distance(Point(q)), q) for q in mess.exterior.coords), key=lambda x: x[0])[0][1]       # the Messina shore facing the strait
+at = mess.exterior.project(Point(near))
+for k in range(3):
+    s = mess.exterior.interpolate(at + (k - 1) * 28); t = mp.exterior.interpolate(mp.exterior.project(s))
+    v = np.array([t.x - s.x, t.y - s.y]); n = v / np.hypot(*v); p = np.array([-n[1], n[0]]); e = np.array([t.x, t.y]) - n * 6; st = np.array([s.x, s.y]) + n * 4
+    exit_arrows += f'<path d="M{st[0]:.1f} {st[1]:.1f}L{e[0]:.1f} {e[1]:.1f}" stroke-dasharray="5 5"/><path d="M{(e + n * 9)[0]:.1f} {(e + n * 9)[1]:.1f}L{(e - n * 4 + p * 7)[0]:.1f} {(e - n * 4 + p * 7)[1]:.1f}L{(e - n * 4 - p * 7)[0]:.1f} {(e - n * 4 - p * 7)[1]:.1f}Z" fill="#ffffff" stroke="none"/>'
+coast = [ring(pts(p)) for p in A['coast'] + A['islets'] + A['mainland']]
 lines = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">',
-         g('shores', '', f'<g stroke="#fbfbf6" stroke-width="5">{paths(A["coast"] + A["islets"] + A["mainland"])}</g><g stroke="#1c78c0" stroke-width="2.2">{paths(A["coast"] + A["islets"] + A["mainland"])}</g>'),
-         g('boundaries', 'stroke="#fbfbf6" stroke-width="2.8"', paths(A['open'])),
-         g('restricted', '', f'<g stroke="#5b4630" stroke-width="15" stroke-linecap="butt" stroke-dasharray="1.4 3.2" stroke-opacity=".85">{paths(A["restricted"])}</g><g stroke="#fbfbf6" stroke-width="6">{paths(A["restricted"])}</g><g stroke="#3b2f22" stroke-width="3.2">{paths(A["restricted"])}</g>'),
-         g('rivers', '', f'<g stroke="#fff" stroke-width="6">{paths(A["river"])}</g><g stroke="#1c78c0" stroke-width="3">{paths(A["river"])}</g>'),
-         g('roads', '', f'<g stroke="#e4e6d8" stroke-opacity=".85" stroke-width="4.4">{paths(A["roads"])}</g><g stroke="#585b56" stroke-width="1.7">{paths(A["roads"])}</g>'),
-         g('army-boundaries', '', f'<g stroke="#fbfbf6" stroke-width="6">{paths(A["army_boundary"])}</g><g stroke="#2b2a26" stroke-width="3" stroke-linecap="butt" stroke-dasharray="9 7">{paths(A["army_boundary"])}</g>'),
-         g('exit', 'stroke="#fbfbf6" stroke-width="3.4"', exit_arrows),
-         g('outline', 'stroke="#fbfbf6" stroke-width="4.6"', paths(A['border'] + A['frame_small'])),
+         g('rivers', '', f'<g stroke="#ffffff" stroke-width="5.2">{paths(A["river"])}</g><g stroke="{RIVER}" stroke-width="2.8">{paths(A["river"])}</g>'),
+         g('roads', f'stroke="{ROAD}" stroke-width="4.4"', paths(A['roads'])),
+         g('boundaries', f'stroke="{BORDER}" stroke-width="5.6"', paths(A['open'])),
+         g('restricted', '', f'<g stroke="{TREELINE}" stroke-width="18" stroke-linecap="butt" stroke-dasharray="1.6 3.6" stroke-opacity=".8">{paths(A["restricted"])}</g><g stroke="{TREELINE}" stroke-width="3">{paths(A["restricted"])}</g>'),
+         g('army-boundaries', '', f'<g stroke="#ffffff" stroke-width="6">{paths(A["army_boundary"])}</g><g stroke="{ARMY}" stroke-width="6" stroke-linecap="butt" stroke-dasharray="9 9">{paths(A["army_boundary"])}</g>'),
+         g('outline', f'stroke="{RIM}" stroke-width="7"', paths(coast)),
+         g('exit', 'stroke="#ffffff" stroke-width="3.4"', exit_arrows),
+         '<g id="symbols">' + ''.join(anchor(p['x'], p['y']) for p in A['port_symbols']) + ''.join(airfield(a['x'], a['y'], a['r']) for a in A['airfields']) + '</g>',
          '</svg>']
 open(os.path.join(OUT, 'map-lines.svg'), 'w').write('\n'.join(lines))
 print('board', W, H, os.path.getsize(os.path.join(OUT, 'map-base.svg')) // 1024, 'KB +', os.path.getsize(os.path.join(OUT, 'map-lines.svg')) // 1024, 'KB', len(A['boxes']), 'boxes')

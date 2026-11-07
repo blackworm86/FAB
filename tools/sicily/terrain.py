@@ -75,6 +75,7 @@ px = (tx(ll[:, 0]) - X0) * 256 - .5; py = (ty(ll[:, 1]) - Y0) * 256 - .5
 i = np.floor(px).astype(int); j = np.floor(py).astype(int); fx = px - i; fy = py - j
 g = lambda a, b: dem[np.clip(b, 0, dem.shape[0] - 1), np.clip(a, 0, dem.shape[1] - 1)]
 h = (g(i, j) * (1 - fx) * (1 - fy) + g(i + 1, j) * fx * (1 - fy) + g(i, j + 1) * (1 - fx) * fy + g(i + 1, j + 1) * fx * fy).reshape(xs.shape)
+np.save(f'{OUT}/lonlat.npy', ll.reshape(xs.shape + (2,)).astype(np.float32))                # longitude, latitude of every grid point, for the satellite ground
 h = np.where(h < -6000, -50, h)                                                      # a few no-data pixels in one sea tile
 np.save(f'{OUT}/real.npy', h)
 # ground metres per map pixel, from the fitted longitude/latitude across the land
