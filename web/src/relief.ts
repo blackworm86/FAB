@@ -8,7 +8,10 @@ type Meta = { outline: [number, number][][]; w: number; h: number; step: number;
   mpp?: number; exag?: number;   /** ground metres per map pixel (The Bulge 80) and how much the heights are raised (The Bulge 4) */
   dry?: boolean;                 /** a dry country (Golan): round green trees, no snow */
   overlay?: string;              /** the printed items off and on the map (entry triangles, boxes, names) come from this board file, minus its ground */
-  ownLines?: boolean;            /** the board's own line work is draped as drawn (Sicily: borders, army boundaries, coast in the print's style), not redrawn */ };
+  ownLines?: boolean;            /** the board's own line work is draped as drawn (Sicily: borders, army boundaries, coast in the print's style), not redrawn */
+  floatsFrom?: string;           /** a board file whose data-float items hover too (The Bulge: the entry strips of map-base.svg, instead of entry.png) */ };
+/** A printed item that hovers over the relief instead of being draped on it (arrows, entry triangles and strips, boxes): its box on the map and its picture, also turned for the far side. */
+export type Float = { x: number; y: number; w: number; h: number; img: HTMLImageElement; imgFlip: HTMLImageElement };
 export type Relief = {
   /** Height of the ground (cm) at world x, z. */
   h(x: number, z: number): number;
@@ -29,24 +32,43 @@ export type Relief = {
   patch(mat: THREE.MeshStandardMaterial, areaId: THREE.Texture, tints: THREE.Texture): void;
   /** Where a ray meets the ground. */
   hit(ray: THREE.Ray): THREE.Vector3 | null;
+  floats: Float[];
 };
 
 const RELIEF = 4, BASE = 0.22;                               // BASE: even the lowest valley stands this high (cm) above the wooden base                                          // the relief is shown four times higher than real, as chosen on the mockup
 const img = (src: string) => new Promise<HTMLImageElement>((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = bad; i.src = src; });
 const svgImg = (svg: string) => img(URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' })));
+/** Take the <g data-float="x y w h"> items out of a board file: the file without them, and each item as its own small picture. */
+function takeFloats(svg: string, out: { x: number; y: number; w: number; h: number; svg: string }[]) {
+  const re = /<g data-float="(-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+)"/g; let rest = '', from = 0, m: RegExpExecArray | null;
+  while ((m = re.exec(svg))) {
+    let depth = 0, i = m.index;
+    const tag = /<g[\s>]|<\/g>/g; tag.lastIndex = i;
+    for (let t: RegExpExecArray | null; (t = tag.exec(svg));) { depth += t[0] === '</g>' ? -1 : 1; if (!depth) { i = t.index + 4; break; } }
+    const [x, y, w, h] = m.slice(1, 5).map(Number); out.push({ x, y, w, h, svg: svg.slice(m.index, i) });
+    rest += svg.slice(from, m.index); from = i; re.lastIndex = i;
+  }
+  return rest + svg.slice(from);
+}
+const floatPic = (f: { x: number; y: number; w: number; h: number; svg: string }, flip: boolean) => svgImg(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${f.x} ${f.y} ${f.w} ${f.h}" width="${Math.round(f.w * 3)}" height="${Math.round(f.h * 3)}">${flip ? flipSvg(f.svg) : f.svg}</svg>`);
 const group = (svg: string, id: string) => { const m = new RegExp(`<g id="${id}"[\\s\\S]*?</g>(\\s*</g>)?`).exec(svg); return m ? m[0] : ''; };
 
 /** lite (phones): a ground mesh half as fine and half the trees. */
 export async function loadRelief(MW: number, MH: number, S: number, labels: [number, number, number, number][], lite = false, base = './'): Promise<Relief> {
   const meta = await fetch(base + 'relief/relief.json').then((r) => r.json() as Promise<Meta>);
-  const [hb, wb, snow, linesSvg, overlay] = await Promise.all([
+  const [hb, wb, snow, linesSvg0, overlay0, floatsSrc] = await Promise.all([
     fetch(base + 'relief/height.bin').then((r) => r.arrayBuffer()),
     fetch(base + 'relief/woods.bin').then((r) => r.arrayBuffer()),
     img(base + 'relief/snow.png'),
     fetch(base + 'map-lines.svg').then((r) => r.text()),
     meta.overlay ? fetch(base + meta.overlay).then((r) => r.text()).then((t) => t.replace(/<image id="ground"[^>]*\/>/, '')) : null,
+    meta.floatsFrom ? fetch(base + meta.floatsFrom).then((r) => r.text()) : null,
   ]);
-  const entry = overlay ? await svgImg(overlay) : await img(base + 'relief/entry.png'), entryFlip = overlay && overlay.includes('data-flip=') ? await svgImg(flipSvg(overlay)) : entry;
+  const fl: { x: number; y: number; w: number; h: number; svg: string }[] = [];
+  const linesSvg = takeFloats(linesSvg0, fl), overlay = overlay0 == null ? null : takeFloats(overlay0, fl); if (floatsSrc) takeFloats(floatsSrc, fl);
+  const floats: Float[] = await Promise.all(fl.map(async (f) => { const im = await floatPic(f, false); return { x: f.x, y: f.y, w: f.w, h: f.h, img: im, imgFlip: f.svg.includes('data-flip=') ? await floatPic(f, true) : im }; }));
+  const blank = () => svgImg('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"></svg>');
+  const entry = overlay ? await svgImg(overlay) : meta.floatsFrom ? await blank() : await img(base + 'relief/entry.png'), entryFlip = overlay && overlay.includes('data-flip=') ? await svgImg(flipSvg(overlay)) : entry;
   const ZS = (meta.exag ?? RELIEF) / ((meta.mpp ?? 80) * S);   // metres → cm
   const { cols: C, rows: R, step: ST } = meta, HB = new Uint16Array(hb), WB = new Uint8Array(wb);
   const K = (meta.metres / 65535) * ZS;                   // grid value → cm
@@ -154,5 +176,5 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
     return at(t1).clone();
   };
 
-  return { h, geometry, walls, entry, entryFlip, props, snow, lines, linesFlip, borders, patch, hit, ownLines: !!meta.ownLines };
+  return { floats, h, geometry, walls, entry, entryFlip, props, snow, lines, linesFlip, borders, patch, hit, ownLines: !!meta.ownLines };
 }

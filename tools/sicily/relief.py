@@ -32,12 +32,14 @@ h = np.where(ground, np.maximum(h, 4), 0)                                       
 dl, (iy, ix) = nd.distance_transform_edt(~ground, return_indices=True)              # the shore drops to the sea over a few pixels
 h = np.where(ground, h, h[iy, ix] * np.clip(1 - dl / 3, 0, 1))
 h = nd.gaussian_filter(h, 1.0)
+PLINTH = 0.4 * MPP * (W / 86.36) / EXAG; h = h + PLINTH                            # the whole sheet is the map: it stands 4 mm proud, cut straight down all round
 g = h[::STEP, ::STEP]; hi = float(g.max()); rows, cols = g.shape
 np.round(g / hi * 65535).astype('<u2').tofile(OUT + 'height.bin')
 
 # the ground from the land cover, in the colours the July satellite image gives each class (tools/terrain/satellite.py measured them):
 # the real pattern of woods, crops, pasture and towns, painted in patches like a map rather than copied from the photo
 lc = nd.zoom(np.load(S + '/landcover.npy'), 2, order=0)[:H, :W]
+_, (iy, ix) = nd.distance_transform_edt(lc == 50, return_indices=True); lc = lc[iy, ix]   # today's built-up land is painted as the ground around it: the towns come from the game map
 have = nd.zoom(np.load(S + '/sat_have.npy').astype(np.float32), 2, order=0)[:H, :W] > 0.5
 sat = np.array(Image.open(S + '/sat.png').convert('RGB').resize((W, H), Image.BILINEAR)).astype(np.float32)
 CLASSES = [10, 20, 30, 40, 50, 60, 80]
@@ -53,7 +55,7 @@ soft = {k: nd.gaussian_filter((lc == k).astype(np.float32), 2.2) for k in CLASSE
 tot = sum(soft.values()) + 1e-6
 gr = sum(lift(col[k])[None, None, :] * soft[k][..., None] for k in CLASSES) / tot[..., None]
 gr = gr * (1 + nd.gaussian_filter(rng.standard_normal((H, W)), 7)[..., None] * 0.06 + nd.gaussian_filter(rng.standard_normal((H, W)), 1.5)[..., None] * 0.04)   # field patchwork and grain
-summit = nd.gaussian_filter((h > 1900).astype(np.float32), 8)[..., None]
+summit = nd.gaussian_filter((h - PLINTH > 1900).astype(np.float32), 8)[..., None]
 gr = gr * (1 - summit) + np.array([120, 112, 104], np.float32) * summit             # Etna's lava
 gr = np.where(ground[..., None], gr, np.array([137, 193, 216], np.float32))          # the sea as printed
 mainland_only = ground & ~land

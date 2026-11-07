@@ -48,7 +48,7 @@ h = nd.zoom(np.load(REAL), 2, order=1)[:H, :W]
 hs = nd.gaussian_filter(h, 1.6)
 gy, gx = np.gradient(hs)
 shade = np.clip(1 + (-gx * 0.62 - gy * 0.78) / 34, 0.62, 1.22)                       # light from the upper left, as on a printed map
-shade = 1 + (shade - 1) * np.where(ids == 83, 1.0, 0.7)                             # Hermon keeps its full modelling, the plateau a softer one
+shade = 1 + (shade - 1) * 0.7                                                         # a soft modelling of the plateau
 slope = np.hypot(gx, gy)
 
 # ---------- ground: drawn in the printed map's manner from its own colours (the scan, rotated to the board, is only measured) ----------
@@ -64,7 +64,12 @@ rng = np.random.default_rng(73)
 hz = nd.gaussian_filter(h, 4) + nd.gaussian_filter(rng.standard_normal((H, W)), 12) * 35      # the washes follow the ground in soft patches
 ground = np.stack([np.interp(hz, zs, cs[:, k]) for k in range(3)], -1)
 HERMON = med(nd.binary_erosion(ids == 83, iterations=6) & (ssat > 20), (150, 120, 70))
-ground = np.where((ids == 83)[..., None], HERMON * np.clip(shade, .75, 1.2)[..., None], ground)
+herm = ids == 83                                                                     # Mt Hermon as printed: stepped olive-brown height bands, darker towards the summit
+hq = np.percentile(h[herm], [22, 45, 65, 82]) if herm.any() else [0, 0, 0, 0]
+HBANDS = np.array([(152, 124, 54), (128, 104, 44), (110, 90, 36), (97, 79, 31), (84, 69, 26)], np.float32)
+hb = np.digitize(nd.gaussian_filter(h, 3), hq)
+hcol = nd.gaussian_filter(HBANDS[hb], (1.2, 1.2, 0))
+ground = np.where(herm[..., None], hcol, ground)
 stone = nd.gaussian_filter(rng.standard_normal((H, W)), 1.1) * 2.5                  # the paper's grain
 img = ground + stone[..., None]
 cont = np.zeros((H, W), bool)                                                        # the print's faint brown contour lines, every 50 m
@@ -101,12 +106,14 @@ def inward(x, y, r=70):                                                         
     a = np.arctan2(v[1], v[0]); a = np.round(a / (np.pi / 2)) * (np.pi / 2)        # square to the map edge
     return np.array([np.cos(a), np.sin(a)])
 marks = []
-def triangle(e, side=66):
+def triangle(e, side=40):
     x, y = e['x'], e['y']; n = inward(x, y); t = np.array([-n[1], n[0]])
-    c = np.array([x, y]) + n * 8                                                     # astride the map edge, pointing in (the sheet has no margin outside it here)
-    marks.append({'letter': e['letter'], 'x': round(float(c[0] - n[0] * 4), 1), 'y': round(float(c[1] - n[1] * 4 + 2), 1)})
+    c = np.array([x, y]) + n * side * 0.23                                           # as printed: the map edge crosses the triangle a quarter of the way from its base
+    marks.append({'letter': e['letter'], 'x': round(float(c[0] - n[0] * 6), 1), 'y': round(float(c[1] - n[1] * 6 + 2), 1)})
     tip = c + n * side * 0.5; b1 = c - n * side * 0.5 + t * side * 0.58; b2 = c - n * side * 0.5 - t * side * 0.58
-    return f'M{tip[0]:.1f} {tip[1]:.1f}L{b1[0]:.1f} {b1[1]:.1f}L{b2[0]:.1f} {b2[1]:.1f}Z'
+    xs, ys = [tip[0], b1[0], b2[0]], [tip[1], b1[1], b2[1]]
+    return (f'<g data-float="{min(xs) - 4:.1f} {min(ys) - 4:.1f} {max(xs) - min(xs) + 8:.1f} {max(ys) - min(ys) + 8:.1f}" fill="#91a763" stroke="#5f7a3c" stroke-width="2" stroke-linejoin="round">'
+            f'<path d="M{tip[0]:.1f} {tip[1]:.1f}L{b1[0]:.1f} {b1[1]:.1f}L{b2[0]:.1f} {b2[1]:.1f}Z"/></g>')
 tank = lambda x, y, col: (f'<g transform="translate({x:.1f} {y:.1f}) scale(.62)" fill="{col}" stroke="#2b2a26" stroke-width="2.2" stroke-linejoin="round">'      # the alternate set-up tanks, in the division's colour
                           '<rect x="-24" y="2" width="48" height="11" rx="5.5"/><path d="M-20 2L-15 -6H17L22 2Z"/><path d="M-8 -6V-12H9L11 -6Z"/><path d="M9 -10H30" fill="none" stroke-width="3.4"/></g>')
 font = 'font-family="Saira Condensed, Arial Narrow, sans-serif"'
@@ -123,20 +130,11 @@ for P in leja: cx, cy = wcentre(P); lake_names.append(flip(cx - 6, cy - 9, txt(c
 base = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">',
         f'<image id="ground" href="{ground_uri}" width="{W}" height="{H}" preserveAspectRatio="none"/>',
         '<g id="names">' + ''.join(lake_names) + '</g>',
-        '<g id="assembly">' + ''.join(
-            f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="10" fill="#dce8ef" stroke="#fbfbf6" stroke-width="4"/>'
-            f'<path d="M{x + 10} {y}H{x + w - 10}A10 10 0 0 1 {x + w} {y + 10}V{y + 34}H{x}V{y + 10}A10 10 0 0 1 {x + 10} {y}Z" fill="#2a8fc8"/>'
-            f'<g data-flip="{x + w / 2} {y + 18}"><text x="{x + w / 2}" y="{y + 23}" text-anchor="middle" {font} font-weight="700" font-size="14" fill="#fff" textLength="{w - 22}" lengthAdjust="spacingAndGlyphs">{v["name"].upper()}</text></g>'
-            f'<path d="M{x + w / 2 - 26} {y + h + 4}L{x + w / 2 + 26} {y + h + 4}L{x + w / 2} {y + h + 46}Z" fill="#2a8fc8" stroke="#fbfbf6" stroke-width="3" stroke-linejoin="round"/>'
-            f'<g data-flip="{x + w / 2} {y + h + 20}"><text x="{x + w / 2}" y="{y + h + 28}" text-anchor="middle" {font} font-weight="700" font-size="24" fill="#fff">{k}</text></g>'
-            for k, v in M['assembly'].items() for x, y, w, h in [v['box']]) + '</g>',
-        '<g id="entries" fill="#2f9a52" stroke="#fbfbf6" stroke-width="3.2" stroke-linejoin="round">' + ''.join(f'<path d="{triangle(e)}"/>' for e in M['entries']) + '</g>',
         '<g id="setup">' + ''.join(tank(x, y, c) for x, y, c in setup) + '</g>',
         '<g id="supply">' + ''.join(f'<g transform="translate({x:.1f} {y:.1f})"><circle r="13" fill="#fbfbf6"/><path d="M0 -11A11 11 0 0 0 0 11Z" fill="#1d5fa8"/>'
                                      f'<circle r="11" fill="none" stroke="#1d5fa8" stroke-width="2"/></g>' for x, y in supply) + '</g>',
         '</svg>']
 open(os.path.join(OUT, 'map-base.svg'), 'w').write('\n'.join(base))
-json.dump(marks, open(os.path.join(D, 'entry_marks.json'), 'w'))                      # where the run-time letters go: in the triangles
 
 # ---------- line work: the printed legend, in The Bulge's hand ----------
 g = lambda gid, attrs, body: f'<g id="{gid}" fill="none" stroke-linecap="round" stroke-linejoin="round" {attrs}>{body}</g>'
@@ -163,8 +161,31 @@ def purple(d, off=11):                                                          
     o = min([a, b], key=mid)                                                       # as printed: on the Syrian side (up the sheet, east)
     segs = [o] if o.geom_type == 'LineString' else list(o.geoms)
     return ''.join('M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in s.coords) for s in segs if s.length > 4)
-_one, _all = one_shaft(A['arrows1']), one_shaft(A['arrowsAll'])
-arrow_labels = ''.join(arrow_label(d, '1 MP') for d in _one) + ''.join(arrow_label(d, "All MP's") if LineString(pts(d)).length > 60 else arrow_label(d, "All MP's|(Inf-class only)", off=-46) for d in _all)
+_one, _all = one_shaft(A['arrows1']), [d for d in one_shaft(A['arrowsAll']) if LineString(pts(d)).length > 60]
+HERMON_ARROW = 'M190,634L262,606'                                                    # the drawing's Hermon arrow is a stub: drawn where the print has it, from the mountain to Majdal Shams
+def head(tip, d, L=21, w=7.5):
+    n = np.array([-d[1], d[0]]); b = tip - d * L
+    q = [tip, b + n * w, tip - d * L * 0.72, b - n * w]
+    return 'M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in q) + 'Z'
+def arrow(d, both, text, off=20):
+    q = np.array(pts(d)); u = lambda a, b: (b - a) / (np.hypot(*(b - a)) or 1)
+    e1, e0 = u(q[-2], q[-1]), u(q[1], q[0]); s = q.copy(); s[-1] = s[-1] - e1 * 15
+    if both: s[0] = s[0] - e0 * 15
+    shaft = 'M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in s)
+    heads = head(q[-1], e1) + (head(q[0], e0) if both else '')
+    lab = arrow_label(d, text, off)
+    xs, ys = q[:, 0], q[:, 1]; lx, ly = [float(v) for v in re.findall(r'data-flip="(-?[\d.]+) (-?[\d.]+)"', lab)[0]]
+    x0, x1, y0, y1 = min(xs.min(), lx - 40) - 14, max(xs.max(), lx + 40) + 14, min(ys.min(), ly - 22) - 14, max(ys.max(), ly + 22) + 14
+    return (f'<g data-float="{x0:.1f} {y0:.1f} {x1 - x0:.1f} {y1 - y0:.1f}"><path d="{shaft}" fill="none" stroke="#1d1d1b" stroke-width="4.6" stroke-linecap="butt" stroke-dasharray="3.6 3.4"/>'
+            f'<path d="{heads}" fill="#1d1d1b"/>{lab}</g>')
+arrows_svg = ''.join(arrow(d, False, '1 MP') for d in _one) + ''.join(arrow(d, True, "All MP's") for d in _all) + arrow(HERMON_ARROW, True, "All MP's|(Inf-class only)", off=-40)
+def assembly_box(k, x, y, w, h):                                                     # as printed: pale blue, a dark edge, the blue title band, the letter triangle astride the bottom edge
+    cx = x + w / 2; ty = y + h
+    return (f'<g data-float="{x - 6} {y - 6} {w + 12} {h + 40}"><rect x="{x}" y="{y}" width="{w}" height="{h}" rx="5" fill="#c8e2f5" stroke="#2b2c2e" stroke-width="2.4"/>'
+            f'<path d="M{x + 1.2} {y + 30}V{y + 5}A4 4 0 0 1 {x + 5} {y + 1.2}H{x + w - 5}A4 4 0 0 1 {x + w - 1.2} {y + 5}V{y + 30}Z" fill="#4f9fd6"/>'
+            f'<g data-flip="{cx} {y + 16}"><text x="{cx}" y="{y + 21}" text-anchor="middle" {font} font-weight="700" font-size="15" fill="#fff">{M["assembly"][k]["name"]}</text></g>'
+            f'<path d="M{cx} {ty - 22}L{cx + 22} {ty + 16}H{cx - 22}Z" fill="#4f9fd6" stroke="#eaf3fa" stroke-width="2" stroke-linejoin="round"/>'
+            f'<g data-flip="{cx} {ty + 3}"><text x="{cx}" y="{ty + 11}" text-anchor="middle" {font} font-weight="700" font-size="20" fill="#fff">{k}</text></g></g>')
 lines = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">',
          g('shores', '', f'<g stroke="#3f86c4" stroke-width="4">{paths([poly(P) for P in water])}</g><g stroke="#6c6a62" stroke-width="7">{paths([poly(P) for P in leja])}</g>'),
          g('rivers', '', f'<g stroke="#4f8fc4" stroke-width="5.6">{paths(A["river"])}</g><g stroke="#9ccbee" stroke-width="3">{paths(A["river"])}</g>'),
@@ -177,10 +198,14 @@ lines = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" view
          g('purple-line', 'stroke="#8e4f9f" stroke-width="2.4" stroke-dasharray="7 5"', ''.join(f'<path d="{purple(d)}"/>' for d in A['atDitch'])),
          g('sam-barrier', '', f'<g stroke="#2a72c0" stroke-width="3" stroke-dasharray="12 4 2 4">{paths(A["samBarrier"])}</g>'),
          g('sectors', '', f'<g stroke="#5e5a52" stroke-width="5">{paths(A["sector"])}</g><g stroke="#ffffff" stroke-width="1.8" stroke-linecap="butt" stroke-dasharray="5 4">{paths(A["sector"])}</g>'),
-         g('hermon', 'stroke="#ffffff" stroke-width="3.2" stroke-dasharray="3 4"', paths(A['hermon'])),
-         g('arrows', 'stroke="#1d1d1b" stroke-width="6"', f'<g stroke-linecap="butt" stroke-dasharray="4 4">{paths(one_shaft(A["arrows1"])) + paths(one_shaft(A["arrowsAll"]))}</g><g stroke="none">{heads}</g>' + arrow_labels),
+         g('hermon', '', f'<g stroke="#8a8476" stroke-width="7">{paths(A["hermon"])}</g><g stroke="#f3eee0" stroke-width="3.6" stroke-dasharray="0.1 6.4">{paths(A["hermon"])}</g>'),
          g('outline', 'stroke="#6c6a62" stroke-width="9"', paths(A['border'])),
+         '<g id="assembly">' + ''.join(assembly_box(k, *v['box']) for k, v in M['assembly'].items()) + '</g>',
+         '<g id="entries">' + ''.join(triangle(e) for e in M['entries']) + '</g>',
+         '<g id="arrows">' + arrows_svg + '</g>',
          '</svg>']
 open(os.path.join(OUT, 'map-lines.svg'), 'w').write('\n'.join(lines))
+json.dump(marks, open(os.path.join(D, 'entry_marks.json'), 'w'))                      # where the run-time letters go: in the triangles
+
 np.save(os.path.join(os.path.dirname(REAL), 'golan-ground.npy'), np.clip(img, 0, 255).astype(np.uint8))   # unshaded ground, for the 3D relief
 print('board', W, H, os.path.getsize(os.path.join(OUT, 'map-base.svg')) // 1024, 'KB +', os.path.getsize(os.path.join(OUT, 'map-lines.svg')) // 1024, 'KB', len(supply), 'supply', len(setup), 'setup')

@@ -116,7 +116,7 @@ for letter, e in sorted(entries.items()):
     d, i = min(cand); q, c = E_SH[i]
     if d > 12: report.append(f'entry {letter}: nearest drawn strip is {d:.0f}px away'); continue
     used.add(i); ge = e['side'] == 'german'
-    strips += '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in q.exterior.coords) + f'Z" fill="{"#9fb0b8" if ge else "#2f9a52"}" stroke="#fff" stroke-width="1.6"/>'
+    bx = q.bounds; strips += f'<g data-float="{bx[0] - 3:.1f} {bx[1] - 3:.1f} {bx[2] - bx[0] + 6:.1f} {bx[3] - bx[1] + 6:.1f}">' + '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in q.exterior.coords) + f'Z" fill="{"#9fb0b8" if ge else "#2f9a52"}" stroke="#fff" stroke-width="1.6"/></g>'   # hovers over the relief in 3D
     c = q.representative_point(); entry_marks.append({'letter': letter, 'x': round(c.x, 1), 'y': round(c.y, 1), 'side': e['side']}); letters += f'<text x="{c.x:.1f}" y="{c.y + 6:.1f}" text-anchor="middle" font-size="19" font-weight="700" fill="{"#111" if ge else "#fff"}" stroke="{"#fff" if ge else "#14502a"}" stroke-width="0.8" font-family="Arial, sans-serif">{letter}</text>'
 report.extend(f'drawn entry strip {i} was not matched to an entry area' for i in range(len(E_SH)) if i not in used)
 open('docs/maps/vector/import-report.txt', 'w').write('\n'.join(report) or 'no differences'); print('\n'.join(report[:40]) or 'no differences')

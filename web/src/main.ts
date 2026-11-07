@@ -449,7 +449,7 @@ function paintBoard() {
   {
     c.save(); c.scale(k, k);
     if (VOL.id === 'bulge') for (const [a, b] of RESTRICTED) drawRestricted(c, sharedBorder(a, b), undefined, far);                       // the other volumes print their restricted terrain in their line work
-    if (layers.numbers) for (const e of MAP.entries) { c.save(); c.translate(e.x, e.y); c.rotate(textRot()); drawEntry(c, e, VOL.art.entryDark(e.side)); c.restore(); }
+    if (layers.numbers) for (const e of MAP.entries) { if (floatAt(e.x, e.y)) continue; c.save(); c.translate(e.x, e.y); c.rotate(textRot()); drawEntry(c, e, VOL.art.entryDark(e.side)); c.restore(); }
     c.restore();
   }
   boardTex.needsUpdate = true; buildLabels();
@@ -457,8 +457,33 @@ function paintBoard() {
 /* ---------- area labels: printed flat, each on its own level card, so the relief never bends them ---------- */
 const labelsGrp = new THREE.Group(); scene.add(labelsGrp);
 const labelTexCache = new Map<string, THREE.CanvasTexture>();
+/** In 3D the printed arrows, entry triangles and strips and the boxes hover a little above the ground under them (relief.ts takes them off the draped board). */
+const floatAt = (x: number, y: number) => (show3d() ? REL!.floats.find((f) => x >= f.x && x <= f.x + f.w && y >= f.y && y <= f.y + f.h) : undefined);
+function floatCards() {
+  if (!show3d()) return;
+  REL!.floats.forEach((f, i) => {
+    const key = `float${i}:${+camFar}${+layers.numbers}`, K = 3; let t = labelTexCache.get(key);
+    if (!t) {
+      const cv = document.createElement('canvas'); cv.width = Math.ceil(f.w * K); cv.height = Math.ceil(f.h * K); const c = cv.getContext('2d')!;
+      c.drawImage(camFar ? f.imgFlip : f.img, 0, 0, cv.width, cv.height);
+      if (layers.numbers) for (const e of MAP.entries) if (floatAt(e.x, e.y) === f) { c.save(); c.scale(K, K); c.translate(e.x - f.x, e.y - f.y); c.rotate(textRot()); drawEntry(c, e, VOL.art.entryDark(e.side)); c.restore(); }      // the entry letter rides on its triangle or strip
+      t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; labelTexCache.set(key, t);
+    }
+    const nx = Math.max(1, Math.ceil(f.w / 24)), ny = Math.max(1, Math.ceil(f.h / 24)), geo = new THREE.PlaneGeometry(1, 1, nx, ny), pos = geo.getAttribute('position') as THREE.BufferAttribute;
+    const r = Math.max(f.w / nx, f.h / ny) / 2 + 8;                                               // each corner of the card clears the highest ground around it
+    for (let k = 0; k < pos.count; k++) {
+      const mx = f.x + (pos.getX(k) + 0.5) * f.w, my = f.y + (0.5 - pos.getY(k)) * f.h, p = toWorld(mx, my);
+      let y = 0; for (const dx of [-r, 0, r]) for (const dy of [-r, 0, r]) y = Math.max(y, REL!.h(p.x + dx / S, p.z + dy / S));
+      pos.setXYZ(k, p.x, y + 0.05, p.z);
+    }
+    pos.needsUpdate = true; geo.computeBoundingSphere();
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 }));
+    m.renderOrder = 2; labelsGrp.add(m);
+  });
+}
 function buildLabels() {
   labelsGrp.children.forEach((o) => { (o as THREE.Mesh).geometry.dispose(); ((o as THREE.Mesh).material as THREE.Material).dispose(); }); labelsGrp.clear();
+  floatCards();
   const PAD = 12, lk = `${+layers.numbers}${+layers.tdn}${+layers.vp}${+layers.names}${Object.values(vpIcons).every((i) => i.naturalWidth > 0)}`, K = 4;
   for (const a of MAP.areas) {
     const L = LAB[a.id]; if (!L || L.mode === 'none' || (!layers.numbers && !layers.tdn && !layers.vp && !layers.names)) continue;      // a box prints its own code on the board
@@ -1746,4 +1771,4 @@ void startOnline((rg) => { applyingRemote = true; if (heldNext) commitRoll(); co
     selArr = keep(prevG, selArr, (x) => [x.pendingArrivals.includes(selArr!), x.units.find((u) => u.id === selArr)?.area]);
     if (!same) selArea = null; if (!selUnit) previewArea = null; hoverArea = null; } hist.remote(prevG, g, lockOf); if (rolled) hist.clear('dice rolled'); if (followFoe && online.lastBy && online.lastBy !== online.uid && !g.battle) { const mv = g.units.find((u) => { const o = prevG.units.find((x) => x.id === u.id); return o && u.area != null && o.area !== u.area; }); if (mv) lookAt(mv.area!); } try { save(); } finally { applyingRemote = false; } refresh();
   { const cs = g.checks ?? [], k = cs.findIndex((c) => JSON.stringify(c) === ckLast); const fresh = ckLast === 'null' ? [] : k >= 0 ? cs.slice(k + 1) : []; if (fresh.length) showChecks(fresh); } }, () => { onNet(); syncView(); render(); }, say, () => { try { sessionStorage.setItem('fab-notice', 'That game was deleted by its creator.'); } catch { /* private mode */ } location.href = homeUrl(); });       // the table is gone: nobody stays inside it
-if (import.meta.env.DEV || DEV_FAKE || SANDBOX || TUTORIAL) Object.assign(window, { __fab: { seat: (sd: E.Side) => { tutView = sd; refresh(); }, tut: () => tut, unitAt: (id: string) => { const m = pieces.children.find((o) => o.userData.unit === id || o.userData.chit === id); if (!m) return null; const r = canvas.getBoundingClientRect(), v = m.getWorldPosition(new THREE.Vector3()).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, game: () => g, setGame: (x: E.Game) => { g = x; hist.clear(); save(); refresh(); }, at: (a: number) => { const p = center(a), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(p.x, 0, p.z).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, project: (x: number, y: number, z: number) => { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height }; }, online, setMatches: (m: Match[]) => { matches = m; }, iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets: () => sheets(VOL), setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, rel: () => ({ tris: renderer.info.render.triangles, calls: renderer.info.render.calls, trees: (REL?.props.children[0] as THREE.InstancedMesh | undefined)?.count }), board: () => boardCv.toDataURL("image/png"), view: (x: number, z: number, d: number, pt: number, yw: number) => { goal = { t: new THREE.Vector3(x, 0, z), dist: d, pitch: pt, fast: true }; yaw = yw; }, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
+if (import.meta.env.DEV || DEV_FAKE || SANDBOX || TUTORIAL) Object.assign(window, { __fab: { seat: (sd: E.Side) => { tutView = sd; refresh(); }, viewMap: (mx: number, my: number, d: number, pt: number, yw: number) => { const p = toWorld(mx, my); goal = { t: new THREE.Vector3(p.x, show3d() ? REL!.h(p.x, p.z) : 0, p.z), dist: d, pitch: pt, fast: true }; yaw = yw; }, tut: () => tut, unitAt: (id: string) => { const m = pieces.children.find((o) => o.userData.unit === id || o.userData.chit === id); if (!m) return null; const r = canvas.getBoundingClientRect(), v = m.getWorldPosition(new THREE.Vector3()).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, game: () => g, setGame: (x: E.Game) => { g = x; hist.clear(); save(); refresh(); }, at: (a: number) => { const p = center(a), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(p.x, 0, p.z).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, project: (x: number, y: number, z: number) => { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height }; }, online, setMatches: (m: Match[]) => { matches = m; }, iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets: () => sheets(VOL), setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, rel: () => ({ tris: renderer.info.render.triangles, calls: renderer.info.render.calls, trees: (REL?.props.children[0] as THREE.InstancedMesh | undefined)?.count }), board: () => boardCv.toDataURL("image/png"), view: (x: number, z: number, d: number, pt: number, yw: number) => { goal = { t: new THREE.Vector3(x, 0, z), dist: d, pitch: pt, fast: true }; yaw = yw; }, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });

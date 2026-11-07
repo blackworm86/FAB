@@ -40,14 +40,16 @@ esc = lines(A['escarpment'], 3); de = nd.distance_transform_edt(~esc)           
 h += 25 * np.exp(-(de / 6) ** 2) * (h > np.percentile(h[land], 30))
 h = nd.gaussian_filter(h, 1.0)
 lo = float(h[sheet].min()); h = h - lo
-dl, (iy, ix) = nd.distance_transform_edt(~sheet, return_indices=True)               # beyond the printed land the ground slopes gently down to the sheet
-h = np.where(sheet, h, nd.gaussian_filter(h[iy, ix], 8) * np.clip(1 - dl / 32, 0, 1) ** 1.5); h = np.maximum(h, 0)
+PLINTH = 0.4 * MPP * (W / 86.36) / EXAG                                             # the map stands 4 mm proud of the sheet's margin, cut straight down at its edge
+onmap = nd.binary_dilation(sheet, iterations=6)                                     # the printed map edge line sits on top
+h = np.where(onmap, np.maximum(h, 0) + PLINTH, 0)
 g = h[::STEP, ::STEP]; hi = float(g.max()); rows, cols = g.shape
 np.round(g / hi * 65535).astype('<u2').tofile(OUT + 'height.bin')
 
 # the ground, trees and towns: the land cover painted in the colours the October satellite image gives each class (tools/terrain/satellite.py);
 # trees where it has woods or orchards; a town (a church and a ring of houses) where each area's settlement is named on the game map
 lc = nd.zoom(np.load(S + '/landcover.npy'), 2, order=0)[:H, :W]
+_, (iy, ix) = nd.distance_transform_edt(lc == 50, return_indices=True); lc = lc[iy, ix]   # today's built-up land is painted as the ground around it: the towns come from the game map
 have = nd.zoom(np.load(S + '/sat_have.npy').astype(np.float32), 2, order=0)[:H, :W] > 0.5
 sat = np.array(Image.open(S + '/sat.png').convert('RGB').resize((W, H), Image.BILINEAR)).astype(np.float32)
 CLASSES = [10, 20, 30, 40, 50, 60, 80]

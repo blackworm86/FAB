@@ -18,6 +18,7 @@ for a in M['areas']: d.polygon([tuple(p) for p in a['polygon']], fill=1)
 land = np.array(im) > 0; sheet = (np.array(Image.open(SHEET).convert('L')) < 128) | land
 
 lc = nd.zoom(np.load(S + '/landcover.npy'), 2, order=0)[:H, :W]
+_, (iy, ix) = nd.distance_transform_edt(lc == 50, return_indices=True); lc = lc[iy, ix]   # today's built-up land is painted as the ground around it: the towns come from the game map
 have = nd.zoom(np.load(S + '/sat_have.npy').astype(np.float32), 2, order=0)[:H, :W] > 0.5
 sat = np.array(Image.open(S + '/sat.png').convert('RGB').resize((W, H), Image.BILINEAR)).astype(np.float32)
 clear = have & (np.arange(H)[:, None] < H * 0.45)                                                  # the north of the scene is clear; cloud streets cross the south
@@ -39,5 +40,14 @@ entry = nd.binary_dilation(np.array(Image.open(OUT + 'entry.png').convert('RGBA'
 n = nd.gaussian_filter(rng.random((H, W)), 3); n = (n - n.min()) / (n.max() - n.min())
 dens = (np.where(lc == 10, 0.85, 0) + np.where(lc == 20, 0.3, 0)) * land * ~entry * (n > 0.2)
 wd = nd.uniform_filter(dens.astype(np.float32), STEP + 1)[::STEP, ::STEP]; np.round(np.clip(wd, 0, 1) * 255).astype(np.uint8).tofile(OUT + 'woods.bin')
+# the map stands proud of the sheet's margin, cut straight down at its edge (the old relief sloped down to the margin): from the original grid, kept once in <s>
+import os, shutil
+if not os.path.exists(S + '/height-orig.bin'): shutil.copy(OUT + 'height.bin', S + '/height-orig.bin')
+meta.setdefault('metresOrig', meta['metres'])                                       # the original grid's scale
+orig = np.fromfile(S + '/height-orig.bin', '<u2').reshape(meta['rows'], meta['cols']).astype(np.float32) / 65535 * meta['metresOrig']
+onmap = nd.binary_dilation(sheet, iterations=5)[::STEP, ::STEP][:meta['rows'], :meta['cols']]
+PLINTH = 0.4 * 80 * (W / 86.36) / 4                                                 # 4 mm, in the relief's metres (80 m a pixel, shown four times higher)
+hg = np.where(onmap, orig + PLINTH, 0); meta['metres'] = float(hg.max()); np.round(hg / hg.max() * 65535).astype('<u2').tofile(OUT + 'height.bin')
+meta['floatsFrom'] = 'map-base.svg'                                                 # the entry strips hover over the relief, out of the board file
 meta['ownLines'] = True; json.dump(meta, open(OUT + 'relief.json', 'w'), separators=(',', ':'))
 print('woods', round(float((dens > 0)[land].mean()), 2))
