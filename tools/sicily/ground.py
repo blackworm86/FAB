@@ -1,48 +1,55 @@
-"""The printed ground of the Sicily map, lifted from the scan: the tan paper, the brown relief washes, Etna, the sea, without any line, text or symbol.
+"""The Sicily board's ground, drawn in the printed map's manner from its own data: the paper tan of the lowlands darkening to brown with
+the real height of the ground (the print's relief washes), mottled as the print is, Etna's dark dome, the printed sea and the grey mainland.
 
-Usage: python3 -I tools/sicily/ground.py docs/games/sicily/maps/SICILYmap-FINAL-72.jpg data/sicily <scratch>/sicily-ground.png
-The scan is warped into the game's coordinates (the same fit that paired the drawing with the Vassal map), then everything the
-board draws itself is masked and inpainted: the grey and black lines (borders, roads, hachures), the blue rivers and river names, the
-number plates, names, VP symbols and other printed symbols, the landing and port boxes with their arrows, and the charts beyond the
-map frame. What remains is the cardboard's own ground depiction; board.py draws the lines, boxes and symbols over it in the print's style.
+Usage: python3 -I tools/sicily/ground.py docs/games/sicily/maps/SICILYmap-FINAL-72.jpg data/sicily <scratch>/real.npy <scratch>/sicily-ground.png
+The scan is only read for its colours: the median colour of its ground at each elevation band (lines, text and symbols left out) gives the
+wash palette, and its sea and mainland their colours. The shapes come from the real elevation (terrain.py) and from the game's own land
+polygons, so every border and the coast line fall exactly where the board draws them.
 """
 import json, os, re, sys
 import numpy as np, cv2
+from scipy import ndimage as nd
 
-SCAN, D, OUT = sys.argv[1:4]
-A = json.load(open(os.path.join(D, 'map_art.json'))); M = json.load(open(os.path.join(D, 'map.json'))); V = json.load(open(os.path.join(D, 'map_vassal.json')))
+SCAN, D, REAL, OUT = sys.argv[1:5]
+A = json.load(open(os.path.join(D, 'map_art.json'))); M = json.load(open(os.path.join(D, 'map.json')))
 W, H = M['size']
 pts = lambda d: [tuple(map(float, q.split(','))) for q in re.findall(r'-?[\d.]+,-?[\d.]+', d)]
-# scan -> Vassal px (fitted with SIFT, 0.5 px rms) and Vassal -> drawing (svgmap.py's fit)
 A1 = np.array([[1.36112, -0.0000116, -0.395], [-0.0000279, 1.36174, -0.293]]); A2 = np.array([[0.7657, -0.0001, 0.2434], [-0.0002, 0.7659, -0.3259]])
 T = (np.vstack([A2, [0, 0, 1]]) @ np.vstack([A1, [0, 0, 1]]))[:2]
-img = cv2.warpAffine(cv2.imread(SCAN), T, (W, H), flags=cv2.INTER_CUBIC)
+scan = cv2.warpAffine(cv2.imread(SCAN), T, (W, H), flags=cv2.INTER_AREA)[..., ::-1].astype(np.float32)   # RGB, in the board's coordinates
+h = nd.zoom(np.load(REAL), 2, order=1)[:H, :W].astype(np.float32)
 
-land = np.zeros((H, W), np.uint8)
-for a in M['areas']: cv2.fillPoly(land, [np.array(a['polygon'], np.int32)], 255)
-for p in A['islets'] + A['mainland']: cv2.fillPoly(land, [np.array(pts(p), np.int32)], 255)
-b, g, r = [c.astype(int) for c in cv2.split(img)]; gray = 0.299 * r + 0.587 * g + 0.114 * b; sat = np.max(img, 2).astype(int) - np.min(img, 2).astype(int)
+# ---------- the land as the board knows it ----------
+def mask(polys):
+    m = np.zeros((H, W), np.uint8)
+    for P in polys:
+        if len(P) > 2: cv2.fillPoly(m, [np.array(P, np.int32)], 1)
+    return m > 0
+island = mask([a['polygon'] for a in M['areas']]) | mask([pts(p) for p in A['coast']]) | mask([pts(p) for p in A['islets']])
+mainland = mask([pts(p) for p in A['mainland']])
 
-mask = np.zeros((H, W), np.uint8)
-mask[(gray < 130) & (sat < 45)] = 255                                                  # grey and black: borders, roads, hachures, text, plates' numbers
-thin_blue = ((b - r > 45) & (gray < 175)).astype(np.uint8)                              # rivers and blue text, not the sea
-mask[(thin_blue > 0) & (cv2.morphologyEx(thin_blue, cv2.MORPH_OPEN, np.ones((13, 13), np.uint8)) == 0)] = 255
-mask[(sat > 105) & (land > 0)] = 255                                                   # coloured symbols and plates on the land
-def line(paths, w):
-    for d in paths: cv2.polylines(mask, [np.array(pts(d), np.int32)], False, 255, w)
-line(A['roads'], 9); line(A['open'], 11); line(A['river'], 9); line(A['army_boundary'], 11); line(A['restricted'], 26); line(A['coast'], 7)   # the drawn lines themselves, generously
-for a in V['areas']: x, y = A2 @ np.array([a['plate'][0], a['plate'][1], 1]); cv2.circle(mask, (int(x), int(y)), 21, 255, -1)
-for v in A['vp_marks']: cv2.circle(mask, (int(v['x']), int(v['y'])), 19, 255, -1)
-for p in A['port_symbols']: cv2.circle(mask, (int(p['x']), int(p['y'])), 20, 255, -1)
-for p in A['airfields']: cv2.circle(mask, (int(p['x']), int(p['y'])), int(p['r']) + 6, 255, -1)
-for c in A['cities']: cv2.fillPoly(mask, [np.array(pts(c['d']), np.int32)], 255)
-for bx in A['boxes']:
-    x0, y0, x1, y1 = bx['rect']; cv2.rectangle(mask, (int(x0) - 16, int(y0) - 16), (int(x1) + 16, int(y1) + 16), 255, -1)
-    if bx.get('damage_box'): x0, y0, x1, y1 = bx['damage_box']; cv2.rectangle(mask, (int(x0) - 12, int(y0) - 12), (int(x1) + 12, int(y1) + 12), 255, -1)
-mask[(gray > 222) & (land == 0)] = 255                                                 # the white dotted arrows and box edges in the sea
-mask = cv2.dilate(mask, np.ones((7, 7), np.uint8))
-out = cv2.inpaint(img, mask, 9, cv2.INPAINT_TELEA)
-out = cv2.bilateralFilter(out, 7, 28, 7)
-sea = np.median(out[(land == 0) & (mask == 0)].reshape(-1, 3), 0)                        # the printed sea colour
-cv2.imwrite(OUT, out)
-print('ground', out.shape, 'masked', round(float((mask > 0).mean()) * 100, 1), '% of the sheet; sea rgb', sea[::-1].astype(int))
+# ---------- the print's palette: ground colour by height (its plain paper, its washes), the sea, the mainland ----------
+r, g, b = scan[..., 0], scan[..., 1], scan[..., 2]; gray = 0.299 * r + 0.587 * g + 0.114 * b; sat = scan.max(2) - scan.min(2)
+plain = island & (gray > 110) & (sat < 125) & ~(b - r > 40)                                            # paper and washes: not lines, text, blue or symbols
+plain = nd.binary_erosion(plain, iterations=2)
+bands = [(-50, 60), (60, 150), (150, 300), (300, 500), (500, 750), (750, 1000), (1000, 1400), (1400, 1900), (1900, 2600), (2600, 4000)]
+palette = []
+for lo, hi in bands:
+    sel = plain & (h >= lo) & (h < hi); c = np.median(scan[sel].reshape(-1, 3), 0) if sel.sum() > 500 else palette[-1][1]
+    palette.append(((lo + hi) / 2, c))
+sea = np.median(scan[~nd.binary_dilation(island | mainland, iterations=40) & (b - r > 30)].reshape(-1, 3), 0)
+ml = nd.binary_erosion(mainland, iterations=8) & (sat < 30)
+grey = np.median(scan[ml].reshape(-1, 3), 0) if ml.sum() > 500 else np.array([150, 150, 145.])
+print('palette by height', [(int(z), c.astype(int).tolist()) for z, c in palette]); print('sea', sea.astype(int), 'mainland', grey.astype(int))
+
+# ---------- the ground: height mapped through the palette, with the print's blotchy hand ----------
+rng = np.random.default_rng(1943)
+blotch = nd.gaussian_filter(rng.standard_normal((H, W)), 14) * 60 + nd.gaussian_filter(rng.standard_normal((H, W)), 5) * 18   # the washes are laid in patches, not contours
+hz = nd.gaussian_filter(h, 6) + blotch * nd.gaussian_filter(np.clip(h / 300, 0.3, 1.6), 20)           # higher ground: broader, bolder patches
+zs = np.array([z for z, _ in palette]); cols = np.array([c for _, c in palette])
+ground = np.stack([np.interp(hz, zs, cols[:, k]) for k in range(3)], -1)
+ground = ground + nd.gaussian_filter(rng.standard_normal((H, W)), 1.2)[..., None] * 2.5            # the paper's grain
+out = np.where(island[..., None], ground, sea)
+out = np.where(mainland[..., None], grey + nd.gaussian_filter(rng.standard_normal((H, W)), 6)[..., None] * 5, out)
+cv2.imwrite(OUT, np.ascontiguousarray(np.clip(out, 0, 255).astype(np.uint8)[..., ::-1]))
+print('ground', out.shape)

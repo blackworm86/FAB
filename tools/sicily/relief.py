@@ -1,5 +1,5 @@
 """The Sicily 3D map data (web/public/sicily/relief/): the real relief (terrain.py) painted with the real July ground (satellite.py: Sentinel-2),
-with groves and woods where the land cover has trees, and towns and cities where it is built up.
+with groves and woods where the land cover has trees, and towns and cities where it is built up; the ground is painted by land-cover class in the colours the July image gives each class.
 
 Usage: python3 -I tools/sicily/relief.py <scratch>     (after terrain.py, satellite.py and board.py)
 Writes height.bin (uint16 grid, 4 map px), woods.bin (tree density), snow.png (the ground the relief is painted with: board.py's ground
@@ -35,20 +35,30 @@ h = nd.gaussian_filter(h, 1.0)
 g = h[::STEP, ::STEP]; hi = float(g.max()); rows, cols = g.shape
 np.round(g / hi * 65535).astype('<u2').tofile(OUT + 'height.bin')
 
-# the ground, trees and towns from the satellite data (tools/terrain/satellite.py): Sentinel-2 in July, WorldCover land cover
-from PIL import ImageFilter
-sat = np.array(Image.open(S + '/sat.png').convert('RGB').resize((W, H), Image.BILINEAR)).astype(np.float32)
-have = nd.zoom(np.load(S + '/sat_have.npy').astype(np.float32), 2, order=0)[:H, :W] > 0.5
+# the ground from the land cover, in the colours the July satellite image gives each class (tools/terrain/satellite.py measured them):
+# the real pattern of woods, crops, pasture and towns, painted in patches like a map rather than copied from the photo
 lc = nd.zoom(np.load(S + '/landcover.npy'), 2, order=0)[:H, :W]
-LC_COL = {10: (62, 88, 44), 20: (150, 140, 90), 30: (196, 178, 118), 40: (190, 160, 110), 50: (170, 165, 158), 60: (200, 190, 170), 80: (120, 170, 205)}
-fallback = np.full((H, W, 3), 190, np.float32)
-for k, c in LC_COL.items(): fallback[lc == k] = c
-sat = np.where(have[..., None], sat, fallback)
-sat = 255 * (np.clip(sat, 0, 255) / 255) ** 0.72                                     # the raw true colour is dark; lifted so the pieces stay readable
-sat = sat * 0.88 + sat.mean(2, keepdims=True) * 0.12                                   # a touch less saturated, like a printed photo
-sat = np.array(Image.fromarray(sat.astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.8))).astype(np.float32)
-gr = np.where(ground[..., None], sat, np.array([137, 193, 216], np.float32))          # the sea as printed (flat); lakes keep their satellite blue
-Image.fromarray(gr.astype(np.uint8)).save(OUT + 'snow.png', optimize=True)
+have = nd.zoom(np.load(S + '/sat_have.npy').astype(np.float32), 2, order=0)[:H, :W] > 0.5
+sat = np.array(Image.open(S + '/sat.png').convert('RGB').resize((W, H), Image.BILINEAR)).astype(np.float32)
+CLASSES = [10, 20, 30, 40, 50, 60, 80]
+shore = nd.distance_transform_edt(ground) < 9
+lc = np.where((lc == 80) & land & shore, 30, lc)                                     # the land-cover sea along a coast that the map draws a little differently: ground, not water
+col = {}
+for k in CLASSES:                                                                     # the class's own colour, measured on the map where the image is clear
+    sel = have & (lc == k) & land; col[k] = np.median(sat[sel].reshape(-1, 3), 0) if sel.sum() > 400 else np.array([150, 140, 110.])
+col[0] = col[30]
+lift = lambda c: 255 * (np.clip(c, 0, 255) / 255) ** 0.62 * 0.9 + 18                 # the photo is dark; the board reads it lighter, like a printed photo map
+rng = np.random.default_rng(1943)
+soft = {k: nd.gaussian_filter((lc == k).astype(np.float32), 2.2) for k in CLASSES}   # soft-edged patches
+tot = sum(soft.values()) + 1e-6
+gr = sum(lift(col[k])[None, None, :] * soft[k][..., None] for k in CLASSES) / tot[..., None]
+gr = gr * (1 + nd.gaussian_filter(rng.standard_normal((H, W)), 7)[..., None] * 0.06 + nd.gaussian_filter(rng.standard_normal((H, W)), 1.5)[..., None] * 0.04)   # field patchwork and grain
+summit = nd.gaussian_filter((h > 1900).astype(np.float32), 8)[..., None]
+gr = gr * (1 - summit) + np.array([120, 112, 104], np.float32) * summit             # Etna's lava
+gr = np.where(ground[..., None], gr, np.array([137, 193, 216], np.float32))          # the sea as printed
+mainland_only = ground & ~land
+gr = np.where(mainland_only[..., None], gr * 0.85 + np.array([150, 150, 145], np.float32) * 0.15, gr)
+Image.fromarray(np.clip(gr, 0, 255).astype(np.uint8)).save(OUT + 'snow.png', optimize=True)
 
 # trees where the land cover says tree cover (dense) or shrubland (sparse), never on the summit or the sea
 rng = np.random.default_rng(7); n = nd.gaussian_filter(rng.random((H, W)), 3); n = (n - n.min()) / (n.max() - n.min())

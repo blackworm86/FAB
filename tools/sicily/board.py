@@ -30,7 +30,7 @@ def txt(x, y, s, size, fill, extra=''):
     return f'<text x="{x:.1f}" y="{y:.1f}" {at} {font} font-size="{size}" fill="{fill}" {extra}>{escape(s)}</text>'
 
 # ---------- the printed palette, sampled from the scan ----------
-SEA = (137, 193, 216); RIM = '#ffffff'; RIVER = '#4f9fd8'; ROAD = '#b3aea7'; BORDER = '#6a6667'; ARMY = '#3b3b3b'; TREELINE = '#6b4a24'; ANCHOR = '#1e6fc0'; AIRFIELD = '#f4de3a'
+SEA = (137, 193, 216); RIM = '#ffffff'; RIVER = '#4f9fd8'; ROAD = '#a9a49c'; BORDER = '#6a6667'; ARMY = '#3b3b3b'; TREELINE = '#6b4a24'; ANCHOR = '#1e6fc0'; AIRFIELD = '#f4de3a'
 GROUP = {'A': '#3f9a3a', 'B': '#2a7fc8', 'D': '#1f6f3f', 'P': '#1e6fc0'}
 
 # ---------- the ground: the cardboard's island and mainland on the printed sea ----------
@@ -106,10 +106,10 @@ for k in range(3):
 coast = [ring(pts(p)) for p in A['coast'] + A['islets'] + A['mainland']]
 lines = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">',
          g('rivers', '', f'<g stroke="#ffffff" stroke-width="5.2">{paths(A["river"])}</g><g stroke="{RIVER}" stroke-width="2.8">{paths(A["river"])}</g>'),
-         g('roads', f'stroke="{ROAD}" stroke-width="4.4"', paths(A['roads'])),
-         g('boundaries', f'stroke="{BORDER}" stroke-width="5.6"', paths(A['open'])),
-         g('restricted', '', f'<g stroke="{TREELINE}" stroke-width="18" stroke-linecap="butt" stroke-dasharray="1.6 3.6" stroke-opacity=".8">{paths(A["restricted"])}</g><g stroke="{TREELINE}" stroke-width="3">{paths(A["restricted"])}</g>'),
-         g('army-boundaries', '', f'<g stroke="#ffffff" stroke-width="6">{paths(A["army_boundary"])}</g><g stroke="{ARMY}" stroke-width="6" stroke-linecap="butt" stroke-dasharray="9 9">{paths(A["army_boundary"])}</g>'),
+         g('roads', f'stroke="{ROAD}" stroke-width="4.2"', paths(A['roads'])),
+         g('boundaries', f'stroke="{BORDER}" stroke-width="4.4"', paths(A['open'])),
+         g('restricted', '', f'<g stroke="{TREELINE}" stroke-width="14" stroke-linecap="butt" stroke-dasharray="1.4 4.2" stroke-opacity=".75">{paths(A["restricted"])}</g><g stroke="{TREELINE}" stroke-width="2.4">{paths(A["restricted"])}</g>'),
+         g('army-boundaries', '', f'<g stroke="#ffffff" stroke-width="4.4">{paths(A["army_boundary"])}</g><g stroke="{ARMY}" stroke-width="4.4" stroke-linecap="butt" stroke-dasharray="8 8">{paths(A["army_boundary"])}</g>'),
          g('outline', f'stroke="{RIM}" stroke-width="7"', paths(coast)),
          g('exit', 'stroke="#ffffff" stroke-width="3.4"', exit_arrows),
          '<g id="symbols">' + ''.join(anchor(p['x'], p['y']) for p in A['port_symbols']) + ''.join(airfield(a['x'], a['y'], a['r']) for a in A['airfields']) + '</g>',
