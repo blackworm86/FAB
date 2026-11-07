@@ -117,7 +117,7 @@ const vpIcons: Record<string, HTMLImageElement> = Object.fromEntries(Object.entr
 const baseImg = loadImg(VOL.art.base), linesImg = loadImg(VOL.art.lines);
 const flipped = new Map<HTMLImageElement, HTMLImageElement>();
 for (const [im, src] of [[baseImg, VOL.art.base], [linesImg, VOL.art.lines]] as const) fetch(src).then((r) => r.text()).then((t) => { if (t.includes('data-flip=')) flipped.set(im, loadImg(URL.createObjectURL(new Blob([flipSvg(t)], { type: 'image/svg+xml' })))); }).catch(() => { /* the plain board serves both sides */ });
-const facing = (im: HTMLImageElement) => { const f = farSide() ? flipped.get(im) : undefined; return f && f.naturalWidth ? f : im; };
+const facing = (im: HTMLImageElement) => { const f = camFar ? flipped.get(im) : undefined; return f && f.naturalWidth ? f : im; };
 /** The map drawings are turned into pixels once and reused: redrawing the detailed SVG on every colour change is what made phones stall. */
 const flat = new Map<HTMLImageElement, HTMLCanvasElement>();
 function pixels(im: HTMLImageElement): CanvasImageSource {
@@ -411,6 +411,9 @@ const seen = (u: E.Unit) => E.visibleTo(g, u, fogSide());
 /** Sicily's untried garrisons (15.3) stand face down for both players, the owner too, until a battle reveals them. */
 const faceDown = (u: E.Unit) => !seen(u) || (!!u.untried && u.up !== u.area);
 const viewRot = () => (farSide() ? Math.PI : 0);
+/** Printed words (area labels, board text, entry letters) face the way the camera looks, whatever the seat: hotseat, the sandbox's Both seat, or a board turned by hand. */
+let camFar = false;
+const textRot = () => (camFar ? Math.PI : 0);
 /** Restricted boundaries (14.1) and the border two areas share, as a polyline (vertices of one area lying on the other's outline). */
 const RESTRICTED: [number, number][] = [...E.areas.keys()].flatMap((a) => E.neighbors(a).filter((b) => b > a && E.connection(a, b)?.restricted).map((b): [number, number] => [a, b]));
 function sharedBorder(a: number, b: number): [number, number][] {
@@ -424,7 +427,7 @@ function sharedBorder(a: number, b: number): [number, number][] {
 const SHEET_ONLY = new Set((VOL.art.sheetBoxes ?? []).map((b) => b.id));
 const shownArea = (id: number) => !SHEET_ONLY.has(id) || !!g.inPlay?.includes(id);
 function paintBoard() {
-  if (!baseImg.naturalWidth || !linesImg.naturalWidth) return; const far = farSide();
+  if (!baseImg.naturalWidth || !linesImg.naturalWidth) return; const far = camFar;
   const c = boardCv.getContext('2d')!, k = 2; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, boardCv.width, boardCv.height);
   const r3 = show3d() ? REL : null;
   if (r3) { c.fillStyle = hex6(WOOD_BASE); c.fillRect(0, 0, boardCv.width, boardCv.height); c.drawImage(relPixels(r3.snow), 0, 0, boardCv.width, boardCv.height); c.drawImage(relPixels(far ? r3.entryFlip : r3.entry), 0, 0, boardCv.width, boardCv.height); }
@@ -446,7 +449,7 @@ function paintBoard() {
   {
     c.save(); c.scale(k, k);
     if (VOL.id === 'bulge') for (const [a, b] of RESTRICTED) drawRestricted(c, sharedBorder(a, b), undefined, far);                       // the other volumes print their restricted terrain in their line work
-    if (layers.numbers) for (const e of MAP.entries) { c.save(); c.translate(e.x, e.y); c.rotate(viewRot()); drawEntry(c, e, VOL.art.entryDark(e.side)); c.restore(); }
+    if (layers.numbers) for (const e of MAP.entries) { c.save(); c.translate(e.x, e.y); c.rotate(textRot()); drawEntry(c, e, VOL.art.entryDark(e.side)); c.restore(); }
     c.restore();
   }
   boardTex.needsUpdate = true; buildLabels();
@@ -463,7 +466,7 @@ function buildLabels() {
     if (!t) { const cv = document.createElement('canvas'); cv.width = Math.ceil((L.w + 2 * PAD) * K); cv.height = Math.ceil((L.h + 2 * PAD) * K); const c = cv.getContext('2d')!; c.scale(K, K); c.translate(L.w / 2 + PAD, L.h / 2 + PAD); drawLabel(c, a, layers, vpIcons, L);
       t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; labelTexCache.set(a.id + lk, t); }
     const m = new THREE.Mesh(new THREE.PlaneGeometry((L.w + 2 * PAD) / S, (L.h + 2 * PAD) / S), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
-    const p = toWorld(L.x, L.y); m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, viewRot(), 0); m.userData.area = a.id;
+    const p = toWorld(L.x, L.y); m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, textRot(), 0); m.userData.area = a.id;
     let y = 0.006;
     if (show3d()) { y = 0; for (const dx of [-0.5, 0, 0.5]) for (const dz of [-0.5, 0, 0.5]) y = Math.max(y, REL!.h(p.x + (dx * L.w) / S, p.z + (dz * L.h) / S)); y += 0.03; }      // level, at the highest ground under it
     m.position.set(p.x, y, p.z); m.renderOrder = 2; labelsGrp.add(m);
@@ -474,7 +477,7 @@ function buildLabels() {
     c.fillStyle = '#fff'; c.font = '700 19px Arial Narrow, Arial, sans-serif'; c.textAlign = 'center'; c.fillText(bx.name.toUpperCase(), bx.w / 2, 26);
     const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
     const m = new THREE.Mesh(new THREE.PlaneGeometry(bx.w / S, bx.h / S), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }));
-    const p = toWorld(bx.x + bx.w / 2, bx.y + bx.h / 2); m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, viewRot(), 0);
+    const p = toWorld(bx.x + bx.w / 2, bx.y + bx.h / 2); m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, textRot(), 0);
     let y = 0.008; if (show3d()) { y = 0; for (const dx of [-0.5, 0, 0.5]) for (const dz of [-0.5, 0, 0.5]) y = Math.max(y, REL!.h(p.x + (dx * bx.w) / S, p.z + (dz * bx.h) / S)); y += 0.04; }
     m.position.set(p.x, y + 0.004, p.z); m.renderOrder = 3; labelsGrp.add(m);      // over the dimmed areas' own labels
   }
@@ -1688,6 +1691,7 @@ function frame() {
   if (!CALM) { const t = performance.now() / 1000; for (const k of markers.children) { const f = k.userData.float; if (f) { k.position.y = f.y + ((k.userData.lift as number | undefined) ?? 0) + Math.sin(t * 1.6 + f.ph) * 0.07; k.rotation.y = viewRot() + Math.sin(t * 0.9 + f.ph) * 0.22; } } }   // a slow 4 s bob and 7 s sway, each marker out of step
   { const old = Math.round(clearRatio * 5); clearRatio = fitBattleView(); if (g.battle && Math.round(clearRatio * 5) !== old) syncBattleCam(); }
   if (REL && PHONE) { const near = dist < 40; REL.props.children[0].visible = REL.props.children[1].visible = near; }   // phones: trees only when zoomed in (thousands of them are the heaviest part)
+  { const f = Math.cos(yaw) < 0; if (f !== camFar) { camFar = f; paintBoard(); } }        // the camera has swung past the side: the printed words turn to face it
   placeCam(); runAnims(); settle(); renderer.render(scene, cam); renderFocus(); placeBadges();
 }
 SBU.initSandboxUi({
