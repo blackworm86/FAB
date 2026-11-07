@@ -93,9 +93,14 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
   for (let k = 0; k < pos.count; k++) { const [px, py] = toMap(pos.getX(k), -pos.getY(k)); pos.setZ(k, hMap(px, py)); }     // off the land the shader cuts the ground away
   geometry.computeVertexNormals(); geometry.computeBoundingSphere();
   const wp: number[] = [];
+  // the cut sides follow the ground's own profile every two pixels (a straight top from corner to corner left gaps wherever the ground rose between them)
   const wall = (ring: [number, number][], top: (x: number, y: number) => number) => { for (let k = 0; k + 1 < ring.length; k++) {
-    const [a, b] = [ring[k], ring[k + 1]], ha = top(a[0], a[1]), hb2 = top(b[0], b[1]), A = [wx(a[0]), wz(a[1])], B = [wx(b[0]), wz(b[1])];
-    wp.push(A[0], 0, A[1], B[0], 0, B[1], B[0], hb2, B[1], A[0], 0, A[1], B[0], hb2, B[1], A[0], ha, A[1]);
+    const [p, q] = [ring[k], ring[k + 1]], n = Math.max(1, Math.ceil(Math.hypot(q[0] - p[0], q[1] - p[1]) / 2));
+    for (let i = 0; i < n; i++) {
+      const a = [p[0] + ((q[0] - p[0]) * i) / n, p[1] + ((q[1] - p[1]) * i) / n], b = [p[0] + ((q[0] - p[0]) * (i + 1)) / n, p[1] + ((q[1] - p[1]) * (i + 1)) / n];
+      const ha = top(a[0], a[1]) + 0.004, hb2 = top(b[0], b[1]) + 0.004, A = [wx(a[0]), wz(a[1])], B = [wx(b[0]), wz(b[1])];
+      wp.push(A[0], 0, A[1], B[0], 0, B[1], B[0], hb2, B[1], A[0], 0, A[1], B[0], hb2, B[1], A[0], ha, A[1]);
+    }
   } };
   // a cut map keeps only a small margin of the sheet round the map and the boxes that hover beside it (the rest of the printed sheet is not the board)
   const pad = 26, xsAll = [...(meta.cut ?? []).flat().map((q) => q[0]), ...floats.flatMap((f) => [f.x, f.x + f.w])], ysAll = [...(meta.cut ?? []).flat().map((q) => q[1]), ...floats.flatMap((f) => [f.y, f.y + f.h])];
@@ -106,7 +111,7 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
   const margin = cutPx ? (() => { const [x0, y0, x1, y1] = mb, m = new THREE.PlaneGeometry((x1 - x0) / S, (y1 - y0) / S, 1, 1), q = m.getAttribute('position') as THREE.BufferAttribute, uv = m.getAttribute('uv') as THREE.BufferAttribute;
     for (let k = 0; k < q.count; k++) { const u = uv.getX(k), v = uv.getY(k), px = x0 + u * (x1 - x0), py = y0 + (1 - v) * (y1 - y0); q.setXYZ(k, wx(px), -wz(py), BASE); uv.setXY(k, px / meta.w, 1 - py / meta.h); }
     m.computeVertexNormals(); return m; })() : null;
-  const cutTex = cutCv ? new THREE.CanvasTexture(cutCv) : null;
+  const cutTex = cutCv ? (() => { const t = new THREE.CanvasTexture(cutCv); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; return t; })() : null;   // a crisp cut, the same line as the walls at every distance
   const walls = new THREE.BufferGeometry(); walls.setAttribute('position', new THREE.Float32BufferAttribute(wp, 3)); walls.computeVertexNormals();
 
   // printed lines without towns, cities and borders; borders redrawn black on a white edge
