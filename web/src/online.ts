@@ -27,7 +27,9 @@ export interface Store {
   /** Accounts and the lobby. */
   account(): Account; onAccount(f: (a: Account) => void): void;
   google(): Promise<string>; emailSignIn(email: string, password: string): Promise<string>; emailRegister(email: string, password: string, name: string): Promise<string>;
-  resetPassword(email: string): Promise<string>; signOut(): Promise<string>; freeSeat(side: Side): Promise<string>;
+  resetPassword(email: string): Promise<string>; signOut(): Promise<string>;
+  /** The signed-in player's Firebase ID token, for the push relay (4.3); null for guests or when signed out. */
+  idToken?(): Promise<string | null>; freeSeat(side: Side): Promise<string>;
   /** Create a game (its shared state, the creator's seat and the lobby record); resolves the new id, or an error starting with '!'. */
   createMatch(m: Omit<Match, 'id' | 'owner' | 'members' | 'created'>, side: Side | null, stateJson: string): Promise<string>;
   /** The creator or an admin deletes the game for everyone; anyone else leaves it. Resolve '' or an error. */
@@ -144,7 +146,7 @@ async function run(f: (s: Store) => Promise<string>) { if (!store) return; const
 export const auth = {
   google: () => run((s) => s.google()), signOut: () => run((s) => s.signOut()),
   signIn: (e: string, p: string) => run((s) => s.emailSignIn(e, p)), register: (e: string, p: string, n: string) => run((s) => s.emailRegister(e, p, n)),
-  reset: (e: string) => run((s) => s.resetPassword(e)), freeSeat: (side: Side) => run((s) => s.freeSeat(seatKey(side))),
+  reset: (e: string) => run((s) => s.resetPassword(e)), token: async () => (store?.idToken ? store.idToken().catch(() => null) : null), freeSeat: (side: Side) => run((s) => s.freeSeat(seatKey(side))),
 };
 export const lobby = {
   create: async (m: Parameters<Store['createMatch']>[0], seat: SeatKey | null, json: string) => (store ? store.createMatch(m, seat, json) : '!Online play is not set up'),

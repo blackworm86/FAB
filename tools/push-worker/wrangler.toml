@@ -1,0 +1,15 @@
+# The "your move" push relay. Fill in the four values, then follow docs/DEPLOY.md section 7.
+name = "fab-push"
+main = "worker.js"
+compatibility_date = "2024-09-01"
+
+[[kv_namespaces]]
+binding = "SUBS"
+id = "PASTE-THE-KV-NAMESPACE-ID"
+
+[vars]
+FIREBASE_PROJECT = "your-firebase-project-id"
+DATABASE_URL = "https://your-project-default-rtdb.region.firebasedatabase.app"
+ALLOWED_ORIGIN = "https://your-user.github.io"
+VAPID_SUBJECT = "mailto:you@example.com"
+VAPID_PUBLIC = "PASTE-THE-PUBLIC-KEY-FROM-keys.mjs"

@@ -39,3 +39,19 @@ cd web && cp .env.example .env.local   # optional; without it only the developme
 npm ci && npm run dev
 ```
 `?dev=1` opens a local table and shows a **Seat** button (Both, German, Allied, Watching). `?dev=1&fake=german` and `?dev=1&fake=allied` in two tabs of one browser play the two seats of a game kept in localStorage, with no Firebase.
+
+## 7. "Your move" notices with the app closed (optional, free)
+Without this, players who switch notices on (Menu > Settings > Notices, or the Account panel) are told when it is their move while a game or the home page is open somewhere (another tab, the app minimised). With it, the notice also arrives when the app is closed. It uses a tiny relay on Cloudflare's free plan (`tools/push-worker/`), which keeps each player's push address and sends an empty push; no game data goes through it. On iPhone and iPad, notices work only in the installed app (Share > Add to Home Screen, iOS 16.4 or later).
+
+Once, on your computer, from the repository folder:
+1. Make a free account at dash.cloudflare.com.
+2. `cd tools/push-worker` and `npx wrangler login` (a browser window asks you to allow it).
+3. `npx wrangler kv namespace create SUBS`. It prints an `id`: paste it into `wrangler.toml` in place of `PASTE-THE-KV-NAMESPACE-ID`.
+4. `node keys.mjs`. It prints a **public key** and a **private key**. Keep this window open.
+5. In `wrangler.toml` fill in `FIREBASE_PROJECT` (the Firebase project id), `DATABASE_URL` (the same address as `VITE_FIREBASE_DATABASE_URL`), `ALLOWED_ORIGIN` (the site's origin, e.g. `https://<your-user>.github.io`, no path), `VAPID_SUBJECT` (`mailto:` and your email) and `VAPID_PUBLIC` (the public key).
+6. `npx wrangler secret put VAPID_PRIVATE_JWK` and paste the private key when asked. Never commit it.
+7. `npx wrangler deploy`. It prints the relay's address, e.g. `https://fab-push.<you>.workers.dev`.
+8. On GitHub, **Settings > Secrets and variables > Actions > Variables**: add `VITE_PUSH_URL` (the relay's address) and `VITE_VAPID_PUBLIC` (the public key). Run the Pages workflow again (or push to `main`).
+9. Players switch notices off and on once (Menu > Settings > Notices) so their device registers with the relay; the message then says "even with the app closed".
+
+What it costs: nothing on the free plan for a group of friends (Workers: 100,000 requests a day; KV: 1,000 writes a day, one per move that hands over the turn, at most one per game a minute). Security: every request carries the player's Firebase sign-in, checked against Google's keys; the relay reads the table's seats as that player and only ever notifies the opponent seated at the same table. Its tests run in CI (`node --test tools/push-worker/worker.test.mjs`).

@@ -32,3 +32,7 @@ self.addEventListener('notificationclick', (e) => {
     return self.clients.openWindow(url);
   })());
 });
+// The closed-app "your move" push (4.3 step 2): the relay sends no text, so the notice is generic and opens the list of games.
+self.addEventListener('push', (e) => {
+  e.waitUntil(self.registration.showNotification('Your move · Fast Action Battles', { body: 'The other player has moved. Tap to play.', tag: 'fab-move', renotify: true, icon: './icons/app-192.png', badge: './icons/app-192.png', data: { url: self.registration.scope } }));
+});
