@@ -3,8 +3,8 @@
 Usage: python3 -I tools/sicily/board.py data/sicily web/public/sicily <scratch>/sicily-ground.png
 Writes map-base.svg: the printed ground of the island and the mainland on the printed sea, the landing boxes (A green, B blue, D dark green)
 and port boxes with their white dotted arrows, the damage boxes, the At Sea and Airborne Assault boxes. And map-lines.svg, in the print's
-order: rivers, roads, area borders, the restricted-terrain tree line, the army boundaries, the white coast rim, then the symbols above
-everything (anchors, airfields, the Messina exit arrows). Area numbers, names and VP symbols are printed at run time (labels.json).
+order: the blue coast line, rivers, roads, the restricted-terrain tufts, area borders, the army boundaries (grey with white dashes), the
+hatched cities, the owner's drawn arrows (white dotted, as printed), then the symbols above everything (anchors, airfields). Area numbers, names and VP symbols are printed at run time (labels.json).
 The unshaded ground is left beside the ground file as sicily-ground.npy for relief.py.
 """
 import base64, io, json, os, re, sys
@@ -76,7 +76,7 @@ def box_svg(b):
             dx0, dy0, dx1, dy1 = b['damage_box']; cx = (dx0 + dx1) / 2
             s += (f'<rect x="{dx0}" y="{dy0}" width="{dx1 - dx0:.1f}" height="{dy1 - dy0:.1f}" rx="6" fill="#dbe9f4" stroke="#ffffff" stroke-width="2.5"/>'
                   + txt(cx, dy0 + 14, b['name'], 10, '#1b2a3a', 'font-weight="600"') + txt(cx, dy0 + 25, 'Damage', 9, '#1b2a3a', 'font-weight="600"') + anchor_glyph(cx, (dy0 + dy1) / 2 + 12, 0.9, '#1e6fc0'))
-    return s + arrow(b)
+    return s
 def anchor_glyph(x, y, k, col):
     return (f'<g transform="translate({x:.1f} {y:.1f}) scale({k})" fill="none" stroke="{col}" stroke-width="2.4" stroke-linecap="round"><circle cy="-8" r="2.4"/><path d="M0 -5.5V9M-6 -1.5H6M-9 3.5A9 9 0 0 0 9 3.5"/></g>')
 anchor = lambda x, y: f'<g transform="translate({x:.1f} {y:.1f})"><circle r="12.5" fill="{ANCHOR}" stroke="#ffffff" stroke-width="2"/>{anchor_glyph(0, 0.5, 1, "#ffffff")}</g>'
@@ -95,23 +95,33 @@ open(os.path.join(OUT, 'map-base.svg'), 'w').write('\n'.join(base))
 
 # ---------- the line work, in the print's order; the symbols above everything ----------
 g = lambda gid, attrs, body: f'<g id="{gid}" fill="none" stroke-linecap="round" stroke-linejoin="round" {attrs}>{body}</g>'
-exit_arrows = ''
-mess = AREA[ML['exit_from']]; mp = Polygon(pts(A['mainland'][0]))
-near = sorted(((mp.distance(Point(q)), q) for q in mess.exterior.coords), key=lambda x: x[0])[0][1]       # the Messina shore facing the strait
-at = mess.exterior.project(Point(near))
-for k in range(3):
-    s = mess.exterior.interpolate(at + (k - 1) * 28); t = mp.exterior.interpolate(mp.exterior.project(s))
-    v = np.array([t.x - s.x, t.y - s.y]); n = v / np.hypot(*v); p = np.array([-n[1], n[0]]); e = np.array([t.x, t.y]) - n * 6; st = np.array([s.x, s.y]) + n * 4
-    exit_arrows += f'<path d="M{st[0]:.1f} {st[1]:.1f}L{e[0]:.1f} {e[1]:.1f}" stroke-dasharray="5 5"/><path d="M{(e + n * 9)[0]:.1f} {(e + n * 9)[1]:.1f}L{(e - n * 4 + p * 7)[0]:.1f} {(e - n * 4 + p * 7)[1]:.1f}L{(e - n * 4 - p * 7)[0]:.1f} {(e - n * 4 - p * 7)[1]:.1f}Z" fill="#ffffff" stroke="none"/>'
+# the restricted-terrain boundary as printed: rows of small dark tufts on both sides of the line
+def tufts(d, gap=7.5, off=5.5, size=7.5):
+    P = np.array(pts(d)); seg = np.r_[0, np.cumsum(np.hypot(*np.diff(P, axis=0).T))]; out = []
+    for k, t in enumerate(np.arange(gap / 2, seg[-1], gap)):
+        i = min(np.searchsorted(seg, t), len(P) - 1); a, b = P[max(i - 1, 0)], P[i]; v = b - a; L = np.hypot(*v)
+        if not L: continue
+        tg = v / L; n = np.array([-tg[1], tg[0]]); c0 = a + tg * (t - seg[max(i - 1, 0)])
+        for side in (1, -1):
+            c = c0 + n * side * (off + (k % 2) * 1.2)
+            for f in (-0.7, -0.45, -0.2, 0.05, 0.3, 0.55, 0.8):                                              # a fan of five short strokes pointing away from the line
+                dirn = n * side * np.cos(f) + tg * np.sin(f); e = c + dirn * size * (0.75 + 0.35 * np.cos(f * 2))
+                out.append(f'M{c[0]:.1f} {c[1]:.1f}L{e[0]:.1f} {e[1]:.1f}')
+    return ''.join(out)
+ARROW_COL = '#ffffff'
+arrows_svg = ''.join(f'<path d="{a["shaft"]}" fill="none" stroke="{ARROW_COL}" stroke-width="6" stroke-dasharray="5 4" stroke-linecap="butt"/><path d="{a["head"]}" fill="{ARROW_COL}"/>' for a in A['arrows'])
 coast = [ring(pts(p)) for p in A['coast'] + A['islets'] + A['mainland']]
+city = ''.join(f'<path d="{c["d"]}" fill="url(#hatch)" stroke="#6d6d6d" stroke-width="1.2"/>' for c in A['cities'])
 lines = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">',
-         g('rivers', '', f'<g stroke="#ffffff" stroke-width="5.2">{paths(A["river"])}</g><g stroke="{RIVER}" stroke-width="2.8">{paths(A["river"])}</g>'),
-         g('roads', f'stroke="{ROAD}" stroke-width="4.2"', paths(A['roads'])),
-         g('boundaries', f'stroke="{BORDER}" stroke-width="4.4"', paths(A['open'])),
-         g('restricted', '', f'<g stroke="{TREELINE}" stroke-width="14" stroke-linecap="butt" stroke-dasharray="1.4 4.2" stroke-opacity=".75">{paths(A["restricted"])}</g><g stroke="{TREELINE}" stroke-width="2.4">{paths(A["restricted"])}</g>'),
-         g('army-boundaries', '', f'<g stroke="#ffffff" stroke-width="4.4">{paths(A["army_boundary"])}</g><g stroke="{ARMY}" stroke-width="4.4" stroke-linecap="butt" stroke-dasharray="8 8">{paths(A["army_boundary"])}</g>'),
-         g('outline', f'stroke="{RIM}" stroke-width="7"', paths(coast)),
-         g('exit', 'stroke="#ffffff" stroke-width="3.4"', exit_arrows),
+         '<defs><pattern id="hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="4" fill="#c4c2bd"/><path d="M0 0V4" stroke="#7d7b77" stroke-width="1.3"/></pattern></defs>',
+         g('coast', 'stroke="#1f84c4" stroke-width="5"', paths(coast)),                                   # the print's order: the coast, rivers, roads, the tufts, borders, army boundaries, cities, arrows, symbols
+         g('rivers', '', f'<g stroke="#2f7fb5" stroke-width="6.4">{paths(A["river"])}</g><g stroke="#6cc4ec" stroke-width="3.6">{paths(A["river"])}</g>'),
+         g('roads', '', f'<g stroke="#8e8e8e" stroke-width="5">{paths(A["roads"])}</g><g stroke="#d6d5d2" stroke-width="2.6">{paths(A["roads"])}</g>'),
+         g('restricted', 'stroke="#4b3b2a" stroke-width=".8"', f'<path d="{"".join(tufts(d) for d in A["restricted"])}"/>'),
+         g('boundaries', 'stroke="#626262" stroke-width="5.2"', paths(A['open'] + A['restricted'])),
+         g('army-boundaries', '', f'<g stroke="#5a5a5a" stroke-width="7">{paths(A["army_boundary"])}</g><g stroke="#ffffff" stroke-width="2" stroke-linecap="butt" stroke-dasharray="6 5">{paths(A["army_boundary"])}</g>'),
+         f'<g id="cities">{city}</g>',
+         f'<g id="arrows">{arrows_svg}</g>',
          '<g id="symbols">' + ''.join(anchor(p['x'], p['y']) for p in A['port_symbols']) + ''.join(airfield(a['x'], a['y'], a['r']) for a in A['airfields']) + '</g>',
          '</svg>']
 open(os.path.join(OUT, 'map-lines.svg'), 'w').write('\n'.join(lines))

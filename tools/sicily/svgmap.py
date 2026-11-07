@@ -113,7 +113,7 @@ vboxes = [{'kind': 'landing', **b} for b in V['beaches']] + [{'kind': 'port', **
 for b in vboxes: b['c'] = tpt((b['rect'][0] + b['rect'][2]) / 2, (b['rect'][1] + b['rect'][3]) / 2)
 GROUP_FILL = {'#518f39': 'A', '#2589c5': 'B', '#137344': 'D', '#656567': 'P'}
 boxes, taken = [], set()
-for e in layer('PORTS_x5F_AREAS'):
+for e in layer('BEACHEADS') + layer('PORTS_x5F_BOXES'):
     c = centre(e); k = min((i for i in range(len(vboxes)) if i not in taken), key=lambda i: (vboxes[i]['c'][0] - c[0]) ** 2 + (vboxes[i]['c'][1] - c[1]) ** 2)
     vb = vboxes[k]; taken.add(k); d = float(np.hypot(vb['c'][0] - c[0], vb['c'][1] - c[1]))
     assert d < 60, (vb['box'], d)
@@ -214,7 +214,18 @@ def dpath(geom):
     return ' '.join('M' + ' L'.join(f'{x:.1f},{y:.1f}' for x, y in g.simplify(.6).coords) for g in gs if g.length > 0)
 ring = lambda P, tol=.6: 'M' + ' L'.join(f'{x:.1f},{y:.1f}' for x, y in Polygon(P).simplify(tol).exterior.coords) + 'Z'
 coast = LAND.buffer(1.5).buffer(-1.5)
+def arrows(lid, kind):                                                                  # the owner's drawn arrows: a dotted shaft and a head, per group
+    g = next(x for x in root if x.attrib.get('id') == lid); out = []
+    for grp in g:
+        shaft = [d_of(e) for e in grp if e.tag.replace(NS, '') in ('line', 'polyline', 'path')]
+        head = [d_of(e) for e in grp if e.tag.replace(NS, '') == 'polygon']
+        if not shaft or not head: continue
+        sp = [(round(q.x, 1), round(q.y, 1)) for q in (Path(shaft[0]).point(i / 40) for i in range(41))]
+        hp = Polygon([(float(x), float(y)) for x, y in re.findall(r'(-?[\d.]+)[ ,](-?[\d.]+)', grp.find(NS + 'polygon').attrib['points'])])
+        out.append({'kind': kind, 'shaft': 'M' + ' L'.join(f'{x},{y}' for x, y in sp), 'head': 'M' + ' L'.join(f'{x:.1f},{y:.1f}' for x, y in hp.exterior.coords) + 'Z'})
+    return out
 art = {'size': [int(W), int(H)],
+       'arrows': arrows('BEACHEADS_x5F_ARROWS', 'beach') + arrows('PORT_x5F_BOXES_x5F_ARROWS', 'port') + arrows('AXIS_x5F_EXITING_x5F_ARROWS', 'exit'),
        'border': [dpath(LineString(s)) for e in layer('BORDER') for s in e['subs'] if LineString(s).length > 1000],
        'frame_small': [dpath(LineString(s)) for e in layer('BORDER') for s in e['subs'] if LineString(s).length <= 1000],
        'coast': [ring(p.exterior.coords, .8) for p in getattr(coast, 'geoms', [coast])],

@@ -11229,81 +11229,6 @@
  ],
  "boxes": [
   {
-   "box": "P2",
-   "kind": "port",
-   "name": "Catania",
-   "area": 26,
-   "rect": [
-    1961.1,
-    847.7,
-    2079.7,
-    944.0
-   ],
-   "group": "P",
-   "control": "Allied Control Required (8th Army only)",
-   "damage_box": [
-    1887.3,
-    881.4,
-    1944.0,
-    938.1
-   ]
-  },
-  {
-   "box": "P1",
-   "kind": "port",
-   "name": "Syracuse",
-   "area": 5,
-   "rect": [
-    2086.1,
-    1202.7,
-    2204.6,
-    1299.0
-   ],
-   "group": "P",
-   "control": "Allied Control Required (8th Army only)",
-   "damage_box": [
-    2016.9,
-    1185.7,
-    2073.6,
-    1242.4
-   ]
-  },
-  {
-   "box": "P3",
-   "kind": "port",
-   "name": "Palermo",
-   "area": 57,
-   "rect": [
-    636.7,
-    62.9,
-    755.3,
-    159.2
-   ],
-   "group": "P",
-   "control": "Allied Control Required (7th Army only)",
-   "damage_box": [
-    647.8,
-    181.8,
-    704.5,
-    238.4
-   ]
-  },
-  {
-   "box": "P4",
-   "kind": "port",
-   "name": "Messina",
-   "area": 29,
-   "rect": [
-    2153.2,
-    79.6,
-    2271.8,
-    175.9
-   ],
-   "group": "P",
-   "control": "Axis Control Required (6th Army only)",
-   "damage_box": null
-  },
-  {
    "box": "B6",
    "kind": "landing",
    "name": "Fustian",
@@ -11601,6 +11526,81 @@
     927.2
    ],
    "group": "D"
+  },
+  {
+   "box": "P2",
+   "kind": "port",
+   "name": "Catania",
+   "area": 26,
+   "rect": [
+    1961.1,
+    847.7,
+    2079.7,
+    944.0
+   ],
+   "group": "P",
+   "control": "Allied Control Required (8th Army only)",
+   "damage_box": [
+    1887.3,
+    881.4,
+    1944.0,
+    938.1
+   ]
+  },
+  {
+   "box": "P1",
+   "kind": "port",
+   "name": "Syracuse",
+   "area": 5,
+   "rect": [
+    2086.1,
+    1202.7,
+    2204.6,
+    1299.0
+   ],
+   "group": "P",
+   "control": "Allied Control Required (8th Army only)",
+   "damage_box": [
+    2016.9,
+    1185.7,
+    2073.6,
+    1242.4
+   ]
+  },
+  {
+   "box": "P3",
+   "kind": "port",
+   "name": "Palermo",
+   "area": 57,
+   "rect": [
+    636.7,
+    62.9,
+    755.3,
+    159.2
+   ],
+   "group": "P",
+   "control": "Allied Control Required (7th Army only)",
+   "damage_box": [
+    647.8,
+    181.8,
+    704.5,
+    238.4
+   ]
+  },
+  {
+   "box": "P4",
+   "kind": "port",
+   "name": "Messina",
+   "area": 29,
+   "rect": [
+    2153.2,
+    79.6,
+    2271.8,
+    175.9
+   ],
+   "group": "P",
+   "control": "Axis Control Required (6th Army only)",
+   "damage_box": null
   }
  ],
  "mainland": {

@@ -427,7 +427,7 @@ function paintBoard() {
     for (const a of MAP.areas.filter((x) => shownArea(x.id))) { c.beginPath(); a.polygon.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fillStyle = hex6(tintOf(a.id)); c.fill(); }
     c.restore();
   }
-  if (r3) { c.drawImage(relPixels(r3.lines), 0, 0, boardCv.width, boardCv.height); c.save(); c.scale(k, k); c.lineJoin = 'round';                                       // area borders from the area shapes themselves: every edge, including the circles round Bastogne and Verviers
+  if (r3) { c.drawImage(relPixels(r3.lines), 0, 0, boardCv.width, boardCv.height); c.save(); c.scale(k, k); c.lineJoin = 'round'; if (r3.ownLines) c.globalAlpha = 0;      // a relief with its own line work keeps the board's borders as drawn                                       // area borders from the area shapes themselves: every edge, including the circles round Bastogne and Verviers
     for (const [w, col] of [[7, '#ffffff99'], [2.9, '#141416']] as const) { c.lineWidth = w; c.strokeStyle = col; for (const a of MAP.areas.filter((x) => shownArea(x.id))) { c.beginPath(); a.polygon.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.stroke(); } }
     c.restore(); }
   else c.drawImage(pixels(linesImg), 0, 0, boardCv.width, boardCv.height);

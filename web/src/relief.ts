@@ -6,7 +6,8 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 type Meta = { outline: [number, number][][]; w: number; h: number; step: number; cols: number; rows: number; metres: number; towns: [number, number][]; cities: { c: [number, number]; cells: [number, number][] }[];
   mpp?: number; exag?: number;   /** ground metres per map pixel (The Bulge 80) and how much the heights are raised (The Bulge 4) */
   dry?: boolean;                 /** a dry country (Golan): round green trees, no snow */
-  overlay?: string;              /** the printed items off and on the map (entry triangles, boxes, names) come from this board file, minus its ground */ };
+  overlay?: string;              /** the printed items off and on the map (entry triangles, boxes, names) come from this board file, minus its ground */
+  ownLines?: boolean;            /** the board's own line work is draped as drawn (Sicily: borders, army boundaries, coast in the print's style), not redrawn */ };
 export type Relief = {
   /** Height of the ground (cm) at world x, z. */
   h(x: number, z: number): number;
@@ -21,6 +22,8 @@ export type Relief = {
   lines: HTMLImageElement;
   /** Area borders: a black line on a thin white edge, so they never pass for roads. */
   borders: HTMLImageElement;
+  /** The relief keeps the board's own line work (no borders redrawn on top). */
+  ownLines: boolean;
   /** Contour lines and the area tints (an area-number texture and a colour per area) for the board material. */
   patch(mat: THREE.MeshStandardMaterial, areaId: THREE.Texture, tints: THREE.Texture): void;
   /** Where a ray meets the ground. */
@@ -66,8 +69,8 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
   const walls = new THREE.BufferGeometry(); walls.setAttribute('position', new THREE.Float32BufferAttribute(wp, 3)); walls.computeVertexNormals();
 
   // printed lines without towns, cities and borders; borders redrawn black on a white edge
-  const lines = await svgImg(linesSvg.replace(group(linesSvg, 'cities'), '').replace(group(linesSvg, 'towns'), '').replace(group(linesSvg, 'boundaries'), '').replace(group(linesSvg, 'outline'), ''));   // the white board outline belongs to the flat map, not to the diorama
-  const paths = (group(linesSvg, 'boundaries').match(/<path[^>]*\/>/g) ?? []).join('');
+  const lines = await svgImg(meta.ownLines ? linesSvg.replace(group(linesSvg, 'cities'), '') : linesSvg.replace(group(linesSvg, 'cities'), '').replace(group(linesSvg, 'towns'), '').replace(group(linesSvg, 'boundaries'), '').replace(group(linesSvg, 'outline'), ''));   // the white board outline belongs to the flat map, not to the diorama
+  const paths = meta.ownLines ? '' : (group(linesSvg, 'boundaries').match(/<path[^>]*\/>/g) ?? []).join('');
   const head = /<svg[^>]*>/.exec(linesSvg)![0];
   const borders = await svgImg(`${head}<g fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#fff" stroke-opacity=".6" stroke-width="7">${paths}</g><g stroke="#141416" stroke-width="2.9">${paths}</g></g></svg>`);
 
@@ -148,5 +151,5 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
     return at(t1).clone();
   };
 
-  return { h, geometry, walls, entry, props, snow, lines, borders, patch, hit };
+  return { h, geometry, walls, entry, props, snow, lines, borders, patch, hit, ownLines: !!meta.ownLines };
 }

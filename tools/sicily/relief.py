@@ -66,19 +66,20 @@ dens = np.where(lc == 10, 0.85, 0) + np.where(lc == 20, 0.3, 0) + np.where(lc ==
 dens = dens * land * (n > 0.25)
 wd = nd.uniform_filter(dens.astype(np.float32), STEP + 1)[::STEP, ::STEP]; np.round(np.clip(wd, 0, 1) * 255).astype(np.uint8).tofile(OUT + 'woods.bin')
 
-# towns and cities from the built-up class: the large clusters are cities (house blocks on 4 px cells), the smaller ones towns (a church and a ring of houses)
-built = (lc == 50) & land
-built = nd.binary_opening(built, iterations=1)
-lab, nlab = nd.label(built, structure=np.ones((3, 3)))
-sizes = nd.sum(built, lab, range(1, nlab + 1)); towns, cities = [], []
-for i, sz in enumerate(sizes, 1):
-    if sz < 60: continue
-    ys, xs = np.nonzero(lab == i); cy, cx = float(ys.mean()), float(xs.mean())
-    if sz < 400: towns.append([round(cx, 1), round(cy, 1)]); continue
-    cells = sorted({(int(x) // 4 * 4 + 2, int(y) // 4 * 4 + 2) for x, y in zip(xs[::3], ys[::3])})
-    cells = [c for c in cells if lab[min(c[1], H - 1), min(c[0], W - 1)] == i][:900]
-    cities.append({'c': [round(cx, 1), round(cy, 1)], 'cells': cells})
+# towns and cities from the game map, as it was in 1943 (not today's built-up land): the four cities drawn on the map (CITIES layer)
+# as house blocks filling their printed shape, and a town (a church and a ring of houses) at the place each area is named after
+A2 = json.load(open('data/sicily/map_art.json'))
+cities, towns = [], []
+for c in A2['cities']:
+    P = pts(c['d']); cm = mask([P]); ys, xs = np.nonzero(cm)
+    if not len(xs): continue
+    cells = sorted({(int(x) // 4 * 4 + 2, int(y) // 4 * 4 + 2) for x, y in zip(xs, ys)})
+    cities.append({'c': [round(float(xs.mean()), 1), round(float(ys.mean()), 1)], 'cells': [cc for cc in cells if cm[min(cc[1], H - 1), min(cc[0], W - 1)]]})
+city_areas = {c['area'] for c in A2['cities']}
+for a in M['areas']:
+    if a['id'] in city_areas or a['tdn'] >= 3: continue                                  # the cities are drawn; no town on Etna
+    towns.append([float(a['label'][0]), float(a['label'][1])])
 print(len(towns), 'towns', len(cities), 'cities')
 json.dump({'outline': [[[0, 0], [W, 0], [W, H], [0, H], [0, 0]]], 'w': W, 'h': H, 'step': STEP, 'cols': cols, 'rows': rows, 'metres': hi, 'mpp': MPP, 'exag': EXAG,
-           'dry': True, 'overlay': 'map-base.svg', 'towns': towns, 'cities': cities}, open(OUT + 'relief.json', 'w'), separators=(',', ':'))
+           'dry': True, 'ownLines': True, 'overlay': 'map-base.svg', 'towns': towns, 'cities': cities}, open(OUT + 'relief.json', 'w'), separators=(',', ':'))
 print(rows, cols, round(hi), 'm', {f: os.path.getsize(OUT + f) // 1024 for f in os.listdir(OUT)})
