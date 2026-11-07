@@ -78,3 +78,35 @@ describe('Golan \'73: the book\'s outcomes', () => {
     expect(E.inSupply(g, 'syrian', 52)).toBe(false);
   });
 });
+const sicily = COURSES.find((c) => c.id === 'sicily')!;
+describe('Sicily: the book\'s outcomes', () => {
+  it('Ex 14: both garrisons eliminated; the naval support removes the Gela field works', () => {
+    const i = lesson(sicily, 's-beach'), g = replay(sicily, i, sicily.lessons[i].steps.length);
+    expect(U(g, 'IT09').str).toBe(0); expect(U(g, 'IT37').str).toBe(0);
+    expect(g.fieldWorks).not.toContain(19); expect(E.unitsIn(g, 20, 'allied').length).toBe(2); expect(E.unitsIn(g, 19, 'allied').length).toBe(2);
+    expect(U(g, 'US05').str).toBe(4); expect(U(g, 'US03').str + U(g, 'US04').str).toBe(6);
+    const lic = g.log.map((l) => (typeof l === 'string' ? l : JSON.stringify(l))).join('\n'); expect(lic).toMatch(/disordered \(5 vs 3/); expect(lic).toMatch(/holds \(5 vs 5/);
+  });
+  it('Ex 9: the four blocks land, Licata and Gela must be fought', () => {
+    const i = lesson(sicily, 's-landing'), g = replay(sicily, i, sicily.lessons[i].steps.length);
+    expect(g.phase).toBe('combat'); expect(E.mustFight(g).sort()).toEqual([19, 20]);
+  });
+  it('Ex 5: before the release Regalbuto is out of reach, after it the 5th Infantry gets there', () => {
+    const i = lesson(sicily, 's-zones'), g0 = sicily.lessons[i].setup(); g0.phase = 'movement';
+    expect(E.moveOptions(g0, 'BR03').map((o) => o.area)).not.toContain(25);
+    const g = replay(sicily, i, sicily.lessons[i].steps.length); expect(U(g, 'BR03').area).toBe(25);
+  });
+  it('Ex 3: Bolognetta stays interdicted, Salemi is freed; Aosta cannot pass Bolognetta, the panzers reach Castelvetrano', () => {
+    const i = lesson(sicily, 's-air'), L = sicily.lessons[i], g = replay(sicily, i, L.steps.length);
+    expect(g.interdicted[56]).toBe('USC06a'); expect(g.interdicted[59]).toBeUndefined(); expect(g.phase).toBe('movement');
+    const aosta = E.moveOptions(g, 'IT05').map((o) => o.area); expect(aosta).not.toContain(49);
+    expect(E.moveOptions(g, 'GE02').map((o) => o.area)).toContain(60);
+  });
+  it('Ex 4 and 10: Palermo repaired to damage 1; Italian morale level 1 and the 177th gone', () => {
+    let i = lesson(sicily, 's-port'), g = replay(sicily, i, sicily.lessons[i].steps.length); expect(E.sicily.state(g).portDamage.P3).toBe(1);
+    i = lesson(sicily, 's-morale'); g = replay(sicily, i, sicily.lessons[i].steps.length); expect(E.sicily.state(g).morale).toBe(1); expect(E.chit(g, 'ITC05').box).toBe('eliminated');
+  });
+  it('Supply: the 2nd Armored in Canicatti traces to Joss', () => {
+    const g = sicily.lessons[lesson(sicily, 's-supply')].setup(); expect(E.VOLUMES.sicily.unitSupply!(g, U(g, 'US01'))).toBe(true);
+  });
+});

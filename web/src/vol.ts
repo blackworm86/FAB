@@ -159,7 +159,7 @@ function sicily(): VolView {
     map: { size: m.size, areas, connections: E.VOLUMES.sicily.map.connections, entries: [] },
     labels,
     art: { base: './sicily/map-base.svg', lines: './sicily/map-lines.svg', vpIcons: { german: './icons/vp-german.svg', allied: './icons/vp-allied.svg', mutual: './icons/vp-mutual.svg' }, relief: './sicily/', reliefName: 'Sicily in relief, from the Etna to the western capes, with contour lines, groves and woods', entryDark: () => false },
-    features: { fuel: false, zones: false, optional: true, tutorial: false },
+    features: { fuel: false, zones: false, optional: true, tutorial: true },
     scenarios: info.scenarios, defaultOpts: { scenario: 'tournament', fuel: false },
     unitSvg: (u, g) => (u.garrison && u.chitId ? chitArt(E.chit(g, u.chitId)) : unitArt(u)), chitSvg: chitArt,
     cssSide: (u) => u.nation ?? (u.side === 'axis' ? 'german' : 'us'),

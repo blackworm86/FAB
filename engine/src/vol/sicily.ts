@@ -506,8 +506,10 @@ function adjustFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground', lis
 /** The field works go before the fire of the step the asset gave up (16.21 naval support first; 16.22 Rangers in the ground step, if the attack goes on and they survived). */
 function beforeFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground') {
   const V = state(g), key = `${b.area}`, def = other(b.attacker); if (side !== b.attacker) return;
-  const id = kind === 'arty' ? V.navalShock[key] : V.rangerFw[key]; if (!id) return;
-  if (b.assets[side].includes(id) && g.fieldWorks.includes(b.area) && (g.fwOwner[b.area] ?? def) === def) { g.fieldWorks = g.fieldWorks.filter((a) => a !== b.area); say(g, `${chit(g, id).name} removes the field works in ${nameOf(b.area)} (${kind === 'arty' ? '16.21' : '16.22'})`, side); }
+  // the naval asset's bombardment comes first even when no artillery fires and the artillery step is skipped
+  for (const [id, rule] of (kind === 'arty' ? [[V.navalShock[key], '16.21']] : [[V.navalShock[key], '16.21'], [V.rangerFw[key], '16.22']]) as [string | undefined, string][]) {
+    if (id && b.assets[side].includes(id) && g.fieldWorks.includes(b.area) && (g.fwOwner[b.area] ?? def) === def) { g.fieldWorks = g.fieldWorks.filter((a) => a !== b.area); say(g, `${chit(g, id).name} removes the field works in ${nameOf(b.area)} (${rule})`, side); }
+  }
 }
 /** 16.21 Shock and Awe: a committed naval support asset of the attacker removes the defending field works instead of firing. */
 export function setNavalShock(g: Game, b: Battle, chitId: string | null) {

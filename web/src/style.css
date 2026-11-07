@@ -404,7 +404,7 @@ img.cb { border-radius: 7%; box-shadow: 0 1px 0 #e3dccb, 0 2px 0 #b9b2a0, 0 3px 
 .inspect.slimcard { display: block; }
 /* chit bar: the header stays put while the description scrolls; more room while it is open; a fade says there is more */
 .chitbar .cbhead { position: sticky; top: -8px; z-index: 1; background: #0b0d08; padding: 6px 0; margin-top: -6px; }
-.chitbar.open { max-height: 70% !important; -webkit-mask-image: linear-gradient(#000 calc(100% - 22px), #0008); mask-image: linear-gradient(#000 calc(100% - 22px), #0008); overscroll-behavior: contain; }
+.chitbar.open { z-index: 2; max-height: 70% !important; -webkit-mask-image: linear-gradient(#000 calc(100% - 22px), #0008); mask-image: linear-gradient(#000 calc(100% - 22px), #0008); overscroll-behavior: contain; }
 /* a filter or fading on a container flattens a 3D block inside it: fade and grey the faces instead */
 .vkill { width: auto !important; height: auto !important; filter: none !important; } .vkill .b3 { --s: 36px !important; margin: 4px 14px 8px 4px !important; filter: none !important; } .vkill .b3 i { filter: grayscale(.35) brightness(.9); }
 .oob.past { opacity: 1 !important; } .oob.past h4, .oob.past small, .oob.past img.cb, .oob.past .b3 i { opacity: .5; }

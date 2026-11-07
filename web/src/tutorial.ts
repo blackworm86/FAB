@@ -139,7 +139,8 @@ export function initTutorial(h: TutHost, course: Course) {
     const g = h.game(), t = menu ? undefined : s.target; let r: { x: number; y: number; w: number; h: number } | null = null;
     if (t && 'unit' in t) { const p = h.unitScreen(U(g, t.unit).id); if (p) r = { x: p.x - p.rad - 8, y: p.y - p.rad - 8, w: 2 * p.rad + 16, h: 2 * p.rad + 16 }; }
     else if (t && 'area' in t) { const p = h.areaScreen(t.area); if (p) r = { x: p.x - 40, y: p.y - 40, w: 80, h: 80 }; }
-    else { const e = targetEl(t); if (e) { let b = e.getBoundingClientRect(); if (b.right > innerWidth || b.left < 0 || b.bottom > innerHeight) { e.scrollIntoView({ block: 'nearest', inline: 'center' }); b = e.getBoundingClientRect(); } r = { x: b.left - 4, y: b.top - 4, w: b.width + 8, h: b.height + 8 }; } }
+    else { const e = targetEl(t); if (e) { let b = e.getBoundingClientRect(); const hidden = () => { const top = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); return !top || !(top === e || e.contains(top) || top.closest('.tut-coach, .tut-spot')); };   // off screen, or clipped inside a scrolled panel
+      if (b.right > innerWidth || b.left < 0 || b.bottom > innerHeight || hidden()) { e.scrollIntoView({ block: 'nearest', inline: 'center' }); b = e.getBoundingClientRect(); } r = { x: b.left - 4, y: b.top - 4, w: b.width + 8, h: b.height + 8 }; } }
     const busy = h.busy();
     ring.style.display = r && !busy ? 'block' : 'none'; dim.style.display = !r && !busy && !t ? 'block' : 'none';
     if (r) Object.assign(ring.style, { left: `${r.x}px`, top: `${r.y}px`, width: `${r.w}px`, height: `${r.h}px`, borderRadius: t && !('el' in t) ? '50%' : '10px' });

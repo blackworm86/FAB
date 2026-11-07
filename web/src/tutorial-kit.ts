@@ -7,6 +7,9 @@ import { chitSvg, garrisonChit } from './chits';
 import { golanBlockSvg, golanChitSvg, type GUnit, type GCounter } from './golan-art';
 import golanUnits from '../../data/golan73/units.json';
 import golanCounters from '../../data/golan73/counters.json';
+import { sicilyBlockSvg, sicilyChitSvg, SICILY_WOOD, type SUnit, type SCounter } from './sicily-art';
+import sicilyUnits from '../../data/sicily/units.json';
+import sicilyCounters from '../../data/sicily/counters.json';
 
 export type G = E.Game;
 /** What the coach points at: a DOM element (the first selector found; `text` = an element containing it), a block (by id or name), an area, or nothing. */
@@ -85,6 +88,17 @@ export function bookDice(g: G, side: string, kind: 'arty' | 'ground', book: { wh
   return out;
 }
 
+/** The book's dice for one fire step, firer by firer in the order the game lists them (for firers that share a name, like the two blocks of a division).
+ *  Each entry is the book's Success Number and dice for that firer; a die whose verdict differs here is nudged to the nearest value with the book's verdict. */
+export function bookDiceSeq(g: G, side: string, kind: 'arty' | 'ground', book: { sn: number; dice: number[] }[]): number[] {
+  const out: number[] = [];
+  E.fireList(g, g.battle!, side as E.Side, kind).forEach((f, k) => {
+    const bk = book[k];
+    for (let i = 0; i < f.dice; i++) { const d = bk?.dice[i] ?? 10, hit = d <= (bk?.sn ?? 0); out.push(hit === (d <= f.sn) ? d : hit ? Math.max(1, Math.min(d, f.sn)) : Math.min(10, Math.max(d, f.sn + 1))); }
+  });
+  return out;
+}
+
 /* ---------- common steps ---------- */
 export const tapUnit = (key: string, title: string, text: string, o: { rule?: string; why?: string; label?: string } = {}): Step => ({ title, text, rule: o.rule, why: o.why, target: { unit: key, label: o.label }, tap: true });
 export const moveTo = (key: string, a: number, title: string, text: string, o: { rule?: string; why?: string; kind?: Step['kind'] } = {}): Step =>
@@ -128,6 +142,28 @@ export function golanTable(turn: number, phasing: string, phase: E.Phase, place:
   g.riverAssault = []; g.fought = []; g.contestedAtMoveStart = []; g.pendingArrivals = []; g.log = []; g.fieldWorks = []; g.markers = { syrian: { res: 2 }, israeli: { res: 4 } };
   for (const a of E.areas.keys()) if (!E.golan.isAssembly(a)) { const us = E.unitsIn(g, a); if (us.length && !E.contested(g, a)) g.control[a] = us[0].side; }
   for (const c of g.chits) if (c.box === 'map' && c.kind !== 'garrison') c.box = 'used';
+  return g;
+}
+
+/* ---------- Sicily: the Tournament set up, or a clean table ---------- */
+/** The Tournament with the quick set-up (garrisons shuffled, the given landing plan, the invasion units on their beachheads), at the Allied Movement Phase of turn 1. */
+export function sicilyStart(plan: 'historical' | 'alternate' = 'historical', br = 'B1', us = 'D1'): G {
+  E.useGame('sicily'); const g = E.newGame(1943, { scenario: 'tournament' }), S = E.sicily;
+  S.autoGarrisons(g); S.choosePlan(g, plan, br, plan === 'alternate' ? us : undefined); S.autoLanding(g); E.endPhase(g); g.log = []; return g;
+}
+/** A clean Sicily table: the Tournament's beachheads, only the listed blocks (by id) on the map or in boxes, all land Axis-held except where Allied blocks stand alone. */
+export function sicilyTable(turn: number, phasing: string, phase: E.Phase, place: Record<string, number>, o: { plan?: 'historical' | 'alternate'; br?: string; us?: string } = {}): G {
+  const g = sicilyStart(o.plan, o.br, o.us), V = E.sicily.state(g);
+  g.turn = turn; g.phasing = phasing as E.Side; g.phase = phase;
+  for (const u of g.units) {
+    const a = place[u.id];
+    if (a != null) { u.area = a; u.box = undefined; u.str = u.max; u.arrival = undefined; u.disorder = 0; u.moved = false; u.reserve = null; u.exploit = false; u.unsupplied = false; }
+    else if (u.area != null || u.box) { u.area = null; u.box = undefined; }
+  }
+  g.fieldWorks = []; g.fwOwner = {}; g.riverAssault = []; g.blown = []; g.fought = []; g.contestedAtMoveStart = []; g.pendingArrivals = []; g.log = []; V.dropPending = false; V.airborneAreas = []; V.beachAssault = {};
+  for (const a of E.areas.keys()) if (!E.sicily.isBox(a)) g.control[a] = 'axis';
+  for (const a of new Set(Object.values(place))) if (!E.sicily.isBox(a) && E.unitsIn(g, a, 'allied').length && !E.unitsIn(g, a, 'axis').length) g.control[a] = 'allied';
+  for (const c of g.chits) if (c.box === 'map') c.box = 'used';
   return g;
 }
 
@@ -190,3 +226,10 @@ export function runTo(g: G, turn: number, side: string, phase: E.Phase) {
     E.endPhase(g);
   }
 }
+
+const SU = new Map((sicilyUnits as unknown as SUnit[]).map((u) => [u.id, u])), SC = new Map((sicilyCounters as unknown as SCounter[]).map((c) => [c.id, c]));
+const hexWood = (n: number) => '#' + n.toString(16).padStart(6, '0');
+/** A Sicily block at strength str (default full), as its owner sees it. */
+export const sicilyBlock = (g: G, id: string, str?: number) => { const u = U(g, id), raw = SU.get(u.id)!; return sicilyBlockSvg({ ...raw, name: u.name, steps: u.max, quality_by_step: u.q }, str ?? u.max); };
+export const sicilyWood = (g: G, id: string) => { const u = U(g, id); return hexWood(SICILY_WOOD[(u.nation ?? (u.side === 'axis' ? 'german' : 'us')) as keyof typeof SICILY_WOOD]); };
+export const sicilyChit = (g: G, id: string) => { const c = C(g, id), raw = SC.get(c.counter ?? c.id); return sicilyChitSvg({ ...(raw ?? { id: c.id, kind: c.kind, side: c.side as 'allied' | 'axis', name: c.name }), id: c.id, kind: c.kind, side: c.side as 'allied' | 'axis', name: c.name, turn: c.turn }); };

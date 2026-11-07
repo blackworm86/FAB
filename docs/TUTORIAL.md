@@ -13,8 +13,8 @@ Address: `?tutorial=<course id>` (the home page's *Learn to play* card and the i
 | `bulge` | The Bulge | a first game of the series | 13, about 65 min |
 | `golan73` | Golan '73 | a first game, on the Golan | 18, about 95 min |
 | `golan73-new` | Golan '73 | players who know The Bulge: "what's new?" | 16, about 85 min |
-
-Sicily will get the same pair (`sicily`, `sicily-new`) once its engine module exists.
+| `sicily` | Sicily | a first game, on Sicily | 12, about 55 min |
+| `sicily-new` | Sicily | players who know The Bulge: "what's new?" | 11, about 50 min |
 
 ## Principles
 
@@ -92,10 +92,40 @@ Where the book and our map part: Example 8's 91st Tank falls back to Keshet, not
 
 One chapter, **What changes on the Golan**: an opening lesson *Same engine, new ground* (what a Bulge player must unlearn: no fuel, no army zones, no Greif; what is new: the Purple Line, the ditch, strongpoints and ghosts, brigades, SAMs and air, commandos, sudden death) and then the Golan lessons above without *Welcome*, *Chits* and *Strategic movement*, which the series player knows.
 
+## Sicily course (`sicily`)
+
+Chapter **Before you start**
+
+| Lesson | Ref | Side | Goal |
+| --- | --- | --- | --- |
+| Welcome to Sicily | | Allied | Operation Husky, the two sides and how you win |
+| Blocks on Sicily | | Allied | Divisions, motorized Italians, untried coastal garrisons |
+| The map | | Allied | Landing boxes, ports, army zones, Mount Etna, rivers, Messina |
+| Chits on Sicily | | Allied | Air and naval support, Rangers and Commandos, engineers, events |
+| Setting up the invasion | Ex 1 · 22.24 | Allied | Garrisons face down, the landing plan, the invasion units |
+
+Chapter **The Sicily turn** (Play Book Examples of Play)
+
+| Lesson | Ref | Side | Goal |
+| --- | --- | --- | --- |
+| The landings | Ex 9 | Allied | From the beachheads into the coastal areas |
+| Beach assault | Ex 14 | Allied | Licata and Gela: untried garrisons revealed, naval support, Rangers, no turning back |
+| Army boundaries | Ex 5 | Allied | Zones, releasing a division with a Special Action |
+| Ports | Ex 4 | Allied | Palermo at damage 2, repaired by engineers |
+| Interdiction and dogfights | Ex 3 | Axis | Two Allied interdictions, one cancelled by a dogfight |
+| Fading Italian morale | Ex 10 | Allied | The event, the lost asset, the levels |
+| Supply and victory | Ex 18 · 19.0 | Allied | Tracing to beachheads, ports and Messina; the score |
+
+Ends with: *Start the Tournament*, *Sunrise Bridge (short)*.
+
+Where the book and the game part: Example 14 leaves out the −1 for firing in an assault and the −1 for field works that the series Ground Fire table applies (14.27: the river assault penalties apply to beach assaults), so the coach quotes the numbers on screen and the dice are nudged to the book's hits. The beach lesson uses the Tournament's historical boxes Joss (A1) and Dime (A2) with the book's garrisons placed by hand. Example 5 is played from Catania instead of Mount Etna.
+
+`sicily-new` opens with *Same engine, an island* and keeps the lessons above without *Welcome* and *Chits*.
+
 ## Code
 
 - `web/src/tutorial-kit.ts` — the model (`Course` › `Lesson` › `Step`), the position builders (`bulgeTable`, `golanTable`: a clean table with only the book's blocks on it), the book's dice (`bookDice` nudges the dice queue to the book's verdicts), the figures (`pieces`, `blockAnatomy`, `strengths`), and the coach's helpers (`autoFight`, `runTo`).
-- `web/src/tutorial-bulge.ts`, `web/src/tutorial-golan.ts` — the lessons.
+- `web/src/tutorial-bulge.ts`, `web/src/tutorial-golan.ts`, `web/src/tutorial-sicily.ts` — the lessons (the kit adds `sicilyStart`, `sicilyTable` and `bookDiceSeq` for firers that share a name).
 - `web/src/tutorial-script.ts` — the registry (`COURSES`, `courseFor`, `coursesOf`) and `replay`.
 - `web/src/tutorial.ts` — the runner: coach card, spotlight, lock, lesson list, Back, progress. `main.ts` gives it a host API (`TutHost`) and asks `gate` before a map tap.
 - `web/test/tutorial.test.ts` — for every course: unique ids, every step reaches its goal, Back's replay never throws and every figure renders; the book's outcomes (Bulge 23.5–23.8, Golan Ex 2, 3, 6, 8, 9, 15).

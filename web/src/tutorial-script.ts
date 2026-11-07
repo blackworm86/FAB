@@ -1,12 +1,13 @@
 /** The tutorial courses: one per volume for a first game, and "what's new" courses for players who know an earlier volume.
- *  The lessons live in tutorial-bulge.ts and tutorial-golan.ts on the kit in tutorial-kit.ts; this file is the registry and the replay. */
+ *  The lessons live in tutorial-bulge.ts, tutorial-golan.ts and tutorial-sicily.ts on the kit in tutorial-kit.ts; this file is the registry and the replay. */
 import type { Course, G } from './tutorial-kit';
 import { BULGE_COURSE } from './tutorial-bulge';
 import { GOLAN_COURSE, GOLAN_NEW_COURSE } from './tutorial-golan';
+import { SICILY_COURSE, SICILY_NEW_COURSE } from './tutorial-sicily';
 export type { Course, Lesson, Step, Target } from './tutorial-kit';
 export { U } from './tutorial-kit';
 
-export const COURSES: Course[] = [BULGE_COURSE, GOLAN_COURSE, GOLAN_NEW_COURSE];
+export const COURSES: Course[] = [BULGE_COURSE, GOLAN_COURSE, GOLAN_NEW_COURSE, SICILY_COURSE, SICILY_NEW_COURSE];
 export const courseFor = (id: string | null | undefined) => COURSES.find((c) => c.id === id) ?? COURSES[0];
 export { coursesOf } from './tutorial-list';
 
