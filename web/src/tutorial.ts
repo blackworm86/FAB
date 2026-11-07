@@ -2,6 +2,7 @@
  *  The courses themselves are in tutorial-script.ts (one per volume, plus "what's new" courses); main.ts gives this module a small
  *  host API and asks `gate` before a map tap. */
 import type * as E from '../../engine/src';
+import { tr, trHtml, translateDom } from './i18n';
 import { U, replay, type Course, type Step, type Target } from './tutorial-script';
 import { linkRules } from './rules-link';
 
@@ -18,7 +19,7 @@ export interface TutHost {
 const GKEY = 'fab-tut-guide';
 let entered = 0;
 const store = { get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k: string, v: string | null) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* private mode */ } } };
-const q = (s: string, text?: string) => Array.from(document.querySelectorAll(s)).some((e) => !text || (e.textContent ?? '').includes(text));
+const q = (s: string, text?: string) => Array.from(document.querySelectorAll(s)).some((e) => !text || (e.textContent ?? '').includes(text) || (e.textContent ?? '').includes(tr(text)));      // the screen may be in Italian (4.6)
 const visible = (e: Element) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; };
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 const SIDE_NAME: Record<string, string> = { german: 'Germany', allied: 'the Allies', israeli: 'Israel', syrian: 'Syria', axis: 'the Axis' };
@@ -38,7 +39,7 @@ export function initTutorial(h: TutHost, course: Course) {
   function targetEl(t: Target | undefined): HTMLElement | null {
     if (!t || !('el' in t)) return null;
     for (const sel of Array.isArray(t.el) ? t.el : [t.el]) {
-      const hit = Array.from(document.querySelectorAll<HTMLElement>(`#ui ${sel}`)).find((e) => visible(e) && (!t.text || `${e.textContent} ${e.title} ${e.getAttribute('aria-label') ?? ''}`.includes(t.text)));
+      const hit = Array.from(document.querySelectorAll<HTMLElement>(`#ui ${sel}`)).find((e) => visible(e) && (!t.text || ((x) => x.includes(t.text!) || x.includes(tr(t.text!)))(`${e.textContent} ${e.title} ${e.getAttribute('aria-label') ?? ''}`)));
       if (hit) return hit;
     }
     return null;
@@ -108,7 +109,7 @@ export function initTutorial(h: TutHost, course: Course) {
     const g = h.game(), lastStep = si === L.steps.length - 1, end = lastStep && li === LESSONS.length - 1, wait = !!s.target && !s.auto && (!!s.done || !!s.tap);
     const kind = s.kind ?? 'step', figure = (() => { try { return s.figure?.(g) ?? ''; } catch (e) { console.error(e); return ''; } })();
     const meta = kind === 'situation' ? `<div class="tut-meta">${L.side ? `<span>You play <b>${esc(SIDE_NAME[L.side] ?? L.side)}</b></span>` : ''}<span>${L.minutes} min</span>${L.ref ? `<span>Play Book ${esc(L.ref)}</span>` : ''}</div>` : '';
-    const why = s.why ? `<details class="tut-why"><summary>${kind === 'try' ? 'Hint' : esc(s.rule ?? 'Why?')}</summary><p>${s.why}</p></details>` : s.rule ? `<small class="tut-rule">${esc(s.rule)}</small>` : '';
+    const why = s.why ? `<details class="tut-why"><summary>${kind === 'try' ? 'Hint' : esc(s.rule ?? 'Why?')}</summary><p>${trHtml(s.why)}</p></details>` : s.rule ? `<small class="tut-rule">${esc(s.rule)}</small>` : '';
     const goLabel = kind === 'situation' ? 'Start →' : s.auto ? 'Show me →' : lastStep ? (li + 1 < LESSONS.length ? 'Next lesson →' : 'Finish →') : 'Next →';
     const buttons = end
       ? `<div class="tut-end">${course.end.map((e, i) => btn(`end:${i}`, esc(e.label), e.primary ? 'tut-go' : '')).join('')}${btn('home', 'Back home')}</div>`
@@ -116,13 +117,13 @@ export function initTutorial(h: TutHost, course: Course) {
     const stepsLeft = L.steps.length - si - 1;
     return `<div class="bar" title="${stepsLeft} steps to go"><i style="width:${Math.round(((si + 1) / L.steps.length) * 100)}%"></i></div>
       <div class="k"><span>${esc(L.chapter)} · ${li + 1}/${LESSONS.length}</span><i>${esc(L.topic)}</i></div>
-      <div class="tut-body ${kind}"><h4>${s.title}</h4>${meta}${figure}<div class="tut-text">${s.text}</div>${why}</div>${buttons}`;
+      <div class="tut-body ${kind}"><h4>${trHtml(s.title)}</h4>${meta}${figure}<div class="tut-text">${trHtml(s.text)}</div>${why}</div>${buttons}`;
   }
   function draw() {
     const L = LESSONS[li], s = step(); if (!L || !s) return;
     coach.className = `tut-coach ${menu ? 'is-menu' : `is-${s.kind ?? 'step'}`}`;
     coach.innerHTML = menu ? menuHtml() : stepHtml(L, s);
-    linkRules(coach); coach.querySelectorAll('.tut-rule, .tut-why summary').forEach((e) => linkRules(e, true));      // rule numbers open the rules reference
+    translateDom(coach); linkRules(coach); coach.querySelectorAll('.tut-rule, .tut-why summary').forEach((e) => linkRules(e, true));      // rule numbers open the rules reference
     coach.querySelectorAll<HTMLElement>('[data-t]').forEach((b) => (b.onclick = () => {
       const t = b.dataset.t!;
       if (t === 'next') onNext(); else if (t === 'skip') skipTry(); else if (t === 'back') back(); else if (t === 'exit') finish(undefined, true);

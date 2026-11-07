@@ -2,6 +2,7 @@
  *  with the move arrow, the battle ring and its dice, a timeline of turns with the VP balance and the battles, and the move list.
  *  It is an overlay of its own: the table underneath does not change. */
 import type { JPub, JUnits, RStep } from './journal';
+import { translateDom } from './i18n';
 
 export interface ReplayCtx {
   title: string; result: string; steps: RStep[]; sides: [string, string]; sideName: Record<string, string>; tag: Record<string, string>;
@@ -98,7 +99,7 @@ export function openReplay(c: ReplayCtx) {
     q('.rp-where').innerHTML = ''; q('.rp-where').append(h('b', '', `Turn ${st.pub.t}`), ` · ${sideName(st.pub)} ${c.phaseName(st.pub.ph)} · VP ${c.tag[c.sides[0]]} ${st.pub.vp[0]} – ${c.tag[c.sides[1]]} ${st.pub.vp[1]}`);
     for (const b of Array.from(list.querySelectorAll<HTMLButtonElement>('button'))) { const on = +b.dataset.i! === cur; if (on) { b.setAttribute('aria-current', 'step'); const top = b.offsetTop - 34, bot = b.offsetTop + b.offsetHeight; if (top < list.scrollTop) list.scrollTop = top; else if (bot > list.scrollTop + list.clientHeight) list.scrollTop = bot - list.clientHeight; } else b.removeAttribute('aria-current'); }
     const tl = q('.rp-tl'); tl.setAttribute('aria-valuenow', String(cur + 1)); tl.setAttribute('aria-valuemax', String(N)); tl.setAttribute('aria-valuetext', `Turn ${st.pub.t}, ${c.phaseName(st.pub.ph)}`);
-    drawTl();
+    drawTl(); translateDom(root);
   }
   /* the move list, grouped by turn and phase */
   const list = q<HTMLElement>('.rp-list'); let head = '';

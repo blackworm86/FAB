@@ -988,3 +988,7 @@ body.caninstall .homein { padding-bottom: 76px !important; }
 .exfig .die.h { color: #0b0d08; background: #a9e08a; border-color: #a9e08a; } .exfig .die.m { color: #ff9c8a; border-color: #ff9c8a; }
 .exfig .mp { font: 600 13px/1 "Saira Condensed", sans-serif; letter-spacing: .08em; color: #e7b04a; }
 p.stepped { cursor: pointer; border-left: 3px solid transparent; padding-left: 8px; margin-left: -11px; } p.stepped:hover { background: #ffffff06; } p.stepped[aria-current="step"] { background: #e7b04a14; border-left-color: #e7b04a; }
+/* 4.6 language chip on the home page */
+.langchip { position: fixed; right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); z-index: 70; display: inline-flex; border: 1px solid var(--line, #3a3e2c); background: #0b0d08; box-shadow: 0 6px 18px #000a; }
+.langchip button { min-width: 44px; min-height: 40px; background: none; border: 0; color: #9a9886; font: 700 14px/1 "Saira Condensed", sans-serif; letter-spacing: .12em; cursor: pointer; }
+.langchip button[aria-pressed="true"] { background: #e7b04a; color: #1a1608; }

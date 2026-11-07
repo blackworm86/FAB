@@ -1,6 +1,7 @@
 /** The home page: the shelf of volumes, your tables, a new game, the tutorials and sign-in. It loads without the 3D table (three.js),
  *  which main.ts brings in only when a game opens. Some of its parts (the sign-in panel, invites, the rules window) also serve the table's menu. */
 import * as E from '../../engine/src';
+import { translateDom, LANG, LANGS, setLang } from './i18n';
 import { installKind, install, onInstallChange } from './install';
 import { moveNotice, noticesOn, noticesSupported, setNotices } from './notices';
 import { online, startOnline, auth, lobby, DEV, TABLE, type Match } from './online';
@@ -125,6 +126,8 @@ export function bindAuth(ui: HTMLElement) {
   }));
 }
 const notice = (t: string, ok: boolean) => { toast = t; toastInfo = ok; render(); setTimeout(() => { toast = ''; render(); }, 2500); };
+/** 4.6: English or Italian, at the foot of the page. */
+const langHtml = () => `<div class="langchip notr" role="group" aria-label="Language">${LANGS.map(([l, n]) => `<button type="button" aria-pressed="${LANG === l}" data-ui="${reg(() => setLang(l))}" title="${n}">${l.toUpperCase()}</button>`).join('')}</div>`;
 /** 4.2: install the site as an app, where the browser offers it (or the iPhone steps). */
 function installHtml() {
   const k = installKind(); if (!k) return '';
@@ -139,8 +142,8 @@ function render() {
   resetActs();
   const ui = $('#ui');
   document.body.classList.toggle('caninstall', !!installKind());                                     // room at the foot of the page for the install button
-  ui.innerHTML = (modal === 'rules' ? rulesHtml('', notice) : '') + homeHtml() + installHtml() + (toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : '');
-  linkRules(ui);
+  ui.innerHTML = (modal === 'rules' ? rulesHtml('', notice) : '') + homeHtml() + installHtml() + langHtml() + (toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : '');
+  translateDom(ui); linkRules(ui);
   ui.querySelectorAll<HTMLElement>('[data-ui], [data-do]').forEach((e) => (e.onclick = () => { acts[e.dataset.ui ?? e.dataset.do!]?.(); render(); }));
   ui.querySelectorAll<HTMLElement>('[data-modal]').forEach((e) => (e.onclick = () => { modal = (e.dataset.modal || null) as typeof modal; render(); }));
   ui.querySelectorAll<HTMLElement>('[data-sel]').forEach((e) => (e.onchange = () => actv[e.dataset.sel!]?.(e instanceof HTMLInputElement && e.type === 'checkbox' ? (e.checked ? 'on' : 'off') : (e as HTMLSelectElement).value)));
