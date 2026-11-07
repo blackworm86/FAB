@@ -149,7 +149,7 @@ const L_MOVE_SY: Lesson = { id: 'g-move-syrian', topic: 'Ditches, minefields and
 
 const L_STRAT: Lesson = { id: 'g-strategic', topic: 'Strategic movement', chapter: CH2, ref: 'Ex 7', goal: 'Reserves race by road; the assembly areas', minutes: 3, side: 'israeli', setup: () => {
   const g = golanTable(3, 'israeli', 'movement', { I11: A(), I05: 42, I03: 34, S13: 33 }); g.control[33] = 'syrian';
-  E.setReserve(g, U(g, 'I11').id, true); g.phase = 'strategic'; g.stratMoves = 0; return g;
+  E.setReserve(g, U(g, 'I11').id, true, true); g.phase = 'strategic'; g.stratMoves = 0; return g;
 }, steps: [
   situation('From the assembly area to the front', `You play <b>Israel</b>. The <b>4th Mech</b> arrived in the <b>Northern Assembly Area</b> and was marked as reserve in the Move step: a block in an assembly box may carry a reserve marker. Now, in <b>Strategic movement</b>, it may travel by road through friendly, uncontested areas as far as the roads go.`, { look: 7 }),
   tapUnit('I11', 'The 4th Mech', '<b>Tap the 4th Mech in the Northern Assembly Area.</b>', { rule: '14.72 Reserves in the assembly areas' }),

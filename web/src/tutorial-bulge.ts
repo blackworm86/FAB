@@ -170,7 +170,7 @@ const L_MOVE: Lesson = { id: 'movement', topic: 'Movement', chapter: CH2, ref: '
 
 const L_STRAT: Lesson = { id: 'strategic', topic: 'Strategic movement', chapter: CH2, ref: '23.4', goal: 'Reserves race along the roads', minutes: 3, side: 'allied', setup: () => {
   const g = bulgeTable(3, 'allied', 'movement', { 82: 96, 101: 87, Lehr: 47, '2 Pz': 49 });
-  E.setReserve(g, U(g, '82').id, true); E.setReserve(g, U(g, '101').id, true);
+  E.setReserve(g, U(g, '82').id, true, true); E.setReserve(g, U(g, '101').id, true, true);
   g.phase = 'strategic'; g.stratMoves = 0; return g;
 }, steps: [
   situation('Turn 3, the Allied side', `For this lesson you sit on the <b>Allied</b> side. The Germans have taken Bastogne and a gap opens in the line. The <b>82nd</b> and <b>101st Airborne</b> arrived at Givet and La Chapelle and were put in reserve.
@@ -223,7 +223,7 @@ const L_EXPLOIT: Lesson = { id: 'exploitation', topic: 'Artillery and exploitati
 const BLOW_OK: Step = { title: 'No bridge blown', text: 'The Allied engineers are all spent: nobody tries to blow this bridge, and the block crosses.', skip: (g) => !g.pendingBlow, auto: (g) => { E.resolveBlow(g, false); } };
 const L_BREAK: Lesson = { id: 'breakthrough', topic: 'Reaction and Breakthrough', chapter: CH2, ref: '23.7', goal: 'The enemy reacts, then three ways to press on', minutes: 8, side: 'german', setup: () => {
   const g = bulgeTable(2, 'german', 'movement', { '116 Pz': 22, 'CCR/9': 36, Lehr: 13, '150 Pz': 12, '106 Inf': 24 });
-  E.setReserve(g, U(g, 'Lehr').id, true); U(g, '116 Pz').exploit = true;
+  E.setReserve(g, U(g, 'Lehr').id, true, true); U(g, '116 Pz').exploit = true;
   for (const a of [21, 22, 12, 13]) g.control[a] = 'german';
   for (const c of g.chits.filter((x) => x.side === 'german' && x.kind === 'fuel')) c.box = 'available';
   sa(g, 'german'); for (const u of g.units) u.moved = true; for (const n of ['116 Pz', 'Lehr', '150 Pz']) U(g, n).moved = false;

@@ -128,9 +128,9 @@ describe('river crossings (5.35d, 5.35e, 7.31)', () => {
     expect(g2.units.find((u) => u.id === ger.id)!.area).toBe(b);
     endPhase(g2); expect(g2.riverAssault).toContain(b);
   });
-  it('an exploitation unit never crosses a bridge blown by its own attempt and keeps its move', () => {
+  it('an exploitation unit never crosses a bridge blown by its own attempt and then cannot move at all (7.31)', () => {
     const { g, ger, b } = quiet(); g.phase = 'btMove'; ger.exploit = true;
-    for (let s = 1; s < 80; s++) { const g2: Game = JSON.parse(JSON.stringify(g)); g2.seed = s * 31; g2.rolls = 0; if (move(g2, ger.id, b) !== 'blow') continue; if (resolveBlow(g2, true) === 'stopped') { const u = g2.units.find((x) => x.id === ger.id)!; expect(u.area).not.toBe(b); expect(u.moved).toBe(false); expect(moveOptions(g2, u.id).some((o) => o.area === b)).toBe(false); return; } }
+    for (let s = 1; s < 80; s++) { const g2: Game = JSON.parse(JSON.stringify(g)); g2.seed = s * 31; g2.rolls = 0; if (move(g2, ger.id, b) !== 'blow') continue; if (resolveBlow(g2, true) === 'stopped') { const u = g2.units.find((x) => x.id === ger.id)!; expect(u.area).not.toBe(b); expect(u.moved).toBe(true); expect(moveOptions(g2, u.id)).toEqual([]); return; } }
     throw new Error('no blown bridge reached');
   });
   it('a unit that cannot cross loses 1 MP and may keep moving (5.35d)', () => {
@@ -149,7 +149,7 @@ describe('river crossings (5.35d, 5.35e, 7.31)', () => {
 describe('rule fixes from the conformance review', () => {
   it('5.21: a reserve marker is removed when the area becomes contested; 5.2: a unit that moved cannot be marked', () => {
     const g = newGame(5), u = g.units.find((x) => x.side === 'allied' && x.area != null && !x.garrison && canReserve(g, x))!;
-    setReserve(g, u.id, true); expect(u.reserve).not.toBeNull();
+    setReserve(g, u.id, true, true); expect(u.reserve).not.toBeNull();
     const foe = g.units.find((x) => x.side === 'german' && x.area != null && !x.garrison)!; foe.area = u.area; updateControlForTest(g, u.area!);
     expect(u.reserve).toBeNull();
     const w = g.units.find((x) => x.side === 'allied' && x.area != null && !x.garrison && x !== u)!; w.moved = true; expect(canReserve(g, w)).toBe(false);

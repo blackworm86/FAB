@@ -37,6 +37,7 @@ export interface Roll { who: string; sn: number; dice: number[]; hits: number; k
 export interface Battle {
   area: number; attacker: Side; attPoint: string; defPoint: string; bt: boolean; riverAssault: boolean;
   stage: 'setup' | 'attArty' | 'defArty' | 'defFire' | 'offFire' | 'attChoice' | 'attFirst' | 'defChoice' | 'retreat' | 'exploit' | 'done';
+  reinforced?: string;     /** 8.23: the unit that reinforced the defence by Special Action (never the point unit while the original stands) */
   exploitIds?: string[];   /** 6.8: the attacking armor-class units that may roll the exploitation morale check */
   retreat?: { side: Side; queue: string[]; moved: boolean; after: 'ground' | 'arty' | 'sa'; h: number; excess: number };
   queue: ('attArty' | 'defArty' | 'defFire' | 'offFire')[]; assets: Record<Side, string[]>; air: Partial<Record<Side, { id: string; mode: 'arty' | 'support'; unit?: string }>>;
@@ -89,7 +90,7 @@ export interface Game {
   turn: number; lastTurn: number; phasing: Side; phase: Phase; units: Unit[]; chits: Chit[]; control: Record<number, Side>;
   fieldWorks: number[]; fwOwner: Record<number, Side>; riverAssault: number[]; blown: string[]; contestedAtMoveStart: number[]; fought: number[];
   markers: Record<Side, Record<string, number>>; stratMoves: number; riverCross: string[]; blowTried: number[]; entered: Record<number, { id: string; river: boolean; blown: boolean }[]>;
-  pendingBlow: { unit: string; path: number[]; spent?: number } | null; greif: Record<string, string>; greifTried: string[]; fwBuilt: string[]; tfNew: string[]; elimLarge: string[]; captured: number[]; fuelAdded: boolean; opts: Opts;
+  pendingBlow: { unit: string; path: number[]; spent?: number; fuel?: boolean } | null; greif: Record<string, string>; greifTried: string[]; fwBuilt: string[]; tfNew: string[]; elimLarge: string[]; captured: number[]; fuelAdded: boolean; opts: Opts;
   roadblocks: Record<number, Side>; interdicted: Record<number, string>; pooled: number | null; airSupply: { area: number; side: Side; id: string; stamp: number } | null; revealed: string | null; arrived: string[]; pendingArrivals: string[];
   recover: Side[];
   battle: Battle | null; seed: number; rolls: number; log: string[]; over?: string;
@@ -397,9 +398,11 @@ const markerKey = (g: Game, u: Unit) => CUR.markerKey(g, u);
 export function canReserve(g: Game, u: Unit) {
   return u.area != null && !u.garrison && !u.fort && (!u.ghost || !!CUR.ghostsMove?.(g)) && !u.reserve && !u.moved && !u.unsupplied && u.disorder === 0 && !contested(g, u.area) && (g.markers[u.side]?.[markerKey(g, u)] ?? 0) > 0 && (CUR.reserveOk?.(g, u) ?? true);
 }
-export function setReserve(g: Game, id: string, on: boolean) {
+/** 3.22 / 5.21: the Phasing Player marks reserves in his Operational Movement Phase; `anyTime` is for Command Staff 8.33 and set-ups. */
+export function setReserve(g: Game, id: string, on: boolean, anyTime = false) {
   const u = g.units.find((x) => x.id === id)!;
-  if (on) { if (!canReserve(g, u)) throw new Error('no eligible reserve marker for this unit'); if (u.interdict && !interdictCheck(g, u)) throw new Error('Greif interdict: morale check failed, it cannot be placed in reserve'); const k = markerKey(g, u); g.markers[u.side][k]--; u.reserve = k; }
+  if (on && !anyTime && (g.phase !== 'movement' || u.side !== g.phasing)) throw new Error('reserves are marked by the phasing player in his Movement Phase (5.21)');
+  if (on) { if (!canReserve(g, u)) throw new Error('no eligible reserve marker for this unit'); if (u.interdict && !interdictCheck(g, u)) throw new Error('Greif interdict: morale check failed, it cannot be placed in reserve'); const k = markerKey(g, u); g.markers[u.side][k]--; u.reserve = k; CUR.onReserve?.(g, u); }
   else if (u.reserve) { g.markers[u.side][u.reserve]++; u.reserve = null; }
 }
 const dropReserve = (g: Game, u: Unit) => { if (u.reserve) { g.markers[u.side][u.reserve]++; u.reserve = null; } };
@@ -436,7 +439,7 @@ function bulgeReach(g: Game, u: Unit, one: boolean): Opt[] {
   const garr = new Set(g.units.filter((x) => x.garrison && x.side === enemy && x.area != null && !blocks(g, x.area, enemy).length).map((x) => x.area!));
   const r = reachable({ side: u.side as 'german' | 'allied', cls: u.cls, area: u.area!, supplied: !u.unsupplied, disordered: u.disorder > 0, adjacentOnly: one || !!u.adjOnly, spent: u.spent, ownZone: one ? undefined : (ARMY(u) as 5 | 6 | 7 | undefined), boundaryPreauthorized: u.bcross },
     { occupants: occ, blownBridges: new Set(g.blown), roadblocks: new Set([...garr, ...markerAreas(g, enemy)]), controller: (a) => g.control[a] as 'german' | 'allied' | undefined,
-      extraCost: (f, t) => (markerAreas(g, enemy).includes(t) ? 1 : 0) + (unitsIn(g, t).length && !blocks(g, t, 'german').length && !blocks(g, t, 'allied').length ? 1 : 0) + (u.side === 'german' && (g.interdicted[f] || g.interdicted[t]) ? 1 : 0) });
+      extraCost: (f, t) => (markerAreas(g, enemy).includes(t) ? 1 : 0) + (unitsIn(g, t).length && !blocks(g, t, 'german').length && !blocks(g, t, 'allied').length ? 1 : 0) + (u.side === 'german' ? (g.interdicted[f] ? 1 : 0) + (g.interdicted[t] ? 1 : 0) : 0) });   // 17.21: +1 to enter and +1 to leave
   return r.filter((x) => !(u.side === 'german' && x.fuel && g.opts.fuel && !fuelChits(g).length));    // 16.13
 }
 /** 17.11 Greif interdict: the unit rolls morale before it moves; failing, it may only move one area. */
@@ -472,21 +475,21 @@ export function move(g: Game, id: string, to: number) {
   const prev = opt.path[opt.path.length - 2], last = connection(prev, to)!, enemy = other(u.side);
   const newly = unitsIn(g, to, enemy).length > 0 && !g.contestedAtMoveStart.includes(to) && !contested(g, to);
   if (last.river && !g.blown.includes(keyOf(prev, to)) && newly && !g.blowTried.includes(to) && (g.phase === 'movement' || g.phase === 'btMove')) {
-    g.pendingBlow = { unit: id, path: opt.path, spent: (moveOptions(g, id).find((x) => x.area === opt.path[opt.path.length - 2])?.cost ?? 0) }; return 'blow';                                       // 5.35d the opponent may try to blow the bridge
+    g.pendingBlow = { unit: id, path: opt.path, fuel: opt.fuel || undefined, spent: (moveOptions(g, id).find((x) => x.area === opt.path[opt.path.length - 2])?.cost ?? 0) }; return 'blow';                                       // 5.35d the opponent may try to blow the bridge
   }
   finishMove(g, u, opt, false); return 'moved';
 }
 export function resolveBlow(g: Game, attempt: boolean) {
   const p = g.pendingBlow!; g.pendingBlow = null;
   const u = g.units.find((x) => x.id === p.unit)!, to = p.path[p.path.length - 1], prev = p.path[p.path.length - 2];
-  const opt = { area: to, cost: 0, fuel: false, mustStop: true, path: p.path };
+  const opt = { area: to, cost: 0, fuel: !!p.fuel, mustStop: true, path: p.path };   // 16.13: a long German move still spends its fuel
   g.blowTried.push(to);
   if (!attempt) { finishMove(g, u, { ...opt, cost: p.path.length }, false); return 'crossed'; }
   const r = roll(g), need = g.greif[keyOf(prev, to)] ? 1 : 5;                       // 17.12: a Greif team holding the bridge makes it a 1
   if (r > need) { say(g, `bridge blow attempt failed (rolled ${r})`); finishMove(g, u, { ...opt, cost: p.path.length }, false); return 'failed'; }
   g.blown.push(keyOf(prev, to)); say(g, `bridge ${areas.get(prev)!.name}–${areas.get(to)!.name} blown (rolled ${r})`); dropGreif(g, keyOf(prev, to));
   const exploitOnly = g.phase === 'btMove' && u.exploit && !u.reserve;
-  if (exploitOnly) { say(g, `${u.name} cannot cross the blown bridge and does not move (7.31)`); return 'stopped'; }          // exploitation units may not cross a blown bridge, even one blown by their own attempt
+  if (exploitOnly) { u.moved = true; u.exploit = false; say(g, `${u.name} cannot cross the blown bridge and does not move at all (7.31)`); return 'stopped'; }          // exploitation units may not cross a blown bridge, even one blown by their own attempt
   if (p.path.length === 2) { finishMove(g, u, { ...opt, cost: 6 }, true); return 'blown-crossed'; }     // began adjacent: still crosses, whole allowance
   // 5.35d: it does not enter the area, loses one movement point, and may carry on from where it stands
   const here = p.path.length - 2 > 0 ? prev : u.area!; u.spent = (p.spent ?? 0) + 1; u.area = here; u.from = p.path[0]; dropReserve(g, u);
@@ -542,15 +545,15 @@ const supplied = (g: Game, side: Side, a: number) => g.control[a] === side && in
 export const BRITISH_AREAS = new Set([57, 58, 78, 79, 92, 93, 94, 95, 96]);
 const britishOk = (u: Unit, a: number) => u.ech !== 'br_xxx' || BRITISH_AREAS.has(a);
 const ARMY_ECH: Record<number, string> = { 5: 'de_5pz', 6: 'de_6pz', 7: 'de_7a' };
-export const assetZoneOk = (g: Game, c: Chit, a: number) => CUR.id !== 'bulge' || c.side === 'allied' || c.ech === 'de_sr' || c.ech === 'german' || ZONE[c.ech] === zoneOf(a) ||
-  (c.kind === 'engineer' && !g.chits.some((x) => x.kind === 'engineer' && x.ech === ARMY_ECH[zoneOf(a)] && x.box !== 'eliminated'));   // 14.52 an army that lost its engineer may borrow another   // 16.1 German assets/events act only in their own army's zone
+export const assetZoneOk = (g: Game, c: Chit, a: number, bridging = false) => CUR.id !== 'bulge' || c.side === 'allied' || c.ech === 'de_sr' || c.ech === 'german' || ZONE[c.ech] === zoneOf(a) ||
+  (bridging && c.kind === 'engineer' && !g.chits.some((x) => x.kind === 'engineer' && x.ech === ARMY_ECH[zoneOf(a)] && x.box !== 'eliminated'));   // 14.52 an army that lost its engineer may borrow another   // 16.1 German assets/events act only in their own army's zone
 export function bridgeTargets(g: Game, side: Side, area: number) {
   return neighbors(area).filter((n) => connection(area, n)!.river && !g.blown.includes(keyOf(area, n)) && supplied(g, side, area));
 }
 export function blowBridges(g: Game, id: string, area: number, targets: number[]) {
   needAdmin(g); const c = chit(g, id);
   if (c.kind !== 'engineer' || c.box !== 'available') throw new Error('engineer not available');
-  if (!assetZoneOk(g, c, area) || !bridgeTargets(g, c.side, area).length || targets.length < 1 || targets.length > 2 || !targets.every((t) => bridgeTargets(g, c.side, area).includes(t))) throw new Error('not a legal bridge-blowing');
+  if (!assetZoneOk(g, c, area, true) || !bridgeTargets(g, c.side, area).length || targets.length < 1 || targets.length > 2 || !targets.every((t) => bridgeTargets(g, c.side, area).includes(t))) throw new Error('not a legal bridge-blowing');
   c.box = 'used';
   for (const t of targets) {
     const k = keyOf(area, t);
@@ -565,7 +568,7 @@ export function repairTargets(g: Game, side: Side, area: number) {
 }
 export function repairBridge(g: Game, id: string, area: number, to: number) {
   needAdmin(g); const c = chit(g, id);
-  if (c.kind !== 'engineer' || c.box !== 'available' || !assetZoneOk(g, c, area) || !repairTargets(g, c.side, area).includes(to)) throw new Error('not a legal repair');
+  if (c.kind !== 'engineer' || c.box !== 'available' || !assetZoneOk(g, c, area, true) || !repairTargets(g, c.side, area).includes(to)) throw new Error('not a legal repair');
   if (c.side === 'german' && g.opts.bridgeLimit && (g.bridgesLeft ?? 6) <= 0) throw new Error('the Germans have repaired their six bridges (18.1)');
   if (c.side === 'german' && g.opts.bridgeLimit) g.bridgesLeft = (g.bridgesLeft ?? 6) - 1;
   g.blown = g.blown.filter((k) => k !== keyOf(area, to)); c.box = 'used'; say(g, `${c.name} repairs the bridge ${areas.get(area)!.name}–${areas.get(to)!.name}${c.side === 'german' && g.opts.bridgeLimit ? ` (German repairs left: ${g.bridgesLeft}, 18.1)` : ''}`, c.side);
@@ -588,7 +591,7 @@ export function eligibleForStep(c: Chit, u: Unit) {
   if (arm && u.cls !== 'armor') return false; if (inf && u.cls !== 'infantry') return false;
   if (c.ech === 'de_sr' || c.ech === 'us_sr') return true;
   if (c.side === 'german' && ZONE[c.ech] !== zoneOf(u.area)) return false;
-  return u.ech === c.ech || u.ech === 'us_sr';
+  return u.ech === c.ech || u.ech === 'us_sr' || (c.side === 'german' && u.ech === 'de_sr');   // 15.1c: plus the Strategic Reserve units
 }
 export function playReplacement(g: Game, id: string, unitId: string) {
   needAdmin(g); const c = chit(g, id), u = g.units.find((x) => x.id === unitId)!;
@@ -603,34 +606,37 @@ export function playReplacement(g: Game, id: string, unitId: string) {
 export function playRebuild(g: Game, id: string, unitId: string, area: number) {
   needAdmin(g); const c = chit(g, id), u = g.units.find((x) => x.id === unitId)!;
   const arm = c.kind === 'rebuild_or_replace_arm';
-  if (!c.kind.startsWith('rebuild') || c.box !== 'available' || u.area != null || u.max !== 1 || u.side !== c.side || u.q[0] === 'elite' || (arm !== (u.cls === 'armor')) || g.control[area] !== c.side || !(areas.get(area)!.vp.allied || areas.get(area)!.vp.mutual || areas.get(area)!.vp.german)) throw new Error('cannot return that unit there');
+  const ownArmy = c.ech === 'us_sr' || c.ech === 'de_sr' || u.ech === c.ech || u.ech === 'us_sr' || u.ech === 'de_sr';   // 17.2: its own Army's units
+  if (!c.kind.startsWith('rebuild') || c.box !== 'available' || u.area != null || u.str !== 0 || !ownArmy || u.max !== 1 || u.side !== c.side || u.q[0] === 'elite' || (arm !== (u.cls === 'armor')) || g.control[area] !== c.side || !(areas.get(area)!.vp.allied || areas.get(area)!.vp.mutual || areas.get(area)!.vp.german)) throw new Error('cannot return that unit there');
   u.area = area; u.str = 1; c.box = 'eliminated'; say(g, `${u.name} returns to ${areas.get(area)!.name}`, c.side);
 }
 export function alternateUse(g: Game, id: string) {
   needAdmin(g); const c = chit(g, id);
   if (c.box !== 'available' || isAsset(c) || c.kind === 'sa_block') throw new Error('not an event');
+  if (CUR.saFilter && !CUR.saFilter(g, c.side, boxOf(g, c.side, 'available'), c.ech).includes(c)) throw new Error('this event cannot be spent alone now');   // e.g. Sicily 17.11 Patton: two US events
   const pri = ['engineer', 'artillery', 'rocket_artillery', 'armor_asset', 'infantry_asset', 'fuel'];
-  const back = boxOf(g, c.side, 'eliminated').filter(isAsset).sort((a, b) => pri.indexOf(a.kind) - pri.indexOf(b.kind)).slice(0, 2);
+  const back = boxOf(g, c.side, 'eliminated').filter((x) => isAsset(x) && x.kind !== 'garrison' && x.kind !== 'task_force').sort(   // 16.21 / 16.22: never garrisons or task forces
+    (a, b) => pri.indexOf(a.kind) - pri.indexOf(b.kind)).slice(0, 2);
   if (!back.length) throw new Error('no assets in the Eliminated Box to bring back (4.21)');
-  back.forEach((x) => (x.box = 'cup')); c.box = 'eliminated'; say(g, `${c.name} used as alternate event: ${back.map((x) => x.name).join(', ')} back to the cup`, c.side);
+  back.forEach((x) => (x.box = 'cup')); c.box = 'eliminated'; CUR.onSpendSA?.(g, c.side, c); say(g, `${c.name} used as alternate event: ${back.map((x) => x.name).join(', ')} back to the cup`, c.side);
 }
 export function rally(g: Game, side: Side, area: number, chitId?: string) {
-  needAdmin(g); if (!supplied(g, side, area)) throw new Error('area must be supplied and friendly');
+  needAdmin(g); if (g.control[area] !== side || !inSupply(g, side, area)) throw new Error('area must be supplied and friendly');   // 8.25: any supplied area, contested or not
   const sa = spendSA(g, side, undefined, 'Rally the troops', chitId), only = sa.kind === 'special_action_event' && sa.ech !== 'us_sr' ? sa.ech : null;     // 8.1 a single-use event only affects its own Higher Echelon
   for (const a of [area, ...neighbors(area)]) for (const u of blocks(g, a, side)) if (u.disorder && !u.unsupplied && (!only || u.ech === only)) u.disorder = 0;
 }
 export function qualityReplacement(g: Game, unitId: string, chitId?: string) {
-  needAdmin(g); const u = g.units.find((x) => x.id === unitId)!; if (u.garrison || u.unsupplied || u.str >= u.max) throw new Error('not eligible');
+  needAdmin(g); const u = g.units.find((x) => x.id === unitId)!; if (u.area == null || u.str < 1 || u.garrison || u.unsupplied || u.str >= u.max) throw new Error('not eligible');   // 8.26: a supplied reduced unit on the map
   spendSA(g, u.side, u.ech, 'Quality replacements', chitId); u.str++; say(g, `${u.name} gains a step`, u.side);
 }
 export function staffReplacement(g: Game, id: string, unitId: string) {
   needAdmin(g); const c = chit(g, id), u = g.units.find((x) => x.id === unitId)!;
-  if (c.kind !== 'command_staff' || c.box !== 'available' || u.side !== c.side || u.cls !== 'infantry' || u.area == null || u.garrison) throw new Error('not eligible');
+  if (c.kind !== 'command_staff' || c.box !== 'available' || CUR.staffReplaceOk?.(g, c) === false || u.side !== c.side || u.cls !== 'infantry' || u.area == null || u.garrison) throw new Error('not eligible');
   addStep(u, false); c.box = 'used'; say(g, `Command staff: ${u.name} gains a step`, c.side);
 }
 export function staffReserve(g: Game, id: string, unitId: string) {
   needAdmin(g); const c = chit(g, id); if (c.kind !== 'command_staff' || c.box !== 'available') throw new Error('not available');
-  setReserve(g, unitId, true); c.box = 'used';
+  setReserve(g, unitId, true, true); c.box = 'used';
 }
 export function releaseUnit(g: Game, id: string, area: 4 | 6) {
   needAdmin(g); const c = chit(g, id); if (c.kind !== 'event_release' || c.box !== 'available') throw new Error('not available');
@@ -822,7 +828,7 @@ function allocate(g: Game, b: Battle, side: Side, n: number) {
   b.hit ??= {}; const hit = new Set<string>(b.hit[side] ?? []);                          // 6.43 everyone takes a loss before anyone takes a second, across all the volleys of one battle
   for (let i = 0; i < n; i++) {
     fixPoint(g, b);
-    let ps = [...b.assets[side].filter((id) => isBattleAsset(chit(g, id))).map((id) => ({ key: id, asset: true, str: 1 })), ...unitsIn(g, b.area, side).map((u) => ({ key: u.id, asset: !!u.garrison, str: u.str }))];
+    let ps = [...b.assets[side].filter((id) => isBattleAsset(chit(g, id))).map((id) => ({ key: id, asset: true, str: 1 })), ...unitsIn(g, b.area, side).filter((u) => side !== b.attacker || !(u.disorder > 0 || u.fort)).map((u) => ({ key: u.id, asset: !!u.garrison, str: u.str }))];   // 6.2: disordered units take no part for the attacker
     if (!ps.length) return n - i;
     let cand = ps.filter((p) => !hit.has(p.key)); if (!cand.length) { hit.clear(); cand = ps; }
     const pid = side === b.attacker ? b.attPoint : b.defPoint;
@@ -1069,6 +1075,7 @@ export function closeBattle(g: Game) { if (g.battle?.stage !== 'done') throw new
 export function defenderRetreatSA(g: Game, b: Battle, chitId?: string) {
   if (b.stage !== 'setup') throw new Error('only before the first roll'); const def = other(b.attacker);
   const us = unitsIn(g, b.area, def).filter((u) => !u.garrison && !u.fort && !u.ghost); if (!us.length) throw new Error('only units retreat: garrisons, defended roadblocks and strongpoints stay (16.21, 4.35, 15.6)');
+  if (us.some((u) => u.unsupplied)) throw new Error('out-of-supply units may not be affected by Special Actions (9.34d)');
   spendSA(g, def, us[0].ech, 'retreat before combat', chitId);
   for (const id of [...b.assets[def], ...airOf(b, def).map((a) => a.id)]) unassign(g, b, id);               // assets already assigned go back to the Available Box
   b.locked = true; us.forEach((x) => clearInterdict(g, x));
@@ -1077,9 +1084,9 @@ export function defenderRetreatSA(g: Game, b: Battle, chitId?: string) {
 export function defenderReinforceSA(g: Game, b: Battle, unitId: string, chitId?: string) {
   if (b.stage !== 'setup') throw new Error('only before the first roll'); const def = other(b.attacker), u = g.units.find((x) => x.id === unitId)!;
   if (unitsIn(g, b.area, def).some((x) => x.id.startsWith('DR-'))) throw new Error('a defended roadblock may not be reinforced (4.35)');
-  if (u.side !== def || u.area == null || !neighbors(b.area).includes(u.area) || contested(g, u.area) || u.disorder || u.garrison || u.fort || u.ghost || !roomFor(g, u, b.area)) throw new Error('not a legal reinforcement');
+  if (u.side !== def || u.area == null || !neighbors(b.area).includes(u.area) || contested(g, u.area) || u.disorder || u.unsupplied || u.garrison || u.fort || u.ghost || !roomFor(g, u, b.area)) throw new Error('not a legal reinforcement');
   if (CUR.reinforceOk && !CUR.reinforceOk(g, b, u)) throw new Error('not a legal reinforcement here (8.23)');
-  spendSA(g, def, u.ech, 'reinforce a battle', chitId); b.locked = true; clearInterdict(g, u); const from = u.area; u.area = b.area; u.from = from; updateControl(g, from); say(g, `${u.name} reinforces ${areas.get(b.area)!.name}`);
+  spendSA(g, def, u.ech, 'reinforce a battle', chitId); b.locked = true; b.reinforced = u.id; clearInterdict(g, u); const from = u.area; u.area = b.area; u.from = from; updateControl(g, from); say(g, `${u.name} reinforces ${areas.get(b.area)!.name}`);
 }
 /** 18.3: Peiper, exploiting in a Breakthrough Movement Phase on or before turn 3, may move with its full allowance once per game. */
 export const peiperCan = (g: Game, u: Unit) => !!g.opts.peiper && !g.peiperUsed && g.phase === 'btMove' && g.turn <= 3 && u.name === 'Peiper' && u.exploit && !u.moved && u.area != null && u.side === g.phasing;
@@ -1114,10 +1121,12 @@ function placeRiverAssaults(g: Game) {
   }
   g.entered = {}; g.riverCross = []; g.blowTried = [];
 }
+/** Who has a supply status: units, plus The Bulge's garrison and task force assets (16.21, 16.22: eliminated by a failed unsupplied morale check). */
+const hasSupply = (x: Unit) => !x.garrison || (CUR.id === 'bulge' && !x.id.startsWith('DR-'));
 function supplyPhase(g: Game) {
   CUR.onPhase?.(g, 'supply', 'start');
   for (const a of areas.keys()) updateControl(g, a);
-  for (const u of g.units.filter((x) => x.area != null && !x.garrison)) u.unsupplied = !(CUR.alwaysSupplied?.(g, u) || (CUR.unitSupply ? CUR.unitSupply(g, u) : inSupply(g, u.side, u.area!)));
+  for (const u of g.units.filter((x) => x.area != null && hasSupply(x))) u.unsupplied = !(CUR.alwaysSupplied?.(g, u) || (CUR.unitSupply ? CUR.unitSupply(g, u) : inSupply(g, u.side, u.area!)));
   for (const u of g.units.filter((x) => x.area != null && x.fort)) u.unsupplied = false;                                   // strongpoints are always in supply (Golan 15.6)
   for (const u of g.units.filter((x) => x.area != null && !x.unsupplied && x.disorder)) if (!CUR.recoverOk || CUR.recoverOk(g, u)) u.disorder = u.disorder === 2 ? 0 : 2;
   g.riverAssault = [];
@@ -1137,14 +1146,15 @@ function supplyPhase(g: Game) {
 }
 /** 9.4 the units of the Phasing Player that must roll an out-of-supply morale check now, with the number each needs. */
 export function supplyChecks(g: Game) {
-  return g.units.filter((x) => x.area != null && x.side === g.phasing && x.unsupplied && !x.garrison && !x.fort).map((u) => ({ unit: u, sn: CUR.moraleSn(g, u, 'supply'), rounds: CUR.id === 'bulge' && g.turn >= 6 ? 2 : 1 }));
+  return g.units.filter((x) => x.area != null && x.side === g.phasing && x.unsupplied && hasSupply(x) && !x.fort).map((u) => ({ unit: u, sn: CUR.moraleSn(g, u, 'supply'), rounds: CUR.id === 'bulge' && g.turn >= 6 ? 2 : 1 }));
 }
 export function rollSupply(g: Game) {
   if (!g.supplyPending) throw new Error('no supply checks pending'); g.supplyPending = false;
   const rounds = CUR.id === 'bulge' && g.turn >= 6 ? 2 : 1;                                           // 14.93 (The Bulge)
-  for (const u of g.units.filter((x) => x.area != null && x.side === g.phasing && x.unsupplied && !x.garrison && !x.fort)) for (let i = 0; i < rounds && u.area != null; i++) {
+  for (const u of g.units.filter((x) => x.area != null && x.side === g.phasing && x.unsupplied && hasSupply(x) && !x.fort)) for (let i = 0; i < rounds && u.area != null; i++) {
     const q = quality(u), { r, ok } = check(g, u, CUR.moraleSn(g, u, 'supply'), 'Out of supply morale check (9.4)');
     if (ok) continue;
+    if (u.garrison) { eliminate(g, u); say(g, `${u.name} unsupplied, morale failed (${r}): eliminated (16.21)`); continue; }
     if (!u.disorder) { u.disorder = 1; say(g, `${u.name} unsupplied, morale failed (${r}): disordered`); }
     else if ((q === 'veteran' && r === 10) || (q === 'green' && r >= 8)) { eliminate(g, u); say(g, `${u.name} surrenders (${r})`); }
     else { u.str -= 1; if (u.str <= 0) eliminate(g, u); say(g, `${u.name} unsupplied and disordered, morale failed (${r}): step loss`); }
@@ -1282,12 +1292,13 @@ export function playInterdiction(g: Game, id: string, area: number) {
 export function airSupplyAreas(g: Game, side: Side) { return [...new Set(g.units.filter((u) => u.side === side && u.area != null && !u.garrison && !inSupply(g, side, u.area)).map((u) => u.area!))]; }
 export function playAirSupply(g: Game, id: string, area: number) {
   const c = chit(g, id);
-  if (g.phase !== 'supply' || g.battle || c.kind !== 'air_mission' || c.box !== 'available' || c.side !== g.phasing || g.airSupply || !airSupplyAreas(g, c.side).includes(area)) throw new Error('needs an Air Mission, the end of the turn, and an unsupplied area');
-  g.airSupply = { area, side: c.side, id, stamp: g.turn * 2 + (g.phasing === 'german' ? 0 : 1) }; c.box = 'map'; for (const u of unitsIn(g, area, c.side)) u.unsupplied = false; say(g, `Air Supply mission over ${areas.get(area)!.name}`, c.side);
+  if (g.phase !== 'supply' || g.battle || c.kind !== 'air_mission' || c.box !== 'available' || g.airSupply || !airSupplyAreas(g, c.side).includes(area)) throw new Error('needs an Air Mission, the end of the turn, and an unsupplied area');
+  g.airSupply = { area, side: c.side, id, stamp: g.turn * 2 + (g.phasing === 'german' ? 0 : 1) }; c.box = 'map'; for (const u of unitsIn(g, area, c.side)) { if (u.unsupplied && u.disorder && (!CUR.recoverOk || CUR.recoverOk(g, u))) u.disorder = u.disorder === 2 ? 0 : 2; u.unsupplied = false; }   // 9.35: supplied, so the markers adjust
+  say(g, `Air Supply mission over ${areas.get(area)!.name}`, c.side);
 }
 /** 8.27 Reroute a reinforcing unit (Reinforcement Phase, one Special Action). */
 export function rerouteOptions(g: Game, unitId: string): number[] {
-  const u = g.units.find((x) => x.id === unitId); if (!u || g.phase !== 'reinforcement' || !g.arrived.includes(u.id) || u.area == null || !saAvailable(g, u.side, u.ech).length) return [];
+  const u = g.units.find((x) => x.id === unitId); if (!u || CUR.noReroute || g.phase !== 'reinforcement' || !g.arrived.includes(u.id) || u.area == null || !saAvailable(g, u.side, u.ech).length) return [];
   return [...new Set(appropriateAreas(u, g))].filter((a) => a !== u.area && (g.control[a] === u.side || !unitsIn(g, a).length) && roomFor(g, u, a) && !unitsIn(g, a, other(u.side)).length);
 }
 export function reroute(g: Game, unitId: string, area: number, chitId?: string) {
@@ -1329,6 +1340,7 @@ export function setPoint(g: Game, b: Battle, side: Side, unitId: string) {
   if (b.stage !== 'setup') throw new Error('already started'); const u = g.units.find((x) => x.id === unitId);
   if (!u || u.side !== side || u.area !== b.area || u.garrison || u.ghost) throw new Error('not a legal point unit');
   if (side === b.attacker && u.disorder) throw new Error('a disordered unit cannot be the attacking point unit');
+  if (side !== b.attacker && unitId === b.reinforced && g.units.some((x) => x.id === b.defPoint && x.area === b.area)) throw new Error('the reinforcing unit may not be the point unit while the original point unit stands (8.23)');
   { const pz = pz150In(g, b); if (pz && pz.side === side && pz.id !== unitId) throw new Error('150th Panzer Brigade must be the point unit in its first battle (18.4)'); }
   if (side === b.attacker) b.attPoint = unitId; else b.defPoint = unitId;
 }

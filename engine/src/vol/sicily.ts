@@ -26,6 +26,9 @@ export interface SicilyState {
   morale: number; moraleCup: number; triggered: string[];      // Fading Italian Morale level (17.21), events put in the cup so far, the ports / areas that triggered one
   moralePick?: Record<string, number>;                         // 17.21c: Italian assets each side must still pick for elimination
   portDamage: Record<string, number>; portWorked: string[];    // damage level of P1-P3 (14.51); ports already worked this Admin Phase
+  evacMp?: Record<string, number>;                             // 14.29: MP an Axis unit still has after moving into Messina this phase
+  stratUnit?: string;                                          // 14.29: the unit that strat-moved this phase (it may go on to the toe of Italy)
+  flankTurn?: number;                                          // 17.22: the turn of the last flanking invasion (one per Admin Phase)
   untriedActed?: string;                                       // 15.3a: the one untried unit that acted this Movement Phase
   strat: Record<string, number>;                               // strat-moves this turn: axis, us, british (14.8)
   extract: boolean; patton: boolean;                           // 17.12 in effect this Movement Phase; 17.11 in effect
@@ -227,7 +230,7 @@ const etnaFree = (g: Game): SSide | undefined => (contested(g, ETNA) ? undefined
 function moveCtx(g: Game): SMoveCtx {
   const count = (a: number): Record<SSide, number> => ({ allied: unitsIn(g, a, 'allied').length, axis: unitsIn(g, a, 'axis').length });
   return { units: count, controller: (a) => g.control[a] as SSide | undefined, blownBridges: new Set(g.blown), interdicted: (a) => interdictedBy(g, a) as SSide | undefined,
-    untriedOnly: (a) => unitsIn(g, a).length > 0 && unitsIn(g, a).every((u) => u.untried), etnaFree: etnaFree(g), contestedAtStart: new Set(g.contestedAtMoveStart) };
+    untriedOnly: (a) => unitsIn(g, a).length > 0 && unitsIn(g, a).every((u) => u.untried), etnaFree: etnaFree(g), etnaCtl: g.control[ETNA] as SSide | undefined, contestedAtStart: new Set(g.contestedAtMoveStart) };
 }
 function sicilyReach(g: Game, u: Unit, one: boolean): Opt[] {
   const V = state(g), a = u.area!;
@@ -237,8 +240,8 @@ function sicilyReach(g: Game, u: Unit, one: boolean): Opt[] {
     return [opt({ area: box.area, cost: allowanceOf(u), path: [a, box.area], mustStop: true })];
   }
   if (isPortBox(a)) {                                                                                  // 14.26: ashore in the port, then a normal move
-    const box = BOX.get(a)!; if (one || unitsIn(g, box.area, 'axis').length) return [];
-    const from = reachable({ side: 'allied', cls: u.cls, area: box.area, supplied: true, disordered: u.disorder > 0, motorized: u.motorized, allowed: allowedZones(g, u) }, moveCtx(g));
+    const box = BOX.get(a)!; if (one || unitsIn(g, box.area, other(u.side)).length) return [];
+    const from = reachable({ side: u.side as SSide, cls: u.cls, area: box.area, supplied: true, disordered: u.disorder > 0, motorized: u.motorized, allowed: allowedZones(g, u) }, moveCtx(g));
     return [opt({ area: box.area, cost: 0, path: [a, box.area], mustStop: false }), ...from.map((r) => opt({ ...r, path: [a, ...r.path] }))];
   }
   const r = reachable({ side: u.side as SSide, cls: u.cls, area: a, supplied: !u.unsupplied, disordered: u.disorder > 0, adjacentOnly: one || !!u.adjOnly, spent: u.spent, motorized: u.motorized, untried: u.untried,
@@ -251,7 +254,8 @@ function moveOk(g: Game, u: Unit, a: number) { return !isBox(a) && untriedFree(g
 function afterMove(g: Game, u: Unit, opt: Opt) {
   const V = state(g), from = opt.path[0], to = opt.area;
   if (u.untried) V.untriedActed = u.id;
-  if (isLandingBox(from) && unitsIn(g, to, 'axis').length) V.beachAssault[to] = from;                  // 14.27b
+  if (u.side === 'axis' && to === MESSINA && !isBox(from)) (V.evacMp ??= {})[u.id] = allowanceOf(u) - opt.cost;   // 14.29: what is left to evacuate with
+  if (isLandingBox(from) && unitsIn(g, to, 'axis').length && !g.contestedAtMoveStart.includes(to)) V.beachAssault[to] = from;   // 14.27b; into a contested area it is ordinary combat (14.26)
   if (V.extract && nation(u) === 'german' && g.contestedAtMoveStart.includes(from)) { u.disorder = 2; say(g, `${u.name} extracts to ${nameOf(to)} and is recovering (17.12)`); }
   if (u.side === 'allied' && V.flank[to]) relieveFlank(g, to);
 }
@@ -260,11 +264,11 @@ function toSea(g: Game, u: Unit, why: string) { const from = u.area; u.area = nu
 const inBoxes = (g: Game, side: Side, f: (a: number) => boolean) => g.units.filter((u) => u.side === side && u.area != null && f(u.area));
 /** 14.29: an Axis unit in Messina leaves for the mainland, for good (one MP; or its strat-move). */
 export function canEvacuate(g: Game, u: Unit) {
-  return u.side === 'axis' && u.area === MESSINA && !state(g).sunrise && g.phasing === 'axis' && regular(u) && ((g.phase === 'movement' && !u.moved && !u.untried) || (g.phase === 'strategic' && !!u.reserve && !u.moved && stratAllowed(g, u)));
+  return u.side === 'axis' && u.area === MESSINA && !state(g).sunrise && g.phasing === 'axis' && regular(u) && ((g.phase === 'movement' && !u.untried && (!u.moved || (state(g).evacMp?.[u.id] ?? 0) >= 1)) || (g.phase === 'strategic' && ((!!u.reserve && !u.moved && stratAllowed(g, u)) || (u.moved && state(g).stratUnit === u.id))));
 }
 export function evacuate(g: Game, unitId: string) {
   const u = unit(g, unitId); need(canEvacuate(g, u), 'only an Axis unit in Messina, in its Movement Phase (or a reserve unit by strat-move), may evacuate (14.29)');
-  if (g.phase === 'strategic') afterStrat(g, u);
+  if (g.phase === 'strategic' && !u.moved) afterStrat(g, u);
   u.area = null; u.box = 'evacuated'; u.moved = true; dropReserve(g, u); updateControl(g, MESSINA); say(g, `${u.name} evacuates to the Italian mainland (14.29)`, 'axis');
 }
 /** 14.8: the Axis strat-moves one unit a turn, the Allies one American and one British; never out of a landing box; not from an interdicted area. */
@@ -280,7 +284,7 @@ function stratStep(g: Game, u: Unit, a: number, n: number): boolean | 'end' {
   if (interdictedBy(g, n) === other(u.side)) return false;                                            // 16.33
   return true;
 }
-function afterStrat(g: Game, u: Unit) { const V = state(g), k = army(nation(u)); V.strat[k] = (V.strat[k] ?? 0) + 1; }
+function afterStrat(g: Game, u: Unit) { const V = state(g), k = army(nation(u)); V.strat[k] = (V.strat[k] ?? 0) + 1; V.stratUnit = u.id; }
 
 /* ================= arrivals (14.24, 14.25), airborne assault (14.27a), the At Sea box (14.24b, 14.28) ================= */
 const portOpen = (g: Game, p: SBox, side: Side) => g.control[p.area] === side && !contested(g, p.area) && (p.box === 'P4' || (state(g).portDamage[p.box] ?? 0) === 0) && (!g.inPlay || g.inPlay.includes(p.id));
@@ -293,9 +297,13 @@ export function entryBoxes(g: Game, u: Unit): number[] {
   return [...bh, ...ports];
 }
 function syncPortBoxes(g: Game) { for (const p of portBoxes) { const c = g.control[p.area]; if (c) g.control[p.id] = c; else delete g.control[p.id]; } }
+/** 16.21: the fleet withdraws one Naval Support asset from the Used Box, after the unused reusable Special Action had its chance to save it (Example 2A). */
+function beforeRecycle(g: Game, side: Side) {
+  if (side === 'allied' && g.phase === 'reinforcement') { const nav = g.chits.find((c) => c.kind === 'naval_support' && c.box === 'used'); if (nav) { nav.box = 'eliminated'; say(g, `${nav.name} withdraws: eliminated from the Used Box (16.21)`, side); } }
+  return false;
+}
 function reinforce(g: Game, side: Side) {
   const V = state(g); syncPortBoxes(g); V.strat = {};
-  if (side === 'allied') { const nav = g.chits.find((c) => c.kind === 'naval_support' && c.box === 'used'); if (nav) { nav.box = 'eliminated'; say(g, `${nav.name} withdraws: eliminated from the Used Box (16.21)`, side); } }
   for (const u of g.units.filter((x) => x.side === side && x.box === 'at_sea')) { u.box = undefined; u.arrival = g.turn; say(g, `${u.name} tries to land again (14.24b)`, side); }
   for (const u of g.units.filter((x) => x.side === side && x.arrival === g.turn && x.area == null && x.str > 0 && !x.box)) {
     if (u.symbol === 'airborne') { u.box = 'airborne_assault'; u.arrival = undefined; g.arrived.push(u.id); say(g, `${u.name} waits in the Airborne Assault box (14.24)`, side); continue; }
@@ -325,19 +333,20 @@ function onPhase(g: Game, phase: string, when: 'start' | 'mid' | 'end') {
   const V = state(g);
   if (phase === 'deploy' && when === 'end') onDeployEnd(g);
   if (when === 'start') { syncPortBoxes(g); V.portWorked = []; }
-  if (phase === 'movement' && when === 'start') { V.untriedActed = undefined; V.beachAssault = {}; }
+  if (phase === 'movement' && when === 'start') { V.untriedActed = undefined; V.beachAssault = {}; V.evacMp = {}; }
+  if (phase === 'strategic' && when === 'start') V.stratUnit = undefined;
   if (phase === 'movement' && when === 'end') {
     for (const u of inBoxes(g, g.phasing, isLandingBox)) toSea(g, u, 'could not land, 14.24b');
-    for (const u of inBoxes(g, g.phasing, isPortBox).filter((x) => !x.reserve)) toSea(g, u, 'could not land, 14.24b');
+    if (g.phasing === 'allied') for (const u of inBoxes(g, g.phasing, isPortBox).filter((x) => !x.reserve)) toSea(g, u, 'could not land, 14.24b');   // the At Sea box is the Allies' (14.24b)
     V.extract = false;
   }
-  if (phase === 'btMove' && when === 'end') for (const u of inBoxes(g, g.phasing, isPortBox)) { const a = BOX.get(u.area!)!.area; if (!unitsIn(g, a, 'axis').length && blocks(g, a, 'allied').length < 2) { u.area = a; dropReserve(g, u); say(g, `${u.name} lands in ${nameOf(a)} (14.24c)`); } else toSea(g, u, 'the port is full, 14.24c'); }
+  if (phase === 'btMove' && when === 'end' && g.phasing === 'allied') for (const u of inBoxes(g, g.phasing, isPortBox)) { const a = BOX.get(u.area!)!.area; if (!unitsIn(g, a, 'axis').length && blocks(g, a, 'allied').length < 2) { u.area = a; dropReserve(g, u); say(g, `${u.name} lands in ${nameOf(a)} (14.24c)`); } else toSea(g, u, 'the port is full, 14.24c'); }
   if (phase === 'combat' && when === 'start') { V.dropPending = g.phasing === 'allied' && g.units.some((u) => u.box === 'airborne_assault' && u.side === 'allied'); V.airborneAreas = []; }
   if (phase === 'combat' && when === 'end') { need(!V.dropPending, 'place the airborne units first (14.27a)'); V.airborneAreas = []; V.beachAssault = {}; }
   if (phase === 'admin' && when === 'end') need(!V.moralePick || !Object.values(V.moralePick).some((n) => n > 0), 'pick the Italian assets eliminated by Fading Italian Morale first (17.21c)');
   if (phase === 'supply' && when === 'mid') {
-    for (const u of g.units.filter((x) => x.untried && x.area != null && x.unsupplied)) { say(g, `${u.name} is out of supply: untried units are eliminated instead of checking morale (15.3c)`); eliminate(g, u); }
-    for (const c of g.chits) if (c.mission === 'interdiction' && c.box === 'map' && c.side === g.phasing) { c.box = 'used'; if (c.area != null) delete g.interdicted[c.area]; c.area = undefined; c.mission = undefined; }   // 16.33: to the Supply Phase of the same player turn
+    for (const u of g.units.filter((x) => x.untried && x.side === g.phasing && x.area != null && x.unsupplied)) {   /* only when its own OOS morale check is due */ say(g, `${u.name} is out of supply: untried units are eliminated instead of checking morale (15.3c)`); eliminate(g, u); }
+    for (const c of g.chits) if (c.mission === 'interdiction' && c.box === 'map') { c.box = 'used'; if (c.area != null) delete g.interdicted[c.area]; c.area = undefined; c.mission = undefined; }   // 16.33: to the Supply Phase of the same player turn
     if (g.airSupply && g.airSupply.side === g.phasing) { chit(g, g.airSupply.id).box = 'used'; g.airSupply = null; }
   }
   if (when === 'end') afterChange(g);
@@ -394,7 +403,7 @@ function unitSupply(g: Game, u: Unit) {
 function sicilyVictory(g: Game): Record<Side, number> & { net: number } {
   const V = state(g), S = SCEN(g), pts: Record<Side, number> = { allied: 0, axis: 0 };
   if (V.sunrise) {
-    for (const [a, v] of Object.entries(S.victory.area_vp ?? {})) { const c = g.control[+a]; if (c && !contested(g, +a)) pts[c] += v; }
+    for (const [a, v] of Object.entries(S.victory.area_vp ?? {})) { const c = g.control[+a]; if (c) pts[c] += v; }                                                  // 22.17: control, contested or not
     return { ...pts, net: pts.allied - pts.axis };
   }
   for (const a of mapAreas.values()) {
@@ -408,8 +417,7 @@ function sicilyVictory(g: Game): Record<Side, number> & { net: number } {
 }
 function finalResult(g: Game, net: number) {
   const S = SCEN(g); if (state(g).sunrise) return net > 0 ? `Allied Victory (${net} net VP, 22.17)` : net < 0 ? `Axis Victory (${-net} net VP, 22.17)` : 'Draw (22.17)';
-  const v = sicilyVictory(g);
-  if (S.victory.axis_win_at != null) return v.axis >= S.victory.axis_win_at ? `Axis Victory (${v.axis} VPs, 22.28)` : `Allied Victory (Axis ${v.axis} VPs, 22.28)`;
+  if (S.victory.axis_win_at != null) return -net >= S.victory.axis_win_at ? `Axis Victory (Axis ahead by ${-net} VP, 22.28)` : `Allied Victory (${net >= 0 ? `Allies ahead by ${net}` : `Axis ahead by only ${-net}`} VP, 22.28)`;   // 19.3: the VP level
   const n = Math.abs(net); if (!n) return 'Draw (22.38)';
   return `${net > 0 ? 'Allied' : 'Axis'} ${n >= (S.victory.levels?.operational ?? 4) ? 'Operational' : 'Marginal'} Victory (${n} net VP, 22.38)`;
 }
@@ -503,11 +511,16 @@ function adjustFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground', lis
   for (const f of list) { const u = g.units.find((x) => x.id === f.key); if (u && regular(u) && u.division && !u.untried) (byDiv.get(u.division) ?? byDiv.set(u.division, []).get(u.division)!).push(f); }
   for (const [d, fs] of byDiv) if (fs.length >= 2) list.push({ key: `division:${d}`, who: `${g.units.find((x) => x.id === fs[0].key)!.name}: divisional integrity`, shooter: { kind: 'unit', cls: 'infantry', dice: 1 }, dice: 1, sn: Math.min(...fs.map((f) => f.sn)), parts: [['divisional integrity extra die (15.2)', 0]], isAsset: true });
 }
+/** 16.21 Shock and Awe: the naval bombardment that removes the defending field works is the first act of each battle. */
+function navalShockFirst(g: Game, b: Battle) {
+  const V = state(g), id = V.navalShock[`${b.area}`], def = other(b.attacker);
+  if (id && b.assets[b.attacker].includes(id) && g.fieldWorks.includes(b.area) && (g.fwOwner[b.area] ?? def) === def) { g.fieldWorks = g.fieldWorks.filter((a) => a !== b.area); say(g, `${chit(g, id).name} removes the field works in ${nameOf(b.area)} (16.21)`, b.attacker); }
+}
 /** The field works go before the fire of the step the asset gave up (16.21 naval support first; 16.22 Rangers in the ground step, if the attack goes on and they survived). */
 function beforeFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground') {
   const V = state(g), key = `${b.area}`, def = other(b.attacker); if (side !== b.attacker) return;
-  // the naval asset's bombardment comes first even when no artillery fires and the artillery step is skipped
-  for (const [id, rule] of (kind === 'arty' ? [[V.navalShock[key], '16.21']] : [[V.navalShock[key], '16.21'], [V.rangerFw[key], '16.22']]) as [string | undefined, string][]) {
+  // the naval asset's bombardment is the first act of the battle (beforeBegin); the Rangers act in the ground step
+  for (const [id, rule] of (kind === 'arty' ? [] : [[V.rangerFw[key], '16.22']]) as [string | undefined, string][]) {
     if (id && b.assets[side].includes(id) && g.fieldWorks.includes(b.area) && (g.fwOwner[b.area] ?? def) === def) { g.fieldWorks = g.fieldWorks.filter((a) => a !== b.area); say(g, `${chit(g, id).name} removes the field works in ${nameOf(b.area)} (${rule})`, side); }
   }
 }
@@ -527,19 +540,22 @@ const canAbort = (g: Game, b: Battle) => (battleState(b).airborne && unitsIn(g, 
 function beforeBegin(g: Game, b: Battle) {
   const V = state(g); need(!V.dropPending, 'place the airborne units first (14.27a)');
   const first = V.airborneAreas.filter((a) => contested(g, a) && !g.fought.includes(a)); need(!first.length || first.includes(b.area), `the airborne assault in ${nameOf(first[0] ?? 0)} is fought first (14.27a)`);
+  navalShockFirst(g, b);
 }
+/** 14.41: zone B is prohibited to the Americans, zone D to the British. */
+const prohibited = (u: Unit, g: Game, a: number) => (nation(u) === 'us' ? zonesAt(g, a).every((z) => z === 'B') : zonesAt(g, a).every((z) => z === 'D'));
 /** 14.43: retreat within the army's zones first, to sea before any prohibited crossing. */
 function retreatPrefer(g: Game, u: Unit, from: number, opts: number[]) {
   if (u.side !== 'allied') return opts;
   const ok = opts.filter((n) => zoneOk(g, u, n)); if (ok.length) return ok;
   if (seaRetreat(g, u, from)) return [];
-  const n = nation(u), notProhibited = opts.filter((x) => !(n === 'us' ? zonesAt(g, x).every((z) => z === 'B') : zonesAt(g, x).every((z) => z === 'D')));   // 14.41: never zone B (US) / zone D (British) if anything else is open
+  const notProhibited = opts.filter((x) => !prohibited(u, g, x));                                     // 14.41: never zone B (US) / zone D (British) if anything else is open
   return notProhibited.length ? notProhibited : opts;
 }
 function onRetreat(g: Game, u: Unit, _from: number, to: number) {
-  if (u.side === 'allied' && to !== SEA && !zoneOk(g, u, to) && u.division && !isReleased(g, u)) { state(g).released.push(u.division); say(g, `${u.name} retreats across its army boundary: its division counts as released (14.43)`); }
+  if (u.side === 'allied' && to !== SEA && !zoneOk(g, u, to) && !prohibited(u, g, to) && u.division && !isReleased(g, u)) {   /* only the restricted-boundary case releases (14.43) */ state(g).released.push(u.division); say(g, `${u.name} retreats across its army boundary: its division counts as released (14.43)`); }
 }
-const retreatOk = (g: Game, u: Unit, from: number, to: number) => { const c = connection(from, to)!; if (isBox(to)) return false; if (c.restricted && (u.cls === 'armor' || !(etnaFree(g) === u.side && c.type === 'road'))) return false; return !(u.side === 'axis' && state(g).flank[to]); };
+const retreatOk = (g: Game, u: Unit, from: number, to: number) => { const c = connection(from, to)!; if (isBox(to)) return false; if (c.restricted && (u.cls === 'armor' || c.type !== 'road' || g.control[ETNA] !== u.side || (to === ETNA && etnaFree(g) !== u.side))) return false;   /* 14.1: the controller leaves by road; enters only uncontested */ return !(u.side === 'axis' && state(g).flank[to]); };
 
 /* ================= the volume's own player actions ================= */
 const avail = (g: Game, id: string, kinds: string[]) => { const c = chit(g, id); need(c.box === 'available' && kinds.includes(c.kind), `${c.name} is not available for this`); return c; };
@@ -601,13 +617,13 @@ export function pickMoraleLoss(g: Game, side: Side, assetId: string) {
 export function autoMoraleLoss(g: Game) { const V = state(g); for (const sd of ['axis', 'allied'] as const) while (V.moralePick?.[sd]) { const a = g.chits.find((x) => x.side === 'axis' && x.nation === 'italian' && x.box === 'available' && x.kind !== 'command_staff' && (isArty(x) || isBattleAsset(x))); if (!a) { V.moralePick![sd] = 0; break; } pickMoraleLoss(g, sd, a.id); } }
 /** 17.22: a Flanking Invasion asset lands in an enemy-controlled, uncontested coastal area within two areas of a unit of its army in a coastal area. */
 export function flankTargets(g: Game, chitId: string): number[] {
-  const c = chit(g, chitId), V = state(g); if (g.phase !== 'admin' || g.phasing !== 'allied' || c.box !== 'available' || !c.flank || (c.flank === 'once' && V.cdoUsed) || Object.keys(V.flank).length) return [];
+  const c = chit(g, chitId), V = state(g); if (g.phase !== 'admin' || g.phasing !== 'allied' || c.box !== 'available' || !c.flank || (c.flank === 'once' && V.cdoUsed) || V.flankTurn === g.turn) return [];          // one per Admin Phase
   const near = new Set<number>(); for (const u of g.units.filter((x) => x.side === 'allied' && x.area != null && !isBox(x.area) && regular(x) && nation(x) === c.nation && sarea(x.area)?.coastal)) for (const a of within(u.area!, 2)) near.add(a);
   return [...near].filter((a) => sarea(a)?.coastal && g.control[a] === 'axis' && !contested(g, a) && (!g.inPlay || g.inPlay.includes(a)) && !V.flank[a]);
 }
 export function playFlanking(g: Game, chitId: string, a: number) {
   need(flankTargets(g, chitId).includes(a), 'not a legal flanking invasion (17.22)'); const c = chit(g, chitId), V = state(g);
-  c.box = 'map'; c.area = a; if (c.flank === 'once') V.cdoUsed = true; V.flank[a] = c.id;
+  c.box = 'map'; c.area = a; if (c.flank === 'once') V.cdoUsed = true; V.flank[a] = c.id; V.flankTurn = g.turn;
   g.units.push({ id: `F-${c.id}`, name: c.name, side: 'allied', nation: c.nation, cls: 'infantry', q: [c.q ?? 'veteran'], max: 1, str: 1, area: a, garrison: true, disorder: 0, unsupplied: false, moved: true, reserve: null, exploit: false, chitId: c.id, ech: c.ech });
   say(g, `${c.name} lands in ${nameOf(a)}: a flanking invasion (17.22)`, 'allied');
   if (unitsIn(g, a, 'axis').length) { if (!g.riverAssault.includes(a)) g.riverAssault.push(a); say(g, 'The area is defended: one round of combat now, with air and naval support only', 'allied'); }
@@ -630,6 +646,8 @@ function onSpendSA(g: Game, _side: Side, c: Chit) {
 /* ---------- reserves (14.7) ---------- */
 const markerKey = (_g: Game, u: Unit) => (u.side === 'axis' ? 'res' : nation(u) === 'british' ? 'br' : 'us');
 const reserveOk = (g: Game, u: Unit) => !isLandingBox(u.area!) && untriedFree(g, u);
+/** 15.3a: a reserve marker on an untried unit is its one action this phase (called when the marker goes on). */
+const onReserve = (g: Game, u: Unit) => { if (u.untried && g.phase === 'movement') state(g).untriedActed = u.id; };
 /** 5.23 with 15.3a: an untried garrison digging in is the one untried unit acting this phase. */
 export function unitFieldWorks(g: Game, unitId: string) { const u = unit(g, unitId); need(untriedFree(g, u), 'only one untried unit may act in a Movement Phase (15.3a)'); need(!isBox(u.area!), 'not in a box'); buildFieldWorks(g, unitId); if (u.untried) state(g).untriedActed = u.id; }
 export const specialActions = (g: Game, side: Side) => saAvailable(g, side);
@@ -641,7 +659,7 @@ registerHooks('sicily', {
   newGame: newSicilyGame as Volume['newGame'], markerKey, reach: sicilyReach, moveOk, afterMove, stratAllowed, stratStep, afterStrat,
   successNumber: sicilySn, adjustFire, canAssign, moraleSn: sicilyMoraleSn, retreatOk, retreatPrefer, onRetreat, noRetreat: (_g, u) => !!u.garrison, seaRetreat,
   sources, supplyStep, unitSupply, supplyFree: (g, side, a) => g.airSupply?.area === a && g.airSupply.side === side, alwaysSupplied: (_g, u) => isLandingBox(u.area!) || !!u.garrison,
-  victory: sicilyVictory, finalResult, onPhase, onBattle, assault, reinforce, afterDraw, afterDeploy, extraDraws, canAbort, beforeBegin, beforeFire, saFilter, onSpendSA, battleAllowed, reserveOk,
+  victory: sicilyVictory, finalResult, onPhase, onBattle, assault, reinforce, afterDraw, afterDeploy, extraDraws, canAbort, beforeBegin, beforeFire, saFilter, onSpendSA, battleAllowed, reserveOk, onReserve, beforeRecycle, noReroute: true, staffReplaceOk: (_g, c) => c.side !== 'axis',
   appropriate: (g, u) => entryBoxes(g, u), stackLimit: () => 2, optional: [{ key: 'airborne', rule: '18.1', name: 'Airborne units', text: 'The 82nd and 1st Airborne units ignore the −1 unsupplied morale modifier.' },
     { key: 'advArty', rule: '18.2', name: 'Advanced artillery modifiers', text: '−1 when the target is the defender, +1 against an infantry point unit not in field works.' },
     { key: 'overrun', rule: '18.3', name: 'Overrunning artillery', text: 'Defending artillery left behind in a vacated area may be destroyed by the attacker.' },

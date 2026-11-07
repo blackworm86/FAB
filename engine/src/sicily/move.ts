@@ -21,6 +21,7 @@ export interface SMoveCtx {
   interdicted?: (a: number) => SSide | undefined;              // owner of an interdiction air mission over the area (16.33)
   untriedOnly?: (a: number) => boolean;                        // 14.42: the area holds only untried Italian units
   etnaFree?: SSide;                                            // 14.1: the side that controls an uncontested Mount Etna
+  etnaCtl?: SSide;                                             // 14.1: the side that controls Mount Etna, contested or not
   contestedAtStart?: Set<number>;                              // 17.12: areas already contested when the phase began
 }
 export interface SReach { area: number; cost: number; path: number[]; mustStop: boolean }
@@ -51,7 +52,7 @@ export function reachable(u: SMoveUnit, ctx: SMoveCtx): SReach[] {
       } else if (startContested && (enemyThere || (atStart && (contestedTo || ctx.controller?.(to) === enemy)))) continue;   // 5.34
       let all = false;
       if (c.restricted) {                                                                              // 14.1
-        const exception = ctx.etnaFree === u.side && c.type === 'road' && (to === ETNA || from === ETNA);
+        const exception = c.type === 'road' && ((from === ETNA && (ctx.etnaCtl ?? ctx.etnaFree) === u.side) || (to === ETNA && ctx.etnaFree === u.side));   // leave by road while in control; enter only uncontested
         if (!exception) { if (u.cls === 'armor' || !first) continue; all = true; }
       }
       if (c.river && (c.type !== 'road' || ctx.blownBridges?.has(key))) { if (!first) continue; all = true; }   // 5.32: no bridge, or a blown one

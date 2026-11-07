@@ -134,6 +134,12 @@ export interface Volume {
   battleAllowed?: (g: Game, area: number) => boolean;
   /** May this unit take a reserve marker (beyond the series conditions)? */
   reserveOk?: (g: Game, u: Unit) => boolean;
+  /** The Reroute Reinforcement special action (8.27) is not used (Sicily 14.64). */
+  noReroute?: boolean;
+  /** Whether this command staff may replace steps of units on the board (8.31; Sicily 14.63: not the Axis one). */
+  staffReplaceOk?: (g: Game, c: Chit) => boolean;
+  /** A reserve marker just went on the unit. */
+  onReserve?: (g: Game, u: Unit) => void;
 }
 
 export const VOLUMES: Record<string, Volume> = {};
