@@ -434,7 +434,7 @@ function paintBoard() {
     for (const [w, col] of [[7, '#ffffff99'], [2.9, '#141416']] as const) { c.lineWidth = w; c.strokeStyle = col; for (const a of MAP.areas.filter((x) => shownArea(x.id))) { c.beginPath(); a.polygon.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.stroke(); } }
     c.restore(); }
   else c.drawImage(pixels(linesImg), 0, 0, boardCv.width, boardCv.height);
-  if (VOL.art.zones) {                                                                           // the three German army zones: a dashed line in the zone's colour just inside it
+  if (VOL.art.zones && tint === 'zones') {                                                      // the three German army zones, when coloured: a dashed line in the zone's colour just inside it (the board prints the army boundaries)
     c.save(); c.scale(k, k); c.lineWidth = 2.6; c.lineJoin = 'round'; c.setLineDash([9, 5]);
     for (const [z, d] of Object.entries(VOL.art.zones)) { c.strokeStyle = hex6(ZONE_COL[+z]); c.stroke(new Path2D(d)); }
     c.restore();

@@ -4,6 +4,8 @@
 
 Keep the layer names and order. Then run `python3 web/scripts/import_map.py`; it rebuilds the polygons and the board texture and reports any difference against `data/bulge/`.
 
+The ground (paper washes by height and woods, in the print's manner) is `map-ground.jpg`, drawn by `tools/bulge/ground.py` from the scan's colours and woods; rebuild it before `import_map.py` if the map changes. The 3D winter ground and trees come from `tools/bulge/relief.py` (snowy Sentinel-2 scene + ESA WorldCover).
+
 ## Confirmed art (the only versions kept)
 - `BulgeMap_layers.svg` / `.ai`: the map (layers, then `web/scripts/import_map.py` → `web/public/map-base.svg`, `map-lines.svg`).
 - `vp-symbols.svg` → `web/public/icons/vp-*.svg`.

@@ -1,7 +1,7 @@
 """The real ground of a game map from open satellite data, in the season the game is set in: Sentinel-2 true colour (AWS open data,
 sentinel-cogs) and ESA WorldCover land cover (tree cover, built-up, water...), sampled on the map's own grid.
 
-Usage: python3 -I tools/terrain/satellite.py <scratch> <year> <months> <utm zone> <lat band> <squares or *> [max cloud %]  (run once per UTM zone the map spans; each run adds to sat.png)
+Usage: [SNOW=1] [ADD=1] python3 -I tools/terrain/satellite.py <scratch> <year> <months> <utm zone> <lat band> <squares or *> [max cloud %]  (run once per UTM zone the map spans; each run adds to sat.png)
   e.g. python3 -I tools/terrain/satellite.py <s>/sicily-terrain 2023 7,8 33 S TA,TB,TC,UA,UB,UC,VA,VB,VC,WA,WB,WC,XA,XB,XC 8
 Reads <scratch>/lonlat.npy (longitude, latitude of every point of the map's 2 px grid, from the game's terrain.py) and writes
 <scratch>/sat.png (true colour, the clearest scene of each tile in those months, 10 m data read at 80 m) and <scratch>/landcover.npy
@@ -16,7 +16,7 @@ from PIL import Image
 os.environ.setdefault('CURL_CA_BUNDLE', '/root/.ccr/ca-bundle.crt'); os.environ.setdefault('GDAL_CURL_CA_BUNDLE', '/root/.ccr/ca-bundle.crt')
 OUT, YEAR, MONTHS, ZONE, BAND, SQUARES = sys.argv[1:7]; MAXCLOUD = float(sys.argv[7]) if len(sys.argv) > 7 else 10
 ll = np.load(OUT + '/lonlat.npy'); R, C, _ = ll.shape; lon, lat = ll[..., 0].ravel().astype(float), ll[..., 1].ravel().astype(float)
-bbox = (lon.min(), lat.min(), lon.max(), lat.max()); print('map covers lon %.2f..%.2f lat %.2f..%.2f' % bbox)
+bbox = (lon.min(), lat.min(), lon.max(), lat.max()); print('map covers lon %.2f..%.2f lat %.2f..%.2f' % (bbox[0], bbox[2], bbox[1], bbox[3]))
 S3 = 'https://sentinel-cogs.s3.us-west-2.amazonaws.com/'
 get = lambda url: subprocess.run(['curl', '-sS', '--retry', '3', '--max-time', '120', url], capture_output=True, text=True).stdout
 
@@ -38,6 +38,7 @@ for sq in SQUARES.split(','):
             ov = max(0, min(bb[2], bbox[2]) - max(bb[0], bbox[0])) * max(0, min(bb[3], bbox[3]) - max(bb[1], bbox[1]))   # how much of the map this scene's data covers
             if ov <= 0: continue
             score = ov * (1 - cc / 100) ** 2                                                     # the widest clear scene wins
+            if os.environ.get('SNOW'): score *= meta['properties'].get('s2:snow_ice_percentage', 0) / 100 + 0.02   # SNOW=1: a winter map wants the snowiest clear scene
             if cc <= MAXCLOUD and (best is None or score > best[2]): best = (cc, pre, score)
     if best is None: print(sq, 'off the map or no clear scene'); continue
     cc, pre, _ = best; print(sq, pre.split('/')[-2], 'cloud %.1f%%' % cc)

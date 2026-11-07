@@ -88,7 +88,7 @@ outline = ''.join(f'<path d="{e.get("d")}"/>' for e in layers['OUTLINE'] if tag(
 towns, cities = '', ''
 for e in layers['Towns']:
     t = tag(e)
-    if t == 'circle': towns += f'<circle cx="{e.get("cx")}" cy="{e.get("cy")}" r="7.5" fill="#fff" stroke="#3b403d" stroke-width="2.6"/>'
+    if t == 'circle': towns += f'<circle cx="{e.get("cx")}" cy="{e.get("cy")}" r="6.2" fill="#f6f4ec" stroke="#575b5b" stroke-width="1.9"/>'
     else: cities += '<' + t + ''.join(f' {k}="{v}"' for k, v in e.attrib.items() if k != 'class') + '/>'
 def cross(x, y, r):
     a, b = r * .2, r * .34; pts = [(-a, -a), (-b, -r), (b, -r), (a, -a), (r, -b), (r, b), (a, a), (b, r), (-b, r), (-a, a), (-r, b), (-r, -b)]
@@ -121,8 +121,20 @@ for letter, e in sorted(entries.items()):
 report.extend(f'drawn entry strip {i} was not matched to an entry area' for i in range(len(E_SH)) if i not in used)
 open('docs/maps/vector/import-report.txt', 'w').write('\n'.join(report) or 'no differences'); print('\n'.join(report[:40]) or 'no differences')
 import base64, os
-WP = 'docs/maps/vector/map-woods.png'                                                                 # forest pattern traced from the printed map by woods.py
-woods_g = f'<clipPath id="land"><path fill-rule="evenodd" d="{land_d}"/></clipPath><g id="woods" clip-path="url(#land)"><image href="data:image/png;base64,{base64.b64encode(open(WP, "rb").read()).decode()}" x="0" y="0" width="{W}" height="{H}" preserveAspectRatio="none"/></g>' if os.path.exists(WP) else '<g id="woods"></g>'
+GP = 'docs/maps/vector/map-ground.jpg'                                                               # the print's paper washes and woods, redrawn by tools/bulge/ground.py
+woods_g = f'<clipPath id="land"><path fill-rule="evenodd" d="{land_d}"/></clipPath><g id="woods" clip-path="url(#land)"><image href="data:image/jpeg;base64,{base64.b64encode(open(GP, "rb").read()).decode()}" x="0" y="0" width="{W}" height="{H}" preserveAspectRatio="none"/></g>' if os.path.exists(GP) else '<g id="woods"></g>'
+# army boundaries, as printed: the white border edged with grey dashes, where areas of two army zones meet
+from shapely.geometry import Polygon as _P
+zone = {a['id']: a['zone'] for a in out['areas']}; P_ = {a['id']: _P(a['polygon']).buffer(0) for a in out['areas']}
+from shapely.geometry import LineString as _L
+wet = unary_union([_L(pts_of(e, 24)).buffer(6) for e in layers['Rivers'] if tag(e) == 'path' and e.get('d')])   # where a river is the border, the print shows the river alone
+army = ''
+for i in P_:
+    for j in P_:
+        if i < j and zone[i] != zone[j] and P_[i].distance(P_[j]) < 2:
+            g = P_[i].boundary.intersection(P_[j].buffer(2.5)).difference(wet)
+            for ln in (getattr(g, 'geoms', None) or [g]):
+                if ln.geom_type == 'LineString' and ln.length > 6: army += '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in ln.coords) + '"/>'
 head = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">'
 base = f'''{head}
 <rect id="frame" width="{W}" height="{H}" fill="#bccad3"/>
@@ -132,9 +144,11 @@ base = f'''{head}
 </svg>'''
 lines = f'''{head}
 <g id="boundaries" fill="none" stroke="#fbfbf6" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">{bnd}</g>
+<g id="army" fill="none" stroke-linecap="butt" stroke-linejoin="round"><g stroke="#6d706c" stroke-width="9" stroke-dasharray="8 5">{army}</g><g stroke="#fbfbf6" stroke-width="3.4">{army}</g></g>
 <g id="rivers" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#ffffff">{rivers_c}</g><g stroke="#1c78c0">{rivers}</g></g>
 <g id="roads" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#e4e6d8" stroke-width="4.0" stroke-opacity="0.8">{roads_c}</g><g stroke="#585b56" stroke-width="2.4">{roads_c}</g></g>
-<g id="cities" fill="#6b706d" stroke="#3a3f3d" stroke-width="1.6">{cities}</g>
+<defs><pattern id="hatch" width="4.5" height="4.5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4.5" height="4.5" fill="#aeb2b4"/><path d="M0 0V4.5" stroke="#6c7175" stroke-width="1.6"/></pattern></defs>
+<g id="cities" fill="url(#hatch)" stroke="#5a5f62" stroke-width="1.4">{cities}</g>
 <g id="towns">{towns}</g>
 <g id="outline" fill="none" stroke="#fbfbf6" stroke-width="4.6" stroke-linejoin="round">{outline}</g>
 </svg>'''
