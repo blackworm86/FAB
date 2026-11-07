@@ -360,7 +360,7 @@ function afterChange(g: Game) {
   }
   if (V.sunrise) return;
   for (const a of MUTUAL) if (g.control[a] === 'allied' && !V.triggered.includes(`vp${a}`)) { V.triggered.push(`vp${a}`); moraleTrigger(g, `${nameOf(a)} captured`); }
-  for (const p of portBoxes) if (g.control[p.area] === 'allied' && (p.box === 'P4' || V.portDamage[p.box] === 0) && !V.triggered.includes(p.box)) { V.triggered.push(p.box); moraleTrigger(g, `the port of ${p.name} is Allied and undamaged`); }
+  for (const p of portBoxes) if (p.box !== 'P4' && g.control[p.area] === 'allied' && V.portDamage[p.box] === 0 && !V.triggered.includes(p.box))   /* the three Sicilian ports (Example 10), not Messina */ { V.triggered.push(p.box); moraleTrigger(g, `the port of ${p.name} is Allied and undamaged`); }
 }
 function captureBeachhead(g: Game, b: number, why: string) {
   const V = state(g); delete V.beachheads[b]; V.captured.push(b); delete g.control[b];
@@ -378,7 +378,7 @@ function afterDraw(g: Game) {
   for (const c of g.chits.filter((x) => x.kind === 'air_mission' && x.side === 'axis' && x.box === 'available' && x.drawn === stamp)) { if (!V.airfieldHoles) break; c.box = 'captured_airfields'; V.airfieldHoles--; say(g, `${c.name} fills the empty Captured Airfields box (16.4)`, 'axis'); }
 }
 /** 16.5: one extra Allied draw per undamaged Sicilian port the Allies control and occupy. */
-const extraDraws = (g: Game, side: Side) => (side !== 'allied' || state(g).sunrise ? 0 : portBoxes.filter((p) => g.control[p.area] === 'allied' && unitsIn(g, p.area, 'allied').some(regular) && (p.box === 'P4' || state(g).portDamage[p.box] === 0)).length);
+const extraDraws = (g: Game, side: Side) => (side !== 'allied' || state(g).sunrise ? 0 : portBoxes.filter((p) => g.control[p.area] === 'allied' && unitsIn(g, p.area, 'allied').some(regular) && p.box !== 'P4' && state(g).portDamage[p.box] === 0).length);   // 16.5: Syracuse, Catania, Palermo only
 
 /* ================= supply (14.9) and victory (19.x) ================= */
 let NATION_FILTER: Nation | null = null;

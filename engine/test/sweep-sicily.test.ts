@@ -178,3 +178,15 @@ describe('Sicily rules sweep', () => {
     expect(S.isReleased(g, u)).toBe(false);
   });
 });
+
+describe('Sicily ports (decision: Example 10 lists three Sicilian ports)', () => {
+  it('17.21a / 16.5: an Allied Messina triggers neither Fading Italian Morale nor the extra Allied draw', () => {
+    const g = newSicilyGame(81);
+    const V = S.state(g), before = V.morale;
+    for (const x of E.unitsIn(g, 29, 'axis')) x.area = 28;
+    const br = unit(g, 'BR03'); br.box = undefined; br.area = 29; g.control[29] = 'allied';
+    E.VOLUMES.sicily.onPhase!(g, 'movement', 'end');
+    expect(V.morale).toBe(before);
+    expect(E.VOLUMES.sicily.extraDraws!(g, 'allied')).toBe(0);
+  });
+});
