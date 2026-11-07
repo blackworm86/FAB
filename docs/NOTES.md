@@ -87,3 +87,12 @@ The board texture and the area polygons come from the hand-drawn Illustrator fil
 
 ## Golan '73 decisions
 - **14.17 / 19.5 / 20.35 "west of the Jordan":** the rule book prints "area 6 (Gadot), area 7 (Kfar Hanasi) or area 8 (Almagor)". On the map Kfar Hanasi is area 9 and Almagor area 10 (7 is B'not Yakov Bridge, 8 Had Nes, both east of the river; the river edges are 5-6, 6-7, 8-9, 10-11). The printed numbers are a misprint; the engine follows the names: areas 6, 9, 10.
+
+## Rules decisions confirmed by the owner (rules sweep, Nov 2026)
+- **6.43 (series):** players allocate their own step losses; the game enforces the limits and offers a "Suggested" order.
+- **Sicily 17.21a / 16.5:** only Syracuse, Catania and Palermo count as ports (Example 10); Messina does not.
+- **Golan 14.02:** a failed minefield check costs only the extra 1 MP; the unit may continue into a non-mined area (Example 6).
+- **Golan 18.32:** +1 to the point unit per supporting artillery asset.
+- **Golan 18.2:** a unit that fails the withdrawal check stops, disordered, in the first area it enters (or stays put if it cannot stop there).
+- **Golan 18.4:** Syrian air may neither fire nor support a unit in defence; interdiction is unaffected.
+- **Golan 18.5:** strongpoints do not count when deciding whether Israeli divisions are mixed in an area.
