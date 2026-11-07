@@ -715,7 +715,8 @@ export function startBattle(g: Game, a: number, viaSA = false, chitId?: string):
   if (g.battle) throw new Error('a battle is already open');
   const bt = g.phase === 'btCombat';
   if ((g.phase !== 'combat' && !bt && !CUR.battleAllowed?.(g, a)) || !contested(g, a) || g.fought.includes(a)) throw new Error('no battle here');
-  const att = fighters(g, a, g.phasing, true).filter((u) => !u.garrison), def = fighters(g, a, other(g.phasing), false);
+  const att = fighters(g, a, g.phasing, true).filter((u) => !u.garrison || !!CUR.battleAllowed?.(g, a)),   // a landing flank asset fights its own round (Sicily 17.22)
+    def = fighters(g, a, other(g.phasing), false);
   if (!att.length) throw new Error('no attacker in good order');
   let lockedAtStart = false;
   if (bt && !newlyContested(g).includes(a)) {
@@ -1140,6 +1141,7 @@ function supplyPhase(g: Game) {
   }
   g.roadblocks = {};                                                                                   // 4.34
   for (const u of g.units.filter((x) => x.id.startsWith('DR-') && x.area != null)) { chit(g, u.chitId!).box = 'used'; u.area = null; say(g, `${u.name} survives and returns to the Used Box`); }   // 4.35
+  for (const a of areas.keys()) updateControl(g, a);
   CUR.onPhase?.(g, 'supply', 'mid');
   g.units.forEach((u) => { u.exploit = false; u.adjOnly = false; if (u.side === other(g.phasing)) dropReserve(g, u); });
   g.supplyPending = true;                                                                              // the player rolls the checks (rollSupply); endPhase rolls them if nobody did
@@ -1159,6 +1161,7 @@ export function rollSupply(g: Game) {
     else if ((q === 'veteran' && r === 10) || (q === 'green' && r >= 8)) { eliminate(g, u); say(g, `${u.name} surrenders (${r})`); }
     else { u.str -= 1; if (u.str <= 0) eliminate(g, u); say(g, `${u.name} unsupplied and disordered, morale failed (${r}): step loss`); }
   }
+  for (const a of areas.keys()) updateControl(g, a);                                                   // eliminated units leave areas behind
   supplyCleanup(g);
 }
 function supplyCleanup(g: Game) { CUR.onPhase?.(g, 'supply', 'end'); }
@@ -1250,7 +1253,7 @@ function finalResult(g: Game, net: number) {
 export const unitsFor = (g: Game, side: Side) => g.units.filter((u) => u.side === side && u.area != null);
 
 /* ================= M3: roadblocks, staff functions, air missions, reroute ================= */
-const vacantSupplied = (g: Game, side: Side, a: number) => supplied(g, side, a) && !unitsIn(g, a).length && areas.get(a)!.tdn >= 1;
+const vacantSupplied = (g: Game, side: Side, a: number) => (!g.inPlay || g.inPlay.includes(a)) && supplied(g, side, a) && !unitsIn(g, a).length && areas.get(a)!.tdn >= 1;
 /** 4.34 / 4.35: a roadblock marker, or the engineer itself as a defended roadblock. */
 export function roadblock(g: Game, id: string, area: number, defended: boolean) {
   needAdmin(g); const c = chit(g, id);
@@ -1356,7 +1359,7 @@ export function actorOf(g: Game): Side | 'both' {
   return g.phase === 'reaction' ? other(g.phasing) : g.phasing;
 }
 const PHASE_ORDER: Phase[] = ['reinforcement', 'admin', 'movement', 'strategic', 'combat', 'reaction', 'btMove', 'btCombat', 'supply'];
-const clock = (g: Game) => g.turn * 1000 + (g.phasing === sidesOf(g)[0] ? 0 : 500) + PHASE_ORDER.indexOf(g.phase);
+const clock = (g: Game) => g.phase === 'deploy' ? g.turn * 1000 - 1 : g.turn * 1000 + (g.phasing === sidesOf(g)[0] ? 0 : 500) + PHASE_ORDER.indexOf(g.phase);
 /** Without a server nobody stops a modified browser from writing a false game; each browser checks what the other one wrote and warns.
  *  `writer` is the side whose account wrote the change (null: an admin or unknown). Returns plain-language problems, empty when all is well. */
 export function auditChange(prev: Game, next: Game, writer: Side | null): string[] {

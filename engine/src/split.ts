@@ -5,16 +5,16 @@
 import { visibleTo, other, sidesOf, type Game, type Side, type Unit } from './game';
 import { alias } from './redact';
 
-export type UnitSecret = Pick<Unit, 'name' | 'cls' | 'q' | 'max' | 'str' | 'code' | 'symbol' | 'ech' | 'entry' | 'arrival' | 'chitId' | 'from' | 'ghost' | 'fort' | 'kind' | 'division' | 'brigade' | 'symbol2' | 'peiperFull' | 'heydte'>;
+export type UnitSecret = Pick<Unit, 'name' | 'cls' | 'q' | 'max' | 'str' | 'code' | 'symbol' | 'ech' | 'entry' | 'arrival' | 'chitId' | 'from' | 'ghost' | 'fort' | 'kind' | 'division' | 'brigade' | 'symbol2' | 'peiperFull' | 'heydte' | 'motorized'>;
 export interface Priv { salt: string; secrets: Record<string, UnitSecret>; epoch?: Record<string, number> }
 /** A block's opaque id for this seat. It changes (new epoch) each time a revealed block is hidden again, so the other side cannot link it to what it saw. */
 export const aliasOf = (priv: Pick<Priv, 'salt' | 'epoch'>, id: string) => { const e = priv.epoch?.[id]; return alias(priv.salt, e ? `${id}#${e}` : id); };
 export type Reveal = UnitSecret & { id: string };
 export type Reveals = Record<string, Reveal>;                 // by alias
-const KEYS = ['name', 'cls', 'q', 'max', 'str', 'code', 'symbol', 'ech', 'entry', 'arrival', 'chitId', 'from', 'ghost', 'fort', 'kind', 'division', 'brigade', 'symbol2', 'peiperFull', 'heydte'] as const;   // everything that tells what a block is: a ghost, a strongpoint, its division
+const KEYS = ['name', 'cls', 'q', 'max', 'str', 'code', 'symbol', 'ech', 'entry', 'arrival', 'chitId', 'from', 'ghost', 'fort', 'kind', 'division', 'brigade', 'symbol2', 'peiperFull', 'heydte', 'motorized'] as const;   // everything that tells what a block is: a ghost, a strongpoint, its division
 const quote = (s: string) => JSON.stringify(s);
 const swap = (json: string, pairs: Iterable<[string, string]>) => { for (const [a, b] of pairs) json = json.split(quote(a)).join(quote(b)); return json; };
-const BLANK: Partial<Unit> = { name: 'Hidden block', cls: 'infantry', q: ['green'], max: 1, str: 1, code: '', symbol: 'inf', ech: '', entry: undefined, arrival: undefined, chitId: undefined, from: undefined, ghost: undefined, fort: undefined, kind: undefined, division: undefined, brigade: undefined, symbol2: undefined, peiperFull: undefined, heydte: undefined };
+const BLANK: Partial<Unit> = { name: 'Hidden block', cls: 'infantry', q: ['green'], max: 1, str: 1, code: '', symbol: 'inf', ech: '', entry: undefined, arrival: undefined, chitId: undefined, from: undefined, ghost: undefined, fort: undefined, kind: undefined, division: undefined, brigade: undefined, symbol2: undefined, peiperFull: undefined, heydte: undefined, motorized: undefined };
 
 export const secretOf = (u: Unit): UnitSecret => Object.fromEntries(KEYS.map((k) => [k, u[k]])) as UnitSecret;
 /** The details of every block on `side`: what goes in that seat's private document. */

@@ -347,8 +347,8 @@ function onPhase(g: Game, phase: string, when: 'start' | 'mid' | 'end') {
   if (phase === 'supply' && when === 'mid') {
     for (const u of g.units.filter((x) => x.untried && x.side === g.phasing && x.area != null && x.unsupplied)) {   /* only when its own OOS morale check is due */ say(g, `${u.name} is out of supply: untried units are eliminated instead of checking morale (15.3c)`); eliminate(g, u); }
     for (const c of g.chits) if (c.mission === 'interdiction' && c.box === 'map') { c.box = 'used'; if (c.area != null) delete g.interdicted[c.area]; c.area = undefined; c.mission = undefined; }   // 16.33: to the Supply Phase of the same player turn
-    if (g.airSupply && g.airSupply.side === g.phasing) { chit(g, g.airSupply.id).box = 'used'; g.airSupply = null; }
   }
+  if (phase === 'supply' && when === 'end' && g.airSupply) { chit(g, g.airSupply.id).box = 'used'; g.airSupply = null; }   // 16.34: to the Used Box at the end of that Supply Phase
   if (when === 'end') afterChange(g);
 }
 /** What control changes trigger: lost beachheads (14.22), captured airfields (16.4), Fading Italian Morale (17.21a). */

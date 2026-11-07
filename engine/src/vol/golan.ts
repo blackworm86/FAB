@@ -585,7 +585,7 @@ export function zvikaToCup(g: Game) {
   const z = zvikaOnMap(g); need(!!z, 'Lt. Zvika is not on the map in the Supply Phase (Lt. Zvika variant)');
   z!.area = null; z!.str = 0; const c = chit(g, z!.chitId!); c.box = 'cup'; c.area = undefined; say(g, 'Lt. Zvika is taken back into the Selection Cup', 'israeli');
 }
-export const zvikaOnMap = (g: Game) => (g.opts.zvikaCup && g.phase === 'supply' ? g.units.find((u) => u.area != null && u.chitId && chit(g, u.chitId).kind === 'event_lt_zvika') : undefined);
+export const zvikaOnMap = (g: Game) => (g.opts.zvikaCup && g.phase === 'supply' && g.phasing === 'israeli' ? g.units.find((u) => u.area != null && u.chitId && chit(g, u.chitId).kind === 'event_lt_zvika') : undefined);
 /** Advanced ghosts: the best of an armour and an infantry move, never into an area that would become contested. */
 function ghostReach(g: Game, u: Unit, one: boolean, ctx: GMoveCtx) {
   const all = new Map<number, ReturnType<typeof reachable>[number]>();
@@ -618,7 +618,7 @@ function retreatOk(g: Game, u: Unit, from: number, to: number) {
 /** 14.42: a Syrian unit retreats across the operational boundary only when nothing else is open (turns 1–4). */
 function retreatPrefer(g: Game, u: Unit, from: number, opts: number[]) {
   if (u.side !== 'syrian' || g.turn > 4) return opts;
-  const inside = opts.filter((n) => !connection(from, n)!.sector); return inside.length ? inside : opts;
+  const inside = opts.filter((n) => !connection(from, n)?.sector); return inside.length ? inside : opts;   // a retreat past a full neighbour ends further away
 }
 /** A retreat across a minefield costs a morale check (14.02); the strongpoint left behind is evacuated (15.6); a garrison left behind is destroyed (16.24). */
 function onRetreat(g: Game, u: Unit, from: number, to: number) {
@@ -902,7 +902,7 @@ const shuffled = <T,>(g: Game, xs: T[], salt: number) => { const sr = secureRand
 /** 15.7 quick placement of the strongpoints and ghosts still to place: the errata's rough historical set-up, or shuffled face-down ("most players prefer"). */
 export function autoStrongpoints(g: Game, how: 'historical' | 'shuffle') {
   need(g.phase === 'deploy', 'only while setting up');
-  if (how === 'historical') for (const { id, area } of SUGGESTED) if (deployOptions(g, id).includes(area)) deploy(g, id, area);
+  if (how === 'historical') for (const { id, area } of SUGGESTED) if (g.units.some((u) => u.id === id && u.box === 'deploy') && deployOptions(g, id).includes(area)) deploy(g, id, area);
   const rest = shuffled(g, g.units.filter((u) => (u.fort || u.ghost) && u.box === 'deploy'), 7);
   for (const u of rest) { const o = deployOptions(g, u.id); if (o.length) deploy(g, u.id, shuffled(g, o, u.id.charCodeAt(2))[0]); }
 }
