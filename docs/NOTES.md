@@ -84,3 +84,6 @@ Added A (sequence, movement table), B (extended sequence), C (combat, morale, hi
 
 ## Vector map
 The board texture and the area polygons come from the hand-drawn Illustrator file `docs/maps/vector/BulgeMap_layers.svg` (and `.ai`). Run `python3 web/scripts/import_map.py` to rebuild `data/bulge/map.json` and `web/public/map-vector.svg` from it; it writes `docs/maps/vector/import-report.txt` with any disagreement against the data. The original scan `web/public/map.jpg` is untouched and stays for the later 3D scenery pass (woods, towns).
+
+## Golan '73 decisions
+- **14.17 / 19.5 / 20.35 "west of the Jordan":** the rule book prints "area 6 (Gadot), area 7 (Kfar Hanasi) or area 8 (Almagor)". On the map Kfar Hanasi is area 9 and Almagor area 10 (7 is B'not Yakov Bridge, 8 Had Nes, both east of the river; the river edges are 5-6, 6-7, 8-9, 10-11). The printed numbers are a misprint; the engine follows the names: areas 6, 9, 10.

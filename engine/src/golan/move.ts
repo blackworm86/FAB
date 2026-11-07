@@ -52,7 +52,8 @@ function step(u: GMoveUnit, ctx: GMoveCtx, from: number, to: number, first: bool
   if (syrianNight && (to === HERMON || from === HERMON)) return null;                            // 14.03
   if (u.side === 'syrian' && ctx.turn <= 4 && c.sector) return null;                            // 14.42
   const toArea = isAssembly(to) ? null : area(to);
-  if (u.side === 'israeli' && toArea?.syria && ctx.units(to).syrian > 0) return null;           // 14.43: into Syria only if undefended
+  const fromSyria = !isAssembly(from) && area(from).syria;
+  if (u.side === 'israeli' && toArea?.syria && !fromSyria && ctx.units(to).syrian > 0) return null;   // 14.43: across the Purple Line into Syria only if undefended
   const road = c.kind === 'road' || c.kind === 'assembly';
   let cost = road ? 1 : u.slowField ? 3 : 2, all = false, limited: string | undefined;
   const intoEnemy = enemyIn(to);

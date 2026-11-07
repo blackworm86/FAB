@@ -75,8 +75,8 @@ describe('air missions and commando raids (16.11, 16.31)', () => {
 });
 
 describe('events (17.x, 4.21)', () => {
-  it('17.11 the Assad Guard is released and arrives next Reinforcement Phase', () => {
-    const g = newGolanGame(5); fresh(g); golan.playRelease(g, give(g, 'SC42')); expect(unit(g, 'S21').box).toBe('arriving');
+  it('17.11 the Assad Guard is released and placed at once in a friendly Entry area', () => {
+    const g = newGolanGame(5); fresh(g); golan.playRelease(g, give(g, 'SC42')); expect(unit(g, 'S21').box).toBeUndefined(); expect(unit(g, 'S21').area).not.toBeNull();
   });
   it('17.12 SSM: Israeli air assets in the Available Box go back to the cup on 1–2', () => {
     const g = newGolanGame(6); fresh(g); golan.playSSM(g, give(g, 'SC46')); expect(chit(g, 'SC46').box).toBe('eliminated');
@@ -172,7 +172,7 @@ describe('Special Actions and staff in the Admin Phase', () => {
     const g = newGolanGame(16); fresh(g); g.turn = 3;
     unit(g, 'S01').disorder = 1; give(g, 'SC21'); rally(g, 'syrian', 63, 'SC21'); expect(chit(g, 'SC21').box).toBe('eliminated');
     unit(g, 'S04').str = 3; give(g, 'SC28'); qualityReplacement(g, 'S04', 'SC28'); expect(unit(g, 'S04').str).toBe(4);
-    give(g, 'SC33'); golan.releaseOperationalReserve(g, 'SC33'); expect(unit(g, 'S18').box).toBe('arriving'); expect(unit(g, 'S19').box).toBe('operational_reserve');
+    give(g, 'SC33'); golan.releaseOperationalReserve(g, 'SC33'); expect(unit(g, 'S18').box).toBeUndefined(); expect(unit(g, 'S18').area).not.toBeNull();   // 14.61b: at once expect(unit(g, 'S19').box).toBe('operational_reserve');
     const sam = g.chits.find((c) => c.kind === 'sam')!; sam.box = 'eliminated'; give(g, 'SC38'); golan.replaceAsset(g, 'syrian', sam.id, 'SC38'); expect(sam.box).toBe('cup');
     for (const id of ['I06', 'I07']) Object.assign(unit(g, id), { area: 52, disorder: 0 }); unit(g, 'I06').str = 1; unit(g, 'I07').str = 1;
     give(g, 'IC14'); golan.mergeUnits(g, 'I06', 'I07', 'IC14'); expect(unit(g, 'I07').str).toBe(2); expect(unit(g, 'I06').area).toBeNull(); expect(g.elimLarge).toEqual([]);
@@ -190,11 +190,11 @@ describe('Special Actions and staff in the Admin Phase', () => {
   });
 });
 
-describe('a released unit arrives next Reinforcement Phase (15.2, 17.11)', () => {
-  it('the Strategic Reserve unit is placed at a Syrian entry area', () => {
+describe('a released unit enters at once (15.2, 17.11, 14.61b)', () => {
+  it('the Strategic Reserve unit is placed in a friendly-controlled Syrian entry area, not next turn', () => {
     const g = newGolanGame(20); for (const a of mustFight(g)) fight(g, a);
-    fresh(g); golan.playRelease(g, give(g, 'SC42')); g.phase = 'supply'; g.phasing = 'israeli'; g.supplyPending = false;
-    endPhase(g); expect(g.phase).toBe('reinforcement'); expect(g.pendingArrivals).toContain('S21'); expect(unit(g, 'S21').box).toBeUndefined();
+    fresh(g); golan.playRelease(g, give(g, 'SC42')); const s = unit(g, 'S21');
+    expect(s.box).toBeUndefined(); expect(s.area).not.toBeNull(); expect(g.control[s.area!]).toBe('syrian');
   });
 });
 

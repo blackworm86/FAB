@@ -71,7 +71,7 @@ German engineers work in their own army's zone (14.52); an army without its engi
   'golan:air_mission': ['Air support (16.3)', `Combat: fires as artillery or supports one unit (+1 Syrian, +2 Israeli). Israel may commit two (one of each) only west of the SAM barrier or when no SAM is available (16.22).
 • Admin Phase: interdiction over an area (+1 MP to enter and leave until the second player's Supply Phase) or reconnaissance (the enemy blocks there are shown).
 • Never on the night turn (14.03). Israeli missions east of the SAM barrier may be answered by a SAM.`],
-  'golan:event_release': ['Strategic Reserve released (17.11)', `Admin Phase: the named brigade is released; it arrives next Reinforcement Phase at a Syrian entry area.`],
+  'golan:event_release': ['Strategic Reserve released (17.11)', `Admin Phase: the named brigade is released and placed at once in a friendly-controlled Syrian entry area.`],
   event_ssm_strike: ['SSM strike (17.12)', `Admin Phase: each Israeli air asset in the Available Box goes back to the cup on a roll of 1–2.`],
   event_arriving_battalion: ['Arriving battalion (17.21)', `Admin Phase, to its brigade: +2 steps to one supplied unit, +1 to each of two, or an eliminated unit back with 2 steps in an Assembly area (and off the eliminated-units VP track).`],
   event_dugman5: ['Operation Dugman 5 (17.22)', `Played when drawn: one die per SAM in the Available Box. 1: destroyed (an Israeli air asset is released). 2–3: back to the cup. 10: an Israeli air asset is lost.`],

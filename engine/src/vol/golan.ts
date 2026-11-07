@@ -35,7 +35,7 @@ export interface GolanState {
   alowda?: { raids: number; cup?: string[]; drawn?: string[] };
   chem?: number; ghostsMade?: number;    // optional rules: chemical attacks so far (each one after the first gives Israel a VP); ghosts drawn from the Al-Owda cup       // 20.35 the commandos landed at the start; 20.36 the Israeli Reinforcements Draw Cup
 }
-export interface GolanBattle { event: Partial<Record<Side, string>>; counterbattery: Partial<Record<Side, string>>; ew?: { pending: boolean }; defLocked?: boolean; engBridge?: string; chem?: string; flank?: string; spSwap?: string }
+export interface GolanBattle { event: Partial<Record<Side, string>>; counterbattery: Partial<Record<Side, string>>; ew?: { pending: boolean }; defLocked?: boolean; engBridge?: string; chem?: string; flank?: string; spSwap?: string; samCancelled?: boolean }   // samCancelled: 16.12
 export const state = (g: Game) => g.vol as unknown as GolanState;
 export const battleState = (b: Battle) => (b.vol ??= { event: {}, counterbattery: {} }) as unknown as GolanBattle;
 
@@ -252,7 +252,7 @@ function alowdaDraw(g: Game) {
 /** The two commandos the card lands at the start, still to place. */
 export const alowdaCommandos = (g: Game) => (isAlOwda(g) && g.phase === 'deploy' ? g.chits.filter((c) => ALO.syrian.commando_landing.includes(c.id) && c.box === 'available') : []);
 export const alowdaRaidAreas = (g: Game) => (isAlOwda(g) && g.phase === 'deploy' && alowdaCommandos(g).length > 0
-  ? [...areas.keys()].filter((a) => !isAssembly(a) && a !== HERMON && a !== 17 && ![6, 7, 8].includes(a) && g.control[a] === 'israeli' && vacant(g, a)) : []);
+  ? [...areas.keys()].filter((a) => !isAssembly(a) && a !== HERMON && a !== 17 && !WEST_OF_JORDAN.includes(a) && g.control[a] === 'israeli' && vacant(g, a)) : []);
 export function alowdaRaid(g: Game, chitId: string, a: number) {
   need(alowdaRaidAreas(g).includes(a), 'a vacant Israeli-held area east of the Jordan (not Mt Hermon or Ma\'agan)');
   const c = chit(g, chitId); need(ALO.syrian.commando_landing.includes(c.id) && c.box === 'available', 'the 181st or 182nd commandos (Al-Owda Setup Card)');
@@ -288,19 +288,30 @@ function beforeMove(g: Game, u: Unit, opt: Opt) {
 function afterMove(g: Game, u: Unit, opt: Opt) {
   const V = state(g), from = opt.path[0], to = opt.area, prev = opt.path[opt.path.length - 2], last = connection(prev, to)!, key = edgeKey(prev, to);
   for (const l of opt.limited ?? []) if (!V.crossed.includes(l)) V.crossed.push(l);
-  if (unitsIn(g, to, other(u.side)).length && ((last.atDitch && !V.bridgedDitch.includes(key)) || (last.river && (last.type !== 'road' || g.blown.includes(key))))) (V.assaultEntered[to] ??= []).push(u.id);   // 14.01
+  if (unitsIn(g, to, other(u.side)).length && ((last.atDitch && !V.bridgedDitch.includes(key)) || last.rugged || last.escarpment || (last.river && (last.type !== 'road' || g.blown.includes(key))))) (V.assaultEntered[to] ??= []).push(u.id);   // 14.01 (a: rugged, escarpment, AT ditch)
   if (u.side === 'israeli' && !V.purpleLineCrossed && !isAssembly(from) && !garea(from).syria && !isAssembly(to) && garea(to).syria) purpleLineCrossed(g);
   if (u.side === 'israeli' && V.raids.includes(to)) resolveRaid(g, u, to);
   if (u.side === 'syrian') { const c = raidUnitAt(g, to); if (c) { chit(g, c.chitId!).box = 'used'; c.area = null; c.str = 0; V.raids = V.raids.filter((a) => a !== to); V.raidPartial = V.raidPartial.filter((a) => a !== to); say(g, `${u.name} relieves the commandos in ${areas.get(to)!.name}`); } }
   if (u.side === 'israeli' && regular(u)) evacuateStrongpoint(g, from);
   ghostsMet(g, u, to, opt.cost);
 }
-/** 15.2, 15.4a: the first Israeli unit into Syria releases the 3rd Tank Division and two Strategic Reserve units. */
-function purpleLineCrossed(g: Game) {
+/** 15.2, 15.4a: the first Israeli unit into Syria releases at once the 3rd Tank Division and two Strategic Reserve units of the Syrian
+ *  player's choice (`choice`; by default the first two still held: Assad, then the 141st), each placed in a friendly-controlled Entry area.
+ *  A unit with no open Entry area waits in the Arriving box for the next Reinforcement Phase. */
+export function purpleLineCrossed(g: Game, choice?: string[]) {
   state(g).purpleLineCrossed = true;
-  for (const u of g.units) if (u.box === 'operational_reserve') u.box = 'arriving';
-  for (const u of g.units.filter((x) => x.box === 'strategic_reserve').slice(0, 2)) u.box = 'arriving';
+  const held = g.units.filter((x) => x.box === 'strategic_reserve'), sr = choice ? held.filter((u) => choice.includes(u.id)) : held;
+  for (const u of [...g.units.filter((x) => x.box === 'operational_reserve'), ...sr.slice(0, 2)]) if (!releaseUnit(g, u)) u.box = 'arriving';
   say(g, 'Israeli units cross the Purple Line: the 3rd Tank Division and two Strategic Reserve units are released (15.2, 15.4a)');
+}
+/** Friendly-controlled Entry areas of a released Syrian unit with room for it (14.61b, 15.2, 17.11). */
+export const releaseAreas = (g: Game, u: Unit) => (u.entry ?? []).map((l) => (l.startsWith('#') ? +l.slice(1) : ENTRY[l])).filter((a) => a != null && g.control[a] === u.side
+  && !unitsIn(g, a, other(u.side)).length && unitsIn(g, a, u.side).filter(regular).length < 2);
+/** Place a released unit in an Entry area at once (`at`, or the first open one); false when none is open. */
+function releaseUnit(g: Game, u: Unit, at?: number): boolean {
+  const ok = releaseAreas(g, u), a = at ?? ok[0]; if (a == null || !ok.includes(a)) return false;
+  Object.assign(u, { box: undefined, area: a, arrival: g.turn, moved: false, spent: 0 }); g.arrived.push(u.id); say(g, `${u.name} enters in ${nameOf(a)}`, u.side);
+  return true;
 }
 /** 16.11a: the first Israeli unit into a raided area rolls: 1–2 the raid succeeds, 3–5 partly (the commandos do not fire back), 6+ the helicopters were shot down. */
 function resolveRaid(g: Game, u: Unit, a: number) {
@@ -374,8 +385,10 @@ function golanVictory(g: Game): Record<Side, number> & { net: number } {
   return { ...pts, net: pts.syrian - pts.israeli };
 }
 const finalResult = (g: Game, net: number) => isNafakh(g) ? nafakhResult(g) : (net === 0 ? 'Draw (0 net VP)' : `${net > 0 ? 'Syrian' : 'Israeli'} ${Math.abs(net) >= 3 ? 'Operational' : 'Marginal'} Victory (${Math.abs(net)} net VP)`);
-/** 19.5: a supplied Syrian unit west of the Jordan (areas 6, 7, 8) at the end of an Israeli player turn. */
-const jordanCrossed = (g: Game) => g.units.some((u) => u.side === 'syrian' && regular(u) && u.area != null && [6, 7, 8].includes(u.area) && inSupply(g, 'syrian', u.area));
+/** 14.17: west of the Jordan = Gadot, Kfar Hanasi and Almagor. The rule book prints "areas 6, 7, 8"; the map numbers them 6, 9, 10 (docs/NOTES.md). */
+const WEST_OF_JORDAN = [6, 9, 10];
+/** 19.5: a supplied Syrian unit west of the Jordan at the end of an Israeli player turn. */
+const jordanCrossed = (g: Game) => g.units.some((u) => u.side === 'syrian' && regular(u) && u.area != null && WEST_OF_JORDAN.includes(u.area) && inSupply(g, 'syrian', u.area));
 
 /* ================= phases ================= */
 function onPhase(g: Game, phase: string, when: 'start' | 'mid' | 'end') {
@@ -437,6 +450,7 @@ function canAssign(g: Game, b: Battle, side: Side, c: Chit, mode?: 'arty' | 'sup
   const lim = limits(g, b, side), mine = b.assets[side].map((id) => chit(g, id));
   if (c.kind === 'air_mission') {                                                                    // 16.31a, 16.22; air needs no supply
     if (isNight(g)) return 'no air support on the night turn (14.03)';
+    if (side === 'israeli' && B.samCancelled) return 'a SAM cancelled the air mission here: no replacement air asset in this battle (16.12)';
     const air = airOf(b, side);
     if (air.length >= lim.air) return lim.air === 2 ? 'at most two air support assets' : 'one air support asset per battle';
     if (air.length === 1 && air[0].mode === (mode ?? 'arty')) return 'with two air assets, one fires as artillery and the other supports a unit (16.22)';
@@ -444,10 +458,11 @@ function canAssign(g: Game, b: Battle, side: Side, c: Chit, mode?: 'arty' | 'sup
   }
   if (V.airAssaultArea === b.area && side === 'syrian' && !inSupply(g, side, b.area)) return 'an air assault that cannot trace supply gets only one air support asset (15.3)';
   if (!inSupply(g, side, b.area) || unitsIn(g, b.area, side).some((u) => u.unsupplied)) return 'units that cannot trace supply may not have assets (9.34a)';
+  const hermonOk = (x: Chit) => ['infantry_asset', 'commando', 'engineer'].includes(x.kind) || (x.kind === 'task_force' && x.name.includes('infantry'));   // 13.3 infantry class
+  if (b.area === HERMON && !hermonOk(c)) return 'on Mt Hermon only infantry-class battle assets and air support (14.16)';
   if (isArty(c)) return mine.filter(isArty).length >= lim.artillery ? `at most ${lim.artillery} artillery asset(s)` : null;
   if (isBattleAsset(c)) {
     if (c.kind === 'commando' && c.side !== 'syrian') return 'Syrian only';
-    if (b.area === HERMON && c.kind !== 'infantry_asset' && c.kind !== 'commando') return 'on Mt Hermon only infantry-class battle assets (14.16)';
     return mine.filter(isBattleAsset).length >= lim.battle ? (lim.battle ? `at most ${lim.battle} battle assets` : 'mixed Syrian divisions: no battle assets (15.12)') : null;
   }
   return 'this counter is not assigned to battles (events come with the event rules)';
@@ -718,7 +733,7 @@ export function fireSam(g: Game, samId: string) {
   const a = chit(g, airId!);
   if (a.mission === 'interdiction' && res !== 'none' && a.area != null) delete g.interdicted[a.area];
   if (a.mission === 'recon' && res === 'none') finishRecon(g, a);
-  if (res !== 'none') { a.mission = undefined; a.box = res === 'eliminated' ? 'eliminated' : 'used'; a.area = undefined; if (b) for (const s of sidesOf(g)) dropAir(b, s, a.id); }
+  if (res !== 'none') { a.mission = undefined; a.box = res === 'eliminated' ? 'eliminated' : 'used'; a.area = undefined; if (b) { for (const s of sidesOf(g)) dropAir(b, s, a.id); battleState(b).samCancelled = true; } }
   b?.rolls.push({ who: `SAM against ${a.name}`, sn: 0, dice: [die], hits: res === 'none' ? 0 : 1, kind: 'sam' });
   say(g, `SAM air defence fire: ${die} — ${res === 'eliminated' ? 'the air asset is shot down' : res === 'used' ? 'the air mission is cancelled' : 'no effect'} (16.12)`, 'syrian');
   return res;
@@ -727,12 +742,13 @@ export function declineSam(g: Game) { const V = state(g), id = V.samTarget; V.sa
 
 /* ---------- events (17.x, 4.21) ---------- */
 const STRATEGIC: Record<string, string> = { Assad: 'S21', '141st': 'S22', '62nd': 'S23' };
-/** 17.11: the named Strategic Reserve unit is released; it arrives next Reinforcement Phase. */
-export function playRelease(g: Game, chitId: string) {
+/** 17.11: the named Strategic Reserve unit is released and placed at once in a friendly-controlled Entry area (`at`, or the first open one). */
+export function playRelease(g: Game, chitId: string, at?: number) {
   needAdmin(g); const c = avail(g, chitId, ['event_release']);
   const id = Object.entries(STRATEGIC).find(([k]) => c.name.startsWith(k))?.[1]; need(id, 'unknown release');
   const u = unit(g, id!); need(u.box === 'strategic_reserve', `${u.name} is already in play`);
-  u.box = 'arriving'; gone(c); say(g, `${u.name} released from the Strategic Reserve (17.11)`, 'syrian');
+  need(at == null ? releaseAreas(g, u).length > 0 : releaseAreas(g, u).includes(at), 'a friendly-controlled Entry area with room (17.11)');
+  say(g, `${u.name} released from the Strategic Reserve (17.11)`, 'syrian'); releaseUnit(g, u, at); gone(c);
 }
 /** 17.12 SSM attack: each Israeli air asset in the Available Box goes back to the cup on 1–2. */
 export function playSSM(g: Game, chitId: string) {
@@ -774,9 +790,9 @@ export function playReplacement(g: Game, chitId: string, unitId: string) {
 /** 4.21: any event may instead bring two assets back from the Eliminated Box to the cup (not commandos, SAMs, air support or garrisons, 17.4). */
 export function alternateEventUse(g: Game, chitId: string, assetIds: string[]) {
   const c = chit(g, chitId);
-  need(c.box === 'available' && (c.kind.startsWith('event') || c.kind === 'special_action_event'), 'play an event from the Available Box');
+  need(c.box === 'available' && (c.kind.startsWith('event') || c.kind.startsWith('replacement_') || c.kind === 'special_action_event'), 'play an event from the Available Box');   // 17.31/17.32 replacements are events
   need(assetIds.length <= 2, 'two assets at most');
-  for (const id of assetIds) { const a = chit(g, id); need(a.side === c.side && a.box === 'eliminated' && !['commando', 'sam', 'air_mission', 'garrison'].includes(a.kind) && !a.kind.startsWith('event') && a.kind !== 'special_action_event', `${a.name} cannot come back this way (17.4)`); }
+  for (const id of assetIds) { const a = chit(g, id); need(a.side === c.side && a.box === 'eliminated' && !['commando', 'sam', 'air_mission', 'garrison'].includes(a.kind) && !a.kind.startsWith('event') && !a.kind.startsWith('replacement_') && a.kind !== 'special_action_event', `${a.name} cannot come back this way (17.4)`); }
   for (const id of assetIds) chit(g, id).box = 'cup';
   gone(c); say(g, `${c.name} used to bring back ${assetIds.length} asset(s) (4.21)`, c.side);
 }
@@ -791,11 +807,12 @@ export function mergeUnits(g: Game, fromId: string, intoId: string, chitId?: str
   spendSA(g, 'israeli', undefined, `merge ${a.name} into ${b.name} (14.61a)`, chitId);
   b.str = Math.min(b.max, b.str + a.str); a.area = null; a.str = 0; dropReserve(g, a);                      // no VP for Syria (19.2)
 }
-/** 14.61b (Syrian, from turn 3): release the next 3rd Tank Division unit (15th, 81st, 65th). */
-export function releaseOperationalReserve(g: Game, chitId?: string) {
+/** 14.61b (Syrian, from turn 3): release the next 3rd Tank Division unit (15th, 81st, 65th) into its friendly-controlled Entry area (`at`, or the first open one). */
+export function releaseOperationalReserve(g: Game, chitId?: string, at?: number) {
   needAdmin(g); need(g.turn >= 3, 'from turn 3');
   const next = ['S18', 'S19', 'S20'].map((id) => unit(g, id)).find((u) => u.box === 'operational_reserve'); need(next, 'the Operational Reserve is empty');
-  spendSA(g, 'syrian', undefined, `release ${next!.name} (14.61b)`, chitId); next!.box = 'arriving';
+  need(at == null ? releaseAreas(g, next!).length > 0 : releaseAreas(g, next!).includes(at), 'its Entry area must be friendly-controlled, with room (14.61b)');
+  spendSA(g, 'syrian', undefined, `release ${next!.name} (14.61b)`, chitId); releaseUnit(g, next!, at);
 }
 /** 14.61c / 14.61d: a SAM (Syria) or an air support asset (Israel) from the Eliminated Box back into the cup. */
 export function replaceAsset(g: Game, side: Side, assetId: string, chitId?: string) {
@@ -940,7 +957,8 @@ export const specialActions = (g: Game, side: Side) => saAvailable(g, side);
 
 registerHooks('golan73', {
   newGame: newGolanGame as Volume['newGame'], markerKey: () => 'res', reach: golanReach, beforeMove, afterMove,
-  stratAllowed: (g, u) => interdictedBy(g, u.area!) !== other(u.side), stratStep,
+  stratAllowed: (g, u) => interdictedBy(g, u.area!) !== other(u.side) && !(isNight(g) && g.stratMoves >= (u.side === 'israeli' ? 2 : 1)), stratStep,   // 14.03: night strat-moves, Israel 2, Syria 1
+  afterStrat: (g) => { g.stratMoves++; },
   successNumber: golanSuccessNumber, adjustFire, canAssign, moraleSn: golanMoraleSn, retreatOk, retreatPrefer, onRetreat, noRetreat: (_g, u) => !!u.garrison,     // 16.24: garrisons never retreat (6.42c)
   
   sources, supplyStep, supplyFree: (_g, _s, a) => isAssembly(a) || a === HERMON, alwaysSupplied: (_g, u) => !!u.ghost || u.id === 'S17',
