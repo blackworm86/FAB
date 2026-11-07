@@ -2,7 +2,7 @@
  *  The courses themselves are in tutorial-script.ts (one per volume, plus "what's new" courses); main.ts gives this module a small
  *  host API and asks `gate` before a map tap. */
 import type * as E from '../../engine/src';
-import { tr, trHtml, translateDom } from './i18n';
+import { tr, trHtml, translateDom, enSel } from './i18n';
 import { U, replay, type Course, type Step, type Target } from './tutorial-script';
 import { linkRules } from './rules-link';
 
@@ -19,7 +19,7 @@ export interface TutHost {
 const GKEY = 'fab-tut-guide';
 let entered = 0;
 const store = { get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k: string, v: string | null) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* private mode */ } } };
-const q = (s: string, text?: string) => Array.from(document.querySelectorAll(s)).some((e) => !text || (e.textContent ?? '').includes(text) || (e.textContent ?? '').includes(tr(text)));      // the screen may be in Italian (4.6)
+const q = (s: string, text?: string) => Array.from(document.querySelectorAll(enSel(s))).some((e) => !text || (e.textContent ?? '').includes(text) || (e.textContent ?? '').includes(tr(text)));      // the screen may be in Italian (4.6)
 const visible = (e: Element) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; };
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 const SIDE_NAME: Record<string, string> = { german: 'Germany', allied: 'the Allies', israeli: 'Israel', syrian: 'Syria', axis: 'the Axis' };
@@ -39,7 +39,7 @@ export function initTutorial(h: TutHost, course: Course) {
   function targetEl(t: Target | undefined): HTMLElement | null {
     if (!t || !('el' in t)) return null;
     for (const sel of Array.isArray(t.el) ? t.el : [t.el]) {
-      const hit = Array.from(document.querySelectorAll<HTMLElement>(`#ui ${sel}`)).find((e) => visible(e) && (!t.text || ((x) => x.includes(t.text!) || x.includes(tr(t.text!)))(`${e.textContent} ${e.title} ${e.getAttribute('aria-label') ?? ''}`)));
+      const hit = Array.from(document.querySelectorAll<HTMLElement>(enSel(`#ui ${sel}`))).find((e) => visible(e) && (!t.text || ((x) => x.includes(t.text!) || x.includes(tr(t.text!)))(`${e.textContent} ${e.title} ${e.getAttribute('aria-label') ?? ''}`)));
       if (hit) return hit;
     }
     return null;

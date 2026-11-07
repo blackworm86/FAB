@@ -1,1 +1,730 @@
-{}
+{
+ "23.2": {
+  "view": [
+   25,
+   24,
+   33,
+   23,
+   35
+  ],
+  "pieces": {
+   "e35": {
+    "label": "35 Eng",
+    "side": "allied"
+   },
+   "e168": {
+    "label": "168 Eng",
+    "side": "allied"
+   }
+  },
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "The Allied player uses two engineers to blow four bridges. The 35th Engineer Battalion in Ligneuville [25] blows those to St. Vith [23] and Malmedy [33]; the 168th in Vielsalm [24] blows those to Malmedy [33] and Baraque de Fraiture [35].",
+    "at": {
+     "e35": 25,
+     "e168": 24
+    },
+    "marks": [
+     {
+      "kind": "blown",
+      "edge": [
+       25,
+       23
+      ]
+     },
+     {
+      "kind": "blown",
+      "edge": [
+       25,
+       33
+      ]
+     },
+     {
+      "kind": "blown",
+      "edge": [
+       24,
+       33
+      ]
+     },
+     {
+      "kind": "blown",
+      "edge": [
+       24,
+       35
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "23.3": {
+  "view": [
+   4,
+   5,
+   10,
+   11,
+   23,
+   3,
+   12
+  ],
+  "pieces": {
+   "inf": {
+    "label": "Infantry",
+    "side": "german",
+    "cls": "infantry"
+   },
+   "arm": {
+    "label": "Armor",
+    "side": "german",
+    "cls": "armor"
+   }
+  },
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "An infantry and an armor unit in Prüm [4] both try to move to St. Vith [23].",
+    "at": {
+     "inf": 4,
+     "arm": 4
+    }
+   },
+   {
+    "tab": "A",
+    "cap": "The infantry moves north into Losheim [5]: 1 MP for the road connection and 2 MP for crossing out of Zone 5 into Zone 6. It must stop.",
+    "at": {
+     "inf": 5
+    },
+    "moves": [
+     {
+      "path": [
+       4,
+       5
+      ],
+      "labels": [
+       "3 MP"
+      ]
+     }
+    ],
+    "mp": "3 MP = 1 road + 2 army boundary"
+   },
+   {
+    "tab": "B",
+    "cap": "Moving west into Bleialf [11] instead, the restricted boundary (the Schnee Eifel) takes its entire movement allowance and it must stop. The armor unit may not cross this boundary at all.",
+    "at": {
+     "inf": 11
+    },
+    "moves": [
+     {
+      "path": [
+       4,
+       11
+      ],
+      "labels": [
+       "all"
+      ]
+     }
+    ],
+    "mp": "Entire movement allowance"
+   },
+   {
+    "tab": "C",
+    "cap": "Moving south and then west instead, the infantry uses road connections through Pronsfeld [3] and Lutzkampen [12] into St. Vith [23], 1 MP each.",
+    "at": {
+     "inf": 23
+    },
+    "moves": [
+     {
+      "path": [
+       4,
+       3,
+       12,
+       23
+      ],
+      "labels": [
+       "1 MP",
+       "2 MP",
+       "3 MP"
+      ]
+     }
+    ],
+    "mp": "3 MP"
+   },
+   {
+    "tab": "D",
+    "cap": "The armor unit pays 3 MP to enter Losheim [5] and must stop unless the German player spends a fuel asset. With fuel it goes on by road through Bucholz [10] and Bleialf [11] into St. Vith [23], its full 6 MP.",
+    "at": {
+     "inf": 4,
+     "arm": 23
+    },
+    "moves": [
+     {
+      "path": [
+       4,
+       5,
+       10,
+       11,
+       23
+      ],
+      "labels": [
+       "3 MP",
+       "4 MP",
+       "5 MP",
+       "6 MP"
+      ]
+     }
+    ],
+    "mp": "6 MP, with a fuel asset"
+   },
+   {
+    "tab": "E",
+    "cap": "With the Boundary Crossing Pre-authorized asset, the same path to St. Vith [23] costs only 4 MP. Without a fuel asset, though, the armor unit must stop in Bleialf [11].",
+    "at": {
+     "arm": 11
+    },
+    "moves": [
+     {
+      "path": [
+       4,
+       5,
+       10,
+       11
+      ],
+      "labels": [
+       "1 MP",
+       "2 MP",
+       "3 MP"
+      ]
+     }
+    ],
+    "fail": [
+     [
+      11,
+      23
+     ]
+    ],
+    "mp": "4 MP to St. Vith; more than 3 MP needs fuel"
+   },
+   {
+    "tab": "F",
+    "cap": "Moving south and then west by road through Pronsfeld [3] and Lutzkampen [12], the armor unit reaches St. Vith [23] for 3 MP. No fuel asset is needed.",
+    "at": {
+     "arm": 23
+    },
+    "moves": [
+     {
+      "path": [
+       4,
+       3,
+       12,
+       23
+      ],
+      "labels": [
+       "1 MP",
+       "2 MP",
+       "3 MP"
+      ]
+     }
+    ],
+    "mp": "3 MP"
+   }
+  ]
+ },
+ "23.4": {
+  "view": [
+   96,
+   82,
+   75,
+   62,
+   74,
+   87,
+   47
+  ],
+  "pieces": {
+   "ab82": {
+    "unit": "B51"
+   },
+   "ab101": {
+    "unit": "B52"
+   },
+   "g1": {
+    "label": "German",
+    "side": "german",
+    "cls": "armor"
+   },
+   "g2": {
+    "label": "German",
+    "side": "german"
+   }
+  },
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "The Germans have secured Bastogne [47], opening a gap in the Allied line. The 82nd strat-moves from Entry Area H (Givet [96]) to La Roche [62] and the 101st from Entry Area J (La Chapelle [87]) to Champlon [74], through friendly-controlled, uncontested areas.",
+    "at": {
+     "ab82": 62,
+     "ab101": 74,
+     "g1": 47,
+     "g2": 47
+    },
+    "moves": [
+     {
+      "path": [
+       96,
+       97,
+       89,
+       82,
+       75,
+       62
+      ],
+      "kind": "strat"
+     },
+     {
+      "path": [
+       87,
+       85,
+       71,
+       72,
+       73,
+       74
+      ],
+      "kind": "strat"
+     }
+    ]
+   }
+  ]
+ },
+ "23.5": {
+  "view": [
+   23,
+   25,
+   11,
+   24,
+   10
+  ],
+  "pieces": {
+   "inf106": {
+    "unit": "B39"
+   },
+   "ccb9": {
+    "unit": "B45"
+   },
+   "gar": {
+    "label": "Garrison",
+    "side": "allied"
+   },
+   "vg18": {
+    "unit": "B19"
+   },
+   "vg62": {
+    "unit": "B21"
+   }
+  },
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "The 18th VG has advanced into St. Vith [23]; the Allied player spends a Special Action to bring the CCB/9th Arm in from Ligneuville [25]. Defensive fire scores two hits: the 18th VG loses a step, then aborts the attack and becomes disordered.",
+    "at": {
+     "inf106": 23,
+     "ccb9": 23,
+     "gar": 23,
+     "vg18": 23,
+     "vg62": 11
+    },
+    "str": {
+     "inf106": 1,
+     "vg18": 2
+    },
+    "moves": [
+     {
+      "path": [
+       25,
+       23
+      ]
+     }
+    ],
+    "ring": [
+     23
+    ],
+    "dice": [
+     [
+      "CCB/9th Arm",
+      6,
+      [
+       5
+      ]
+     ],
+     [
+      "Garrison asset",
+      4,
+      [
+       5
+      ]
+     ],
+     [
+      "106th Inf",
+      4,
+      [
+       1
+      ]
+     ]
+    ]
+   }
+  ]
+ },
+ "23.6": {
+  "view": [
+   22,
+   12,
+   23,
+   21,
+   36
+  ],
+  "pieces": {
+   "pz116": {
+    "unit": "B18"
+   },
+   "r112": {
+    "unit": "B38"
+   }
+  },
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "The 116th Pz, across the river into Weiswampach [22] without a river assault, attacks the 112/28th. Its three hits make the 112/28th retreat and then eliminate it; the excess hit lets the 116th Pz pass a morale check and gain an exploitation marker.",
+    "at": {
+     "pz116": 22,
+     "r112": 22
+    },
+    "moves": [
+     {
+      "path": [
+       12,
+       22
+      ]
+     }
+    ],
+    "ring": [
+     22
+    ],
+    "dice": [
+     [
+      "15th Rocket + 401st",
+      5,
+      [
+       6,
+       10
+      ]
+     ],
+     [
+      "333rd",
+      4,
+      [
+       9
+      ]
+     ],
+     [
+      "112/28th, 1 try for a 3",
+      null,
+      [
+       3
+      ],
+      false
+     ],
+     [
+      "116th Pz",
+      6,
+      [
+       1,
+       6,
+       5
+      ]
+     ],
+     [
+      "116th Pz morale",
+      7,
+      [
+       6
+      ]
+     ]
+    ]
+   }
+  ]
+ },
+ "23.7": {
+  "view": [
+   13,
+   21,
+   22,
+   24,
+   36,
+   12,
+   35,
+   48
+  ],
+  "pieces": {
+   "pz116": {
+    "unit": "B18"
+   },
+   "ccr9": {
+    "unit": "B46"
+   },
+   "lehr": {
+    "unit": "B15"
+   },
+   "pz150": {
+    "unit": "B04"
+   },
+   "inf106": {
+    "unit": "B39"
+   }
+  },
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "Turn 2, Breakthrough Movement Phase: the German player plans a sequence of breakthrough moves in and through Weiswampach [22].",
+    "at": {
+     "pz116": 22,
+     "ccr9": 36,
+     "lehr": 13,
+     "pz150": 12,
+     "inf106": 24
+    }
+   },
+   {
+    "tab": "A",
+    "cap": "The 116th Pz, marked with an exploitation marker, moves one area from Weiswampach [22] into Houffalize [36]. The CCR/9th Arm is there, so a round of combat is mandatory.",
+    "at": {
+     "pz116": 36
+    },
+    "moves": [
+     {
+      "path": [
+       22,
+       36
+      ],
+      "labels": [
+       "1 area"
+      ]
+     }
+    ]
+   },
+   {
+    "tab": "B",
+    "cap": "Pz Lehr, in reserve in Dasburg [13], moves into Marnach [21] for 2 MP and Weiswampach [22] for 1 MP, then spends a fuel asset to go on into Vielsalm [24] for 2 MP. The 106th Inf is there, so a round of combat is mandatory.",
+    "at": {
+     "lehr": 24
+    },
+    "moves": [
+     {
+      "path": [
+       13,
+       21,
+       22,
+       24
+      ],
+      "labels": [
+       "2 MP",
+       "3 MP",
+       "5 MP"
+      ]
+     }
+    ],
+    "mp": "5 MP, with a fuel asset"
+   },
+   {
+    "tab": "C",
+    "cap": "The German player spends a Special Action to move the 150th Panzer Brigade forward one area, from Lutzkampen [12] into Weiswampach [22].",
+    "at": {
+     "pz150": 22
+    },
+    "moves": [
+     {
+      "path": [
+       12,
+       22
+      ],
+      "labels": [
+       "1 area"
+      ]
+     }
+    ]
+   },
+   {
+    "tab": "D",
+    "cap": "In Houffalize [36] the CCR/9th Arm scores one hit and the 116th Pz loses a step; the 116th Pz replies with one hit. The CCR/9th Arm absorbs it by retreating into Noville [48], disordered.",
+    "ring": [
+     36
+    ],
+    "str": {
+     "pz116": 2
+    },
+    "at": {
+     "ccr9": 48
+    },
+    "moves": [
+     {
+      "path": [
+       36,
+       48
+      ],
+      "kind": "retreat"
+     }
+    ],
+    "dice": [
+     [
+      "CCR/9th Arm",
+      5,
+      [
+       5
+      ]
+     ],
+     [
+      "116th Pz",
+      3,
+      [
+       1,
+       9,
+       4
+      ]
+     ]
+    ]
+   },
+   {
+    "tab": "E",
+    "cap": "In Vielsalm [24] the 106th Inf misses with three dice and Pz Lehr scores two hits. The 106th Inf retreats into Baraque de Fraiture [35], disordered, and is reduced to two steps.",
+    "ring": [
+     24
+    ],
+    "str": {
+     "inf106": 2
+    },
+    "at": {
+     "inf106": 35
+    },
+    "moves": [
+     {
+      "path": [
+       24,
+       35
+      ],
+      "kind": "retreat"
+     }
+    ],
+    "dice": [
+     [
+      "106th Inf",
+      2,
+      [
+       6,
+       4,
+       10
+      ]
+     ],
+     [
+      "Pz Lehr",
+      7,
+      [
+       1,
+       9,
+       5,
+       8
+      ]
+     ]
+    ]
+   }
+  ]
+ },
+ "23.8": {
+  "view": [
+   53,
+   51,
+   52,
+   50,
+   34,
+   33,
+   25,
+   24
+  ],
+  "pieces": {
+   "peiper": {
+    "unit": "B01"
+   },
+   "inf1": {
+    "unit": "B48"
+   },
+   "ss1": {
+    "unit": "B02"
+   },
+   "fj3": {
+    "unit": "B07"
+   },
+   "vg62": {
+    "unit": "B21"
+   },
+   "vg18": {
+    "unit": "B19"
+   },
+   "ccb9": {
+    "unit": "B45"
+   },
+   "e168": {
+    "label": "168 Eng",
+    "side": "allied"
+   }
+  },
+  "markers": [
+   {
+    "kind": "blown",
+    "edge": [
+     34,
+     33
+    ]
+   },
+   {
+    "kind": "blown",
+    "edge": [
+     34,
+     24
+    ]
+   },
+   {
+    "kind": "blown",
+    "edge": [
+     24,
+     25
+    ]
+   }
+  ],
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "KG Peiper has pushed on to Werbomont [51], but the 18th VG failed to clear Trois Ponts [34]. Peiper may not trace supply into Stoumont [52] (next to the 1st Infantry in Aywaille [53]), through Manhay [50] (the 168th Engineers' defended roadblock) or into enemy-controlled Trois Ponts, so it is unsupplied.",
+    "at": {
+     "peiper": 51,
+     "inf1": 53,
+     "ss1": 33,
+     "fj3": 25,
+     "vg62": 24,
+     "vg18": 34,
+     "ccb9": 34,
+     "e168": 50
+    },
+    "fail": [
+     [
+      51,
+      52
+     ],
+     [
+      51,
+      50
+     ],
+     [
+      51,
+      34
+     ]
+    ]
+   }
+  ]
+ }
+}

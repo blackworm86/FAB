@@ -17,8 +17,8 @@ if (COLLECT) Object.assign(window, { __i18nMissing: () => [...missing] });
 /** Load the dictionary for the chosen language (nothing to load for English). */
 export async function loadLang() {
   if (LANG === 'en') return;
-  const parts = (await Promise.all([import('./i18n/it-ui.json'), import('./i18n/it-tut-bulge.json'), import('./i18n/it-tut-golan73.json'), import('./i18n/it-tut-sicily.json')])).map((m) => (m.default as unknown) as Dict);
-  for (const p of parts) { Object.assign(D.text, p.text); D.patterns.push(...p.patterns); Object.assign(D.html, p.html); }
+  const parts = (await Promise.all([import('./i18n/it-tut-bulge.json'), import('./i18n/it-tut-golan73.json'), import('./i18n/it-tut-sicily.json'), import('./i18n/it-ui.json')])).map((m) => (m.default as unknown) as Dict);
+  for (const p of parts) { Object.assign(D.text, p.text);      /* it-ui.json last: the interface's own words win over a lesson's */ D.patterns.push(...p.patterns); Object.assign(D.html, p.html); }
   PATS = D.patterns.map(([re, out]) => [new RegExp(`^${re}$`), out]);
 }
 /** A string in the chosen language (or itself when there is no translation yet). */
@@ -33,10 +33,12 @@ export function tr(s: string): string {
 export const trHtml = (s: string) => (LANG === 'en' || !s ? s : D.html[s] ?? (COLLECT && missing.add(`html:${s}`), s));
 const SKIP = 'script, style, #rules .sec, #rules .ix, #rules .row, .notr, [contenteditable], input, textarea';
 const ATTRS = ['title', 'aria-label', 'placeholder', 'data-tip'];
+/** A CSS selector that also finds elements whose title / aria-label was translated (it matches their English). */
+export const enSel = (sel: string) => (LANG === 'en' || !/\[(title|aria-label)/.test(sel) ? sel : `${sel}, ${sel.replace(/\[(title|aria-label)/g, '[data-en-$1')}`);
 /** Translate the text nodes and attributes under `root` that the dictionary knows. */
 export function translateDom(root: Element | null) {
   if (LANG === 'en' || !root) return;
   const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (/[A-Za-z]{2}/.test(n.nodeValue ?? '') && !n.parentElement?.closest(SKIP) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT) });
   for (let n = w.nextNode(); n; n = w.nextNode()) { const raw = n.nodeValue!, key = raw.trim(), t = tr(key); if (t !== key) n.nodeValue = raw.replace(key, t); }
-  for (const a of ATTRS) root.querySelectorAll<HTMLElement>(`[${a}]`).forEach((e) => { if (e.closest(SKIP)) return; const v = e.getAttribute(a)!, t = tr(v); if (t !== v) e.setAttribute(a, t); });
+  for (const a of ATTRS) root.querySelectorAll<HTMLElement>(`[${a}]`).forEach((e) => { if (e.closest(SKIP)) return; const v = e.getAttribute(a)!, t = tr(v); if (t !== v) { e.setAttribute(a, t); e.setAttribute(`data-en-${a}`, v); } });      // the English stays alongside, for the tutorials' targets
 }

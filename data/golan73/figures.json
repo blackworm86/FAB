@@ -1,13 +1,156 @@
 {
+  "Ex 2": {
+    "view": [75, 74, 73, 39],
+    "pieces": {"t91": {"unit": "S26"}, "m58": {"unit": "S25"}},
+    "steps": [
+      {"tab": "Set-up", "cap": "The Syrian 91st Tank and 58th Mech of the 1st Tank Division are in Jasim [75], heading for the front on the Golan.", "at": {"t91": 75, "m58": 75}},
+      {"tab": "A", "cap": "In his part of the Admin Phase the Israeli player flies Interdiction: one Air Support asset each in Jasim [75] and Tel Kudne [73]. Syrian units pay +1 MP to enter and +1 MP to leave an interdicted area.", "marks": [{"kind": "interdict", "area": 75}, {"kind": "interdict", "area": 73}]},
+      {"tab": "B", "cap": "Syria answers with two SAM assets, one die each on the Air Defense Fire Table (Turn 4-6). Jasim: 3, the air asset goes to the Used Box. Tel Kudne: 6, no effect, and the interdiction stays.", "drop": ["interdict:75"], "dice": [["SAM in Jasim [75]", null, [3], true], ["SAM in Tel Kudne [73]", null, [6], false]]},
+      {"tab": "C", "cap": "The 91st Tank pays 1 MP by road into Swisah [74], 2 MP to enter Tel Kudne [73] and 2 MP to leave it. The 58th Mech pays 3 MP to leave, since the interdicted area is also occupied.", "at": {"t91": 39, "m58": 39}, "moves": [{"path": [75, 74, 73, 39], "labels": ["1", "2", "2"]}], "mp": "91st: 1 + 2 + 2 = 5 MP · 58th: 1 + 2 + 3 = 6 MP"}
+    ]
+  },
+  "Ex 3": {
+    "view": [6, 7, 8, 9, 36, 37, 38, 35, 34, 33, 42, 43],
+    "pieces": {"m4": {"unit": "I11"}, "a179": {"unit": "I09"}, "gol": {"unit": "I01"}, "a53": {"unit": "I03"}, "a77": {"unit": "I05"}, "syr": {"label": "Syrian unit", "side": "syrian", "cls": "armor"}},
+    "steps": [
+      {"tab": "Set-up", "cap": "Israeli units in the Jordan valley and on the Golan: the 4th Mech in Gadot [6], the 179th Armored in Kfar Hanasi [9], the Golani in Yehudia [35] and the 53/188th in Kuzabia [34]. A Syrian unit holds Zohar [33].", "at": {"m4": 6, "a179": 9, "gol": 35, "a53": 34, "a77": 42, "syr": 33}, "str": {"m4": 3, "a179": 2}},
+      {"tab": "A", "cap": "The 4th Mech pays 1 MP over the bridge into B'not Yakov Bridge [7], 1 more for the escarpment into Katzrin [36], then 3 MP across the wadi by field into Sindiana [37]. At 6 MP, the armor maximum, it stops.", "at": {"m4": 37}, "moves": [{"path": [6, 7, 36, 37], "labels": ["1", "2", "3"]}], "mp": "6 MP = 1 bridge + 2 road and escarpment + 3 field across the wadi"},
+      {"tab": "B", "cap": "Or the 4th Mech moves south into Kfar Hanasi [9]: 2 MP by field +1 for the occupied area. It may not cross the river into Had Nes [8]: no road, so no bridge.", "at": {"m4": 9}, "moves": [{"path": [6, 9], "labels": ["3"]}], "fail": [[9, 8]], "mp": "3 MP = 2 field + 1 occupied"},
+      {"tab": "C", "cap": "The 179th Armored crosses the river east into Had Nes [8] by field. With no bridge, the crossing costs its entire movement allowance.", "at": {"a179": 8}, "moves": [{"path": [9, 8], "labels": ["All"]}], "mp": "All MP"},
+      {"tab": "D", "cap": "Or the 179th moves north into Gadot [6] for 2 MP and east over the river into B'not Yakov Bridge [7] for 1 MP. It may not climb into Katzrin [36]: the 4th Mech has already crossed that escarpment boundary this phase.", "at": {"a179": 7}, "moves": [{"path": [9, 6, 7], "labels": ["2", "1"]}], "fail": [[7, 36]], "mp": "3 MP = 2 field + 1 bridge"},
+      {"tab": "E", "cap": "The Golani may not cross the escarpment into Had Nes [8]: units cross escarpment boundaries only by road.", "fail": [[35, 8]]},
+      {"tab": "F", "cap": "The Golani moves north by field into Katzrin [36] for 2 MP and must stop there, with only 3 MP as infantry. Nafakh [42] (occupied) and Aleika [43] (wadi) each cost +1 more, and the escarpment into B'not Yakov Bridge [7] is used up.", "at": {"gol": 36}, "moves": [{"path": [35, 36], "labels": ["2"]}], "fail": [[36, 42], [36, 43], [36, 7]], "mp": "2 MP field"},
+      {"tab": "G", "cap": "Or the Golani follows the road into Kuzabia [34] for 2 MP (+1 occupied) and on into Hushniyah [38] for 1 MP: its full 3 MP.", "at": {"gol": 38}, "moves": [{"path": [35, 34, 38], "labels": ["2", "1"]}], "mp": "3 MP = 1 road + 1 occupied + 1 road"},
+      {"tab": "H", "cap": "The 53/188th in Kuzabia [34] moves into Zohar [33], held by the enemy: 1 MP for the road +1 for the occupied area. It must stop there.", "at": {"a53": 33}, "moves": [{"path": [34, 33], "labels": ["2"]}], "mp": "2 MP = 1 road + 1 occupied"}
+    ]
+  },
+  "Ex 4": {
+    "view": [50, 51, 52, 46, 49, 48],
+    "pieces": {"m121": {"unit": "S10"}, "i85": {"unit": "S05"}, "gar": {"label": "Tel Abu Nida garrison", "side": "israeli", "cls": "infantry"}},
+    "steps": [
+      {"tab": "Set-up", "cap": "The Syrian 121st Mech is in Booster [50] and the 85th Infantry in Kuneitra [49]. Tel Abu Nida [46] is occupied, and rugged boundaries separate it from Merom Golan [51] and Kuneitra [49].", "at": {"m121": 50, "i85": 49, "gar": 46}},
+      {"tab": "A", "cap": "The 121st Mech moves by road through Merom Golan [51] into Wasit [52] for 2 MP, then turns south into Tel Abu Nida [46] for 3 MP: 2 for the field connection, +1 for the occupied area.", "at": {"m121": 46}, "moves": [{"path": [50, 51, 52, 46], "labels": ["1", "1", "3"]}], "mp": "5 MP = 2 road + 2 field + 1 occupied"},
+      {"tab": "B", "cap": "Or the 121st Mech moves by road into Merom Golan [51]. It may not cross the rugged boundary: armor-class units cross rugged boundaries only by road.", "at": {"m121": 51}, "moves": [{"path": [50, 51], "labels": ["1"]}], "fail": [[51, 46]]},
+      {"tab": "C", "cap": "The 85th Infantry crosses the rugged boundary into Tel Abu Nida [46], spending its entire movement allowance.", "at": {"i85": 46}, "moves": [{"path": [49, 46], "labels": ["All"]}], "mp": "All MP"},
+      {"tab": "D", "cap": "The 85th Infantry may not cross the operational boundary from Kuneitra [49] into Bunker 109 [48]: assuming it is Turn 3, no unit may cross it before Game Turn 5.", "at": {"i85": 49}, "fail": [[49, 48]]}
+    ]
+  },
+  "Ex 5": {
+    "view": [59, 60, 61, 62, 63, 64, 57, 50],
+    "pieces": {"i85": {"unit": "S05"}, "i68": {"unit": "S06"}, "mor": {"unit": "S07"}, "r7": {"unit": "S08"}, "t78": {"unit": "S09"}, "sp59": {"label": "Israeli strongpoint", "side": "israeli", "cls": "infantry"}, "sp57": {"label": "Israeli strongpoint", "side": "israeli", "cls": "infantry"}, "sp50": {"label": "Israeli strongpoint", "side": "israeli", "cls": "infantry"}},
+    "steps": [
+      {"tab": "Set-up", "cap": "Syrian units face the anti-tank ditch along the Purple Line. Israeli strongpoints hold Majdal Shams [59], Tel Hermonit [57] and Booster [50] behind it.", "at": {"i85": 64, "i68": 61, "mor": 60, "r7": 62, "t78": 63, "sp59": 59, "sp57": 57, "sp50": 50}},
+      {"tab": "A", "cap": "The 85th Infantry in Khan Arnabe [64] crosses the AT ditch into Booster [50], though it costs more than its 3 MP: all MP to cross +1 for the occupied area. It is a Crossing Assault, marked with a River Assault marker.", "at": {"i85": 50}, "moves": [{"path": [64, 50], "labels": ["All"]}], "marks": [{"kind": "note", "text": "RIVER ASSAULT", "area": 50}], "mp": "All MP + 1 occupied"},
+      {"tab": "B", "cap": "The 68th Infantry in Jubata [61] makes a Crossing Assault across the AT ditch into Tel Hermonit [57] to establish a bridgehead.", "at": {"i68": 57}, "moves": [{"path": [61, 57], "labels": ["All"]}], "marks": [{"kind": "note", "text": "RIVER ASSAULT", "area": 57}]},
+      {"tab": "C", "cap": "The Moroccan Infantry in Hadar [60] crosses the AT ditch into Majdal Shams [59], mainly to make the Israeli player split his forces.", "at": {"mor": 59}, "moves": [{"path": [60, 59], "labels": ["All"]}], "marks": [{"kind": "note", "text": "RIVER ASSAULT", "area": 59}]},
+      {"tab": "D", "cap": "The 7th Recon in Horfa [62] cannot reach the ditch and cross it in the same phase: crossing costs a unit its entire movement allowance. It can only approach the ditch and try on a later turn.", "at": {"r7": 60}, "moves": [{"path": [62, 60], "labels": ["1"]}], "fail": [[60, 59]]},
+      {"tab": "E", "cap": "The 78th in Maaz [63] moves into Khan Arnabe [64] and waits there to see whether a breakthrough develops.", "at": {"t78": 64}, "moves": [{"path": [63, 64], "labels": ["1"]}]}
+    ]
+  },
   "Ex 6": {
     "view": [48, 47, 40, 41, 49],
-    "pieces": { "recon": { "unit": "S11" }, "inf": { "unit": "S04" }, "idf": { "label": "Israeli unit", "side": "israeli", "cls": "armor" } },
-    "markers": [{ "kind": "mines", "edge": [47, 48] }],
+    "pieces": {"recon": {"unit": "S11"}, "inf": {"unit": "S04"}, "idf": {"label": "Israeli unit", "side": "israeli", "cls": "armor"}},
+    "markers": [{"kind": "mines", "edge": [47, 48]}],
     "steps": [
-      { "tab": "Set-up", "cap": "Two Syrian units in Bunker 109 [48] want Ein Zivan [47], held by an Israeli unit. The boundary between the two areas is mined.", "at": { "recon": 48, "inf": 48, "idf": 47 } },
-      { "tab": "A", "cap": "The 9th Recon tries the minefield and makes a morale check: it rolls a 7 and fails. It stays in Bunker 109 and may not cross any minefield this turn.", "fail": [[48, 47]], "dice": [["9th Recon morale check", null, [7], false]] },
-      { "tab": "B", "cap": "The 9th Recon goes round instead, by Tel Hazeika [40] and Mt. Yosifon [41] into Ein Zivan: 5 MP in all.", "at": { "recon": 47 }, "moves": [{ "path": [48, 40, 41, 47] }], "mp": "5 MP" },
-      { "tab": "C", "cap": "The 52nd tries the same minefield and rolls a 4: it passes and enters Ein Zivan.", "at": { "inf": 47 }, "moves": [{ "path": [48, 47] }], "dice": [["52nd morale check", null, [4], true]], "mp": "3 MP = 1 road + 1 occupied area + 1 minefield" }
+      {"tab": "Set-up", "cap": "Two Syrian units in Bunker 109 [48] want Ein Zivan [47], held by an Israeli unit. The boundary between the two areas is mined.", "at": {"recon": 48, "inf": 48, "idf": 47}},
+      {"tab": "A", "cap": "The 9th Recon tries the minefield and makes a morale check: it rolls a 7 and fails. It stays in Bunker 109 and may not cross any minefield this turn.", "fail": [[48, 47]], "dice": [["9th Recon morale check", null, [7], false]]},
+      {"tab": "B", "cap": "The 9th Recon goes round instead, by Tel Hazeika [40] and Mt. Yosifon [41] into Ein Zivan: 5 MP in all.", "at": {"recon": 47}, "moves": [{"path": [48, 40, 41, 47]}], "mp": "5 MP"},
+      {"tab": "C", "cap": "The 52nd tries the same minefield and rolls a 4: it passes and enters Ein Zivan.", "at": {"inf": 47}, "moves": [{"path": [48, 47]}], "dice": [["52nd morale check", null, [4], true]], "mp": "3 MP = 1 road + 1 occupied area + 1 minefield"}
+    ]
+  },
+  "Ex 7": {
+    "view": [6, 7, 36, 42, 41, 39, 30, 10, 11, 12, 24, 26, 34, 38],
+    "pieces": {"m4": {"unit": "I11"}},
+    "steps": [
+      {"tab": "Set-up", "cap": "A 4th Mech unit in Assembly Area A, marked in reserve, strat-moves by road through friendly areas directly to Tel Faris [30] (blue). No operational move gets it there: from the assembly area it reaches only Yonatan [26] or Hushniyah [38] with its 6 MP (yellow).", "at": {"m4": 30}, "str": {"m4": 3}, "moves": [{"path": [6, 7, 36, 42, 41, 39, 30], "kind": "strat"}, {"path": [10, 11, 12, 24, 26], "labels": ["1", "1", "2", "1"]}, {"path": [10, 11, 12, 35, 34, 38], "labels": ["1", "1", "1", "1", "1"]}], "mp": "Operational: 1 MP into Almagor [10], then 1 + 1 + 2 + 1, or 1 + 1 + 1 + 1 + 1 = 6 MP"}
+    ]
+  },
+  "Ex 8": {
+    "view": [38, 39, 37, 34, 33],
+    "pieces": {"m4a": {"unit": "I11"}, "m4b": {"unit": "I12"}, "t91": {"unit": "S26"}},
+    "markers": [{"kind": "fw", "area": 38}],
+    "steps": [
+      {"tab": "Set-up", "cap": "Two 4th Mech units attack the Syrian 91st Tank in Hushniyah [38], which has field works. Israel commits an Armor Task Force and the 405th+55th artillery; Syria the 89th artillery and an Air Support asset.", "at": {"m4a": 38, "m4b": 38, "t91": 38}, "str": {"m4a": 3, "m4b": 3}, "ring": [38]},
+      {"tab": "A", "cap": "The attacker fires artillery first. The 405th+55th needs a 3 (5, -1 armor point unit, -1 target is the defender) and rolls 2: a hit, which removes the field works.", "ring": [38], "drop": ["fw:38"], "dice": [["405th+55th artillery", 3, [2]]]},
+      {"tab": "B", "cap": "The defender's 89th artillery needs a 4 (5, -1 armor point unit) and rolls 7: a miss.", "ring": [38], "dice": [["89th artillery", 4, [7]]]},
+      {"tab": "C", "cap": "The 91st Tank, with the Air Support as ground support, fires 3 dice for a 7 and scores two hits. Israel loses the Task Force, then a step from the point 4th Mech, and presses the attack.", "ring": [38], "str": {"m4a": 2}, "dice": [["91st Tank", 7, [2, 3, 8]]]},
+      {"tab": "D", "cap": "The whole 4th Mech brigade is present, so one unit gets an extra die. Each 4th Mech fires 3 dice for a 4 and scores one hit.", "ring": [38], "dice": [["First 4th Mech", 4, [4, 5, 9]], ["Second 4th Mech", 4, [1, 6, 8]]]},
+      {"tab": "E", "cap": "The 91st Tank retreats, disordered, for the first hit and loses a step for the second. The text names Tel Faris [30], which does not touch Hushniyah; the book's figure shows Tel Fazra [39].", "at": {"t91": 39}, "str": {"t91": 2}, "moves": [{"path": [38, 39], "kind": "retreat"}], "marks": [{"kind": "note", "text": "DISORDERED", "area": 39}]}
+    ]
+  },
+  "Ex 9": {
+    "view": [27, 28, 79, 78, 31, 26],
+    "pieces": {"i61": {"unit": "S01"}, "i112": {"unit": "S02"}, "spA": {"unit": "I23"}, "spI": {"unit": "I29"}},
+    "steps": [
+      {"tab": "Set-up", "cap": "Syrian Crossing Assaults: the 61st Infantry against an armor-supported strongpoint in Tel Saki [27], the 112th Infantry against an infantry-supported strongpoint in Juhader [28].", "at": {"i61": 27, "i112": 28, "spA": 27, "spI": 28}, "ring": [27, 28]},
+      {"tab": "A", "cap": "Only Syria fires artillery, each needing a 3 (5, -1 strongpoint, -1 defender). The 50th rolls 2, a hit; the 89th rolls 5, a miss. The strongpoint in Tel Saki cannot retreat and is disordered.", "ring": [27, 28], "marks": [{"kind": "note", "text": "DISORDERED", "area": 27}], "dice": [["50th artillery", 3, [2]], ["89th artillery", 3, [5]]]},
+      {"tab": "B", "cap": "The strongpoint in Juhader [28] fires one die for a 5 (-1 infantry supported, +1 against a River Assault) and rolls 2: a hit. Syria eliminates the 5th AT asset.", "ring": [28], "dice": [["Juhader strongpoint", 5, [2]]]},
+      {"tab": "C", "cap": "The strongpoint in Tel Saki [27] fires one die for a 7 and rolls 6: a hit. The 61st Infantry drops to three steps.", "ring": [27], "str": {"i61": 3}, "dice": [["Tel Saki strongpoint", 7, [6]]]},
+      {"tab": "D", "cap": "The 112th Infantry, with Air Support, fires 4 dice for a 4 and scores two hits. The two-step strongpoint is eliminated, opening a gap in the Israeli line.", "ring": [28], "at": {"spI": null}, "dice": [["112th Infantry", 4, [3, 4, 6, 9]]]},
+      {"tab": "E", "cap": "The 5th Engineering asset survived and did not fire, so it bridges one AT ditch boundary of Juhader. Syria chooses the one with the road connection, now an open boundary with a road.", "marks": [{"kind": "bridge", "edge": [28, 79]}]},
+      {"tab": "F", "cap": "In Tel Saki the 61st Infantry (3 dice for a 4) scores one hit and the 5th Tank (1 die for a 4) misses: the strongpoint loses a step. The GHQ Engineering asset, which did not fire, bridges the AT ditch.", "ring": [27], "str": {"spA": 1}, "marks": [{"kind": "bridge", "edge": [27, 79]}], "dice": [["61st Infantry", 4, [2, 5, 6]], ["5th Tank", 4, [7]]]}
+    ]
+  },
+  "Ex 10": {
+    "view": [83, 59, 58, 60],
+    "pieces": {"para": {"unit": "S17"}, "gar": {"label": "Mt. Hermon garrison", "side": "israeli", "cls": "infantry"}},
+    "steps": [
+      {"tab": "Set-up", "cap": "The Syrian 82nd Para waits in the Air Assault Holding Box. The Israeli Mt. Hermon Garrison holds Mt Hermon [83].", "at": {"para": null, "gar": 83}},
+      {"tab": "A", "cap": "At the very start of combat the 82nd Para flies from the holding box to Mt Hermon [83] with a River Assault marker. The area is now contested and its combat is resolved immediately, before any other.", "at": {"para": 83}, "ring": [83], "marks": [{"kind": "note", "text": "RIVER ASSAULT", "area": 83}]}
+    ]
+  },
+  "Ex 11": {
+    "view": [37, 36, 38, 41, 42],
+    "pieces": {"gol": {"unit": "I01"}, "syr": {"label": "Syrian unit", "side": "syrian", "cls": "armor"}},
+    "steps": [
+      {"tab": "Set-up", "cap": "Syria attacks the Israeli Golani Infantry in Sindiana [37].", "at": {"gol": 37, "syr": 37}, "ring": [37]},
+      {"tab": "A", "cap": "The Syrian attacker assigns one battle asset (7th AT) and his one allowed event, Electronic Warfare, to the battle in Sindiana.", "ring": [37], "marks": [{"kind": "note", "text": "EW", "area": 37}]},
+      {"tab": "B", "cap": "Israel plays his own EW as a countermeasure (+2) and rolls 2: 2 + 2 = 4, and the Golani is disordered. With all his units disordered, Israel may assign no artillery, air support, SAM or battle assets.", "ring": [37], "marks": [{"kind": "note", "text": "DISORDERED", "area": 37}], "dice": [["Israeli EW roll (+2)", null, [2], false]]}
+    ]
+  },
+  "Ex 12": {
+    "view": [58, 2, 54, 59, 55, 56],
+    "pieces": {"isr": {"label": "Israeli unit", "side": "israeli", "cls": "armor"}, "syr": {"label": "Syrian unit", "side": "syrian", "cls": "armor"}},
+    "steps": [
+      {"tab": "Set-up", "cap": "Israel attacks the Syrians in Masada [58].", "at": {"isr": 58, "syr": 58}, "ring": [58]},
+      {"tab": "A", "cap": "The Israeli attacker assigns one battle asset, a Task Force, to the battle in Masada.", "ring": [58]},
+      {"tab": "B", "cap": "The Syrian defender assigns the 89th artillery. It needs a 3 (5, -1 armor-class target, -1 target is the defender) and rolls 9: a miss.", "ring": [58], "dice": [["89th artillery", 3, [9]]]},
+      {"tab": "C", "cap": "Israel plays Counterbattery out of sequence and rolls 3: success on 1-5. The 89th artillery goes on the Turn Track three turns later.", "ring": [58], "dice": [["Counterbattery", 5, [3]]]}
+    ]
+  },
+  "Ex 13": {
+    "view": [12, 24, 21, 19, 18, 17, 23],
+    "pieces": {"m4": {"unit": "I11"}, "m9": {"unit": "I15"}, "cdo1": {"label": "Commando", "side": "syrian", "cls": "infantry"}, "cdo2": {"label": "Commando", "side": "syrian", "cls": "infantry"}, "syr": {"label": "Syrian unit", "side": "syrian", "cls": "armor"}},
+    "steps": [
+      {"tab": "Set-up", "cap": "A Syrian commando already raids Ma'ale Gamla [24], placed in the previous Admin Phase. The Israeli 4th Mech is in Ad Dardarah [12].", "at": {"m4": 12, "cdo1": 24, "syr": 23, "cdo2": null, "m9": null}, "str": {"m4": 3}},
+      {"tab": "A", "cap": "In the Admin Phase Syria places a second commando in El-Al [21]: it is vacant and adjacent to a Syrian unit.", "at": {"cdo2": 21}},
+      {"tab": "B", "cap": "The 4th Mech climbs into Ma'ale Gamla [24] for 3 MP. Syria rolls for the raid, a 2: success. The commando will fight in the Combat Phase as a defended roadblock.", "at": {"m4": 24}, "moves": [{"path": [12, 24], "labels": ["3"]}], "dice": [["Raid roll", null, [2], true]], "mp": "3 MP = 1 road + 1 escarpment + 1 commando"},
+      {"tab": "C", "cap": "The 9th Mech, in reserve in the Southern Assembly Area, strat-moves by road up the escarpment. It may not strat-move into El-Al [21], where the commando raids, so it stops in Givat Yoav [19].", "at": {"m9": 19}, "moves": [{"path": [17, 18, 19], "kind": "strat"}], "fail": [[19, 21]]}
+    ]
+  },
+  "Ex 14": {
+    "view": [24, 26, 27, 28, 30, 31, 32, 33],
+    "pieces": {"t91": {"unit": "S26"}, "sinf": {"label": "Syrian infantry", "side": "syrian", "cls": "infantry"}, "s32": {"label": "Syrian unit", "side": "syrian", "cls": "armor"}, "s28": {"label": "Syrian unit", "side": "syrian", "cls": "armor"}, "p317": {"unit": "I19"}, "a205": {"unit": "I17"}, "b205": {"unit": "I18"}, "m670": {"unit": "I21"}, "m670b": {"unit": "I22"}},
+    "steps": [
+      {"tab": "Set-up", "cap": "After the Combat Phase: the 91st Tank, in reserve, is in Tel Faris [30] and a single-strength Syrian infantry unit in Einot Peham [31]. The 317th Para (Yonatan [26]) and a 205th Armor (Ma'ale Gamla [24]) are in Israeli reserve; the 205th in Zohar [33] has an exploitation marker.", "at": {"t91": 30, "sinf": 31, "s32": 32, "s28": 28, "p317": 26, "a205": 33, "b205": 24, "m670": 27, "m670b": 27}, "str": {"sinf": 1}, "marks": [{"kind": "note", "text": "RESERVE", "area": 30}, {"kind": "note", "text": "RESERVE", "area": 26}, {"kind": "note", "text": "RESERVE", "area": 24}, {"kind": "note", "text": "EXPLOITATION", "area": 33}]},
+      {"tab": "A", "cap": "Reaction Phase: Syria moves the reserve 91st Tank from Tel Faris [30] into Einot Peham [31] to protect the infantry, whose loss would give Israel a VP.", "at": {"t91": 31}, "moves": [{"path": [30, 31]}], "drop": ["note:30"]},
+      {"tab": "B", "cap": "Breakthrough Movement: Israel moves the 317th Para, in reserve, from Yonatan [26] into Einot Peham [31] to keep up the pressure. Its reserve marker is removed.", "at": {"p317": 31}, "moves": [{"path": [26, 31]}], "drop": ["note:26"]},
+      {"tab": "C", "cap": "The 205th Armor in Zohar [33], marked for exploitation, moves one area into Keshet [32], creating a newly contested area.", "at": {"a205": 32}, "moves": [{"path": [33, 32], "labels": ["1 area"]}], "ring": [32], "drop": ["note:33"]},
+      {"tab": "D", "cap": "Israel spends the Reusable Special Action to advance the 670th Mech one area from Tel Saki [27] into Juhader [28].", "at": {"m670": 28}, "moves": [{"path": [27, 28], "labels": ["1 area"]}], "ring": [28]},
+      {"tab": "E", "cap": "The 205th Armor in reserve in Ma'ale Gamla [24] moves to Yonatan [26] for 1 MP by road, then into Einot Peham [31] for 3 MP (2 field +1 occupied). Its reserve marker is removed.", "at": {"b205": 31}, "moves": [{"path": [24, 26, 31], "labels": ["1", "3"]}], "ring": [31], "drop": ["note:24"], "mp": "4 MP = 1 road + 2 field + 1 occupied"}
+    ]
+  },
+  "Ex 15": {
+    "view": [3, 2, 54, 55, 58, 59, 60, 56, 57, 61, 52, 51, 50, 49, 53, 46],
+    "pieces": {"r7": {"unit": "S08"}, "i68": {"unit": "S06"}, "mor": {"unit": "S07"}, "t78": {"unit": "S09"}, "i85": {"unit": "S05"}, "is56": {"label": "Israeli unit", "side": "israeli", "cls": "armor"}, "is58": {"label": "Israeli unit", "side": "israeli", "cls": "armor"}, "sy58": {"label": "Syrian unit", "side": "syrian", "cls": "infantry"}, "is52": {"label": "Israeli unit", "side": "israeli", "cls": "infantry"}, "sp50": {"label": "Israeli strongpoint", "side": "israeli", "cls": "infantry"}},
+    "markers": [{"kind": "bridge", "edge": [57, 61]}, {"kind": "bridge", "edge": [59, 60]}, {"kind": "mines", "edge": [50, 51]}, {"kind": "note", "text": "ISRAELI CONTROL", "area": 53}, {"kind": "note", "text": "ISRAELI CONTROL", "area": 55}],
+    "steps": [
+      {"tab": "Set-up", "cap": "Syrian units placed to show the three ways supply paths are traced. Syrian supply runs out of the picture to Entry areas Z and Y.", "at": {"r7": 49, "i68": 56, "is56": 56, "mor": 3, "is58": 58, "sy58": 58, "t78": 52, "is52": 52, "sp50": 50, "i85": 46}},
+      {"tab": "A", "cap": "The 7th Recon in Kuneitra [49] traces through friendly areas to Entry area Y (Maaz [63]). It may cross the unbridged AT ditch because it is adjacent to it (14.93).", "moves": [{"path": [49, 66, 64, 63], "kind": "strat"}]},
+      {"tab": "B", "cap": "The 68th Infantry in El Rom [56] traces out of its contested area into Tel Hermonit [57] and across the bridged AT ditch to a supply source.", "moves": [{"path": [56, 57, 61, 62], "kind": "strat"}]},
+      {"tab": "C", "cap": "The Moroccan Infantry in Shamir [3] cannot trace into Zaura [54] across the escarpment, but can into Banias [2] and up the escarpment by road. It passes through occupied Masada [58] and across a bridged AT ditch.", "fail": [[3, 54]], "moves": [{"path": [3, 2, 58, 59, 60, 62], "kind": "strat"}]},
+      {"tab": "D", "cap": "The 78th in Wasit [52] is unsupplied: Qela [53] and Sikeik [55] are Israeli-controlled, and the minefield and strongpoint block Booster [50]. The path through Merom Golan [51] into Kuneitra [49] ends there, not adjacent to an unbridged AT ditch.", "fail": [[52, 53], [52, 55], [51, 50]], "moves": [{"path": [52, 51, 49], "kind": "strat"}], "marks": [{"kind": "note", "text": "UNSUPPLIED", "area": 52}]},
+      {"tab": "E", "cap": "The 85th Infantry in Tel Abu Nida [46] is unsupplied too, blocked the same way as the 78th. No valid path exists through the bottom of the picture.", "fail": [[51, 50]], "moves": [{"path": [46, 51, 49], "kind": "strat"}], "marks": [{"kind": "note", "text": "UNSUPPLIED", "area": 46}]}
     ]
   }
 }

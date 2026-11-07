@@ -100,7 +100,7 @@ function mount(D: RulesData, PIECE: Record<string, string[]>, o: RulesOptions, F
     for (const p of paras) {
       if (p.startsWith('• ')) { if (rows.length) flush(); list.push(p.slice(2)); continue; }
       if (p.startsWith('|')) { if (list.length) flush(); rows.push(p); continue; }
-      const st = /^\*\*([A-Z]|Overview)\s*[—–-]/.exec(p)?.[1];                                                // an example's lettered step (4.5: it shows on the figure)
+      const st0 = /^\*\*(Overview|[A-Za-z])\s*(?:[—–-]|\)\s*\*\*|\*\*\s*\))/.exec(p)?.[1], st = st0 && st0 !== 'Overview' ? st0.toUpperCase() : st0;      // "**A—**", or The Bulge's "**a) **" / "**C)**"                                                // an example's lettered step (4.5: it shows on the figure)
       flush(); out += p.startsWith('### ') ? `<h3>${inline(p.slice(4))}</h3>` : /^\d+\.\s/.test(p) ? `<p class="step">${inline(p)}</p>` : `<p${st ? ` data-step="${st}"` : ''}>${inline(p)}</p>`;
     }
     flush(); return out;

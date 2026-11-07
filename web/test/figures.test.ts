@@ -20,7 +20,7 @@ describe.each(GAMES)('%s example figures', (game, figs, rules) => {
     for (const [id, f] of Object.entries(figs)) {
       const p = (m: string) => problems.push(`${id}: ${m}`), area = (a: number | null | undefined, w: string) => { if (a != null && !E.areas.has(a)) p(`${w}: no area ${a}`); };
       const sec = secs.get(id); if (!sec) { p('no such section in the rulebook'); continue; }
-      const letters = new Set(sec.paras.map((x) => /^\*\*([A-Z])\s*[—–-]/.exec(x)?.[1]).filter(Boolean));
+      const letters = new Set(sec.paras.map((x) => /^\*\*([A-Za-z])\s*(?:[—–-]|\)\s*\*\*|\*\*\s*\))/.exec(x)?.[1]?.toUpperCase()).filter(Boolean));
       f.view.forEach((a) => area(a, 'view')); if (f.view.length < 2) p('view needs two areas or more');
       for (const [k, pc] of Object.entries(f.pieces)) { if (pc.unit && !units.has(pc.unit)) p(`piece ${k}: no unit ${pc.unit}`); if (!pc.unit && !pc.label) p(`piece ${k}: a unit or a label`); }
       const edge = (e: [number, number], w: string) => { area(e[0], w); area(e[1], w); if (!E.connection(e[0], e[1])) p(`${w}: ${e[0]} and ${e[1]} do not touch`); };

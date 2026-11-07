@@ -1,1 +1,2516 @@
-{}
+{
+ "Ex 1": {
+  "view": [
+   65,
+   57,
+   63,
+   64,
+   58,
+   114,
+   133
+  ],
+  "pieces": {
+   "us": {
+    "label": "US unit",
+    "side": "allied"
+   },
+   "g1": {
+    "unit": "IT09"
+   },
+   "g2": {
+    "unit": "IT10"
+   },
+   "g3": {
+    "unit": "IT11"
+   },
+   "it": {
+    "label": "Italian unit",
+    "side": "axis"
+   }
+  },
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "Western Sicily, with the Zone D landing boxes along the coast and the Palermo port box [P3]. Each landing box points to one land area."
+   },
+   {
+    "tab": "A",
+    "cap": "In the Campaign Scenario the Allied player picks the Alternate Landing Plan: the US 7th Army may land in any four contiguous landing boxes in Zone D."
+   },
+   {
+    "tab": "B",
+    "cap": "The Palermo port box [P3] is for US use. Once Palermo [57] is Allied-controlled and uncontested and the port box is undamaged, arriving US units can be placed there and, in the Movement Phase, move to Palermo and keep moving.",
+    "moves": [
+     {
+      "path": [
+       133,
+       57
+      ]
+     }
+    ]
+   },
+   {
+    "tab": "C",
+    "cap": "He places beachhead markers in landing boxes D2 through D5, giving direct access to Palermo [57] and adjacent access to Marsala [65]. The markers cannot be moved, but the Axis player can capture them.",
+    "marks": [
+     {
+      "kind": "note",
+      "text": "BEACHHEAD",
+      "area": 112
+     },
+     {
+      "kind": "note",
+      "text": "BEACHHEAD",
+      "area": 113
+     },
+     {
+      "kind": "note",
+      "text": "BEACHHEAD",
+      "area": 114
+     },
+     {
+      "kind": "note",
+      "text": "BEACHHEAD",
+      "area": 115
+     }
+    ]
+   },
+   {
+    "tab": "D",
+    "cap": "The beachhead is now ready: arriving units are placed in it in the Reinforcement Phase and, in the Movement Phase, advance straight to its land area, here from D4.",
+    "at": {
+     "us": 63
+    },
+    "moves": [
+     {
+      "path": [
+       114,
+       63
+      ]
+     }
+    ]
+   },
+   {
+    "tab": "E",
+    "cap": "The Axis player shuffles the Italian coastal garrisons face down and places them per the scenario. One placed in an invasion-capable area may get a field works marker at start.",
+    "at": {
+     "g1": 57,
+     "g2": 64,
+     "g3": 63
+    },
+    "marks": [
+     {
+      "kind": "fw",
+      "area": 57
+     },
+     {
+      "kind": "fw",
+      "area": 64
+     },
+     {
+      "kind": "fw",
+      "area": 63
+     }
+    ]
+   },
+   {
+    "tab": "F",
+    "cap": "Other Axis units set up in predetermined areas, the area number printed in yellow on the block.",
+    "at": {
+     "it": 57
+    }
+   }
+  ]
+ },
+ "Ex 3": {
+  "view": [
+   57,
+   56,
+   58,
+   59,
+   54,
+   60,
+   52,
+   40
+  ],
+  "pieces": {
+   "itp": {
+    "unit": "IT05"
+   },
+   "ita": {
+    "unit": "IT06"
+   },
+   "pg1": {
+    "unit": "GE02"
+   },
+   "pg2": {
+    "unit": "GE03"
+   },
+   "air": {
+    "label": "Air Support",
+    "side": "axis"
+   },
+   "al56": {
+    "label": "Air Support",
+    "side": "allied"
+   },
+   "al59": {
+    "label": "Air Support",
+    "side": "allied"
+   }
+  },
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "The Axis player wants to move his units in western Sicily eastwards: Italian units in Palermo [57] and Alcamo [58], German armor in Salemi [59].",
+    "at": {
+     "itp": 57,
+     "ita": 58,
+     "pg1": 59,
+     "pg2": 59
+    }
+   },
+   {
+    "tab": "A",
+    "cap": "In his part of the Admin Phase the Allied player sends two Air Support assets on Interdiction, to Bolognetta [56] and Salemi [59]. Axis units pay +1 MP to enter and +1 MP to leave an interdicted area.",
+    "at": {
+     "al56": 56,
+     "al59": 59
+    },
+    "marks": [
+     {
+      "kind": "interdict",
+      "area": 56
+     },
+     {
+      "kind": "interdict",
+      "area": 59
+     }
+    ]
+   },
+   {
+    "tab": "B",
+    "cap": "The Axis player commits his one Air Support asset to Dogfighting in Salemi [59], cancelling that Interdiction. The one in Bolognetta [56] stays until the Axis Supply Phase.",
+    "at": {
+     "air": 59,
+     "al59": null
+    },
+    "drop": [
+     "interdict:59"
+    ]
+   },
+   {
+    "tab": "C",
+    "cap": "With 3 MP, the Italian unit in Palermo cannot get past Bolognetta; at best it reaches Corleone [54] via Rocca Busambra [55]. The German armor can go by road to Castelvetrano [60] and along the coast to Canicatti [40], or via Corleone, Prizzi, Collesano and Castelbuono to Caltanissetta [45].",
+    "moves": [
+     {
+      "path": [
+       57,
+       55,
+       54
+      ],
+      "labels": [
+       "2 MP",
+       "3 MP"
+      ]
+     },
+     {
+      "path": [
+       58,
+       57,
+       56
+      ],
+      "labels": [
+       "1 MP",
+       "3 MP"
+      ]
+     },
+     {
+      "path": [
+       59,
+       60,
+       53,
+       51,
+       52,
+       42,
+       40
+      ]
+     }
+    ],
+    "fail": [
+     [
+      56,
+      49
+     ]
+    ]
+   }
+  ]
+ },
+ "Ex 4": {
+  "view": [
+   57,
+   56,
+   55,
+   58,
+   112,
+   133
+  ],
+  "pieces": {
+   "us1": {
+    "unit": "US03"
+   },
+   "us9": {
+    "unit": "US11"
+   },
+   "eng": {
+    "label": "Engineer",
+    "side": "allied"
+   }
+  },
+  "markers": [
+   {
+    "kind": "note",
+    "text": "DAMAGE 2",
+    "edge": [
+     133,
+     57
+    ]
+   },
+   {
+    "kind": "note",
+    "text": "BEACHHEAD",
+    "edge": [
+     112,
+     57
+    ]
+   }
+  ],
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "The battle for Palermo [57] is over: a battered US 1st Infantry block holds it, so the Allies control it. The Palermo port box [P3] is damaged.",
+    "at": {
+     "us1": 57
+    }
+   },
+   {
+    "tab": "A",
+    "cap": "On Game Turn 3 a US 9th Infantry block arrives in the D2 beachhead. With the port box damaged, its only action in the Movement Phase is to advance from D2 to Palermo [57].",
+    "at": {
+     "us9": 112
+    },
+    "moves": [
+     {
+      "path": [
+       112,
+       57
+      ]
+     }
+    ]
+   },
+   {
+    "tab": "B",
+    "cap": "In the Admin Phase the Allied player plays an Engineer asset on the Palermo port box: Palermo is friendly-controlled, in supply and occupied by the US 1st Infantry.",
+    "at": {
+     "eng": 133
+    }
+   },
+   {
+    "tab": "C",
+    "cap": "The Damage 2 marker is flipped to Damage 1: the port box stays unusable until another Engineer removes it. The Axis player may not damage it again unless he retakes and controls Palermo.",
+    "marks": [
+     {
+      "kind": "note",
+      "text": "DAMAGE 1",
+      "edge": [
+       133,
+       57
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "Ex 5": {
+  "view": [
+   27,
+   26,
+   24,
+   38,
+   39,
+   16,
+   33,
+   35,
+   37,
+   46
+  ],
+  "pieces": {
+   "b5": {
+    "unit": "BR03"
+   },
+   "b51": {
+    "unit": "BR07"
+   },
+   "us2": {
+    "unit": "US01"
+   },
+   "us1": {
+    "unit": "US03"
+   },
+   "cdn": {
+    "unit": "BR01"
+   },
+   "us45": {
+    "unit": "US07"
+   }
+  },
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "Historical Landing Plan zones: British units must operate in Zone B, US units in Zones A and C, until released. Each unit's divisional release marker shows whether it is restricted or released.",
+    "at": {
+     "b5": 27,
+     "b51": 26,
+     "us2": 24,
+     "us1": 38,
+     "cdn": 39,
+     "us45": 16
+    }
+   },
+   {
+    "tab": "A",
+    "cap": "The British 5th Infantry in Mount Etna [27] is restricted: it may not yet move into Adrano [33] in Zone C, nor to Regalbuto [25] in Zone A. When released, both moves become legal.",
+    "fail": [
+     [
+      27,
+      33
+     ]
+    ]
+   },
+   {
+    "tab": "B",
+    "cap": "The British 51st Infantry in Catania [26] is released: it may move to Regalbuto [25] in Zone A and on to Adrano [33] in Zone C.",
+    "moves": [
+     {
+      "path": [
+       26,
+       25,
+       33
+      ]
+     }
+    ]
+   },
+   {
+    "tab": "C",
+    "cap": "The US 2nd Armor in Leonforte [24] is restricted: it may already move into Nicosia [35] in Zone C, but not yet to Caltanissetta [45] in Zone D.",
+    "moves": [
+     {
+      "path": [
+       24,
+       35
+      ]
+     }
+    ]
+   },
+   {
+    "tab": "D",
+    "cap": "The US 1st Infantry in Enna [38] is released: it may move to Gangi [37] in Zone C and now also to Castelbuono [46] in Zone D.",
+    "moves": [
+     {
+      "path": [
+       38,
+       37
+      ]
+     },
+     {
+      "path": [
+       38,
+       46
+      ]
+     }
+    ]
+   },
+   {
+    "tab": "E",
+    "cap": "The 1st Canadian (8th Army) in Mazzarino [39] is released: it may operate throughout Zones A, B and C, but may never voluntarily enter Zone D.",
+    "fail": [
+     [
+      39,
+      40
+     ],
+     [
+      39,
+      45
+     ]
+    ]
+   },
+   {
+    "tab": "F",
+    "cap": "The US 45th Infantry in Ramacca [16] is restricted, so it may only operate in Zone A. When released it may also operate in Zones C and D."
+   }
+  ]
+ },
+ "Ex 6": {
+  "view": [
+   50,
+   51,
+   43,
+   40,
+   44,
+   45,
+   46,
+   48
+  ],
+  "pieces": {
+   "pg": {
+    "unit": "GE01"
+   },
+   "liv": {
+    "unit": "IT01"
+   },
+   "us9": {
+    "unit": "US11"
+   },
+   "u51": {
+    "unit": "IT09"
+   },
+   "u46": {
+    "unit": "IT10"
+   },
+   "ax": {
+    "label": "Axis unit",
+    "side": "axis"
+   }
+  },
+  "markers": [
+   {
+    "kind": "blown",
+    "edge": [
+     44,
+     45
+    ]
+   }
+  ],
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "The German 15th PG and the motorized Italian Livorno try to reach the US 9th Infantry in Caltanissetta [45]. The bridge from Mussomeli [44] into Caltanissetta is blown; Untried Italian units hold Monti Sicani [51] and Castelbuono [46].",
+    "at": {
+     "pg": 50,
+     "liv": 50,
+     "us9": 45,
+     "u51": 51,
+     "u46": 46,
+     "ax": 44
+    }
+   },
+   {
+    "tab": "A",
+    "cap": "The 15th PG moves by road into Monti Sicani [51] (the Untried unit adds no congestion), then by field into Aragona [43] and Canicatti [40]: 5 MP. Entering Caltanissetta [45] would need 2 MP more.",
+    "at": {
+     "pg": 40
+    },
+    "moves": [
+     {
+      "path": [
+       50,
+       51,
+       43,
+       40
+      ],
+      "labels": [
+       "1 MP",
+       "3 MP",
+       "5 MP"
+      ]
+     }
+    ],
+    "fail": [
+     [
+      40,
+      45
+     ]
+    ]
+   },
+   {
+    "tab": "B",
+    "cap": "Into Mussomeli [44] costs 3 MP (field and an occupied area), on to Castelbuono [46] 1 MP more. It still has the 2 MP to enter Caltanissetta [45] and attack.",
+    "at": {
+     "pg": 45
+    },
+    "moves": [
+     {
+      "path": [
+       50,
+       44,
+       46,
+       45
+      ],
+      "labels": [
+       "3 MP",
+       "4 MP",
+       "6 MP"
+      ]
+     }
+    ],
+    "ring": [
+     45
+    ]
+   },
+   {
+    "tab": "C",
+    "cap": "Swinging north by road through Collesano [48] to Castelbuono [46] costs 2 MP, and entering Caltanissetta [45] 2 MP more. With 4 MP spent, this is the fastest way to the target.",
+    "at": {
+     "pg": 45
+    },
+    "moves": [
+     {
+      "path": [
+       50,
+       48,
+       46,
+       45
+      ],
+      "labels": [
+       "1 MP",
+       "2 MP",
+       "4 MP"
+      ]
+     }
+    ],
+    "ring": [
+     45
+    ],
+    "mp": "4 MP"
+   },
+   {
+    "tab": "D",
+    "cap": "The Livorno moves into Mussomeli [44] for 3 MP and must stop: it may not cross the blown bridge, and entering an enemy-occupied area would forfeit its motorized MP.",
+    "at": {
+     "pg": 50,
+     "liv": 44
+    },
+    "moves": [
+     {
+      "path": [
+       50,
+       44
+      ],
+      "labels": [
+       "3 MP"
+      ]
+     }
+    ],
+    "fail": [
+     [
+      44,
+      45
+     ]
+    ]
+   },
+   {
+    "tab": "E",
+    "cap": "Via Mussomeli [44] to Castelbuono [46] costs 4 MP, leaving 2 motorized MP; these may not be used to enter enemy-occupied Caltanissetta [45], so it stops or goes elsewhere, such as Enna [38].",
+    "at": {
+     "liv": 46
+    },
+    "moves": [
+     {
+      "path": [
+       50,
+       44,
+       46
+      ],
+      "labels": [
+       "3 MP",
+       "4 MP"
+      ]
+     }
+    ],
+    "fail": [
+     [
+      46,
+      45
+     ]
+    ]
+   },
+   {
+    "tab": "F",
+    "cap": "By road through Collesano [48] to Castelbuono [46] costs 2 MP, but entering Caltanissetta [45] needs 2 MP more: it cannot reach it in either its 3 MP infantry mode or its 6 MP motorized mode.",
+    "at": {
+     "liv": 46
+    },
+    "moves": [
+     {
+      "path": [
+       50,
+       48,
+       46
+      ],
+      "labels": [
+       "1 MP",
+       "2 MP"
+      ]
+     }
+    ],
+    "fail": [
+     [
+      46,
+      45
+     ]
+    ]
+   },
+   {
+    "tab": "G",
+    "cap": "Italian Untried units hold position unless one is selected to move, build field works or go into reserve during an Operational Movement Phase, or Allied units try them in combat.",
+    "at": {
+     "liv": 50
+    }
+   }
+  ]
+ },
+ "Ex 7": {
+  "view": [
+   27,
+   26,
+   25,
+   33,
+   32,
+   30,
+   28
+  ],
+  "pieces": {
+   "ge15a": {
+    "unit": "GE01"
+   },
+   "b4": {
+    "unit": "BR14"
+   },
+   "b51": {
+    "unit": "BR07"
+   },
+   "ge15b": {
+    "unit": "GE02"
+   },
+   "ge29": {
+    "unit": "GE06"
+   },
+   "nap": {
+    "unit": "IT08"
+   }
+  },
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "Mount Etna [27], held by the Italian Napoli, is ringed by restricted boundaries: infantry need all their MP to cross one, armor may not cross. The side controlling the area may use its roads.",
+    "at": {
+     "ge15a": 26,
+     "b4": 25,
+     "b51": 32,
+     "ge15b": 30,
+     "ge29": 28,
+     "nap": 27
+    }
+   },
+   {
+    "tab": "A",
+    "cap": "The German 15th PG leaves contested Catania [26] by road into Mount Etna (3 MP) and on to Adrano [33] (1 MP), and stops: having left a contested area, it may not enter another.",
+    "at": {
+     "ge15a": 33
+    },
+    "moves": [
+     {
+      "path": [
+       26,
+       27,
+       33
+      ],
+      "labels": [
+       "3 MP",
+       "4 MP"
+      ]
+     }
+    ],
+    "fail": [
+     [
+      33,
+      25
+     ],
+     [
+      33,
+      32
+     ]
+    ]
+   },
+   {
+    "tab": "B",
+    "cap": "The British 4th Armour may enter Catania [26] for 3 MP but not Axis-held Mount Etna. Instead it runs round the volcano by road through Adrano [33] and Randazzo [32] to Novara [30]: 5 MP.",
+    "at": {
+     "ge15a": 26,
+     "b4": 30
+    },
+    "moves": [
+     {
+      "path": [
+       25,
+       26
+      ],
+      "labels": [
+       "3 MP"
+      ]
+     },
+     {
+      "path": [
+       25,
+       33,
+       32,
+       30
+      ],
+      "labels": [
+       "1 MP",
+       "3 MP",
+       "5 MP"
+      ]
+     }
+    ]
+   },
+   {
+    "tab": "C",
+    "cap": "The British 51st Infantry in Randazzo [32] may cross the restricted boundary into Mount Etna for all its MP, using Guaranteed Minimum Movement.",
+    "at": {
+     "b4": 25,
+     "b51": 27
+    },
+    "moves": [
+     {
+      "path": [
+       32,
+       27
+      ],
+      "labels": [
+       "ALL"
+      ]
+     }
+    ]
+   },
+   {
+    "tab": "D",
+    "cap": "The German 15th PG in Novara [30] may not cross the restricted boundary into Mount Etna, but may use the roads through Taormina [28]: 4 MP in all.",
+    "at": {
+     "b51": 32,
+     "ge15b": 27
+    },
+    "fail": [
+     [
+      30,
+      27
+     ]
+    ],
+    "moves": [
+     {
+      "path": [
+       30,
+       28,
+       27
+      ],
+      "labels": [
+       "2 MP",
+       "4 MP"
+      ]
+     }
+    ]
+   },
+   {
+    "tab": "E",
+    "cap": "The German 29th PG in Taormina [28] enters Mount Etna by road for 2 MP and may go on to Catania [26] for 2 MP more, or by Adrano [33] to Regalbuto [25] to attack the British 4th Armour: 5 MP.",
+    "at": {
+     "ge15b": 30,
+     "ge29": 25
+    },
+    "moves": [
+     {
+      "path": [
+       28,
+       27,
+       26
+      ],
+      "labels": [
+       "2 MP",
+       "4 MP"
+      ]
+     },
+     {
+      "path": [
+       28,
+       27,
+       33,
+       25
+      ],
+      "labels": [
+       "2 MP",
+       "3 MP",
+       "5 MP"
+      ]
+     }
+    ]
+   },
+   {
+    "tab": "F",
+    "cap": "The infantry-class Napoli in Mount Etna may leave by the road connections, or by the field connections for all its MP.",
+    "at": {
+     "ge29": 28
+    }
+   }
+  ]
+ },
+ "Ex 8": {
+  "view": [
+   15,
+   12,
+   14,
+   11,
+   26,
+   16
+  ],
+  "pieces": {
+   "nap": {
+    "unit": "IT08"
+   },
+   "eng": {
+    "label": "Engineer",
+    "side": "axis"
+   },
+   "c1": {
+    "unit": "BR01"
+   },
+   "c2": {
+    "unit": "BR02"
+   },
+   "f1": {
+    "unit": "BR05"
+   },
+   "f2": {
+    "unit": "BR06"
+   }
+  },
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "The Italian Napoli holds Val di Catania [15], behind the Anapo River towards Sortino [12] and Lentini [14].",
+    "at": {
+     "nap": 15,
+     "c1": 12,
+     "c2": 11,
+     "f1": 14,
+     "f2": 14
+    }
+   },
+   {
+    "tab": "A",
+    "cap": "In the Admin Phase the Axis player could place an Engineer in Val di Catania to blow the bridges to Sortino [12] and Lentini [14] automatically, but he may keep it for the Simeto River by Catania [26].",
+    "at": {
+     "eng": 15
+    }
+   },
+   {
+    "tab": "B",
+    "cap": "The 1st Canadian tries to cross from Sortino [12]; the Axis player tries to blow the bridge and rolls 4 against 5: success. The Canadian crosses anyway for all its MP, and a River Assault marker is placed.",
+    "at": {
+     "eng": null,
+     "c1": 15
+    },
+    "moves": [
+     {
+      "path": [
+       12,
+       15
+      ],
+      "labels": [
+       "ALL"
+      ]
+     }
+    ],
+    "marks": [
+     {
+      "kind": "blown",
+      "edge": [
+       12,
+       15
+      ]
+     }
+    ],
+    "dice": [
+     [
+      "Axis blows the bridge",
+      5,
+      [
+       4
+      ]
+     ]
+    ],
+    "mp": "All MP · River Assault"
+   },
+   {
+    "tab": "C",
+    "cap": "A British 50th Infantry block in Lentini [14] could also cross the Anapo. The Axis player could try to blow that bridge too; either way the River Assault condition still applies.",
+    "moves": [
+     {
+      "path": [
+       14,
+       15
+      ],
+      "labels": [
+       "?"
+      ]
+     }
+    ]
+   },
+   {
+    "tab": "D",
+    "cap": "If the other 1st Canadian block moves in from [11] instead (2 MP field, +1 MP occupied area), the River Assault no longer applies and both blocks of the division get the Divisional Integrity bonus.",
+    "at": {
+     "c2": 15
+    },
+    "moves": [
+     {
+      "path": [
+       11,
+       15
+      ],
+      "labels": [
+       "3 MP"
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "Ex 9": {
+  "view": [
+   56,
+   57,
+   55,
+   54,
+   50,
+   48,
+   49,
+   111,
+   133
+  ],
+  "pieces": {
+   "us3": {
+    "unit": "US05"
+   },
+   "arm1": {
+    "unit": "US01"
+   },
+   "us1": {
+    "unit": "US03"
+   },
+   "arm2": {
+    "unit": "US02"
+   },
+   "usp": {
+    "label": "US unit",
+    "side": "allied"
+   },
+   "it56": {
+    "label": "Italian unit",
+    "side": "axis"
+   },
+   "g48": {
+    "unit": "IT09"
+   },
+   "it49a": {
+    "label": "Italian unit",
+    "side": "axis"
+   },
+   "it49b": {
+    "label": "Italian unit",
+    "side": "axis"
+   }
+  },
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "The Palermo–Termini Imerese coast: US units in the D1 beachhead, the Palermo port box, Rocca Busambra [55] and Prizzi [50]; Italian units in Bolognetta [56], Termini Imerese [49] and, Untried, Collesano [48].",
+    "at": {
+     "us3": 111,
+     "arm1": 55,
+     "us1": 50,
+     "arm2": 133,
+     "usp": 57,
+     "it56": 56,
+     "g48": 48,
+     "it49a": 49,
+     "it49b": 49
+    }
+   },
+   {
+    "tab": "A",
+    "cap": "On Game Turn 1 the 3rd US Infantry lands from the D1 beachhead into Italian-held Bolognetta [56] for no MP. This is a Beach Assault, marked with a River Assault marker.",
+    "at": {
+     "us3": 56
+    },
+    "moves": [
+     {
+      "path": [
+       111,
+       56
+      ]
+     }
+    ],
+    "marks": [
+     {
+      "kind": "note",
+      "text": "RIVER ASSAULT",
+      "edge": [
+       111,
+       56
+      ]
+     }
+    ],
+    "ring": [
+     56
+    ]
+   },
+   {
+    "tab": "B",
+    "cap": "On Game Turn 2 the US 2nd Armor moves from Rocca Busambra [55] into Bolognetta [56]: 1 MP for the road and +1 MP for an occupied area.",
+    "at": {
+     "arm1": 56
+    },
+    "moves": [
+     {
+      "path": [
+       55,
+       56
+      ],
+      "labels": [
+       "2 MP"
+      ]
+     }
+    ]
+   },
+   {
+    "tab": "C",
+    "cap": "The US 1st Infantry moves by road from Prizzi [50] into Collesano [48] for 1 MP, with no penalty for the Untried unit, and must stop.",
+    "at": {
+     "us1": 48
+    },
+    "moves": [
+     {
+      "path": [
+       50,
+       48
+      ],
+      "labels": [
+       "1 MP"
+      ]
+     }
+    ],
+    "ring": [
+     48
+    ]
+   },
+   {
+    "tab": "D",
+    "cap": "The port box is undamaged and Palermo [57] US-controlled and US-occupied, so the 2nd Armor in the port box lands for no MP and keeps moving: Rocca Busambra [55], Corleone [54] and Prizzi [50], shutting the door on Termini Imerese [49].",
+    "at": {
+     "arm2": 50
+    },
+    "moves": [
+     {
+      "path": [
+       133,
+       57,
+       55,
+       54,
+       50
+      ],
+      "labels": [
+       "0",
+       "2 MP",
+       "3 MP",
+       "4 MP"
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "Ex 10": {
+  "view": [
+   19,
+   18,
+   20,
+   9,
+   21,
+   102
+  ],
+  "pieces": {
+   "gar": {
+    "unit": "IT09"
+   },
+   "us1": {
+    "unit": "US03"
+   }
+  },
+  "markers": [
+   {
+    "kind": "fw",
+    "area": 19
+   },
+   {
+    "kind": "note",
+    "text": "BEACH ASSAULT",
+    "edge": [
+     102,
+     19
+    ]
+   }
+  ],
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "The US 1st Infantry has landed in Gela [19] by beach assault, against an Untried Italian coastal garrison with field works.",
+    "at": {
+     "gar": 19,
+     "us1": 19
+    },
+    "moves": [
+     {
+      "path": [
+       102,
+       19
+      ]
+     }
+    ]
+   },
+   {
+    "tab": "A",
+    "cap": "The garrison is revealed and checks morale at 5–2=3: it rolls 2 and stays in good order. Its ground fire gets no +1 against the beach assault, so its SN is 5–1=4: it rolls 5 and misses.",
+    "ring": [
+     19
+    ],
+    "dice": [
+     [
+      "Garrison morale check",
+      3,
+      [
+       2
+      ]
+     ],
+     [
+      "Garrison ground fire",
+      4,
+      [
+       5
+      ]
+     ]
+    ]
+   },
+   {
+    "tab": "B",
+    "cap": "The 1st Infantry fires back at 5–1=4 (beach assault –1, veteran on green +1, field works –1). Had Naval Support or a Ranger removed the field works, it would have 4 tries for a 5.",
+    "ring": [
+     19
+    ]
+   },
+   {
+    "tab": "C",
+    "cap": "Capturing one of the three airfields (Catania [26], Niscemi [18], Marsala [65]) puts a conditional Allied Air Support asset in the Selection Cup at once; the Axis player loses the next Air Support asset he draws.",
+    "marks": [
+     {
+      "kind": "note",
+      "text": "AIRFIELD",
+      "area": 18
+     }
+    ]
+   },
+   {
+    "tab": "D",
+    "cap": "Capturing a Sicilian port or an area of battlefield importance puts a conditional Fading Italian Morale event in the Allied Selection Cup.",
+    "marks": [
+     {
+      "kind": "note",
+      "text": "KEY VP AREA",
+      "area": 18
+     }
+    ]
+   },
+   {
+    "tab": "E",
+    "cap": "Each such event drawn goes on the Fading Italian Morale Track, from Level 1 up. Niscemi [18] and Catania [26] are both airfields and areas of battlefield importance, so capturing one brings both an Air Support asset and a Fading Italian Morale event.",
+    "marks": [
+     {
+      "kind": "note",
+      "text": "AIRFIELD + KEY VP AREA",
+      "area": 18
+     }
+    ]
+   }
+  ]
+ },
+ "Ex 11": {
+  "view": [
+   59,
+   57,
+   49,
+   46,
+   45,
+   40,
+   53,
+   42
+  ],
+  "pieces": {
+   "pg1": {
+    "unit": "GE02"
+   },
+   "pg2": {
+    "unit": "GE03"
+   }
+  },
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "One 15th PG in Salemi [59] goes into reserve and, in the Strategic Movement Phase, moves straight to Caltanissetta [45] for no MP. No operational move gets there: the northern, central and southern routes all run out of MP.",
+    "at": {
+     "pg1": 59,
+     "pg2": 59
+    },
+    "moves": [
+     {
+      "path": [
+       59,
+       55,
+       56,
+       50,
+       44,
+       45
+      ],
+      "kind": "strat"
+     },
+     {
+      "path": [
+       59,
+       58,
+       57,
+       56,
+       49,
+       48,
+       46
+      ],
+      "labels": [
+       "1 MP",
+       "2 MP",
+       "3 MP",
+       "4 MP",
+       "5 MP",
+       "6 MP"
+      ]
+     },
+     {
+      "path": [
+       59,
+       54,
+       50,
+       44
+      ],
+      "labels": [
+       "2 MP",
+       "3 MP",
+       "5 MP"
+      ]
+     },
+     {
+      "path": [
+       59,
+       60,
+       53,
+       51,
+       52,
+       42,
+       40
+      ],
+      "labels": [
+       "1 MP",
+       "2 MP",
+       "3 MP",
+       "4 MP",
+       "5 MP",
+       "6 MP"
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "Ex 12": {
+  "view": [
+   6,
+   11,
+   3,
+   12,
+   7,
+   5
+  ],
+  "pieces": {
+   "nap": {
+    "unit": "IT08"
+   },
+   "f1": {
+    "unit": "BR05"
+   },
+   "f2": {
+    "unit": "BR06"
+   },
+   "a50": {
+    "label": "50th asset",
+    "side": "allied"
+   },
+   "a24": {
+    "label": "24th Arty",
+    "side": "allied"
+   },
+   "a98": {
+    "label": "98th Arty",
+    "side": "allied"
+   },
+   "air": {
+    "label": "Air Support",
+    "side": "allied"
+   },
+   "bers": {
+    "label": "177th Bers",
+    "side": "axis"
+   },
+   "a12": {
+    "label": "12th Arty",
+    "side": "axis"
+   }
+  },
+  "markers": [
+   {
+    "kind": "fw",
+    "area": 6
+   }
+  ],
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "The British 50th Infantry attacks the Italian Napoli Infantry, protected by field works, in Palazzolo Acreide [6].",
+    "at": {
+     "nap": 6,
+     "f1": 6,
+     "f2": 6
+    },
+    "ring": [
+     6
+    ]
+   },
+   {
+    "tab": "A",
+    "cap": "The attacker commits the 50th Infantry asset, the 24th and 98th Artillery and an Air Support asset. The artillery fires at 5–1=4 against the field works: 2 and 5, one hit, which removes the field works.",
+    "at": {
+     "a50": 6,
+     "a24": 6,
+     "a98": 6
+    },
+    "ring": [
+     6
+    ],
+    "drop": [
+     "fw:6"
+    ],
+    "dice": [
+     [
+      "24th and 98th Artillery",
+      4,
+      [
+       2,
+       5
+      ]
+     ]
+    ]
+   },
+   {
+    "tab": "B",
+    "cap": "The defender's 12th Artillery fires at 5 and rolls 5: a hit. The Allied player eliminates the 50th Infantry asset to absorb it.",
+    "at": {
+     "a12": 6,
+     "a50": null
+    },
+    "ring": [
+     6
+    ],
+    "dice": [
+     [
+      "12th Artillery",
+      5,
+      [
+       5
+      ]
+     ]
+    ]
+   },
+   {
+    "tab": "C",
+    "cap": "The artillery goes to the Used Box. Napoli fires at 5 (1, 5, 8: two hits) and the 177th Bersaglieri at 4 (5: no hit). Each 50th Infantry block loses a step.",
+    "at": {
+     "a24": null,
+     "a98": null,
+     "a12": null,
+     "bers": 6
+    },
+    "str": {
+     "f1": 3,
+     "f2": 3
+    },
+    "ring": [
+     6
+    ],
+    "dice": [
+     [
+      "Napoli",
+      5,
+      [
+       1,
+       5,
+       8
+      ]
+     ],
+     [
+      "177th Bersaglieri",
+      4,
+      [
+       5
+      ]
+     ]
+    ]
+   },
+   {
+    "tab": "D",
+    "cap": "The 50th Infantry fires with Divisional Integrity: the unsupported block at 5–2=3 (one hit), the block backed by Air Support at 5 (two hits).",
+    "at": {
+     "air": 6
+    },
+    "ring": [
+     6
+    ],
+    "dice": [
+     [
+      "Unsupported 50th",
+      3,
+      [
+       2,
+       7,
+       8,
+       10
+      ]
+     ],
+     [
+      "Supported 50th",
+      5,
+      [
+       4,
+       5,
+       7
+      ]
+     ]
+    ]
+   },
+   {
+    "tab": "E",
+    "cap": "Three hits: Napoli retreats to Vizzini [11] and becomes disordered, the 177th Bersaglieri asset is eliminated, and Napoli loses a step.",
+    "at": {
+     "nap": 11,
+     "bers": null
+    },
+    "str": {
+     "nap": 2
+    },
+    "moves": [
+     {
+      "path": [
+       6,
+       11
+      ],
+      "kind": "retreat"
+     }
+    ]
+   }
+  ]
+ },
+ "Ex 13": {
+  "view": [
+   6,
+   3,
+   1,
+   13,
+   5,
+   4,
+   2,
+   7,
+   8,
+   12,
+   14
+  ],
+  "pieces": {
+   "b13a": {
+    "label": "British",
+    "side": "allied"
+   },
+   "b13b": {
+    "label": "British",
+    "side": "allied"
+   },
+   "b5a": {
+    "label": "British",
+    "side": "allied"
+   },
+   "b5b": {
+    "label": "British",
+    "side": "allied"
+   },
+   "b4a": {
+    "label": "British",
+    "side": "allied"
+   },
+   "b4b": {
+    "label": "British",
+    "side": "allied"
+   },
+   "b2a": {
+    "label": "British",
+    "side": "allied"
+   },
+   "b2b": {
+    "label": "British",
+    "side": "allied"
+   },
+   "b1": {
+    "label": "British",
+    "side": "allied"
+   },
+   "us8a": {
+    "label": "US",
+    "side": "allied"
+   },
+   "us8b": {
+    "label": "US",
+    "side": "allied"
+   }
+  },
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "The 1st British Airbourne unit waits in the Airborne Assault box. At the start of combat it must drop into an area adjacent to at least two areas already holding units of its own army.",
+    "at": {
+     "b13a": 13,
+     "b13b": 13,
+     "b5a": 5,
+     "b5b": 5,
+     "b4a": 4,
+     "b4b": 4,
+     "b2a": 2,
+     "b2b": 2,
+     "b1": 1,
+     "us8a": 8,
+     "us8b": 8
+    }
+   },
+   {
+    "tab": "A",
+    "cap": "Legal drops (circled): Palazzolo Acreide [6], Ragusa [3] and Pachino [1]. Not legal: Augusta, Syracuse, Avola and Modica (overstacking), Sortino and Lentini (only one area adjacent), and Comiso [7], because the units in Santa Croce Camerina [8] are US units of another army.",
+    "ring": [
+     6,
+     3,
+     1
+    ],
+    "marks": [
+     {
+      "kind": "note",
+      "text": "ONLY ONE ADJACENT",
+      "area": 12
+     },
+     {
+      "kind": "note",
+      "text": "ONLY ONE ADJACENT",
+      "area": 14
+     },
+     {
+      "kind": "note",
+      "text": "DIFFERENT ARMY",
+      "area": 7
+     }
+    ]
+   }
+  ]
+ },
+ "Ex 14": {
+  "view": [
+   20,
+   19,
+   21,
+   18,
+   9
+  ],
+  "pieces": {
+   "g20": {
+    "unit": "IT10"
+   },
+   "g19": {
+    "unit": "IT37"
+   },
+   "u3a": {
+    "unit": "US05"
+   },
+   "u3b": {
+    "unit": "US06"
+   },
+   "rng": {
+    "label": "1st Ranger",
+    "side": "allied"
+   },
+   "u1a": {
+    "unit": "US03"
+   },
+   "u1b": {
+    "unit": "US04"
+   },
+   "nav": {
+    "label": "Naval Support",
+    "side": "allied"
+   }
+  },
+  "markers": [
+   {
+    "kind": "fw",
+    "area": 20
+   },
+   {
+    "kind": "fw",
+    "area": 19
+   },
+   {
+    "kind": "note",
+    "text": "BEACH ASSAULT",
+    "edge": [
+     101,
+     20
+    ]
+   },
+   {
+    "kind": "note",
+    "text": "BEACH ASSAULT",
+    "edge": [
+     102,
+     19
+    ]
+   }
+  ],
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "After the landings, the US 3rd Infantry and the 1st Ranger assault Licata [20] and the US 1st Infantry assaults Gela [19], each held by an Untried coastal garrison with field works.",
+    "at": {
+     "g20": 20,
+     "g19": 19,
+     "u3a": 20,
+     "u3b": 20,
+     "u1a": 19,
+     "u1b": 19
+    },
+    "ring": [
+     20,
+     19
+    ]
+   },
+   {
+    "tab": "A",
+    "cap": "In Licata the garrison is revealed as a green unit and checks morale at 5–2=3: it rolls 5 and fails, so it is disordered before the first shot. Its field works stay.",
+    "ring": [
+     20
+    ],
+    "dice": [
+     [
+      "Licata garrison morale check",
+      3,
+      [
+       5
+      ]
+     ]
+    ]
+   },
+   {
+    "tab": "B",
+    "cap": "In Gela the garrison is the best coastal garrison in the game, a veteran with strength 2. It checks morale at 5 and rolls 5: success.",
+    "ring": [
+     19
+    ],
+    "dice": [
+     [
+      "Gela garrison morale check",
+      5,
+      [
+       5
+      ]
+     ]
+    ]
+   },
+   {
+    "tab": "C",
+    "cap": "No artillery was committed. In Gela the single Naval Support asset removes the field works at once.",
+    "at": {
+     "nav": 19
+    },
+    "ring": [
+     19
+    ],
+    "drop": [
+     "fw:19"
+    ]
+   },
+   {
+    "tab": "D",
+    "cap": "In Licata the disordered green garrison gets no river assault bonus and fires at 5–3=2: it rolls 9 and misses.",
+    "at": {
+     "nav": null
+    },
+    "ring": [
+     20
+    ],
+    "dice": [
+     [
+      "Licata garrison",
+      2,
+      [
+       9
+      ]
+     ]
+    ]
+   },
+   {
+    "tab": "E",
+    "cap": "In Gela the veteran garrison gets the river assault bonus and fires at 6: 1 and 5, two hits. Aborting a beach assault would lose the beachhead, so each 1st Infantry block loses a step.",
+    "ring": [
+     19
+    ],
+    "str": {
+     "u1a": 3,
+     "u1b": 3
+    },
+    "dice": [
+     [
+      "Gela garrison",
+      6,
+      [
+       1,
+       5
+      ]
+     ]
+    ]
+   },
+   {
+    "tab": "F",
+    "cap": "In Licata the two 3rd Infantry blocks and the Ranger score six hits. The field works absorb the first, a retreat into Butera [21] the second, and the third eliminates the garrison.",
+    "ring": [
+     20
+    ],
+    "at": {
+     "g20": null,
+     "rng": 20
+    },
+    "drop": [
+     "fw:20"
+    ],
+    "moves": [
+     {
+      "path": [
+       20,
+       21
+      ],
+      "kind": "retreat"
+     }
+    ],
+    "dice": [
+     [
+      "First 3rd Infantry",
+      6,
+      [
+       2,
+       4,
+       5,
+       9,
+       10
+      ]
+     ],
+     [
+      "Second 3rd Infantry",
+      6,
+      [
+       1,
+       6,
+       8,
+       9
+      ]
+     ],
+     [
+      "1st Ranger",
+      7,
+      [
+       5
+      ]
+     ]
+    ]
+   },
+   {
+    "tab": "G",
+    "cap": "In Gela the 1st Infantry scores three hits. The garrison retreats into Niscemi [18] and becomes disordered for the first; the next two are step losses and it is eliminated.",
+    "ring": [
+     19
+    ],
+    "at": {
+     "g19": null
+    },
+    "moves": [
+     {
+      "path": [
+       19,
+       18
+      ],
+      "kind": "retreat"
+     }
+    ],
+    "dice": [
+     [
+      "First 1st Infantry",
+      5,
+      [
+       2,
+       4,
+       6,
+       9
+      ]
+     ],
+     [
+      "Second 1st Infantry",
+      5,
+      [
+       5,
+       8,
+       9
+      ]
+     ]
+    ]
+   }
+  ]
+ },
+ "Ex 15": {
+  "view": [
+   47,
+   36,
+   34,
+   31,
+   35
+  ],
+  "pieces": {
+   "ao36": {
+    "unit": "IT05"
+   },
+   "ao34": {
+    "unit": "IT06"
+   },
+   "rct": {
+    "label": "30 RCT (–)",
+    "side": "allied"
+   },
+   "air1": {
+    "label": "Air Support",
+    "side": "allied"
+   },
+   "air2": {
+    "label": "Air Support",
+    "side": "allied"
+   }
+  },
+  "markers": [
+   {
+    "kind": "fw",
+    "area": 34
+   }
+  ],
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "The Italian Aosta Infantry holds Santo Stefano di Camastra [36] and, with field works, Sant' Agata di Militello [34].",
+    "at": {
+     "ao36": 36,
+     "ao34": 34,
+     "rct": 47
+    }
+   },
+   {
+    "tab": "A",
+    "cap": "In the Admin Phase the Allied player launches a Flanking Invasion from Cefalù [47] into Sant' Agata di Militello [34], bypassing the Aosta in Santo Stefano. It is an assault, resolved at once, and only Air and Naval Support may be committed.",
+    "at": {
+     "rct": 34
+    },
+    "moves": [
+     {
+      "path": [
+       47,
+       34
+      ],
+      "kind": "air"
+     }
+    ],
+    "ring": [
+     34
+    ]
+   },
+   {
+    "tab": "B",
+    "cap": "One Air Support asset fires as artillery at 5–1=4 and rolls 2: a hit, which the Axis player absorbs by removing the field works.",
+    "at": {
+     "air1": 34
+    },
+    "ring": [
+     34
+    ],
+    "drop": [
+     "fw:34"
+    ],
+    "dice": [
+     [
+      "Air Support as artillery",
+      4,
+      [
+       2
+      ]
+     ]
+    ]
+   },
+   {
+    "tab": "C",
+    "cap": "The second Air Support asset backs the Flanking Invasion as a battle asset (+2) for an SN of 5: it rolls 5, a hit.",
+    "at": {
+     "air2": 34
+    },
+    "ring": [
+     34
+    ],
+    "dice": [
+     [
+      "Flanking Invasion",
+      5,
+      [
+       5
+      ]
+     ]
+    ]
+   },
+   {
+    "tab": "D",
+    "cap": "The Aosta retreats into Capo di Orlando [31] and becomes disordered. The Flanking Invasion stays and may only defend; the Aosta in Santo Stefano keeps its supply line.",
+    "at": {
+     "ao34": 31
+    },
+    "moves": [
+     {
+      "path": [
+       34,
+       31
+      ],
+      "kind": "retreat"
+     }
+    ]
+   }
+  ]
+ },
+ "Ex 16": {
+  "view": [
+   6,
+   5,
+   4,
+   1,
+   2,
+   7,
+   3,
+   107
+  ],
+  "pieces": {
+   "ab": {
+    "unit": "BR11"
+   },
+   "us1": {
+    "unit": "US03"
+   },
+   "U": {
+    "label": "U",
+    "side": "axis"
+   },
+   "V": {
+    "label": "V",
+    "side": "allied"
+   },
+   "W": {
+    "label": "W",
+    "side": "axis"
+   },
+   "X": {
+    "label": "X",
+    "side": "allied"
+   },
+   "Y": {
+    "label": "Y",
+    "side": "allied"
+   },
+   "Z": {
+    "label": "Z",
+    "side": "allied"
+   },
+   "m2": {
+    "label": "2 units",
+    "side": "allied"
+   }
+  },
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "The British 1st Airbourne in Palazzolo Acreide [6], still restricted to Zone B, must retreat. The forces in Syracuse [5], Avola [4] and Pachino [1] change from case to case.",
+    "at": {
+     "ab": 6,
+     "us1": 7
+    }
+   },
+   {
+    "tab": "A",
+    "cap": "With V in Syracuse [5] and X in Avola [4], the only option is Syracuse: a friendly area with zero or one unit comes first, and crossing the army boundary into Comiso [7] comes last.",
+    "at": {
+     "V": 5,
+     "X": 4,
+     "ab": 5
+    },
+    "moves": [
+     {
+      "path": [
+       6,
+       5
+      ],
+      "kind": "retreat"
+     }
+    ]
+   },
+   {
+    "tab": "B",
+    "cap": "With enemy U in Syracuse and Avola contested by W and X, the unit must cross the restricted boundary into Comiso [7], held by the US 1st Infantry. The Allied player may then release it to operate in Zone A.",
+    "at": {
+     "V": null,
+     "U": 5,
+     "W": 4,
+     "ab": 7
+    },
+    "moves": [
+     {
+      "path": [
+       6,
+       7
+      ],
+      "kind": "retreat"
+     }
+    ]
+   },
+   {
+    "tab": "C",
+    "cap": "With Syracuse contested (U and V), two Allied units (X) in Avola and one (Y) in Pachino, the unit retreats through Avola [4] to Pachino [1], staying in its army zone.",
+    "at": {
+     "V": 5,
+     "W": null,
+     "Y": 1,
+     "ab": 1
+    },
+    "moves": [
+     {
+      "path": [
+       6,
+       4,
+       1
+      ],
+      "kind": "retreat"
+     }
+    ]
+   },
+   {
+    "tab": "D",
+    "cap": "With two British units each in Pachino (Z) and Modica [2], no area in Zone B with zero or one unit is in reach, so the unit uses sea retreat from Avola through the Acid South beachhead [B3] to the At Sea box.",
+    "at": {
+     "Y": null,
+     "Z": 1,
+     "m2": 2,
+     "ab": null
+    },
+    "moves": [
+     {
+      "path": [
+       6,
+       4,
+       107
+      ],
+      "kind": "retreat"
+     }
+    ]
+   }
+  ]
+ },
+ "Ex 17": {
+  "view": [
+   7,
+   9,
+   10,
+   11,
+   17,
+   18,
+   19,
+   22
+  ],
+  "pieces": {
+   "nap": {
+    "unit": "IT07"
+   },
+   "ax10": {
+    "label": "Axis unit",
+    "side": "axis"
+   },
+   "ax17": {
+    "label": "Axis unit",
+    "side": "axis"
+   },
+   "ax22": {
+    "label": "Axis unit",
+    "side": "axis"
+   },
+   "us1": {
+    "unit": "US03"
+   },
+   "arm1": {
+    "unit": "US01"
+   },
+   "arm2": {
+    "unit": "US02"
+   },
+   "us45": {
+    "unit": "US07"
+   }
+  },
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "After the Combat Phase: the Italian Napoli in Vizzini [11] is in 6th Army reserve; the US 1st Infantry in Comiso [7] and the US 45th Infantry in Gela [19] are in 7th Army reserve; the US 2nd Armor in Niscemi [18] has an Exploitation marker.",
+    "at": {
+     "nap": 11,
+     "ax10": 10,
+     "ax17": 17,
+     "ax22": 22,
+     "us1": 7,
+     "arm1": 18,
+     "arm2": 9,
+     "us45": 19
+    }
+   },
+   {
+    "tab": "A",
+    "cap": "In the Reaction Phase the Axis player moves the reserve Napoli from Vizzini [11] into Mazzarrone [10], to prevent the loss of a large unit there.",
+    "at": {
+     "nap": 10
+    },
+    "moves": [
+     {
+      "path": [
+       11,
+       10
+      ],
+      "labels": [
+       "3 MP"
+      ]
+     }
+    ]
+   },
+   {
+    "tab": "B",
+    "cap": "In the Breakthrough Movement Phase the reserve US 1st Infantry moves from Comiso [7] into Mazzarrone [10] to protect the flank; its 7th Army reserve marker is removed.",
+    "at": {
+     "us1": 10
+    },
+    "moves": [
+     {
+      "path": [
+       7,
+       10
+      ],
+      "labels": [
+       "3 MP"
+      ]
+     }
+    ]
+   },
+   {
+    "tab": "C",
+    "cap": "The US 2nd Armor with the Exploitation marker moves one area, from Niscemi [18] into Grammichele [17], creating a newly contested area.",
+    "at": {
+     "arm1": 17
+    },
+    "moves": [
+     {
+      "path": [
+       18,
+       17
+      ],
+      "labels": [
+       "1 area"
+      ]
+     }
+    ]
+   },
+   {
+    "tab": "D",
+    "cap": "Using the Reusable Special Action, the Allied player advances the US 2nd Armor in Scoglitti [9] one area into Mazzarrone [10].",
+    "at": {
+     "arm2": 10
+    },
+    "moves": [
+     {
+      "path": [
+       9,
+       10
+      ],
+      "labels": [
+       "1 area"
+      ]
+     }
+    ]
+   },
+   {
+    "tab": "E",
+    "cap": "The reserve US 45th Infantry moves from Gela [19] to Niscemi [18] for 1 MP and on to Caltagirone [22] for 2 MP more; its reserve marker is removed.",
+    "at": {
+     "us45": 22
+    },
+    "moves": [
+     {
+      "path": [
+       19,
+       18,
+       22
+      ],
+      "labels": [
+       "1 MP",
+       "3 MP"
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "Ex 18": {
+  "view": [
+   43,
+   44,
+   45,
+   46,
+   48,
+   50,
+   40,
+   42
+  ],
+  "pieces": {
+   "arm": {
+    "unit": "US01"
+   },
+   "us9": {
+    "unit": "US11"
+   },
+   "us45": {
+    "unit": "US07"
+   },
+   "us3": {
+    "unit": "US05"
+   },
+   "us1": {
+    "unit": "US03"
+   },
+   "ab82": {
+    "unit": "US09"
+   },
+   "ax45": {
+    "label": "Axis unit",
+    "side": "axis"
+   },
+   "ax46": {
+    "label": "Axis unit",
+    "side": "axis"
+   },
+   "ax48": {
+    "label": "Axis unit",
+    "side": "axis"
+   },
+   "air": {
+    "label": "Air Support",
+    "side": "allied"
+   }
+  },
+  "markers": [
+   {
+    "kind": "blown",
+    "edge": [
+     43,
+     44
+    ]
+   },
+   {
+    "kind": "blown",
+    "edge": [
+     44,
+     45
+    ]
+   }
+  ],
+  "steps": [
+   {
+    "tab": "Set-up",
+    "cap": "US units around Mussomeli [44] check supply, traced off the map along the southern coast road to the Joss beachhead [A1]. Bridges are blown between Aragona [43], Mussomeli and Caltanissetta [45].",
+    "at": {
+     "arm": 43,
+     "us9": 44,
+     "us45": 45,
+     "us3": 46,
+     "us1": 48,
+     "ab82": 50,
+     "ax45": 45,
+     "ax46": 46,
+     "ax48": 48
+    }
+   },
+   {
+    "tab": "A",
+    "cap": "The US 2nd Armor in Aragona [43] traces directly through friendly-controlled areas to the supply source (9.31a).",
+    "moves": [
+     {
+      "path": [
+       43,
+       42
+      ],
+      "kind": "strat"
+     }
+    ]
+   },
+   {
+    "tab": "B",
+    "cap": "The US 9th Infantry in Mussomeli [44] traces across the blown bridge to Aragona and on (9.31a: it starts next to that blown bridge).",
+    "moves": [
+     {
+      "path": [
+       44,
+       43,
+       42
+      ],
+      "kind": "strat"
+     }
+    ]
+   },
+   {
+    "tab": "C",
+    "cap": "The US 45th Infantry in contested Caltanissetta [45] traces out to Canicatti [40] and on (9.31c, 9.31a).",
+    "moves": [
+     {
+      "path": [
+       45,
+       40,
+       42
+      ],
+      "kind": "strat"
+     }
+    ]
+   },
+   {
+    "tab": "D",
+    "cap": "The US 3rd Infantry in enemy-controlled Castelbuono [46] traces through Caltanissetta, contested but Allied-controlled, and on (9.31b, 9.31c, 9.31a).",
+    "moves": [
+     {
+      "path": [
+       46,
+       45,
+       40,
+       42
+      ],
+      "kind": "strat"
+     }
+    ]
+   },
+   {
+    "tab": "E",
+    "cap": "The US 1st Infantry in Collesano [48] cannot trace into enemy-controlled Castelbuono, and the paths through Mussomeli and Prizzi [50] end at the two blown bridges. It is marked Out of Supply.",
+    "moves": [
+     {
+      "path": [
+       48,
+       44
+      ],
+      "kind": "strat"
+     },
+     {
+      "path": [
+       48,
+       50,
+       44
+      ],
+      "kind": "strat"
+     }
+    ],
+    "fail": [
+     [
+      48,
+      46
+     ],
+     [
+      44,
+      43
+     ],
+     [
+      44,
+      45
+     ]
+    ],
+    "mp": "US 1st Infantry: Out of Supply"
+   },
+   {
+    "tab": "F",
+    "cap": "The 82nd Airborne in Prizzi [50] can trace only as far as Mussomeli and is marked Out of Supply. An Air Support asset on an Air Supply mission spares it the morale check.",
+    "at": {
+     "air": 50
+    },
+    "moves": [
+     {
+      "path": [
+       50,
+       44
+      ],
+      "kind": "strat"
+     }
+    ],
+    "fail": [
+     [
+      44,
+      43
+     ],
+     [
+      44,
+      45
+     ]
+    ],
+    "mp": "82nd Airborne: Out of Supply, no morale check"
+   }
+  ]
+ }
+}

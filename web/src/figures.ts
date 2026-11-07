@@ -61,9 +61,9 @@ export function bindFigure(root: HTMLElement, f: FigSpec, k: FigKit) {
   const near = new Set<number>(); for (const a of f.view) near.add(a);
   for (const s of f.steps) for (const m of s.moves ?? []) m.path.forEach((a) => near.add(a));
   const lab = el('g');
-  for (const a of near) { const p = k.label(a); if (!p) continue;
-    lab.append(el('g', { transform: `translate(${p[0] - 11} ${p[1] - 34})` }, [el('rect', { width: 22, height: 17, rx: 3, fill: '#d9b45a', stroke: '#5b4512', 'stroke-width': 1 }), el('text', { x: 11, y: 13.5, 'text-anchor': 'middle', 'font-family': 'Saira Condensed, sans-serif', 'font-weight': 700, 'font-size': 13, fill: '#1a1608' }, [String(a)])]),
-      el('text', { x: p[0], y: p[1] - 2, 'text-anchor': 'middle', 'font-family': k.labelFont, 'font-weight': 600, 'font-size': 15, fill: '#2b2418', stroke: '#efe6c8', 'stroke-width': 3.5, 'paint-order': 'stroke' }, [k.name(a)])); }
+  for (const a of near) { const p = k.label(a); if (!p) continue; const box = /\bbox\b/i.test(k.name(a));      // an off-map box shows its printed code, not an area number
+    if (!box) lab.append(el('g', { transform: `translate(${p[0] - 11} ${p[1] - 34})` }, [el('rect', { width: 22, height: 17, rx: 3, fill: '#d9b45a', stroke: '#5b4512', 'stroke-width': 1 }), el('text', { x: 11, y: 13.5, 'text-anchor': 'middle', 'font-family': 'Saira Condensed, sans-serif', 'font-weight': 700, 'font-size': 13, fill: '#1a1608' }, [String(a)])]));
+    lab.append(el('text', { x: p[0], y: p[1] - 2, 'text-anchor': 'middle', 'font-family': k.labelFont, 'font-weight': 600, 'font-size': 15, fill: '#2b2418', stroke: '#efe6c8', 'stroke-width': 3.5, 'paint-order': 'stroke' }, [k.name(a)])); }
   const gMk = el('g'), gAr = el('g'), gU = el('g'); svg.append(lab, gMk, gAr, gU);
   const blocks = new Map<string, SVGGElement>();
   const blockOf = (key: string, str?: number) => {
@@ -74,7 +74,7 @@ export function bindFigure(root: HTMLElement, f: FigSpec, k: FigKit) {
   };
   const mid = (a: number, b: number) => edgeMid(k, a, b);
   const markerEl = (m: FigMarker) => {
-    const p = m.edge ? mid(m.edge[0], m.edge[1]) : m.area != null ? (([x, y]) => [x, y + 30] as [number, number])(k.label(m.area) ?? [0, 0]) : null; if (!p) return null;
+    const p = m.edge ? mid(m.edge[0], m.edge[1]) : m.area != null ? (([x, y]) => [x, y - 50] as [number, number])(k.label(m.area) ?? [0, 0]) : null; if (!p) return null;      // an area's marker sits above its name, clear of the blocks
     const txt = m.kind === 'mines' ? 'MINES' : m.kind === 'fw' ? 'FIELD WORKS' : m.kind === 'blown' ? 'BLOWN' : m.kind === 'roadblock' ? 'ROADBLOCK' : m.kind === 'bridge' ? 'BRIDGED' : m.kind === 'interdict' ? 'INTERDICTED' : m.kind === 'ditch' ? 'AT DITCH' : (m.text ?? '');
     const wdt = Math.max(36, txt.length * 6.4 + 10), fill = m.kind === 'blown' || m.kind === 'interdict' ? '#d1432f' : m.kind === 'note' ? '#efe6c8' : '#e7b04a';
     return el('g', { transform: `translate(${p[0]} ${p[1]})` }, [el('rect', { x: -wdt / 2, y: -9, width: wdt, height: 18, rx: 2.5, fill, stroke: '#2b210a', 'stroke-width': 1.4 }), el('text', { x: 0, y: 4.5, 'text-anchor': 'middle', 'font-family': 'Saira Condensed, sans-serif', 'font-weight': 700, 'font-size': 11.5, 'letter-spacing': 0.8, fill: m.kind === 'blown' || m.kind === 'interdict' ? '#fff' : '#1a1608' }, [txt])]);
