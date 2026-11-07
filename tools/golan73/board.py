@@ -113,11 +113,12 @@ font = 'font-family="Saira Condensed, Arial Narrow, sans-serif"'
 txt = lambda x, y, s, size, fill, extra='': f'<text x="{x:.0f}" y="{y:.0f}" text-anchor="middle" {font} font-style="italic" font-weight="600" font-size="{size}" fill="{fill}" {extra}>{s}</text>'
 wcentre = lambda P: (np.mean([p[0] for p in P]), np.mean([p[1] for p in P]))
 lake_names = []
+flip = lambda cx, cy, body: f'<g data-flip="{cx:.1f} {cy:.1f}">{body}</g>'     # printed words the app turns round for the player across the table
 for P in water:
     cx, cy = wcentre(P); big = Polygon(P).area > 40000
-    lake_names.append(txt(cx, cy - 4, 'Sea of Galilee' if big else 'Lake Hula', 34 if big else 20, '#1d5f9a', 'stroke="#d8e8f3" stroke-width="3" paint-order="stroke"') +
-                      ('' if big else txt(cx, cy + 18, '(drained)', 15, '#1d5f9a', 'stroke="#d8e8f3" stroke-width="3" paint-order="stroke"')))
-for P in leja: cx, cy = wcentre(P); lake_names.append(txt(cx - 6, cy, 'The Leja', 26, '#3f3e3a', 'stroke="#c3c2bb" stroke-width="3" paint-order="stroke"'))
+    lake_names.append(flip(cx, cy - 12 if big else cy, txt(cx, cy - 4, 'Sea of Galilee' if big else 'Lake Hula', 34 if big else 20, '#1d5f9a', 'stroke="#d8e8f3" stroke-width="3" paint-order="stroke"') +
+                      ('' if big else txt(cx, cy + 18, '(drained)', 15, '#1d5f9a', 'stroke="#d8e8f3" stroke-width="3" paint-order="stroke"'))))
+for P in leja: cx, cy = wcentre(P); lake_names.append(flip(cx - 6, cy - 9, txt(cx - 6, cy, 'The Leja', 26, '#3f3e3a', 'stroke="#c3c2bb" stroke-width="3" paint-order="stroke"')))
 
 base = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">',
         f'<image id="ground" href="{ground_uri}" width="{W}" height="{H}" preserveAspectRatio="none"/>',
@@ -125,9 +126,9 @@ base = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{
         '<g id="assembly">' + ''.join(
             f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="10" fill="#dce8ef" stroke="#fbfbf6" stroke-width="4"/>'
             f'<path d="M{x + 10} {y}H{x + w - 10}A10 10 0 0 1 {x + w} {y + 10}V{y + 34}H{x}V{y + 10}A10 10 0 0 1 {x + 10} {y}Z" fill="#2a8fc8"/>'
-            f'<text x="{x + w / 2}" y="{y + 23}" text-anchor="middle" {font} font-weight="700" font-size="14" fill="#fff" textLength="{w - 22}" lengthAdjust="spacingAndGlyphs">{v["name"].upper()}</text>'
+            f'<g data-flip="{x + w / 2} {y + 18}"><text x="{x + w / 2}" y="{y + 23}" text-anchor="middle" {font} font-weight="700" font-size="14" fill="#fff" textLength="{w - 22}" lengthAdjust="spacingAndGlyphs">{v["name"].upper()}</text></g>'
             f'<path d="M{x + w / 2 - 26} {y + h + 4}L{x + w / 2 + 26} {y + h + 4}L{x + w / 2} {y + h + 46}Z" fill="#2a8fc8" stroke="#fbfbf6" stroke-width="3" stroke-linejoin="round"/>'
-            f'<text x="{x + w / 2}" y="{y + h + 28}" text-anchor="middle" {font} font-weight="700" font-size="24" fill="#fff">{k}</text>'
+            f'<g data-flip="{x + w / 2} {y + h + 20}"><text x="{x + w / 2}" y="{y + h + 28}" text-anchor="middle" {font} font-weight="700" font-size="24" fill="#fff">{k}</text></g>'
             for k, v in M['assembly'].items() for x, y, w, h in [v['box']]) + '</g>',
         '<g id="entries" fill="#2f9a52" stroke="#fbfbf6" stroke-width="3.2" stroke-linejoin="round">' + ''.join(f'<path d="{triangle(e)}"/>' for e in M['entries']) + '</g>',
         '<g id="setup">' + ''.join(tank(x, y, c) for x, y, c in setup) + '</g>',
@@ -144,7 +145,8 @@ def arrow_label(d, text, off=20, size=13):                                      
     q = np.array(pts(d)); L = LineString(q); m = L.interpolate(.5, normalized=True); v = q[-1] - q[0]; v = v / (np.hypot(*v) or 1); n = np.array([-v[1], v[0]])
     if n[1] < 0: n = -n
     x, y = m.x + n[0] * off, m.y + n[1] * off
-    return '<g stroke="none">' + ''.join(f'<text x="{x:.1f}" y="{y + i * (size + 2):.1f}" text-anchor="middle" {font} font-weight="700" font-size="{size}" fill="#1d1d1b">{t}</text>' for i, t in enumerate(text.split('|'))) + '</g>'
+    lines = text.split('|'); cy = y + (len(lines) - 1) * (size + 2) / 2 - size * 0.35
+    return f'<g stroke="none" data-flip="{x:.1f} {cy:.1f}">' + ''.join(f'<text x="{x:.1f}" y="{y + i * (size + 2):.1f}" text-anchor="middle" {font} font-weight="700" font-size="{size}" fill="#1d1d1b">{t}</text>' for i, t in enumerate(text.split('|'))) + '</g>'
 def one_shaft(ds):                                                                   # the drawing has each shaft twice (a long and a short line from the same tail): keep one, so the dashes keep their rhythm
     out = []
     for d in ds:

@@ -14,7 +14,7 @@ import { online, startOnline, push, sit, setDevSeat, auth, lobby, publishReveals
 import { gameInfo, GAMES } from './games';
 import { BOXES, boxFront, boxSpine } from './covers';
 import { ICONS, ico } from './icons';
-import { esc, nm } from './util';
+import { esc, nm, flipSvg } from './util';
 import { sheets } from './sheets';
 import { pips, ABBR, chitLabel, BTN_ICON, iconify, STAGE_NAME, ok10, faces, modIcon, modWord } from './table-text';
 import { initChat, chatBtn, chatHtml, bindChat } from './chat';
@@ -115,12 +115,16 @@ const boardTex = new THREE.CanvasTexture(boardCv); boardTex.colorSpace = THREE.S
 const loadImg = (src: string) => { const i = new Image(); i.onload = () => paintBoard(); i.src = src; return i; };
 const vpIcons: Record<string, HTMLImageElement> = Object.fromEntries(Object.entries(VOL.art.vpIcons).map(([k, src]) => [k, loadImg(src)]));
 const baseImg = loadImg(VOL.art.base), linesImg = loadImg(VOL.art.lines);
+const flipped = new Map<HTMLImageElement, HTMLImageElement>();
+for (const [im, src] of [[baseImg, VOL.art.base], [linesImg, VOL.art.lines]] as const) fetch(src).then((r) => r.text()).then((t) => { if (t.includes('data-flip=')) flipped.set(im, loadImg(URL.createObjectURL(new Blob([flipSvg(t)], { type: 'image/svg+xml' })))); }).catch(() => { /* the plain board serves both sides */ });
+const facing = (im: HTMLImageElement) => { const f = farSide() ? flipped.get(im) : undefined; return f && f.naturalWidth ? f : im; };
 /** The map drawings are turned into pixels once and reused: redrawing the detailed SVG on every colour change is what made phones stall. */
 const flat = new Map<HTMLImageElement, HTMLCanvasElement>();
 function pixels(im: HTMLImageElement): CanvasImageSource {
   const have = flat.get(im); if (have) return have;
   const c = document.createElement('canvas'); c.width = boardCv.width; c.height = boardCv.height; const x = c.getContext('2d')!; x.drawImage(im, 0, 0, c.width, c.height);
-  if (x.getImageData(c.width >> 1, c.height >> 1, 1, 1).data[3] || im === linesImg) { if (im !== linesImg || flat.has(baseImg)) flat.set(im, c); return c; }     // a large SVG can come out blank the first time: keep the copy only once it shows
+  const lines = im === linesImg || im === flipped.get(linesImg);
+  if (x.getImageData(c.width >> 1, c.height >> 1, 1, 1).data[3] || lines) { if (!lines || flat.has(baseImg)) flat.set(im, c); return c; }     // a large SVG can come out blank the first time: keep the copy only once it shows
   setTimeout(paintBoard, 120); return im;
 }
 function applyArt() { const mat = board.material as THREE.MeshStandardMaterial; mat.map = boardTex; mat.needsUpdate = true; paintBoard(); }
@@ -214,7 +218,7 @@ function disposeAll(group: THREE.Group) {
 }
 const tagTex = new Map<string, THREE.CanvasTexture>();
 function tag(text: string, bg: string, size = 1.1) {
-  const art = VOL.markSvg(text);
+  const art = text.startsWith('chit:') ? VOL.chitSvg(E.chit(g, text.slice(5))) : VOL.markSvg(text);      // chit:<id>: the very chit placed (an air mission), in its game's own art
   if (art) {                                                         // printed marker art, drawn as a vector chit
     const key = 'art:' + text; let at = tagTex.get(key);
     if (!at) { at = new THREE.CanvasTexture(document.createElement('canvas')); const im = new Image(); im.onload = () => { const c = document.createElement('canvas'); c.width = c.height = 256; c.getContext('2d')!.drawImage(im, 0, 0, 256, 256); at!.image = c; at!.colorSpace = THREE.SRGBColorSpace; at!.anisotropy = 8; at!.needsUpdate = true; }; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(art); tagTex.set(key, at); }
@@ -375,7 +379,7 @@ function drawPieces() {
   // area markers: inside their own area, next to the group they belong to
   for (const a of MAP.areas) {
     const { base, cont } = rows.get(a.id)!, mine: { side?: E.Side; t: string; c: string }[] = [];
-    if (g.roadblocks[a.id]) mine.push({ side: g.roadblocks[a.id], t: 'RB', c: '#6b4a8a' }); if (g.interdicted[a.id]) mine.push({ t: 'AIR', c: '#2f6fb0' }); if (g.pooled === a.id) mine.push({ side: 'allied', t: 'P', c: '#3f8a5a' }); if (g.airSupply?.area === a.id) mine.push({ side: g.airSupply.side, t: 'AS', c: '#2f6fb0' });
+    if (g.roadblocks[a.id]) mine.push({ side: g.roadblocks[a.id], t: 'RB', c: '#6b4a8a' }); if (g.interdicted[a.id]) mine.push({ side: E.chit(g, g.interdicted[a.id]).side, t: `chit:${g.interdicted[a.id]}`, c: '#2f6fb0' }); if (g.pooled === a.id) mine.push({ side: 'allied', t: 'P', c: '#3f8a5a' }); if (g.airSupply?.area === a.id) mine.push({ side: g.airSupply.side, t: `chit:${g.airSupply.id}`, c: '#2f6fb0' });
     if (g.fieldWorks.includes(a.id)) mine.push({ side: g.fwOwner[a.id] ?? g.control[a.id], t: 'FW', c: '#7a5a2b' });
     mine.forEach((m, i) => {
       const side = m.side ?? g.control[a.id], lane = cont ? (near(side) ? 1 : -1) : 1, size = CHIT;
@@ -420,20 +424,20 @@ function sharedBorder(a: number, b: number): [number, number][] {
 const SHEET_ONLY = new Set((VOL.art.sheetBoxes ?? []).map((b) => b.id));
 const shownArea = (id: number) => !SHEET_ONLY.has(id) || !!g.inPlay?.includes(id);
 function paintBoard() {
-  if (!baseImg.naturalWidth || !linesImg.naturalWidth) return;
+  if (!baseImg.naturalWidth || !linesImg.naturalWidth) return; const far = farSide();
   const c = boardCv.getContext('2d')!, k = 2; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, boardCv.width, boardCv.height);
   const r3 = show3d() ? REL : null;
-  if (r3) { c.fillStyle = hex6(WOOD_BASE); c.fillRect(0, 0, boardCv.width, boardCv.height); c.drawImage(relPixels(r3.snow), 0, 0, boardCv.width, boardCv.height); c.drawImage(relPixels(r3.entry), 0, 0, boardCv.width, boardCv.height); }
-  else c.drawImage(pixels(baseImg), 0, 0, boardCv.width, boardCv.height);
+  if (r3) { c.fillStyle = hex6(WOOD_BASE); c.fillRect(0, 0, boardCv.width, boardCv.height); c.drawImage(relPixels(r3.snow), 0, 0, boardCv.width, boardCv.height); c.drawImage(relPixels(far ? r3.entryFlip : r3.entry), 0, 0, boardCv.width, boardCv.height); }
+  else c.drawImage(pixels(facing(baseImg)), 0, 0, boardCv.width, boardCv.height);
   if (tint !== 'off' && tint !== 'supply') {
     c.save(); c.scale(k, k); c.globalAlpha = 0.6;
     for (const a of MAP.areas.filter((x) => shownArea(x.id))) { c.beginPath(); a.polygon.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fillStyle = hex6(tintOf(a.id)); c.fill(); }
     c.restore();
   }
-  if (r3) { c.drawImage(relPixels(r3.lines), 0, 0, boardCv.width, boardCv.height); c.save(); c.scale(k, k); c.lineJoin = 'round'; if (r3.ownLines) c.globalAlpha = 0;      // a relief with its own line work keeps the board's borders as drawn                                       // area borders from the area shapes themselves: every edge, including the circles round Bastogne and Verviers
+  if (r3) { c.drawImage(relPixels(far ? r3.linesFlip : r3.lines), 0, 0, boardCv.width, boardCv.height); c.save(); c.scale(k, k); c.lineJoin = 'round'; if (r3.ownLines) c.globalAlpha = 0;      // a relief with its own line work keeps the board's borders as drawn                                       // area borders from the area shapes themselves: every edge, including the circles round Bastogne and Verviers
     for (const [w, col] of [[7, '#ffffff99'], [2.9, '#141416']] as const) { c.lineWidth = w; c.strokeStyle = col; for (const a of MAP.areas.filter((x) => shownArea(x.id))) { c.beginPath(); a.polygon.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.stroke(); } }
     c.restore(); }
-  else c.drawImage(pixels(linesImg), 0, 0, boardCv.width, boardCv.height);
+  else c.drawImage(pixels(facing(linesImg)), 0, 0, boardCv.width, boardCv.height);
   if (VOL.art.zones && tint === 'zones') {                                                      // the three German army zones, when coloured: a dashed line in the zone's colour just inside it (the board prints the army boundaries)
     c.save(); c.scale(k, k); c.lineWidth = 2.6; c.lineJoin = 'round'; c.setLineDash([9, 5]);
     for (const [z, d] of Object.entries(VOL.art.zones)) { c.strokeStyle = hex6(ZONE_COL[+z]); c.stroke(new Path2D(d)); }
@@ -441,7 +445,7 @@ function paintBoard() {
   }
   {
     c.save(); c.scale(k, k);
-    if (VOL.id === 'bulge') for (const [a, b] of RESTRICTED) drawRestricted(c, sharedBorder(a, b));                       // the other volumes print their restricted terrain in their line work
+    if (VOL.id === 'bulge') for (const [a, b] of RESTRICTED) drawRestricted(c, sharedBorder(a, b), undefined, far);                       // the other volumes print their restricted terrain in their line work
     if (layers.numbers) for (const e of MAP.entries) { c.save(); c.translate(e.x, e.y); c.rotate(viewRot()); drawEntry(c, e, VOL.art.entryDark(e.side)); c.restore(); }
     c.restore();
   }
@@ -470,7 +474,7 @@ function buildLabels() {
     c.fillStyle = '#fff'; c.font = '700 19px Arial Narrow, Arial, sans-serif'; c.textAlign = 'center'; c.fillText(bx.name.toUpperCase(), bx.w / 2, 26);
     const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
     const m = new THREE.Mesh(new THREE.PlaneGeometry(bx.w / S, bx.h / S), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }));
-    const p = toWorld(bx.x + bx.w / 2, bx.y + bx.h / 2); m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, 0, 0);
+    const p = toWorld(bx.x + bx.w / 2, bx.y + bx.h / 2); m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, viewRot(), 0);
     let y = 0.008; if (show3d()) { y = 0; for (const dx of [-0.5, 0, 0.5]) for (const dz of [-0.5, 0, 0.5]) y = Math.max(y, REL!.h(p.x + (dx * bx.w) / S, p.z + (dz * bx.h) / S)); y += 0.04; }
     m.position.set(p.x, y + 0.004, p.z); m.renderOrder = 3; labelsGrp.add(m);      // over the dimmed areas' own labels
   }
@@ -643,7 +647,12 @@ window.addEventListener('keydown', (e) => {
  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey && !(e.target as HTMLElement)?.matches?.('input,select')) { e.preventDefault(); undo(); } });
 const tfAreas = () => [...E.areas.keys()].filter((a) => g.control[a] === 'allied' && !E.contested(g, a) && E.inSupply(g, 'allied', a));
 /** Place an arriving block; an area outside its listed ones costs a Special Action, and the player picks which one (8.27). In a set-up step the block is deployed. */
+/** Set-up: untried garrisons wait face down in one stack (15.3, 22.24); placing one draws a garrison at random, so the Axis player picks the area, never the unit. */
+const POOL = 'untried-pool';
+const poolIds = () => (g.phase === 'deploy' ? VOL.pendingPlace(g).filter((id) => g.units.find((u) => u.id === id)?.untried) : []);
+const realArr = (id: string | null) => (id === POOL ? poolIds()[0] ?? null : id);
 function arrive(id: string, area: number) {
+  if (id === POOL) { const ids = poolIds(); id = ids[Math.floor(Math.random() * ids.length)]; if (!id) return; }
   if (g.phase === 'deploy') return VOL.place(g, id, area);
   if (!g.pendingArrivals.includes(id)) return E.placeTaskForce(g, id, area);
   const u = g.units.find((x) => x.id === id)!, o = E.arrivalOptions(g, id).find((x) => x.area === area);
@@ -702,7 +711,7 @@ function saPickHtml() {
 function arrOpts(): { area: number; sa: boolean }[] {
   if (!selArr || (g.phase !== 'reinforcement' && g.phase !== 'deploy')) return [];
   { const au = g.units.find((x) => x.id === selArr); if (au && !mine(au.side)) return []; const ac = g.chits.find((x) => x.id === selArr); if (ac && !mine(ac.side)) return []; }
-  if (g.phase === 'deploy') return VOL.placeOptions(g, selArr).map((area) => ({ area, sa: false }));
+  if (g.phase === 'deploy') { const id = realArr(selArr); return id ? VOL.placeOptions(g, id).map((area) => ({ area, sa: false })) : []; }
   return g.pendingArrivals.includes(selArr) ? E.arrivalOptions(g, selArr) : g.tfNew.includes(selArr) ? tfAreas().map((area) => ({ area, sa: false })) : [];
 }
 
@@ -1407,7 +1416,10 @@ const sideOfUnit = (u: E.Unit) => VOL.cssSide(u);
 function tray() {
   const ids = g.phase === 'deploy' ? VOL.pendingPlace(g) : g.pendingArrivals, us = ids.map((id) => g.units.find((x) => x.id === id)!).filter((u) => mine(u.side)), tf = g.phase === 'deploy' ? [] : g.tfNew.map((id) => E.chit(g, id)).filter((c) => mine(c.side));
   if (!us.length && !tf.length) return '';
-  return `<div class="arrtray" role="group" aria-label="${g.phase === 'deploy' ? 'Blocks to place' : 'Arriving reinforcements'}"><span class="why">${g.phase === 'deploy' ? 'Drag a block to a highlighted set-up area, or click it to see them.' : 'Drag a block to a highlighted entry area, or click it to see them.'}</span>${us.map((u) => `<button class="arr ${u.id === selArr ? 'sel' : ''}" data-arr="${u.id}" title="${esc(u.name)}">${b3(unitFace(u), sideOfUnit(u), !!u.garrison)}<small>${esc(u.name)}</small></button>`).join('')}${tf.map((c) => `<button class="arr ${c.id === selArr ? 'sel' : ''}" data-arr="${c.id}" title="Task Force">${b3(svgUri(garrisonChit('Task Force', `${c.turn}-*`, false)), 'allied', true)}<small>Task Force</small></button>`).join('')}</div>`;
+  const pool = g.phase === 'deploy' ? us.filter((u) => u.untried) : [], open = us.filter((u) => !pool.includes(u));
+  const back = svgUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160"><rect width="160" height="160" fill="${hex6(VOL.wood[pool[0]?.nation ?? pool[0]?.side ?? ''] ?? 0x9a8a6a)}"/></svg>`);      // the plain wood of a block lying face down
+  const stack = pool.length ? `<button class="arr ${selArr === POOL ? 'sel' : ''}" data-arr="${POOL}" title="Coastal garrisons, face down: the one placed is drawn at random">${b3(back, sideOfUnit(pool[0]))}<small>Coastal garrison ×${pool.length}</small></button>` : '';
+  return `<div class="arrtray" role="group" aria-label="${g.phase === 'deploy' ? 'Blocks to place' : 'Arriving reinforcements'}"><span class="why">${g.phase === 'deploy' ? 'Drag a block to a highlighted set-up area, or click it to see them.' : 'Drag a block to a highlighted entry area, or click it to see them.'}</span>${stack}${open.map((u) => `<button class="arr ${u.id === selArr ? 'sel' : ''}" data-arr="${u.id}" title="${esc(u.name)}">${b3(unitFace(u), sideOfUnit(u), !!u.garrison)}<small>${esc(u.name)}</small></button>`).join('')}${tf.map((c) => `<button class="arr ${c.id === selArr ? 'sel' : ''}" data-arr="${c.id}" title="Task Force">${b3(svgUri(garrisonChit('Task Force', `${c.turn}-*`, false)), 'allied', true)}<small>Task Force</small></button>`).join('')}</div>`;
 }
 /** One slim line above the hand: what the chosen card does and whether it can join, without covering the map. */
 function cardTip() {
@@ -1730,4 +1742,4 @@ void startOnline((rg) => { applyingRemote = true; if (heldNext) commitRoll(); co
     selArr = keep(prevG, selArr, (x) => [x.pendingArrivals.includes(selArr!), x.units.find((u) => u.id === selArr)?.area]);
     if (!same) selArea = null; if (!selUnit) previewArea = null; hoverArea = null; } hist.remote(prevG, g, lockOf); if (rolled) hist.clear('dice rolled'); if (followFoe && online.lastBy && online.lastBy !== online.uid && !g.battle) { const mv = g.units.find((u) => { const o = prevG.units.find((x) => x.id === u.id); return o && u.area != null && o.area !== u.area; }); if (mv) lookAt(mv.area!); } try { save(); } finally { applyingRemote = false; } refresh();
   { const cs = g.checks ?? [], k = cs.findIndex((c) => JSON.stringify(c) === ckLast); const fresh = ckLast === 'null' ? [] : k >= 0 ? cs.slice(k + 1) : []; if (fresh.length) showChecks(fresh); } }, () => { onNet(); syncView(); render(); }, say, () => { try { sessionStorage.setItem('fab-notice', 'That game was deleted by its creator.'); } catch { /* private mode */ } location.href = homeUrl(); });       // the table is gone: nobody stays inside it
-if (import.meta.env.DEV || DEV_FAKE || SANDBOX || TUTORIAL) Object.assign(window, { __fab: { tut: () => tut, unitAt: (id: string) => { const m = pieces.children.find((o) => o.userData.unit === id || o.userData.chit === id); if (!m) return null; const r = canvas.getBoundingClientRect(), v = m.getWorldPosition(new THREE.Vector3()).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, game: () => g, setGame: (x: E.Game) => { g = x; hist.clear(); save(); refresh(); }, at: (a: number) => { const p = center(a), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(p.x, 0, p.z).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, project: (x: number, y: number, z: number) => { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height }; }, online, setMatches: (m: Match[]) => { matches = m; }, iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets: () => sheets(VOL), setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, rel: () => ({ tris: renderer.info.render.triangles, calls: renderer.info.render.calls, trees: (REL?.props.children[0] as THREE.InstancedMesh | undefined)?.count }), board: () => boardCv.toDataURL("image/png"), view: (x: number, z: number, d: number, pt: number, yw: number) => { goal = { t: new THREE.Vector3(x, 0, z), dist: d, pitch: pt, fast: true }; yaw = yw; }, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });
+if (import.meta.env.DEV || DEV_FAKE || SANDBOX || TUTORIAL) Object.assign(window, { __fab: { seat: (sd: E.Side) => { tutView = sd; refresh(); }, tut: () => tut, unitAt: (id: string) => { const m = pieces.children.find((o) => o.userData.unit === id || o.userData.chit === id); if (!m) return null; const r = canvas.getBoundingClientRect(), v = m.getWorldPosition(new THREE.Vector3()).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, game: () => g, setGame: (x: E.Game) => { g = x; hist.clear(); save(); refresh(); }, at: (a: number) => { const p = center(a), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(p.x, 0, p.z).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, project: (x: number, y: number, z: number) => { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height }; }, online, setMatches: (m: Match[]) => { matches = m; }, iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets: () => sheets(VOL), setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, rel: () => ({ tris: renderer.info.render.triangles, calls: renderer.info.render.calls, trees: (REL?.props.children[0] as THREE.InstancedMesh | undefined)?.count }), board: () => boardCv.toDataURL("image/png"), view: (x: number, z: number, d: number, pt: number, yw: number) => { goal = { t: new THREE.Vector3(x, 0, z), dist: d, pitch: pt, fast: true }; yaw = yw; }, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });

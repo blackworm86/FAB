@@ -60,6 +60,7 @@ def arrow(b, white=True):
     p = np.array([-n[1], n[0]]); tip = e + n * 12; b1 = e - n * 6 + p * 11; b2 = e - n * 6 - p * 11
     return (f'<path d="M{s[0]:.1f} {s[1]:.1f}L{e[0]:.1f} {e[1]:.1f}" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="butt" stroke-dasharray="6 6"/>'
             f'<path d="M{tip[0]:.1f} {tip[1]:.1f}L{b1[0]:.1f} {b1[1]:.1f}L{b2[0]:.1f} {b2[1]:.1f}Z" fill="#ffffff"/>')
+flip = lambda cx, cy, body: f'<g data-flip="{cx:.1f} {cy:.1f}">{body}</g>'     # printed words the app turns round for the player across the table
 def box_svg(b):
     x0, y0, x1, y1 = b['rect']; w, h = x1 - x0, y1 - y0; col = GROUP[b['group']]; r = 7; s = ''
     if b['kind'] == 'landing':
@@ -67,14 +68,16 @@ def box_svg(b):
         s += (f'<rect x="{x0}" y="{y0}" width="{w:.1f}" height="{h:.1f}" rx="{r}" fill="#c9def0" stroke="#ffffff" stroke-width="3"/>'
               f'<path d="M{x0} {y1 - st}H{x1}V{y1 - r}A{r} {r} 0 0 1 {x1 - r} {y1}H{x0 + r}A{r} {r} 0 0 1 {x0} {y1 - r}Z" fill="{col}"/>'
               + txt(x0 + 8, y1 - 6, b['box'], 16, '#fff', 'text-anchor="start"') + (txt(x1 - 8, y1 - 6, b['name'], 13, '#fff', 'text-anchor="end" font-weight="600"') if b.get('name') else ''))
+        s = flip((x0 + x1) / 2, (y0 + y1) / 2, s)
     else:
         who = 'Axis Control Required (6th Army only)' if b['box'] == 'P4' else f"Allied Control Required ({'7th' if b['box'] == 'P3' else '8th'} Army only)"
         s += (f'<rect x="{x0}" y="{y0}" width="{w:.1f}" height="{h:.1f}" rx="{r}" fill="{col}" stroke="#ffffff" stroke-width="3"/>'
               + txt((x0 + x1) / 2, y0 + 24, b['box'], 20, '#fff') + txt((x0 + x1) / 2, y0 + 42, b['name'], 15, '#fff', 'font-weight="600"')
               + txt((x0 + x1) / 2, y1 - 20, who.split(' (')[0], 9.5, '#fff', 'font-weight="600"') + txt((x0 + x1) / 2, y1 - 8, '(' + who.split(' (')[1], 9.5, '#fff', 'font-weight="600"'))
+        s = flip((x0 + x1) / 2, (y0 + y1) / 2, s)
         if b.get('damage_box'):
             dx0, dy0, dx1, dy1 = b['damage_box']; cx = (dx0 + dx1) / 2
-            s += (f'<rect x="{dx0}" y="{dy0}" width="{dx1 - dx0:.1f}" height="{dy1 - dy0:.1f}" rx="6" fill="#dbe9f4" stroke="#ffffff" stroke-width="2.5"/>'
+            s += flip(cx, (dy0 + dy1) / 2, f'<rect x="{dx0}" y="{dy0}" width="{dx1 - dx0:.1f}" height="{dy1 - dy0:.1f}" rx="6" fill="#dbe9f4" stroke="#ffffff" stroke-width="2.5"/>'
                   + txt(cx, dy0 + 14, b['name'], 10, '#1b2a3a', 'font-weight="600"') + txt(cx, dy0 + 25, 'Damage', 9, '#1b2a3a', 'font-weight="600"') + anchor_glyph(cx, (dy0 + dy1) / 2 + 12, 0.9, '#1e6fc0'))
     return s
 def anchor_glyph(x, y, k, col):
@@ -83,12 +86,12 @@ anchor = lambda x, y: f'<g transform="translate({x:.1f} {y:.1f})"><circle r="12.
 airfield = lambda x, y, r: (f'<g transform="translate({x:.1f} {y:.1f})"><circle r="{r:.1f}" fill="{AIRFIELD}" stroke="#2b2a26" stroke-width="1.2"/>'
                             f'<g transform="scale({r / 16:.3f})" fill="#2b2a26"><path d="M-1.6 -11h3.2l1 7 8.5 4.5v2.6l-8.5-2.2-.5 5.5 3 2v1.8L0 9.5l-5.2 .7V8.4l3-2-.5-5.5-8.5 2.2V.5l8.5-4.5z"/></g></g>')
 ML = M['mainland']; mlc = ML['label']
-hold = lambda x, y, w, h, title: (f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="8" fill="#c9def0" stroke="#ffffff" stroke-width="3"/>'
+hold = lambda x, y, w, h, title: flip(x + w / 2, y + h / 2, f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="8" fill="#c9def0" stroke="#ffffff" stroke-width="3"/>'
                                   f'<path d="M{x} {y + h - 24}H{x + w}V{y + h - 8}A8 8 0 0 1 {x + w - 8} {y + h}H{x + 8}A8 8 0 0 1 {x} {y + h - 8}Z" fill="{GROUP["P"]}"/>' + txt(x + w / 2, y + h - 7, title, 15, '#fff'))
 base = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">',
         f'<image id="ground" href="{ground_uri}" width="{W}" height="{H}" preserveAspectRatio="none"/>',
-        '<g id="names">' + txt(mlc[0] + 40, mlc[1] - 150, 'Exiting', 24, '#3f3e3a', 'stroke="#d8dad2" stroke-width="3" paint-order="stroke" font-style="italic"')
-        + txt(mlc[0] + 40, mlc[1] - 124, 'Axis Units', 24, '#3f3e3a', 'stroke="#d8dad2" stroke-width="3" paint-order="stroke" font-style="italic"') + '</g>',
+        '<g id="names">' + f'<g data-flip="{mlc[0] + 40:.1f} {mlc[1] - 145:.1f}">' + txt(mlc[0] + 40, mlc[1] - 150, 'Exiting', 24, '#3f3e3a', 'stroke="#d8dad2" stroke-width="3" paint-order="stroke" font-style="italic"')
+        + txt(mlc[0] + 40, mlc[1] - 124, 'Axis Units', 24, '#3f3e3a', 'stroke="#d8dad2" stroke-width="3" paint-order="stroke" font-style="italic"') + '</g></g>',
         '<g id="boxes">' + ''.join(box_svg(b) for b in A['boxes']) + hold(46, 1020, 170, 170, 'At Sea') + hold(236, 1020, 150, 170, 'Airborne Assault') + '</g>',
         '</svg>']
 open(os.path.join(OUT, 'map-base.svg'), 'w').write('\n'.join(base))

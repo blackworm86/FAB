@@ -147,6 +147,7 @@ function sicily(): VolView {
     const raw = RAW_UNITS.get(u.id);
     return sicilyBlockSvg({ ...(raw ?? { id: u.id, name: u.name, side: u.side as 'allied' | 'axis' }), name: u.name, side: u.side as 'allied' | 'axis', nation: (u.nation ?? raw?.nation) as SUnit['nation'], steps: u.max, quality_by_step: u.q, symbol: u.symbol ?? raw?.symbol }, u.str);
   };
+  const RESERVE: Record<string, string> = { R: 'M03', R7: 'M01', R8: 'M02' };                 // the reserve tags over a block: Sicily's own printed reserve markers (6th, 7th, 8th Army)
   const chitArt = (c: E.Chit) => {
     if (c.kind === 'sa_block') return sicilyBlockSvg({ id: c.id, name: c.name, side: c.side as 'allied' | 'axis', nation: c.nation as SUnit['nation'], kind: 'special_action_block' });
     const raw = RAW_COUNTERS.get(c.counter ?? c.id);
@@ -166,7 +167,7 @@ function sicily(): VolView {
     ruleKey: (k) => (['air_mission', 'engineer', 'command_staff'].includes(k) ? `sicily:${k}` : k), targetsFor: sicilyTargets,
     battleCard: sicilyBattleCard, battleUse: (g, b, c) => E.canAssign(g, b, c.side, c), playInBattle: () => false,
     ruleArt: (key) => { const u = RAW_UNITS.get(key); if (u) return { svg: sicilyBlockSvg(u), wood: hexc(SICILY_WOOD[u.nation ?? 'us']), name: u.name }; const c = RAW_COUNTERS.get(key); return c ? { svg: sicilyChitSvg(c), name: c.name } : null; },
-    panel: sicilyPanel, blocksBegin: sicilyBlocksBegin, edgeMarks: () => [], markSvg: (code) => mapMarkerSvg(code), boxes: SICILY_BOXES,
+    panel: sicilyPanel, blocksBegin: sicilyBlocksBegin, edgeMarks: () => [], markSvg: (code) => (RESERVE[code] ? sicilyChitSvg(RAW_COUNTERS.get(RESERVE[code])!) : mapMarkerSvg(code)), boxes: SICILY_BOXES,
     fieldWorks: (g, id) => S.unitFieldWorks(g, id),
     limits: (_g, b, s) => ({ arty: s === b.attacker ? 2 : 1, assets: null }),
     placeOptions: (g, id) => (g.phase === 'deploy' ? S.deployOptions(g, id) : []), pendingPlace: (g) => (g.phase === 'deploy' ? g.units.filter((u) => u.box === 'deploy').map((u) => u.id) : []), place: (g, id, a) => S.deploy(g, id, a),

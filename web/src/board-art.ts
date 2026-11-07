@@ -37,7 +37,7 @@ export function drawEntry(c: CanvasRenderingContext2D, e: { letter: string }, da
 }
 /** 14.1 Restricted boundary (the Schnee Eifel between Prüm 4 and Bleialf 11): a ridge of hachures along the shared border, as on the printed map.
  *  `border` is the shared border as a polyline in map pixels. */
-export function drawRestricted(c: CanvasRenderingContext2D, border: [number, number][], label = 'Schnee Eifel') {
+export function drawRestricted(c: CanvasRenderingContext2D, border: [number, number][], label = 'Schnee Eifel', far = false) {
   if (border.length < 2) return;
   const seg: { x: number; y: number; nx: number; ny: number; t: number }[] = []; let total = 0;
   for (let i = 1; i < border.length; i++) total += Math.hypot(border[i][0] - border[i - 1][0], border[i][1] - border[i - 1][1]);
@@ -56,7 +56,7 @@ export function drawRestricted(c: CanvasRenderingContext2D, border: [number, num
   });
   const mid = border[Math.floor(border.length / 2)], prev = border[Math.max(0, Math.floor(border.length / 2) - 1)];
   let ang = Math.atan2(mid[1] - prev[1], mid[0] - prev[0]); if (ang > Math.PI / 2) ang -= Math.PI; if (ang < -Math.PI / 2) ang += Math.PI;
-  c.translate(mid[0], mid[1]); c.rotate(ang); c.font = 'italic 700 9px "Arial Narrow", Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.translate(mid[0], mid[1]); c.rotate(ang + (far ? Math.PI : 0));      // the name reads the right way up from the player's side c.font = 'italic 700 9px "Arial Narrow", Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
   c.lineWidth = 2.6; c.strokeStyle = '#e9e6d4'; c.strokeText(label, 0, 0); c.fillStyle = '#3a2d1a'; c.fillText(label, 0, 0);
   c.restore();
 }

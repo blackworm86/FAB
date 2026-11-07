@@ -2,6 +2,7 @@
  *  tools/map3d (fullmap.py) into public/relief/; Golan '73: tools/golan73/relief.py into public/golan73/relief/. World unit = 1 cm, like the board. */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { flipSvg } from './util';
 
 type Meta = { outline: [number, number][][]; w: number; h: number; step: number; cols: number; rows: number; metres: number; towns: [number, number][]; cities: { c: [number, number]; cells: [number, number][] }[];
   mpp?: number; exag?: number;   /** ground metres per map pixel (The Bulge 80) and how much the heights are raised (The Bulge 4) */
@@ -15,11 +16,11 @@ export type Relief = {
   /** The cut sides of the diorama: straight walls from the base up to the ground, all round the playing area. */
   walls: THREE.BufferGeometry;
   /** The entry strips printed off the map (green Allied, grey German). */
-  entry: HTMLImageElement;
+  entry: HTMLImageElement; entryFlip: HTMLImageElement;     /** entryFlip, linesFlip: the same with the printed words turned for the player across the table */
   props: THREE.Group;
   snow: HTMLImageElement;
   /** Lines of the printed map without towns, cities and area borders (those become 3D or are drawn apart). */
-  lines: HTMLImageElement;
+  lines: HTMLImageElement; linesFlip: HTMLImageElement;
   /** Area borders: a black line on a thin white edge, so they never pass for roads. */
   borders: HTMLImageElement;
   /** The relief keeps the board's own line work (no borders redrawn on top). */
@@ -38,13 +39,14 @@ const group = (svg: string, id: string) => { const m = new RegExp(`<g id="${id}"
 /** lite (phones): a ground mesh half as fine and half the trees. */
 export async function loadRelief(MW: number, MH: number, S: number, labels: [number, number, number, number][], lite = false, base = './'): Promise<Relief> {
   const meta = await fetch(base + 'relief/relief.json').then((r) => r.json() as Promise<Meta>);
-  const [hb, wb, snow, linesSvg, entry] = await Promise.all([
+  const [hb, wb, snow, linesSvg, overlay] = await Promise.all([
     fetch(base + 'relief/height.bin').then((r) => r.arrayBuffer()),
     fetch(base + 'relief/woods.bin').then((r) => r.arrayBuffer()),
     img(base + 'relief/snow.png'),
     fetch(base + 'map-lines.svg').then((r) => r.text()),
-    meta.overlay ? fetch(base + meta.overlay).then((r) => r.text()).then((t) => svgImg(t.replace(/<image id="ground"[^>]*\/>/, ''))) : img(base + 'relief/entry.png'),
+    meta.overlay ? fetch(base + meta.overlay).then((r) => r.text()).then((t) => t.replace(/<image id="ground"[^>]*\/>/, '')) : null,
   ]);
+  const entry = overlay ? await svgImg(overlay) : await img(base + 'relief/entry.png'), entryFlip = overlay && overlay.includes('data-flip=') ? await svgImg(flipSvg(overlay)) : entry;
   const ZS = (meta.exag ?? RELIEF) / ((meta.mpp ?? 80) * S);   // metres → cm
   const { cols: C, rows: R, step: ST } = meta, HB = new Uint16Array(hb), WB = new Uint8Array(wb);
   const K = (meta.metres / 65535) * ZS;                   // grid value → cm
@@ -69,7 +71,8 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
   const walls = new THREE.BufferGeometry(); walls.setAttribute('position', new THREE.Float32BufferAttribute(wp, 3)); walls.computeVertexNormals();
 
   // printed lines without towns, cities and borders; borders redrawn black on a white edge
-  const lines = await svgImg(meta.ownLines ? linesSvg.replace(group(linesSvg, 'cities'), '') : linesSvg.replace(group(linesSvg, 'cities'), '').replace(group(linesSvg, 'towns'), '').replace(group(linesSvg, 'boundaries'), '').replace(group(linesSvg, 'outline'), ''));   // the white board outline belongs to the flat map, not to the diorama
+  const linesText = meta.ownLines ? linesSvg.replace(group(linesSvg, 'cities'), '') : linesSvg.replace(group(linesSvg, 'cities'), '').replace(group(linesSvg, 'towns'), '').replace(group(linesSvg, 'boundaries'), '').replace(group(linesSvg, 'outline'), '');   // the white board outline belongs to the flat map, not to the diorama
+  const lines = await svgImg(linesText), linesFlip = linesText.includes('data-flip=') ? await svgImg(flipSvg(linesText)) : lines;
   const paths = meta.ownLines ? '' : (group(linesSvg, 'boundaries').match(/<path[^>]*\/>/g) ?? []).join('');
   const head = /<svg[^>]*>/.exec(linesSvg)![0];
   const borders = await svgImg(`${head}<g fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#fff" stroke-opacity=".6" stroke-width="7">${paths}</g><g stroke="#141416" stroke-width="2.9">${paths}</g></g></svg>`);
@@ -151,5 +154,5 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
     return at(t1).clone();
   };
 
-  return { h, geometry, walls, entry, props, snow, lines, borders, patch, hit, ownLines: !!meta.ownLines };
+  return { h, geometry, walls, entry, entryFlip, props, snow, lines, linesFlip, borders, patch, hit, ownLines: !!meta.ownLines };
 }
