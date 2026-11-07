@@ -57,15 +57,15 @@ const floatPic = (f: { x: number; y: number; w: number; h: number; svg: string }
 const group = (svg: string, id: string) => { const m = new RegExp(`<g id="${id}"[\\s\\S]*?</g>(\\s*</g>)?`).exec(svg); return m ? m[0] : ''; };
 
 /** lite (phones): a ground mesh half as fine and half the trees. */
-export async function loadRelief(MW: number, MH: number, S: number, labels: [number, number, number, number][], lite = false, base = './'): Promise<Relief> {
+export async function loadRelief(MW: number, MH: number, S: number, labels: [number, number, number, number][], lite = false, base = './', text: (url: string) => Promise<string> = (u) => fetch(u).then((r) => r.text())): Promise<Relief> {
   const meta = await fetch(base + 'relief/relief.json').then((r) => r.json() as Promise<Meta>);
   const [hb, wb, snow, linesSvg0, overlay0, floatsSrc] = await Promise.all([
     fetch(base + 'relief/height.bin').then((r) => r.arrayBuffer()),
     fetch(base + 'relief/woods.bin').then((r) => r.arrayBuffer()),
     img(base + 'relief/snow.png'),
-    fetch(base + 'map-lines.svg').then((r) => r.text()),
-    meta.overlay ? fetch(base + meta.overlay).then((r) => r.text()).then((t) => t.replace(/<image id="ground"[^>]*\/>/, '')) : null,
-    meta.floatsFrom ? fetch(base + meta.floatsFrom).then((r) => r.text()) : null,
+    text(base + 'map-lines.svg'),
+    meta.overlay ? text(base + meta.overlay).then((t) => t.replace(/<image id="ground"[^>]*\/>/, '')) : null,
+    meta.floatsFrom ? text(base + meta.floatsFrom) : null,
   ]);
   const fl: { x: number; y: number; w: number; h: number; svg: string }[] = [];
   const linesSvg = takeFloats(linesSvg0, fl), overlay = overlay0 == null ? null : takeFloats(overlay0, fl); if (floatsSrc) takeFloats(floatsSrc, fl);
@@ -96,9 +96,15 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
     const [a, b] = [ring[k], ring[k + 1]], ha = top(a[0], a[1]), hb2 = top(b[0], b[1]), A = [wx(a[0]), wz(a[1])], B = [wx(b[0]), wz(b[1])];
     wp.push(A[0], 0, A[1], B[0], 0, B[1], B[0], hb2, B[1], A[0], 0, A[1], B[0], hb2, B[1], A[0], ha, A[1]);
   } };
-  for (const ring of meta.outline) wall(ring, cutPx ? () => BASE : hMap);                 // the sheet's edge: up to the margin when the map is cut, else up to the ground
+  // a cut map keeps only a small margin of the sheet round the map and the boxes that hover beside it (the rest of the printed sheet is not the board)
+  const pad = 26, xsAll = [...(meta.cut ?? []).flat().map((q) => q[0]), ...floats.flatMap((f) => [f.x, f.x + f.w])], ysAll = [...(meta.cut ?? []).flat().map((q) => q[1]), ...floats.flatMap((f) => [f.y, f.y + f.h])];
+  const mb = cutPx ? [Math.max(0, Math.min(...xsAll) - pad), Math.max(0, Math.min(...ysAll) - pad), Math.min(meta.w, Math.max(...xsAll) + pad), Math.min(meta.h, Math.max(...ysAll) + pad)] : [0, 0, meta.w, meta.h];
+  const sheetRing: [number, number][] = [[mb[0], mb[1]], [mb[2], mb[1]], [mb[2], mb[3]], [mb[0], mb[3]], [mb[0], mb[1]]];
+  for (const ring of cutPx ? [sheetRing] : meta.outline) wall(ring, cutPx ? () => BASE : hMap);      // the sheet's edge: up to the margin when the map is cut, else up to the ground
   for (const ring of meta.cut ?? []) wall(ring, hMap);                                  // the map's own edge, cut straight down from the ground to the margin
-  const margin = cutPx ? (() => { const m = new THREE.PlaneGeometry(MW / S, MH / S, 1, 1), q = m.getAttribute('position') as THREE.BufferAttribute; for (let k = 0; k < q.count; k++) q.setZ(k, BASE); m.computeVertexNormals(); return m; })() : null;
+  const margin = cutPx ? (() => { const [x0, y0, x1, y1] = mb, m = new THREE.PlaneGeometry((x1 - x0) / S, (y1 - y0) / S, 1, 1), q = m.getAttribute('position') as THREE.BufferAttribute, uv = m.getAttribute('uv') as THREE.BufferAttribute;
+    for (let k = 0; k < q.count; k++) { const u = uv.getX(k), v = uv.getY(k), px = x0 + u * (x1 - x0), py = y0 + (1 - v) * (y1 - y0); q.setXYZ(k, wx(px), -wz(py), BASE); uv.setXY(k, px / meta.w, 1 - py / meta.h); }
+    m.computeVertexNormals(); return m; })() : null;
   const cutTex = cutCv ? new THREE.CanvasTexture(cutCv) : null;
   const walls = new THREE.BufferGeometry(); walls.setAttribute('position', new THREE.Float32BufferAttribute(wp, 3)); walls.computeVertexNormals();
 

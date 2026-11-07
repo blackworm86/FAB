@@ -21,7 +21,7 @@ export function drawItems(c: CanvasRenderingContext2D, a: { id: number }, layers
     c.fill(); c.stroke();
     c.font = '700 16px "Arial Narrow", Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.fillStyle = col === 3 ? '#fff' : col === 2 ? '#111' : '#1a1608';
     c.fillText(String(layers.numbers ? a.id : t), 0, col === 3 ? -3 : 0);
-    if (layers.numbers && layers.tdn && t > 0) { c.beginPath(); c.arc(15, -15, 8, 0, 7); c.fillStyle = '#1a1608'; c.fill(); c.font = '700 11px "Arial Narrow", Arial, sans-serif'; c.fillStyle = '#f4e3a4'; c.fillText(`−${t}`, 15, -11); }     // the terrain defence as a number too, not only the plate's shape
+    if (layers.numbers && layers.tdn && t > 0) { c.beginPath(); c.arc(14, -14, 6.6, 0, 7); c.fillStyle = '#3a3a2c'; c.fill(); c.lineWidth = 1; c.strokeStyle = '#f4e3a499'; c.stroke(); c.font = '700 10px "Arial Narrow", Arial, sans-serif'; c.fillStyle = '#f4e3a4'; c.fillText(`−${t}`, 14, -10.5);   /* a lighter TDN bubble: it modifies the number, it does not outweigh it */ }     // the terrain defence as a number too, not only the plate's shape
   }
   if (layers.vp) {                                                                                   // the symbols are the editable files in public/icons
     const v = ar.vp, put = (img: HTMLImageElement, x: number, y: number) => { if (img?.naturalWidth) c.drawImage(img, x - 13, y - 13, 26, 26); };
@@ -63,6 +63,10 @@ export function drawRestricted(c: CanvasRenderingContext2D, border: [number, num
 
 /** One area's label as a single printed group inside a w x h box centred on (0, 0): the number plate in its TDN shape with the VP stars beside it, the name below.
  *  Placement comes from the game's labels file (the largest clear spot that covers the least printed detail). */
+/** The place-name lettering of the printed map: The Bulge sets them in a condensed italic sans, Golan and Sicily in a Times-like serif; the halo is the map's own paper colour. */
+export type LabelFace = { family: string; style: 'italic' | 'normal'; weight: number; halo: string; ink: string };
+let FACE: LabelFace = { family: '"Arial Narrow", Arial, sans-serif', style: 'italic', weight: 600, halo: '#e4e6d8', ink: '#1c2216' };
+export const setLabelFace = (f: Partial<LabelFace>) => { FACE = { ...FACE, ...f }; };
 export function drawLabel(c: CanvasRenderingContext2D, a: { id: number }, layers: Layers, vpIcons: VpIcons, box: { w: number; h: number; mode: string }, info?: AreaInfo) {
   const ar = (info ?? E.areas.get(a.id)!) as AreaInfo, v = ar.vp, icons: HTMLImageElement[] = [];
   if (layers.vp) { for (const s of Object.keys(vpIcons).filter((k) => k !== 'mutual')) for (let i = 0; i < count(v, s); i++) icons.push(vpIcons[s]); if (v.mutual) icons.push(vpIcons.mutual); }
@@ -70,6 +74,6 @@ export function drawLabel(c: CanvasRenderingContext2D, a: { id: number }, layers
   let x = -rowW / 2;
   if (plate) { c.save(); c.translate(x + 16, top + 3); drawItems(c, a, { ...layers, vp: false, names: false }, vpIcons, false, info); c.restore(); x += 32; }
   for (const im of icons) { if (im?.naturalWidth) c.drawImage(im, x, top - 10, 20, 20); x += 21; }
-  if (name) { let fs = 15; c.font = `italic 600 ${fs}px "Arial Narrow", Arial, sans-serif`; while (fs > 9 && c.measureText(ar.name).width > box.w - 4) { fs -= 0.5; c.font = `italic 600 ${fs}px "Arial Narrow", Arial, sans-serif`; }      // a long name shrinks to its box, never clipped
-    c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.lineWidth = 3.2; c.strokeStyle = '#e4e6d8'; c.strokeText(ar.name, 0, box.h / 2 - 4); c.fillStyle = '#1c2216'; c.fillText(ar.name, 0, box.h / 2 - 4); }
+  if (name) { const f = (fs: number) => `${FACE.style} ${FACE.weight} ${fs}px ${FACE.family}`; let fs = 15; c.font = f(fs); while (fs > 9 && c.measureText(ar.name).width > box.w - 4) { fs -= 0.5; c.font = f(fs); }      // a long name shrinks to its box, never clipped
+    c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.lineWidth = 2.6; c.strokeStyle = FACE.halo; c.strokeText(ar.name, 0, box.h / 2 - 4); c.fillStyle = FACE.ink; c.fillText(ar.name, 0, box.h / 2 - 4); }
 }

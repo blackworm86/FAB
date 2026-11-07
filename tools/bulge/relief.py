@@ -40,14 +40,17 @@ meta.setdefault('metresOrig', meta['metres'])
 if not _os.path.exists(S + '/height-orig.bin'): import shutil as _sh; _sh.copy(OUT + 'height.bin', S + '/height-orig.bin')
 orig = np.fromfile(S + '/height-orig.bin', '<u2').reshape(meta['rows'], meta['cols']).astype(np.float32) / 65535 * meta['metresOrig']
 hfull = nd.zoom(orig, STEP, order=1)[:H, :W]; hfull = np.pad(hfull, ((0, H - hfull.shape[0]), (0, W - hfull.shape[1])), mode='edge')
-gy, gx = np.gradient(nd.gaussian_filter(hfull, 2.0)); shade = np.clip(1 + (-gx * 0.6 - gy * 0.8) / 30, 0.75, 1.15)
+gy, gx = np.gradient(nd.gaussian_filter(hfull, 2.0)); shade = np.clip(1 + (-gx * 0.6 - gy * 0.8) / 34, 0.8, 1.06)
 paper = np.array(Image.open('docs/maps/vector/map-ground.jpg').convert('RGB')).astype(np.float32)
-gr = np.where(land[..., None], (paper * 0.68 + gr * 0.32) * shade[..., None], paper)
+wash = np.array([232, 238, 246], np.float32)                                        # winter: a light cool wash on the print, never a re-skin
+gr = np.where(land[..., None], (paper * 0.93 + wash * 0.07) * shade[..., None] * 0.9, paper)   # a touch darker than the paper: the table's lights brighten it again
 Image.fromarray(np.clip(gr, 0, 255).astype(np.uint8)).quantize(64, dither=Image.Dither.NONE).save(OUT + 'snow.png', optimize=True)   # a small palette keeps the file light for phones
 
 entry = nd.binary_dilation(np.array(Image.open(OUT + 'entry.png').convert('RGBA'))[..., 3] > 20, iterations=6)   # no trees on the entry strips
 n = nd.gaussian_filter(rng.random((H, W)), 3); n = (n - n.min()) / (n.max() - n.min())
-dens = (np.where(lc == 10, 0.85, 0) + np.where(lc == 20, 0.3, 0)) * land * ~entry * (n > 0.2)
+pw = np.array(Image.open('docs/maps/vector/map-ground.jpg').convert('RGB')).astype(np.float32)   # trees only where the printed map has woods (its crowns: darker and greener than the paper)
+pwood = nd.gaussian_filter(((pw.mean(2) < 182) & (pw[..., 1] - pw[..., 0] > 4)).astype(np.float32), 4) > 0.45
+dens = np.where(pwood, 0.9, 0) * land * ~entry * (n > 0.2)
 wd = nd.uniform_filter(dens.astype(np.float32), STEP + 1)[::STEP, ::STEP]; np.round(np.clip(wd, 0, 1) * 255).astype(np.uint8).tofile(OUT + 'woods.bin')
 # the map stands proud of the sheet's margin, cut straight down at its edge (the old relief sloped down to the margin): from the original grid, kept once in <s>
 onmapF = nd.binary_dilation(sheet, iterations=5); onmap = onmapF[::STEP, ::STEP][:meta['rows'], :meta['cols']]

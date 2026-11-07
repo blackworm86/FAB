@@ -12,7 +12,7 @@ from xml.sax.saxutils import escape
 import numpy as np
 from PIL import Image, ImageDraw
 from scipy import ndimage as nd
-from shapely.geometry import Point, Polygon
+from shapely.geometry import LineString, Point, Polygon
 
 D, OUT, GROUND = sys.argv[1:4]
 M = json.load(open(os.path.join(D, 'map.json'))); A = json.load(open(os.path.join(D, 'map_art.json')))
@@ -115,6 +115,26 @@ def tufts(d, gap=7.5, off=5.5, size=7.5):
                 out.append(f'M{c[0]:.1f} {c[1]:.1f}L{e[0]:.1f} {e[1]:.1f}')
     return ''.join(out)
 ARROW_COL = '#ffffff'
+ZONE = {a['id']: a['zone'] for a in M['areas']}
+def zone_captions():                                                                # as printed: "Zone A" / "Zone B" either side of each army boundary, along it
+    import math; out = ''
+    for d in A['army_boundary']:
+        q = pts(d)
+        if len(q) < 2: continue
+        ln = LineString(q); L = ln.length
+        if L < 120: continue
+        for t in ([0.5] if L < 500 else [0.3, 0.7]):
+            a, b = ln.interpolate(L * t - 6), ln.interpolate(L * t + 6); ang = math.degrees(math.atan2(b.y - a.y, b.x - a.x))
+            if ang > 90: ang -= 180
+            if ang < -90: ang += 180
+            m = ln.interpolate(L * t); r = math.radians(ang); nx, ny = -math.sin(r), math.cos(r)
+            for sgn in (1, -1):
+                px, py = m.x + nx * 13 * sgn, m.y + ny * 13 * sgn
+                zs = next((ZONE[k] for k, P in AREA.items() if P.contains(Point(px, py))), None)
+                if zs and len(zs) == 1:
+                    out += (f'<g data-flip="{px:.1f} {py:.1f}"><text x="{px:.1f}" y="{py + 4:.1f}" transform="rotate({ang:.1f} {px:.1f} {py:.1f})" text-anchor="middle" '
+                            f'font-family="Saira Condensed, Arial Narrow, sans-serif" font-weight="700" font-size="12" letter-spacing="1" fill="#4b4b4b" stroke="#ece6d2" stroke-width="2.4" paint-order="stroke">ZONE {zs[0]}</text></g>')
+    return out
 def clear_of_town(x, y, r=17):                                                      # an anchor never sits on a town's hatching: pushed out of it, away from the town's middle
     for c in A['cities']:
         P = Polygon(pts(c['d']))
@@ -132,13 +152,14 @@ coast = [ring(pts(p)) for p in A['coast'] + A['islets'] + A['mainland']]
 city = ''.join(f'<path d="{c["d"]}" fill="url(#hatch)" stroke="#6d6d6d" stroke-width="1.2"/>' for c in A['cities'])
 lines = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">',
          '<defs><pattern id="hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="4" fill="#c4c2bd"/><path d="M0 0V4" stroke="#7d7b77" stroke-width="1.3"/></pattern></defs>',
-         g('coast', 'stroke="#1f84c4" stroke-width="5"', paths(coast)),                                   # the print's order: the coast, rivers, roads, the tufts, borders, army boundaries, cities, arrows, symbols
+         g('coast', 'stroke="#2a86c2" stroke-width="3.2"', paths(coast)),                                   # the print's order: the coast, rivers, roads, the tufts, borders, army boundaries, cities, arrows, symbols
          g('rivers', '', f'<g stroke="#2f7fb5" stroke-width="6.4">{paths(A["river"])}</g><g stroke="#6cc4ec" stroke-width="3.6">{paths(A["river"])}</g>'),
          g('roads', '', f'<g stroke="#8e8e8e" stroke-width="5">{paths(A["roads"])}</g><g stroke="#d6d5d2" stroke-width="2.6">{paths(A["roads"])}</g>'),
          g('restricted', 'stroke="#4b3b2a" stroke-width=".8"', f'<path d="{"".join(tufts(d) for d in A["restricted"])}"/>'),
          g('boundaries', 'stroke="#626262" stroke-width="5.2"', paths(A['open'] + A['restricted'])),
          g('army-boundaries', '', f'<g stroke="#5a5a5a" stroke-width="7">{paths(A["army_boundary"])}</g><g stroke="#ffffff" stroke-width="2" stroke-linecap="butt" stroke-dasharray="6 5">{paths(A["army_boundary"])}</g>'),
          f'<g id="cities">{city}</g>',
+         f'<g id="zone-names">{zone_captions()}</g>',
          f'<g id="arrows">{arrows_svg}</g>',
          '<g id="symbols">' + ''.join(anchor(*clear_of_town(p['x'], p['y'])) for p in A['port_symbols']) + ''.join(airfield(a['x'], a['y'], a['r']) for a in A['airfields']) + '</g>',
          '</svg>']

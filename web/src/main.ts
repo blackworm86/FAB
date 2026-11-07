@@ -21,7 +21,7 @@ import { initChat, chatBtn, chatHtml, bindChat } from './chat';
 import { acts, actv, resetActs, reg, regv, ubtn, btn, chip } from './ui-kit';
 import { optChooser, optOn } from './opt-rules';
 import { STEP_NAME, homeUrl, tutUrl, share, dropMatch, rulesHtml, accountHtml, bindAuth } from './home';
-import { drawLabel, drawEntry, drawRestricted } from './board-art';
+import { drawLabel, drawEntry, drawRestricted, setLabelFace } from './board-art';
 import { targetsFor, type Tgt } from './chit-play';
 import { snap, diffFx, FxLayer, fxRow, FX_SAMPLES, type Fx } from './fx';
 import { RULE, ruleHtml } from './rules-text';
@@ -114,9 +114,13 @@ const boardCv = document.createElement('canvas'); boardCv.width = MW * 2; boardC
 const boardTex = new THREE.CanvasTexture(boardCv); boardTex.colorSpace = THREE.SRGBColorSpace; boardTex.anisotropy = 8;
 const loadImg = (src: string) => { const i = new Image(); i.onload = () => paintBoard(); i.src = src; return i; };
 const vpIcons: Record<string, HTMLImageElement> = Object.fromEntries(Object.entries(VOL.art.vpIcons).map(([k, src]) => [k, loadImg(src)]));
-const baseImg = loadImg(VOL.art.base), linesImg = loadImg(VOL.art.lines);
+/** Each board file is downloaded once: its text gives both the picture and, when it has printed words, the copy turned for the far side. */
+const boardText = new Map<string, Promise<string>>();
+const boardFile = (src: string) => { let p = boardText.get(src); if (!p) { p = fetch(src).then((r) => r.text()); boardText.set(src, p); } return p; };
+const svgUrl = (t: string) => URL.createObjectURL(new Blob([t], { type: 'image/svg+xml' }));
+const baseImg = new Image(), linesImg = new Image(); baseImg.onload = linesImg.onload = () => paintBoard();
 const flipped = new Map<HTMLImageElement, HTMLImageElement>();
-for (const [im, src] of [[baseImg, VOL.art.base], [linesImg, VOL.art.lines]] as const) fetch(src).then((r) => r.text()).then((t) => { if (t.includes('data-flip=')) flipped.set(im, loadImg(URL.createObjectURL(new Blob([flipSvg(t)], { type: 'image/svg+xml' })))); }).catch(() => { /* the plain board serves both sides */ });
+for (const [im, src] of [[baseImg, VOL.art.base], [linesImg, VOL.art.lines]] as const) boardFile(src).then((t) => { im.src = svgUrl(t); if (t.includes('data-flip=')) flipped.set(im, loadImg(svgUrl(flipSvg(t)))); }).catch(() => { im.src = src; });
 const facing = (im: HTMLImageElement) => { const f = camFar ? flipped.get(im) : undefined; return f && f.naturalWidth ? f : im; };
 /** The map drawings are turned into pixels once and reused: redrawing the detailed SVG on every colour change is what made phones stall. */
 const flat = new Map<HTMLImageElement, HTMLCanvasElement>();
@@ -158,7 +162,7 @@ function applyMap3d() {
 function setMap3d(on: boolean) {
   if (on && !VOL.art.relief) { map3d = false; say('This map has no 3D relief yet.'); return; }
   map3d = on; try { localStorage.setItem('fab-map3d', on ? '1' : '0'); } catch { /* storage off */ }
-  if (on && !REL) { if (!relLoading) { relLoading = true; say('Loading the 3D map…', true); loadRelief(MW, MH, S, MAP.areas.filter((x) => LAB[x.id]).map((x) => [LAB[x.id].x, LAB[x.id].y, LAB[x.id].w, LAB[x.id].h] as [number, number, number, number]), PHONE, VOL.art.relief!).then((r) => { REL = r; REL.patch(reliefMat, areaIdTex, tintTex); diorama.add(REL.props);
+  if (on && !REL) { if (!relLoading) { relLoading = true; say('Loading the 3D map…', true); loadRelief(MW, MH, S, MAP.areas.filter((x) => LAB[x.id]).map((x) => [LAB[x.id].x, LAB[x.id].y, LAB[x.id].w, LAB[x.id].h] as [number, number, number, number]), PHONE, VOL.art.relief!, (u) => boardFile(new URL(u, location.href).pathname.endsWith(new URL(VOL.art.lines, location.href).pathname) ? VOL.art.lines : new URL(u, location.href).pathname.endsWith(new URL(VOL.art.base, location.href).pathname) ? VOL.art.base : u)).then((r) => { REL = r; REL.patch(reliefMat, areaIdTex, tintTex); diorama.add(REL.props);
         const ground = new THREE.Mesh(REL.geometry, reliefMat); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; diorama.add(ground);
         if (REL.margin) { const mg = new THREE.Mesh(REL.margin, new THREE.MeshStandardMaterial({ map: boardTex, roughness: 0.95 })); mg.rotation.x = -Math.PI / 2; mg.receiveShadow = true; diorama.add(mg); }      // the sheet's flat margin round a cut map
         diorama.add(new THREE.Mesh(REL.walls, new THREE.MeshStandardMaterial({ color: 0x4a3524, roughness: 0.9, side: THREE.DoubleSide }))); applyMap3d(); refresh(); }).catch(() => { relLoading = false; map3d = false; say('The 3D map could not be loaded. Check your connection and try again.'); }); } return; }
@@ -457,7 +461,8 @@ function paintBoard() {
 }
 /* ---------- area labels: printed flat, each on its own level card, so the relief never bends them ---------- */
 const labelsGrp = new THREE.Group(); scene.add(labelsGrp);
-const labelTexCache = new Map<string, THREE.CanvasTexture>();
+const labelTexCache = new Map<string, THREE.CanvasTexture>(); let labelTilt = 0;
+if (VOL.art.labelFace) { setLabelFace(VOL.art.labelFace); document.fonts?.load(`600 15px ${VOL.art.labelFace.family ?? 'serif'}`).then(() => { labelTexCache.clear(); buildLabels(); }).catch(() => { /* the fallback serif stands in */ }); }   // the print's own lettering, drawn again once its face has loaded
 /** In 3D the printed arrows, entry triangles and strips and the boxes hover a little above the ground under them (relief.ts takes them off the draped board). */
 const floatAt = (x: number, y: number) => (show3d() ? REL!.floats.find((f) => x >= f.x && x <= f.x + f.w && y >= f.y && y <= f.y + f.h) : undefined);
 function floatCards() {
@@ -484,7 +489,7 @@ function floatCards() {
 }
 function buildLabels() {
   labelsGrp.children.forEach((o) => { (o as THREE.Mesh).geometry.dispose(); ((o as THREE.Mesh).material as THREE.Material).dispose(); }); labelsGrp.clear();
-  floatCards();
+  floatCards(); labelTilt = -1;      // new labels take the current tilt on the next frame
   const PAD = 12, lk = `${+layers.numbers}${+layers.tdn}${+layers.vp}${+layers.names}${Object.values(vpIcons).every((i) => i.naturalWidth > 0)}`, K = 4;
   for (const a of MAP.areas) {
     const L = LAB[a.id]; if (!L || L.mode === 'none' || (!layers.numbers && !layers.tdn && !layers.vp && !layers.names)) continue;      // a box prints its own code on the board
@@ -492,10 +497,10 @@ function buildLabels() {
     if (!t) { const cv = document.createElement('canvas'); cv.width = Math.ceil((L.w + 2 * PAD) * K); cv.height = Math.ceil((L.h + 2 * PAD) * K); const c = cv.getContext('2d')!; c.scale(K, K); c.translate(L.w / 2 + PAD, L.h / 2 + PAD); drawLabel(c, a, layers, vpIcons, L);
       t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; labelTexCache.set(a.id + lk, t); }
     const m = new THREE.Mesh(new THREE.PlaneGeometry((L.w + 2 * PAD) / S, (L.h + 2 * PAD) / S), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
-    const p = toWorld(L.x, L.y); m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, textRot(), 0); m.userData.area = a.id;
+    const p = toWorld(L.x, L.y); m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, textRot(), 0); m.userData.area = a.id; m.userData.lh = (L.h + 2 * PAD) / S;
     let y = 0.006;
     if (show3d()) { y = 0; for (const dx of [-0.5, 0, 0.5]) for (const dz of [-0.5, 0, 0.5]) y = Math.max(y, REL!.h(p.x + (dx * L.w) / S, p.z + (dz * L.h) / S)); y += 0.03; }      // level, at the highest ground under it
-    m.position.set(p.x, y, p.z); m.renderOrder = 2; labelsGrp.add(m);
+    m.position.set(p.x, y, p.z); m.userData.y0 = y; m.renderOrder = 2; labelsGrp.add(m);
   }
   for (const bx of (VOL.art.sheetBoxes ?? []).filter((x) => shownArea(x.id))) {                     // a scenario sheet's own box, on a card above the dimmed map around it
     const K2 = 3, cv = document.createElement('canvas'); cv.width = bx.w * K2; cv.height = bx.h * K2; const c = cv.getContext('2d')!; c.scale(K2, K2);
@@ -538,7 +543,7 @@ function paintAreas() {
 }
 
 /* ---------- camera ---------- */
-let target = new THREE.Vector3(17, 0, -3), yaw = 0, pitch = 1.0, dist = 36;
+let target = new THREE.Vector3(17, 0, -3), yaw = 0, pitch = 1.0, dist = 36, opened = false;
 function placeCam() { cam.position.set(target.x + dist * Math.sin(yaw) * Math.cos(pitch), dist * Math.sin(pitch), target.z + dist * Math.cos(yaw) * Math.cos(pitch)); cam.lookAt(target); }
 const ptrs = new Map<number, [number, number]>(); let moved = 0, pinch = 0;
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -1565,10 +1570,17 @@ const modChips = (parts: [string, number][]) => parts.map(([w, v]) => `<span cla
 /** A toggle chip. With `icon` the icon replaces the tick; with an empty label it is icon-only and `title` names it. */
 const relayer = () => { saveLayers(); paintBoard(); paintAreas(); };
 /** The camera takes in all the areas a side holds (the supply colour then always shows something). */
+/** Where a full-map game opens: the middle of the blocks on the map (the front), so no game opens on its empty margin. */
+function openingTarget() {
+  const ps = g.units.filter((u) => u.area != null && MAP.areas.some((a) => a.id === u.area)).map((u) => center(u.area!));
+  if (!ps.length) { const p = toWorld(MW / 2, MH / 2); return new THREE.Vector3(p.x, 0, p.z); }
+  const xs = ps.map((p) => p.x), zs = ps.map((p) => p.z);
+  return new THREE.Vector3((Math.min(...xs) + Math.max(...xs)) / 2, 0, (Math.min(...zs) + Math.max(...zs)) / 2);
+}
 /** The opening view: the whole map, or a scenario's own sheet (its play area) framed from above. */
 function homeGoal() {
   const ids = g.inPlay ? MAP.areas.filter((a) => g.inPlay!.includes(a.id)).flatMap((a) => a.polygon.map(([x, y]) => toWorld(x, y))) : [];      // every corner of the sheet
-  if (!ids.length) return { t: new THREE.Vector3(17, 0, -3), dist: innerWidth < 700 ? 52 : 36, pitch: 1.0 };
+  if (!ids.length) return { t: openingTarget(), dist: innerWidth < 700 ? 52 : 36, pitch: 1.0 };
   const x0 = Math.min(...ids.map((p) => p.x)), x1 = Math.max(...ids.map((p) => p.x)), z0 = Math.min(...ids.map((p) => p.z)), z1 = Math.max(...ids.map((p) => p.z));
   return { t: new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), dist: clampDist(Math.max(x1 - x0, (z1 - z0) * 1.3) * (innerWidth < 700 ? 1.7 : 1.12) + 3), pitch: 1.0 };
 }
@@ -1685,7 +1697,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
 let lastView: E.Side | null = null;
 /** Standard view: German from the bottom of the map, Allied from the top; the printed items turn with it. */
 function syncView() {
-  const v = viewSide(); if (v === lastView) return; const fresh = lastView === null; lastView = v; yaw = v !== VOL.bottom ? Math.PI : 0; if (!fresh) goal = g.inPlay ? homeGoal() : { t: new THREE.Vector3(17, 0, -3), dist, pitch }; paintBoard();
+  const v = viewSide(); if (v === lastView) return; const fresh = lastView === null; lastView = v; yaw = v !== VOL.bottom ? Math.PI : 0; if (!fresh) goal = g.inPlay ? homeGoal() : { t: openingTarget(), dist, pitch }; paintBoard();
 }
 /** Split tables: publish the blocks the other side may now see, and (attacker's seat) start combat once both sides are ready and their blocks are known. */
 function driveSplit() {
@@ -1726,8 +1738,11 @@ function frame() {
   if (lock && !goal) target.copy(lock.c);
   if (!CALM) { const t = performance.now() / 1000; for (const k of markers.children) { const f = k.userData.float; if (f) { k.position.y = f.y + ((k.userData.lift as number | undefined) ?? 0) + Math.sin(t * 1.6 + f.ph) * 0.07; k.rotation.y = viewRot() + Math.sin(t * 0.9 + f.ph) * 0.22; } } }   // a slow 4 s bob and 7 s sway, each marker out of step
   { const old = Math.round(clearRatio * 5); clearRatio = fitBattleView(); if (g.battle && Math.round(clearRatio * 5) !== old) syncBattleCam(); }
-  if (REL && PHONE) { const near = dist < 40; REL.props.children[0].visible = REL.props.children[1].visible = near; }   // phones: trees only when zoomed in (thousands of them are the heaviest part)
+  if (REL) { const near = dist < (PHONE ? 40 : 55); REL.props.children[0].visible = REL.props.children[1].visible = near; }   // trees only up close: at overview they are noise over the map   // phones: trees only when zoomed in (thousands of them are the heaviest part)
   { const f = Math.cos(yaw) < 0; if (f !== camFar) { camFar = f; paintBoard(); } }        // the camera has swung past the side: the printed words turn to face it
+  { const tilt = show3d() ? Math.min(0.75, Math.max(0, 0.8 - pitch) * 1.3) : 0;              // a low look across the 3D table: the names stand up toward the player, as the hovering boxes do, so they stay readable
+    if (Math.abs(tilt - labelTilt) > 0.005) { labelTilt = tilt; for (const l of labelsGrp.children) if (l.userData.lh) { l.rotation.x = -Math.PI / 2 + tilt; l.position.y = l.userData.y0 + Math.sin(tilt) * l.userData.lh / 2; } } }
+  if (!opened) { opened = true; if (!g.inPlay && !TUT) target.copy(openingTarget()); }      // the first frame looks at the front of this game
   placeCam(); runAnims(); settle(); renderer.render(scene, cam); renderFocus(); placeBadges();
 }
 SBU.initSandboxUi({

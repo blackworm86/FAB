@@ -48,6 +48,8 @@ blotch = nd.gaussian_filter(rng.standard_normal((H, W)), 14) * 60 + nd.gaussian_
 hz = nd.gaussian_filter(h, 6) + blotch * nd.gaussian_filter(np.clip(h / 300, 0.3, 1.6), 20)           # higher ground: broader, bolder patches
 zs = np.array([z for z, _ in palette]); cols = np.array([c for _, c in palette])
 ground = np.stack([np.interp(hz, zs, cols[:, k]) for k in range(3)], -1)
+cone = np.clip((nd.gaussian_filter(h, 4) - 2300) / 700, 0, 1)[..., None]           # Etna's summit cone, dark brown as printed
+ground = ground * (1 - cone * 0.75) + np.array([92, 72, 56], np.float32) * cone * 0.75
 ground = ground + nd.gaussian_filter(rng.standard_normal((H, W)), 1.2)[..., None] * 2.5            # the paper's grain
 out = np.where(island[..., None], ground, sea)
 out = np.where(mainland[..., None], grey + nd.gaussian_filter(rng.standard_normal((H, W)), 6)[..., None] * 5, out)

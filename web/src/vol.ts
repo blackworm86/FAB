@@ -35,7 +35,7 @@ export interface VolView {
   wood: Record<string, number>; ink: Record<string, string>; controlCol: Record<string, number>;   // block wood, text colour (CSS --ge/--al), area-control tint
   map: { size: [number, number]; areas: MapArea[]; connections: { a: number; b: number }[]; entries: MapEntry[] };
   labels: Record<string, LabelBox>;
-  art: { base: string; lines: string; vpIcons: Record<string, string>; zones?: Record<string, string>; relief: string | null; reliefName: string; entryDark: (side: E.Side) => boolean;
+  art: { labelFace?: Partial<import('./board-art').LabelFace>; base: string; lines: string; vpIcons: Record<string, string>; zones?: Record<string, string>; relief: string | null; reliefName: string; entryDark: (side: E.Side) => boolean;
     /** Off-map boxes printed only on a scenario's own sheet: drawn, and clickable, only while that scenario's play area includes them. */
     sheetBoxes?: { id: number; name: string; side: E.Side; x: number; y: number; w: number; h: number }[] };
   features: { fuel: boolean; zones: boolean; optional: boolean; tutorial: boolean };
@@ -117,7 +117,7 @@ function golan(): VolView {
     wood: { ...GOLAN_WOOD }, ink: { syrian: '#8fc46a', israeli: '#6fd0ea' }, controlCol: { syrian: 0x4f9a4a, israeli: 0x3ab0d0 },
     map: { size: m.size, areas, connections: m.connections, entries: (golanEntries as { letter: string; x: number; y: number }[]).map((e) => ({ ...e, side: 'syrian' })) },      // the letters sit in the printed triangles (tools/golan73/board.py)
     labels,
-    art: { base: './golan73/map-base.svg', lines: './golan73/map-lines.svg', vpIcons: { syrian: './icons/vp-golan-syrian.svg', israeli: './icons/vp-mutual.svg', mutual: './icons/vp-mutual.svg' }, relief: './golan73/', reliefName: 'The Golan Heights in relief, from Mt Hermon to the Sea of Galilee, with contour lines', entryDark: () => false, sheetBoxes },
+    art: { labelFace: { family: '"Crimson Pro", "Times New Roman", serif', style: 'normal', weight: 600, halo: '#ddd3ae', ink: '#2a2418' }, base: './golan73/map-base.svg', lines: './golan73/map-lines.svg', vpIcons: { syrian: './icons/vp-golan-syrian.svg', israeli: './icons/vp-mutual.svg', mutual: './icons/vp-mutual.svg' }, relief: './golan73/', reliefName: 'The Golan Heights in relief, from Mt Hermon to the Sea of Galilee, with contour lines', entryDark: () => false, sheetBoxes },
     features: { fuel: false, zones: false, optional: true, tutorial: true },
     scenarios: info.scenarios, defaultOpts: { scenario: 'badr', fuel: false },
     unitSvg: (u, g) => (u.garrison && u.chitId ? chitArt(E.chit(g, u.chitId)) : unitArt(u)), chitSvg: chitArt,
@@ -158,7 +158,7 @@ function sicily(): VolView {
     wood: { ...SICILY_WOOD, allied: SICILY_WOOD.us, axis: SICILY_WOOD.german }, ink: { allied: '#7fb3e8', axis: '#b9bcc0' }, controlCol: { allied: 0x3f7fc8, axis: 0x8a9096 },
     map: { size: m.size, areas, connections: E.VOLUMES.sicily.map.connections, entries: [] },
     labels,
-    art: { base: './sicily/map-base.svg', lines: './sicily/map-lines.svg', vpIcons: { german: './icons/vp-german.svg', allied: './icons/vp-allied.svg', mutual: './icons/vp-mutual.svg' }, relief: './sicily/', reliefName: 'Sicily in relief, from the Etna to the western capes, with contour lines, groves and woods', entryDark: () => false },
+    art: { labelFace: { family: '"Crimson Pro", "Times New Roman", serif', style: 'italic', weight: 600, halo: '#e6dbbd', ink: '#22201a' }, base: './sicily/map-base.svg', lines: './sicily/map-lines.svg', vpIcons: { german: './icons/vp-german.svg', allied: './icons/vp-allied.svg', mutual: './icons/vp-mutual.svg' }, relief: './sicily/', reliefName: 'Sicily in relief, from the Etna to the western capes, with contour lines, groves and woods', entryDark: () => false },
     features: { fuel: false, zones: false, optional: true, tutorial: true },
     scenarios: info.scenarios, defaultOpts: { scenario: 'tournament', fuel: false },
     unitSvg: (u, g) => (u.garrison && u.chitId ? chitArt(E.chit(g, u.chitId)) : unitArt(u)), chitSvg: chitArt,

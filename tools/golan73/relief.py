@@ -76,9 +76,9 @@ hs = nd.gaussian_filter(h, 2.0); gy, gx = np.gradient(hs); shade = np.clip(1 + (
 gr = np.where(land[..., None], paper * 0.78 + gr * 0.22, paper) * np.where(onmap, shade, 1.0)[..., None]
 Image.fromarray(np.clip(gr, 0, 255).astype(np.uint8)).save(OUT + 'snow.png', optimize=True)
 n = nd.gaussian_filter(rng.random((H, W)), 3); n = (n - n.min()) / (n.max() - n.min())
-dens = (np.where(lc == 10, 0.8, 0) + np.where(lc == 20, 0.3, 0)) * land * (n > 0.25) * ~mask(water)
+dens = np.zeros((H, W), np.float32)                                                 # the printed map has no woods (no terrain in the rules): no trees
 wd = nd.uniform_filter(dens.astype(np.float32), STEP + 1)[::STEP, ::STEP]; np.round(np.clip(wd, 0, 1) * 255).astype(np.uint8).tofile(OUT + 'woods.bin')
-towns = [[float(a['label'][0]), float(a['label'][1])] for a in M['areas'] if a['id'] != 83]
+towns = []                                                                          # the printed map draws no town symbols: none in 3D either
 json.dump({'cut': CUT, 'outline': [[[0, 0], [W, 0], [W, H], [0, H], [0, 0]]], 'w': W, 'h': H, 'step': STEP, 'cols': cols, 'rows': rows, 'metres': hi, 'mpp': MPP, 'exag': EXAG,
            'dry': True, 'ownLines': True, 'overlay': 'map-base.svg', 'towns': towns, 'cities': []}, open(OUT + 'relief.json', 'w'), separators=(',', ':'))
 print(rows, cols, round(hi), 'm', {f: os.path.getsize(OUT + f) // 1024 for f in os.listdir(OUT)})

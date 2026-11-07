@@ -76,6 +76,24 @@ tel = land & nolab & (sr - sb > 70) & (sr > 170) & (sg > 110) & (sg < 185); tel 
 lab_, n_ = nd.label(tel); big = np.zeros(n_ + 1, bool); big[1:] = np.array(nd.sum(tel, lab_, range(1, n_ + 1))) >= 300; tel = big[lab_]
 TEL = med(tel, (188, 155, 93)); tsoft = nd.gaussian_filter(nd.binary_closing(tel, iterations=3).astype(np.float32), 2.0)[..., None]   # the tels (volcanic cones) where the print has them, in its orange-brown
 ground = ground * (1 - tsoft * .9) + TEL * tsoft * .9
+tg = nd.gaussian_filter(tsoft[..., 0], 3); ty, tx = np.gradient(tg)                  # the tels as mounds: lit on the upper left, shaded on the lower right, as printed
+ground = ground * (1 + np.clip((-tx - ty) * 9, -0.16, 0.12))[..., None]
+# the Jordan and Hula valley below the escarpment: the print's pale mint, deepening with depth
+MINT = np.array([222, 231, 203], np.float32); vdep = np.clip((200 - nd.gaussian_filter(h, 6)) / 200, 0, 1) ** 0.8
+vdep = vdep * (1 + nd.gaussian_filter(rng.standard_normal((H, W)), 14) * 0.35); vdep = np.clip(vdep, 0, 1)[..., None] * land[..., None]
+ground = ground * (1 - vdep * 0.9) + MINT * vdep * 0.9
+# the escarpment: a broad soft brown shading on its downhill side, as printed (not only a halo along the line)
+escl = np.zeros((H, W), np.uint8); _d = ImageDraw.Draw(Image.fromarray(escl))
+_im = Image.new('L', (W, H), 0); _dd = ImageDraw.Draw(_im)
+for dpath in A['escarpment']:
+    q = pts(dpath)
+    if len(q) > 1: _dd.line(q, fill=1, width=3)
+escl = np.array(_im) > 0
+dE, (eiy, eix) = nd.distance_transform_edt(~escl, return_indices=True)
+below = nd.gaussian_filter(h, 2) < h[eiy, eix] - 8
+band = np.clip(1 - dE / 70, 0, 1) ** 1.3 * below * land
+band = nd.gaussian_filter(band.astype(np.float32), 3)[..., None]
+ground = ground * (1 - band * 0.7) + np.array([170, 134, 86], np.float32) * band * 0.7
 stone = nd.gaussian_filter(rng.standard_normal((H, W)), 1.1) * 2.5                  # the paper's grain
 img = ground + stone[..., None]
 cont = np.zeros((H, W), bool)                                                        # the print's faint brown contour lines, every 50 m
@@ -123,15 +141,15 @@ def triangle(e, side=40):
 tank = lambda x, y, col: (f'<g transform="translate({x:.1f} {y:.1f}) scale(.62)" fill="{col}" stroke="#2b2a26" stroke-width="2.2" stroke-linejoin="round">'      # the alternate set-up tanks, in the division's colour
                           '<rect x="-24" y="2" width="48" height="11" rx="5.5"/><path d="M-20 2L-15 -6H17L22 2Z"/><path d="M-8 -6V-12H9L11 -6Z"/><path d="M9 -10H30" fill="none" stroke-width="3.4"/></g>')
 font = 'font-family="Saira Condensed, Arial Narrow, sans-serif"'
-txt = lambda x, y, s, size, fill, extra='': f'<text x="{x:.0f}" y="{y:.0f}" text-anchor="middle" {font} font-style="italic" font-weight="600" font-size="{size}" fill="{fill}" {extra}>{s}</text>'
+txt = lambda x, y, s, size, fill, extra='': f'<text x="{x:.0f}" y="{y:.0f}" text-anchor="middle" font-family="Crimson Pro, Times New Roman, serif" font-style="italic" font-weight="600" font-size="{size}" fill="{fill}" {extra}>{s}</text>'   # the print's water and basalt names: a quiet serif italic
 wcentre = lambda P: (np.mean([p[0] for p in P]), np.mean([p[1] for p in P]))
 lake_names = []
 flip = lambda cx, cy, body: f'<g data-flip="{cx:.1f} {cy:.1f}">{body}</g>'     # printed words the app turns round for the player across the table
 for P in water:
     cx, cy = wcentre(P); big = Polygon(P).area > 40000
-    lake_names.append(flip(cx, cy - 12 if big else cy, txt(cx, cy - 4, 'Sea of Galilee' if big else 'Lake Hula', 34 if big else 20, '#1d5f9a', 'stroke="#d8e8f3" stroke-width="3" paint-order="stroke"') +
-                      ('' if big else txt(cx, cy + 18, '(drained)', 15, '#1d5f9a', 'stroke="#d8e8f3" stroke-width="3" paint-order="stroke"'))))
-for P in leja: cx, cy = wcentre(P); lake_names.append(flip(cx - 6, cy - 9, txt(cx - 6, cy, 'The Leja', 26, '#3f3e3a', 'stroke="#c3c2bb" stroke-width="3" paint-order="stroke"')))
+    lake_names.append(flip(cx, cy - 12 if big else cy, txt(cx, cy - 4, 'Sea of Galilee' if big else 'Lake Hula', 22 if big else 15, '#2c6e9e', 'stroke="#cfe3f1" stroke-width="2" paint-order="stroke"') +
+                      ('' if big else txt(cx, cy + 13, '(drained)', 11, '#2c6e9e', 'stroke="#cfe3f1" stroke-width="2" paint-order="stroke"'))))
+for P in leja: cx, cy = wcentre(P); lake_names.append(flip(cx - 6, cy - 9, txt(cx - 6, cy, 'The Leja', 19, '#3f3e3a', 'stroke="#b9b8b1" stroke-width="2" paint-order="stroke"')))
 
 base = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">',
         f'<image id="ground" href="{ground_uri}" width="{W}" height="{H}" preserveAspectRatio="none"/>',
@@ -202,7 +220,7 @@ lines = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" view
          g('escarpment', '', f'<g stroke="#b08a5c" stroke-width="22" stroke-opacity=".45">{paths(A["escarpment"])}</g><g stroke="#1d1d1b" stroke-width="3.6">{paths(A["escarpment"])}</g>'),
          g('at-ditch', '', f'<g stroke="#5f4630" stroke-width="13">{paths(A["atDitch"])}</g><g stroke="#9a7650" stroke-width="7">{paths(A["atDitch"])}</g>'),
          g('purple-line', 'stroke="#8e4f9f" stroke-width="2.4" stroke-dasharray="7 5"', ''.join(f'<path d="{purple(d)}"/>' for d in A['atDitch'])),
-         g('sam-barrier', '', f'<g stroke="#2a72c0" stroke-width="3" stroke-dasharray="12 4 2 4">{paths(A["samBarrier"])}</g>'),
+         g('sam-barrier', '', f'<g stroke="#eef4f6" stroke-width="6.5" stroke-opacity=".9">{paths(A["samBarrier"])}</g><g stroke="#2a72c0" stroke-width="3.2" stroke-linecap="butt" stroke-dasharray="6 5">{paths(A["samBarrier"])}</g>'),   # as printed: short blue dashes on a pale casing
          g('sectors', '', f'<g stroke="#5e5a52" stroke-width="5">{paths(A["sector"])}</g><g stroke="#ffffff" stroke-width="1.8" stroke-linecap="butt" stroke-dasharray="5 4">{paths(A["sector"])}</g>'),
          g('hermon', '', f'<g stroke="#8a8476" stroke-width="7">{paths(A["hermon"])}</g><g stroke="#f3eee0" stroke-width="3.6" stroke-dasharray="0.1 6.4">{paths(A["hermon"])}</g>'),
          g('outline', 'stroke="#6c6a62" stroke-width="9"', paths(A['border'])),

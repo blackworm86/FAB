@@ -68,7 +68,7 @@ Image.fromarray(np.clip(gr, 0, 255).astype(np.uint8)).save(OUT + 'snow.png', opt
 
 # trees where the land cover says tree cover (dense) or shrubland (sparse), never on the summit or the sea
 rng = np.random.default_rng(7); n = nd.gaussian_filter(rng.random((H, W)), 3); n = (n - n.min()) / (n.max() - n.min())
-dens = np.where(lc == 10, 0.85, 0) + np.where(lc == 20, 0.3, 0) + np.where(lc == 40, 0.08, 0)
+dens = np.zeros((H, W), np.float32)                                                 # the printed map has no woods (and woods are no terrain in the rules): no trees
 dens = dens * land * (n > 0.25)
 wd = nd.uniform_filter(dens.astype(np.float32), STEP + 1)[::STEP, ::STEP]; np.round(np.clip(wd, 0, 1) * 255).astype(np.uint8).tofile(OUT + 'woods.bin')
 
@@ -82,9 +82,7 @@ for c in A2['cities']:
     cells = sorted({(int(x) // 4 * 4 + 2, int(y) // 4 * 4 + 2) for x, y in zip(xs, ys)})
     cities.append({'c': [round(float(xs.mean()), 1), round(float(ys.mean()), 1)], 'cells': [cc for cc in cells if cm[min(cc[1], H - 1), min(cc[0], W - 1)]]})
 city_areas = {c['area'] for c in A2['cities']}
-for a in M['areas']:
-    if a['id'] in city_areas or a['tdn'] >= 3: continue                                  # the cities are drawn; no town on Etna
-    towns.append([float(a['label'][0]), float(a['label'][1])])
+# towns only where the printed map draws a city (its four hatched cities); no generic village at every area
 print(len(towns), 'towns', len(cities), 'cities')
 json.dump({'outline': [[[0, 0], [W, 0], [W, H], [0, H], [0, 0]]], 'w': W, 'h': H, 'step': STEP, 'cols': cols, 'rows': rows, 'metres': hi, 'mpp': MPP, 'exag': EXAG,
            'dry': True, 'ownLines': True, 'overlay': 'map-base.svg', 'towns': towns, 'cities': cities}, open(OUT + 'relief.json', 'w'), separators=(',', ':'))

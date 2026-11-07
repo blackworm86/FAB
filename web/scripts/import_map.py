@@ -128,15 +128,27 @@ from shapely.geometry import Polygon as _P
 zone = {a['id']: a['zone'] for a in out['areas']}; P_ = {a['id']: _P(a['polygon']).buffer(0) for a in out['areas']}
 from shapely.geometry import LineString as _L
 wet = unary_union([_L(pts_of(e, 24)).buffer(6) for e in layers['Rivers'] if tag(e) == 'path' and e.get('d')])   # where a river is the border, the print shows the river alone
-army = ''
+army = ''; army_segs = {}
 for i in P_:
     for j in P_:
         if i < j and zone[i] != zone[j] and P_[i].distance(P_[j]) < 2:
             g = P_[i].boundary.intersection(P_[j].buffer(2.5)).difference(wet)
             for ln in (getattr(g, 'geoms', None) or [g]):
-                if ln.geom_type == 'LineString' and ln.length > 6: army += '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in ln.coords) + '"/>'
+                if ln.geom_type == 'LineString' and ln.length > 6: army += '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in ln.coords) + '"/>'; army_segs.setdefault(tuple(sorted((zone[i], zone[j]))), []).append((ln, i))
 NB = 'docs/maps/vector/borders-national.json'                                         # the print's national borders along the east edge: German (magenta), Luxembourg (cyan); traced from the scan by position
 national = ''.join(f'<path d="M' + 'L'.join(f'{x} {y}' for x, y in pl) + f'" stroke="{col}"/>' for k, col in (('magenta', '#c2287f'), ('cyan', '#1aa3d6')) for pl in [json.load(open(NB))[k]]) if os.path.exists(NB) else ''
+ARMY = {5: '6th Panzer Army', 6: '5th Panzer Army', 7: '7th Army'}                     # as printed: each army's name along its boundary, on its own side
+def army_caption(ln, za, zb):
+    L = ln.length; a, b = ln.interpolate(L / 2 - 6), ln.interpolate(L / 2 + 6); ang = math.degrees(math.atan2(b.y - a.y, b.x - a.x))
+    if ang > 90: ang -= 180
+    if ang < -90: ang += 180
+    m = ln.interpolate(L / 2); r = math.radians(ang); nx, ny = -math.sin(r), math.cos(r); out = ''
+    for sgn in (1, -1):
+        px, py = m.x + nx * 11 * sgn, m.y + ny * 11 * sgn
+        zn = next((zone[k] for k, P in P_.items() if P.contains(Point(px, py))), None)
+        if zn in ARMY: out += f'<g data-flip="{px:.1f} {py:.1f}"><text x="{px:.1f}" y="{py + 3.5:.1f}" transform="rotate({ang:.1f} {px:.1f} {py:.1f})" text-anchor="middle" font-family="Arial Narrow, Arial, sans-serif" font-style="italic" font-weight="700" font-size="10" fill="#4a4d48">{ARMY[zn]}</text></g>'
+    return out
+army_text = ''.join(army_caption(max(v, key=lambda t: t[0].length)[0], *k) for k, v in army_segs.items())
 head = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">'
 base = f'''{head}
 <rect id="frame" width="{W}" height="{H}" fill="#bccad3"/>
@@ -147,6 +159,7 @@ base = f'''{head}
 lines = f'''{head}
 <g id="boundaries" fill="none" stroke="#fbfbf6" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">{bnd}</g>
 <g id="army" fill="none" stroke-linecap="butt" stroke-linejoin="round"><g stroke="#6d706c" stroke-width="9" stroke-dasharray="8 5">{army}</g><g stroke="#fbfbf6" stroke-width="3.4">{army}</g></g>
+<g id="army-names" stroke="#eef0e6" stroke-width="2.4" paint-order="stroke">{army_text}</g>
 <g id="rivers" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#ffffff">{rivers_c}</g><g stroke="#1c78c0">{rivers}</g></g>
 <g id="roads" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#e4e6d8" stroke-width="4.0" stroke-opacity="0.8">{roads_c}</g><g stroke="#585b56" stroke-width="2.4">{roads_c}</g></g>
 <defs><pattern id="hatch" width="4.5" height="4.5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4.5" height="4.5" fill="#aeb2b4"/><path d="M0 0V4.5" stroke="#6c7175" stroke-width="1.6"/></pattern></defs>
