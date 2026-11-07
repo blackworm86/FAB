@@ -1,6 +1,7 @@
 /** The home page: the shelf of volumes, your tables, a new game, the tutorials and sign-in. It loads without the 3D table (three.js),
  *  which main.ts brings in only when a game opens. Some of its parts (the sign-in panel, invites, the rules window) also serve the table's menu. */
 import * as E from '../../engine/src';
+import { installKind, install, onInstallChange } from './install';
 import { online, startOnline, auth, lobby, DEV, TABLE, type Match } from './online';
 import { gameInfo, GAMES } from './games';
 import { BOXES, boxFront, boxSpine } from './covers';
@@ -123,6 +124,12 @@ export function bindAuth(ui: HTMLElement) {
   }));
 }
 const notice = (t: string, ok: boolean) => { toast = t; toastInfo = ok; render(); setTimeout(() => { toast = ''; render(); }, 2500); };
+/** 4.2: install the site as an app, where the browser offers it (or the iPhone steps). */
+function installHtml() {
+  const k = installKind(); if (!k) return '';
+  const fn = k === 'prompt' ? () => { void install(); } : () => notice('On iPhone or iPad: tap Share, then Add to Home Screen.', true);
+  return `<button class="installchip" data-ui="${reg(fn)}" title="Install Fast Action Battles as an app on this device">${ico('install')}<span>Install app</span></button>`;
+}
 /* A tap must land on the button it started on: while a finger or mouse is down on a button, redraws wait. */
 let pressing = false, waiting = false;
 function render() {
@@ -130,7 +137,8 @@ function render() {
   if (document.activeElement?.closest?.('.authform')) return;                                         // do not wipe what is being typed
   resetActs();
   const ui = $('#ui');
-  ui.innerHTML = (modal === 'rules' ? rulesHtml('', notice) : '') + homeHtml() + (toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : '');
+  document.body.classList.toggle('caninstall', !!installKind());                                     // room at the foot of the page for the install button
+  ui.innerHTML = (modal === 'rules' ? rulesHtml('', notice) : '') + homeHtml() + installHtml() + (toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : '');
   linkRules(ui);
   ui.querySelectorAll<HTMLElement>('[data-ui], [data-do]').forEach((e) => (e.onclick = () => { acts[e.dataset.ui ?? e.dataset.do!]?.(); render(); }));
   ui.querySelectorAll<HTMLElement>('[data-modal]').forEach((e) => (e.onclick = () => { modal = (e.dataset.modal || null) as typeof modal; render(); }));
@@ -139,6 +147,7 @@ function render() {
 }
 /** Start the home page. `local`: no online play is set up on this site (development): open the local table instead. */
 export function startHome(local: () => void) {
+  onInstallChange(() => render());
   (document.getElementById('gl') as HTMLElement).style.display = 'none';
   document.addEventListener('pointerdown', (e) => { pressing = !!(e.target as HTMLElement).closest?.('#ui button, #ui [role=button]'); }, true);
   const release = () => { if (!pressing) return; pressing = false; if (waiting) setTimeout(() => { if (waiting && !pressing) render(); }, 0); };

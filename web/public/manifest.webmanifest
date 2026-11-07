@@ -1,0 +1,15 @@
+{
+  "name": "FAB: Fast Action Battles",
+  "short_name": "FAB",
+  "description": "GMT's Fast Action Battles board games, played online: The Bulge, Golan '73 and Sicily.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b0d08",
+  "theme_color": "#0b0d08",
+  "icons": [
+    { "src": "icons/app-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/app-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

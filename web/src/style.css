@@ -933,3 +933,7 @@ a.rlink:hover { border-bottom-style: solid; }
 .maplegend .mlhead .ico { color: #23251d; min-width: 32px; min-height: 32px; } .maplegend .mlsub { display: block; margin: 8px 0 2px; font: 700 13px var(--sfd); letter-spacing: .08em; text-transform: uppercase; color: #4a4b3a; }
 .maplegend ul { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 3px; } .maplegend li { display: flex; align-items: center; gap: 10px; } .maplegend li svg { flex: none; }
 .maplegend .tdn { grid-template-columns: 1fr 1fr; }
+/* 4.2: install as an app (home page only, where the browser offers it) */
+.installchip { position: fixed; left: max(14px, env(safe-area-inset-left)); bottom: max(14px, env(safe-area-inset-bottom)); z-index: 70; display: flex; gap: 7px; align-items: center; min-height: 40px; padding: 6px 14px; background: #0b0d08; border: 1px solid var(--gold); color: var(--gold); font: 600 13px/1 "Saira Condensed", sans-serif; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; box-shadow: 0 6px 18px #000a; }
+.installchip .ic { width: 18px; height: 18px; } .installchip:hover, .installchip:focus-visible { background: #1b1f14; }
+body.caninstall .homein { padding-bottom: 76px !important; }
