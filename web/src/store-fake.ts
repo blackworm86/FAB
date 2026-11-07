@@ -27,6 +27,8 @@ export function fakeStore(side: Side): Store {
     setState: async (d) => put(P, { ...d, by: 'u-' + side }),                      // like the database: each write is signed by its writer
     watchPriv: (next) => on(V(side), () => next(get<Priv>(V(side)))), setPriv: async (p) => put(V(side), p),
     watchChat: (next) => on('fab-fake-chat', () => next(get<ChatMsg[]>('fab-fake-chat') ?? [])),
+    addJournal: async (part, d) => { const j = get<Record<string, Record<string, { at: number; d: string }>>>('fab-fake-journal') ?? {}; (j[part] ??= {})[`e${Date.now()}${Math.random().toString(36).slice(2, 6)}`] = { at: Date.now(), d }; put('fab-fake-journal', j); },
+    readJournal: async () => get<Record<string, Record<string, { at: number; d: string }>>>('fab-fake-journal') ?? {},
     sendChat: async (s, text) => { put('fab-fake-chat', [...(get<ChatMsg[]>('fab-fake-chat') ?? []), { id: String(Date.now()), uid: 'u-' + s, side: s, name: s, text, t: Date.now() }].slice(-100)); return ''; },
     watchReveals: (next) => on(R, () => next(get<Reveals>(R) ?? {})), mergeReveals: async (r) => put(R, { ...(get<Reveals>(R) ?? {}), ...r }),
     dropReveals: async (keys) => { const r = { ...(get<Reveals>(R) ?? {}) }; for (const k of keys) delete r[k]; put(R, r); },

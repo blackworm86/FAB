@@ -10,7 +10,7 @@ import { History } from './history';
 import * as SB from './sandbox';
 import { vpStrip, vpSheet, endPanel } from './score';
 import * as SBU from './sandbox-ui';
-import { online, startOnline, push, sit, setDevSeat, auth, lobby, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, SANDBOX, TUTORIAL, seatOf, seatName, type DevSeat, type Match } from './online';
+import { online, startOnline, push, sit, setDevSeat, auth, lobby, journal, seatKey, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, SANDBOX, TUTORIAL, seatOf, seatName, type DevSeat, type Match } from './online';
 import { gameInfo, GAMES } from './games';
 import { BOXES, boxFront, boxSpine } from './covers';
 import { ICONS, ico } from './icons';
@@ -20,6 +20,8 @@ import { pips, ABBR, chitLabel, BTN_ICON, iconify, STAGE_NAME, ok10, faces, modI
 import { initChat, chatBtn, chatHtml, bindChat } from './chat';
 import { acts, actv, resetActs, reg, regv, ubtn, btn, chip } from './ui-kit';
 import { optChooser, optOn } from './opt-rules';
+import { Recorder, unitsOf, localJournal, buildSteps } from './journal';
+import { openReplay } from './replay';
 import { moveNotice, handedOver, turnOf, pushNotify, noticesOn, noticesBlocked, noticesSupported, setNotices } from './notices';
 import { STEP_NAME, homeUrl, tutUrl, share, dropMatch, rulesHtml, accountHtml, bindAuth } from './home';
 import { drawLabel, drawEntry, drawRestricted, setLabelFace } from './board-art';
@@ -96,7 +98,33 @@ let areaPick: { label: string; areas: Set<number>; run: (a: number) => void } | 
 let applyingRemote = false;
 let oppTurn: boolean | null = null;                                                               // 4.3: was it the opponent's move when last seen
 const save = () => { if (heldNext) return;                                                       // a roll is on screen: its result is already saved; the board shown is older and must not be written back
-   try { localStorage.setItem(KEY, JSON.stringify(g)); } catch { /* storage off: the game still runs */ } if (!applyingRemote) { void push(g); handOver(); } };
+   try { localStorage.setItem(KEY, JSON.stringify(g)); } catch { /* storage off: the game still runs */ } if (!applyingRemote) { void push(g); handOver(); record(true); } };
+/* 4.1 the replay journal: each change is a step; online each seat writes only its own blocks (the database keeps the journal unread until the game is over) */
+const rec = new Recorder(VOL.sides); let recLast = '', replayShown = false;
+function record(own: boolean, gm: E.Game = g) {
+  if (TUTORIAL || SANDBOX) return;
+  if (online.mode === 'remote') {
+    const me = online.mySide(); if (!me) return rec.seen(gm);
+    const u = JSON.stringify(unitsOf(gm, me)), mine = () => { if (u !== rec.units) { rec.units = u; void journal.add(seatKey(me), u); } };   // the step first, then the blocks: a step's blocks are those written after it
+    if (!own) { rec.seen(gm); return mine(); }
+    const p = rec.pub(gm), k = JSON.stringify([p.t, p.ph, p.side, u]); if (p.msg.length || p.dice || k !== recLast) { recLast = k; void journal.add('pub', JSON.stringify(p)); } mine();
+  } else if (own) { const p = rec.pub(gm), u = unitsOf(gm, null), k = JSON.stringify([p.t, p.ph, p.side, u]); if (!p.msg.length && !p.dice && k === recLast) return; recLast = k; localJournal.add(KEY, p, u); }
+}
+/** Open the replay of this game (4.1). */
+async function showReplay() {
+  let steps = online.mode === 'remote' ? null : localJournal.read(KEY).map((e) => ({ pub: e.pub, units: e.units }));
+  if (!steps) { const j = await journal.read(); const part = (k: string) => Object.values(j?.[k] ?? {}); steps = j ? buildSteps(part('pub'), [part('german'), part('allied')]) : []; }
+  if (!steps.length) return say('No replay for this game: only games played since the replay arrived are recorded.');
+  const ref = new Map<string, E.Unit>([...E.newGame(1, g.opts).units, ...g.units].map((u) => [u.id, u]));
+  const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`, scen = VOL.scenarios.find((s) => s.id === g.opts.scenario)?.name ?? '';
+  const names = online.active ? [seatName(online.seats, P1), seatName(online.seats, P2)].filter(Boolean).join(' vs ') : '';
+  openReplay({
+    title: [VOL.name, scen, names].filter(Boolean).join(' · '), result: g.over ?? `Turn ${g.turn}, not finished`, steps, sides: [P1, P2], sideName: VOL.sideName, tag: VOL.tag,
+    board: boardCv.toDataURL('image/jpeg', 0.86), size: [MW, MH], label: (a) => MAP.areas.find((x) => x.id === a)?.label ?? null, areaName: (a) => E.areas.get(a)?.name ?? String(a),
+    face: (id, str) => { const u = ref.get(id); return u ? { svg: VOL.unitSvg({ ...u, str, area: u.area ?? 0 }, g), side: u.side, name: u.name } : null; },
+    wood: Object.fromEntries(VOL.sides.map((sd) => [sd, hex(VOL.wood[sd] ?? 0x777777)])), phaseName: (ph) => STEP_NAME[ph] ?? ph, close: () => render(), areaIds: MAP.areas.map((a) => a.id).filter((a) => E.areas.has(a) && (!g.inPlay || g.inPlay.includes(a))),
+  });
+}
 /** This player's move handed the move to the opponent: the push relay tells them, even with their app closed (4.3 step 2). */
 function handOver() {
   const me = online.mySide(); if (online.mode !== 'remote' || !me) return;
@@ -1677,7 +1705,7 @@ function renderInner() {
   const dockMain = alert || ledger() || handCards();
   const keepD = document.querySelector<HTMLElement>('#ui .c-dispatch')?.scrollTop ?? 0;           // a panel being read keeps its place when the screen updates
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = `<a class="skipmap" href="#" data-ui="${reg(() => { (document.getElementById('gl') as HTMLElement).focus(); })}">Skip to the map</a><div class="tops">${topBar()}${vpStrip(g, reg(() => { scoreOpen = true; }))}</div>` + `<div class="stage">${SANDBOX ? (SBU.st.sbOpen ? SBU.sandboxPanel() : SBU.sandboxFab()) : ''}${seatBar()}${heldBad ? heldBadBar() : ''}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${volPanel()}${mapLegend()}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${airPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} Map`, () => { endHidden = true; }) + ubtn(`${ico('plus')} New game`, () => { if (SANDBOX) { SBU.sbReset({ ...g.opts }); endHidden = false; } else location.href = homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}</button>${undoBtn()}${!p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
+  $('#ui').innerHTML = `<a class="skipmap" href="#" data-ui="${reg(() => { (document.getElementById('gl') as HTMLElement).focus(); })}">Skip to the map</a><div class="tops">${topBar()}${vpStrip(g, reg(() => { scoreOpen = true; }))}</div>` + `<div class="stage">${SANDBOX ? (SBU.st.sbOpen ? SBU.sandboxPanel() : SBU.sandboxFab()) : ''}${seatBar()}${heldBad ? heldBadBar() : ''}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${volPanel()}${mapLegend()}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${airPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} Map`, () => { endHidden = true; }) + ubtn(`${ico('dice')} Replay`, () => { void showReplay(); }, '', false, 'Watch the whole game again, step by step') + ubtn(`${ico('plus')} New game`, () => { if (SANDBOX) { SBU.sbReset({ ...g.opts }); endHidden = false; } else location.href = homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}</button>${undoBtn()}${!p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
   const ui = $('#ui');
   { const d = ui.querySelector<HTMLElement>('.c-dispatch'); if (d) d.scrollTop = keepD; }
   bind(ui, keepH, keepA);
@@ -1799,6 +1827,8 @@ void startOnline((rg) => { applyingRemote = true; if (heldNext) commitRoll(); co
     if (by && by !== online.uid && E.isRestore(prevG, rg)) { heldBad = null; auditWarn = [...auditWarn, `The other player's rules check put the game back to the last legal position: ${rg.restored!.why.join(' ')}`].slice(-6); }
     else if (by && by !== online.uid && gotRemote) { const p = E.auditChange(prevG, rg, w); if (p.length) { console.warn('rules check', p); heldBad = { game: rg, why: p }; applyingRemote = false; render(); return; } }
     gotRemote = true; heldBad = null;
+    record(false, rg);
+    if (PARAMS.get('replay') && rg.over && !replayShown) { replayShown = true; setTimeout(() => { void showReplay(); }, 400); }      // opened from the home page list
     { const me = online.mySide(); if (me) oppTurn = turnOf(rg, other(me));       // 4.3: the other player's move made it ours
       if (me && by && by !== online.uid && !firstRemote && handedOver(prevG, rg, me)) void moveNotice(`Your move · ${VOL.name}`, `Turn ${rg.turn} · ${STEP_NAME[rg.phase] ?? rg.phase}${rg.battle ? ' · a battle waits for you' : ''}`, `fab-${TABLE}`); } } const ckLast = JSON.stringify(g.checks?.at(-1) ?? null); const was = g.battle, n0 = was?.rolls.length ?? 0, st0 = was?.stage, pre = was ? snap(g) : null; applyingRemote = true; g = rg;
   const nb = g.battle; if (nb && !was) { battleFx = []; rollFx = []; } const rolled = !!(was && nb && nb.area === was.area && nb.rolls.length > n0); if (pre) { try { noteFx(pre, g, rolled); } catch (e) { console.error(e); } }                  // a failure while describing the changes must never stop the screen from updating

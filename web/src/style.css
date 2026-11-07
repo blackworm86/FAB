@@ -937,3 +937,39 @@ a.rlink:hover { border-bottom-style: solid; }
 .installchip { position: fixed; left: max(14px, env(safe-area-inset-left)); bottom: max(14px, env(safe-area-inset-bottom)); z-index: 70; display: flex; gap: 7px; align-items: center; min-height: 40px; padding: 6px 14px; background: #0b0d08; border: 1px solid var(--gold); color: var(--gold); font: 600 13px/1 "Saira Condensed", sans-serif; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; box-shadow: 0 6px 18px #000a; }
 .installchip .ic { width: 18px; height: 18px; } .installchip:hover, .installchip:focus-visible { background: #1b1f14; }
 body.caninstall .homein { padding-bottom: 76px !important; }
+/* 4.1 replay viewer: its own full-screen overlay (approved mockup) */
+.rp { position: fixed; inset: 0; z-index: 90; background: #0b0d08; color: var(--paper, #ddd7b5); font: 14px/1.45 "JetBrains Mono", monospace; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 10px;
+  padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+.rp button:focus-visible, .rp [tabindex]:focus-visible { outline: 2px solid #e7b04a; outline-offset: 2px; }
+.rp-bar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; background: #14170f; border: 1px solid #3a3e2c; padding: 8px 12px; }
+.rp-ttl { display: flex; gap: 10px; align-items: baseline; min-width: 0; flex-wrap: wrap; } .rp-ttl b { font: 700 22px/1 "Saira Condensed", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #e7b04a; }
+.rp-ttl span, .rp-res { font: 600 13px/1.1 "Saira Condensed", sans-serif; letter-spacing: .1em; text-transform: uppercase; color: #9a9886; } .rp-res { color: #ddd7b5; }
+.rp-seg { display: inline-flex; border: 1px solid #3a3e2c; } .rp-seg button { background: #1d2114; color: #9a9886; border: 0; padding: 7px 10px; min-height: 34px; font: 600 12px/1 "Saira Condensed", sans-serif; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
+.rp-seg button[aria-pressed="true"] { background: #e7b04a; color: #1a1608; }
+.rp-x { width: 38px; height: 34px; background: #1d2114; border: 1px solid #3a3e2c; color: #ddd7b5; font-size: 16px; cursor: pointer; }
+.rp-main { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 10px; min-height: 0; }
+.rp-board { position: relative; border: 1px solid #3a3e2c; background: #1a1c15; min-height: 0; overflow: hidden; }
+.rp-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.rp-u { transition: transform .6s ease, opacity .4s; }
+.rp-zoom { position: absolute; right: 8px; top: 8px; background: #0b0d08e6; border: 1px solid #e7b04a; color: #e7b04a; padding: 6px 10px; font: 600 12px/1 "Saira Condensed", sans-serif; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
+.rp-side { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 10px; min-height: 0; min-width: 0; }
+.rp-cap { background: #1d2114; border: 1px solid #3a3e2c; padding: 10px 12px; display: grid; gap: 6px; min-width: 0; max-height: 46vh; overflow: auto; }
+.rp-cap .k { display: flex; justify-content: space-between; gap: 8px; font: 600 13px/1 "Saira Condensed", sans-serif; letter-spacing: .12em; text-transform: uppercase; } .rp-cap .ph { color: #e7b04a; } .rp-cap .n { color: #9a9886; font-variant-numeric: tabular-nums; }
+.rp-msg p { margin: 0 0 4px; overflow-wrap: anywhere; }
+.rp-dice { display: grid; gap: 5px; } .rp-dice .dr { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; color: #9a9886; } .rp-dice .who { flex: 1 1 140px; min-width: 0; }
+.rp-dice .die { width: 26px; height: 26px; display: inline-grid; place-items: center; font: 700 15px/1 "Saira Condensed", sans-serif; border: 2px solid; border-radius: 4px; }
+.rp-dice .die.h { color: #0b0d08; background: #a9e08a; border-color: #a9e08a; } .rp-dice .die.m { color: #ff9c8a; border-color: #ff9c8a; }
+.rp-list { position: relative; background: #14170f; border: 1px solid #3a3e2c; overflow: auto; min-height: 0; }
+.rp-list h4 { margin: 0; position: sticky; top: 0; background: #14170f; padding: 8px 12px 6px; font: 600 12px/1 "Saira Condensed", sans-serif; letter-spacing: .14em; text-transform: uppercase; color: #9a9886; border-bottom: 1px solid #3a3e2c; }
+.rp-list button { display: grid; grid-template-columns: 34px 1fr; gap: 6px; width: 100%; text-align: left; background: none; border: 0; border-left: 3px solid transparent; color: #ddd7b5; padding: 7px 10px; font: 12px/1.35 "JetBrains Mono", monospace; cursor: pointer; }
+.rp-list button .t { min-width: 0; overflow-wrap: anywhere; } .rp-list button .i { color: #9a9886; font-variant-numeric: tabular-nums; }
+.rp-list button[aria-current="step"] { background: #e7b04a1c; border-left-color: #e7b04a; } .rp-list button.bt .t::after { content: "  battle"; color: #d1432f; font-size: 11px; }
+.rp-dock { background: #14170f; border: 1px solid #3a3e2c; padding: 8px 12px 10px; display: grid; gap: 8px; }
+.rp-tl { position: relative; height: 54px; cursor: pointer; touch-action: none; } .rp-tl svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.rp-ctl { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.rp-where { font: 600 13px/1.1 "Saira Condensed", sans-serif; letter-spacing: .1em; text-transform: uppercase; color: #9a9886; } .rp-where b { color: #ddd7b5; }
+.rp-tp { display: flex; gap: 6px; } .rp-tp button { width: 44px; height: 40px; display: grid; place-items: center; background: #1d2114; border: 1px solid #3a3e2c; color: #ddd7b5; cursor: pointer; }
+.rp-tp button.play { width: 56px; background: #e7b04a; color: #1a1608; border-color: #e7b04a; }
+.rp-tp svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; } .rp-tp svg .f { fill: currentColor; stroke: none; }
+@media (max-width: 860px) { .rp { display: flex; flex-direction: column; overflow: auto; } .rp > * { flex: none; } .rp-main { grid-template-columns: 1fr; } .rp-board { height: 56vh; flex: none; } .rp-side { grid-template-rows: auto auto; } .rp-list { max-height: 240px; } .rp-cap { max-height: none; } .rp-where { flex: 1 1 100%; order: 3; } }
+@media (prefers-reduced-motion: reduce) { .rp-u { transition: none; } }

@@ -6,7 +6,7 @@ import { rtdbStore } from './store-rtdb';
 
 export interface Seats { german?: string | null; allied?: string | null; germanName?: string | null; alliedName?: string | null }
 /** A game as listed in the lobby: who made it, which game and rules, who sits where. */
-export interface Match { id: string; game: string; title: string; opts: { scenario: string; fuel: boolean; airborne?: boolean }; owner: string; members: string[]; germanName?: string; alliedName?: string; created: number; /** whose move it is: my move, turn and step, read from the shared state */ myMove?: boolean; turn?: number; step?: string }
+export interface Match { id: string; game: string; title: string; opts: { scenario: string; fuel: boolean; airborne?: boolean }; owner: string; members: string[]; germanName?: string; alliedName?: string; created: number; /** whose move it is: my move, turn and step, read from the shared state */ myMove?: boolean; /** the game is over (it can be replayed, 4.1) */ over?: boolean; turn?: number; step?: string }
 export interface Account { uid: string; name: string; email: string; guest: boolean; admin: boolean }
 /** The shared game as the store hands it over: a revision counter and the game as JSON. */
 /** One chat message: written only by a seated player, signed with their own account and side. */
@@ -24,6 +24,8 @@ export interface Store {
   watchPriv(next: (p: Priv | null) => void): void; setPriv(p: Priv): Promise<void>; watchReveals(next: (r: Reveals) => void): void; mergeReveals(r: Reveals): Promise<void>; dropReveals(keys: string[]): Promise<void>;
   /** The players' chat: the last messages, live; and sending one as the seated side. */
   watchChat(next: (m: ChatMsg[]) => void): void; sendChat(side: Side, text: string): Promise<string>;
+  /** 4.1 the replay journal: add a step part ('pub', or a seat's own blocks), and read it all once the game is over. */
+  addJournal?(part: 'pub' | SeatKey, d: string): Promise<void>; readJournal?(): Promise<Record<string, Record<string, { at: number; d: string }>> | null>;
   /** Accounts and the lobby. */
   account(): Account; onAccount(f: (a: Account) => void): void;
   google(): Promise<string>; emailSignIn(email: string, password: string): Promise<string>; emailRegister(email: string, password: string, name: string): Promise<string>;
@@ -137,6 +139,10 @@ export async function publishReveals(g: Game) {
 }
 
 /** Send a chat line as the seated side; resolves an error message or ''. Watchers only read. */
+export const journal = {
+  add: (part: 'pub' | SeatKey, d: string) => store?.addJournal?.(part, d).catch(() => {}),
+  read: async () => (store?.readJournal ? store.readJournal().catch(() => null) : null),
+};
 export async function sendChat(text: string) { const side = online.mySide(), t = text.trim().slice(0, 300); if (!store || online.mode !== 'remote' && !DEV || !side || !t) return 'Only the two players can write in the chat.'; return store.sendChat(side, t); }
 export const setChatListener = (f: (m: ChatMsg[]) => void) => { onChat = f; };
 export async function sit(side: Side | null) { if (online.mode !== 'remote' || !store) return; const e = await store.sit(side ? seatKey(side) : null); online.error = e; onChange(); }

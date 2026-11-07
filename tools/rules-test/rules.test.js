@@ -159,3 +159,25 @@ describe('chat: the two players write, everyone signed in reads', () => {
   });
 });
 
+
+describe('the replay journal (4.1): each seat records its own blocks; readable only once the game is over', () => {
+  const e = (d = '{}') => ({ at: { '.sv': 'timestamp' }, d });
+  beforeEach(async () => { await admin((d) => Promise.all([set(ref(d, `games/${G}/seats/allied`), 'bob'), set(ref(d, `games/${G}/members`), { alice: true, bob: true })])); });
+  it('a seated player writes the shared part and their own side, never the other side, never twice', async () => {
+    await assertSucceeds(set(ref(user('alice'), `games/${G}/journal/pub/e1`), e()));
+    await assertSucceeds(set(ref(user('alice'), `games/${G}/journal/german/e1`), e()));
+    await assertFails(set(ref(user('alice'), `games/${G}/journal/allied/e1`), e()));
+    await assertSucceeds(set(ref(user('bob'), `games/${G}/journal/allied/e1`), e()));
+    await assertFails(set(ref(user('alice'), `games/${G}/journal/german/e1`), e('{"x":1}')));
+    await assertFails(set(ref(user('mallory'), `games/${G}/journal/pub/e2`), e()));
+    await assertFails(set(ref(user('alice'), `games/${G}/journal/pub/e3`), { at: 5, d: '{}' }));
+    await assertFails(set(ref(user('alice'), `games/${G}/journal/other/e1`), e()));
+  });
+  it('nobody reads it while the game is on (it holds each side\'s hidden blocks); the players do once it is over', async () => {
+    await assertFails(get(ref(user('alice'), `games/${G}/journal`)));
+    await admin((d) => set(ref(d, `games/${G}/state/f/over`), '"German victory"'));
+    await assertSucceeds(get(ref(user('alice'), `games/${G}/journal`)));
+    await assertSucceeds(get(ref(user('bob'), `games/${G}/journal`)));
+    await assertFails(get(ref(user('mallory'), `games/${G}/journal`)));
+  });
+});

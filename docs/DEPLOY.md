@@ -28,6 +28,7 @@ Everything of one game is under `games/<id>`:
 - `priv/german`, `priv/allied`: the real details of that side's blocks. Only the player in that seat can read them.
 - `reveals`: details of blocks the other side may see (a battle area once both pressed Ready, an Intelligence Gathering target).
 - `users/<uid>/games/<id>`: each player's list of games.
+- `journal`: the replay record (4.1). `journal/pub` holds each step's shared part (turn, phase, log lines, dice, VP), written by the player who made it; `journal/german` and `journal/allied` hold where that seat's blocks stood, written only by that seat. Nobody can read it until the game is over, so it never shows hidden blocks during play. After updating the site, publish `database.rules.json` again (Admin > Update rules): without the new rules the journal is refused and finished games have no replay.
 
 In the shared game, every block nobody may see (6.24) is a placeholder with an opaque id and no name, strength or quality. Each browser puts its own details back, runs the rules on its own copy and writes the changes.
 

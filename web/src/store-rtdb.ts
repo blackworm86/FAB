@@ -70,6 +70,8 @@ export async function rtdbStore(table: string): Promise<Store | null> {
     async mergeReveals(r: Reveals) { await rt.update(G('reveals'), enc(r)); },
     async dropReveals(keys: string[]) { await rt.update(G('reveals'), Object.fromEntries(keys.map((k) => [ek(k), null]))); },
     watchChat: (next) => { rt.onValue(rt.query(G('chat'), rt.limitToLast(100)), (s) => { const out: ChatMsg[] = []; s.forEach((c) => { const v = c.val(); out.push({ id: c.key!, uid: v.uid, side: v.side, name: v.name, text: String(v.text ?? ''), t: v.t }); }); next(out); }, () => next([])); },
+    async addJournal(part, d) { await rt.push(G(`journal/${part}`), { at: rt.serverTimestamp(), d }); },
+    async readJournal() { const s = await rt.get(G('journal')); return (s.val() ?? {}) as Record<string, Record<string, { at: number; d: string }>>; },
     async sendChat(side: Side, text: string) { try { await rt.push(G('chat'), { uid: account.uid, side, name: seatName().slice(0, 60), text, t: Date.now() }); return ''; } catch (e) { return msg(e); } },
     async sit(side: Side | null) {
       if (account.guest) return 'Sign in to take a seat';
@@ -112,7 +114,7 @@ export async function rtdbStore(table: string): Promise<Store | null> {
       type Row = { meta?: Record<string, unknown>; names?: Record<string, string>; seats?: Record<string, string>; f?: Record<string, string>; stop: () => void };
       const rows = new Map<string, Row>();
       /** Who must act, from a few top-level fields of the shared state (not the whole game): mirrors the engine's actorOf. */
-      const move = (r: Row) => { const f = r.f, P = (k: string) => { try { return f?.[k] ? JSON.parse(f[k]) : null; } catch { return null; } }; if (!f || P('over')) return {};
+      const move = (r: Row) => { const f = r.f, P = (k: string) => { try { return f?.[k] ? JSON.parse(f[k]) : null; } catch { return null; } }; if (!f) return {}; if (P('over')) return { over: true };
         const second = gameInfo(String(r.meta?.game ?? 'bulge'))?.sides[1] ?? 'allied', key = (x: string): Side => (x === second ? 'allied' : 'german');     // the state names the volume's sides; the seats keep the keys german/allied
         const phase = P('phase') as string, phasing = key(P('phasing') as string), b0 = P('battle') as { stage: string; attacker: string } | null, b = b0 && { stage: b0.stage, attacker: key(b0.attacker) }, oth = (x: Side): Side => (x === 'german' ? 'allied' : 'german');
         const actor = P('pendingBlow') ? 'both' : b ? (b.stage === 'setup' ? 'both' : ['defArty', 'defFire', 'defChoice', 'retreat'].includes(b.stage) ? oth(b.attacker) : b.attacker) : phase === 'admin' || phase === 'reinforcement' || phase === 'deploy' ? 'both' : phase === 'reaction' ? oth(phasing) : phasing;
