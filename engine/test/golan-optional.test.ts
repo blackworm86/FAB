@@ -17,7 +17,7 @@ const sn = (g: Game, b: Battle, side: string, kind: 'arty' | 'ground', key: stri
 
 describe('Golan optional rules (18.x)', () => {
   it('Golan has its own list of optional rules', () => {
-    useGame('golan73'); expect(optionalRules().map((r) => r.key)).toEqual(['atAssets', 't62', 'artyArmor', 'zvikaCup', 'raidMod', 'battleRecovery', 'chemical', 'flank', 'advGhosts']);
+    useGame('golan73'); expect(optionalRules().map((r) => r.key)).toEqual(['fwMaintain', 'withdrawal', 'artyInterdict', 'directSupport', 'syrianAirAttack', 'israeliDivisions', 'atAssets', 't62', 'artyArmor', 'zvikaCup', 'raidMod', 'battleRecovery', 'chemical', 'flank', 'advGhosts']);
     useGame('bulge'); expect(optionalRules().map((r) => r.key)).toContain('bridgeLimit'); useGame('golan73');
   });
   it('anti-tank assets: +1 against an armour point unit; defending with one, Israeli armour fires −1', () => {

@@ -13,10 +13,20 @@ import { reachable, type GMoveCtx, type GMoveUnit } from '../golan/move';
 import { assetLimits, brigadeExtraDie, moraleSn as gMoraleSn, samResult, successNumber as gSuccessNumber, type GShooter, type GTarget, type Quality } from '../golan/combat';
 import { isArty, isBattleAsset, type Chit } from '../chits';
 import { registerHooks, type Volume } from '../volumes';
-import { airOf, blocks, buildFieldWorks, chit, contested, dropAir, dropReserve, eliminate, fighters, inSupply, moraleCheck, needAdmin, other, quality, rngf, rollDie, say, secureRandom, saAvailable, sidesOf, spendSA, supplied, unitsIn, updateControl,
+import { airOf, blocks, buildFieldWorks, chit, contested, dropAir, dropReserve, eliminate, fighters, inSupply, moraleCheck, move as seriesMove, moveOptions, needAdmin, other, quality, rngf, rollDie, say, secureRandom, saAvailable, sidesOf, spendSA, supplied, unitsIn, updateControl,
   type Battle, type Game, type Opt, type Opts, type Side, type Unit, type Fire, type OptionalRule } from '../game';
 import type { Shooter, Target, Setting } from '../combat';
 export { ASSEMBLY, HERMON, NAF_NORTH, REAR, isAssembly, eastOfSam };
+/** The Golan rule book's own optional rules (18.2–18.5; 18.1 is the series' fwMaintain), each off unless chosen. */
+declare module '../game' {
+  interface Opts {
+    withdrawal?: boolean;        /** 18.2 leaving a contested area last takes a morale check */
+    artyInterdict?: boolean;     /** 18.31 artillery interdiction in the Admin Phase */
+    directSupport?: boolean;     /** 18.32 Israeli artillery as direct combat support (+1 to the point unit) */
+    syrianAirAttack?: boolean;   /** 18.4 Syrian close air support only when Syria attacks */
+    israeliDivisions?: boolean;  /** 18.5 Israeli divisional organization (the 15.12 mixing penalty for Israel) */
+  }
+}
 
 /* ================= the volume's own state ================= */
 export interface GolanState {
@@ -33,9 +43,10 @@ export interface GolanState {
   minesLeft?: number; startAt?: 'combat' | 'movement';    // 14.02: minefields the Israeli player still places at the start; the phase the scenario opens with once set up
   nafakh?: { s03Free: boolean; golani: boolean; staffOut: boolean };   // 22.46: the 33rd held back, Golani's release, the HQ Staff lost with Nafakh
   alowda?: { raids: number; cup?: string[]; drawn?: string[] };
+  withdrew?: string[]; artyInt?: Side[];                 // 18.2: units that already rolled to leave a contested area this phase; 18.31: sides that interdicted with artillery this Admin Phase
   chem?: number; ghostsMade?: number;    // optional rules: chemical attacks so far (each one after the first gives Israel a VP); ghosts drawn from the Al-Owda cup       // 20.35 the commandos landed at the start; 20.36 the Israeli Reinforcements Draw Cup
 }
-export interface GolanBattle { event: Partial<Record<Side, string>>; counterbattery: Partial<Record<Side, string>>; ew?: { pending: boolean }; defLocked?: boolean; engBridge?: string; chem?: string; flank?: string; spSwap?: string; samCancelled?: boolean }   // samCancelled: 16.12
+export interface GolanBattle { event: Partial<Record<Side, string>>; counterbattery: Partial<Record<Side, string>>; ew?: { pending: boolean }; defLocked?: boolean; engBridge?: string; chem?: string; flank?: string; spSwap?: string; samCancelled?: boolean; dcs?: string[] }   // samCancelled: 16.12; dcs: 18.32 Israeli artillery in direct combat support
 export const state = (g: Game) => g.vol as unknown as GolanState;
 export const battleState = (b: Battle) => (b.vol ??= { event: {}, counterbattery: {} }) as unknown as GolanBattle;
 
@@ -278,12 +289,27 @@ function golanReach(g: Game, u: Unit, one: boolean): Opt[] {
 }
 /** 14.02: crossing a minefield from the starting area costs +1 MP and a morale check; failing, the unit stays (having spent that 1 MP), may not try another minefield this turn, and may move on into a non-mined area. */
 function beforeMove(g: Game, u: Unit, opt: Opt) {
+  const w = withdrawal(g, u, opt); if (w) return w;
   if (u.side !== 'syrian') return;
   const key = edgeKey(opt.path[0], opt.path[1]); if (!state(g).minefields.includes(key)) return;
   const sn = golanMoraleSn(g, u, 'check'), { r, ok } = moraleCheck(g, u, sn, 'Minefield (14.02)');
   if (ok) { say(g, `${u.name} crosses the minefield (${r} vs ${sn})`); return; }
   state(g).minefieldFailed.push(u.id); u.spent = (u.spent ?? 0) + 1;   // only the attempt's extra MP: it never crossed, and may go on into a non-mined area
   say(g, `${u.name} fails the minefield check (${r} vs ${sn}) and stays in ${areas.get(opt.path[0])!.name}`); return 'minefield';
+}
+/** 18.2 (optional) Withdrawal: the last unit to leave a contested area in the Movement Phase checks morale; failing, it is disordered and its
+ *  move ends in the first area it enters (it stays put when it may not stop there). */
+function withdrawal(g: Game, u: Unit, opt: Opt) {
+  const V = state(g), from = opt.path[0];
+  if (!g.opts.withdrawal || g.phase !== 'movement' || isAssembly(from) || !contested(g, from) || (V.withdrew ??= []).includes(u.id)) return;
+  if (unitsIn(g, from, u.side).some((x) => x.id !== u.id && regular(x))) return;
+  V.withdrew.push(u.id);
+  const sn = golanMoraleSn(g, u, 'check'), { r, ok } = moraleCheck(g, u, sn, 'Withdrawal (18.2)');
+  if (ok) { say(g, `${u.name} withdraws from ${nameOf(from)} in good order (${r} vs ${sn}, 18.2)`); return; }
+  u.disorder = 1; const first = opt.path[1], can = moveOptions(g, u.id).some((x) => x.area === first);   // disordered now: it may no longer stop among enemy units (9.33d)
+  say(g, `${u.name} fails its withdrawal check (${r} vs ${sn}): disordered, its move ends in ${nameOf(can ? first : from)} (18.2)`);
+  if (can) seriesMove(g, u.id, first);
+  u.moved = true; return 'withdrawal';
 }
 function afterMove(g: Game, u: Unit, opt: Opt) {
   const V = state(g), from = opt.path[0], to = opt.area, prev = opt.path[opt.path.length - 2], last = connection(prev, to)!, key = edgeKey(prev, to);
@@ -394,7 +420,8 @@ const jordanCrossed = (g: Game) => g.units.some((u) => u.side === 'syrian' && re
 function onPhase(g: Game, phase: string, when: 'start' | 'mid' | 'end') {
   const V = state(g); nafakhStaff(g);
   if (phase === 'reinforcement' && when === 'start') V.minefieldFailed = [];
-  if ((phase === 'movement' || phase === 'btMove' || phase === 'reaction') && when === 'start') { V.crossed = []; V.assaultEntered = {}; }
+  if ((phase === 'movement' || phase === 'btMove' || phase === 'reaction') && when === 'start') { V.crossed = []; V.assaultEntered = {}; V.withdrew = []; }
+  if (phase === 'admin' && when === 'start') V.artyInt = [];
   if (phase === 'deploy' && when === 'end' && g.units.some((u) => u.box === 'deploy')) throw new Error('place every unit first');
   if (phase === 'deploy' && when === 'end' && V.minesLeft) throw new Error(`place the Israeli minefields first (${V.minesLeft} left, 14.02)`);
   if (phase === 'deploy' && when === 'end') for (const sd of sidesOf(g)) if (setupReserves(g, sd).all && reservesLeft(g, sd)) throw new Error(`place the ${sd === 'israeli' ? 'Israeli' : 'Syrian'} reserve markers first (${reservesLeft(g, sd)} left)`);
@@ -435,13 +462,13 @@ export function resolveDugman(g: Game, c: Chit) {
 /* ================= combat (Combat Play Aid, 15.12, 15.51, 16.12, 16.21, 16.22, 16.24, 17.33, 17.34) ================= */
 const golanSuccessNumber = (s: Shooter, t: Target, c: Setting) => gSuccessNumber(s as unknown as GShooter, t as GTarget, { firerIsAttacker: c.attacker, tdn: c.tdn, assault: c.riverAssault, night: c.night });
 const golanMoraleSn = (g: Game, u: Unit, why: 'exploit' | 'supply' | 'check') => gMoraleSn(q(u), { disordered: u.disorder > 0, unsupplied: why === 'supply' || u.unsupplied, nightExploitation: why === 'exploit' && isNight(g) });
-const mixedDivisions = (g: Game, a: number) => new Set(unitsIn(g, a, 'syrian').filter((u) => regular(u) && u.division).map((u) => u.division)).size > 1;   // 15.12
+const mixedDivisions = (g: Game, a: number, side: Side = 'syrian') => new Set(unitsIn(g, a, side).filter((u) => regular(u) && u.division).map((u) => u.division)).size > 1;   // 15.12; 18.5 (optional) for Israel
 /** How many assets a side may commit here (6.22/6.23, 15.12 mixed Syrian divisions, 16.21 Mt Hermon, 16.22 Israeli air against SAMs). */
 export function limits(g: Game, b: Battle, side: Side) {
   const V = state(g); if (g.control[HERMON] === 'syrian') V.hermonLost = true;                      // 16.21: for the rest of the game
   const hermon = side === 'israeli' && !V.hermonLost && g.control[HERMON] === 'israeli' && unitsIn(g, HERMON, 'israeli').length > 0;
   const samUp = g.chits.some((c) => c.kind === 'sam' && c.box === 'available');
-  return assetLimits(side as GSide, side === b.attacker, { mixedDivisions: side === 'syrian' && mixedDivisions(g, b.area), israeliHoldsHermon: hermon, eastOfSamBarrier: eastOfSam(b.area), samAvailable: samUp });
+  return assetLimits(side as GSide, side === b.attacker, { mixedDivisions: (side === 'syrian' || !!g.opts.israeliDivisions) && mixedDivisions(g, b.area, side), israeliHoldsHermon: hermon, eastOfSamBarrier: eastOfSam(b.area), samAvailable: samUp });
 }
 function canAssign(g: Game, b: Battle, side: Side, c: Chit, mode?: 'arty' | 'support'): string | null {
   const V = state(g), B = battleState(b);
@@ -450,6 +477,7 @@ function canAssign(g: Game, b: Battle, side: Side, c: Chit, mode?: 'arty' | 'sup
   const lim = limits(g, b, side), mine = b.assets[side].map((id) => chit(g, id));
   if (c.kind === 'air_mission') {                                                                    // 16.31a, 16.22; air needs no supply
     if (isNight(g)) return 'no air support on the night turn (14.03)';
+    if (g.opts.syrianAirAttack && side === 'syrian' && b.attacker !== 'syrian') return 'Syrian air support flies close air support only when Syria attacks (18.4)';
     if (side === 'israeli' && B.samCancelled) return 'a SAM cancelled the air mission here: no replacement air asset in this battle (16.12)';
     const air = airOf(b, side);
     if (air.length >= lim.air) return lim.air === 2 ? 'at most two air support assets' : 'one air support asset per battle';
@@ -463,7 +491,7 @@ function canAssign(g: Game, b: Battle, side: Side, c: Chit, mode?: 'arty' | 'sup
   if (isArty(c)) return mine.filter(isArty).length >= lim.artillery ? `at most ${lim.artillery} artillery asset(s)` : null;
   if (isBattleAsset(c)) {
     if (c.kind === 'commando' && c.side !== 'syrian') return 'Syrian only';
-    return mine.filter(isBattleAsset).length >= lim.battle ? (lim.battle ? `at most ${lim.battle} battle assets` : 'mixed Syrian divisions: no battle assets (15.12)') : null;
+    return mine.filter(isBattleAsset).length >= lim.battle ? (lim.battle ? `at most ${lim.battle} battle assets` : side === 'syrian' ? 'mixed Syrian divisions: no battle assets (15.12)' : 'mixed Israeli divisions: no battle assets (18.5)') : null;
   }
   return 'this counter is not assigned to battles (events come with the event rules)';
 }
@@ -472,7 +500,7 @@ const samAvailable = (g: Game) => g.chits.some((c) => c.kind === 'sam' && c.box 
 function onAssign(g: Game, b: Battle, c: Chit) { if (c.kind === 'air_mission' && c.side === 'israeli' && eastOfSam(b.area) && samAvailable(g)) state(g).samTarget = c.id; }
 function beforeBegin(g: Game) { if (state(g).samTarget) throw new Error('the SAM answer to the air mission is pending (16.12)'); }
 /** The air mission taken back (or its battle withdrawn): no SAM answer is pending any more. */
-function onUnassign(g: Game, _b: Battle, c: Chit) { const V = state(g); if (V.samTarget === c.id) V.samTarget = undefined; }
+function onUnassign(g: Game, b: Battle, c: Chit) { const V = state(g), B = battleState(b); if (V.samTarget === c.id) V.samTarget = undefined; if (B.dcs) B.dcs = B.dcs.filter((x) => x !== c.id); }
 function onBattle(g: Game, b: Battle, when: 'begin' | 'end') {
   const V = state(g);
   if (when === 'begin') for (const u of unitsIn(g, b.area)) if (u.ghost) { u.area = null; u.str = 0; say(g, `A Ghost is revealed in ${areas.get(b.area)!.name} and removed (15.7)`); }
@@ -517,6 +545,12 @@ function afterFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground') {
 
 /* ================= additional optional rules (the Battle for Nafakh and Al-Owda scenario sheets, 18.x) ================= */
 export const GOLAN_OPTIONAL: OptionalRule[] = [
+  { key: 'fwMaintain', rule: '18.1', name: 'Maintaining field works', text: 'Field works in a contested area are not removed automatically: in his own Supply Phase the owner checks morale with one unit there, and only a failure removes them.' },
+  { key: 'withdrawal', rule: '18.2', name: 'Withdrawal', text: 'The last unit to leave a contested area in the Movement Phase checks morale; failing, it is disordered and its move ends at once.' },
+  { key: 'artyInterdict', rule: '18.31', name: 'Artillery interdiction', text: 'Once per Admin Phase each player may place an available artillery asset next to his units or a strongpoint: the enemy pays +1 MP to enter and to leave, and may not strat-move in or out, until the second Supply Phase.' },
+  { key: 'directSupport', rule: '18.32', name: 'Direct combat support (Israeli)', text: 'Israeli artillery assigned to a battle may support instead of firing: +1 to the point unit per asset.' },
+  { key: 'syrianAirAttack', rule: '18.4', name: 'Syrian air support use', text: 'Syrian air support flies close air support only when Syria is the Attacker.' },
+  { key: 'israeliDivisions', rule: '18.5', name: 'Israeli divisional organization', text: 'Israeli units of different divisions in one area: one artillery asset, no battle assets (as 15.12); merging units (14.61a) must be of the same division.' },
   { key: 'atAssets', rule: '18.6', name: 'Anti-tank assets', text: 'Syrian AT assets fire +1 when the enemy point unit is armour. When Syria defends with an AT asset assigned, Israeli armour fires −1. In Al-Owda (its own sheet): only a defending Syrian AT asset gets the +1, and there is no −1.' },
   { key: 't62', rule: '18.7', name: 'Syrian T-62 tanks', text: 'The 65th, 76th, 81st, 91st and Assad armoured units pay one extra MP to cross a field connection.' },
   { key: 'artyArmor', rule: '18.8', name: 'Artillery vs armour', text: 'Armour takes a recovery marker instead of a step loss from artillery; each marker is −1 in ground fire. After the battle one marker stays (the unit is recovering) until the Supply Phase.' },
@@ -534,7 +568,11 @@ const bump = (f: Fire, by: number, why: string) => { f.sn += by; f.parts.push([w
 function optionalFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground', list: Fire[]) {
   const o = g.opts, B = battleState(b), enemyPoint = pointOf(g, b, other(side));
   if (o.chemical && kind === 'arty' && B.chem) for (const f of list) if (f.key === B.chem) bump(f, 2, 'chemical warfare');
+  const dcs = o.directSupport && side === 'israeli' ? (B.dcs ?? []).filter((id) => b.assets.israeli.includes(id)) : [];     // 18.32: they support instead of firing
+  if (kind === 'arty' && dcs.length) for (let i = list.length - 1; i >= 0; i--) if (dcs.includes(list[i].key)) list.splice(i, 1);
   if (kind !== 'ground') return;
+  const own = pointOf(g, b, side);
+  if (dcs.length && own) for (const f of list) if (f.key === own.id) bump(f, dcs.length, `direct combat support ×${dcs.length} (18.32)`);
   const atNarrow = isAlOwda(g);                                                                       // A18.6: in Al-Owda only a defending Syrian AT asset gets +1, and no −1; N18.6 elsewhere
   if (o.atAssets && side === 'syrian' && enemyPoint?.cls === 'armor' && (!atNarrow || b.attacker === 'israeli')) for (const f of list) if (f.isAsset && b.assets.syrian.includes(f.key) && isAT(chit(g, f.key))) bump(f, 1, 'AT asset vs armour (18.6)');
   if (o.atAssets && !atNarrow && side === 'israeli' && b.attacker === 'israeli' && b.assets.syrian.some((id) => isAT(chit(g, id)))) for (const f of list) { const u = g.units.find((x) => x.id === f.key); if (u?.cls === 'armor' && !f.isAsset) bump(f, -1, 'Syrian AT defence (18.6)'); }
@@ -580,6 +618,19 @@ export function flankOptions(g: Game): string[] {
   const b = g.battle; if (!g.opts.flank || !b || b.stage !== 'setup' || b.attacker !== 'israeli' || battleState(b).flank || !saAvailable(g, 'israeli').length) return [];
   const us = unitsIn(g, b.area, 'israeli').filter(regular); return us.length >= 2 ? us.filter((u) => u.id !== b.attPoint).map((u) => u.id) : [];
 }
+/** 18.32 (optional) Direct combat support: the Israeli artillery assigned to the open battle that may be switched between firing and supporting. */
+export function directSupportOptions(g: Game): string[] {
+  const b = g.battle; if (!g.opts.directSupport || !b || b.stage !== 'setup') return [];
+  return b.assets.israeli.filter((id) => isArty(chit(g, id)));
+}
+/** 18.32: an assigned Israeli artillery asset supports the point unit (+1 to its SN) instead of firing; `on` false puts it back to firing. */
+export function setDirectSupport(g: Game, chitId: string, on: boolean) {
+  need(directSupportOptions(g).includes(chitId), 'an Israeli artillery asset in this battle, before the first roll (18.32)');
+  const B = battleState(g.battle!), dcs = (B.dcs ?? []).filter((x) => x !== chitId); B.dcs = on ? [...dcs, chitId] : dcs;
+  say(g, `${chit(g, chitId).name} ${on ? 'gives direct combat support to the point unit (18.32)' : 'fires as artillery'}`, 'israeli');
+}
+/** 18.32: an artillery asset in direct combat support may take a step loss, like a battle asset (needs the series loss pool to ask this hook). */
+const lossAsset = (g: Game, b: Battle, side: Side, id: string) => !!g.opts.directSupport && side === 'israeli' && (battleState(b).dcs ?? []).includes(id) && b.assets.israeli.includes(id);
 /** Lt. Zvika variant: in the Supply Phase Israel takes Lt. Zvika off the map, back into the Selection Cup. */
 export function zvikaToCup(g: Game) {
   const z = zvikaOnMap(g); need(!!z, 'Lt. Zvika is not on the map in the Supply Phase (Lt. Zvika variant)');
@@ -706,6 +757,18 @@ export function airInterdiction(g: Game, chitId: string, a: number) {
   if (c.side === 'israeli' && eastOfSam(a) && samAvailable(g)) state(g).samTarget = c.id;
   say(g, `Air interdiction over ${nameOf(a)} (16.31b)`, c.side);
 }
+/** 18.31 (optional) Artillery interdiction: once per Admin Phase per player, an available artillery asset goes into an area next to friendly units
+ *  or a strongpoint; it works as an interdiction mission (16.31b: +1 MP in and out for the enemy, no strat-move) until the second Supply Phase. */
+export function artilleryInterdiction(g: Game, chitId: string, a: number) {
+  needAdmin(g); need(!!g.opts.artyInterdict, 'artillery interdiction is an optional rule (18.31)');
+  const c = chit(g, chitId), V = state(g); need(c.box === 'available' && isArty(c), `${c.name} is not an available artillery asset`);
+  need(!(V.artyInt ?? []).includes(c.side), 'one artillery interdiction per player in each Admin Phase (18.31)');
+  need(areas.has(a) && !isAssembly(a) && (!g.inPlay || g.inPlay.includes(a)), 'not an area of the map');
+  need(!g.interdicted[a], 'that area is already interdicted');
+  need(neighbors(a).some((n) => !isAssembly(n) && unitsIn(g, n, c.side).some((u) => regular(u) || !!u.fort)), 'an area next to one holding friendly units or a strongpoint (18.31)');
+  c.box = 'map'; c.area = a; c.mission = 'interdiction'; g.interdicted[a] = c.id; (V.artyInt ??= []).push(c.side);
+  say(g, `${c.name} interdicts ${nameOf(a)} (18.31)`, c.side);
+}
 export function airRecon(g: Game, chitId: string, a: number) {
   needAdmin(g); const c = avail(g, chitId, ['air_mission']); airOk(g, a);
   need(unitsIn(g, a, other(c.side)).some(regular), 'reconnaissance over an enemy-occupied area');
@@ -802,6 +865,7 @@ export function alternateEventUse(g: Game, chitId: string, assetIds: string[]) {
 export function mergeUnits(g: Game, fromId: string, intoId: string, chitId?: string) {
   needAdmin(g); const a = unit(g, fromId), b = unit(g, intoId);
   need(a.side === 'israeli' && b.side === 'israeli' && a.id !== b.id && regular(a) && regular(b) && a.symbol === b.symbol, 'two Israeli units with the same unit symbol');
+  need(!g.opts.israeliDivisions || a.division === b.division, 'with Israeli divisional organization, merging units must be of the same division (18.5)');
   need(a.area != null && b.area != null && (a.area === b.area || neighbors(a.area).includes(b.area)), 'in the same or adjacent areas');
   need([a.area!, b.area!].every((x) => isAssembly(x) || (g.control[x] === 'israeli' && !contested(g, x))) && a.disorder === 0 && b.disorder === 0, 'uncontested friendly areas, units in good order');
   spendSA(g, 'israeli', undefined, `merge ${a.name} into ${b.name} (14.61a)`, chitId);
@@ -964,4 +1028,5 @@ registerHooks('golan73', {
   sources, supplyStep, supplyFree: (_g, _s, a) => isAssembly(a) || a === HERMON, alwaysSupplied: (_g, u) => !!u.ghost || u.id === 'S17',
   victory: golanVictory, finalResult, onPhase, onBattle, freeBattle, assault, reinforce, afterDraw: (g) => { nafakhStaff(g); const d = g.chits.find((c) => c.kind === 'event_dugman5' && c.box === 'available'); if (d) resolveDugman(g, d); },
   afterDeploy, onUnassign, keepAssigned, optional: GOLAN_OPTIONAL, absorbLoss, lossOk, recoverOk, ghostsMove: (g) => !!g.opts.advGhosts, reinforceOk: (g, b, u) => reinforceOptions(g, b).includes(u.id), stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2), stackRoom: (g, u, a) => (g.opts.advGhosts && u.side === 'israeli' ? ghostRoom(g, u, a) : undefined), appropriate: (g, u) => (isNafakh(g) ? (u.side === 'israeli' ? [NAF_NORTH] : [REAR, NAF.sheet.entry.Z]) : u.side === 'israeli' ? [ASSEMBLY.A, ASSEMBLY.B] : Object.values(ENTRY)), isNight, onAssign, beforeBegin, beforeFire, afterFire,
+  lossAsset,   // 18.32: a supporting artillery asset may take a step loss (series loss pool)
 } as Partial<Volume>);

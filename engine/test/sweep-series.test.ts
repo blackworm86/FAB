@@ -177,3 +177,27 @@ describe('sweep: The Bulge exclusive rules', () => {
     expect(to22.cost).toBe(3);
   });
 });
+
+describe('6.43: the owner allocates step losses (decision: players choose)', () => {
+  const attack = () => {
+    const g = blank(); g.phase = 'combat'; g.phasing = 'german'; g.control[23] = 'allied';
+    const a = put(g, '12SS', 23), b2 = put(g, '2 Pz', 23); put(g, '106 Inf', 23);
+    const b = E.startBattle(g, 23); E.beginCombat(g, b);
+    b.queue = []; b.unitHit.german = true; b.hit = { german: [b.attPoint] }; b.pending = 2; b.stage = 'attChoice';     // as after the first hit on the point unit
+    return { g, b, point: b.attPoint, other: b.attPoint === a.id ? b2.id : a.id };
+  };
+  it('everyone takes one before anyone takes a second: after the point unit, the next loss must fall on the other attacker', () => {
+    const { g, b, other } = attack();
+    E.attackerChoice(g, b, false);
+    expect(E.unitsIn(g, 23, 'german').find((u) => u.id === other)!.str).toBeLessThan(E.unitsIn(g, 23, 'german').find((u) => u.id === other)!.max);
+  });
+  it('once everyone has taken one, the owner picks freely and the battle waits for the pick', () => {
+    const { g, b, point, other } = attack(); b.hit = { german: [point, other] };
+    E.attackerChoice(g, b, false);
+    expect(b.stage).toBe('loss'); expect(new Set(E.lossOptions(g, b))).toEqual(new Set([point, other]));
+    const before = E.unitsIn(g, 23, 'german').find((u) => u.id === other)!.str;
+    E.chooseLoss(g, b, other); expect(E.unitsIn(g, 23, 'german').find((u) => u.id === other)?.str ?? 0).toBe(before - 1);
+    expect(b.stage).not.toBe('loss');                                                        // a new round of 6.43: only the point unit could take the last one, so it went there
+    expect(b.hit!.german).toEqual([other, point]);
+  });
+});

@@ -804,7 +804,7 @@ function click(e: PointerEvent) {
   if (rb?.stage === 'retreat' && area != null && E.retreatOptions(g, rb).includes(area)) return act(() => E.chooseRetreat(g, rb, area));
   if (g.battle && !g.pendingBlow) {                                                                         // a battle is on the table: tapping a block makes it that side's point unit
     const b = g.battle, u = unit ? g.units.find((x) => x.id === unit) : null, { chit: tapped } = pick(e);
-    { const fn = tgt?.units.get(tapped ?? unit ?? ''); if (fn && b.stage === 'attFirst') return act(fn); }
+    { const fn = tgt?.units.get(tapped ?? unit ?? ''); if (fn && (b.stage === 'attFirst' || b.stage === 'loss')) return act(fn); }
     if (b.stage === 'setup' && airPick?.step === 'unit') { const p = airPick; if (u && u.side === p.side && u.area === b.area && !u.garrison) { airPick = null; return act(() => E.assign(g, b, p.id, 'support', u.id)); } airPick = null; say('Tap one of your own blocks in this battle for the +2. Cancelled.'); return refresh(); }
     if (b.stage === 'setup' && tapped) { const c = E.chit(g, tapped); if (mine(c.side)) act(() => E.unassign(g, b, tapped)); else say('Those are the other player\'s assets.'); return; }
     if (b.stage === 'setup' && u && seen(u) && mine(u.side) && !u.garrison && !(u.side === b.attacker && u.disorder)) act(() => E.setPoint(g, b, u.side, u.id));
@@ -962,8 +962,9 @@ function placeBubbles() {
 }
 /** The first loss of a failed attack (6.41a) is chosen on the table: the point unit or one battle asset lights up. */
 function decisionTargets(): Tgt | null {
-  const b = g.battle; if (!b || b.stage !== 'attFirst' || !allowed()) return null;
+  const b = g.battle; if (!b || (b.stage !== 'attFirst' && b.stage !== 'loss') || !allowed()) return null;
   const t: Tgt = { units: new Map(), areas: new Map(), pick: new Map(), color: new Map(), chips: [], buttons: [], modes: [], any: null, hint: '' };
+  if (b.stage === 'loss') { for (const id of E.lossOptions(g, b)) t.units.set(id, () => E.chooseLoss(g, g.battle!, id)); t.hint = 'Tap a glowing block or asset to take the next step loss (6.43)'; return t; }   // 6.43: the owner places each loss
   t.units.set(b.attPoint, () => E.chooseFirstLoss(g, g.battle!, b.attPoint));
   for (const id of b.assets[b.attacker].filter((x) => E.isBattleAsset(E.chit(g, x)))) t.units.set(id, () => E.chooseFirstLoss(g, g.battle!, id));
   return t;
@@ -971,11 +972,12 @@ function decisionTargets(): Tgt | null {
 /** The choice the battle is waiting for, as a bubble over the deciding side's row. */
 function decisionBubble(): string {
   const b = g.battle;
-  if (!b && !g.over && !rollView && allowed() && (g.phase === 'combat' || g.phase === 'btCombat') && selArea != null && fightable().includes(selArea)) { const p = primary(); if (p) return `<div class="mapbubble fighttag" data-area="${selArea}" data-tg=""><button class="primary" data-do="${reg(p.fn)}">${ico('burst')} Fight here</button></div>`; } if (!b || rollView || !['attChoice', 'defChoice', 'attFirst'].includes(b.stage)) return '';
-  const who = b.stage === 'defChoice' ? other(b.attacker) : b.attacker;
-  const tg = b.stage === 'attFirst' ? [b.attPoint, ...b.assets[b.attacker].filter((x) => E.isBattleAsset(E.chit(g, x)))] : E.unitsIn(g, b.area, who).map((u) => u.id).concat(b.assets[who].filter((x) => E.isBattleAsset(E.chit(g, x))));
+  if (!b && !g.over && !rollView && allowed() && (g.phase === 'combat' || g.phase === 'btCombat') && selArea != null && fightable().includes(selArea)) { const p = primary(); if (p) return `<div class="mapbubble fighttag" data-area="${selArea}" data-tg=""><button class="primary" data-do="${reg(p.fn)}">${ico('burst')} Fight here</button></div>`; } if (!b || rollView || !['attChoice', 'defChoice', 'attFirst', 'loss'].includes(b.stage)) return '';
+  const who = b.stage === 'loss' && b.loss ? b.loss.side : b.stage === 'defChoice' ? other(b.attacker) : b.attacker;
+  const tg = b.stage === 'loss' ? E.lossOptions(g, b) : b.stage === 'attFirst' ? [b.attPoint, ...b.assets[b.attacker].filter((x) => E.isBattleAsset(E.chit(g, x)))] : E.unitsIn(g, b.area, who).map((u) => u.id).concat(b.assets[who].filter((x) => E.isBattleAsset(E.chit(g, x))));
   const at = `data-area="${b.area}" data-tg="${tg.join(',')}"`;                                       // placed off the area by placeBubbles, with a line to each block it is about
   if (!allowed()) return `<div class="mapbubble wait" ${at}><b>${nm(who)} decides…</b></div>`;
+  if (b.stage === 'loss') { const n = b.loss?.left ?? 0; return `<div class="mapbubble" ${at}><b class="hits" title="${n} step loss${n > 1 ? 'es' : ''} to place">${n}<small>loss${n > 1 ? 'es' : ''}</small></b><span>Tap a glowing block or asset to take the next one</span><div class="row">${btn(`${ico('check')}<span>Suggested</span>`, () => E.autoLosses(g, g.battle!), '', false, 'Place the rest in the suggested order: battle assets first, then the point unit, then the weakest block')}</div></div>`; }
   if (b.stage === 'attFirst') return `<div class="mapbubble" ${at}><b>${b.pending} hit${b.pending > 1 ? 's' : ''}</b><span>Tap the point unit or an asset to take the first loss</span></div>`;
   if (b.stage === 'attChoice') return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b><div class="row">${btn(`${ico('back')}<span>Abort</span>`, () => E.attackerChoice(g, g.battle!, true), 'ab', false, 'Abort: all attackers disordered, no losses')}${btn(`${ico('xbold')}<span>Take losses</span>`, () => E.attackerChoice(g, g.battle!, false), 'ab', false, 'Continue and take the step losses')}</div></div>`;
   if (b.stage !== 'defChoice') return '';
@@ -1259,7 +1261,7 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
       return { label: on ? 'Waiting… tap to undo' : 'Ready', fn: () => act(() => { if (g.battle) E.setReady(g, g.battle, me, !on); }), dis: !on && !!VOL.blocksBegin(g) };   // the live battle: a remote write may have replaced the one this button was drawn for
     }
     if (b.stage === 'done') return { label: 'Close battle', fn: () => act(() => { E.closeBattle(g); selArea = null; }) };
-    if (b.stage.endsWith('Choice') || b.stage === 'retreat' || b.stage === 'attFirst') return null;
+    if (b.stage.endsWith('Choice') || b.stage === 'retreat' || b.stage === 'attFirst' || b.stage === 'loss') return null;
     return { label: `Roll ${STAGE_NAME[b.stage].toLowerCase()}`, fn: () => rollStage(g.battle!) };
   }
   const must = E.mustFight(g);
@@ -1449,6 +1451,7 @@ let legendOpen = false;
 function mapLegend() {
   if (!hasLegend(VOL.id)) return '';
   const close = `<button class="ico" aria-label="Close the legend" data-ui="${reg(() => { legendOpen = false; })}">${ico('close')}</button>`;
+  if (g.battle) return '';                                                                              // the battle bar takes the top of the map
   return legendOpen ? legendCard(VOL.id, close) : `<button class="mlchip" aria-expanded="false" data-ui="${reg(() => { legendOpen = true; })}">${ico('info')}<span>Legend</span></button>`;
 }
 /** The volume's prompts (set-up, drops, evacuation…). On a phone they fold down to a handle so the map can have the screen; they open again on a tap. */

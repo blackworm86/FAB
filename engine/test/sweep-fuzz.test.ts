@@ -80,7 +80,7 @@ export function play(cfg: Cfg): Result {
     for (const s of sides) for (const [k, v] of Object.entries(g.markers[s] ?? {})) if (v < 0) fail(`${s} reserve markers ${k} = ${v}`);
     const mt = json(markerTotal(g)); if (mt !== markers0) fail(`reserve markers not conserved after ${label}: ${markers0} -> ${mt}`);
     if (g.turn > g.lastTurn) fail(`turn ${g.turn} past the last turn ${g.lastTurn}`);
-    if (g.battle && !['setup', 'attArty', 'defArty', 'defFire', 'offFire', 'attChoice', 'attFirst', 'defChoice', 'retreat', 'exploit', 'done'].includes(g.battle.stage)) fail(`battle stage ${g.battle.stage}`);
+    if (g.battle && !['setup', 'attArty', 'defArty', 'defFire', 'offFire', 'attChoice', 'attFirst', 'loss', 'defChoice', 'retreat', 'exploit', 'done'].includes(g.battle.stage)) fail(`battle stage ${g.battle.stage}`);
     if (!g.battle && !g.pendingBlow) {
       // control follows occupation (5.2): an area held by regular blocks of one side only is that side's
       const staleNow = new Set<number>();
@@ -235,6 +235,7 @@ export function play(cfg: Cfg): Result {
       const who = (E.actorOf(g) === 'both' ? att : E.actorOf(g)) as Side;
       if (st === 'done') { act(att, 'closeBattle', () => E.closeBattle(g)); return; }
       if (st === 'setup') { resolvePending(); act(att, 'beginCombat', () => E.beginCombat(g, g.battle!)); continue; }
+      if (st === 'loss') { const keys = E.lossOptions(g, b); if (!keys.length) fail('loss stage with nothing to choose'); const who = b.loss!.side; if (chance(0.2)) act(who, 'autoLosses', () => E.autoLosses(g, b)); else act(who, 'chooseLoss', () => E.chooseLoss(g, b, pick(keys))); continue; }
       if (st === 'attFirst') { const keys = [b.attPoint, ...b.assets[att].filter((id) => E.isBattleAsset(E.chit(g, id)))]; act(att, 'chooseFirstLoss', () => E.chooseFirstLoss(g, b, pick(keys))); continue; }
       if (st === 'attChoice') { const abort = chance(0.25) && !E.VOLUME.canAbort?.(g, b); act(att, `attackerChoice ${abort}`, () => E.attackerChoice(g, b, abort)); continue; }
       if (st === 'defChoice') { const use = chance(0.5); act(def, `defenderChoice ${use}`, () => E.defenderChoice(g, b, use)); continue; }

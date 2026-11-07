@@ -36,7 +36,9 @@ export interface Check { who: string; why: string; sn: number; die: number; ok: 
 export interface Roll { who: string; sn: number; dice: number[]; hits: number; kind: 'arty' | 'ground' | 'morale' | 'sam' }
 export interface Battle {
   area: number; attacker: Side; attPoint: string; defPoint: string; bt: boolean; riverAssault: boolean;
-  stage: 'setup' | 'attArty' | 'defArty' | 'defFire' | 'offFire' | 'attChoice' | 'attFirst' | 'defChoice' | 'retreat' | 'exploit' | 'done';
+  stage: 'setup' | 'attArty' | 'defArty' | 'defFire' | 'offFire' | 'attChoice' | 'attFirst' | 'loss' | 'defChoice' | 'retreat' | 'exploit' | 'done';
+  /** 6.43: step losses the owner is placing one at a time (stage 'loss'), and what follows once they are all taken. */
+  loss?: LossRun;
   reinforced?: string;     /** 8.23: the unit that reinforced the defence by Special Action (never the point unit while the original stands) */
   exploitIds?: string[];   /** 6.8: the attacking armor-class units that may roll the exploitation morale check */
   retreat?: { side: Side; queue: string[]; moved: boolean; after: 'ground' | 'arty' | 'sa'; h: number; excess: number };
@@ -824,20 +826,54 @@ function stepLoss(g: Game, b: Battle, side: Side, key: string) {
   if (u.str <= 0 || u.garrison) eliminate(g, u); else say(g, `${u.name} loses a step`);
   if (!u.garrison) b.unitHit[side] = true;
 }
-/** 6.43: assets first, the first unit loss falls on the point unit, everyone takes one loss before anyone takes a second. */
-function allocate(g: Game, b: Battle, side: Side, n: number) {
-  b.hit ??= {}; const hit = new Set<string>(b.hit[side] ?? []);                          // 6.43 everyone takes a loss before anyone takes a second, across all the volleys of one battle
-  for (let i = 0; i < n; i++) {
-    fixPoint(g, b);
-    let ps = [...b.assets[side].filter((id) => isBattleAsset(chit(g, id))).map((id) => ({ key: id, asset: true, str: 1 })), ...unitsIn(g, b.area, side).filter((u) => side !== b.attacker || !(u.disorder > 0 || u.fort)).map((u) => ({ key: u.id, asset: !!u.garrison, str: u.str }))];   // 6.2: disordered units take no part for the attacker
-    if (!ps.length) return n - i;
-    let cand = ps.filter((p) => !hit.has(p.key)); if (!cand.length) { hit.clear(); cand = ps; }
-    const pid = side === b.attacker ? b.attPoint : b.defPoint;
-    if (!b.unitHit[side] && cand.some((p) => p.key === pid)) cand = cand.filter((p) => p.asset || p.key === pid);
-    if (CUR.lossOk) { const ok = cand.filter((p) => CUR.lossOk!(g, b, side, p.key)); if (ok.length) cand = ok; }        // e.g. a flanking unit takes no hits while its point unit stands
-    cand.sort((x, y) => +!x.asset - +!y.asset || +(x.key !== pid) - +(y.key !== pid) || x.str - y.str);
-    stepLoss(g, b, side, cand[0].key); hit.add(cand[0].key); b.hit[side] = [...hit];
+/** 6.43 step losses still to place: `then` says what follows (the attacker's remaining hits, or the defender's, with its retreat option and kind of fire). */
+export interface LossRun { side: Side; left: number; then: 'att' | 'def'; kind?: 'arty' | 'ground'; retreat?: boolean; h?: number; excess?: number }
+/** Who may take the next step loss (6.43): everyone present takes one before anyone takes a second (across the battle's volleys), the first unit loss is the
+ *  point unit's (battle assets may go before it), and the volume's limits. Sorted with the suggested pick first: assets, then the point unit, then the weakest.
+ *  null: nothing is left to take it. */
+function lossCands(g: Game, b: Battle, side: Side): string[] | null {
+  fixPoint(g, b);
+  const ps = lossPool(g, b, side); if (!ps.length) return null;
+  const hit = new Set<string>(b.hit?.[side] ?? []);
+  let cand = ps.filter((p) => !hit.has(p.key)); if (!cand.length) cand = ps;
+  const pid = side === b.attacker ? b.attPoint : b.defPoint;
+  if (!b.unitHit[side] && cand.some((p) => p.key === pid)) cand = cand.filter((p) => p.asset || p.key === pid);
+  if (CUR.lossOk) { const ok = cand.filter((p) => CUR.lossOk!(g, b, side, p.key)); if (ok.length) cand = ok; }        // e.g. a flanking unit takes no hits while its point unit stands
+  cand.sort((x, y) => +!x.asset - +!y.asset || +(x.key !== pid) - +(y.key !== pid) || x.str - y.str);
+  return cand.map((p) => p.key);
+}
+const lossPool = (g: Game, b: Battle, side: Side) => [...b.assets[side].filter((id) => isBattleAsset(chit(g, id)) || !!CUR.lossAsset?.(g, b, side, id)).map((id) => ({ key: id, asset: true, str: 1 })),
+  ...unitsIn(g, b.area, side).filter((u) => side !== b.attacker || !(u.disorder > 0 || u.fort)).map((u) => ({ key: u.id, asset: !!u.garrison, str: u.str }))];   // 6.2: disordered units take no part for the attacker
+function takeLoss(g: Game, b: Battle, side: Side, key: string) {
+  b.hit ??= {}; const hit = new Set<string>(b.hit[side] ?? []);
+  if (lossPool(g, b, side).every((p) => hit.has(p.key))) hit.clear();                                // everyone has taken one: a new round of 6.43
+  stepLoss(g, b, side, key); hit.add(key); b.hit[side] = [...hit];
+}
+/** Place the losses of `run`: automatically while only one block or asset may take the next one (or `auto`), otherwise the owner picks (stage 'loss'). */
+function runLosses(g: Game, b: Battle, run: LossRun, auto = false) {
+  while (run.left > 0) {
+    const cand = lossCands(g, b, run.side);
+    if (!cand) { run.excess = (run.excess ?? 0) + run.left; run.left = 0; break; }
+    if (cand.length > 1 && !auto) { b.loss = run; b.stage = 'loss'; return; }
+    takeLoss(g, b, run.side, cand[0]); run.left--;
   }
+  b.loss = undefined;
+  if (run.then === 'att') { b.pending = 0; return next(g, b); }
+  afterDefLosses(g, b, run.kind!, !!run.retreat, run.h ?? 0, run.excess ?? 0);
+}
+/** The blocks and battle assets that may take the next step loss now (6.43), the suggested one first. */
+export function lossOptions(g: Game, b: Battle): string[] { return b.stage === 'loss' && b.loss ? lossCands(g, b, b.loss.side) ?? [] : []; }
+/** 6.43: the owner places one step loss. */
+export function chooseLoss(g: Game, b: Battle, key: string) {
+  if (b.stage !== 'loss' || !b.loss) throw new Error('no loss to place');
+  if (!lossOptions(g, b).includes(key)) throw new Error('that block or asset cannot take this loss (6.43: everyone takes one before anyone takes a second; the first unit loss is the point unit\'s)');
+  const run = b.loss; takeLoss(g, b, run.side, key); run.left--; runLosses(g, b, run);
+}
+/** The rest of the losses in the suggested order (assets first, then the point unit, then the weakest). */
+export function autoLosses(g: Game, b: Battle) { if (b.stage !== 'loss' || !b.loss) throw new Error('no loss to place'); runLosses(g, b, b.loss, true); }
+/** One automatic loss (the first hit on an attacker with no battle asset: always the point unit). */
+function allocate(g: Game, b: Battle, side: Side, n: number) {
+  for (let i = 0; i < n; i++) { const c = lossCands(g, b, side); if (!c) return n - i; takeLoss(g, b, side, c[0]); }
   return 0;
 }
 const allGone = (g: Game, b: Battle, side: Side) => !unitsIn(g, b.area, side).length && !b.assets[side].some((id) => isBattleAsset(chit(g, id)));
@@ -902,6 +938,7 @@ export const exploitSn = (g: Game, u: Unit) => CUR.moraleSn(g, u, 'exploit');
 const bulgeMoraleSn = (g: Game, u: Unit, why: 'exploit' | 'supply' | 'check') => moraleSn(quality(u), u.disorder > 0, (why === 'supply' || u.unsupplied) && !(g.opts.airborne && AIRBORNE.has(u.name)));
 export function roll_step(g: Game, b: Battle) {
   const st = b.stage;
+  if (st === 'loss') return autoLosses(g, b);                                                          // "roll on": the losses go in the suggested order
   if (st === 'exploit') {                                                                                // 6.8: each attacking armor-class unit rolls; a pass earns the exploitation marker
     for (const id of b.exploitIds ?? []) { const u = g.units.find((x) => x.id === id)!; if (u.area !== b.area) continue; const sn = exploitSn(g, u), r = roll(g), ok = succeeds(r, sn); if (ok) u.exploit = true; b.rolls.push({ who: u.name, sn, dice: [r], hits: ok ? 1 : 0, kind: 'morale' }); say(g, `${u.name} exploitation morale check: rolled ${r} (needs ${sn} or less) → ${ok ? 'exploitation marker' : 'failed'}`); }
     b.exploitIds = undefined; b.stage = 'done'; return;
@@ -944,7 +981,7 @@ export function attackerChoice(g: Game, b: Battle, abort: boolean) {
     for (const u of us) if (u.area != null) u.disorder = 1;                                      // the ones that fell back are disordered too
     b.queue = []; return end(g, b, 'Attack aborted: attackers disordered' + (b.riverAssault ? ' and back across the river' : ''));
   }
-  allocate(g, b, b.attacker, b.pending); b.pending = 0; next(g, b);
+  runLosses(g, b, { side: b.attacker, left: b.pending, then: 'att' });
 }
 function hitDefender(g: Game, b: Battle, h: number, kind: 'arty' | 'ground') {
   const def = other(b.attacker); { const p = point(g, b, def); if (p && p.area === b.area) b.lastDefPoint = { ...p }; }
@@ -966,7 +1003,10 @@ function applyDef(g: Game, b: Battle, h: number, kind: 'arty' | 'ground', retrea
   const def = other(b.attacker);
   if (retreat) h--;
   if (retreat && CUR.noRetreat) for (const a of unitsIn(g, b.area, def).filter((x) => CUR.noRetreat!(g, x))) { say(g, `${a.name} cannot retreat: destroyed, counting as a hit (6.42c)`); eliminate(g, a); h = Math.max(0, h - 1); }   // 6.42c (2016)
-  const excess = allocate(g, b, def, h);
+  runLosses(g, b, { side: def, left: h, then: 'def', kind, retreat, h });
+}
+function afterDefLosses(g: Game, b: Battle, kind: 'arty' | 'ground', retreat: boolean, h: number, excess: number) {
+  const def = other(b.attacker);
   b.pending = 0;
   if (retreat) { b.retreat = { side: def, queue: unitsIn(g, b.area, def).filter((x) => !x.garrison && !x.fort && !x.ghost).map((x) => x.id), moved: false, after: kind, h, excess }; return advanceRetreat(g, b); }
   finishDef(g, b, kind, false, excess);
@@ -1135,9 +1175,9 @@ function supplyPhase(g: Game) {
   else for (const a of g.fieldWorks.filter((x) => contested(g, x) && (g.fwOwner[x] ?? g.control[x]) === g.phasing)) {        // 18.8: in the owner's own Supply Phase, one unit (the best: the player's natural choice) checks morale
     const us = unitsIn(g, a, g.phasing).filter((u) => !u.garrison); if (!us.length) continue;
     const sn = (u: Unit) => moraleSn(quality(u), u.disorder > 0, u.unsupplied && !(g.opts.airborne && AIRBORNE.has(u.name)));
-    const u = [...us].sort((x, y) => sn(y) - sn(x))[0], { r, ok } = check(g, u, sn(u), 'Maintaining field works (18.8)');
+    const u = [...us].sort((x, y) => sn(y) - sn(x))[0], { r, ok } = check(g, u, sn(u), `Maintaining field works (${CUR.id === 'golan73' ? '18.1' : CUR.id === 'sicily' ? '18.4' : '18.8'})`);
     if (!ok) g.fieldWorks = g.fieldWorks.filter((x) => x !== a);
-    say(g, `field works in ${areas.get(a)!.name}: ${u.name} rolls ${r} → ${ok ? 'maintained' : 'removed'} (18.8)`);
+    say(g, `field works in ${areas.get(a)!.name}: ${u.name} rolls ${r} → ${ok ? 'maintained' : 'removed'} (${CUR.id === 'golan73' ? '18.1' : CUR.id === 'sicily' ? '18.4' : '18.8'})`);
   }
   g.roadblocks = {};                                                                                   // 4.34
   for (const u of g.units.filter((x) => x.id.startsWith('DR-') && x.area != null)) { chit(g, u.chitId!).box = 'used'; u.area = null; say(g, `${u.name} survives and returns to the Used Box`); }   // 4.35
@@ -1354,7 +1394,7 @@ export function setEngFw(_g: Game, b: Battle, on: boolean) { if (!['setup', 'att
 export function actorOf(g: Game): Side | 'both' {
   if (g.pendingBlow) { const u = g.units.find((x) => x.id === g.pendingBlow!.unit); return u ? other(u.side) : 'both'; }
   const b = g.battle;
-  if (b) return b.stage === 'setup' ? 'both' : ['defArty', 'defFire', 'defChoice', 'retreat'].includes(b.stage) ? other(b.attacker) : b.attacker;
+  if (b) return b.stage === 'setup' ? 'both' : b.stage === 'loss' && b.loss ? b.loss.side : ['defArty', 'defFire', 'defChoice', 'retreat'].includes(b.stage) ? other(b.attacker) : b.attacker;
   if (g.phase === 'admin' || g.phase === 'reinforcement' || g.phase === 'deploy') return 'both';         // the set-up: each side places its own pieces
   return g.phase === 'reaction' ? other(g.phasing) : g.phasing;
 }

@@ -60,11 +60,12 @@ export function brigadeExtraDie(firers: { brigade?: string; sn: number; side: GS
 }
 
 export interface AssetLimits { artillery: number; battle: number; events: number; air: number }
-/** How many assets a side may commit to one battle (Combat Play Aid; 6.22/6.23, 15.12 Syrian mixed divisions, 16.21 Mt Hermon, 16.22 Israeli air). */
+/** How many assets a side may commit to one battle (Combat Play Aid; 6.22/6.23, 15.12 Syrian mixed divisions, 18.5 Israeli mixed divisions (optional), 16.21 Mt Hermon, 16.22 Israeli air).
+ *  mixedDivisions: the caller decides when it applies (always for Syria, only with the 18.5 optional rule for Israel). */
 export function assetLimits(side: GSide, attacker: boolean, o: { mixedDivisions?: boolean; israeliHoldsHermon?: boolean; eastOfSamBarrier?: boolean; samAvailable?: boolean } = {}): AssetLimits {
   let artillery = attacker ? 2 : 1, battle = attacker ? 8 : 5;
   if (side === 'israeli' && o.israeliHoldsHermon) artillery += 1;
-  if (side === 'syrian' && o.mixedDivisions) { artillery = 1; battle = 0; }
+  if (o.mixedDivisions) { artillery = 1; battle = 0; }
   const air = side === 'israeli' && !(o.eastOfSamBarrier && o.samAvailable) ? 2 : 1;
   return { artillery, battle, events: 1, air };
 }

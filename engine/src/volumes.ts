@@ -134,6 +134,8 @@ export interface Volume {
   battleAllowed?: (g: Game, area: number) => boolean;
   /** May this unit take a reserve marker (beyond the series conditions)? */
   reserveOk?: (g: Game, u: Unit) => boolean;
+  /** A committed asset other than a battle asset that may take a step loss (Golan 18.32: artillery in direct support). */
+  lossAsset?: (g: Game, b: Battle, side: Side, id: string) => boolean;
   /** The Reroute Reinforcement special action (8.27) is not used (Sicily 14.64). */
   noReroute?: boolean;
   /** Whether this command staff may replace steps of units on the board (8.31; Sicily 14.63: not the Axis one). */
