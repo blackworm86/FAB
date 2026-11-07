@@ -1,0 +1,13 @@
+{
+  "Ex 6": {
+    "view": [48, 47, 40, 41, 49],
+    "pieces": { "recon": { "unit": "S11" }, "inf": { "unit": "S04" }, "idf": { "label": "Israeli unit", "side": "israeli", "cls": "armor" } },
+    "markers": [{ "kind": "mines", "edge": [47, 48] }],
+    "steps": [
+      { "tab": "Set-up", "cap": "Two Syrian units in Bunker 109 [48] want Ein Zivan [47], held by an Israeli unit. The boundary between the two areas is mined.", "at": { "recon": 48, "inf": 48, "idf": 47 } },
+      { "tab": "A", "cap": "The 9th Recon tries the minefield and makes a morale check: it rolls a 7 and fails. It stays in Bunker 109 and may not cross any minefield this turn.", "fail": [[48, 47]], "dice": [["9th Recon morale check", null, [7], false]] },
+      { "tab": "B", "cap": "The 9th Recon goes round instead, by Tel Hazeika [40] and Mt. Yosifon [41] into Ein Zivan: 5 MP in all.", "at": { "recon": 47 }, "moves": [{ "path": [48, 40, 41, 47] }], "mp": "5 MP" },
+      { "tab": "C", "cap": "The 52nd tries the same minefield and rolls a 4: it passes and enters Ein Zivan.", "at": { "inf": 47 }, "moves": [{ "path": [48, 47] }], "dice": [["52nd morale check", null, [4], true]], "mp": "3 MP = 1 road + 1 occupied area + 1 minefield" }
+    ]
+  }
+}

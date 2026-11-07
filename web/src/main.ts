@@ -4,7 +4,7 @@ import * as E from '../../engine/src';
 import { loadChitArt, garrisonChit } from './chits';
 import { loadGolanChitArt } from './golan-art';
 import { loadSicilyChitArt } from './sicily-art';
-import { useVolume, type LabelBox } from './vol';
+import { useVolume, figKit, type LabelBox } from './vol';
 import type { PanelCtx } from './golan-ui';
 import { History } from './history';
 import * as SB from './sandbox';
@@ -91,7 +91,7 @@ const areaName = (a: number) => E.areas.get(a)!.name;
 /* ---------- state ---------- */
 let tut: ReturnType<typeof initTutorial> | null = null;
 let g: E.Game = (() => { const s = HAS_TABLE && !SANDBOX && !TUTORIAL ? null : load(); return s && (s.game ?? 'bulge') === VOL.id ? s : E.newGame(undefined, VOL.defaultOpts); })();   // a shared table starts from what the database sends, never from an old local copy
-setRulesContext({ game: VOL.id, title: VOL.name, art: (k) => VOL.ruleArt(k, g) });          // the rules reference shows this game's rulebooks and pieces
+setRulesContext({ game: VOL.id, title: VOL.name, art: (k) => VOL.ruleArt(k, g), fig: () => { const k = figKit(VOL, E.newGame(1, g.opts)); E.setPlayArea(g.inPlay); return k; } });      // a fresh game for every block's face (online the other side's are hidden); the play area stays this game's          // the rules reference shows this game's rulebooks and pieces
 let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, previewArea: number | null = null, hoverArea: number | null = null, newOpts: E.Opts = { scenario: VOL.defaultOpts.scenario ?? 'tournament', fuel: !!VOL.defaultOpts.fuel };
 /** A prompt of the volume asked for an area (an air assault landing): the legal ones light up, a tap runs it. */
 let areaPick: { label: string; areas: Set<number>; run: (a: number) => void } | null = null;

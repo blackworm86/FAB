@@ -973,3 +973,18 @@ body.caninstall .homein { padding-bottom: 76px !important; }
 .rp-tp svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; } .rp-tp svg .f { fill: currentColor; stroke: none; }
 @media (max-width: 860px) { .rp { display: flex; flex-direction: column; overflow: auto; } .rp > * { flex: none; } .rp-main { grid-template-columns: 1fr; } .rp-board { height: 56vh; flex: none; } .rp-side { grid-template-rows: auto auto; } .rp-list { max-height: 240px; } .rp-cap { max-height: none; } .rp-where { flex: 1 1 100%; order: 3; } }
 @media (prefers-reduced-motion: reduce) { .rp-u { transition: none; } }
+/* 4.5 example figures in the rules reader (approved mockup) */
+.exfig { margin: 12px 0; background: #1d2114; border: 1px solid #3a3e2c; display: grid; }
+.exfig .fh { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 7px 8px 7px 12px; border-bottom: 1px solid #3a3e2c; flex-wrap: wrap; }
+.exfig .fh .k { font: 600 12px/1 "Saira Condensed", sans-serif; letter-spacing: .14em; text-transform: uppercase; color: #9a9886; }
+.exfig .ftabs { display: inline-flex; border: 1px solid #3a3e2c; }
+#rules .exfig .ftabs button, .exfig .ftabs button { min-width: 42px; min-height: 34px; background: #0b0d08; border: 0; border-left: 1px solid #3a3e2c; color: #9a9886; font: 700 15px/1 "Saira Condensed", sans-serif; letter-spacing: .08em; cursor: pointer; padding: 0 10px; }
+#rules .exfig .ftabs button:first-child, .exfig .ftabs button:first-child { border-left: 0; } #rules .exfig .ftabs button[aria-selected="true"], .exfig .ftabs button[aria-selected="true"] { background: #e7b04a; color: #1a1608; }
+.exfig .stage { position: relative; max-width: 100%; overflow: hidden; background: #2a2b22; } .exfig .stage svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.exfig .fu { transition: opacity .35s, transform .5s ease; } @media (prefers-reduced-motion: reduce) { .exfig .fu { transition: none; } }
+.exfig figcaption { padding: 10px 12px 12px; display: grid; gap: 8px; border-top: 1px solid #3a3e2c; font-size: 13px; }
+.exfig .dr { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: #9a9886; font-size: 12px; }
+.exfig .die { width: 26px; height: 26px; display: inline-grid; place-items: center; font: 700 15px/1 "Saira Condensed", sans-serif; border: 2px solid; border-radius: 4px; }
+.exfig .die.h { color: #0b0d08; background: #a9e08a; border-color: #a9e08a; } .exfig .die.m { color: #ff9c8a; border-color: #ff9c8a; }
+.exfig .mp { font: 600 13px/1 "Saira Condensed", sans-serif; letter-spacing: .08em; color: #e7b04a; }
+p.stepped { cursor: pointer; border-left: 3px solid transparent; padding-left: 8px; margin-left: -11px; } p.stepped:hover { background: #ffffff06; } p.stepped[aria-current="step"] { background: #e7b04a14; border-left-color: #e7b04a; }

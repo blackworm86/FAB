@@ -7,7 +7,7 @@ type IndexEntry = { term: string; subs: { label: string; refs: string[] }[]; see
 export type RulesData = { game: string; books: Book[]; index: IndexEntry[]; indexSource?: string };
 /** A piece the rule is about, drawn by the game: SVG markup, the block's wood colour when it is a block, its name. */
 export type Art = { svg: string; wood?: string; name: string };
-export interface RulesOptions { game: string; title: string; at?: string; q?: string; art: (key: string) => Art | null; onClose?: () => void }
+export interface RulesOptions { game: string; title: string; at?: string; q?: string; art: (key: string) => Art | null; onClose?: () => void; fig?: () => import('./figures').FigKit }
 
 const LOAD: Record<string, () => Promise<{ default: unknown }>> = {
   bulge: () => import('../../data/bulge/rules.json'),
@@ -18,6 +18,11 @@ const PIECES: Record<string, () => Promise<{ default: unknown }>> = {
   bulge: () => import('../../tools/rules/icons-bulge.json'),
   golan73: () => import('../../tools/rules/icons-golan73.json'),
   sicily: () => import('../../tools/rules/icons-sicily.json'),
+};
+const FIGS: Record<string, () => Promise<{ default: unknown }>> = {
+  bulge: () => import('../../data/bulge/figures.json'),
+  golan73: () => import('../../data/golan73/figures.json'),
+  sicily: () => import('../../data/sicily/figures.json'),
 };
 export const hasRules = (game: string) => game in LOAD;
 
@@ -50,15 +55,17 @@ export async function openRules(o: RulesOptions) {
   if (current && current.game === o.game) { if (o.at) current.go(o.at); else if (o.q) current.search(o.q); return; }
   current?.close();
   opening = (async () => {
-    const [data, pieces] = await Promise.all([LOAD[o.game]().then((m) => m.default as RulesData), PIECES[o.game]().then((m) => m.default as Record<string, string[]>).catch(() => ({}))]);
-    current = mount(data, pieces, o);
+    const [data, pieces, figs, F] = await Promise.all([LOAD[o.game]().then((m) => m.default as RulesData), PIECES[o.game]().then((m) => m.default as Record<string, string[]>).catch(() => ({})),
+      FIGS[o.game]().then((m) => m.default as Record<string, import('./figures').FigSpec>).catch(() => ({})), import('./figures')]);
+    current = mount(data, pieces, o, figs, F);
   })();
   try { await opening; } finally { opening = null; }
 }
 export const closeRules = () => current?.close();
 export const rulesOpen = () => !!current;
 
-function mount(D: RulesData, PIECE: Record<string, string[]>, o: RulesOptions) {
+function mount(D: RulesData, PIECE: Record<string, string[]>, o: RulesOptions, FIG: Record<string, import('./figures').FigSpec> = {}, F?: typeof import('./figures')) {
+  let kit: import('./figures').FigKit | null = null; const figKit = () => (kit ??= o.fig?.() ?? null);
   const all: X[] = [], byId = new Map<string, X>();
   D.books.forEach((b, bi) => b.sections.forEach((s, i) => { const x = { ...s, book: bi, i }; all.push(x); byId.set(s.id, x); }));
   /** A reference as printed ('6.41b', '14.02') to the rule that has it. */
@@ -93,10 +100,13 @@ function mount(D: RulesData, PIECE: Record<string, string[]>, o: RulesOptions) {
     for (const p of paras) {
       if (p.startsWith('• ')) { if (rows.length) flush(); list.push(p.slice(2)); continue; }
       if (p.startsWith('|')) { if (list.length) flush(); rows.push(p); continue; }
-      flush(); out += p.startsWith('### ') ? `<h3>${inline(p.slice(4))}</h3>` : /^\d+\.\s/.test(p) ? `<p class="step">${inline(p)}</p>` : `<p>${inline(p)}</p>`;
+      const st = /^\*\*([A-Z]|Overview)\s*[—–-]/.exec(p)?.[1];                                                // an example's lettered step (4.5: it shows on the figure)
+      flush(); out += p.startsWith('### ') ? `<h3>${inline(p.slice(4))}</h3>` : /^\d+\.\s/.test(p) ? `<p class="step">${inline(p)}</p>` : `<p${st ? ` data-step="${st}"` : ''}>${inline(p)}</p>`;
     }
     flush(); return out;
   }
+  /** 4.5: the example's figure, after its first paragraph (the Overview). */
+  const withFig = (id: string, html: string) => { const f = FIG[id]; if (!f || !F || !figKit()) return html; const i = html.indexOf('</p>'); const fh = F.figureHtml(id, f); return i < 0 ? fh + html : html.slice(0, i + 4) + fh + html.slice(i + 4); };
   const arts = new Map<string, Art | null>();
   const art = (k: string) => { if (!arts.has(k)) { let a: Art | null = null; try { a = o.art(k); } catch { a = null; } arts.set(k, a); } return arts.get(k)!; };
   const pic = (k: string) => { const a = art(k); return a ? `<img alt="" class="${a.wood ? 'blk' : ''}" style="${a.wood ? `background:${a.wood}` : ''}" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(a.svg)}">` : ''; };
@@ -118,7 +128,7 @@ function mount(D: RulesData, PIECE: Record<string, string[]>, o: RulesOptions) {
     return `<article class="sec"><div class="crumb"><button data-tab="${b.id}">${esc(b.title)}</button>${par ? `<span aria-hidden="true">›</span><button data-go="${par.id}">${label(par.id)} ${esc(par.title)}</button>` : ''}</div>
       <h2><span class="num">${label(s.id)}</span><span>${esc(s.title)}</span></h2><div class="src">${esc(s.source)}</div>
       ${ps.length ? `<div class="art">${ps.map((k) => `<figure>${pic(k)}<figcaption>${esc(art(k)!.name)}</figcaption></figure>`).join('')}</div>` : ''}
-      <div class="txt">${body(s.paras)}</div>
+      <div class="txt">${withFig(s.id, body(s.paras))}</div>
       ${kids.length ? `<div class="childs">${kids.map((x) => row(x)).join('')}</div>` : ''}
       ${cites.length ? `<div class="cites"><b>Cited in</b>${cites.map((id) => `<a href="#" data-go="${id}">${label(id)}</a>`).join('')}</div>` : ''}
       <div class="pn">${prev ? `<button class="ib" data-go="${prev.id}">‹ ${label(prev.id)} ${esc(prev.title)}</button>` : '<span></span>'}${next ? `<button class="ib" data-go="${next.id}">${label(next.id)} ${esc(next.title)} ›</button>` : ''}</div></article>`;
@@ -180,7 +190,7 @@ function mount(D: RulesData, PIECE: Record<string, string[]>, o: RulesOptions) {
     root.querySelectorAll<HTMLElement>('.tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === view.tab && view.kind !== 'search')));
     backBtn.hidden = !hist.length;
     if (view.kind === 'search') bd.innerHTML = searchHtml(view.q ?? '');
-    else if (view.kind === 'sec' && view.id && byId.has(view.id)) bd.innerHTML = secHtml(byId.get(view.id)!);
+    else if (view.kind === 'sec' && view.id && byId.has(view.id)) { bd.innerHTML = secHtml(byId.get(view.id)!); const f = FIG[view.id], k = figKit(); if (f && F && k) F.bindFigure(bd, f, k); }
     else if (view.tab === 'index') bd.innerHTML = indexHtml();
     else bd.innerHTML = listHtml(Math.max(0, D.books.findIndex((b) => b.id === view.tab)));
     if (!keepScroll) bd.scrollTop = view.top ?? 0;

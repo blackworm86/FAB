@@ -2,7 +2,7 @@
  *  game's own text turned into links ("(14.02)" in a prompt opens 14.02). The reader itself (rules-ref.ts) and the rulebook text load on first use. */
 import type { Art } from './rules-ref';
 
-type Ctx = { game: string; title: string; art: (key: string) => Art | null; onOpen?: () => void; onClose?: () => void };
+type Ctx = { game: string; title: string; art: (key: string) => Art | null; onOpen?: () => void; onClose?: () => void; fig?: () => import('./figures').FigKit };
 let ctx: Ctx | null = null;
 export const RULES_GAMES = ['bulge', 'golan73', 'sicily'];
 /** The game the reader shows (each game has its own rulebooks). */
@@ -12,7 +12,7 @@ export async function showRules(at?: string, q?: string) {
   if (!ctx || !RULES_GAMES.includes(ctx.game)) return;
   const c = ctx; c.onOpen?.();
   const m = await import('./rules-ref');
-  await m.openRules({ game: c.game, title: c.title, art: c.art, at, q, onClose: c.onClose });
+  await m.openRules({ game: c.game, title: c.title, art: c.art, at, q, onClose: c.onClose, fig: c.fig });
 }
 export async function closeRules() { const m = await import('./rules-ref'); m.closeRules(); }
 

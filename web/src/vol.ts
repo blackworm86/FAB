@@ -217,3 +217,18 @@ function golanRuleArt(key: string) {
   const u = G_UNIT.get(key); if (u) return { svg: golanBlockSvg(u), wood: hexc(GOLAN_WOOD[u.side as 'israeli' | 'syrian']), name: u.name };
   const c = G_COUNTER.get(key); return c ? { svg: golanChitSvg(c), name: c.name } : null;
 }
+
+/** 4.5 What the Play Book example figures need from a game: its printed board, where the areas are, their names, and block faces
+ *  (a unit of the game by id, or a generic block for a hypothetical unit). `g` is any game of this volume (its units and chits). */
+export function figKit(V: VolView, g: E.Game): import('./figures').FigKit {
+  const area = (a: number) => V.map.areas.find((x) => x.id === a), hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`;
+  const generic = (name: string, cls: 'armor' | 'infantry' = 'infantry') => `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect x="5" y="5" width="90" height="90" fill="#f1ecd8"/><rect x="25" y="27" width="50" height="34" fill="none" stroke="#111" stroke-width="4"/>${cls === 'armor' ? '<ellipse cx="50" cy="44" rx="16" ry="9" fill="none" stroke="#111" stroke-width="4"/>' : '<path d="M25 27L75 61M75 27L25 61" stroke="#111" stroke-width="4"/>'}<text x="50" y="86" text-anchor="middle" font-family="Arial Narrow, Arial, sans-serif" font-weight="700" font-size="15">${name.replace(/[&<]/g, '')}</text></svg>`;
+  return {
+    base: V.art.base, lines: V.art.lines, size: V.map.size, label: (a) => area(a)?.label ?? null, poly: (a) => area(a)?.polygon ?? null,
+    name: (a) => E.areas.get(a)?.name ?? String(a), labelFont: V.art.labelFace?.family ?? '"Arial Narrow", Arial, sans-serif',
+    face: (p, str) => {
+      if (p.unit) { const u = g.units.find((x) => x.id === p.unit); if (!u) return null; return { svg: V.unitSvg({ ...u, str: str ?? u.max, area: u.area ?? 0 }, g), wood: hex(V.wood[u.side] ?? 0x777777), side: u.side }; }
+      const side = p.side ?? V.sides[0]; return { svg: generic(p.label ?? '', p.cls), wood: hex(V.wood[side] ?? 0x777777), side };
+    },
+  };
+}

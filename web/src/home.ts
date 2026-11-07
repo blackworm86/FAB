@@ -112,8 +112,8 @@ export function rulesHtml(back: string, say: (t: string, ok: boolean) => void) {
 
 /** The rules reference of a volume, opened from its learn card (the piece art comes with the volume's drawings, loaded now). */
 async function openReader(game: string) {
-  const V = (await import('./vol')).useVolume(game); let g0: E.Game | null = null;
-  setRulesContext({ game, title: gameInfo(game)?.name ?? game, art: (k) => V.ruleArt(k, (g0 ??= (E.useGame(game), E.newGame()))) });
+  const VM = await import('./vol'), V = VM.useVolume(game); let g0: E.Game | null = null;
+  setRulesContext({ game, title: gameInfo(game)?.name ?? game, art: (k) => V.ruleArt(k, (g0 ??= (E.useGame(game), E.newGame()))), fig: () => VM.figKit(V, (g0 ??= (E.useGame(game), E.newGame()))) });
   void showRules();
 }
 /** The sign-in buttons (here and in the table's menu). */
