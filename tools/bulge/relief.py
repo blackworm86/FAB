@@ -33,7 +33,7 @@ gr = gr * (1 + nd.gaussian_filter(rng.standard_normal((H, W)), 6)[..., None] * 0
 offl = np.clip(nd.distance_transform_edt(~land) / 6, 0, 1)[..., None]                               # beyond the play areas: greyer snow, as before
 gr = gr * (1 - offl) + (gr * 0.55 + np.array([214, 218, 214.]) * 0.45) * offl
 gr = np.where(sheet[..., None], gr, np.array([200, 212, 220.]))                                     # the sheet's margin: pale blue-grey, as printed
-Image.fromarray(np.clip(gr, 0, 255).astype(np.uint8)).save(OUT + 'snow.png', optimize=True)
+Image.fromarray(np.clip(gr, 0, 255).astype(np.uint8)).quantize(40, dither=Image.Dither.NONE).save(OUT + 'snow.png', optimize=True)   # a small palette keeps the file light for phones
 
 entry = nd.binary_dilation(np.array(Image.open(OUT + 'entry.png').convert('RGBA'))[..., 3] > 20, iterations=6)   # no trees on the entry strips
 n = nd.gaussian_filter(rng.random((H, W)), 3); n = (n - n.min()) / (n.max() - n.min())
