@@ -3259,9 +3259,68 @@
   "Speed": "Velocità",
   "Step back": "Passo indietro",
   "Step forward": "Passo avanti",
-  "Whose view": "Punto di vista"
+  "Whose view": "Punto di vista",
+  "Play the computer": "Gioca contro il computer",
+  "Your side:": "La tua parte:",
+  "Set up a game against the computer": "Prepara una partita contro il computer",
+  "Saved in your account: carry on from any device. The computer plays the other side by the rules and sees only what a player would.": "Salvata nel tuo account: continua da qualsiasi dispositivo. Il computer gioca l'altra parte secondo le regole e vede solo ciò che vedrebbe un giocatore.",
+  "No account needed: the game is kept on this device. Sign in to keep it in your account and play it on any device. The computer plays the other side by the rules and sees only what a player would.": "Non serve un account: la partita resta su questo dispositivo. Accedi per salvarla nel tuo account e giocarla da qualsiasi dispositivo. Il computer gioca l'altra parte secondo le regole e vede solo ciò che vedrebbe un giocatore.",
+  "vs computer": "contro il computer",
+  "You": "Tu",
+  "On this device only": "Solo su questo dispositivo",
+  "Save to my account": "Salva nel mio account",
+  "Saving…": "Salvataggio…",
+  "No games yet: tap New for an online table, or play the computer below.": "Nessuna partita: tocca Nuova per un tavolo online, oppure gioca contro il computer qui sotto.",
+  "Loading this game from your account…": "Carico questa partita dal tuo account…",
+  "This game is in an account: sign in on the home page to open it.": "Questa partita è in un account: accedi dalla pagina iniziale per aprirla.",
+  "Loading…": "Caricamento…",
+  "Checking your account for a newer copy…": "Cerco nel tuo account una copia più recente…",
+  "Played on another device too.": "Giocata anche su un altro dispositivo.",
+  "Use the other device's": "Usa quella dell'altro dispositivo",
+  "Keep this one": "Tieni questa",
+  "This game is not in your account.": "Questa partita non è nel tuo account."
  },
  "patterns": [
+  [
+   "(.+) · your games",
+   "$1 · le tue partite"
+  ],
+  [
+   "Resume turn (\\d+)",
+   "Riprendi turno $1"
+  ],
+  [
+   "Resume turn (\\d+) · (.+)",
+   "Riprendi turno $1 · $2"
+  ],
+  [
+   "(.+) \\(computer\\) is playing…",
+   "Il computer ($1) sta giocando…"
+  ],
+  [
+   "There: turn (\\d+), (.+)\\. Here: turn (\\d+), (.+)\\.",
+   "Là: turno $1, $2. Qui: turno $3, $4."
+  ],
+  [
+   "(\\d+) of (\\d+) saved; try again for the rest\\.",
+   "$1 di $2 salvate; riprova per le altre."
+  ],
+  [
+   "(\\d+) games saved to your account\\.",
+   "$1 partite salvate nel tuo account."
+  ],
+  [
+   "1 game saved to your account\\.",
+   "1 partita salvata nel tuo account."
+  ],
+  [
+   "(\\d+) games against the computer on this device are not in your account yet\\.",
+   "$1 partite contro il computer su questo dispositivo non sono ancora nel tuo account."
+  ],
+  [
+   "(\\d+) game against the computer on this device is not in your account yet\\.",
+   "$1 partita contro il computer su questo dispositivo non è ancora nel tuo account."
+  ],
   [
    "Turn (\\d+), not finished",
    "Turno $1, non finito"

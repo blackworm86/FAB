@@ -11,6 +11,8 @@ import { History } from './history';
 import * as SB from './sandbox';
 import { vpStrip, vpSheet, endPanel } from './score';
 import * as SBU from './sandbox-ui';
+import { solo as soloAcct } from './online';
+import * as SOLO from './solo';
 import { online, startOnline, push, sit, setDevSeat, auth, lobby, journal, seatKey, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, SANDBOX, TUTORIAL, CPU, seatOf, seatName, type DevSeat, type Match } from './online';
 import { gameInfo, GAMES } from './games';
 import { BOXES, boxFront, boxSpine } from './covers';
@@ -41,7 +43,10 @@ import { loadRelief, type Relief } from './relief';
 /* ---------- which game this page shows ---------- */
 const PARAMS = new URLSearchParams(location.search), GAME_PARAM = PARAMS.get('game');
 const TUT = TUTORIAL ? courseFor(PARAMS.get('tutorial')) : null;                                         // the tutorial course this page runs (docs/TUTORIAL.md)
-const KEY0 = TUT ? `fab-tutorial-${TUT.id}` : SANDBOX ? 'fab-sandbox' : CPU ? 'fab-cpu' : TABLE === 'main' ? 'fab-demo2' : `fab-demo2-${TABLE}`, KEY = GAME_PARAM && GAME_PARAM !== 'bulge' ? `${KEY0}-${GAME_PARAM}` : KEY0;
+/** 4.4: a game against the computer has its own id (the address's `solo`, else a new one), kept on this device and in the player's account. */
+const SOLO_ID = CPU ? PARAMS.get('solo') ?? SOLO.newSoloId() : null;
+if (CPU && !PARAMS.get('solo')) { const u = new URL(location.href); u.searchParams.set('solo', SOLO_ID!); history.replaceState(null, '', u.href); }
+const KEY0 = TUT ? `fab-tutorial-${TUT.id}` : SANDBOX ? 'fab-sandbox' : TABLE === 'main' ? 'fab-demo2' : `fab-demo2-${TABLE}`, KEY = SOLO_ID ? SOLO.soloKey(SOLO_ID) : GAME_PARAM && GAME_PARAM !== 'bulge' ? `${KEY0}-${GAME_PARAM}` : KEY0;
 function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif && x.roadblocks && x.pendingArrivals && x.fwOwner && Array.isArray(x.recover) ? x : null; } catch { return null; } }
 /** The volume (docs/design/one-engine.md): the address says which game, else the game saved for this table, else The Bulge. A shared table of another game reloads the page with its game. */
 const VOL = useVolume(TUT ? TUT.game : GAME_PARAM ?? load()?.game ?? 'bulge');
@@ -96,16 +101,25 @@ const CPU_SIDE: E.Side | null = CPU ? (VOL.sides.includes(CPU) ? CPU : P2) : nul
 if (CPU_SIDE) online.cpu = CPU_SIDE;
 const cpuOpts = (): Partial<E.Opts> => { const o: Record<string, unknown> = { ...VOL.defaultOpts }; const sc = PARAMS.get('scenario'); if (sc && VOL.scenarios.some((x) => x.id === sc)) o.scenario = sc; if (PARAMS.has('fuel')) o.fuel = PARAMS.get('fuel') === '1';
   for (const k of (PARAMS.get('rules') ?? '').split(',').filter(Boolean)) { const [key, v] = k.split(':'); if (E.optionalRules().some((r) => r.key === key)) o[key] = key === 'bid' ? +(v ?? 0) : true; } return o as Partial<E.Opts>; };
-let g: E.Game = (() => { const s = HAS_TABLE && !SANDBOX && !TUTORIAL ? null : CPU && PARAMS.has('new') ? null : load(); return s && (s.game ?? 'bulge') === VOL.id ? s : E.newGame(undefined, CPU ? cpuOpts() : VOL.defaultOpts); })();   // a shared table starts from what the database sends, never from an old local copy
-if (CPU && PARAMS.has('new')) { try { localStorage.setItem(KEY, JSON.stringify(g)); } catch { /* storage off */ } history.replaceState(null, '', location.pathname + location.search.replace(/&new=1|[?]new=1&?/, (m) => (m.startsWith('?') ? '?' : ''))); }
+const SOLO_NEW = !!CPU && (PARAMS.has('new') || (!SOLO.localGame(SOLO_ID!) && !PARAMS.get('solo')));
+let g: E.Game = (() => { const s = HAS_TABLE && !SANDBOX && !TUTORIAL ? null : SOLO_NEW ? null : load(); return s && (s.game ?? 'bulge') === VOL.id ? s : E.newGame(undefined, CPU ? cpuOpts() : VOL.defaultOpts); })();   // a shared table starts from what the database sends, never from an old local copy
+/** 4.4: this device's list entry of the game, and whether the game is still to come from the account (opened on a device that does not have it). */
+let soloLast = '', soloHold = false, soloMeta: SOLO.SoloMeta | null = null, soloWait = !!CPU && !SOLO_NEW && !load();
+if (CPU) {
+  soloMeta = SOLO_NEW ? null : SOLO.localMeta(SOLO_ID!);
+  if (!soloMeta) soloMeta = SOLO.metaOf(g, { id: SOLO_ID!, cpu: CPU_SIDE!, title: `${VOL.name} · ${VOL.scenarios.find((x) => x.id === g.opts.scenario)?.name ?? ''}`, created: Date.now(), owner: '' });
+  if (!soloWait) { soloLast = JSON.stringify(g); try { localStorage.setItem(KEY, soloLast); } catch { /* storage off */ } SOLO.putLocalMeta(soloMeta); }
+  soloHold = !!soloMeta.owner && !soloWait; if (soloHold) setTimeout(() => { if (soloHold) { soloHold = false; render(); } }, 8000);      // an account's game: a moment to look for a newer copy before play goes on (offline: it carries on)
+  if (PARAMS.has('new')) { const u = new URL(location.href); for (const k of ['new', 'scenario', 'fuel', 'rules']) u.searchParams.delete(k); history.replaceState(null, '', u.href); }
+}
 setRulesContext({ game: VOL.id, title: VOL.name, art: (k) => VOL.ruleArt(k, g), fig: () => { const k = figKit(VOL, E.newGame(1, g.opts)); E.setPlayArea(g.inPlay); return k; } });      // a fresh game for every block's face (online the other side's are hidden); the play area stays this game's          // the rules reference shows this game's rulebooks and pieces
 let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, previewArea: number | null = null, hoverArea: number | null = null, newOpts: E.Opts = { scenario: VOL.defaultOpts.scenario ?? 'tournament', fuel: !!VOL.defaultOpts.fuel };
 /** A prompt of the volume asked for an area (an air assault landing): the legal ones light up, a tap runs it. */
 let areaPick: { label: string; areas: Set<number>; run: (a: number) => void } | null = null;
 let applyingRemote = false;
 let oppTurn: boolean | null = null;                                                               // 4.3: was it the opponent's move when last seen
-const save = () => { if (heldNext) return;                                                       // a roll is on screen: its result is already saved; the board shown is older and must not be written back
-   try { localStorage.setItem(KEY, JSON.stringify(g)); } catch { /* storage off: the game still runs */ } if (!applyingRemote) { void push(g); handOver(); record(true); } };
+const save = () => { if (heldNext || soloWait) return;                                             // a roll is on screen: its result is already saved; the board shown is older and must not be written back
+   const json = JSON.stringify(g); try { localStorage.setItem(KEY, json); } catch { /* storage off: the game still runs */ } if (CPU) soloSaved(json); if (!applyingRemote) { void push(g); handOver(); record(true); } };
 /* 4.1 the replay journal: each change is a step; online each seat writes only its own blocks (the database keeps the journal unread until the game is over) */
 const rec = new Recorder(VOL.sides); let recLast = '', replayShown = false;
 function record(own: boolean, gm: E.Game = g) {
@@ -683,7 +697,7 @@ let dragTargets: number[] = [];
 const hist = new History<E.Game>(); let note = '', selArr: string | null = null;
 /** Who may act right now: one side, or both while each handles its own assets (admin, reinforcement, battle set-up). */
 const actorNow = () => E.actorOf(g);
-const allowed = () => cpuActing || (!heldBad && (!online.active || online.both() || (online.mySide() != null && (actorNow() === 'both' || actorNow() === online.mySide()))));   // a held-back change waits for a decision first
+const allowed = () => cpuActing || (!heldBad && !soloWait && !soloHold && !soloClash && (!online.active || online.both() || (online.mySide() != null && (actorNow() === 'both' || actorNow() === online.mySide()))));   // a held-back change waits for a decision first
 /** In a shared-screen game every side is yours; online only your own seat's pieces. */
 const mine = (s: E.Side) => !online.active || online.both() || online.mySide() === s;
 const notYou = () => online.mySide() == null ? 'You are watching. Take a seat in the menu to play.' : `Wait for the ${nm(actorNow() as E.Side)} player.`;
@@ -716,16 +730,66 @@ function lockOf(a: E.Game, b: E.Game): string {
   return '';
 }
 function undo() { if (!allowed()) return say(notYou()); if (heldNext) return say('Wait for the dice to land'); const lbl = hist.label, r = hist.undo(g); if (!r.game) return say(r.why ?? 'Nothing to undo'); const p = r.game; p.log.push(`T${p.turn} ${nm(online.mySide() ?? p.phasing)} undid ${lbl ? '“' + lbl + '”' : 'an action'}`); g = p; selUnit = selChit = selArr = previewArea = hoverArea = null; note = ''; save(); refresh(); }
+/* ---------- 4.4 keeping a game against the computer in the player's account ---------- */
+let soloTimer = 0, soloChecked = '', soloClash: { meta: SOLO.SoloMeta; json: string } | null = null, soloBusy = false;
+/** A change was saved on this device: count it, and send it to the account a moment later (the changes of that moment go as one write). */
+function soloSaved(json: string) {
+  if (!soloMeta || json === soloLast) return; soloLast = json;
+  soloMeta = { ...SOLO.metaOf(g, soloMeta), rev: soloMeta.rev + 1 }; SOLO.putLocalMeta(soloMeta);
+  if (!soloTimer) soloTimer = window.setTimeout(() => { void soloPush(); }, 1500);                       // at most 1.5 s behind, even while the computer keeps moving
+}
+const soloMine = () => soloAcct.on && !!soloMeta && (!soloMeta.owner || soloMeta.owner === online.uid);
+async function soloPush(force = false) {
+  clearTimeout(soloTimer); soloTimer = 0;
+  if (!soloMine() || soloBusy || soloClash || soloWait || soloChecked !== online.uid) return;
+  soloBusy = true;
+  try {
+    const m = { ...soloMeta!, owner: online.uid }, r = await soloAcct.save(m, JSON.stringify(g), force);
+    if (r === 'ok') { soloMeta = { ...soloMeta!, owner: online.uid, rev: m.rev, base: m.rev }; SOLO.putLocalMeta(soloMeta); }
+    else if (r === 'conflict') { const x = await soloAcct.load(SOLO_ID!); if (x) { soloClash = x; render(); } }
+  } finally { soloBusy = false; }
+  if (soloMeta && soloMeta.rev !== soloMeta.base && !soloClash && !soloTimer) soloTimer = window.setTimeout(() => { void soloPush(); }, 1500);      // saved meanwhile
+}
+/** Take the account's copy of the game in place of this device's. */
+function soloTake(x: { meta: SOLO.SoloMeta; json: string }) {
+  const ng = JSON.parse(x.json) as E.Game; if ((ng.game ?? 'bulge') !== VOL.id) return;
+  if (heldNext) commitRoll(); soloWait = false; soloClash = null;
+  g = ng; hist.clear(); selUnit = selChit = selArr = null; selArea = previewArea = hoverArea = null;
+  soloMeta = { ...x.meta, owner: online.uid, base: x.meta.rev };
+  soloLast = JSON.stringify(g); try { localStorage.setItem(KEY, soloLast); } catch { /* storage off */ } SOLO.putLocalMeta(soloMeta); refresh();
+}
+/** Once the account is known: compare this device's copy with the account's. Unchanged on one side: the newer wins quietly; changed on both: the player chooses. */
+async function soloOnNet() {
+  if (!CPU || !online.account || online.account.guest || soloChecked === online.uid || !soloAcct.on) { if (soloWait && online.ready && online.account?.guest) render(); return; }
+  soloChecked = online.uid; soloHold = false; render();
+  if (soloMeta?.owner && soloMeta.owner !== online.uid) return;                                      // another account's game on this device: left alone
+  const x = await soloAcct.load(SOLO_ID!);
+  if (!x) { if (soloWait) { soloWait = false; say('This game is not in your account.'); location.href = homeUrl(); return; } void soloPush(); return; }
+  const base = soloMeta?.base, dirty = !!soloMeta && soloMeta.rev !== base;
+  if (soloWait || (x.meta.rev !== base && !dirty) || (base == null && !soloMeta)) return soloTake(x);
+  if (x.meta.rev === base) return void soloPush();
+  soloClash = x; render();                                                                            // moved on both here and elsewhere
+}
+function soloBar() {
+  if (!CPU) return '';
+  if (soloWait) return `<div class="seatbar cpu"><span class="spin" aria-hidden="true"></span><span>${online.account && !online.account.guest ? 'Loading this game from your account…' : online.ready && online.account?.guest ? 'This game is in an account: sign in on the home page to open it.' : 'Loading…'}</span></div>`;
+  if (soloHold) return `<div class="seatbar cpu"><span class="spin" aria-hidden="true"></span><span>Checking your account for a newer copy…</span></div>`;
+  if (!soloClash) return '';
+  const t = soloClash.meta;
+  return `<div class="seatbar err"><span><b>Played on another device too.</b> There: turn ${t.turn}, ${esc(STEP_NAME[t.step] ?? t.step)}. Here: turn ${g.turn}, ${esc(STEP_NAME[g.phase] ?? g.phase)}.</span>${ubtn('Use the other device\'s', () => soloTake(soloClash!), 'primary')}${ubtn('Keep this one', () => { soloClash = null; void soloPush(true); })}</div>`;
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && soloTimer) void soloPush(); });
+
 /* ---------- 4.4 the computer opponent: one action at a time, each shown on the table as a player's would be ---------- */
 let cpuActing = false, cpuTimer = 0, cpuLast = '';
 /** After every redraw: if it is the computer's turn to act, its next action follows shortly (dice and effects are left to settle first). */
 function cpuTick() {
-  if (!CPU_SIDE || cpuTimer || g.over || rollView || heldNext || !E.ai.turnOf(g, CPU_SIDE)) return;
+  if (!CPU_SIDE || cpuTimer || g.over || rollView || heldNext || soloWait || soloHold || soloClash || !E.ai.turnOf(g, CPU_SIDE)) return;
   const delay = cpuLast === 'ready' || cpuLast === 'done' ? 350 : /move|fight|arrive|place|retreat|strategic/.test(cpuLast) ? 900 : 600;
   cpuTimer = window.setTimeout(cpuStep, delay);
 }
 function cpuStep() {
-  cpuTimer = 0; if (!CPU_SIDE || g.over || rollView || heldNext || !E.ai.turnOf(g, CPU_SIDE)) return;
+  cpuTimer = 0; if (!CPU_SIDE || g.over || rollView || heldNext || soloWait || soloHold || soloClash || !E.ai.turnOf(g, CPU_SIDE)) return;
   let a: E.ai.Action | null = null; try { a = E.ai.next(g, CPU_SIDE); } catch (e) { console.error('computer opponent', e); }
   if (!a) { cpuLast = ''; return; }
   cpuLast = a.label; cpuActing = true;
@@ -737,7 +801,7 @@ function cpuStep() {
   render();
 }
 /** A line at the top while the computer plays. */
-function cpuBar() { return CPU_SIDE && !g.over && E.ai.turnOf(g, CPU_SIDE) && !rollView ? `<div class="seatbar cpu"><span class="spin" aria-hidden="true"></span><span>${esc(nm(CPU_SIDE))} (computer) is playing…</span></div>` : ''; }
+function cpuBar() { return soloBar() || (CPU_SIDE && !soloWait && !g.over && E.ai.turnOf(g, CPU_SIDE) && !rollView ? `<div class="seatbar cpu"><span class="spin" aria-hidden="true"></span><span>${esc(nm(CPU_SIDE))} (computer) is playing…</span></div>` : ''); }
 window.addEventListener('keydown', (e) => {
   const t = e.target as HTMLElement | null, typing = !!t?.matches?.('input,select,textarea');
   if (e.key === 'Escape') { if (modal) { modal = null; render(); } else if (selUnit || selArr || selChit || selArea != null) { selUnit = selArr = selChit = null; selArea = null; previewArea = null; refresh(); } return; }
@@ -1744,7 +1808,7 @@ function renderInner() {
   const dockMain = alert || ledger() || handCards();
   const keepD = document.querySelector<HTMLElement>('#ui .c-dispatch')?.scrollTop ?? 0;           // a panel being read keeps its place when the screen updates
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = `<a class="skipmap" href="#" data-ui="${reg(() => { (document.getElementById('gl') as HTMLElement).focus(); })}">Skip to the map</a><div class="tops">${topBar()}${vpStrip(g, reg(() => { scoreOpen = true; }))}</div>` + `<div class="stage">${SANDBOX ? (SBU.st.sbOpen ? SBU.sandboxPanel() : SBU.sandboxFab()) : ''}${seatBar()}${cpuBar()}${heldBad ? heldBadBar() : ''}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${volPanel()}${mapLegend()}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${airPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} Map`, () => { endHidden = true; }) + ubtn(`${ico('dice')} Replay`, () => { void showReplay(); }, '', false, 'Watch the whole game again, step by step') + ubtn(`${ico('plus')} New game`, () => { if (SANDBOX) { SBU.sbReset({ ...g.opts }); endHidden = false; } else if (CPU) location.href = `${location.pathname}${location.search}&new=1`; else location.href = homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}</button>${undoBtn()}${!p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
+  $('#ui').innerHTML = `<a class="skipmap" href="#" data-ui="${reg(() => { (document.getElementById('gl') as HTMLElement).focus(); })}">Skip to the map</a><div class="tops">${topBar()}${vpStrip(g, reg(() => { scoreOpen = true; }))}</div>` + `<div class="stage">${SANDBOX ? (SBU.st.sbOpen ? SBU.sandboxPanel() : SBU.sandboxFab()) : ''}${seatBar()}${cpuBar()}${heldBad ? heldBadBar() : ''}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${volPanel()}${mapLegend()}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${airPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} Map`, () => { endHidden = true; }) + ubtn(`${ico('dice')} Replay`, () => { void showReplay(); }, '', false, 'Watch the whole game again, step by step') + ubtn(`${ico('plus')} New game`, () => { if (SANDBOX) { SBU.sbReset({ ...g.opts }); endHidden = false; } else if (CPU) location.href = `${location.pathname}?cpu=${CPU_SIDE}${VOL.id !== 'bulge' ? `&game=${VOL.id}` : ''}&scenario=${g.opts.scenario}${VOL.features.fuel ? `&fuel=${g.opts.fuel ? 1 : 0}` : ''}${optOn(g.opts, VOL.id).length ? `&rules=${optOn(g.opts, VOL.id).map((r) => (r.key === 'bid' ? `bid:${g.opts.bid}` : r.key)).join(',')}` : ''}&new=1`; else location.href = homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}</button>${undoBtn()}${!p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
   const ui = $('#ui');
   { const d = ui.querySelector<HTMLElement>('.c-dispatch'); if (d) d.scrollTop = keepD; }
   bind(ui, keepH, keepA);
@@ -1882,5 +1946,5 @@ void startOnline((rg) => { applyingRemote = true; if (heldNext) commitRoll(); co
     selUnit = keep(prevG, selUnit, (x) => x.units.find((u) => u.id === selUnit)); selChit = keep(prevG, selChit, (x) => x.chits.find((c) => c.id === selChit));
     selArr = keep(prevG, selArr, (x) => [x.pendingArrivals.includes(selArr!), x.units.find((u) => u.id === selArr)?.area]);
     if (!same) selArea = null; if (!selUnit) previewArea = null; hoverArea = null; } hist.remote(prevG, g, lockOf); if (rolled) hist.clear('dice rolled'); if (followFoe && online.lastBy && online.lastBy !== online.uid && !g.battle) { const mv = g.units.find((u) => { const o = prevG.units.find((x) => x.id === u.id); return o && u.area != null && o.area !== u.area; }); if (mv) lookAt(mv.area!); } try { save(); } finally { applyingRemote = false; } refresh();
-  { const cs = g.checks ?? [], k = cs.findIndex((c) => JSON.stringify(c) === ckLast); const fresh = ckLast === 'null' ? [] : k >= 0 ? cs.slice(k + 1) : []; if (fresh.length) showChecks(fresh); } }, () => { onNet(); syncView(); render(); }, say, () => { try { sessionStorage.setItem('fab-notice', 'That game was deleted by its creator.'); } catch { /* private mode */ } location.href = homeUrl(); });       // the table is gone: nobody stays inside it
+  { const cs = g.checks ?? [], k = cs.findIndex((c) => JSON.stringify(c) === ckLast); const fresh = ckLast === 'null' ? [] : k >= 0 ? cs.slice(k + 1) : []; if (fresh.length) showChecks(fresh); } }, () => { onNet(); void soloOnNet(); syncView(); render(); }, say, () => { try { sessionStorage.setItem('fab-notice', 'That game was deleted by its creator.'); } catch { /* private mode */ } location.href = homeUrl(); });       // the table is gone: nobody stays inside it
 if (import.meta.env.DEV || DEV_FAKE || SANDBOX || TUTORIAL) Object.assign(window, { __fab: { seat: (sd: E.Side) => { tutView = sd; refresh(); }, viewMap: (mx: number, my: number, d: number, pt: number, yw: number) => { const p = toWorld(mx, my); goal = { t: new THREE.Vector3(p.x, show3d() ? REL!.h(p.x, p.z) : 0, p.z), dist: d, pitch: pt, fast: true }; yaw = yw; }, tut: () => tut, unitAt: (id: string) => { const m = pieces.children.find((o) => o.userData.unit === id || o.userData.chit === id); if (!m) return null; const r = canvas.getBoundingClientRect(), v = m.getWorldPosition(new THREE.Vector3()).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, game: () => g, setGame: (x: E.Game) => { g = x; hist.clear(); save(); refresh(); }, at: (a: number) => { const p = center(a), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(p.x, 0, p.z).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, project: (x: number, y: number, z: number) => { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height }; }, online, setMatches: (m: Match[]) => { matches = m; }, iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets: () => sheets(VOL), setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, rel: () => ({ tris: renderer.info.render.triangles, calls: renderer.info.render.calls, trees: (REL?.props.children[0] as THREE.InstancedMesh | undefined)?.count }), board: () => boardCv.toDataURL("image/png"), view: (x: number, z: number, d: number, pt: number, yw: number) => { goal = { t: new THREE.Vector3(x, 0, z), dist: d, pitch: pt, fast: true }; yaw = yw; }, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });

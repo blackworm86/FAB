@@ -4,7 +4,8 @@ import * as E from '../../engine/src';
 import { translateDom, LANG, LANGS, setLang } from './i18n';
 import { installKind, install, onInstallChange } from './install';
 import { moveNotice, noticesOn, noticesSupported, setNotices } from './notices';
-import { online, startOnline, auth, lobby, DEV, TABLE, type Match } from './online';
+import { online, startOnline, auth, lobby, solo, DEV, TABLE, type Match } from './online';
+import * as SOLO from './solo';
 import { gameInfo, GAMES } from './games';
 import { BOXES, boxFront, boxSpine } from './covers';
 import { ico } from './icons';
@@ -62,21 +63,42 @@ const tutCard = (game: string) => { const cs = coursesOf(game); return !cs.lengt
 const WHEN: Record<string, string> = Object.fromEntries(GAMES.map((x) => [x.id, x.when]));
 /** 4.4 Play the computer: a game kept in this browser, no account needed. The player picks a side, a scenario and the rules; the computer takes the other seat. */
 let cpuOpen = false;
-const cpuKey = (game: string) => (game === 'bulge' ? 'fab-cpu' : `fab-cpu-${game}`);
-const cpuSaved = (game: string): { turn: number; over: boolean } | null => { try { const s = localStorage.getItem(cpuKey(game)); if (!s) return null; const x = JSON.parse(s); return { turn: x.turn ?? 1, over: !!x.over }; } catch { return null; } };
-function cpuUrl(info: { id: string; sides: [string, string]; fuel: boolean; optional: boolean; defaultScenario: string }, fresh: boolean) {
+/** Games against the computer: this device's list merged with the account's (the newer copy of each), for the current account. */
+let soloAcct: SOLO.SoloMeta[] = [], soloWatching = '', soloMsg = '';
+function soloGames(game?: string): SOLO.SoloMeta[] {
+  const uid = online.account && !online.account.guest ? online.uid : '', by = new Map<string, SOLO.SoloMeta>();
+  for (const m of SOLO.localList()) if (!m.owner || m.owner === uid) by.set(m.id, m);
+  if (uid) for (const m of soloAcct) { const l = by.get(m.id); if (!l || m.updated > l.updated) by.set(m.id, { ...m, owner: uid }); }
+  return [...by.values()].filter((m) => !game || m.game === game).sort((a, b) => +!!a.over - +!!b.over || b.updated - a.updated);
+}
+/** Games played on this device signed out: not in any account yet. */
+const soloLoose = () => SOLO.localList().filter((m) => !m.owner && SOLO.localGame(m.id));
+async function soloAdopt() {
+  const list = soloLoose(); let n = 0; soloMsg = 'Saving…'; render();
+  for (const m of list) { const json = SOLO.localGame(m.id); if (!json) continue; const mm = { ...m, owner: online.uid, base: undefined }; if (await solo.save(mm, json) === 'ok') { SOLO.putLocalMeta({ ...mm, base: mm.rev }); n++; } }
+  soloMsg = n === list.length ? `${n} game${n === 1 ? '' : 's'} saved to your account.` : `${n} of ${list.length} saved; try again for the rest.`; render();
+}
+async function soloDrop(m: SOLO.SoloMeta) {
+  if (!confirm(`Delete "${m.title}" against the computer? This cannot be undone.`)) return;
+  SOLO.dropLocal(m.id); if (m.owner || soloAcct.some((x) => x.id === m.id)) await solo.remove(m.id);
+  soloAcct = soloAcct.filter((x) => x.id !== m.id); render();
+}
+const soloRow = (m: SOLO.SoloMeta, first: boolean) => { const gi = gameInfo(m.game), me = gi ? gi.sides.find((x) => x !== m.cpu) ?? '' : '', open = () => { location.href = SOLO.soloUrl(m); };
+  return `<div class="matchrow solo ${!m.over ? 'yours' : ''}"><button class="open" data-do="${reg(open)}"><b>${esc(m.title)}</b><small class="seats"><span class="st live" aria-hidden="true"></span><small class="stw">vs computer</small><b>You</b> ${esc(gi?.sideName[me] ?? me)}</small><small class="mrules">${m.over ? esc(m.over) : `Turn ${m.turn} · ${esc(STEP_NAME[m.step] ?? m.step)}`}</small>${m.owner ? '' : '<small class="mrules">On this device only</small>'}</button><div class="row">${btn(`${ico('trash')}`, () => { void soloDrop(m); }, 'ico danger', false, 'Delete this game')}</div>${!m.over ? `<button class="${first ? 'go' : 'primary'} resume" data-do="${reg(open)}">Resume turn ${m.turn}${STEP_NAME[m.step] ? ` · ${STEP_NAME[m.step]}` : ''}${ico('next')}</button>` : ''}</div>`; };
+const adoptHtml = () => { const n = soloLoose().length; return online.account && !online.account.guest && n ? `<div class="row adopt"><span class="hint">${n} game${n === 1 ? '' : 's'} against the computer on this device ${n === 1 ? 'is' : 'are'} not in your account yet.</span>${btn(`${ico('check')}<span>Save to my account</span>`, () => { void soloAdopt(); }, 'primary')}</div>` : ''; };
+function cpuUrl(info: { id: string; sides: [string, string]; fuel: boolean; optional: boolean; defaultScenario: string }) {
   const me = form.side && info.sides.includes(form.side) ? form.side : info.sides[1], cpu = me === info.sides[0] ? info.sides[1] : info.sides[0];
   const keep = new Set(rulesOf(info.id).map((r) => r.key as string)), rules = Object.entries(form.rules).filter(([k, v]) => keep.has(k) && v).map(([k, v]) => (k === 'bid' ? `bid:${v}` : k)).join(',');
-  return `${homeUrl()}?cpu=${cpu}${info.id !== 'bulge' ? `&game=${info.id}` : ''}${fresh ? `&scenario=${form.scenario || info.defaultScenario}${info.fuel ? `&fuel=${form.fuel ? 1 : 0}` : ''}${info.optional && rules ? `&rules=${rules}` : ''}&new=1` : ''}`;
+  return `${homeUrl()}?cpu=${cpu}${info.id !== 'bulge' ? `&game=${info.id}` : ''}&solo=${SOLO.newSoloId()}&scenario=${form.scenario || info.defaultScenario}${info.fuel ? `&fuel=${form.fuel ? 1 : 0}` : ''}${info.optional && rules ? `&rules=${rules}` : ''}&new=1`;
 }
 function cpuCard(game: string) {
   const info = gameInfo(game); if (!info?.ready) return '';
-  const saved = cpuSaved(game), tile = (v: string, label: string, tag: string) => `<button class="tile ${form.side === v ? 'on' : ''} ${v}" aria-pressed="${form.side === v}" data-ui="${reg(() => { form.side = v; })}" title="${label}"><b>${tag}</b><small>${label}</small></button>`;
+  const signed = !!online.account && !online.account.guest, list = signed ? [] : soloGames(game), tile = (v: string, label: string, tag: string) => `<button class="tile ${form.side === v ? 'on' : ''} ${v}" aria-pressed="${form.side === v}" data-ui="${reg(() => { form.side = v; })}" title="${label}"><b>${tag}</b><small>${label}</small></button>`;
   const setup = cpuOpen ? `<div class="sheetbox"><p class="hint">Your side:</p><div class="tiles">${info.sides.map((sd) => tile(sd, info.sideName[sd], info.tag[sd])).join('')}</div>
       <div class="chips"><div class="scens">${info.scenarios.filter((sc) => !sc.testing).map((sc) => chip(`${esc(sc.name)}<small>${esc(sc.sub)}</small>`, form.scenario === sc.id, () => { form.scenario = sc.id; }, sc.title)).join('')}</div>${info.fuel ? `<div class="optrules fuelrow"><button class="orow tog ${form.fuel ? 'on' : ''}" aria-pressed="${form.fuel}" data-ui="${reg(() => { form.fuel = !form.fuel; })}"><span class="orn">16.13</span><span class="ort"><b>German fuel</b><small>Moves over 3 MP and strategic moves spend a fuel asset.</small></span><span class="sw ${form.fuel ? 'on' : ''}">${form.fuel ? 'ON' : 'OFF'}</span></button></div>` : ''}</div>${info.optional ? optChooser(form.rules, game) : ''}
-      <div class="row createrow">${btn(`${ico('next')}<span>Start</span>`, () => { if (!form.side || !info.sides.includes(form.side)) form.side = info.sides[1]; location.href = cpuUrl(info, true); }, 'primary')}</div></div>` : '';
-  return `<section class="card cpucard"><div class="lh"><h2>${ico('cpu')} Play the computer</h2>${cpuOpen ? ubtn(ico('close'), () => { cpuOpen = false; }, 'ico', false, 'Close') : ubtn(`${ico('plus')}<span>New</span>`, () => { cpuOpen = true; if (!form.side) form.side = info.sides[1]; }, saved && !saved.over ? '' : 'primary', false, 'Set up a game against the computer')}</div>
-    <p class="hint">A game kept on this device, no account needed. The computer plays the other side by the rules and sees only what a player would.</p>${setup}${saved && !saved.over ? `<div class="row">${btn(`${ico('next')}<span>Resume turn ${saved.turn}</span>`, () => { location.href = cpuUrl(info, false); }, 'primary')}</div>` : ''}</section>`;
+      <div class="row createrow">${btn(`${ico('next')}<span>Start</span>`, () => { if (!form.side || !info.sides.includes(form.side)) form.side = info.sides[1]; location.href = cpuUrl(info); }, 'primary')}</div></div>` : '';
+  return `<section class="card cpucard"><div class="lh"><h2>${ico('cpu')} Play the computer</h2>${cpuOpen ? ubtn(ico('close'), () => { cpuOpen = false; }, 'ico', false, 'Close') : ubtn(`${ico('plus')}<span>New</span>`, () => { cpuOpen = true; if (!form.side) form.side = info.sides[1]; }, soloGames(game).some((m) => !m.over) ? '' : 'primary', false, 'Set up a game against the computer')}</div>
+    <p class="hint">${signed ? 'Saved in your account: carry on from any device.' : 'No account needed: the game is kept on this device. Sign in to keep it in your account and play it on any device.'} The computer plays the other side by the rules and sees only what a player would.</p>${setup}${list.map((m, i) => soloRow(m, i === 0)).join('')}</section>`;
 }
 /** The shelf: one box cover per FAB volume; tapping one shows that volume's tables (option A of the home mockup). */
 function shelfHtml() {
@@ -92,7 +114,8 @@ function homeHtml() {
   if (!online.ready) return `<div class="homepage" style="background-image: radial-gradient(ellipse at 55% 35%, #0b0d0866 0%, #0b0d08d9 62%, #0b0d08 100%), url('./home-table.jpg')"><div class="homein">${head}<p class="hint">Connecting…</p></div></div>`;
   if (online.mode !== 'remote' || !online.hasAccounts) return `<div class="homepage" style="background-image: radial-gradient(ellipse at 55% 35%, #0b0d0866 0%, #0b0d08d9 62%, #0b0d08 100%), url('./home-table.jpg')"><div class="homein">${head}${ready ? cpuCard(form.game) : ''}<section class="card"><p class="hint">Online play is not set up on this site.${online.error ? ' ' + esc(online.error) : ''}</p></section>${learn}</div></div>`;
   if (!signed) return `<div class="homepage" style="background-image: radial-gradient(ellipse at 55% 35%, #0b0d0866 0%, #0b0d08d9 62%, #0b0d08 100%), url('./home-table.jpg')"><div class="homein">${head}<section class="card"><h2>Sign in</h2>${(() => { try { return sessionStorage.getItem('fab-next'); } catch { return null; } })() ? '<p class="hint">You will go straight back to the game you were invited to.</p>' : '<p class="hint">To create a game or join one. Anyone can watch a game from its link.</p>'}${accountHtml()}</section>${ready ? cpuCard(form.game) : ''}${learn}${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}</div></div>`;
-  const mine = matches.filter((m) => (m.game ?? 'bulge') === form.game).sort((x, y) => +!!y.myMove - +!!x.myMove).map((m, mi) => `<div class="matchrow ${m.myMove ? 'yours' : ''}"><button class="open" data-do="${reg(() => { location.href = tableUrl(m.id, m.game ?? 'bulge'); })}"><b>${esc(m.title)}${m.myMove ? '<span class="stampy">Your move</span>' : ''}</b><small class="seats"><span class="st ${m.germanName && m.alliedName ? 'live' : 'wait'}" aria-hidden="true"></span><small class="stw">${esc(stateOf(m))}</small><b>${info!.tag[info!.sides[0]]}</b> ${esc(m.germanName || '—')} <b>${info!.tag[info!.sides[1]]}</b> ${esc(m.alliedName || '—')}</small><small class="mrules">${SCEN_NAME[(m.opts as Partial<E.Opts> | undefined)?.scenario ?? 'tournament'] ?? ''}${(m.opts as Partial<E.Opts> | undefined)?.fuel === false ? ' · no fuel rule' : ''}${optOn(m.opts as Partial<E.Opts>, m.game ?? 'bulge').length ? ` · optional ${optOn(m.opts as Partial<E.Opts>, m.game ?? 'bulge').map((r) => r.rule).join(', ')}` : ''}</small></button><div class="row">${m.over ? btn(`${ico('dice')}`, () => { location.href = `${tableUrl(m.id, m.game ?? 'bulge')}&replay=1`; }, 'ico', false, 'Watch the replay of this finished game') : ''}${btn(`${ico('share')}`, () => { void share(m.id, m.title); }, 'ico', false, 'Invite a player')}${btn(`${ico('trash')}`, () => { void dropMatch(m); }, 'ico danger', false, m.owner === online.uid || online.admin ? 'Delete this game for everyone' : 'Remove from my list')}</div>${m.myMove ? `<button class="${mi === 0 ? 'go' : 'primary'} resume" data-do="${reg(() => { location.href = tableUrl(m.id, m.game ?? 'bulge'); })}">Resume${m.turn ? ` turn ${m.turn}` : ''}${m.step && STEP_NAME[m.step] ? ` · ${STEP_NAME[m.step]}` : ''}${ico('next')}</button>` : ''}</div>`).join('') || '<p class="hint">No games yet.</p>';
+  const solos = soloGames(form.game).map((m, i) => soloRow(m, i === 0 && !matches.some((x) => x.myMove && (x.game ?? 'bulge') === form.game))).join('');
+  const mine = matches.filter((m) => (m.game ?? 'bulge') === form.game).sort((x, y) => +!!y.myMove - +!!x.myMove).map((m, mi) => `<div class="matchrow ${m.myMove ? 'yours' : ''}"><button class="open" data-do="${reg(() => { location.href = tableUrl(m.id, m.game ?? 'bulge'); })}"><b>${esc(m.title)}${m.myMove ? '<span class="stampy">Your move</span>' : ''}</b><small class="seats"><span class="st ${m.germanName && m.alliedName ? 'live' : 'wait'}" aria-hidden="true"></span><small class="stw">${esc(stateOf(m))}</small><b>${info!.tag[info!.sides[0]]}</b> ${esc(m.germanName || '—')} <b>${info!.tag[info!.sides[1]]}</b> ${esc(m.alliedName || '—')}</small><small class="mrules">${SCEN_NAME[(m.opts as Partial<E.Opts> | undefined)?.scenario ?? 'tournament'] ?? ''}${(m.opts as Partial<E.Opts> | undefined)?.fuel === false ? ' · no fuel rule' : ''}${optOn(m.opts as Partial<E.Opts>, m.game ?? 'bulge').length ? ` · optional ${optOn(m.opts as Partial<E.Opts>, m.game ?? 'bulge').map((r) => r.rule).join(', ')}` : ''}</small></button><div class="row">${m.over ? btn(`${ico('dice')}`, () => { location.href = `${tableUrl(m.id, m.game ?? 'bulge')}&replay=1`; }, 'ico', false, 'Watch the replay of this finished game') : ''}${btn(`${ico('share')}`, () => { void share(m.id, m.title); }, 'ico', false, 'Invite a player')}${btn(`${ico('trash')}`, () => { void dropMatch(m); }, 'ico danger', false, m.owner === online.uid || online.admin ? 'Delete this game for everyone' : 'Remove from my list')}</div>${m.myMove ? `<button class="${mi === 0 ? 'go' : 'primary'} resume" data-do="${reg(() => { location.href = tableUrl(m.id, m.game ?? 'bulge'); })}">Resume${m.turn ? ` turn ${m.turn}` : ''}${m.step && STEP_NAME[m.step] ? ` · ${STEP_NAME[m.step]}` : ''}${ico('next')}</button>` : ''}</div>`).join('') + solos || '<p class="hint">No games yet: tap New for an online table, or play the computer below.</p>';
   const tile = (v: string, label: string, tag: string) => `<button class="tile ${form.side === v ? 'on' : ''} ${v}" aria-pressed="${form.side === v}" data-ui="${reg(() => { form.side = v; })}" title="${label}"><b>${tag}</b><small>${label}</small></button>`;
   const create = creating ? `<div class="sheetbox"><div class="lh"><h3>${ico('plus')} New game</h3>${ubtn(ico('close'), () => { creating = false; }, 'ico', false, 'Cancel')}</div>
       <div class="authform"><input placeholder="Name (optional)" value="${esc(form.title)}" data-sel="${regv((x) => { form.title = x; })}"></div>
@@ -101,7 +124,7 @@ function homeHtml() {
       <div class="row createrow">${btn(`${ico('check')}<span>Create game</span>`, () => { void createGame(); }, 'primary', !info?.ready)}</div></div>` : '';
   return `<div class="homepage" style="background-image: radial-gradient(ellipse at 55% 35%, #0b0d0866 0%, #0b0d08d9 62%, #0b0d08 100%), url('./home-table.jpg')"><div class="homein">
     <header class="hbar"><div><h1>Fast Action Battles</h1><p>Board-game battles with the series rules, played online.</p></div><div class="who"><span class="avatar" title="${esc(a!.name || a!.email)}">${esc((a!.name || a!.email || '?').slice(0, 1).toUpperCase())}</span>${online.admin ? ubtn(ico('wand'), () => { location.href = `${homeUrl()}?sandbox=1&game=${form.game}${DEV ? '&dev=1' : ''}`; }, 'ico', false, 'Admin: sandbox test table') + ubtn(ico('lock'), () => { modal = 'rules'; }, 'ico', false, 'Admin: update the database rules') : ''}<button class="ico" data-auth="out" title="Sign out" aria-label="Sign out">${ico('logout')}</button></div></header>
-    ${shelfHtml()}${ready ? `<section class="card"><div class="lh"><h2>${ico('users')} ${esc(info!.name)} · your tables</h2>${creating ? '' : ubtn(`${ico('plus')}<span>New</span>`, () => { creating = true; }, 'primary', false, 'Start a new game')}</div>${create}${mine || '<p class="hint">No tables yet: tap New to set one up.</p>'}</section>` : ''}
+    ${shelfHtml()}${ready ? `<section class="card"><div class="lh"><h2>${ico('users')} ${esc(info!.name)} · your games</h2>${creating ? '' : ubtn(`${ico('plus')}<span>New</span>`, () => { creating = true; }, 'primary', false, 'Start a new game')}</div>${create}${adoptHtml()}${soloMsg ? `<p class="hint"><b>${esc(soloMsg)}</b></p>` : ''}${mine}</section>` : ''}
     ${ready ? cpuCard(form.game) : ''}${learn}<section class="card joincard"><div class="row authform"><input id="join" class="grow" placeholder="Invite link or code" aria-label="Invite link or code">${ubtn(`${ico('next')}<span>Join</span>`, () => { joinByCode(($('#join') as HTMLInputElement).value); }, 'primary', false, 'Join a game with an invite')}</div></section>
     ${homeMsg ? `<p class="hint"><b>${esc(homeMsg)}</b></p>` : ''}${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}
   </div></div>`;
@@ -175,6 +198,7 @@ export function startHome(local: () => void) {
   const release = () => { if (!pressing) return; pressing = false; if (waiting) setTimeout(() => { if (waiting && !pressing) render(); }, 0); };
   document.addEventListener('pointerup', release, true); document.addEventListener('pointercancel', release, true); window.addEventListener('blur', release);
   let lobbyUid = '', left = false;
+  SOLO.migrateOld((game, sc) => `${gameInfo(game)?.name ?? game} · ${gameInfo(game)?.scenarios.find((x) => x.id === sc)?.name ?? ''}`, (game) => gameInfo(game)?.sides);
   render();
   void startOnline(() => {}, () => {
     if (left) return;
@@ -182,6 +206,7 @@ export function startHome(local: () => void) {
     if (online.mode === 'remote' && online.hasAccounts && lobbyUid !== online.uid) { lobbyUid = online.uid; lobby.watch((m) => { const was = new Set(matches.filter((x) => x.myMove).map((x) => x.id)), first = !watched; watched = true;      // 4.3: a game that just became this player's move
       if (!first) for (const x of m) if (x.myMove && !was.has(x.id)) void moveNotice(`Your move · ${x.title}`, `Turn ${x.turn ?? ''}${x.step && STEP_NAME[x.step] ? ` · ${STEP_NAME[x.step]}` : ''}`, `fab-${x.id}`);
       matches = m; render(); }); }
+    if (solo.on && soloWatching !== online.uid) { soloWatching = online.uid; soloAcct = []; solo.list((m) => { soloAcct = m; render(); }); }
     const next = (() => { try { return sessionStorage.getItem('fab-next'); } catch { return null; } })();
     if (next && online.account && !online.account.guest) { try { sessionStorage.removeItem('fab-next'); } catch { /* private mode */ } location.href = `${homeUrl()}?table=${next}`; return; }     // back to the invite that sent you to sign in
     render();

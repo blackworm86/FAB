@@ -3,6 +3,7 @@
  *  and writes only what changed. The seat decides who may act. In development (`?dev=1`) a seat switch lets one tab play both sides. */
 import { setRandom, SplitSeat, VOLUME, type Game, type Side, type Priv, type Reveals } from '../../engine/src';
 import { rtdbStore } from './store-rtdb';
+import type { SoloMeta } from './solo';
 
 export interface Seats { german?: string | null; allied?: string | null; germanName?: string | null; alliedName?: string | null }
 /** A game as listed in the lobby: who made it, which game and rules, who sits where. */
@@ -26,6 +27,9 @@ export interface Store {
   watchChat(next: (m: ChatMsg[]) => void): void; sendChat(side: Side, text: string): Promise<string>;
   /** 4.1 the replay journal: add a step part ('pub', or a seat's own blocks), and read it all once the game is over. */
   addJournal?(part: 'pub' | SeatKey, d: string): Promise<void>; readJournal?(): Promise<Record<string, Record<string, { at: number; d: string }>> | null>;
+  /** 4.4 games against the computer kept in the account: the list (live), one game, saving (refused as 'conflict' when the account moved on past `m.base`, unless forced), deleting. */
+  soloList?(next: (m: SoloMeta[]) => void): void; soloLoad?(id: string): Promise<{ meta: SoloMeta; json: string } | null>;
+  soloSave?(m: SoloMeta, json: string, force?: boolean): Promise<'ok' | 'conflict' | string>; soloDelete?(id: string): Promise<string>;
   /** Accounts and the lobby. */
   account(): Account; onAccount(f: (a: Account) => void): void;
   google(): Promise<string>; emailSignIn(email: string, password: string): Promise<string>; emailRegister(email: string, password: string, name: string): Promise<string>;
@@ -96,7 +100,10 @@ const savedLater = () => { writing = false; if (rebuildLater) { rebuildLater = f
 export async function startOnline(remote: (g: Game) => void, changed: () => void, say: (m: string) => void = () => {}, gone: () => void = () => {}) {
   onRemote = remote; onChange = changed; notify = say; onGone = gone;
   if (TUTORIAL) { online.ready = true; changed(); return; }
-  if (CPU) { online.mode = 'local'; online.ready = true; changed(); return; }                                   // 4.4: the table is this browser's; the computer needs no store
+  if (CPU) { online.mode = 'local'; online.ready = true; changed();                                             // 4.4: the table is this browser's at once; the account (if any) comes after, to keep the game there too
+    try { store = await Promise.race([rtdbStore(TABLE), new Promise<null>((ok) => setTimeout(() => ok(null), 15000))]); } catch { store = null; }
+    if (store) { const sync = (a: Account) => { online.account = a; online.uid = a.uid; online.admin = a.admin; onChange(); }; sync(store.account()); store.onAccount(sync); online.hasAccounts = true; }
+    return; }
   try {
     const fake = DEV ? params.get('fake') : null, make = async () => (fake === 'german' || fake === 'allied' ? (await import('./store-fake')).fakeStore(fake) : rtdbStore(TABLE));
     store = await Promise.race([make(), new Promise<never>((_, no) => setTimeout(() => no(new Error('Could not reach the game database. Check the database address and your connection.')), 15000))]);
@@ -159,6 +166,14 @@ export const auth = {
   google: () => run((s) => s.google()), signOut: () => run((s) => s.signOut()),
   signIn: (e: string, p: string) => run((s) => s.emailSignIn(e, p)), register: (e: string, p: string, n: string) => run((s) => s.emailRegister(e, p, n)),
   reset: (e: string) => run((s) => s.resetPassword(e)), token: async () => (store?.idToken ? store.idToken().catch(() => null) : null), freeSeat: (side: Side) => run((s) => s.freeSeat(seatKey(side))),
+};
+/** 4.4 games against the computer in the player's account (nothing when signed out or offline). */
+export const solo = {
+  get on() { return !!store?.soloSave && !!online.account && !online.account.guest; },
+  list: (next: (m: SoloMeta[]) => void) => { if (solo.on) store!.soloList!(next); },
+  load: (id: string) => (solo.on ? store!.soloLoad!(id).catch(() => null) : Promise.resolve(null)),
+  save: (m: SoloMeta, json: string, force = false) => (solo.on ? store!.soloSave!(m, json, force).catch((e) => String(e?.message ?? e)) : Promise.resolve('signed out')),
+  remove: (id: string) => (solo.on ? store!.soloDelete!(id) : Promise.resolve('')),
 };
 export const lobby = {
   create: async (m: Parameters<Store['createMatch']>[0], seat: SeatKey | null, json: string) => (store ? store.createMatch(m, seat, json) : '!Online play is not set up'),
