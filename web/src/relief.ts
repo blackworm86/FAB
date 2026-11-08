@@ -76,13 +76,31 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
   const ZS = (meta.exag ?? RELIEF) / ((meta.mpp ?? 80) * S);   // metres → cm
   const { cols: C, rows: R, step: ST } = meta, HB = new Uint16Array(hb), WB = new Uint8Array(wb);
   const K = (meta.metres / 65535) * ZS;                   // grid value → cm
-  const HF = Float32Array.from(HB, (v) => v * K);          // heights in cm; a cut map's edge band is smoothed below (edgeBand)
+  const HF = Float32Array.from(HB, (v) => v * K);          // heights in cm
   const grid = (gx: number, gy: number) => { gx = Math.min(Math.max(gx, 0), C - 1.001); gy = Math.min(Math.max(gy, 0), R - 1.001); const i = gx | 0, j = gy | 0, fx = gx - i, fy = gy - j, v = (a: number, b: number) => HF[b * C + a];
     return (v(i, j) * (1 - fx) + v(i + 1, j) * fx) * (1 - fy) + (v(i, j + 1) * (1 - fx) + v(i + 1, j + 1) * fx) * fy; };
   const hMap = (px: number, py: number) => grid(px / ST, py / ST) + BASE;
   const landPx = (() => { const c = document.createElement('canvas'); c.width = meta.w; c.height = meta.h; const x = c.getContext('2d')!; x.drawImage(snow, 0, 0); const d = x.getImageData(0, 0, meta.w, meta.h).data, out = new Uint8Array(meta.w * meta.h); for (let k = 0; k < out.length; k++) out[k] = d[k * 4 + 3] > 127 ? 1 : 0; return out; })();
   const cutCv = meta.cut ? (() => { const c = document.createElement('canvas'); c.width = meta.w; c.height = meta.h; const x = c.getContext('2d')!; x.fillStyle = '#000'; x.fillRect(0, 0, meta.w, meta.h); x.fillStyle = '#fff'; x.beginPath(); for (const r of meta.cut!) r.forEach(([a, b], i) => (i ? x.lineTo(a, b) : x.moveTo(a, b))); x.fill('evenodd'); return c; })() : null;
   const cutPx = cutCv ? (() => { const d = cutCv.getContext('2d')!.getImageData(0, 0, meta.w, meta.h).data, out = new Uint8Array(meta.w * meta.h); for (let k = 0; k < out.length; k++) out[k] = d[k * 4] > 127 ? 1 : 0; return out; })() : null;
+  /* Missing heights, filled from the real ground around them, ring by ring with the mean of the filled neighbours (a smooth continuation, not
+     a copy of the nearest sample, which made jumps of its own):
+     - a cut map: the data does not end on the outline (short of it the generator's floor value shows through just inside the cut), so a sample
+       counts only when everything within two steps of it is inside the cut;
+     - small patches at the data's floor value (under 1000 samples: holes and pits in the data, e.g. Golan's notches in the edge) are not ground;
+       large ones are (the sea, the Sea of Galilee, a flat box corner) and stay flat. */
+  { const ok = new Uint8Array(C * R).fill(1);
+    if (cutPx) { const at = (x: number, y: number) => cutPx[Math.min(meta.h - 1, Math.max(0, Math.round(y))) * meta.w + Math.min(meta.w - 1, Math.max(0, Math.round(x)))] === 1;
+      for (let j = 0; j < R; j++) for (let i = 0; i < C; i++) { const x = i * ST, y = j * ST; let all = at(x, y); for (let a = 0; a < 8 && all; a++) all = at(x + 2 * ST * Math.cos((a * Math.PI) / 4), y + 2 * ST * Math.sin((a * Math.PI) / 4)); ok[j * C + i] = all ? 1 : 0; } }
+    const nb = (k: number) => { const i = k % C, j = (k / C) | 0; return [[i - 1, j], [i + 1, j], [i, j - 1], [i, j + 1]].filter(([a, b]) => a >= 0 && b >= 0 && a < C && b < R).map(([a, b]) => b * C + a); };
+    let floor = 65535; for (let k = 0; k < C * R; k++) floor = Math.min(floor, HB[k]);
+    const seen = new Uint8Array(C * R);
+    for (let k0 = 0; k0 < C * R; k0++) { if (seen[k0] || !ok[k0] || HB[k0] !== floor) continue; const patch = [k0]; seen[k0] = 1;
+      for (let h0 = 0; h0 < patch.length; h0++) for (const n of nb(patch[h0])) if (!seen[n] && ok[n] && HB[n] === floor) { seen[n] = 1; patch.push(n); }
+      if (patch.length < 1000) for (const k of patch) ok[k] = 0; }
+    let front: number[] = []; for (let k = 0; k < C * R; k++) if (!ok[k] && nb(k).some((n) => ok[n])) front.push(k);
+    while (front.length) { const vals = front.map((k) => { let s = 0, n = 0; for (const m of nb(k)) if (ok[m]) { s += HF[m]; n++; } return s / n; });
+      front.forEach((k, x) => { HF[k] = vals[x]; ok[k] = 1; }); const nx = new Set<number>(); for (const k of front) for (const m of nb(k)) if (!ok[m]) nx.add(m); front = [...nx]; } }
   const blur = (src: Float32Array, r: number) => { const t = new Float32Array(C * R), o = new Float32Array(C * R);
     for (let j = 0; j < R; j++) { let s = 0, n = 0; for (let i = -r; i < C + r; i++) { if (i + r < C) { s += src[j * C + Math.min(C - 1, i + r)]; n++; } if (i - r - 1 >= 0) { s -= src[j * C + (i - r - 1)]; n--; } if (i >= 0 && i < C) t[j * C + i] = s / Math.max(1, n); } }
     for (let i = 0; i < C; i++) { let s = 0, n = 0; for (let j = -r; j < R + r; j++) { if (j + r < R) { s += t[Math.min(R - 1, j + r) * C + i]; n++; } if (j - r - 1 >= 0) { s -= t[(j - r - 1) * C + i]; n--; } if (j >= 0 && j < R) o[j * C + i] = s / Math.max(1, n); } }
@@ -96,46 +114,81 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
     for (let it = 0; it < 8; it++) for (let j = 0; j < R; j++) for (let i = 0; i < C; i++) { const k = j * C + i; let lo = Infinity;
       if (i > 0) lo = Math.min(lo, HF[k - 1]); if (i < C - 1) lo = Math.min(lo, HF[k + 1]); if (j > 0) lo = Math.min(lo, HF[k - C]); if (j < R - 1) lo = Math.min(lo, HF[k + C]);
       if (HF[k] > lo + maxD) HF[k] = (HF[k] + lo + maxD) / 2; } }
-  /* A cut map's edge: within a band of the outline the ground eases into a smoothed copy of itself, so the side wall and the ground meet
-     along one clean line (the raw relief along a cliff, e.g. the Golan scarp over the Kinneret, made a saw-tooth rim). */
-  if (cutPx) {
-    const inside = new Uint8Array(C * R); for (let j = 0; j < R; j++) for (let i = 0; i < C; i++) { const px = Math.min(meta.w - 1, i * ST), py = Math.min(meta.h - 1, j * ST); inside[j * C + i] = cutPx[py * meta.w + px]; }
-    const BAND = 7, dist = new Uint8Array(C * R).fill(255), q: number[] = [];
-    for (let k = 0; k < C * R; k++) if (!inside[k]) { dist[k] = 0; q.push(k); }
-    for (let h0 = 0; h0 < q.length; h0++) { const k = q[h0], d = dist[k]; if (d >= BAND) continue; const i = k % C, j = (k / C) | 0; for (const [a, b] of [[i - 1, j], [i + 1, j], [i, j - 1], [i, j + 1]]) { if (a < 0 || b < 0 || a >= C || b >= R) continue; const n = b * C + a; if (dist[n] > d + 1) { dist[n] = d + 1; q.push(n); } } }
-    const smooth = blur(blur(HF, 4), 4);
-    for (let k = 0; k < C * R; k++) { const d = dist[k]; if (d >= BAND) continue; const t = d / BAND, e = t * t * (3 - 2 * t); HF[k] = smooth[k] + (HF[k] - smooth[k]) * e; }
-  }
   const inMap = (px: number, py: number) => px >= 0 && py >= 0 && px < meta.w && py < meta.h && (cutPx ? cutPx[(py | 0) * meta.w + (px | 0)] === 1 : landPx[(py | 0) * meta.w + (px | 0)] === 1);
   const onLand = inMap;
   const wx = (px: number) => px / S - MW / (2 * S), wz = (py: number) => py / S - MH / (2 * S);
   const toMap = (x: number, z: number) => [(x + MW / (2 * S)) * S, (z + MH / (2 * S)) * S] as const;
   const h = (x: number, z: number) => { const [px, py] = toMap(x, z); return onLand(px, py) ? hMap(px, py) : cutPx ? BASE : 0; };   // outside a cut map: the sheet's margin
 
-  // the ground: one vertex per grid cell (4 map px)
-  const G = lite ? 2 : 1, geometry = new THREE.PlaneGeometry(MW / S, MH / S, Math.ceil((C - 1) / G), Math.ceil((R - 1) / G)), pos = geometry.getAttribute('position') as THREE.BufferAttribute;
-  for (let k = 0; k < pos.count; k++) { const [px, py] = toMap(pos.getX(k), -pos.getY(k)); pos.setZ(k, hMap(px, py)); }     // off the land the shader cuts the ground away
+  /* The diorama: one closed ground mesh that ends exactly on the map's outline (the cut, or the sheet's edge), and vertical walls standing on the very
+     same edge points, so ground and sides meet along one line, as if cut by a blade: no gap, no step, nothing hidden by a shader. Inside, a regular grid
+     (one vertex per height sample); along the outline, a strip from the grid's own edge to the outline points, triangulated (earcut). */
+  const s = ST * (lite ? 2 : 1), NX = Math.floor(meta.w / s), NY = Math.floor(meta.h / s), N1 = NX + 1;
+  const rings = (meta.cut ?? meta.outline).map((r) => { const o: [number, number][] = [];     // each ring resampled every half grid step: the wall and strip points
+    for (let k = 0; k + 1 < r.length; k++) { const [p, q] = [r[k], r[k + 1]], n = Math.max(1, Math.ceil(Math.hypot(q[0] - p[0], q[1] - p[1]) / (s / 2))); for (let i = 0; i < n; i++) o.push([p[0] + ((q[0] - p[0]) * i) / n, p[1] + ((q[1] - p[1]) * i) / n]); }
+    return o; });
+  const nodeIn = new Uint8Array(N1 * (NY + 1));                       // grid nodes inside the outline (even-odd, row by row)
+  for (let j = 0; j <= NY; j++) { const y = j * s, xs: number[] = [];
+    for (const r of rings) for (let k = 0; k < r.length; k++) { const [a, b] = [r[k], r[(k + 1) % r.length]]; if ((a[1] <= y) !== (b[1] <= y)) xs.push(a[0] + ((y - a[1]) * (b[0] - a[0])) / (b[1] - a[1])); }
+    xs.sort((u, v) => u - v); for (let k = 0; k + 1 < xs.length; k += 2) for (let i = Math.max(0, Math.ceil(xs[k] / s)); i <= Math.min(NX, Math.floor(xs[k + 1] / s)); i++) nodeIn[j * N1 + i] = 1; }
+  const keep = new Uint8Array(NX * NY), cell = (i: number, j: number) => i >= 0 && j >= 0 && i < NX && j < NY && keep[j * NX + i] === 1;
+  for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) keep[j * NX + i] = nodeIn[j * N1 + i] & nodeIn[j * N1 + i + 1] & nodeIn[(j + 1) * N1 + i] & nodeIn[(j + 1) * N1 + i + 1];
+  for (const r of rings) for (let k = 0; k < r.length; k++) { const [a, b] = [r[k], r[(k + 1) % r.length]], n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / (s / 4)) + 1;    // the grid stays a cell clear of the outline
+    for (let m = 0; m <= n; m++) { const ci = Math.floor((a[0] + ((b[0] - a[0]) * m) / n) / s), cj = Math.floor((a[1] + ((b[1] - a[1]) * m) / n) / s);
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const i = ci + di, j = cj + dj; if (i >= 0 && j >= 0 && i < NX && j < NY) keep[j * NX + i] = 0; } } }
+  { const seen = new Uint8Array(NX * NY), q: number[] = [];          // a pocket of dropped cells shut in by kept ones is ground: keep it (the strip has no holes in holes)
+    for (let i = 0; i < NX; i++) for (const j of [0, NY - 1]) if (!keep[j * NX + i]) q.push(j * NX + i);
+    for (let j = 0; j < NY; j++) for (const i of [0, NX - 1]) if (!keep[j * NX + i]) q.push(j * NX + i);
+    for (const k of q) seen[k] = 1;
+    for (let h0 = 0; h0 < q.length; h0++) { const k = q[h0], i = k % NX, j = (k / NX) | 0; for (const [a, b] of [[i - 1, j], [i + 1, j], [i, j - 1], [i, j + 1]]) { if (a < 0 || b < 0 || a >= NX || b >= NY) continue; const n = b * NX + a; if (!seen[n] && !keep[n]) { seen[n] = 1; q.push(n); } } }
+    for (let k = 0; k < NX * NY; k++) if (!keep[k] && !seen[k]) keep[k] = 1; }
+  for (let changed = true; changed; ) { changed = false;                // two kept cells touching only at a corner: drop one, so every edge loop is simple
+    for (let j = 1; j < NY; j++) for (let i = 1; i < NX; i++) { const tl = cell(i - 1, j - 1), tr = cell(i, j - 1), bl = cell(i - 1, j), br = cell(i, j);
+      if ((tl && br && !tr && !bl) || (tr && bl && !tl && !br)) { keep[j * NX + i] = 0; if (tr && bl) keep[(j - 1) * NX + i] = 0; changed = true; } } }
+  const GP: number[] = [], UV: number[] = [], I: number[] = [], vid = new Int32Array(N1 * (NY + 1)).fill(-1);
+  const vert = (px: number, py: number) => { GP.push(wx(px), -wz(py), hMap(px, py)); UV.push(px / MW, 1 - py / MH); return GP.length / 3 - 1; };
+  const node = (i: number, j: number) => { const k = j * N1 + i; if (vid[k] < 0) vid[k] = vert(i * s, j * s); return vid[k]; };
+  const tri = (a: number, b: number, c: number) => {                  // every face up (+z before the mesh is laid flat)
+    const cr = (GP[b * 3] - GP[a * 3]) * (GP[c * 3 + 1] - GP[a * 3 + 1]) - (GP[b * 3 + 1] - GP[a * 3 + 1]) * (GP[c * 3] - GP[a * 3]); if (cr < 0) I.push(a, c, b); else I.push(a, b, c); };     // a flat sliver on a straight edge keeps its place in the mesh
+  for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) if (keep[j * NX + i]) { const a = node(i, j), b = node(i + 1, j), c = node(i + 1, j + 1), d = node(i, j + 1); tri(a, b, c); tri(a, c, d); }
+  const next = new Map<number, number>();                              // the grid's edge, as loops of node keys (each edge with the kept cell on one side)
+  for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) if (keep[j * NX + i]) { const k = (a: number, b: number) => b * N1 + a;
+    if (!cell(i, j - 1)) next.set(k(i, j), k(i + 1, j)); if (!cell(i + 1, j)) next.set(k(i + 1, j), k(i + 1, j + 1));
+    if (!cell(i, j + 1)) next.set(k(i + 1, j + 1), k(i, j + 1)); if (!cell(i - 1, j)) next.set(k(i, j + 1), k(i, j)); }
+  const loops: number[][] = [];
+  for (const start of next.keys()) { if (!next.has(start)) continue; const L: number[] = []; let k = start; while (next.has(k)) { L.push(k); const n = next.get(k)!; next.delete(k); k = n; } loops.push(L); }
+  const inRing = (r: [number, number][], x: number, y: number) => { let o = false; for (let k = 0; k < r.length; k++) { const [a, b] = [r[k], r[(k + 1) % r.length]]; if ((a[1] <= y) !== (b[1] <= y) && x < a[0] + ((y - a[1]) * (b[0] - a[0])) / (b[1] - a[1])) o = !o; } return o; };
+  const ringIds = rings.map((r) => r.map(([x, y]) => vert(x, y)));
+  rings.forEach((r, ri) => {
+    const holes = loops.filter((L) => inRing(r, (L[0] % N1) * s, ((L[0] / N1) | 0) * s));
+    const ids = [...ringIds[ri], ...holes.flat().map((k) => node(k % N1, (k / N1) | 0))];
+    const nudge = (x: number, y: number, k: number) => new THREE.Vector2(x + Math.sin(k * 12.9898) * 0.01, y + Math.sin(k * 78.233) * 0.01);   // earcut drops points that lie exactly in line when it gets stuck (Sicily's straight sheet edge): a hundredth of a pixel apart, every point stays
+    const faces = THREE.ShapeUtils.triangulateShape(r.map(([x, y], k) => nudge(x, y, k)), holes.map((L) => L.map((k) => nudge((k % N1) * s, ((k / N1) | 0) * s, k + 0.5))));
+    for (const [a, b, c] of faces) tri(ids[a], ids[b], ids[c]);
+  });
+  const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.Float32BufferAttribute(GP, 3)); geometry.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2)); geometry.setIndex(I);
   geometry.computeVertexNormals(); geometry.computeBoundingSphere();
+  if (import.meta.env.DEV) {                                           // self-check: an edge with one face only must lie on the outline (where the wall stands), else the ground has a hole
+    const onRing = new Set(ringIds.flat()), once = new Map<string, number>();
+    for (let k = 0; k < I.length; k += 3) for (const [a, b] of [[I[k], I[k + 1]], [I[k + 1], I[k + 2]], [I[k + 2], I[k]]]) { const e = a < b ? `${a},${b}` : `${b},${a}`; once.set(e, (once.get(e) ?? 0) + 1); }
+    const holes = [...once].filter(([e, n]) => n === 1 && !e.split(',').every((v) => onRing.has(+v))).length, wrong = [...once.values()].filter((n) => n > 2).length;
+    if (holes || wrong) console.error(`3D map: ${holes} open edges inside the outline, ${wrong} edges with more than two faces`); else console.info(`3D map: closed ground, ${I.length / 3} faces`);
+  }
   const wp: number[] = [];
-  // the cut sides follow the ground's own profile every two pixels (a straight top from corner to corner left gaps wherever the ground rose between them)
-  const wall = (ring: [number, number][], top: (x: number, y: number) => number) => { for (let k = 0; k + 1 < ring.length; k++) {
-    const [p, q] = [ring[k], ring[k + 1]], n = Math.max(1, Math.ceil(Math.hypot(q[0] - p[0], q[1] - p[1]) / 2));
-    for (let i = 0; i < n; i++) {
-      const a = [p[0] + ((q[0] - p[0]) * i) / n, p[1] + ((q[1] - p[1]) * i) / n], b = [p[0] + ((q[0] - p[0]) * (i + 1)) / n, p[1] + ((q[1] - p[1]) * (i + 1)) / n];
-      const ha = top(a[0], a[1]) + 0.004, hb2 = top(b[0], b[1]) + 0.004, A = [wx(a[0]), wz(a[1])], B = [wx(b[0]), wz(b[1])];
-      wp.push(A[0], 0, A[1], B[0], 0, B[1], B[0], hb2, B[1], A[0], 0, A[1], B[0], hb2, B[1], A[0], ha, A[1]);
-    }
-  } };
+  const wall = (r: [number, number][], top: (x: number, y: number) => number) => { for (let k = 0; k < r.length; k++) {    // straight down from each pair of edge points
+    const [a, b] = [r[k], r[(k + 1) % r.length]], ha = top(a[0], a[1]), hb2 = top(b[0], b[1]), A = [wx(a[0]), wz(a[1])], B = [wx(b[0]), wz(b[1])];
+    wp.push(A[0], 0, A[1], B[0], 0, B[1], B[0], hb2, B[1], A[0], 0, A[1], B[0], hb2, B[1], A[0], ha, A[1]); } };
   // a cut map keeps only a small margin of the sheet round the map and the boxes that hover beside it (the rest of the printed sheet is not the board)
   const pad = 26, xsAll = [...(meta.cut ?? []).flat().map((q) => q[0]), ...floats.flatMap((f) => [f.x, f.x + f.w])], ysAll = [...(meta.cut ?? []).flat().map((q) => q[1]), ...floats.flatMap((f) => [f.y, f.y + f.h])];
   const mb = cutPx ? [Math.max(0, Math.min(...xsAll) - pad), Math.max(0, Math.min(...ysAll) - pad), Math.min(meta.w, Math.max(...xsAll) + pad), Math.min(meta.h, Math.max(...ysAll) + pad)] : [0, 0, meta.w, meta.h];
   const sheetRing: [number, number][] = [[mb[0], mb[1]], [mb[2], mb[1]], [mb[2], mb[3]], [mb[0], mb[3]], [mb[0], mb[1]]];
-  for (const ring of cutPx ? [sheetRing] : meta.outline) wall(ring, cutPx ? () => BASE : hMap);      // the sheet's edge: up to the margin when the map is cut, else up to the ground
-  for (const ring of meta.cut ?? []) wall(ring, hMap);                                  // the map's own edge, cut straight down from the ground to the margin
-  const margin = cutPx ? (() => { const [x0, y0, x1, y1] = mb, m = new THREE.PlaneGeometry((x1 - x0) / S, (y1 - y0) / S, 1, 1), q = m.getAttribute('position') as THREE.BufferAttribute, uv = m.getAttribute('uv') as THREE.BufferAttribute;
-    for (let k = 0; k < q.count; k++) { const u = uv.getX(k), v = uv.getY(k), px = x0 + u * (x1 - x0), py = y0 + (1 - v) * (y1 - y0); q.setXYZ(k, wx(px), -wz(py), BASE); uv.setXY(k, px / meta.w, 1 - py / meta.h); }
-    m.computeVertexNormals(); return m; })() : null;
-  const cutTex = cutCv ? (() => { const t = new THREE.CanvasTexture(cutCv); t.magFilter = t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; return t; })() : null;   // a crisp cut, the same line as the walls at every distance
+  if (cutPx) wall(sheetRing.slice(0, -1), () => BASE);                                   // a cut map: the sheet's edge, up to the margin
+  for (const r of rings) wall(r, hMap);                                                  // the map's own edge, from the base up to the ground's edge points
+  const margin = cutPx ? (() => { const out = sheetRing.slice(0, -1), pts = [...out, ...rings.flat()], q: number[] = [], uv: number[] = [], ix: number[] = [];   // the sheet with the map cut out, on the same edge points
+    for (const [px, py] of pts) { q.push(wx(px), -wz(py), BASE); uv.push(px / MW, 1 - py / MH); }
+    for (const [a, b, c] of THREE.ShapeUtils.triangulateShape(out.map(([x, y]) => new THREE.Vector2(x, y)), rings.map((r) => r.map(([x, y]) => new THREE.Vector2(x, y))))) {
+      const cr = (pts[b][0] - pts[a][0]) * (pts[a][1] - pts[c][1]) - (pts[a][1] - pts[b][1]) * (pts[c][0] - pts[a][0]); ix.push(...(cr > 0 ? [a, b, c] : [a, c, b])); }
+    const m = new THREE.BufferGeometry(); m.setAttribute('position', new THREE.Float32BufferAttribute(q, 3)); m.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); m.setIndex(ix); m.computeVertexNormals(); return m; })() : null;
   const walls = new THREE.BufferGeometry(); walls.setAttribute('position', new THREE.Float32BufferAttribute(wp, 3)); walls.computeVertexNormals();
 
   // printed lines without towns, cities and borders; borders redrawn black on a white edge
@@ -183,10 +236,9 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
     const t = new THREE.CanvasTexture(c); t.flipY = true; return t; })();
   const patch = (mat: THREE.MeshStandardMaterial, areaId: THREE.Texture, tints: THREE.Texture) => {
     mat.onBeforeCompile = (sh) => {
-      sh.uniforms.uMetre = { value: 1 / ZS }; sh.uniforms.tId = { value: areaId }; sh.uniforms.tTint = { value: tints }; sh.uniforms.tLab = { value: labMask }; sh.uniforms.tCut = { value: cutTex ?? labMask }; sh.uniforms.uCut = { value: cutTex ? 1 : 0 };
+      sh.uniforms.uMetre = { value: 1 / ZS }; sh.uniforms.tId = { value: areaId }; sh.uniforms.tTint = { value: tints }; sh.uniforms.tLab = { value: labMask };
       sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying float vMet; uniform float uMetre;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvMet = transformed.z * uMetre;');
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vMet; uniform sampler2D tId, tTint, tLab, tCut; uniform float uCut;').replace('#include <map_fragment>', `#include <map_fragment>
-        if (uCut > .5 && texture2D(tCut, vMapUv).r < .5) discard;      /* a cut map: the ground ends at the map's own outline, the margin is a flat sheet below */
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vMet; uniform sampler2D tId, tTint, tLab;').replace('#include <map_fragment>', `#include <map_fragment>
         { /* contours: fine 25 m lines that fade where they crowd, a stronger line every 100 m; slate blue on snow, green in the woods */
           float wood = clamp((0.8 - diffuseColor.r) / 0.45, 0., 1.); vec3 lc = mix(vec3(.13,.21,.36), vec3(.03,.13,.05), wood);
           float c1 = vMet / ${(meta.contour?.[0] ?? 25).toFixed(1)}, f1 = fwidth(c1), m1 = (1. - clamp(abs(fract(c1 + .5) - .5) / max(f1, 1e-4), 0., 1.)) * smoothstep(2.5, 7., 1. / max(f1, 1e-4));

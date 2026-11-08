@@ -155,11 +155,11 @@ city = ''.join(f'<path d="{c["d"]}" fill="url(#hatch)" stroke="#6d6d6d" stroke-w
 lines = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">',
          '<defs><pattern id="hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="4" fill="#c4c2bd"/><path d="M0 0V4" stroke="#7d7b77" stroke-width="1.3"/></pattern></defs>',
          g('coast', 'stroke="#2a86c2" stroke-width="3.2"', paths(coast)),                                   # the print's order: the coast, rivers, roads, the tufts, borders, army boundaries, cities, arrows, symbols
-         g('rivers', '', f'<g stroke="#2f7fb5" stroke-width="6.4">{paths(A["river"])}</g><g stroke="#6cc4ec" stroke-width="3.6">{paths(A["river"])}</g>'),
-         g('roads', '', f'<g stroke="#8e8e8e" stroke-width="5">{paths(A["roads"])}</g><g stroke="#d6d5d2" stroke-width="2.6">{paths(A["roads"])}</g>'),
          g('restricted', 'stroke="#4b3b2a" stroke-width=".8"', small_paths(''.join(tufts(d) for d in A['restricted']))),
          g('boundaries', 'stroke="#626262" stroke-width="5.2"', paths(A['open'] + A['restricted'])),
          g('army-boundaries', '', f'<g stroke="#5a5a5a" stroke-width="7">{paths(A["army_boundary"])}</g><g stroke="#ffffff" stroke-width="2" stroke-linecap="butt" stroke-dasharray="6 5">{paths(A["army_boundary"])}</g>'),
+         g('rivers', '', f'<g stroke="#2f7fb5" stroke-width="6.4">{paths(A["river"])}</g><g stroke="#6cc4ec" stroke-width="3.6">{paths(A["river"])}</g>'),
+         g('roads', '', f'<g stroke="#8e8e8e" stroke-width="5">{paths(A["roads"])}</g><g stroke="#d6d5d2" stroke-width="2.6">{paths(A["roads"])}</g>'),
          f'<g id="cities">{city}</g>',
          f'<g id="zone-names">{zone_captions()}</g>',
          f'<g id="arrows">{arrows_svg}</g>',
