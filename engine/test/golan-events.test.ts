@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { endPhase, moveOptions, mustFight, inSupply, contested, edgeKey, areas, neighbors, startBattle, beginCombat, roll_step as rollStep, defenderRetreatSA, chooseRetreat, retreatOptions,
   assign, canAssign, fireList, roadblock, rally, qualityReplacement, staffReplacement, setReserve, golan, type Game } from '../src';
+import * as AI from '../src/ai';
 import { fight, playOut, newGolanGame, unit, chit, onMap, count, move, give, fresh } from './golan-helpers';
 
 const ASSEMBLY = golan.ASSEMBLY;
@@ -132,6 +133,14 @@ describe('combat events and Special Actions in battle', () => {
     golan.answerJamming(g, b, 'IC36');
     const r = b.rolls.at(-1)!; expect(sp.disorder === 1).toBe(r.dice[0] <= 5);
     if (sp.disorder === 1) expect(canAssign(g, b, 'israeli', chit(g, 'IC01'))).toMatch(/jammed/);
+  });
+  it('17.33 jamming must be answered before combat; the computer defender answers it with its own EW', () => {
+    const g = newGolanGame(13); give(g, 'SC16'); give(g, 'IC36');
+    const b = startBattle(g, 50); golan.playJamming(g, b, 'SC16');
+    expect(() => beginCombat(g, b)).toThrow(/jamming/);
+    const a = AI.next(g, 'israeli', 'hard')!; expect(a.op).toEqual(['answerJamming', 'IC36']);
+    AI.apply(g, a.op); expect(golan.battleState(b).ew?.pending).toBe(false); expect(chit(g, 'IC36').box).toBe('eliminated');
+    beginCombat(g, b); expect(b.stage).not.toBe('setup');
   });
   it('17.34 counterbattery (Example 12): on 1–5 the enemy artillery goes that many turns down the track, then straight to the Available Box', () => {
     let hit = false;

@@ -498,7 +498,7 @@ function canAssign(g: Game, b: Battle, side: Side, c: Chit, mode?: 'arty' | 'sup
 const samAvailable = (g: Game) => g.chits.some((c) => c.kind === 'sam' && c.box === 'available');
 /** 16.12: an Israeli air asset placed east of the SAM barrier may be answered at once by an available SAM. */
 function onAssign(g: Game, b: Battle, c: Chit) { if (c.kind === 'air_mission' && c.side === 'israeli' && eastOfSam(b.area) && samAvailable(g)) state(g).samTarget = c.id; }
-function beforeBegin(g: Game) { if (state(g).samTarget) throw new Error('the SAM answer to the air mission is pending (16.12)'); }
+function beforeBegin(g: Game, b: Battle) { if (state(g).samTarget) throw new Error('the SAM answer to the air mission is pending (16.12)'); if (battleState(b).ew?.pending) throw new Error('the Defender must answer the jamming first (17.33)'); }
 /** The air mission taken back (or its battle withdrawn): no SAM answer is pending any more. */
 function onUnassign(g: Game, b: Battle, c: Chit) { const V = state(g), B = battleState(b); if (V.samTarget === c.id) V.samTarget = undefined; if (B.dcs) B.dcs = B.dcs.filter((x) => x !== c.id); }
 function onBattle(g: Game, b: Battle, when: 'begin' | 'end') {
