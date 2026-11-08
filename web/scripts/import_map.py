@@ -185,5 +185,6 @@ lines = f'''{head}
 <g id="outline" fill="none" stroke="#fbfbf6" stroke-width="4.6" stroke-linejoin="round">{outline}</g>
 <g id="national-borders" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">{national}</g>
 </svg>'''
-open('web/public/map-base.svg', 'w').write(base); open('web/public/map-lines.svg', 'w').write(lines); print('svg', (len(base) + len(lines)) // 1024, 'KB')
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../tools')); from hatch import convert as hatch_free   # no <pattern> in a board file: see tools/hatch.py
+open('web/public/map-base.svg', 'w').write(base); open('web/public/map-lines.svg', 'w').write(hatch_free(lines)); print('svg', (len(base) + len(lines)) // 1024, 'KB')
 out['entries'] = entry_marks; json.dump(out, open('data/bulge/map.json', 'w'), separators=(',', ':'))
