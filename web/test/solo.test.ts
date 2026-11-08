@@ -43,3 +43,20 @@ describe('games against the computer: the account copy', () => {
     expect(S.accountMeta(meta, undefined)).toBe(meta);                                             // saved before positions carried their revision
   });
 });
+
+describe('games against the computer: device or account copy', () => {
+  it('takes, pushes or asks', () => {
+    const rows: [Parameters<typeof S.syncChoice>[0], number | null, boolean, string][] = [
+      [null, null, true, 'gone'],                      // opened from the account list, deleted there meanwhile
+      [{ rev: 3, base: 3 }, null, false, 'push'],      // not in the account yet
+      [null, 5, false, 'take'],                        // only in the account
+      [{ rev: 3, base: 3 }, 5, true, 'take'],          // opened from the account list
+      [{ rev: 3, base: 3 }, 5, false, 'take'],         // moved on elsewhere only
+      [{ rev: 4, base: 3 }, 3, false, 'push'],         // moved on here only
+      [{ rev: 3, base: 3 }, 3, false, 'push'],         // in step
+      [{ rev: 4, base: 3 }, 5, false, 'ask'],          // moved on both
+      [{ rev: 2 }, 5, false, 'ask'],                   // played signed out, an account copy exists
+    ];
+    for (const [local, acct, wait, want] of rows) expect(S.syncChoice(local, acct, wait), JSON.stringify([local, acct, wait])).toBe(want);
+  });
+});

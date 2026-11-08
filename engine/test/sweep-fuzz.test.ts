@@ -9,7 +9,7 @@ import * as E from '../src';
 import type { Game, Side, Unit, Battle } from '../src';
 
 const G = E.golan, S = E.sicily;
-/** Hunting switches (FUZZ_SEEDS, FUZZ_BASE, FUZZ_PRINT, FUZZ_ALL, FUZZ_FULL, FUZZ_DEBUG, FUZZ_DET) read without Node typings. */
+/** Hunting switches (FUZZ_SEEDS, FUZZ_BASE, FUZZ_PRINT, FUZZ_FULL, FUZZ_DEBUG, FUZZ_DET) read without Node typings. */
 const ENV: Record<string, string | undefined> = ((globalThis as unknown as { process?: { env: Record<string, string | undefined> } }).process?.env) ?? {};
 
 /* ================= seeded policy RNG ================= */
@@ -354,20 +354,7 @@ const MIXES: Record<string, { scen: string[]; opts: Record<string, unknown>[] }>
   golan73: { scen: ['badr', 'badr_alt', 'nafakh', 'alowda'], opts: [{}, { atAssets: true, t62: true, chemical: true, flank: true, artyArmor: true, zvikaCup: true, raidMod: true, battleRecovery: true, advGhosts: true }, { advGhosts: true, artyArmor: true }] },
   sicily: { scen: ['sunrise_bridge', 'tournament', 'campaign', 'campaign_hist'], opts: [{}, { airborne: true, advArty: true, overrun: true, fwMaintain: true }] },
 };
-/** Problems already pinned down by a focused test below ("fuzz finding: ..."); the sweep reports everything else. FUZZ_ALL=1 reports these too. */
-const KNOWN: RegExp[] = [
-  /auditChange flags honest endPhase by \w+: The game went back from turn 1 deploy/,          // auditChange after the set-up
-  /defenderChoice true threw: Cannot read properties of undefined \(reading 'sector'\)/,     // Golan retreat past a full neighbour
-  /held only by \w+ blocks .* after (rollSupply|endPhase)/,                                  // area control after out-of-supply eliminations
-  /supply flag of .*: false, recomputed true/,                                               // Sicily air supply
-  /\(defended roadblock\) in area \d+ outside the area of play/,                              // Bulge roadblocks outside the area of play
-  /shows motorized=true in the shared copy/,                                                 // split.ts: Livorno
-  /startBattle \d+ threw: no attacker in good order/,                                        // Sicily flanking invasion
-  /auditChange flags honest zvikaToCup/,                                                     // Golan Lt. Zvika variant
-  /autoStrongpoints threw: no unit/,                                                         // Golan Nafakh quick placement
-];
 const HUNT = +(ENV.FUZZ_SEEDS ?? 0);
-const isKnown = (p: string) => !ENV.FUZZ_ALL && KNOWN.some((k) => k.test(p));
 const sweepGames = (m: { opts: Record<string, unknown>[] }) => (HUNT ? m.opts.flatMap((o, i) => Array.from({ length: HUNT }, (_, s) => ({ opts: o, seed: 1000 * i + s + 1 + +(ENV.FUZZ_BASE ?? 0) })))
   : [{ opts: m.opts[0], seed: 1 }, { opts: m.opts[m.opts.length - 1], seed: 2 }]);
 
@@ -375,7 +362,7 @@ describe('sweep fuzz: random legal play keeps every invariant', () => {
   for (const [game, m] of Object.entries(MIXES)) for (const scen of m.scen) {
     it(`${game} ${scen}`, () => {
       const all: string[] = [];
-      for (const { opts, seed } of sweepGames(m)) all.push(...play({ game: game as Cfg['game'], scenario: scen, opts, seed, light: !ENV.FUZZ_FULL }).problems.filter((p) => !isKnown(p)));
+      for (const { opts, seed } of sweepGames(m)) all.push(...play({ game: game as Cfg['game'], scenario: scen, opts, seed, light: !ENV.FUZZ_FULL }).problems);
       if (ENV.FUZZ_PRINT) console.log(all.join('\n'));
       expect(all).toEqual([]);
     }, 600_000);

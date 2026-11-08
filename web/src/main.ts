@@ -772,10 +772,10 @@ async function soloOnNet() {
   soloChecked = online.uid; soloHold = false; render();
   if (soloMeta?.owner && soloMeta.owner !== online.uid) return;                                      // another account's game on this device: left alone
   const x = await soloAcct.load(SOLO_ID!);
-  if (!x) { if (soloWait) { soloWait = false; say('This game is not in your account.'); location.href = homeUrl(); return; } void soloPush(); return; }
-  const base = soloMeta?.base, dirty = !!soloMeta && soloMeta.rev !== base;
-  if (soloWait || (x.meta.rev !== base && !dirty) || (base == null && !soloMeta)) return soloTake(x);
-  if (x.meta.rev === base) return void soloPush();
+  const c = SOLO.syncChoice(soloMeta, x?.meta.rev ?? null, soloWait);
+  if (c === 'gone') { soloWait = false; say('This game is not in your account.'); location.href = homeUrl(); return; }
+  if (c === 'take') return soloTake(x!);
+  if (c === 'push') return void soloPush();
   soloClash = x; render();                                                                            // moved on both here and elsewhere
 }
 function soloBar() {

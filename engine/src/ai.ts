@@ -24,10 +24,8 @@ type Est = { str: number; q: Quality; cls: 'armor' | 'infantry' };
 const QW: Record<Quality, number> = { green: 0.8, veteran: 1, elite: 1.25 };
 /** How many times a hard player fights a battle out before deciding (more: steadier, slower). */
 export const SIMS = { attack: 48, choice: 24 };
-/** Tuning switches for the arena: how the hard player picks its moves ('deep': by the position each leaves; 'veto': the plain player's order, attacks the fought-out outcome speaks against dropped), and whether it plans its attacks first. */
-export const TUNE = { moves: 'deep' as 'deep' | 'veto' | 'hybrid', plan: true, vetoAt: -1.5, planAt: 0.3, sd: true, asym: 0.4, vpBase: 6, tw1: 0.5, tw2: 1.5, ownCut: null as number | null };
-/** Tuning: when set, the hard player's judgements of moves are written here. */
-export let TRACE: string[] | null = null; export const setTrace = (t: string[] | null) => { TRACE = t; };
+/** Tuning numbers the arena changes (ARENA_TUNE), and whether the hard player plans its attacks first. */
+export const TUNE = { plan: true, planAt: 0.3, sd: true, asym: 0.4, vpBase: 6, tw1: 0.5, tw2: 1.5, ownCut: null as number | null };
 
 /* ================= actions as data ================= */
 type OpFn = (g: Game, ...args: never[]) => unknown;
@@ -417,7 +415,7 @@ function movement(g: Game, side: Side, level: Level): Action | null {
   if (level === 'hard' && cands.length) {                                                               // the best few, judged on copies: an attack by its fought-out outcome, any move dropped if the position after it reads clearly worse
     const base = evaluate(g, side), live = cands.filter((c) => c.s > -0.6);
     const attacks = live.filter((c) => c.attack && g.phase !== 'reaction').slice(0, 7), moves = live.filter((c) => !c.attack || g.phase === 'reaction').slice(0, 7);
-    const deep = best([...attacks, ...moves], (c) => { const d = c.attack || TUNE.moves === 'deep' ? deepMove(g, side, c.u, c.o, c.attack, canReach, base) : 0; const r = TUNE.moves === 'deep' ? (c.attack && g.phase !== 'reaction' ? d * 0.6 + 0.1 : d < -1.2 ? -1 : Math.max(c.s, d * 0.6 + 0.1)) : c.attack && d < TUNE.vetoAt ? -1 : c.s; if (TRACE) TRACE.push(`${c.u.name} ${c.u.area}->${c.o.area}${c.attack ? ' ATT' : ''} s=${c.s.toFixed(2)} d=${d.toFixed(2)} => ${r.toFixed(2)}`); return r; });
+    const deep = best([...attacks, ...moves], (c) => { const d = deepMove(g, side, c.u, c.o, c.attack, canReach, base); return c.attack && g.phase !== 'reaction' ? d * 0.6 + 0.1 : d < -1.2 ? -1 : Math.max(c.s, d * 0.6 + 0.1); });
     if (deep && deep.s > 0.2) chosen = deep.x;
   } else if (cands.length && cands[0].s > 0.2) chosen = cands[0];
   if (chosen) return act('move', ['move', chosen.u.id, chosen.o.area], { unit: chosen.u.id, area: chosen.o.area });
@@ -459,7 +457,6 @@ function attackPlan(g: Game, side: Side): [string, number][] {
   plans.sort((p, q) => q.gain - p.gain);
   const used = new Set<string>(), out: [string, number][] = [];
   for (const p of plans) { if (p.gain < TUNE.planAt || p.ids.some((id) => used.has(id)) || out.some((m) => m[1] === p.a)) continue; for (const id of p.ids) { used.add(id); out.push([id, p.a]); } }
-  if (TRACE) TRACE.push(`plan: ${plans.slice(0, 12).map((p) => `${areas.get(p.a)!.name}[${p.ids.length}] ${p.gain.toFixed(2)}`).join(', ')} => ${out.map(([id, a]) => `${id}->${a}`).join(' ')}`);
   return out;
 }
 /** The hard player's judgement of one move: the position after it (an attack: after the battle it leads to, fought out many times with the
@@ -475,13 +472,6 @@ function deepMove(g: Game, side: Side, u: Unit, o: E.Opt, attack: boolean, canRe
     return simulate(x, side, SIMS.attack, (y) => { y.phase = bt ? 'btCombat' : 'combat'; y.fought = []; E.startBattle(y, a, false); }) - base;
   }
   return evaluate(x, side) - base;
-}
-/** For tests and tuning: the hard player's judgement of moving `unitId` to `area` now (evaluate units; an attack is fought out). */
-export function judgeMove(g: Game, side: Side, unitId: string, area: number): number {
-  E.useGame(g.game ?? 'bulge'); setPlayArea(g.inPlay);
-  const u = g.units.find((x) => x.id === unitId)!, o = E.moveOptions(g, u.id).find((x) => x.area === area); if (!o) return -1e9;
-  const canReach = new Map<number, Unit[]>(); for (const v of own(g, side).filter((x) => !x.moved)) for (const x of E.moveOptions(g, v.id)) if (E.unitsIn(g, x.area, E.other(side)).length) (canReach.get(x.area) ?? canReach.set(x.area, []).get(x.area)!).push(v);
-  return deepMove(g, side, u, o, E.unitsIn(g, area, E.other(side)).length > 0, canReach, evaluate(g, side));
 }
 const needWith = (g: Game, a: number, side: Side, u: Unit) => { const w = worth(g, a, side); if (!w || g.control[a] !== side) return 0; const en = near(g, a, E.other(side), side); return (w * Math.max(0, en - power(g, a, side, side) - val(g, u, side))) / (en + 1); };
 const needWithout = (g: Game, a: number, side: Side, u: Unit) => { const w = worth(g, a, side); if (!w || g.control[a] !== side) return 0; const en = near(g, a, E.other(side), side); return (w * Math.max(0, en - power(g, a, side, side) + val(g, u, side))) / (en + 1); };

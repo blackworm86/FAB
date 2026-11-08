@@ -8,11 +8,12 @@ GMT's block wargame series **Fast Action Battles** as a browser game: a rules en
 
 ## 2. Where it stands (everything below is on `main`)
 
+- **Audit**: all eight findings of the last `/ponytail-audit` are fixed (5–8: fuzzer no longer hides known problems, the device/account choice is `syncChoice` in `web/src/solo.ts` with a table test, tuning leftovers gone from `ai.ts`, the push relay only posts to real push services).
 - **Rules**: a full sweep of all three volumes (about 60 bugs fixed), a random full-game fuzzer (`engine/test/sweep-fuzz.test.ts`), players choose their own step losses (6.43), Golan optional rules 18.1–18.5.
 - **Phase 4 extras, all done**: install as an app (PWA), "your move" notices (in-page notices work; the closed-app push relay in `tools/push-worker` is optional and **not set up**), replay viewer, Play Book example figures, Italian interface and tutorials (`web/src/i18n*`, `GLOSSARY.md`).
 - **Maps**: 2D from the printed maps, 3D relief from satellite data, for all three volumes. Latest work (3D dioramas, phone map-line fixes) was done by another session and is merged.
 - **Computer opponent (4.4)**: `engine/src/ai.ts`, three levels (Easy, Normal, Hard), thinking in a worker thread (`web/src/cpu-worker.ts`), home-page card "Play the computer", pace setting, one-line turn summary. Games against the computer are kept on the device and, when signed in, in the player's account (`web/src/solo.ts`, `store-rtdb.ts`: `users/{uid}/soloIndex` and `users/{uid}/solo`), with a "played on another device" question when two devices diverge.
-- **Tests**: engine 357, web 115, database rules 35 (needs Java + Firebase emulator). CI (`.github/workflows`) runs engine, web, push relay, database rules and a browser smoke test.
+- **Tests**: engine 357, web 116, database rules 35 (needs Java + Firebase emulator). CI (`.github/workflows`) runs engine, web, push relay, database rules and a browser smoke test.
 - **Progress page** (private artifact, ticks stored in its database): https://claude.ai/artifact/SHN8KVGcEFYxQRmywT7MEm. All of phases 1–6 and 4.x are ticked.
 
 ## 3. Owner actions still pending
@@ -22,14 +23,9 @@ GMT's block wargame series **Fast Action Battles** as a browser game: a rules en
 
 ## 4. Open work, in the order the owner would want it
 
-1. **Audit findings 5–8** (from the last `/ponytail-audit`, not yet done; the owner asked for 1–4 only, those are fixed):
-   - 5. Delete the `KNOWN` filter in `engine/test/sweep-fuzz.test.ts` (all nine problems are fixed; with `FUZZ_ALL=1` the sweep passes). It would now hide regressions.
-   - 6. Move the device/account sync decision (`soloOnNet`, `soloPush` in `web/src/main.ts`) into a small pure function in `web/src/solo.ts` and add a table test (take / push / ask).
-   - 7. Delete tuning leftovers in `engine/src/ai.ts`: `judgeMove`, `TRACE`/`setTrace`, `TUNE.moves` modes `'veto'`/`'hybrid'` and `vetoAt` (keep the `TUNE` numbers the arena changes). Remove the matching `ARENA_MOVES`/`ARENA_VETO` lines in `engine/test/arena.test.ts`.
-   - 8. In `tools/push-worker/worker.js` accept only real push-service hosts at `/subscribe` (fcm.googleapis.com, updates.push.services.mozilla.com, *.push.apple.com, *.notify.windows.com) and extend `worker.test.mjs`.
-2. **Re-measure the hard computer player.** Its strength numbers were taken while it could see face-down blocks (fixed since: it now thinks on a masked copy, `mask()` in `ai.ts`). Run the arena (below), then retune `ai.TUNE`. The owner wants Hard to be **hard to beat**; known weak spot: the German attacker in The Bulge loses most games by Allied sudden death on turn 4. Ideas: multi-turn planning for the attacker, better use of artillery and Special Actions.
-3. **Computer-player gaps**: chits it never plays (Bulge: Greif, Bodenplatte, von der Heydte, roadblocks, staff, interdiction; Golan: jamming, counterbattery, recon, merging, optional rules; Sicily: dogfights, naval shock, flanking invasion, evacuation, Patton, extraction, fading morale), and Special Actions in battle (reinforce or retreat a defence).
-4. Easy/Normal/Hard are chosen by `?level=`; nothing yet for a difficulty that adapts.
+1. **Re-measure the hard computer player.** Its strength numbers were taken while it could see face-down blocks (fixed since: it now thinks on a masked copy, `mask()` in `ai.ts`). Run the arena (below), then retune `ai.TUNE`. The owner wants Hard to be **hard to beat**; known weak spot: the German attacker in The Bulge loses most games by Allied sudden death on turn 4. Ideas: multi-turn planning for the attacker, better use of artillery and Special Actions.
+2. **Computer-player gaps**: chits it never plays (Bulge: Greif, Bodenplatte, von der Heydte, roadblocks, staff, interdiction; Golan: jamming, counterbattery, recon, merging, optional rules; Sicily: dogfights, naval shock, flanking invasion, evacuation, Patton, extraction, fading morale), and Special Actions in battle (reinforce or retreat a defence).
+3. Easy/Normal/Hard are chosen by `?level=`; nothing yet for a difficulty that adapts.
 
 ## 5. How to run and measure
 

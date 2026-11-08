@@ -56,3 +56,11 @@ export function storeSafe(key: string, value: string, id?: string): boolean {
 /** The account's copy as it really is: the list entry is written first and the position after it, so a save cut off in between (a phone put
  *  away mid-save) leaves an entry one revision ahead of the position it holds. The position's own revision is the one that counts. */
 export const accountMeta = (meta: SoloMeta, stateRev: number | undefined): SoloMeta => (stateRev == null || stateRev === meta.rev ? meta : { ...meta, rev: stateRev });
+/** Once the account's copy is loaded (`account`: its rev, null if the account has none): 'take' it, 'push' this device's copy, 'ask' the
+ *  player (moved on both sides), or the game is 'gone' (opened from the account list, `waiting`, but no longer there). */
+export function syncChoice(local: Pick<SoloMeta, 'rev' | 'base'> | null, account: number | null, waiting: boolean): 'take' | 'push' | 'ask' | 'gone' {
+  if (account == null) return waiting ? 'gone' : 'push';
+  const dirty = !!local && local.rev !== local.base;
+  if (waiting || (account !== local?.base && !dirty)) return 'take';
+  return account === local!.base ? 'push' : 'ask';
+}

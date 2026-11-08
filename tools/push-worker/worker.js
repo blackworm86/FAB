@@ -32,6 +32,11 @@ async function defaultKeys() {
   const r = await fetch('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com', { cf: { cacheTtl: 3600 } });
   return (await r.json()).keys;
 }
+/** Only real browser push services: the relay must not be made to POST to any other host. */
+export function pushHost(endpoint) {
+  let u; try { u = new URL(endpoint); } catch { return false; }
+  return u.protocol === 'https:' && /^(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|[\w-]+(\.[\w-]+)*\.push\.apple\.com|[\w-]+(\.[\w-]+)*\.notify\.windows\.com)$/.test(u.hostname);
+}
 /** The VAPID header for one push service (RFC 8292): an ES256 JWT for the endpoint's origin, signed with the relay's private key. */
 export async function vapidHeader(endpoint, env, now = Math.floor(Date.now() / 1000)) {
   const head = b64u.enc(text(JSON.stringify({ typ: 'JWT', alg: 'ES256' })));
@@ -53,7 +58,7 @@ export default {
     const path = new URL(req.url).pathname;
 
     if (path === '/subscribe') {                                                                   // keep up to five devices per player
-      const sub = body.sub; if (!sub?.endpoint || !/^https:\/\//.test(sub.endpoint)) return json({ error: 'bad subscription' }, 400, origin);
+      const sub = body.sub; if (!pushHost(sub?.endpoint)) return json({ error: 'bad subscription' }, 400, origin);
       const list = (await subsOf(env, uid)).filter((s) => s.endpoint !== sub.endpoint); list.push({ endpoint: sub.endpoint }); 
       await env.SUBS.put(`u:${uid}`, JSON.stringify(list.slice(-5))); return json({ ok: true }, 200, origin);
     }
