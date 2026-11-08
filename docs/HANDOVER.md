@@ -15,6 +15,7 @@ GMT's block wargame series **Fast Action Battles** as a browser game: a rules en
 - **Maps**: 2D from the printed maps, 3D relief from satellite data, for all three volumes. Latest work (3D dioramas, phone map-line fixes) was done by another session and is merged.
 - **Computer opponent (4.4)**: `engine/src/ai.ts`, three levels (Easy, Normal, Hard), thinking in a worker thread (`web/src/cpu-worker.ts`), home-page card "Play the computer", pace setting, one-line turn summary. Games against the computer are kept on the device and, when signed in, in the player's account (`web/src/solo.ts`, `store-rtdb.ts`: `users/{uid}/soloIndex` and `users/{uid}/solo`), with a "played on another device" question when two devices diverge.
 - **Tests**: engine 358, web 116, database rules 35 (needs Java + Firebase emulator). CI (`.github/workflows`) runs engine, web, push relay, database rules and a browser smoke test.
+- **Computer opponent progress page** (private artifact, kept up to date after each piece of work, see `docs/PARALLEL.md` §1): https://claude.ai/artifact/TdGcLVt1eKZtidUtHoJTfK.
 - **Progress page** (private artifact, ticks stored in its database): https://claude.ai/artifact/SHN8KVGcEFYxQRmywT7MEm. All of phases 1–6 and 4.x are ticked.
 
 ## 3. Owner actions still pending

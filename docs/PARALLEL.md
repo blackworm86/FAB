@@ -16,7 +16,9 @@ Merge `origin/main` at the start of every work block. When project 2 changes how
 
 ## 1. Computer opponent (already running in another session)
 
-Goal: the computer can play every part of the turn in all three volumes, start to finish, at Easy, Normal and Hard, and Hard is hard to beat. The open list is `docs/HANDOVER.md` §4: re-measure Hard on the masked view, the chits it never plays, Special Actions in battle, then a difficulty that adapts. Status (Nov 2026): the Bulge's missing actions are in (bridges, Greif, Bodenplatte, von der Heydte, staff reserve, paid Breakthrough, reaction reserves) but did not change strength; next is a German plan for the Bulge (the areas to take by turn 4 and the routes to them), then the same for the other volumes. Done means: a fuzzer-style test where the computer plays both seats of every scenario of every volume to the end without getting stuck, and arena numbers per level in the docs.
+Goal: the computer can play every part of the turn in all three volumes, start to finish, at Easy, Normal and Hard, and Hard is hard to beat. The open list is `docs/HANDOVER.md` §4: re-measure Hard on the masked view, the chits it never plays, Special Actions in battle, then a difficulty that adapts. Progress page (private artifact): https://claude.ai/artifact/TdGcLVt1eKZtidUtHoJTfK. Its rows live in the artifact's database (collections `phases`, `items`, `arena`, `log`): after every piece of work, update the item's `status`/`note`/`updated` with ArtifactData, add arena results as `arena` rows and one `log` row. Never republish the page just to change data.
+
+Status (Nov 2026): the Bulge's missing actions are in (bridges, Greif, Bodenplatte, von der Heydte, staff reserve, paid Breakthrough, reaction reserves) but did not change strength; next is a German plan for the Bulge (the areas to take by turn 4 and the routes to them), then the same for the other volumes. Done means: a fuzzer-style test where the computer plays both seats of every scenario of every volume to the end without getting stuck, and arena numbers per level in the docs.
 
 ## 2. Rules review, with a test page for the owner
 
