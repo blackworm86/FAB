@@ -66,4 +66,6 @@ for r in meta['cut']: r.append(r[0])
 meta['metres'] = float(hg.max()); np.round(hg / hg.max() * 65535).astype('<u2').tofile(OUT + 'height.bin')
 meta['floatsFrom'] = 'map-base.svg'                                                 # the entry strips hover over the relief, out of the board file
 meta['ownLines'] = True; json.dump(meta, open(OUT + 'relief.json', 'w'), separators=(',', ':'))
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')); from relief_edge import fill_edge; fill_edge(OUT + 'snow.png', meta['cut'])   # the ground picture right up to the cut: see tools/relief_edge.py
 print('woods', round(float((dens > 0)[land].mean()), 2))

@@ -213,9 +213,9 @@ def assembly_box(k, x, y, w, h):                                                
             f'<g data-flip="{cx} {ty + 3}"><text x="{cx}" y="{ty + 11}" text-anchor="middle" {font} font-weight="700" font-size="20" fill="#fff">{k}</text></g></g>')
 lines = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">',
          g('shores', '', f'<g stroke="#3f86c4" stroke-width="4">{paths([poly(P) for P in water])}</g><g stroke="#6c6a62" stroke-width="7">{paths([poly(P) for P in leja])}</g>'),
+         g('boundaries', 'stroke="#5e5a52" stroke-width="4"', paths(A['open'])),
          g('rivers', '', f'<g stroke="#4f8fc4" stroke-width="5.6">{paths(A["river"])}</g><g stroke="#9ccbee" stroke-width="3">{paths(A["river"])}</g>'),
          g('roads', '', f'<g stroke="#8d8a82" stroke-width="5">{paths(A["roads"])}</g><g stroke="#dedbd0" stroke-width="2.4">{paths(A["roads"])}</g>'),
-         g('boundaries', 'stroke="#5e5a52" stroke-width="4"', paths(A['open'])),
          g('wadi', '', f'<g stroke="#a08868" stroke-width="7" stroke-opacity=".55">{paths(A["wadi"])}</g><g stroke="#4f4a42" stroke-width="3.4">{paths(A["wadi"])}</g>'),
          g('rugged', '', f'<g stroke="#7a6a52" stroke-width="12" stroke-linecap="butt" stroke-dasharray="1.2 2.6">{paths(A["rugged"])}</g><g stroke="#4f4a42" stroke-width="3.6">{paths(A["rugged"])}</g>'),
          g('escarpment', '', f'<g stroke="#b08a5c" stroke-width="22" stroke-opacity=".45">{paths(A["escarpment"])}</g><g stroke="#1d1d1b" stroke-width="3.6">{paths(A["escarpment"])}</g>'),

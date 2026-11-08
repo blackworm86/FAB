@@ -85,4 +85,5 @@ wd = nd.uniform_filter(dens.astype(np.float32), STEP + 1)[::STEP, ::STEP]; np.ro
 towns = []                                                                          # the printed map draws no town symbols: none in 3D either
 json.dump({'cut': CUT, 'outline': [[[0, 0], [W, 0], [W, H], [0, H], [0, 0]]], 'w': W, 'h': H, 'step': STEP, 'cols': cols, 'rows': rows, 'metres': hi, 'mpp': MPP, 'exag': EXAG,
            'dry': True, 'contour': [50, 200, 0.85], 'ownLines': True, 'overlay': 'map-base.svg', 'towns': towns, 'cities': []}, open(OUT + 'relief.json', 'w'), separators=(',', ':'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')); from relief_edge import fill_edge; fill_edge(OUT + 'snow.png', CUT)   # the ground picture right up to the cut: see tools/relief_edge.py
 print(rows, cols, round(hi), 'm', {f: os.path.getsize(OUT + f) // 1024 for f in os.listdir(OUT)})
