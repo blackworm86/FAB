@@ -82,13 +82,18 @@ describe('computer opponent: whole games against itself', () => {
 });
 const gameRun = (cfg: Cfg) => game(cfg, AI.next, AI.next);
 
-describe('computer opponent: ahead of a player who only does what the rules force', () => {
+describe('computer opponent: better than a player who only does what the rules force', () => {
+  // From each seat, against that same do-nothing player: the computer ends with a better margin than the do-nothing player does in its place.
+  // (Not "ahead": Golan's Operation Badr leans to Israel, so a Syrian can do well and still finish behind.)
   const net = (g: Game, side: Side) => { const v = E.victory(g); return v[side] - v[E.other(side)]; };
   for (const [game, scenario] of [['bulge', 'tournament'], ['golan73', 'badr'], ['sicily', 'tournament']] as [Cfg['game'], string][]) {
     it(`${game} ${scenario}: as either side`, () => {
-      E.useGame(game); const [s1, s2] = E.VOLUME.sides; let a = 0, b = 0;
-      for (const seed of [11, 12, 13]) { const x = gameMixed({ game, scenario, seed }, AI.next, lazy); a += net(x.g, s1); const y = gameMixed({ game, scenario, seed }, lazy, AI.next); b += net(y.g, s2); }
-      expect(a).toBeGreaterThan(0); expect(b).toBeGreaterThan(0);
+      E.useGame(game); const [s1, s2] = E.VOLUME.sides; let a = 0, b = 0, base = 0;
+      for (const seed of [11, 12, 13]) {
+        a += net(gameMixed({ game, scenario, seed }, AI.next, lazy).g, s1); b += net(gameMixed({ game, scenario, seed }, lazy, AI.next).g, s2);
+        base += net(gameMixed({ game, scenario, seed }, lazy, lazy).g, s1);
+      }
+      expect(a).toBeGreaterThanOrEqual(base); expect(b).toBeGreaterThanOrEqual(-base); expect(a - base + b + base).toBeGreaterThan(0);      // equal only where the do-nothing side already loses by the most the scenario allows
     }, 300_000);
   }
 });
@@ -127,3 +132,15 @@ describe('computer opponent: the three levels play whole games', () => {
   });
 });
 const game2 = (cfg: Cfg, p1: Policy, p2: Policy) => game(cfg, p1, p2);
+
+describe('computer opponent: it never sees hidden blocks', () => {
+  it('Golan: swapping what a hidden ghost and a hidden strongpoint really are does not change any level\'s next action', () => {
+    E.useGame('golan73'); E.setRandom(null);
+    const g = E.newGame(3, { scenario: 'badr' } as never); E.golan.autoStrongpoints(g, 'historical'); E.golan.state(g).minesLeft = 0; E.endPhase(g);    // the Syrian Combat Phase of turn 1
+    const ghost = g.units.find((u) => u.ghost && u.area != null)!, fort = g.units.find((u) => u.fort && u.area != null)!;
+    expect(E.visibleTo(g, ghost, 'syrian')).toBe(false); expect(E.visibleTo(g, fort, 'syrian')).toBe(false);
+    const g2 = structuredClone(g), a = g2.units.find((u) => u.id === ghost.id)!, b = g2.units.find((u) => u.id === fort.id)!;
+    const sa = E.secretOf(a), sb = E.secretOf(b); Object.assign(a, sb); Object.assign(b, sa);       // the same board to the eye, different blocks under it
+    for (const level of ['easy', 'normal', 'hard'] as const) expect(AI.next(g2, 'syrian', level)?.op).toEqual(AI.next(g, 'syrian', level)?.op);
+  }, 300_000);
+});

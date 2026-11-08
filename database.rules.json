@@ -24,6 +24,7 @@
             "f": { "$k": { ".validate": "newData.isString() && newData.val().length <= 200000" } },
             "units": { "$k": { ".validate": "newData.isString() && newData.val().length <= 4000" } },
             "chits": { "$k": { ".validate": "newData.isString() && newData.val().length <= 2000" } },
+            "rev": { ".validate": "newData.isNumber()" },
             "$other": { ".validate": false }
           }
         },

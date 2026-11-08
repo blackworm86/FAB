@@ -108,7 +108,8 @@ let soloLast = '', soloHold = false, soloMeta: SOLO.SoloMeta | null = null, solo
 if (CPU) {
   soloMeta = SOLO_NEW ? null : SOLO.localMeta(SOLO_ID!);
   if (!soloMeta) soloMeta = SOLO.metaOf(g, { id: SOLO_ID!, cpu: CPU_SIDE!, title: `${VOL.name} · ${VOL.scenarios.find((x) => x.id === g.opts.scenario)?.name ?? ''}`, created: Date.now(), owner: '' });
-  if (!soloWait) { soloLast = JSON.stringify(g); try { localStorage.setItem(KEY, soloLast); } catch { /* storage off */ } SOLO.putLocalMeta(soloMeta); }
+  if (SOLO_NEW) SOLO.pruneJournals(4, SOLO_ID!);                                                      // a new game: the replays of older games go first, before storage runs out
+  if (!soloWait) { soloLast = JSON.stringify(g); if (!SOLO.storeSafe(KEY, soloLast, SOLO_ID!)) storageFull(); SOLO.putLocalMeta(soloMeta); }
   soloHold = !!soloMeta.owner && !soloWait; if (soloHold) setTimeout(() => { if (soloHold) { soloHold = false; render(); } }, 8000);      // an account's game: a moment to look for a newer copy before play goes on (offline: it carries on)
   if (PARAMS.has('new')) { const u = new URL(location.href); for (const k of ['new', 'scenario', 'fuel', 'rules', 'level']) u.searchParams.delete(k); history.replaceState(null, '', u.href); }
 }
@@ -119,7 +120,7 @@ let areaPick: { label: string; areas: Set<number>; run: (a: number) => void } | 
 let applyingRemote = false;
 let oppTurn: boolean | null = null;                                                               // 4.3: was it the opponent's move when last seen
 const save = () => { if (heldNext || soloWait) return;                                             // a roll is on screen: its result is already saved; the board shown is older and must not be written back
-   const json = JSON.stringify(g); try { localStorage.setItem(KEY, json); } catch { /* storage off: the game still runs */ } if (CPU) soloSaved(json); if (!applyingRemote) { void push(g); handOver(); record(true); } };
+   const json = JSON.stringify(g); if (CPU) { if (!SOLO.storeSafe(KEY, json, SOLO_ID!)) storageFull(); soloSaved(json); } else { try { localStorage.setItem(KEY, json); } catch { /* storage off: the game still runs */ } } if (!applyingRemote) { void push(g); handOver(); record(true); } };
 /* 4.1 the replay journal: each change is a step; online each seat writes only its own blocks (the database keeps the journal unread until the game is over) */
 const rec = new Recorder(VOL.sides); let recLast = '', replayShown = false;
 function record(own: boolean, gm: E.Game = g) {
@@ -734,6 +735,9 @@ function lockOf(a: E.Game, b: E.Game): string {
   return '';
 }
 function undo() { if (!allowed()) return say(notYou()); if (heldNext) return say('Wait for the dice to land'); const lbl = hist.label, r = hist.undo(g); if (!r.game) return say(r.why ?? 'Nothing to undo'); const p = r.game; p.log.push(`T${p.turn} ${nm(online.mySide() ?? p.phasing)} undid ${lbl ? '“' + lbl + '”' : 'an action'}`); g = p; selUnit = selChit = selArr = previewArea = hoverArea = null; note = ''; save(); refresh(); }
+/** This device could not store the game (storage full or off): say so once, so a player who is not signed in knows it will not survive a reload. */
+let storageTold = false;
+function storageFull() { if (storageTold) return; storageTold = true; setTimeout(() => say(online.account && !online.account.guest ? 'This device is out of storage: the game is kept in your account only.' : 'This device is out of storage: this game will be lost when the page closes. Sign in to keep it in your account, or delete old games on the home page.'), 0); }
 /* ---------- 4.4 keeping a game against the computer in the player's account ---------- */
 let soloTimer = 0, soloChecked = '', soloClash: { meta: SOLO.SoloMeta; json: string } | null = null, soloBusy = false;
 /** A change was saved on this device: count it, and send it to the account a moment later (the changes of that moment go as one write). */
@@ -760,7 +764,7 @@ function soloTake(x: { meta: SOLO.SoloMeta; json: string }) {
   if (heldNext) commitRoll(); soloWait = false; soloClash = null;
   g = ng; hist.clear(); selUnit = selChit = selArr = null; selArea = previewArea = hoverArea = null;
   soloMeta = { ...x.meta, owner: online.uid, base: x.meta.rev };
-  soloLast = JSON.stringify(g); try { localStorage.setItem(KEY, soloLast); } catch { /* storage off */ } SOLO.putLocalMeta(soloMeta); refresh();
+  soloLast = JSON.stringify(g); if (!SOLO.storeSafe(KEY, soloLast, SOLO_ID!)) storageFull(); SOLO.putLocalMeta(soloMeta); refresh();
 }
 /** Once the account is known: compare this device's copy with the account's. Unchanged on one side: the newer wins quietly; changed on both: the player chooses. */
 async function soloOnNet() {

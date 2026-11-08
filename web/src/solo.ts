@@ -40,3 +40,19 @@ export function migrateOld(name: (game: string, scenario: string) => string, sid
     } catch { /* an unreadable old game: leave it */ }
   }
 }
+
+/** Browser storage is small (about 5 MB a site): keep the replay journals of the `keep` most recent games against the computer only
+ *  (each is 0.2–0.3 MB; the games themselves stay). Returns how many journals it dropped. */
+export function pruneJournals(keep = 4, except?: string): number {
+  const old = localList().filter((m) => m.id !== except).slice(Math.max(0, keep - (except ? 1 : 0)));
+  let n = 0; for (const m of old) { try { if (localStorage.getItem(`fab-journal:${soloKey(m.id)}`) != null) { localStorage.removeItem(`fab-journal:${soloKey(m.id)}`); n++; } } catch { /* storage off */ } }
+  return n;
+}
+/** Write a value; when the storage is full, drop the oldest games' replay journals and try once more. False: it could not be stored. */
+export function storeSafe(key: string, value: string, id?: string): boolean {
+  try { localStorage.setItem(key, value); return true; } catch { /* full, or storage off */ }
+  try { pruneJournals(1, id); localStorage.setItem(key, value); return true; } catch { return false; }
+}
+/** The account's copy as it really is: the list entry is written first and the position after it, so a save cut off in between (a phone put
+ *  away mid-save) leaves an entry one revision ahead of the position it holds. The position's own revision is the one that counts. */
+export const accountMeta = (meta: SoloMeta, stateRev: number | undefined): SoloMeta => (stateRev == null || stateRev === meta.rev ? meta : { ...meta, rev: stateRev });

@@ -1,5 +1,5 @@
 /** 4.4 The computer opponent: a player for one side of any volume, built on the engine's own option functions (so every action it takes
- *  is legal) and an evaluation of the position. It is honest: an enemy block it may not see (6.24) counts as an average block.
+ *  is legal) and an evaluation of the position. It is honest: it thinks on a copy of the game where every enemy block it may not see (6.24) is the average hidden block (`mask`).
  *  One call of `next` gives ONE action (so the table can show them one by one); `play` runs them until the side has nothing left to do.
  *  An action is data (`op`: a name and its arguments, run with `apply`), so it can come back from a worker thread.
  *  Three levels: easy (the plain player, with some noise and no assets), normal (the plain player: it holds and takes objective areas,
@@ -59,15 +59,15 @@ const act = (label: string, op: Op, x: Partial<Action> = {}): Action => ({ label
 
 /* ================= what the side knows ================= */
 /** A block as this side sees it: its own and face-up blocks as they are; a hidden enemy block as the average of the enemy blocks hidden on the map
- *  (what the printed order of battle, less what is face-up, tells a player). */
+ *  at full strength (what the printed order of battle tells a player: their current steps are what is hidden). */
 const est = (g: Game, u: Unit, side: Side): Est => (E.visibleTo(g, u, side) ? { str: u.str, q: E.quality(u), cls: u.cls } : hiddenAvg(g, u.side, side));
 let hidKey = '', hidVal: Est = { str: 2, q: 'veteran', cls: 'infantry' };
 const QL: Quality[] = ['green', 'veteran', 'elite'];
 function hiddenAvg(g: Game, foe: Side, side: Side): Est {
-  const key = `${g.game}|${foe}|${side}|${g.turn}|${g.log.length}|${g.units.length}`; if (key === hidKey) return hidVal; hidKey = key;
+  const key = `${g.game}|${g.seed}|${foe}|${side}|${g.turn}|${g.log.length}|${g.units.filter((u) => u.side === foe && u.area != null).length}`; if (key === hidKey) return hidVal; hidKey = key;
   const hs = g.units.filter((u) => u.side === foe && u.area != null && !u.garrison && !E.visibleTo(g, u, side));
   if (!hs.length) return (hidVal = { str: 2, q: 'veteran', cls: 'infantry' });
-  const str = hs.reduce((t, u) => t + u.str, 0) / hs.length, ql = hs.reduce((t, u) => t + QL.indexOf(E.quality(u)), 0) / hs.length, arm = hs.filter((u) => u.cls === 'armor').length / hs.length;
+  const str = hs.reduce((t, u) => t + u.max, 0) / hs.length, ql = hs.reduce((t, u) => t + QL.indexOf(u.q[u.max - 1] ?? 'veteran'), 0) / hs.length, arm = hs.filter((u) => u.cls === 'armor').length / hs.length;
   return (hidVal = { str: Math.round(str * 2) / 2, q: QL[Math.round(ql)] ?? 'veteran', cls: arm > 0.5 ? 'armor' : 'infantry' });
 }
 /** Fighting value of a block (steps × quality, armour a little more, disorder and no supply a lot less). */
@@ -203,6 +203,7 @@ function simulate(g: Game, side: Side, n: number, prep?: (x: Game) => void): num
   try {
     for (let i = 0; i < n; i++) {
       const x = structuredClone(g); x.seed = ((g.seed + 1) * 2654435761 + (i + 1) * 40503 + g.rolls * 97) % 1e9; x.rolls = 0;
+      mask(x, side);
       try { prep?.(x); } catch { continue; }
       for (let k = 0; k < 120 && x.battle; k++) {
         let a: Action | null = null; for (const s of sides) { a = step(x, s, 'normal'); if (a) break; }
@@ -212,6 +213,14 @@ function simulate(g: Game, side: Side, n: number, prep?: (x: Game) => void): num
     }
   } finally { E.setRandom(src); }
   return done ? total / done : -1e9;
+}
+/** The game as `side` may know it: every enemy block it cannot see becomes the average hidden block (no ghost, no strongpoint, no true strength). */
+function mask(x: Game, side: Side) {
+  const foe = E.other(side), e = hiddenAvg(x, foe, side);
+  for (const u of x.units) if (u.side === foe && u.area != null && !u.garrison && !E.visibleTo(x, u, side)) {
+    const n = Math.max(1, Math.round(e.str));
+    Object.assign(u, { str: n, max: n, q: Array(n).fill(e.q), cls: e.cls, ghost: undefined, fort: undefined, name: 'Hidden block' });
+  }
 }
 /** The best of several ways to go on in a battle, by simulation (hard) — or the given default. */
 function pickSim<T>(g: Game, side: Side, level: Level, options: T[], fallback: T, apply: (x: Game, o: T) => void, n = SIMS.choice): T {
@@ -234,7 +243,9 @@ const VOLDeployPending = (g: Game, side: Side) => g.units.some((u) => u.box === 
 /** The next action of `side`, or null when it has nothing (more) to do now. In a step both sides work in, the side marks itself done (or, phasing, ends the step once the other is done). */
 export function next(g: Game, side: Side, level: Level = 'normal'): Action | null {
   E.useGame(g.game ?? 'bulge'); setPlayArea(g.inPlay);
-  return step(g, side, level);
+  if (g.over || !turnOf(g, side)) return null;
+  const view = structuredClone(g); mask(view, side);                                                    // it thinks on what it may know: the enemy blocks it cannot see are stand-ins
+  return step(view, side, level);
 }
 function step(g: Game, side: Side, level: Level): Action | null {
   if (g.over || !turnOf(g, side)) return null;
@@ -419,11 +430,11 @@ function movement(g: Game, side: Side, level: Level): Action | null {
   return null;
 }
 /* ---- the hard player's attack plan: before its blocks move one by one, the attacks worth making this turn, each with the group of blocks that makes it ---- */
-const PLANS = new Map<string, { key: string; moves: [string, number][] }>();
+const PLANS = new Map<string, { key: string; at: number; moves: [string, number][] }>();
 /** The next move of the attack plan for this Movement Phase (worked out once per phase, kept while the phase lasts), or null when it is done. */
 function planned(g: Game, side: Side): [string, number] | null {
-  const key = `${g.game}|${side}|${g.turn}|${g.phasing}|${g.phase}`, held = PLANS.get(side);
-  const plan = held && held.key === key ? held : { key, moves: attackPlan(g, side) }; PLANS.set(side, plan);
+  const key = `${g.game}|${g.seed}|${side}|${g.turn}|${g.phasing}|${g.phase}`, held = PLANS.get(side);                  // the seed: another game of the same scenario never inherits this one's plan
+  const plan = held && held.key === key && held.at <= g.log.length ? held : { key, at: g.log.length, moves: attackPlan(g, side) }; PLANS.set(side, plan);     // a game put back to before the plan (the account's copy) plans again
   for (const [id, a] of plan.moves) { const u = g.units.find((x) => x.id === id); if (!u || u.moved || u.area === a) continue; if (E.moveOptions(g, id).some((o) => o.area === a)) return [id, a]; }
   return null;
 }

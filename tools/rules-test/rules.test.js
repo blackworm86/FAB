@@ -113,7 +113,8 @@ describe('games against the computer in the account (4.4)', () => {
     const d = user('bob');
     await assertSucceeds(set(ref(d, 'users/bob/soloIndex/s1'), sm('s1')));
     await assertSucceeds(set(ref(d, 'users/bob/solo/s1'), tree));
-    await assertSucceeds(update(ref(d, 'users/bob/solo/s1'), { 'f/turn': '2', 'units/0001': '{"id":"S02"}', 'chits/0000': null }));
+    await assertSucceeds(update(ref(d, 'users/bob/solo/s1'), { 'f/turn': '2', 'units/0001': '{"id":"S02"}', 'chits/0000': null, rev: 2 }));
+    await assertFails(update(ref(d, 'users/bob/solo/s1'), { rev: 'two' }));
     await assertSucceeds(get(ref(d, 'users/bob/soloIndex'))); await assertSucceeds(get(ref(d, 'users/bob/solo/s1')));
     await assertSucceeds(update(ref(d, 'users/bob'), { 'soloIndex/s1': null, 'solo/s1': null }));
   });

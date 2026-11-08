@@ -1,5 +1,5 @@
 import type { ChatMsg, Seats, Store, StateDoc, Account, Match } from './online';
-import type { SoloMeta } from './solo';
+import { accountMeta, type SoloMeta } from './solo';
 import { gameInfo } from './games';
 import { initSplit, toTree, fromTree, diffTree, type Game, type Priv, type Reveals, type Side, type Tree } from '../../engine/src';
 const msg = (e: unknown) => { const c = (e as { code?: string })?.code ?? ''; const m = String((e as { message?: string })?.message ?? e); return c.includes('invalid-credential') || c.includes('wrong-password') || c.includes('user-not-found') ? 'Wrong email or password' : c.includes('email-already') ? 'That email already has an account, sign in instead' : c.includes('weak-password') ? 'The password needs at least 6 characters' : c.includes('popup-closed') ? 'Sign-in was cancelled' : c.includes('unauthorized-domain') ? 'This site is not in the Firebase authorized domains' : m; };
@@ -144,8 +144,8 @@ export async function rtdbStore(table: string): Promise<Store | null> {
     async soloLoad(id) {
       const [m, t] = await Promise.all([rt.get(R(`users/${account.uid}/soloIndex/${id}`)), rt.get(R(`users/${account.uid}/solo/${id}`))]);
       if (!m.exists() || !t.exists()) return null;
-      const v = t.val() as Partial<Tree>, tree: Tree = { f: v.f ?? {}, units: v.units ?? {}, chits: v.chits ?? {} }; soloTrees.set(id, tree);
-      return { meta: m.val() as SoloMeta, json: JSON.stringify(fromTree(tree)) };
+      const v = t.val() as Partial<Tree> & { rev?: number }, tree: Tree = { f: v.f ?? {}, units: v.units ?? {}, chits: v.chits ?? {} }; soloTrees.set(id, tree);
+      return { meta: accountMeta(m.val() as SoloMeta, v.rev), json: JSON.stringify(fromTree(tree)) };
     },
     async soloSave(m, json, force = false) {
       const { owner: _o, base, ...meta } = m; let clash = false;
@@ -157,8 +157,8 @@ export async function rtdbStore(table: string): Promise<Store | null> {
       m.rev = (r.snapshot.val() as SoloMeta).rev;
       const tree = toTree(JSON.parse(json) as Game), prev = force ? null : soloTrees.get(m.id) ?? null;
       try {
-        if (!prev) await rt.set(R(`users/${account.uid}/solo/${m.id}`), tree);
-        else { const d = diffTree(prev, tree); if (Object.keys(d).length) await rt.update(R(`users/${account.uid}/solo/${m.id}`), d); }
+        if (!prev) await rt.set(R(`users/${account.uid}/solo/${m.id}`), { ...tree, rev: m.rev });
+        else await rt.update(R(`users/${account.uid}/solo/${m.id}`), { ...diffTree(prev, tree), rev: m.rev });      // the position and its revision in one write: a save cut off after the list entry is seen as such (accountMeta)
         soloTrees.set(m.id, tree); return 'ok';
       } catch (e) { soloTrees.delete(m.id); return msg(e); }                                                // the next save writes the whole game again
     },
