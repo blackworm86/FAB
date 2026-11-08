@@ -25,7 +25,7 @@ const QW: Record<Quality, number> = { green: 0.8, veteran: 1, elite: 1.25 };
 /** How many times a hard player fights a battle out before deciding (more: steadier, slower). */
 export const SIMS = { attack: 48, choice: 24 };
 /** Tuning switches for the arena: how the hard player picks its moves ('deep': by the position each leaves; 'veto': the plain player's order, attacks the fought-out outcome speaks against dropped), and whether it plans its attacks first. */
-export const TUNE = { moves: 'deep' as 'deep' | 'veto', plan: true, vetoAt: -1.5, planAt: 0.3, sd: false, asym: 0.4, vpBase: 6, tw1: 0.5, tw2: 1.5 };
+export const TUNE = { moves: 'deep' as 'deep' | 'veto' | 'hybrid', plan: true, vetoAt: -1.5, planAt: 0.3, sd: true, asym: 0.4, vpBase: 6, tw1: 0.5, tw2: 1.5 };
 /** Tuning: when set, the hard player's judgements of moves are written here. */
 export let TRACE: string[] | null = null; export const setTrace = (t: string[] | null) => { TRACE = t; };
 
@@ -406,7 +406,7 @@ function movement(g: Game, side: Side, level: Level): Action | null {
   if (level === 'hard' && cands.length) {                                                               // the best few, judged on copies: an attack by its fought-out outcome, any move dropped if the position after it reads clearly worse
     const base = evaluate(g, side), live = cands.filter((c) => c.s > -0.6);
     const attacks = live.filter((c) => c.attack && g.phase !== 'reaction').slice(0, 7), moves = live.filter((c) => !c.attack || g.phase === 'reaction').slice(0, 7);
-    const deep = best([...attacks, ...moves], (c) => { const d = c.attack || TUNE.moves === 'deep' ? deepMove(g, side, c.u, c.o, c.attack, canReach, base) : 0; const r = TUNE.moves === 'deep' ? d * 0.6 + 0.1 : c.attack && d < TUNE.vetoAt ? -1 : c.s; if (TRACE) TRACE.push(`${c.u.name} ${c.u.area}->${c.o.area}${c.attack ? ' ATT' : ''} s=${c.s.toFixed(2)} d=${d.toFixed(2)} => ${r.toFixed(2)}`); return r; });
+    const deep = best([...attacks, ...moves], (c) => { const d = c.attack || TUNE.moves === 'deep' ? deepMove(g, side, c.u, c.o, c.attack, canReach, base) : 0; const r = TUNE.moves === 'deep' ? (c.attack && g.phase !== 'reaction' ? d * 0.6 + 0.1 : d < -1.2 ? -1 : Math.max(c.s, d * 0.6 + 0.1)) : c.attack && d < TUNE.vetoAt ? -1 : c.s; if (TRACE) TRACE.push(`${c.u.name} ${c.u.area}->${c.o.area}${c.attack ? ' ATT' : ''} s=${c.s.toFixed(2)} d=${d.toFixed(2)} => ${r.toFixed(2)}`); return r; });
     if (deep && deep.s > 0.2) chosen = deep.x;
   } else if (cands.length && cands[0].s > 0.2) chosen = cands[0];
   if (chosen) return act('move', ['move', chosen.u.id, chosen.o.area], { unit: chosen.u.id, area: chosen.o.area });
