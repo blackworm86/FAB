@@ -1,7 +1,7 @@
 // The offline helper of the installed app. Pages: network first (always the latest build), the last copy when offline.
 // Built files (assets/, hashed names): cache first. Maps, relief and art: the cached copy at once, refreshed in the background.
 // Never touches other sites (Firebase, fonts): online play always talks to the server directly.
-const CACHE = 'fab-v1';
+const CACHE = 'fab-v2';   // bumped when a map file must not be served stale (v2: hatch without <pattern>)
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil((async () => {
   for (const k of await caches.keys()) if (k !== CACHE) await caches.delete(k);

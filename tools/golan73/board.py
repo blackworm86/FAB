@@ -229,7 +229,8 @@ lines = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" view
          '<g id="entries">' + ''.join(triangle(e) for e in M['entries']) + '</g>',
          '<g id="arrows">' + arrows_svg + '</g>',
          '</svg>']
-open(os.path.join(OUT, 'map-lines.svg'), 'w').write('\n'.join(lines))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')); from hatch import convert as hatch_free   # no <pattern> in a board file: see tools/hatch.py
+open(os.path.join(OUT, 'map-lines.svg'), 'w').write(hatch_free('\n'.join(lines)))
 json.dump(marks, open(os.path.join(D, 'entry_marks.json'), 'w'))                      # where the run-time letters go: in the triangles
 
 np.save(os.path.join(os.path.dirname(REAL), 'golan-ground.npy'), np.clip(img, 0, 255).astype(np.uint8))   # unshaded ground, for the 3D relief
