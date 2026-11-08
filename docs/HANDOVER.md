@@ -1,6 +1,7 @@
 # Handover to the next session
 
 Written at the end of a long development session. Read this, then `docs/ARCHITECTURE.md` (how the pieces fit), `docs/DEPLOY.md` (Firebase, GitHub Pages, push relay) and `README.md`.
+\nThree projects now run in parallel sessions (computer opponent, rules review, figures instead of blocks): see `docs/PARALLEL.md` for who owns which files.
 
 ## 1. What this is
 
