@@ -110,7 +110,7 @@ if (CPU) {
   if (!soloMeta) soloMeta = SOLO.metaOf(g, { id: SOLO_ID!, cpu: CPU_SIDE!, title: `${VOL.name} · ${VOL.scenarios.find((x) => x.id === g.opts.scenario)?.name ?? ''}`, created: Date.now(), owner: '' });
   if (!soloWait) { soloLast = JSON.stringify(g); try { localStorage.setItem(KEY, soloLast); } catch { /* storage off */ } SOLO.putLocalMeta(soloMeta); }
   soloHold = !!soloMeta.owner && !soloWait; if (soloHold) setTimeout(() => { if (soloHold) { soloHold = false; render(); } }, 8000);      // an account's game: a moment to look for a newer copy before play goes on (offline: it carries on)
-  if (PARAMS.has('new')) { const u = new URL(location.href); for (const k of ['new', 'scenario', 'fuel', 'rules']) u.searchParams.delete(k); history.replaceState(null, '', u.href); }
+  if (PARAMS.has('new')) { const u = new URL(location.href); for (const k of ['new', 'scenario', 'fuel', 'rules', 'level']) u.searchParams.delete(k); history.replaceState(null, '', u.href); }
 }
 setRulesContext({ game: VOL.id, title: VOL.name, art: (k) => VOL.ruleArt(k, g), fig: () => { const k = figKit(VOL, E.newGame(1, g.opts)); E.setPlayArea(g.inPlay); return k; } });      // a fresh game for every block's face (online the other side's are hidden); the play area stays this game's          // the rules reference shows this game's rulebooks and pieces
 let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, previewArea: number | null = null, hoverArea: number | null = null, newOpts: E.Opts = { scenario: VOL.defaultOpts.scenario ?? 'tournament', fuel: !!VOL.defaultOpts.fuel };
@@ -712,6 +712,7 @@ let pendingFx: Fx[] = [], rollNoted = false;
 function noteFx(a: ReturnType<typeof snap>, x: E.Game, fresh?: boolean) { const d = diffFx(a, x); if (!d.length) return; battleFx.push(...d); if (fresh) { rollFx = d; pendingFx = d; } else showFx(d); }       // after a roll the effects wait for the dice to settle
 function act(f: () => void, after = '') {
   if (!allowed()) return say(notYou());
+  if (!cpuActing) cpuSummary = '';
   if (online.mode === 'remote' && !online.rev) return say('The game is still loading…');
   if (heldNext) commitRoll();
   const before = g.battle ? snap(g) : null, ck0 = g.checks?.length ?? 0;
@@ -784,27 +785,63 @@ function soloBar() {
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && soloTimer) void soloPush(); });
 
 /* ---------- 4.4 the computer opponent: one action at a time, each shown on the table as a player's would be ---------- */
-let cpuActing = false, cpuTimer = 0, cpuLast = '';
+let cpuActing = false, cpuTimer = 0, cpuLast = '', cpuThinking = false, cpuAskId = 0;
+/** How fast the computer plays (a setting): the pause between its actions is scaled by this. */
+let cpuSpeed: 'slow' | 'normal' | 'fast' = (() => { try { const v = localStorage.getItem('fab-cpu-speed'); return v === 'slow' || v === 'fast' ? v : 'normal'; } catch { return 'normal'; } })();
+const cpuPace = () => ({ slow: 1.7, normal: 1, fast: 0.45 })[cpuSpeed];
+/** What the computer did since the player last acted, told in one line once the move comes back to the player. */
+const cpuDid: { moves: number; fights: string[]; cards: number; other: number } = { moves: 0, fights: [], cards: 0, other: 0 };
+let cpuSummary = '';
+function cpuNote(a: E.ai.Action) {
+  if (a.label === 'move' || a.label === 'strategic move') cpuDid.moves++;
+  else if (a.label === 'fight' && a.area != null) cpuDid.fights.push(areaName(a.area));
+  else if (['replacement', 'rebuild', 'return', 'staff replacement', 'field works', 'port work', 'bridge the ditch', 'clear mines', 'rally', 'quality replacements', 'release', 'arriving battalion', 'army release', 'SSM strike', 'Lt. Zvika', 'air interdiction', 'release the division', 'operational reserve', 'Golani', 'the 33rd', 'air supply'].includes(a.label)) cpuDid.cards++;
+  else if (['arrive', 'task force', 'reserve', 'retreat', 'abort'].includes(a.label)) cpuDid.other++;
+}
+function cpuTell() {
+  const parts: string[] = [];
+  if (cpuDid.moves) parts.push(`moved ${cpuDid.moves} block${cpuDid.moves > 1 ? 's' : ''}`);
+  if (cpuDid.fights.length) parts.push(`attacked ${[...new Set(cpuDid.fights)].slice(0, 3).join(', ')}${new Set(cpuDid.fights).size > 3 ? '…' : ''}`);
+  if (cpuDid.cards) parts.push(`played ${cpuDid.cards} card${cpuDid.cards > 1 ? 's' : ''}`);
+  cpuSummary = parts.length ? `${nm(CPU_SIDE!)} (computer): ${parts.join(', ')}.` : '';
+  cpuDid.moves = 0; cpuDid.fights = []; cpuDid.cards = 0; cpuDid.other = 0;
+}
+/** The level the computer plays at: the address (a new game), else the game's saved entry, else normal. */
+const CPU_LEVEL: E.ai.Level = (() => { const l = PARAMS.get('level') ?? soloMeta?.level; return l === 'easy' || l === 'hard' ? l : 'normal'; })();
+if (soloMeta && soloMeta.level !== CPU_LEVEL) { soloMeta = { ...soloMeta, level: CPU_LEVEL }; if (!soloWait) SOLO.putLocalMeta(soloMeta); }
+/** Its thinking runs in a worker thread, so the table never stutters; without workers it thinks on this thread. */
+const cpuWorker: Worker | null = (() => { try { return typeof Worker === 'function' ? new Worker(new URL('./cpu-worker.ts', import.meta.url), { type: 'module' }) : null; } catch { return null; } })();
+function cpuThink(side: E.Side): Promise<E.ai.Action | null> {
+  if (!cpuWorker) return Promise.resolve(E.ai.next(g, side, CPU_LEVEL));
+  const id = ++cpuAskId, json = JSON.stringify(g);
+  return new Promise((ok) => {
+    const onMsg = (e: MessageEvent<import('./cpu-worker').CpuReply>) => { if (e.data.id !== id) return; cpuWorker.removeEventListener('message', onMsg); const r = e.data; if (r.error) console.error('computer opponent', r.error); ok(r.op ? { label: r.label ?? '', unit: r.unit, area: r.area, chit: r.chit, roll: r.roll, op: r.op, run: (x) => { E.ai.apply(x, r.op!); } } : null); };
+    cpuWorker.addEventListener('message', onMsg); cpuWorker.postMessage({ id, json, side, level: CPU_LEVEL });
+  });
+}
 /** After every redraw: if it is the computer's turn to act, its next action follows shortly (dice and effects are left to settle first). */
 function cpuTick() {
-  if (!CPU_SIDE || cpuTimer || g.over || rollView || heldNext || soloWait || soloHold || soloClash || !E.ai.turnOf(g, CPU_SIDE)) return;
-  const delay = cpuLast === 'ready' || cpuLast === 'done' ? 350 : /move|fight|arrive|place|retreat|strategic/.test(cpuLast) ? 900 : 600;
+  if (!CPU_SIDE || cpuTimer || cpuThinking || g.over || rollView || heldNext || soloWait || soloHold || soloClash || !E.ai.turnOf(g, CPU_SIDE)) return;
+  const delay = (cpuLast === 'ready' || cpuLast === 'done' ? 350 : /move|fight|arrive|place|retreat|strategic/.test(cpuLast) ? 900 : 600) * cpuPace();
   cpuTimer = window.setTimeout(cpuStep, delay);
 }
-function cpuStep() {
-  cpuTimer = 0; if (!CPU_SIDE || g.over || rollView || heldNext || soloWait || soloHold || soloClash || !E.ai.turnOf(g, CPU_SIDE)) return;
-  let a: E.ai.Action | null = null; try { a = E.ai.next(g, CPU_SIDE); } catch (e) { console.error('computer opponent', e); }
-  if (!a) { cpuLast = ''; return; }
-  cpuLast = a.label; cpuActing = true;
+async function cpuStep() {
+  cpuTimer = 0; if (!CPU_SIDE || cpuThinking || g.over || rollView || heldNext || soloWait || soloHold || soloClash || !E.ai.turnOf(g, CPU_SIDE)) return;
+  let a: E.ai.Action | null = null; const seen = JSON.stringify(g); cpuThinking = true;
+  try { a = await cpuThink(CPU_SIDE); } catch (e) { console.error('computer opponent', e); } finally { cpuThinking = false; }
+  if (JSON.stringify(g) !== seen) { cpuTick(); return; }                                              // the game moved on while it thought (a player's undo, another device): think again
+  if (!a || rollView || heldNext) { cpuLast = ''; if (a) cpuTick(); return; }
+  cpuLast = a.label; cpuActing = true; cpuNote(a); cpuSummary = '';
   try {
     if (a.roll && g.battle && !['loss', 'retreat', 'attChoice', 'defChoice', 'attFirst', 'setup', 'done'].includes(g.battle.stage)) rollStage(g.battle);     // the dice are thrown on screen, as for a player
     else { const run = a.run; if (a.area != null && followFoe && !lock && !g.battle) lookAt(a.area); act(() => { run(g); }); }
   } finally { cpuActing = false; }
   hist.clear('the computer moved');                                                                   // a player's undo never reaches back past the computer's moves
+  if ((a.label === 'end' || a.label === 'done') && !E.ai.turnOf(g, CPU_SIDE) && (cpuDid.moves || cpuDid.fights.length || cpuDid.cards)) cpuTell();   // its step is over and the move is the player's: what happened, in one line
   render();
 }
 /** A line at the top while the computer plays. */
-function cpuBar() { return soloBar() || (CPU_SIDE && !soloWait && !g.over && E.ai.turnOf(g, CPU_SIDE) && !rollView ? `<div class="seatbar cpu"><span class="spin" aria-hidden="true"></span><span>${esc(nm(CPU_SIDE))} (computer) is playing…</span></div>` : ''); }
+function cpuBar() { return soloBar() || (CPU_SIDE && !soloWait && !g.over && E.ai.turnOf(g, CPU_SIDE) && !rollView ? `<div class="seatbar cpu"><span class="spin" aria-hidden="true"></span><span>${esc(nm(CPU_SIDE))} (computer) is playing…</span></div>` : cpuSummary && !g.over ? `<div class="seatbar cpu told"><span>${esc(cpuSummary)}</span>${ubtn(ico('close'), () => { cpuSummary = ''; }, 'ico', false, 'Close')}</div>` : ''); }
 window.addEventListener('keydown', (e) => {
   const t = e.target as HTMLElement | null, typing = !!t?.matches?.('input,select,textarea');
   if (e.key === 'Escape') { if (modal) { modal = null; render(); } else if (selUnit || selArr || selChit || selArea != null) { selUnit = selArr = selChit = null; selArea = null; previewArea = null; refresh(); } return; }
@@ -1767,7 +1804,7 @@ function modalHtml() {
     const tabs = ['Players', 'Log', 'Settings', ...(online.admin ? ['Admin'] : [])];
     if (!tabs.includes(menuTab)) menuTab = 'Players';
     const body = menuTab === 'Log' ? logHtml()
-      : menuTab === 'Settings' ? `<h4>Dice</h4><div class="row">${ubtn(`<span class="sw ${autoRoll ? 'on' : ''}">${autoRoll ? 'AUTO' : 'WAIT'}</span> After a roll, move on by itself (decisions still wait for you)`, () => { autoRoll = !autoRoll; try { localStorage.setItem('fab-autoroll', autoRoll ? '1' : '0'); } catch { /* private mode */ } }, autoRoll ? 'on' : '')}</div><h4>Keyboard</h4><dl class="keys"><dt>Tab</dt><dd>to the map (or “Skip to the map” first)</dd><dt>← ↑ → ↓</dt><dd>move between neighbouring areas</dd><dt>Enter</dt><dd>select or move there; on a button, press it</dd><dt>N</dt><dd>next block that can move</dd><dt>Esc</dt><dd>clear the selection, close a window</dd><dt>Ctrl+Z</dt><dd>undo</dd></dl><h4>Rules in use</h4><p>${rulesInUse(g.opts)}</p>${coursesOf(VOL.id).length || RULES_GAMES.includes(VOL.id) ? `<h4>Learn</h4><div class="row">${RULES_GAMES.includes(VOL.id) ? ubtn(`${ico('info')} Rules reference`, () => { void showRules(); }, '', false, 'The full rulebooks, searchable (shortcut: ?)') : ''}${coursesOf(VOL.id).map((c) => ubtn(`${ico('info')} ${esc(c.title)}`, () => { location.href = tutUrl(c.id); })).join('')}</div>` : ''}<h4>Map</h4><div class="row">${ubtn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${ubtn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Explanations</h4><div class="row">${ubtn(`<span class="sw ${guide === 'full' ? 'on' : ''}">${guide === 'full' ? 'FULL' : 'SHORT'}</span> Explain each option and rule`, () => setGuide(guide === 'full' ? 'short' : 'full'), guide === 'full' ? 'on' : '')}</div><h4>Opponent</h4><div class="row">${ubtn(`<span class="sw ${followFoe ? 'on' : ''}">${followFoe ? 'ON' : 'OFF'}</span> Point the camera at the other player's moves`, () => { followFoe = !followFoe; try { localStorage.setItem('fab-follow', followFoe ? '1' : '0'); } catch { /* private mode */ } }, followFoe ? 'on' : '')}</div><h4>Language</h4><div class="chips notr">${LANGS.map(([l, n]) => chip(n, LANG === l, () => setLang(l), l === 'it' ? 'Interfaccia in italiano (i regolamenti restano in inglese)' : 'Interface in English')).join('')}</div>${noticesSupported() ? `<h4>Notices</h4><div class="row">${ubtn(`<span class="sw ${noticesOn() ? 'on' : ''}">${noticesOn() ? 'ON' : 'OFF'}</span> Tell me when it is my move while the game is out of sight`, () => { void setNotices(!noticesOn(), auth.token).then((m) => { say(m); render(); }); }, noticesOn() ? 'on' : '', false, noticesBlocked() ? 'Blocked in this browser: allow notices for this site in its settings' : 'A system notice when the other player hands you the move (this device only)')}</div>` : ''}
+      : menuTab === 'Settings' ? `<h4>Dice</h4><div class="row">${ubtn(`<span class="sw ${autoRoll ? 'on' : ''}">${autoRoll ? 'AUTO' : 'WAIT'}</span> After a roll, move on by itself (decisions still wait for you)`, () => { autoRoll = !autoRoll; try { localStorage.setItem('fab-autoroll', autoRoll ? '1' : '0'); } catch { /* private mode */ } }, autoRoll ? 'on' : '')}</div><h4>Keyboard</h4><dl class="keys"><dt>Tab</dt><dd>to the map (or “Skip to the map” first)</dd><dt>← ↑ → ↓</dt><dd>move between neighbouring areas</dd><dt>Enter</dt><dd>select or move there; on a button, press it</dd><dt>N</dt><dd>next block that can move</dd><dt>Esc</dt><dd>clear the selection, close a window</dd><dt>Ctrl+Z</dt><dd>undo</dd></dl><h4>Rules in use</h4><p>${rulesInUse(g.opts)}</p>${coursesOf(VOL.id).length || RULES_GAMES.includes(VOL.id) ? `<h4>Learn</h4><div class="row">${RULES_GAMES.includes(VOL.id) ? ubtn(`${ico('info')} Rules reference`, () => { void showRules(); }, '', false, 'The full rulebooks, searchable (shortcut: ?)') : ''}${coursesOf(VOL.id).map((c) => ubtn(`${ico('info')} ${esc(c.title)}`, () => { location.href = tutUrl(c.id); })).join('')}</div>` : ''}<h4>Map</h4><div class="row">${ubtn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${ubtn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Explanations</h4><div class="row">${ubtn(`<span class="sw ${guide === 'full' ? 'on' : ''}">${guide === 'full' ? 'FULL' : 'SHORT'}</span> Explain each option and rule`, () => setGuide(guide === 'full' ? 'short' : 'full'), guide === 'full' ? 'on' : '')}</div><h4>Opponent</h4>${CPU_SIDE ? `<div class="chips">${(['slow', 'normal', 'fast'] as const).map((v) => chip(v === 'slow' ? 'Slow' : v === 'normal' ? 'Normal pace' : 'Fast', cpuSpeed === v, () => { cpuSpeed = v; try { localStorage.setItem('fab-cpu-speed', v); } catch { /* private mode */ } }, 'How fast the computer makes its moves')).join('')}</div>` : ''}<div class="row">${ubtn(`<span class="sw ${followFoe ? 'on' : ''}">${followFoe ? 'ON' : 'OFF'}</span> Point the camera at the other player's moves`, () => { followFoe = !followFoe; try { localStorage.setItem('fab-follow', followFoe ? '1' : '0'); } catch { /* private mode */ } }, followFoe ? 'on' : '')}</div><h4>Language</h4><div class="chips notr">${LANGS.map(([l, n]) => chip(n, LANG === l, () => setLang(l), l === 'it' ? 'Interfaccia in italiano (i regolamenti restano in inglese)' : 'Interface in English')).join('')}</div>${noticesSupported() ? `<h4>Notices</h4><div class="row">${ubtn(`<span class="sw ${noticesOn() ? 'on' : ''}">${noticesOn() ? 'ON' : 'OFF'}</span> Tell me when it is my move while the game is out of sight`, () => { void setNotices(!noticesOn(), auth.token).then((m) => { say(m); render(); }); }, noticesOn() ? 'on' : '', false, noticesBlocked() ? 'Blocked in this browser: allow notices for this site in its settings' : 'A system notice when the other player hands you the move (this device only)')}</div>` : ''}
         ${online.active && !online.admin && !online.both() ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as E.Opts['scenario']; })}">${VOL.scenarios.filter((sc) => SANDBOX || !sc.testing).map((sc) => `<option value="${sc.id}" ${newOpts.scenario === sc.id ? 'selected' : ''}>${esc(sc.name)} (${esc(sc.sub)})</option>`).join('')}</select>
         ${VOL.features.fuel ? `<label><input type="checkbox" ${newOpts.fuel ? 'checked' : ''} data-sel="${regv((x) => { newOpts.fuel = x === 'on'; })}"> German fuel rule</label>` : ''}</div>${VOL.features.optional ? optChooser(newOpts, VOL.id) : ''}<div class="row">${ubtn('Restart', () => { if (!confirm('Restart and lose the current game?')) return; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; save(); refresh(); }, 'danger')}</div>`}`
       : menuTab === 'Admin' ? `<div class="row">${ubtn(`${ico('wand')} Sandbox`, () => { location.href = `${homeUrl()}?sandbox=1`; })}${ubtn('Update rules', () => { modal = 'rules'; })}${VOL.sides.map((sd) => ubtn(`Free ${nm(sd)} seat`, () => { void auth.freeSeat(sd); })).join('')}</div>`

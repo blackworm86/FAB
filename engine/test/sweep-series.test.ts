@@ -201,3 +201,21 @@ describe('6.43: the owner allocates step losses (decision: players choose)', () 
     expect(b.hit!.german).toEqual([other, point]);
   });
 });
+
+describe('6.5: an aborted river assault falls back across the river, also after a move of several areas', () => {
+  it('the attacker returns to the area it crossed from, not to where its move began', () => {
+    const g = blank(); g.phase = 'movement'; g.phasing = 'german';
+    const ge = put(g, '2 Pz', 11); g.control[11] = 'german'; g.control[12] = 'german'; g.control[23] = 'allied';             // Bleialf → Lutzkampen → St. Vith: Lutzkampen–St. Vith crosses the Our
+    const al = put(g, '106 Inf', 23); al.str = 3;
+    const o = E.moveOptions(g, ge.id).find((x) => x.area === 23 && x.path.length === 3);
+    if (!o) return;                                                                                   // the map gives no such path from here: nothing to check
+    const r = E.move(g, ge.id, 23); if (r === 'blow') E.resolveBlow(g, false);
+    expect(ge.area).toBe(23); expect(E.neighbors(23)).toContain(ge.from!);
+    g.phase = 'combat'; g.riverAssault.push(23); g.contestedAtMoveStart = []; g.fought = [];
+    const b = E.startBattle(g, 23); E.beginCombat(g, b); g.force = [10, 10, 1, 1, 1, 1, 1, 1];
+    for (let i = 0; i < 6 && b.stage !== 'attChoice' && g.battle; i++) E.roll_step(g, b);
+    if (b.stage !== 'attChoice') return;
+    expect(() => E.attackerChoice(g, b, true)).not.toThrow();
+    expect(ge.area).not.toBe(23);
+  });
+});

@@ -3278,9 +3278,40 @@
   "Played on another device too.": "Giocata anche su un altro dispositivo.",
   "Use the other device's": "Usa quella dell'altro dispositivo",
   "Keep this one": "Tieni questa",
-  "This game is not in your account.": "Questa partita non è nel tuo account."
+  "This game is not in your account.": "Questa partita non è nel tuo account.",
+  "The computer:": "Il computer:",
+  "Easy": "Facile",
+  "Normal": "Normale",
+  "Hard": "Difficile",
+  "Plays by the rules, makes mistakes, uses no assets": "Gioca secondo le regole, commette errori, non usa le risorse",
+  "Holds and takes objectives, attacks with the odds, uses its assets": "Tiene e prende gli obiettivi, attacca con le probabilità a favore, usa le risorse",
+  "Fights each attack out many times before making it; weighs every loss, retreat and abort": "Simula ogni attacco molte volte prima di lanciarlo; soppesa ogni perdita, ritirata e rinuncia",
+  "Slow": "Lento",
+  "Normal pace": "Ritmo normale",
+  "Fast": "Veloce",
+  "How fast the computer makes its moves": "Quanto in fretta il computer fa le sue mosse"
  },
  "patterns": [
+  [
+   "(.*), played (\\d+) cards?\\.",
+   "$1, ha giocato $2 carte."
+  ],
+  [
+   "(.*), attacked (.*)",
+   "$1, ha attaccato $2"
+  ],
+  [
+   "(.+) \\(computer\\): played (\\d+) cards?\\.",
+   "$1 (computer): ha giocato $2 carte."
+  ],
+  [
+   "(.+) \\(computer\\): attacked (.*)",
+   "$1 (computer): ha attaccato $2"
+  ],
+  [
+   "(.+) \\(computer\\): moved (\\d+) blocks?(.*)",
+   "$1 (computer): ha mosso $2 blocchi$3"
+  ],
   [
    "(.+) · your games",
    "$1 · le tue partite"

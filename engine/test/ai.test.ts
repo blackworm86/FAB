@@ -11,7 +11,7 @@ type Policy = (g: Game, side: Side) => E.ai.Action | null;
 /** A player who does nothing of his own: the least the rules make him do. */
 const lazy: Policy = (g, side) => {
   if (g.over || !AI.turnOf(g, side)) return null;
-  const run = (label: string, f: (x: Game) => void): E.ai.Action => ({ label, run: f });
+  const run = (label: string, f: (x: Game) => void): E.ai.Action => ({ label, op: ['lazy'], run: f });
   if (g.pendingBlow) return run('cross', (x) => { E.resolveBlow(x, false); });
   if (g.recover.includes(side)) return run('recover', (x) => E.recoverAsset(x, side, null));
   if (g.artyPick && side === 'german') { const c = E.boxOf(g, 'german', 'used').find((x) => x.kind === 'artillery')!; return run('arty', (x) => E.chooseArtyLoss(x, c.id)); }
@@ -110,3 +110,20 @@ if (ENV.AI_STATS) describe('stats', () => {
     console.log(lines.join('\n'));
   }, 600_000);
 });
+
+describe('computer opponent: the three levels play whole games', () => {
+  for (const [game, scenario] of [['bulge', 'tournament'], ['golan73', 'nafakh'], ['sicily', 'sunrise_bridge']] as [Cfg['game'], string][]) {
+    it(`${game} ${scenario}: hard against easy, both seatings, no illegal action`, () => {
+      for (const [l1, l2] of [['hard', 'easy'], ['easy', 'hard']] as const) {
+        const r = game2({ game, scenario, seed: 21 }, (g, s) => AI.next(g, s, l1), (g, s) => AI.next(g, s, l2));
+        expect(r.g.over).toBeTruthy();
+      }
+    }, 600_000);
+  }
+  it('an action is data: applying its op does what running it does', () => {
+    E.useGame('bulge'); const g = E.newGame(5, { scenario: 'tournament' } as never);
+    const a = AI.next(g, 'german')!; const x = structuredClone(g), y = structuredClone(g);
+    a.run(x); AI.apply(y, a.op); expect(JSON.stringify(y)).toBe(JSON.stringify(x));
+  });
+});
+const game2 = (cfg: Cfg, p1: Policy, p2: Policy) => game(cfg, p1, p2);

@@ -143,6 +143,8 @@ export const optionalRules = (): OptionalRule[] => CUR.optional ?? OPTIONAL_RULE
 export const setRandom = (f: (() => number) | null) => { secure = f; };
 /** The secure source when one is set (online), for choices that must not be reproducible from the shared seed. */
 export const secureRandom = () => secure?.() ?? null;
+/** The random source in use (null: the game's seed), so a simulation can run on the seed and put it back. */
+export const randomSource = () => secure;
 const roll = (g: Game) => (secure ? (g.rolls++, 1 + Math.floor(secure() * 10)) : g.force?.length ? (g.rolls++, g.force.shift()!) : d10(rng(g.seed * 7919 + g.rolls++)));   // online the queue is ignored: a client must not write its own dice
 /** A log line, labelled with the side that acted (in Prepare and Reinforcement both sides act). */
 export const say = (g: Game, s: string, side: Side = g.phasing) => { g.log.push(`T${g.turn} ${CUR.tag[side] ?? side} ${g.phase}: ${s}`); if (g.log.length > 400) g.log.splice(0, g.log.length - 300); };   // the log only has to be read, so it stays short
@@ -461,7 +463,7 @@ function finishMove(g: Game, u: Unit, opt: Opt, bridgeBlown: boolean) {
   const from = u.area!, to = opt.area, last = connection(opt.path[opt.path.length - 2], to)!, enemy = other(u.side);
   const intoEnemy = unitsIn(g, to, enemy).length > 0;
   const faceUp = unitsIn(g, to, enemy).some((x) => x.up === to);                              // 5.22 a unit entering a contested area whose forces are already face-up is revealed too
-  u.from = from; u.area = to; if (faceUp) u.up = to; u.moved = true; u.adjOnly = false; u.spent = 0; dropReserve(g, u);
+  u.from = intoEnemy ? opt.path[opt.path.length - 2] : from; u.area = to; if (faceUp) u.up = to; u.moved = true; u.adjOnly = false; u.spent = 0; dropReserve(g, u);   // into the enemy: the area it came from is the one across the boundary (an aborted river assault goes back there, 6.5)
   if (intoEnemy && last.river) { g.riverCross.push(keyOf(opt.path[opt.path.length - 2], to)); }
   if (intoEnemy) (g.entered[to] ??= []).push({ id: u.id, river: last.river, blown: bridgeBlown || g.blown.includes(keyOf(opt.path[opt.path.length - 2], to)) });
   if (g.phase === 'btMove' || g.phase === 'movement') { u.exploit = u.exploit && g.phase === 'btMove' ? false : u.exploit; }
@@ -977,7 +979,7 @@ export function attackerChoice(g: Game, b: Battle, abort: boolean) {
   if (abort) {
     { const why = CUR.canAbort?.(g, b); if (why) throw new Error(why); }
     const us = unitsIn(g, b.area, b.attacker).filter((u) => !u.garrison);
-    if (b.riverAssault) for (const u of us) { const from = u.from; if (from != null && g.control[from] === b.attacker && !unitsIn(g, from, other(b.attacker)).length && blocks(g, from, b.attacker).length < stackMax(g, from) && (!CUR.retreatOk || CUR.retreatOk(g, u, b.area, from))) { u.area = from; CUR.onRetreat?.(g, u, b.area, from); } else if (from != null) stepLoss(g, b, b.attacker, u.id); }
+    if (b.riverAssault) for (const u of us) { const from = u.from; if (from != null && neighbors(b.area).includes(from) && g.control[from] === b.attacker && !unitsIn(g, from, other(b.attacker)).length && blocks(g, from, b.attacker).length < stackMax(g, from) && (!CUR.retreatOk || CUR.retreatOk(g, u, b.area, from))) { u.area = from; CUR.onRetreat?.(g, u, b.area, from); } else if (from != null) stepLoss(g, b, b.attacker, u.id); }
     for (const u of us) if (u.area != null) u.disorder = 1;                                      // the ones that fell back are disordered too
     b.queue = []; return end(g, b, 'Attack aborted: attackers disordered' + (b.riverAssault ? ' and back across the river' : ''));
   }

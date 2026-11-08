@@ -4,7 +4,7 @@
 /** What the game lists show of a game against the computer, without opening it. `rev` counts saves; `base` is the account's rev this device last saw. */
 export interface SoloMeta {
   id: string; game: string; cpu: string; title: string; scenario: string; created: number; updated: number; rev: number;
-  turn: number; step: string; over?: string;
+  turn: number; step: string; over?: string; level?: 'easy' | 'normal' | 'hard';
   /** device only: the account this copy belongs to ('' = played signed out), and the account rev it was last in step with */
   owner?: string; base?: number;
 }
