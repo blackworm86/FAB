@@ -11,7 +11,7 @@ import { History } from './history';
 import * as SB from './sandbox';
 import { vpStrip, vpSheet, endPanel } from './score';
 import * as SBU from './sandbox-ui';
-import { online, startOnline, push, sit, setDevSeat, auth, lobby, journal, seatKey, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, SANDBOX, TUTORIAL, seatOf, seatName, type DevSeat, type Match } from './online';
+import { online, startOnline, push, sit, setDevSeat, auth, lobby, journal, seatKey, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, SANDBOX, TUTORIAL, CPU, seatOf, seatName, type DevSeat, type Match } from './online';
 import { gameInfo, GAMES } from './games';
 import { BOXES, boxFront, boxSpine } from './covers';
 import { ICONS, ico } from './icons';
@@ -41,7 +41,7 @@ import { loadRelief, type Relief } from './relief';
 /* ---------- which game this page shows ---------- */
 const PARAMS = new URLSearchParams(location.search), GAME_PARAM = PARAMS.get('game');
 const TUT = TUTORIAL ? courseFor(PARAMS.get('tutorial')) : null;                                         // the tutorial course this page runs (docs/TUTORIAL.md)
-const KEY0 = TUT ? `fab-tutorial-${TUT.id}` : SANDBOX ? 'fab-sandbox' : TABLE === 'main' ? 'fab-demo2' : `fab-demo2-${TABLE}`, KEY = GAME_PARAM && GAME_PARAM !== 'bulge' ? `${KEY0}-${GAME_PARAM}` : KEY0;
+const KEY0 = TUT ? `fab-tutorial-${TUT.id}` : SANDBOX ? 'fab-sandbox' : CPU ? 'fab-cpu' : TABLE === 'main' ? 'fab-demo2' : `fab-demo2-${TABLE}`, KEY = GAME_PARAM && GAME_PARAM !== 'bulge' ? `${KEY0}-${GAME_PARAM}` : KEY0;
 function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif && x.roadblocks && x.pendingArrivals && x.fwOwner && Array.isArray(x.recover) ? x : null; } catch { return null; } }
 /** The volume (docs/design/one-engine.md): the address says which game, else the game saved for this table, else The Bulge. A shared table of another game reloads the page with its game. */
 const VOL = useVolume(TUT ? TUT.game : GAME_PARAM ?? load()?.game ?? 'bulge');
@@ -91,7 +91,13 @@ const areaName = (a: number) => E.areas.get(a)!.name;
 
 /* ---------- state ---------- */
 let tut: ReturnType<typeof initTutorial> | null = null;
-let g: E.Game = (() => { const s = HAS_TABLE && !SANDBOX && !TUTORIAL ? null : load(); return s && (s.game ?? 'bulge') === VOL.id ? s : E.newGame(undefined, VOL.defaultOpts); })();   // a shared table starts from what the database sends, never from an old local copy
+/** 4.4: the computer's side (the address names it; the player holds the other seat) and the options of a new solo game from the address. */
+const CPU_SIDE: E.Side | null = CPU ? (VOL.sides.includes(CPU) ? CPU : P2) : null;
+if (CPU_SIDE) online.cpu = CPU_SIDE;
+const cpuOpts = (): Partial<E.Opts> => { const o: Record<string, unknown> = { ...VOL.defaultOpts }; const sc = PARAMS.get('scenario'); if (sc && VOL.scenarios.some((x) => x.id === sc)) o.scenario = sc; if (PARAMS.has('fuel')) o.fuel = PARAMS.get('fuel') === '1';
+  for (const k of (PARAMS.get('rules') ?? '').split(',').filter(Boolean)) { const [key, v] = k.split(':'); if (E.optionalRules().some((r) => r.key === key)) o[key] = key === 'bid' ? +(v ?? 0) : true; } return o as Partial<E.Opts>; };
+let g: E.Game = (() => { const s = HAS_TABLE && !SANDBOX && !TUTORIAL ? null : CPU && PARAMS.has('new') ? null : load(); return s && (s.game ?? 'bulge') === VOL.id ? s : E.newGame(undefined, CPU ? cpuOpts() : VOL.defaultOpts); })();   // a shared table starts from what the database sends, never from an old local copy
+if (CPU && PARAMS.has('new')) { try { localStorage.setItem(KEY, JSON.stringify(g)); } catch { /* storage off */ } history.replaceState(null, '', location.pathname + location.search.replace(/&new=1|[?]new=1&?/, (m) => (m.startsWith('?') ? '?' : ''))); }
 setRulesContext({ game: VOL.id, title: VOL.name, art: (k) => VOL.ruleArt(k, g), fig: () => { const k = figKit(VOL, E.newGame(1, g.opts)); E.setPlayArea(g.inPlay); return k; } });      // a fresh game for every block's face (online the other side's are hidden); the play area stays this game's          // the rules reference shows this game's rulebooks and pieces
 let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, previewArea: number | null = null, hoverArea: number | null = null, newOpts: E.Opts = { scenario: VOL.defaultOpts.scenario ?? 'tournament', fuel: !!VOL.defaultOpts.fuel };
 /** A prompt of the volume asked for an area (an air assault landing): the legal ones light up, a tap runs it. */
@@ -677,7 +683,7 @@ let dragTargets: number[] = [];
 const hist = new History<E.Game>(); let note = '', selArr: string | null = null;
 /** Who may act right now: one side, or both while each handles its own assets (admin, reinforcement, battle set-up). */
 const actorNow = () => E.actorOf(g);
-const allowed = () => !heldBad && (!online.active || online.both() || (online.mySide() != null && (actorNow() === 'both' || actorNow() === online.mySide())));   // a held-back change waits for a decision first
+const allowed = () => cpuActing || (!heldBad && (!online.active || online.both() || (online.mySide() != null && (actorNow() === 'both' || actorNow() === online.mySide()))));   // a held-back change waits for a decision first
 /** In a shared-screen game every side is yours; online only your own seat's pieces. */
 const mine = (s: E.Side) => !online.active || online.both() || online.mySide() === s;
 const notYou = () => online.mySide() == null ? 'You are watching. Take a seat in the menu to play.' : `Wait for the ${nm(actorNow() as E.Side)} player.`;
@@ -710,6 +716,28 @@ function lockOf(a: E.Game, b: E.Game): string {
   return '';
 }
 function undo() { if (!allowed()) return say(notYou()); if (heldNext) return say('Wait for the dice to land'); const lbl = hist.label, r = hist.undo(g); if (!r.game) return say(r.why ?? 'Nothing to undo'); const p = r.game; p.log.push(`T${p.turn} ${nm(online.mySide() ?? p.phasing)} undid ${lbl ? '“' + lbl + '”' : 'an action'}`); g = p; selUnit = selChit = selArr = previewArea = hoverArea = null; note = ''; save(); refresh(); }
+/* ---------- 4.4 the computer opponent: one action at a time, each shown on the table as a player's would be ---------- */
+let cpuActing = false, cpuTimer = 0, cpuLast = '';
+/** After every redraw: if it is the computer's turn to act, its next action follows shortly (dice and effects are left to settle first). */
+function cpuTick() {
+  if (!CPU_SIDE || cpuTimer || g.over || rollView || heldNext || !E.ai.turnOf(g, CPU_SIDE)) return;
+  const delay = cpuLast === 'ready' || cpuLast === 'done' ? 350 : /move|fight|arrive|place|retreat|strategic/.test(cpuLast) ? 900 : 600;
+  cpuTimer = window.setTimeout(cpuStep, delay);
+}
+function cpuStep() {
+  cpuTimer = 0; if (!CPU_SIDE || g.over || rollView || heldNext || !E.ai.turnOf(g, CPU_SIDE)) return;
+  let a: E.ai.Action | null = null; try { a = E.ai.next(g, CPU_SIDE); } catch (e) { console.error('computer opponent', e); }
+  if (!a) { cpuLast = ''; return; }
+  cpuLast = a.label; cpuActing = true;
+  try {
+    if (a.roll && g.battle && !['loss', 'retreat', 'attChoice', 'defChoice', 'attFirst', 'setup', 'done'].includes(g.battle.stage)) rollStage(g.battle);     // the dice are thrown on screen, as for a player
+    else { const run = a.run; if (a.area != null && followFoe && !lock && !g.battle) lookAt(a.area); act(() => { run(g); }); }
+  } finally { cpuActing = false; }
+  hist.clear('the computer moved');                                                                   // a player's undo never reaches back past the computer's moves
+  render();
+}
+/** A line at the top while the computer plays. */
+function cpuBar() { return CPU_SIDE && !g.over && E.ai.turnOf(g, CPU_SIDE) && !rollView ? `<div class="seatbar cpu"><span class="spin" aria-hidden="true"></span><span>${esc(nm(CPU_SIDE))} (computer) is playing…</span></div>` : ''; }
 window.addEventListener('keydown', (e) => {
   const t = e.target as HTMLElement | null, typing = !!t?.matches?.('input,select,textarea');
   if (e.key === 'Escape') { if (modal) { modal = null; render(); } else if (selUnit || selArr || selChit || selArea != null) { selUnit = selArr = selChit = null; selArea = null; previewArea = null; refresh(); } return; }
@@ -1087,7 +1115,7 @@ function rollStage(b: E.Battle) {
   const next = structuredClone(g), before = snap(g); E.roll_step(next, next.battle!); rollFx = []; noteFx(before, next, true); rollNoted = true;
   try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* storage off */ } void push(next);          // the result is stored at once; the board shows it when the dice land
   const fresh = next.battle!.rolls.slice(n0); heldNext = next;
-  rollView = { morale: stage === 'exploit', title: `${nm(side)} ${STAGE_NAME[stage]}`, pos: null, groups: fresh.map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : first(side) ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: fl.find((f) => f.who === r.who)?.parts ?? [] })) };
+  rollView = { remote: cpuActing || undefined, morale: stage === 'exploit', title: `${nm(side)} ${STAGE_NAME[stage]}`, pos: null, groups: fresh.map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : first(side) ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: fl.find((f) => f.who === r.who)?.parts ?? [] })) };
   if (!rollView.groups.length) { rollView = null; commitRoll(); return; }
   refresh();
   const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block';
@@ -1716,7 +1744,7 @@ function renderInner() {
   const dockMain = alert || ledger() || handCards();
   const keepD = document.querySelector<HTMLElement>('#ui .c-dispatch')?.scrollTop ?? 0;           // a panel being read keeps its place when the screen updates
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = `<a class="skipmap" href="#" data-ui="${reg(() => { (document.getElementById('gl') as HTMLElement).focus(); })}">Skip to the map</a><div class="tops">${topBar()}${vpStrip(g, reg(() => { scoreOpen = true; }))}</div>` + `<div class="stage">${SANDBOX ? (SBU.st.sbOpen ? SBU.sandboxPanel() : SBU.sandboxFab()) : ''}${seatBar()}${heldBad ? heldBadBar() : ''}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${volPanel()}${mapLegend()}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${airPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} Map`, () => { endHidden = true; }) + ubtn(`${ico('dice')} Replay`, () => { void showReplay(); }, '', false, 'Watch the whole game again, step by step') + ubtn(`${ico('plus')} New game`, () => { if (SANDBOX) { SBU.sbReset({ ...g.opts }); endHidden = false; } else location.href = homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}</button>${undoBtn()}${!p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
+  $('#ui').innerHTML = `<a class="skipmap" href="#" data-ui="${reg(() => { (document.getElementById('gl') as HTMLElement).focus(); })}">Skip to the map</a><div class="tops">${topBar()}${vpStrip(g, reg(() => { scoreOpen = true; }))}</div>` + `<div class="stage">${SANDBOX ? (SBU.st.sbOpen ? SBU.sandboxPanel() : SBU.sandboxFab()) : ''}${seatBar()}${cpuBar()}${heldBad ? heldBadBar() : ''}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${volPanel()}${mapLegend()}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${legend()}${SBU.hotCoverHtml()}${saPickHtml()}${airPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} Map`, () => { endHidden = true; }) + ubtn(`${ico('dice')} Replay`, () => { void showReplay(); }, '', false, 'Watch the whole game again, step by step') + ubtn(`${ico('plus')} New game`, () => { if (SANDBOX) { SBU.sbReset({ ...g.opts }); endHidden = false; } else if (CPU) location.href = `${location.pathname}${location.search}&new=1`; else location.href = homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}</button>${undoBtn()}${!p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
   const ui = $('#ui');
   { const d = ui.querySelector<HTMLElement>('.c-dispatch'); if (d) d.scrollTop = keepD; }
   bind(ui, keepH, keepA);
@@ -1765,7 +1793,7 @@ function refresh() {
   { const ph = `${g.turn}${g.phasing}${g.phase}`; if (ph !== lastPhase) { lastPhase = ph; fxLayer.clear(); } }
   E.setPlayArea(g.inPlay);
   { const k = (g.inPlay ?? []).join(); if (k !== playKey) { const first = playKey === null; playKey = k; if (!first) paintBoard(); if (g.inPlay || !first) goal = homeGoal(); } }
-  SBU.hotseatSync();
+  SBU.hotseatSync(); cpuTick();
   if (online.mode === 'remote') setTimeout(driveSplit, 0);
   { const key = `${online.devSeat}|${online.mySide()}|${g.battle?.attPoint}|${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
     if (key !== tgtKey) { tgtKey = key; tgt = reinforcing ? reinforceTargets() : decisionTargets() ?? (selChit && mine(g.chits.find((x) => x.id === selChit)?.side ?? P1) ? VOL.targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: (u) => unitPic(u), areaName }) : null); } }

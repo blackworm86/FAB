@@ -47,6 +47,8 @@ export const HAS_TABLE = params.has('table'), DEV_FAKE = DEV && params.has('fake
 export const SANDBOX = params.has('sandbox');
 /** The tutorial: a local game in this browser, nothing written online. */
 export const TUTORIAL = params.has('tutorial') && !SANDBOX && !params.has('table');
+/** 4.4 A game against the computer (`?cpu=<the side the computer plays>`): local, nothing written online, no account needed. */
+export const CPU = !SANDBOX && !TUTORIAL && !params.has('table') ? params.get('cpu') : null;
 /** The seat a side sits in: the database keeps the keys german (First Player) and allied (Second Player) for every game. */
 export type SeatKey = 'german' | 'allied';
 export const seatKey = (s: Side): SeatKey => (s === VOLUME.sides[1] ? 'allied' : 'german');
@@ -60,14 +62,17 @@ export const online = {
   /** 'off' = not connected, 'local' = a development table on this machine, 'remote' = shared through the database. */
   mode: 'off' as 'off' | 'local' | 'remote', uid: '', seats: {} as Seats, rev: 0, error: '', sync: 'connecting' as string, ready: false,
   lastBy: '', chat: [] as ChatMsg[], devSeat: 'both' as DevSeat, enemyAlias: new Map<string, string>(), account: null as Account | null, admin: false, hasAccounts: false,
+  /** 4.4: the side the computer plays at this table (the player holds the other seat). */
+  cpu: null as Side | null,
   mySide(): Side | null {
+    if (this.cpu) return this.cpu === VOLUME.sides[0] ? VOLUME.sides[1] : VOLUME.sides[0];
     if (this.devSwitch()) return this.devSeat !== 'both' && this.devSeat !== 'watch' ? this.devSeat : null;
     return this.seats.german === this.uid && this.uid ? seatSide('german') : this.seats.allied === this.uid && this.uid ? seatSide('allied') : null;
   },
   /** True when this client may act for whoever's turn it is (the development "both" seat). */
-  both() { return this.mode === 'off' || (this.devSwitch() && this.devSeat === 'both'); },
+  both() { return !this.cpu && (this.mode === 'off' || (this.devSwitch() && this.devSeat === 'both')); },
   /** The seat switch exists only where no real opponent can be harmed: the sandbox, the two-tab fake store, a local development table. Never on a shared table, whatever the address says. */
-  devSwitch() { return SANDBOX || DEV_FAKE || (DEV && this.mode === 'local'); },
+  devSwitch() { return !this.cpu && (SANDBOX || DEV_FAKE || (DEV && this.mode === 'local')); },
   get active() { return this.mode !== 'off'; },
 };
 
@@ -91,6 +96,7 @@ const savedLater = () => { writing = false; if (rebuildLater) { rebuildLater = f
 export async function startOnline(remote: (g: Game) => void, changed: () => void, say: (m: string) => void = () => {}, gone: () => void = () => {}) {
   onRemote = remote; onChange = changed; notify = say; onGone = gone;
   if (TUTORIAL) { online.ready = true; changed(); return; }
+  if (CPU) { online.mode = 'local'; online.ready = true; changed(); return; }                                   // 4.4: the table is this browser's; the computer needs no store
   try {
     const fake = DEV ? params.get('fake') : null, make = async () => (fake === 'german' || fake === 'allied' ? (await import('./store-fake')).fakeStore(fake) : rtdbStore(TABLE));
     store = await Promise.race([make(), new Promise<never>((_, no) => setTimeout(() => no(new Error('Could not reach the game database. Check the database address and your connection.')), 15000))]);
