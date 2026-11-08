@@ -165,7 +165,8 @@ function pixels(im: HTMLImageElement): CanvasImageSource {
   const have = flat.get(im); if (have) return have;
   const c = document.createElement('canvas'); c.width = boardCv.width; c.height = boardCv.height; const x = c.getContext('2d')!; x.drawImage(im, 0, 0, c.width, c.height);
   const lines = im === linesImg || im === flipped.get(linesImg);
-  if (x.getImageData(c.width >> 1, c.height >> 1, 1, 1).data[3] || lines) { if (!lines || flat.has(baseImg)) flat.set(im, c); return c; }     // a large SVG can come out blank the first time: keep the copy only once it shows
+  if (lines ? keepIfInked(im, c) : x.getImageData(c.width >> 1, c.height >> 1, 1, 1).data[3]) { flat.set(im, c); return c; }
+  if (lines) return c;     // a large SVG can come out blank the first time: keep the copy only once it shows
   setTimeout(paintBoard, 120); return im;
 }
 function applyArt() { const mat = board.material as THREE.MeshStandardMaterial; mat.map = boardTex; mat.needsUpdate = true; paintBoard(); }
@@ -178,6 +179,15 @@ const diorama = new THREE.Group(); diorama.visible = false; scene.add(diorama);
 const WOOD_BASE = 0x2e2117;
 { const slab = new THREE.Mesh(new THREE.BoxGeometry(MW / S + 1.2, 1.4, MH / S + 1.2), new THREE.MeshStandardMaterial({ color: WOOD_BASE, roughness: 0.8 })); slab.position.y = -0.7 - 0.002; slab.receiveShadow = true; diorama.add(slab); }
 const relArt = new Map<HTMLImageElement, HTMLCanvasElement>();
+/** A large drawing can come out blank on a phone the first time it is turned into pixels (seen on Android with Sicily's line work): keep the copy
+ *  only once it has ink; until then draw again shortly (a few tries, then keep what there is). */
+const inkTries = new Map<HTMLImageElement, number>();
+function keepIfInked(im: HTMLImageElement, c: HTMLCanvasElement) {
+  if (!im.complete || !im.naturalWidth) { setTimeout(paintBoard, 200); return false; }
+  const s = document.createElement('canvas'); s.width = 512; s.height = Math.max(1, Math.round((512 * c.height) / c.width)); const x = s.getContext('2d', { willReadFrequently: true })!; x.drawImage(c, 0, 0, s.width, s.height);
+  const d = x.getImageData(0, 0, s.width, s.height).data; for (let i = 3; i < d.length; i += 16) if (d[i]) return true;
+  const n = (inkTries.get(im) ?? 0) + 1; inkTries.set(im, n); if (n >= 12) return true; setTimeout(paintBoard, 250); return false;
+}
 /** On the relief the area highlights are painted by the ground itself: a picture of the area numbers, and one colour per area. */
 const areaIdTex = (() => { const d = new Uint8Array(MW * MH * 4);                                   // filled by hand, row by row: a canvas would blend the numbers along the borders; a scenario sheet's boxes float on their own cards and take no pixels
   for (const a of MAP.areas.filter((x) => !(VOL.art.sheetBoxes ?? []).some((b) => b.id === x.id))) { const P = a.polygon, ys = P.map((q) => q[1]);
@@ -186,7 +196,7 @@ const areaIdTex = (() => { const d = new Uint8Array(MW * MH * 4);               
       xs.sort((u, v) => u - v); for (let k = 0; k + 1 < xs.length; k += 2) for (let x = Math.max(0, Math.round(xs[k])); x < Math.min(MW, Math.round(xs[k + 1])); x++) d[((MH - 1 - y) * MW + x) * 4] = a.id; } }
   const t = new THREE.DataTexture(d, MW, MH); t.magFilter = t.minFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const tintData = new Uint8Array(256 * 4), tintTex = new THREE.DataTexture(tintData, 256, 1); tintTex.needsUpdate = true;
-const relPixels = (im: HTMLImageElement) => { let c = relArt.get(im); if (!c) { c = document.createElement('canvas'); c.width = boardCv.width; c.height = boardCv.height; c.getContext('2d')!.drawImage(im, 0, 0, c.width, c.height); relArt.set(im, c); } return c; };
+const relPixels = (im: HTMLImageElement) => { let c = relArt.get(im); if (!c) { c = document.createElement('canvas'); c.width = boardCv.width; c.height = boardCv.height; c.getContext('2d')!.drawImage(im, 0, 0, c.width, c.height); if (keepIfInked(im, c)) relArt.set(im, c); } return c; };
 const show3d = () => map3d && !!REL;
 /** Phones and small tablets: the 3D map is drawn lighter (fewer pixels, no shadows, a coarser ground, fewer trees). */
 const PHONE = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 820;

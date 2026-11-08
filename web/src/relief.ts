@@ -76,12 +76,36 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
   const ZS = (meta.exag ?? RELIEF) / ((meta.mpp ?? 80) * S);   // metres → cm
   const { cols: C, rows: R, step: ST } = meta, HB = new Uint16Array(hb), WB = new Uint8Array(wb);
   const K = (meta.metres / 65535) * ZS;                   // grid value → cm
-  const grid = (gx: number, gy: number) => { gx = Math.min(Math.max(gx, 0), C - 1.001); gy = Math.min(Math.max(gy, 0), R - 1.001); const i = gx | 0, j = gy | 0, fx = gx - i, fy = gy - j, v = (a: number, b: number) => HB[b * C + a];
-    return ((v(i, j) * (1 - fx) + v(i + 1, j) * fx) * (1 - fy) + (v(i, j + 1) * (1 - fx) + v(i + 1, j + 1) * fx) * fy) * K; };
+  const HF = Float32Array.from(HB, (v) => v * K);          // heights in cm; a cut map's edge band is smoothed below (edgeBand)
+  const grid = (gx: number, gy: number) => { gx = Math.min(Math.max(gx, 0), C - 1.001); gy = Math.min(Math.max(gy, 0), R - 1.001); const i = gx | 0, j = gy | 0, fx = gx - i, fy = gy - j, v = (a: number, b: number) => HF[b * C + a];
+    return (v(i, j) * (1 - fx) + v(i + 1, j) * fx) * (1 - fy) + (v(i, j + 1) * (1 - fx) + v(i + 1, j + 1) * fx) * fy; };
   const hMap = (px: number, py: number) => grid(px / ST, py / ST) + BASE;
   const landPx = (() => { const c = document.createElement('canvas'); c.width = meta.w; c.height = meta.h; const x = c.getContext('2d')!; x.drawImage(snow, 0, 0); const d = x.getImageData(0, 0, meta.w, meta.h).data, out = new Uint8Array(meta.w * meta.h); for (let k = 0; k < out.length; k++) out[k] = d[k * 4 + 3] > 127 ? 1 : 0; return out; })();
   const cutCv = meta.cut ? (() => { const c = document.createElement('canvas'); c.width = meta.w; c.height = meta.h; const x = c.getContext('2d')!; x.fillStyle = '#000'; x.fillRect(0, 0, meta.w, meta.h); x.fillStyle = '#fff'; x.beginPath(); for (const r of meta.cut!) r.forEach(([a, b], i) => (i ? x.lineTo(a, b) : x.moveTo(a, b))); x.fill('evenodd'); return c; })() : null;
   const cutPx = cutCv ? (() => { const d = cutCv.getContext('2d')!.getImageData(0, 0, meta.w, meta.h).data, out = new Uint8Array(meta.w * meta.h); for (let k = 0; k < out.length; k++) out[k] = d[k * 4] > 127 ? 1 : 0; return out; })() : null;
+  const blur = (src: Float32Array, r: number) => { const t = new Float32Array(C * R), o = new Float32Array(C * R);
+    for (let j = 0; j < R; j++) { let s = 0, n = 0; for (let i = -r; i < C + r; i++) { if (i + r < C) { s += src[j * C + Math.min(C - 1, i + r)]; n++; } if (i - r - 1 >= 0) { s -= src[j * C + (i - r - 1)]; n--; } if (i >= 0 && i < C) t[j * C + i] = s / Math.max(1, n); } }
+    for (let i = 0; i < C; i++) { let s = 0, n = 0; for (let j = -r; j < R + r; j++) { if (j + r < R) { s += t[Math.min(R - 1, j + r) * C + i]; n++; } if (j - r - 1 >= 0) { s -= t[(j - r - 1) * C + i]; n--; } if (j >= 0 && j < R) o[j * C + i] = s / Math.max(1, n); } }
+    return o; };
+  /* Spikes: where the height grid zig-zags (a steep scarp sampled on a coarse grid, e.g. the Golan over the Kinneret) the mesh turned it into a comb of
+     teeth; a cell far from its neighbours' mean eases toward it, while even slopes keep their shape. */
+  { const m = blur(HF, 1); let sum = 0; for (let k = 0; k < C * R; k++) sum += Math.abs(HF[k] - m[k]); const t = Math.max(1e-6, (sum / (C * R)) * 3);
+    for (let k = 0; k < C * R; k++) { const d = HF[k] - m[k], w = Math.min(1, Math.max(0, (Math.abs(d) - t) / t)); HF[k] -= d * w * 0.85; } }
+  /* Cliffs: exaggerated and sampled every few pixels, a deep gorge became near-vertical curtains; no slope may pass about 62 degrees. */
+  { const maxD = Math.tan((62 * Math.PI) / 180) * (ST / S);
+    for (let it = 0; it < 8; it++) for (let j = 0; j < R; j++) for (let i = 0; i < C; i++) { const k = j * C + i; let lo = Infinity;
+      if (i > 0) lo = Math.min(lo, HF[k - 1]); if (i < C - 1) lo = Math.min(lo, HF[k + 1]); if (j > 0) lo = Math.min(lo, HF[k - C]); if (j < R - 1) lo = Math.min(lo, HF[k + C]);
+      if (HF[k] > lo + maxD) HF[k] = (HF[k] + lo + maxD) / 2; } }
+  /* A cut map's edge: within a band of the outline the ground eases into a smoothed copy of itself, so the side wall and the ground meet
+     along one clean line (the raw relief along a cliff, e.g. the Golan scarp over the Kinneret, made a saw-tooth rim). */
+  if (cutPx) {
+    const inside = new Uint8Array(C * R); for (let j = 0; j < R; j++) for (let i = 0; i < C; i++) { const px = Math.min(meta.w - 1, i * ST), py = Math.min(meta.h - 1, j * ST); inside[j * C + i] = cutPx[py * meta.w + px]; }
+    const BAND = 7, dist = new Uint8Array(C * R).fill(255), q: number[] = [];
+    for (let k = 0; k < C * R; k++) if (!inside[k]) { dist[k] = 0; q.push(k); }
+    for (let h0 = 0; h0 < q.length; h0++) { const k = q[h0], d = dist[k]; if (d >= BAND) continue; const i = k % C, j = (k / C) | 0; for (const [a, b] of [[i - 1, j], [i + 1, j], [i, j - 1], [i, j + 1]]) { if (a < 0 || b < 0 || a >= C || b >= R) continue; const n = b * C + a; if (dist[n] > d + 1) { dist[n] = d + 1; q.push(n); } } }
+    const smooth = blur(blur(HF, 4), 4);
+    for (let k = 0; k < C * R; k++) { const d = dist[k]; if (d >= BAND) continue; const t = d / BAND, e = t * t * (3 - 2 * t); HF[k] = smooth[k] + (HF[k] - smooth[k]) * e; }
+  }
   const inMap = (px: number, py: number) => px >= 0 && py >= 0 && px < meta.w && py < meta.h && (cutPx ? cutPx[(py | 0) * meta.w + (px | 0)] === 1 : landPx[(py | 0) * meta.w + (px | 0)] === 1);
   const onLand = inMap;
   const wx = (px: number) => px / S - MW / (2 * S), wz = (py: number) => py / S - MH / (2 * S);
@@ -111,7 +135,7 @@ export async function loadRelief(MW: number, MH: number, S: number, labels: [num
   const margin = cutPx ? (() => { const [x0, y0, x1, y1] = mb, m = new THREE.PlaneGeometry((x1 - x0) / S, (y1 - y0) / S, 1, 1), q = m.getAttribute('position') as THREE.BufferAttribute, uv = m.getAttribute('uv') as THREE.BufferAttribute;
     for (let k = 0; k < q.count; k++) { const u = uv.getX(k), v = uv.getY(k), px = x0 + u * (x1 - x0), py = y0 + (1 - v) * (y1 - y0); q.setXYZ(k, wx(px), -wz(py), BASE); uv.setXY(k, px / meta.w, 1 - py / meta.h); }
     m.computeVertexNormals(); return m; })() : null;
-  const cutTex = cutCv ? (() => { const t = new THREE.CanvasTexture(cutCv); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; return t; })() : null;   // a crisp cut, the same line as the walls at every distance
+  const cutTex = cutCv ? (() => { const t = new THREE.CanvasTexture(cutCv); t.magFilter = t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; return t; })() : null;   // a crisp cut, the same line as the walls at every distance
   const walls = new THREE.BufferGeometry(); walls.setAttribute('position', new THREE.Float32BufferAttribute(wp, 3)); walls.computeVertexNormals();
 
   // printed lines without towns, cities and borders; borders redrawn black on a white edge
