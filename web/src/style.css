@@ -588,7 +588,7 @@ body:has(.hotcover) #leaders, body:has(.hotcover) #fx, body:has(.hotcover) #mark
 @media (max-width: 700px) { body.guide-short .engch { white-space: nowrap; font-size: 12px; } body.guide-short .engch .row button { white-space: nowrap; padding-inline: 6px; } }
 .gowait.slot { border-color: transparent !important; } @media (min-width: 701px) { .gowait.slot { display: none; } }
 /* optional rules chooser (Play Book 18) */
-.optrules { border: 1px solid #8d906566; margin: 8px 0; }
+.optrules { border: 1px solid #8d906566; margin: 8px 0; } .optrules, .inspect { scroll-margin-top: 8px; } .sheet.menu .mbody, .modal > .sheet { overscroll-behavior: contain; }
 .optrules .ohead { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; padding: 6px 10px; background: transparent; border: 0; color: var(--ink); text-align: left; cursor: pointer; }
 .optrules .ohead b { font: 600 14px var(--sfd); letter-spacing: .1em; text-transform: uppercase; } .optrules .ohead span { margin-left: auto; color: var(--gold); font-size: 12px; } .optrules .ohead .ic { width: 16px; height: 16px; color: var(--gold); }
 .optrules .olist { display: grid; border-top: 1px solid #8d906544; }
