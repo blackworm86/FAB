@@ -114,6 +114,8 @@ def tufts(d, gap=7.5, off=5.5, size=7.5):
                 dirn = n * side * np.cos(f) + tg * np.sin(f); e = c + dirn * size * (0.75 + 0.35 * np.cos(f * 2))
                 out.append(f'M{c[0]:.1f} {c[1]:.1f}L{e[0]:.1f} {e[1]:.1f}')
     return ''.join(out)
+def small_paths(d, n=28):                                                           # one path of 1680 strokes made phones drop the line work drawn after it (the borders): a few strokes per path, as on the other maps
+    s = re.findall(r'M[^M]+', d); return ''.join(f'<path d="{"".join(s[i:i + n])}"/>' for i in range(0, len(s), n))
 ARROW_COL = '#ffffff'
 ZONE = {a['id']: a['zone'] for a in M['areas']}
 def zone_captions():                                                                # as printed: "Zone A" / "Zone B" either side of each army boundary, along it
@@ -155,7 +157,7 @@ lines = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" view
          g('coast', 'stroke="#2a86c2" stroke-width="3.2"', paths(coast)),                                   # the print's order: the coast, rivers, roads, the tufts, borders, army boundaries, cities, arrows, symbols
          g('rivers', '', f'<g stroke="#2f7fb5" stroke-width="6.4">{paths(A["river"])}</g><g stroke="#6cc4ec" stroke-width="3.6">{paths(A["river"])}</g>'),
          g('roads', '', f'<g stroke="#8e8e8e" stroke-width="5">{paths(A["roads"])}</g><g stroke="#d6d5d2" stroke-width="2.6">{paths(A["roads"])}</g>'),
-         g('restricted', 'stroke="#4b3b2a" stroke-width=".8"', f'<path d="{"".join(tufts(d) for d in A["restricted"])}"/>'),
+         g('restricted', 'stroke="#4b3b2a" stroke-width=".8"', small_paths(''.join(tufts(d) for d in A['restricted']))),
          g('boundaries', 'stroke="#626262" stroke-width="5.2"', paths(A['open'] + A['restricted'])),
          g('army-boundaries', '', f'<g stroke="#5a5a5a" stroke-width="7">{paths(A["army_boundary"])}</g><g stroke="#ffffff" stroke-width="2" stroke-linecap="butt" stroke-dasharray="6 5">{paths(A["army_boundary"])}</g>'),
          f'<g id="cities">{city}</g>',
