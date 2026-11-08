@@ -476,6 +476,7 @@ img.cb { border-radius: 7%; box-shadow: 0 1px 0 #e3dccb, 0 2px 0 #b9b2a0, 0 3px 
 .tabs button span { display: block; font: 600 11px var(--sfd); letter-spacing: .1em; text-transform: uppercase; margin-top: 2px; } .sheet.menu .tabs { overflow-x: auto; scrollbar-width: none; } .sheet.menu .tabs button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: max-content; padding: 4px 2px; } .sheet.menu .tabs button span { letter-spacing: .04em; margin-top: 0; }      /* four tabs fit a phone in every language: icon above the label, whole words; a language that still does not fit scrolls sideways instead of clipping */
 .sheet.menu { display: flex; flex-direction: column; } .sheet.menu .mbody { flex: 1; min-height: 0; overflow: auto; }
 @media (max-width: 700px) { .sheet.menu { height: 82vh; max-height: 82vh !important; } }
+@media (min-width: 701px) { .sheet.menu { height: min(760px, 86vh); } }      /* the Game menu keeps one size across its tabs: close button and tabs stay put */
 .sheet.menu .log { max-height: none; font-size: 12.5px; line-height: 1.35; color: var(--ink); }
 .log h6 { margin: 8px 0 2px; font: 600 11px var(--sfd); letter-spacing: .14em; text-transform: uppercase; color: var(--rule, #8d9065); }
 .dchips.more { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
