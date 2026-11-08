@@ -184,8 +184,10 @@ function render() {
   resetActs();
   const ui = $('#ui');
   document.body.classList.toggle('caninstall', !!installKind());                                     // room at the foot of the page for the install button
+  const keep = ui.querySelector<HTMLElement>('.homepage')?.scrollTop ?? 0;                          // picking a game or a live lobby update redraws the page: it keeps its place
   ui.innerHTML = (modal === 'rules' ? rulesHtml('', notice) : '') + homeHtml() + installHtml() + langHtml() + (toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : '');
   translateDom(ui); linkRules(ui);
+  { const h = ui.querySelector<HTMLElement>('.homepage'); if (h) h.scrollTop = keep; }
   ui.querySelectorAll<HTMLElement>('[data-ui], [data-do]').forEach((e) => (e.onclick = () => { acts[e.dataset.ui ?? e.dataset.do!]?.(); render(); }));
   ui.querySelectorAll<HTMLElement>('[data-modal]').forEach((e) => (e.onclick = () => { modal = (e.dataset.modal || null) as typeof modal; render(); }));
   ui.querySelectorAll<HTMLElement>('[data-sel]').forEach((e) => (e.onchange = () => actv[e.dataset.sel!]?.(e instanceof HTMLInputElement && e.type === 'checkbox' ? (e.checked ? 'on' : 'off') : (e as HTMLSelectElement).value)));
