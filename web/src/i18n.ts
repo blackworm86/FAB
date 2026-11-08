@@ -32,7 +32,8 @@ export function tr(s: string): string {
 /** A passage with markup (a lesson's text), whole. */
 export const trHtml = (s: string) => (LANG === 'en' || !s ? s : D.html[s] ?? (COLLECT && missing.add(`html:${s}`), s));
 const SKIP = 'script, style, #rules .sec, #rules .ix, #rules .row, .notr, [contenteditable], input, textarea';
-const ATTRS = ['title', 'aria-label', 'placeholder', 'data-tip'];
+const ATTRS = ['title', 'aria-label', 'placeholder', 'data-tip', 'data-cap'];
+const SKIP_ATTR = 'script, style, #rules .sec, #rules .ix, #rules .row, .notr, [contenteditable]';      // inputs keep their typed text, but their hints are translated
 /** A CSS selector that also finds elements whose title / aria-label was translated (it matches their English). */
 export const enSel = (sel: string) => (LANG === 'en' || !/\[(title|aria-label)/.test(sel) ? sel : `${sel}, ${sel.replace(/\[(title|aria-label)/g, '[data-en-$1')}`);
 /** Translate the text nodes and attributes under `root` that the dictionary knows. */
@@ -40,5 +41,5 @@ export function translateDom(root: Element | null) {
   if (LANG === 'en' || !root) return;
   const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (/[A-Za-z]{2}/.test(n.nodeValue ?? '') && !n.parentElement?.closest(SKIP) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT) });
   for (let n = w.nextNode(); n; n = w.nextNode()) { const raw = n.nodeValue!, key = raw.trim(), t = tr(key); if (t !== key) n.nodeValue = raw.replace(key, t); }
-  for (const a of ATTRS) root.querySelectorAll<HTMLElement>(`[${a}]`).forEach((e) => { if (e.closest(SKIP)) return; const v = e.getAttribute(a)!, t = tr(v); if (t !== v) { e.setAttribute(a, t); e.setAttribute(`data-en-${a}`, v); } });      // the English stays alongside, for the tutorials' targets
+  for (const a of ATTRS) root.querySelectorAll<HTMLElement>(`[${a}]`).forEach((e) => { if (e.closest(SKIP_ATTR)) return; const v = e.getAttribute(a)!, t = tr(v); if (t !== v) { e.setAttribute(a, t); e.setAttribute(`data-en-${a}`, v); } });      // the English stays alongside, for the tutorials' targets
 }

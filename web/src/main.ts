@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { translateDom, LANG, LANGS, setLang } from './i18n';
+import { translateDom, tr, LANG, LANGS, setLang } from './i18n';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import * as E from '../../engine/src';
 import { loadChitArt, garrisonChit } from './chits';
@@ -936,7 +936,7 @@ function badgeList(): Badge[] {
 const badgeEls = new Map<string, HTMLElement>();
 function syncBadges() {
   const layer = $('#badges'); layer.innerHTML = ''; badgeEls.clear();
-  for (const b of badges) { const d = document.createElement('div'); d.className = 'bdg ' + b.cls; d.textContent = b.text; layer.appendChild(d); badgeEls.set(b.key ?? String(b.area), d); }
+  for (const b of badges) { const d = document.createElement('div'); d.className = 'bdg ' + b.cls; d.textContent = tr(b.text); layer.appendChild(d); badgeEls.set(b.key ?? String(b.area), d); }
 }
 /** Focus on the battle. The whole table is drawn blurred and dimmed by the browser; a second canvas draws the contested area again, sharp, with its pieces (so nothing inside is cut),
  *  and the area's exact edge glows. */
