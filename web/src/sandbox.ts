@@ -62,3 +62,41 @@ export function report(ns: Note[], g: E.Game, version: string) {
   a.href = URL.createObjectURL(blob); a.download = `fab-test-report-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.json`;
   document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
+
+/* ---------- a ready test situation from the address (the rules checklist links here) ---------- */
+/** Address keys that ask for one: `at=turn.side.phase`, `chits=kind,side:kind` (made available), `battle=1` (a battle opened), `case=` (the rule tested, written in the log), `setup=0` (stay in the set-up). */
+export const PRESET_KEYS = ['at', 'chits', 'battle', 'case', 'setup'];
+type Next = (g: E.Game, s: E.Side, level: 'easy') => { run: (g: E.Game) => void } | null;
+/** A new game finished setting up (the computer places the set-up pieces), then moved to the situation the address asks for. */
+export function preset(g: E.Game, q: URLSearchParams, next: Next): E.Game {
+  const sides = E.sidesOf(g);
+  for (let i = 0; i < 400 && g.phase === 'deploy' && q.get('setup') !== '0'; i++) {
+    const a = sides.map((s) => next(g, s, 'easy')).find(Boolean);
+    try { if (a) a.run(g); else E.endPhase(g); } catch { break; }
+  }
+  const [t, s, p] = (q.get('at') ?? '').split('.'), battle = q.get('battle') === '1';
+  const side = sides.includes(s as E.Side) ? (s as E.Side) : g.phasing, phase = PHASES.some(([k]) => k === p) ? (p as E.Phase) : battle ? 'combat' : null;
+  if (phase || +t) jump(g, +t || g.turn, side, phase ?? g.phase);
+  for (const tok of (q.get('chits') ?? '').split(',').filter(Boolean)) {
+    const [a, b] = tok.split(':'), kind = b ?? a;
+    for (const sd of b ? [a] : sides) {
+      const c = g.chits.find((x) => x.side === sd && x.kind === kind && x.box === 'available') ?? g.chits.find((x) => x.side === sd && x.kind === kind);
+      if (c) { c.box = 'available'; c.area = undefined; }
+    }
+  }
+  if (battle && !g.battle) try { E.startBattle(g, contact(g)); } catch (e) { g.log.push(`T${g.turn} [sandbox] no battle: ${(e as Error).message}`); }
+  if (q.get('case')) g.log.push(`T${g.turn} [sandbox] test: ${q.get('case')}`);
+  return g;
+}
+/** An area to fight in: one that must be fought, else one already contested, else a block of the phasing side is put into an enemy area next to it. */
+function contact(g: E.Game): number {
+  const must = E.mustFight(g); if (must.length) return must[0];
+  const held = E.contestedAreas(g).find((a) => E.fighters(g, a, g.phasing, true).some((u) => !u.garrison)); if (held != null) return held;
+  const foe = (a: number) => g.units.some((u) => u.area === a && u.side !== g.phasing && !u.garrison);
+  for (const u of g.units) {
+    if (u.side !== g.phasing || u.area == null || u.garrison || u.fort || u.ghost || u.str <= 0 || u.disorder) continue;      // strongpoints and ghosts never attack
+    const to = E.neighbors(u.area).find((n) => foe(n) && g.units.filter((x) => x.area === n && x.side === g.phasing).length === 0);
+    if (to != null) { place(g, u.id, to); return to; }
+  }
+  throw new Error('no enemy next to a block of the phasing side');
+}
