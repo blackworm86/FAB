@@ -25,7 +25,7 @@ const QW: Record<Quality, number> = { green: 0.8, veteran: 1, elite: 1.25 };
 /** How many times a hard player fights a battle out before deciding (more: steadier, slower). */
 export const SIMS = { attack: 48, choice: 24 };
 /** Tuning switches for the arena: how the hard player picks its moves ('deep': by the position each leaves; 'veto': the plain player's order, attacks the fought-out outcome speaks against dropped), and whether it plans its attacks first. */
-export const TUNE = { moves: 'deep' as 'deep' | 'veto', plan: true, vetoAt: -1.5 };
+export const TUNE = { moves: 'deep' as 'deep' | 'veto', plan: true, vetoAt: -1.5, planAt: 0.6, sd: true, asym: 0, vpBase: 5, tw1: 0.5, tw2: 1.5 };
 /** Tuning: when set, the hard player's judgements of moves are written here. */
 export let TRACE: string[] | null = null; export const setTrace = (t: string[] | null) => { TRACE = t; };
 
@@ -124,18 +124,18 @@ function pressure(g: Game, a: number, side: Side): number {
   return w * 0.45 * (m / (m + t + 0.1));
 }
 /** What a victory point is worth in steps: more as the game nears its end (and its sudden-death checks), when nothing else will count. */
-const vpWeight = (g: Game) => 5 + 3 * Math.max(0, Math.min(1, (g.turn - (g.lastTurn - 4)) / 3));
+const vpWeight = (g: Game) => TUNE.vpBase + 3 * Math.max(0, Math.min(1, (g.turn - (g.lastTurn - 4)) / 3));
 /** The whole position for `side`, in steps-worth: own and enemy strength, objectives (the victory function), threatened objectives, assets in hand,
  *  enemy blocks cut off from supply, and (for the side that has to take ground) how close its blocks stand to the objectives still to take. */
 export function evaluate(g: Game, side: Side): number { return evaluateParts(g, side).total; }
 /** The evaluation by its parts (for tuning). */
 export function evaluateParts(g: Game, side: Side) {
   const foe = E.other(side); const p = { units: 0, vp: 0, sd: 0, threat: 0, chance: 0, pressure: 0, chits: 0, cutoff: 0, approach: 0, total: 0 };
-  for (const u of g.units) if (u.area != null) p.units += (u.side === side ? 1 : -1) * val(g, u, side);
+  const first = E.sidesOf(g)[0] === side, tw = first ? TUNE.tw1 : TUNE.tw2, ownW = first ? 1 - TUNE.asym : 1, foeW = first ? 1 + TUNE.asym : 1;      // the side that must take ground may count the enemy's steps for more than its own
+  for (const u of g.units) if (u.area != null) p.units += u.side === side ? ownW * val(g, u, side) : -foeW * val(g, u, side);
   const v = E.victory(g), net = v[side] - v[foe]; p.vp = net * vpWeight(g);
-  { const sd = g.inPlay ? null : (g.track ?? CUR.track)[g.turn - 1]?.sd; if (sd) { const [me, them] = E.sidesOf(g)[0] === side ? sd : [sd[1], sd[0]];        // the Victory Check at the end of this turn: over the line wins the game, a point short is nothing yet
+  { const sd = g.inPlay || !TUNE.sd ? null : (g.track ?? CUR.track)[g.turn - 1]?.sd; if (sd) { const [me, them] = E.sidesOf(g)[0] === side ? sd : [sd[1], sd[0]];        // the Victory Check at the end of this turn: over the line wins the game, a point short is nothing yet
     p.sd = (net >= me ? 12 : 4 * Math.max(0, 1 - (me - net) / 3)) - (-net >= them ? 12 : 4 * Math.max(0, 1 - (them + net) / 3)); } }
-  const first = E.sidesOf(g)[0] === side, tw = first ? 0.5 : 1.5;
   for (const a of areas.keys()) if (inPlay(g, a)) { p.threat -= threat(g, a, side) * tw; p.chance += chance(g, a, side) * 0.5; p.pressure += pressure(g, a, side) * vpWeight(g); }
   for (const c of g.chits) if (c.side === side && c.box === 'available') p.chits += c.kind === 'sa_block' ? 0.8 : c.kind === 'special_action_event' ? 0.5 : isAsset(c) ? 0.1 : 0.2;
   const held = new Set(g.units.filter((u) => u.side === foe && u.area != null && !u.garrison).map((u) => u.area!));
@@ -447,7 +447,7 @@ function attackPlan(g: Game, side: Side): [string, number][] {
   }
   plans.sort((p, q) => q.gain - p.gain);
   const used = new Set<string>(), out: [string, number][] = [];
-  for (const p of plans) { if (p.gain < 0.6 || p.ids.some((id) => used.has(id)) || out.some((m) => m[1] === p.a)) continue; for (const id of p.ids) { used.add(id); out.push([id, p.a]); } }
+  for (const p of plans) { if (p.gain < TUNE.planAt || p.ids.some((id) => used.has(id)) || out.some((m) => m[1] === p.a)) continue; for (const id of p.ids) { used.add(id); out.push([id, p.a]); } }
   if (TRACE) TRACE.push(`plan: ${plans.slice(0, 12).map((p) => `${areas.get(p.a)!.name}[${p.ids.length}] ${p.gain.toFixed(2)}`).join(', ')} => ${out.map(([id, a]) => `${id}->${a}`).join(' ')}`);
   return out;
 }
