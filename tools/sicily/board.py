@@ -163,5 +163,6 @@ lines = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" view
          f'<g id="arrows">{arrows_svg}</g>',
          '<g id="symbols">' + ''.join(anchor(*clear_of_town(p['x'], p['y'])) for p in A['port_symbols']) + ''.join(airfield(a['x'], a['y'], a['r']) for a in A['airfields']) + '</g>',
          '</svg>']
-open(os.path.join(OUT, 'map-lines.svg'), 'w').write('\n'.join(lines))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')); from hatch import convert as hatch_free   # no <pattern> in a board file: see tools/hatch.py
+open(os.path.join(OUT, 'map-lines.svg'), 'w').write(hatch_free('\n'.join(lines)))
 print('board', W, H, os.path.getsize(os.path.join(OUT, 'map-base.svg')) // 1024, 'KB +', os.path.getsize(os.path.join(OUT, 'map-lines.svg')) // 1024, 'KB', len(A['boxes']), 'boxes')
