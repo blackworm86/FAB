@@ -153,7 +153,11 @@ sun.shadow.mapSize.set(4096, 4096); Object.assign(sun.shadow.camera, { left: -35
 const board: THREE.Mesh<THREE.BufferGeometry, THREE.Material> = new THREE.Mesh(new THREE.PlaneGeometry(MW / S, MH / S), new THREE.MeshStandardMaterial({ map: null, roughness: 0.9 }));
 board.rotation.x = -Math.PI / 2; board.receiveShadow = true; scene.add(board);
 /* The board texture is composed in layers: ground and forest, then the area tint (so roads and rivers stay visible), then the line work, then the printed items (numbers, TDN, VP, names), turned to face the player. */
-const boardCv = document.createElement('canvas'); boardCv.width = MW * 2; boardCv.height = MH * 2;
+const PHONE = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 820;
+/** Board pixels per map pixel. Every board layer is kept as a canvas of this size; at 2x Sicily's and Golan's are 67 MB each, and a phone over its
+ *  canvas-memory budget hands out blank canvases, so the line work (drawn after the ground) went missing. Phones: 1x, in every game. */
+const BOARD_K = PHONE ? 1 : 2;
+const boardCv = document.createElement('canvas'); boardCv.width = MW * BOARD_K; boardCv.height = MH * BOARD_K;
 const boardTex = new THREE.CanvasTexture(boardCv); boardTex.colorSpace = THREE.SRGBColorSpace; boardTex.anisotropy = 8;
 const loadImg = (src: string) => { const i = new Image(); i.onload = () => paintBoard(); i.src = src; return i; };
 const vpIcons: Record<string, HTMLImageElement> = Object.fromEntries(Object.entries(VOL.art.vpIcons).map(([k, src]) => [k, loadImg(src)]));
@@ -205,7 +209,6 @@ const tintData = new Uint8Array(256 * 4), tintTex = new THREE.DataTexture(tintDa
 const relPixels = (im: HTMLImageElement) => { let c = relArt.get(im); if (!c) { c = document.createElement('canvas'); c.width = boardCv.width; c.height = boardCv.height; c.getContext('2d')!.drawImage(im, 0, 0, c.width, c.height); if (keepIfInked(im, c)) relArt.set(im, c); } return c; };
 const show3d = () => map3d && !!REL;
 /** Phones and small tablets: the 3D map is drawn lighter (fewer pixels, no shadows, a coarser ground, fewer trees). */
-const PHONE = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 820;
 const fullRatio = Math.min(2, devicePixelRatio);
 function tuneForMap() { const lite = PHONE && show3d(); renderer.setPixelRatio(lite ? Math.min(1.3, devicePixelRatio) : fullRatio); sun.castShadow = !lite; }
 function applyMap3d() {
@@ -486,7 +489,7 @@ const SHEET_ONLY = new Set((VOL.art.sheetBoxes ?? []).map((b) => b.id));
 const shownArea = (id: number) => !SHEET_ONLY.has(id) || !!g.inPlay?.includes(id);
 function paintBoard() {
   if (!baseImg.naturalWidth || !linesImg.naturalWidth) return; const far = camFar;
-  const c = boardCv.getContext('2d')!, k = 2; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, boardCv.width, boardCv.height);
+  const c = boardCv.getContext('2d')!, k = BOARD_K; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, boardCv.width, boardCv.height);
   const r3 = show3d() ? REL : null;
   if (r3) { c.fillStyle = hex6(WOOD_BASE); c.fillRect(0, 0, boardCv.width, boardCv.height); c.drawImage(relPixels(r3.snow), 0, 0, boardCv.width, boardCv.height); c.drawImage(relPixels(far ? r3.entryFlip : r3.entry), 0, 0, boardCv.width, boardCv.height); }
   else c.drawImage(pixels(facing(baseImg)), 0, 0, boardCv.width, boardCv.height);
