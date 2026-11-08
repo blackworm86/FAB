@@ -144,3 +144,14 @@ describe('computer opponent: it never sees hidden blocks', () => {
     for (const level of ['easy', 'normal', 'hard'] as const) expect(AI.next(g2, 'syrian', level)?.op).toEqual(AI.next(g, 'syrian', level)?.op);
   }, 300_000);
 });
+
+describe('computer opponent: the Bulge plays beyond combat', () => {
+  it('a German engineer repairs a blown bridge on the way forward', () => {
+    E.useGame('bulge'); E.setRandom(null);
+    const g = E.newGame(5, { scenario: 'tournament' } as never); g.phase = 'admin';
+    for (const c of g.chits) if (c.side === 'german' && c.box === 'available') c.box = 'used';
+    g.chits.find((c) => c.side === 'german' && c.kind === 'engineer' && E.assetZoneOk(g, c, 13, true))!.box = 'available';   // the 5th Panzer Army's engineer, behind the blown bridges on the Our
+    const blown = g.blown.length, act = AI.next(g, 'german', 'normal')!;
+    expect(act.label).toBe('repair the bridge'); act.run(g); expect(g.blown.length).toBe(blown - 1);
+  });
+});

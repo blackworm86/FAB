@@ -43,7 +43,9 @@ const OPS: Record<string, OpFn> = {
   playRelease: (g, c: string) => G.playRelease(g, c), arrivingBattalion: (g, c: string, ch: Parameters<typeof G.playArrivingBattalion>[2]) => G.playArrivingBattalion(g, c, ch), playArmyRelease: (g, c: string) => S.playArmyRelease(g, c),
   playSSM: (g, c: string) => G.playSSM(g, c), playLtZvika: (g, c: string, a: number) => G.playLtZvika(g, c, a), airInterdiction: (g, c: string, a: number) => G.airInterdiction(g, c, a),
   releaseDivision: (g, d: string, sa: string) => S.releaseDivision(g, d, sa), releaseOperationalReserve: (g, sa: string) => G.releaseOperationalReserve(g, sa), releaseGolani: (g, sa: string) => G.releaseGolani(g, sa), freeThe33rd: (g, sa: string) => G.freeThe33rd(g, sa),
-  move: (g, u: string, a: number) => E.move(g, u, a), setReserve: (g, u: string) => E.setReserve(g, u, true), setPeiperFull: (g, u: string) => E.setPeiperFull(g, u, true), stratMove: (g, u: string, a: number) => E.stratMove(g, u, a),
+  repairBridge: (g, c: string, a: number, to: number) => E.repairBridge(g, c, a, to), greifBridge: (g, c: string, a: number, b: number) => E.playGreifBridge(g, c, a, b), interdict: (g, c: string, u: string) => E.playInterdict(g, c, u),
+  bodenplatte: (g, c: string) => E.playBodenplatte(g, c), heydteDrop: (g, c: string, a: 31 | 52) => E.heydteDrop(g, c, a), staffReserve: (g, c: string, u: string) => E.staffReserve(g, c, u), activateBreakthrough: (g, u: string) => E.activateBreakthrough(g, u),
+  move: (g, u: string, a: number) => E.move(g, u, a), setReserve: (g, u: string) => { const had = !!g.units.find((x) => x.id === u)?.interdict; try { E.setReserve(g, u, true); } catch (e) { if (!had) throw e; } },   /* a failed Greif interdict check (17.11) is an outcome, not an illegal action */ setPeiperFull: (g, u: string) => E.setPeiperFull(g, u, true), stratMove: (g, u: string, a: number) => E.stratMove(g, u, a),
   airDrop: (g, u: string, a: number | null) => S.airDrop(g, u, a), startBattle: (g, a: number, viaSA: boolean) => E.startBattle(g, a, viaSA),
   assign: (g, c: string, mode?: 'arty' | 'support', engFw?: boolean) => { E.assign(g, g.battle!, c, mode); if (engFw) E.setEngFw(g, g.battle!, true); },
   setPoint: (g, side: Side, u: string) => E.setPoint(g, g.battle!, side, u), setReady: (g, side: Side) => E.setReady(g, g.battle!, side), closeBattle: (g) => E.closeBattle(g),
@@ -354,6 +356,15 @@ function admin(g: Game, side: Side, level: Level): Action | null {
     if (k === 'special_action_event') for (const u of reduced.filter((x) => x.ech === c.ech || c.ech === 'us_sr')) tries.push({ label: 'quality replacements', chit: c.id, unit: u.id, op: ['qualityReplacement', u.id, c.id] });
     if (k === 'event_release' && CUR.id === 'bulge') for (const a of [4, 6] as const) tries.push({ label: 'release', chit: c.id, area: a, bonus: 2, op: ['releaseUnit', c.id, a] });
     if (k === 'event_release' && CUR.id === 'golan73') tries.push({ label: 'release', chit: c.id, bonus: 2, op: ['playRelease', c.id] });
+    if (CUR.id === 'bulge') {                                                                          // the plays the position score cannot see: a bonus for what they open up
+      const ahead = (a: number) => dist(g, a, enemyObjective(g, side));
+      if (k === 'engineer') for (const a of [...areas.keys()].filter((x) => inPlay(g, x) && E.blocks(g, x, side).some(regular))) for (const to of E.repairTargets(g, side, a)) tries.push({ label: 'repair the bridge', chit: c.id, area: a, bonus: 0.4 + 0.4 * Math.max(0, ahead(a) - ahead(to)), op: ['repairBridge', c.id, a, to] });
+      if (k === 'event_greif_bridge') for (const a of front) for (const n of neighbors(a)) if (connection(a, n)?.river && !g.blown.includes(E.keyOf(a, n)) && !g.greif[E.keyOf(a, n)] && g.control[n] !== side && ahead(n) < ahead(a)) tries.push({ label: 'Greif bridge', chit: c.id, area: a, bonus: 0.8, op: ['greifBridge', c.id, a, n] });
+      if (k === 'event_greif_interdict') for (const u of g.units.filter((x) => x.side !== side && x.area != null && regular(x) && !x.interdict && neighbors(x.area).some((n) => front.includes(n))).sort((x, y) => val(g, y, side) - val(g, x, side)).slice(0, 4)) tries.push({ label: 'Greif interdict', chit: c.id, unit: u.id, bonus: 0.3 + 0.15 * val(g, u, side), op: ['interdict', c.id, u.id] });
+      if (k === 'event_bodenplatte') { const air = avail(g, E.other(side)).filter((x) => x.kind === 'air_mission').length; if (air) tries.push({ label: 'Bodenplatte', chit: c.id, bonus: 0.5 * air, op: ['bodenplatte', c.id] }); }
+      if (E.heydteWindow(g, c)) for (const a of [31, 52] as const) tries.push({ label: 'von der Heydte', chit: c.id, area: a, bonus: 1, op: ['heydteDrop', c.id, a] });
+      if (k === 'command_staff') for (const u of own(g, side).filter((x) => x.cls === 'armor' && E.canReserve(g, x) && near(g, x.area!, E.other(side), side) > 0)) tries.push({ label: 'staff reserve', chit: c.id, unit: u.id, bonus: 0.3, op: ['staffReserve', c.id, u.id] });
+    }
     if (k === 'event_arriving_battalion') { for (const u of own(g, side).filter((x) => x.brigade === c.brigade)) tries.push({ label: 'arriving battalion', chit: c.id, unit: u.id, bonus: 1, op: ['arrivingBattalion', c.id, { add: u.id }] }); for (const u of dead.filter((x) => x.brigade === c.brigade)) tries.push({ label: 'arriving battalion', chit: c.id, unit: u.id, bonus: 1, op: ['arrivingBattalion', c.id, { rebuild: u.id, assembly: 'A' }] }); }
     if (k === 'event_army_release') tries.push({ label: 'army release', chit: c.id, bonus: 3, op: ['playArmyRelease', c.id] });
     if (k === 'event_ssm_strike') tries.push({ label: 'SSM strike', chit: c.id, bonus: 1, op: ['playSSM', c.id] });
@@ -400,7 +411,6 @@ function movement(g: Game, side: Side, level: Level): Action | null {
         const danger = Math.max(0, near(g, a, foe, side) - power(g, a, side, side) - myVal);
         s = w * 1.5 + 0.35 + (dist(g, from, enemyObjective(g, side)) - dist(g, a, enemyObjective(g, side))) * 0.25 - danger * 0.25 * (w ? 0.5 : 1) - (supplied(a) ? 0 : 1.2);
       } else {
-        if (g.phase === 'reaction') continue;
         const gain = need(g, a, side) - needWith(g, a, side, u);
         s = gain * 1.5 + (dist(g, from, enemyObjective(g, side)) - dist(g, a, enemyObjective(g, side))) * 0.2 - 0.2 - (supplied(a) ? 0 : 1) + (u.unsupplied && supplied(a) ? 1 : 0);
       }
@@ -424,8 +434,21 @@ function movement(g: Game, side: Side, level: Level): Action | null {
     const b = best(cand, (u) => val(g, u, side) + (u.cls === 'armor' ? 1 : 0) + (near(g, u.area!, foe, side) > 0 ? 0.5 : 0));
     if (b) return act('reserve', ['setReserve', b.x.id], { unit: b.x.id });
   }
+  if (g.phase === 'btMove' && level !== 'easy' && E.saAvailable(g, side).length) { const id = breakthrough(g, side, level); if (id) return act('breakthrough', ['activateBreakthrough', id], { unit: id }); }
   if (g.phase === 'btMove' && CUR.id === 'bulge') for (const u of own(g, side)) if (E.peiperCan(g, u)) return act('Peiper', ['setPeiperFull', u.id], { unit: u.id });
   return null;
+}
+/** 8.21: an armor block in good order pays a Special Action to move one area in Breakthrough Movement, when its best such move reads well
+ *  worth the Special Action (hard: attacks fought out too; normal: only moves into areas without enemy blocks). */
+function breakthrough(g: Game, side: Side, level: Level): string | null {
+  const foe = E.other(side), base = evaluate(g, side);
+  const cand = own(g, side).filter((u) => u.cls === 'armor' && regular(u) && !u.moved && !u.exploit && !u.reserve && !u.disorder && !u.unsupplied).sort((x, y) => val(g, y, side) - val(g, x, side)).slice(0, 3);
+  const b = best(cand, (u) => {
+    const x = structuredClone(g); try { E.activateBreakthrough(x, u.id); } catch { return -1e9; }
+    const v = x.units.find((y) => y.id === u.id)!, opts = E.moveOptions(x, u.id).filter((o) => (level === 'hard' && E.unitsIn(x, o.area, foe).length > 0) || (!E.unitsIn(x, o.area, foe).length && x.control[o.area] !== side)).slice(0, 4);
+    return best(opts, (o) => deepMove(x, side, v, o, E.unitsIn(x, o.area, foe).length > 0, new Map(), base))?.s ?? -1e9;
+  });
+  return b && b.s > 0.8 ? b.x.id : null;
 }
 /* ---- the hard player's attack plan: before its blocks move one by one, the attacks worth making this turn, each with the group of blocks that makes it ---- */
 const PLANS = new Map<string, { key: string; at: number; moves: [string, number][] }>();

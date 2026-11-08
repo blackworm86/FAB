@@ -13,7 +13,7 @@ GMT's block wargame series **Fast Action Battles** as a browser game: a rules en
 - **Phase 4 extras, all done**: install as an app (PWA), "your move" notices (in-page notices work; the closed-app push relay in `tools/push-worker` is optional and **not set up**), replay viewer, Play Book example figures, Italian interface and tutorials (`web/src/i18n*`, `GLOSSARY.md`).
 - **Maps**: 2D from the printed maps, 3D relief from satellite data, for all three volumes. Latest work (3D dioramas, phone map-line fixes) was done by another session and is merged.
 - **Computer opponent (4.4)**: `engine/src/ai.ts`, three levels (Easy, Normal, Hard), thinking in a worker thread (`web/src/cpu-worker.ts`), home-page card "Play the computer", pace setting, one-line turn summary. Games against the computer are kept on the device and, when signed in, in the player's account (`web/src/solo.ts`, `store-rtdb.ts`: `users/{uid}/soloIndex` and `users/{uid}/solo`), with a "played on another device" question when two devices diverge.
-- **Tests**: engine 357, web 116, database rules 35 (needs Java + Firebase emulator). CI (`.github/workflows`) runs engine, web, push relay, database rules and a browser smoke test.
+- **Tests**: engine 358, web 116, database rules 35 (needs Java + Firebase emulator). CI (`.github/workflows`) runs engine, web, push relay, database rules and a browser smoke test.
 - **Progress page** (private artifact, ticks stored in its database): https://claude.ai/artifact/SHN8KVGcEFYxQRmywT7MEm. All of phases 1–6 and 4.x are ticked.
 
 ## 3. Owner actions still pending
@@ -24,7 +24,8 @@ GMT's block wargame series **Fast Action Battles** as a browser game: a rules en
 ## 4. Open work, in the order the owner would want it
 
 1. **Re-measure the hard computer player.** Its strength numbers were taken while it could see face-down blocks (fixed since: it now thinks on a masked copy, `mask()` in `ai.ts`). Run the arena (below), then retune `ai.TUNE`. The owner wants Hard to be **hard to beat**; known weak spot: the German attacker in The Bulge loses most games by Allied sudden death on turn 4. Ideas: multi-turn planning for the attacker, better use of artillery and Special Actions.
-2. **Computer-player gaps**: chits it never plays (Bulge: Greif, Bodenplatte, von der Heydte, roadblocks, staff, interdiction; Golan: jamming, counterbattery, recon, merging, optional rules; Sicily: dogfights, naval shock, flanking invasion, evacuation, Patton, extraction, fading morale), and Special Actions in battle (reinforce or retreat a defence).
+   - Measured in November 2026 (Bulge, 16 seeds per seat): Hard as the Germans ends a mean 7–9 VP behind, against Hard and against `ref` alike; the Germans lose by sudden death on turn 4 (they start at net −11 and must reach −3). The fix needs a German plan (which mutual VP areas to take by turn 4, along which roads and bridges), not more single actions.
+2. **Computer-player gaps**: done for the Bulge (both sides use them): bridge repair, Greif bridge and interdict, Bodenplatte, von der Heydte, command-staff reserve, paying a Special Action for armour Breakthrough movement, reserves shoring up threatened areas in the Reaction Phase. Measured: no change in strength (within noise), but the game is now played with these rules. Still missing: Bulge roadblocks, blowing bridges on its own initiative, staff boundary/intel/pool, Allied interdiction missions; Golan: jamming, counterbattery, recon, merging, optional rules; Sicily: dogfights, naval shock, flanking invasion, evacuation, Patton, extraction, fading morale), and Special Actions in battle (reinforce or retreat a defence).
 3. Easy/Normal/Hard are chosen by `?level=`; nothing yet for a difficulty that adapts.
 
 ## 5. How to run and measure
