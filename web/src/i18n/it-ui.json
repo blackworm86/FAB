@@ -3289,7 +3289,9 @@
   "Slow": "Lento",
   "Normal pace": "Ritmo normale",
   "Fast": "Veloce",
-  "How fast the computer makes its moves": "Quanto in fretta il computer fa le sue mosse"
+  "How fast the computer makes its moves": "Quanto in fretta il computer fa le sue mosse",
+  "Restart now": "Ricomincia ora",
+  "Keep playing": "Continua a giocare"
  },
  "patterns": [
   [

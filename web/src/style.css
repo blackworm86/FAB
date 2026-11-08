@@ -473,7 +473,7 @@ img.cb { border-radius: 7%; box-shadow: 0 1px 0 #e3dccb, 0 2px 0 #b9b2a0, 0 3px 
   .cquick button { min-height: 36px; padding: 4px 12px; font-size: 13px; }
 }
 /* menu: labelled tabs, steady height, readable log */
-.tabs button span { display: block; font: 600 11px var(--sfd); letter-spacing: .1em; text-transform: uppercase; margin-top: 2px; }
+.tabs button span { display: block; font: 600 11px var(--sfd); letter-spacing: .1em; text-transform: uppercase; margin-top: 2px; } .sheet.menu .tabs { overflow-x: auto; scrollbar-width: none; } .sheet.menu .tabs button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: max-content; padding: 4px 2px; } .sheet.menu .tabs button span { letter-spacing: .04em; margin-top: 0; }      /* four tabs fit a phone in every language: icon above the label, whole words; a language that still does not fit scrolls sideways instead of clipping */
 .sheet.menu { display: flex; flex-direction: column; } .sheet.menu .mbody { flex: 1; min-height: 0; overflow: auto; }
 @media (max-width: 700px) { .sheet.menu { height: 82vh; max-height: 82vh !important; } }
 .sheet.menu .log { max-height: none; font-size: 12.5px; line-height: 1.35; color: var(--ink); }
@@ -787,6 +787,7 @@ button.go:disabled { background: #2a2d22; color: #8d9065; box-shadow: none; opac
 .bdg.opt { background: #1a1608 !important; color: var(--gold) !important; border-color: var(--gold) !important; font-size: 12px !important; letter-spacing: .08em; text-transform: uppercase; padding: 2px 7px !important; }
 
 .mapkey { display: grid; gap: 5px; font-size: 12px; } .mapkey span { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .mapkey i { width: 16px; height: 12px; display: inline-block; flex: none; }
+.mapkey small { font-size: inherit; color: var(--line); } .askrow { border: 1px solid #d1432f88; background: #7d24171f; padding: 8px 10px; margin: 8px 0; scroll-margin-top: 8px; } .askrow p { margin: 0 0 6px; } .sheet:focus { outline: none; }
 .mapkey i.fuel { background: #1a1608; border: 1px solid var(--gold); } .mapkey .ar { font-family: var(--sf); letter-spacing: -2px; } .mapkey .ic { width: 16px; height: 16px; color: var(--ok); }
 
 .fx.fw { border-color: var(--gold) !important; background: #2a1f08f2 !important; } .fx.fw b { color: var(--gold) !important; }     /* no blue outside the rivers */
