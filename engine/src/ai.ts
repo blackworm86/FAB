@@ -25,7 +25,7 @@ const QW: Record<Quality, number> = { green: 0.8, veteran: 1, elite: 1.25 };
 /** How many times a hard player fights a battle out before deciding (more: steadier, slower). */
 export const SIMS = { attack: 48, choice: 24 };
 /** Tuning switches for the arena: how the hard player picks its moves ('deep': by the position each leaves; 'veto': the plain player's order, attacks the fought-out outcome speaks against dropped), and whether it plans its attacks first. */
-export const TUNE = { moves: 'deep' as 'deep' | 'veto', plan: true, vetoAt: -1.5, planAt: 0.6, sd: true, asym: 0, vpBase: 5, tw1: 0.5, tw2: 1.5 };
+export const TUNE = { moves: 'deep' as 'deep' | 'veto', plan: true, vetoAt: -1.5, planAt: 0.3, sd: false, asym: 0.4, vpBase: 6, tw1: 0.5, tw2: 1.5 };
 /** Tuning: when set, the hard player's judgements of moves are written here. */
 export let TRACE: string[] | null = null; export const setTrace = (t: string[] | null) => { TRACE = t; };
 
