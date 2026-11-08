@@ -16,7 +16,7 @@ Merge `origin/main` at the start of every work block. When project 2 changes how
 
 ## 1. Computer opponent (already running in another session)
 
-Goal: the computer can play every part of the turn in all three volumes, start to finish, at Easy, Normal and Hard, and Hard is hard to beat. The open list is `docs/HANDOVER.md` §4: re-measure Hard on the masked view, the chits it never plays, Special Actions in battle, then a difficulty that adapts. Done means: a fuzzer-style test where the computer plays both seats of every scenario of every volume to the end without getting stuck, and arena numbers per level in the docs.
+Goal: the computer can play every part of the turn in all three volumes, start to finish, at Easy, Normal and Hard, and Hard is hard to beat. The open list is `docs/HANDOVER.md` §4: re-measure Hard on the masked view, the chits it never plays, Special Actions in battle, then a difficulty that adapts. Status (Nov 2026): the Bulge's missing actions are in (bridges, Greif, Bodenplatte, von der Heydte, staff reserve, paid Breakthrough, reaction reserves) but did not change strength; next is a German plan for the Bulge (the areas to take by turn 4 and the routes to them), then the same for the other volumes. Done means: a fuzzer-style test where the computer plays both seats of every scenario of every volume to the end without getting stuck, and arena numbers per level in the docs.
 
 ## 2. Rules review, with a test page for the owner
 
@@ -42,7 +42,7 @@ Kick-off prompt for the session:
 Pipeline, one folder per step under `tools/figures/`, each step a script that reads the previous step's files, so a step can be redone with another service:
 1. **List**: from the unit data of each volume, the distinct figure types needed (e.g. US infantry, Panther, Tiger, M4 Sherman, Italian infantry, Centurion, T-55, Merkava, artillery, HQ). Real equipment of the period is fine; Vassal images and scans are reference only and never go into the repo or into a prompt.
 2. **Concept art**: an image model (for example OpenAI, Google Imagen/Gemini, Flux) makes front, side and three-quarter views on a plain background. The owner picks one per type.
-3. **3D model**: an image-to-3D service (for example Meshy, Tripo, Rodin, Hunyuan3D) makes a textured model; the script reduces it to a low polygon count and compresses it (`gltf-transform`) so the phone stays fast. Target: a few hundred KB per type.
+3. **3D model**: an image-to-3D service (free first: TRELLIS, open source under the MIT licence, run on free Hugging Face or Colab GPU time; then the free monthly allowances of Meshy or Tripo; not Hunyuan3D, whose licence excludes the EU) makes a textured model; the script reduces it to a low polygon count and compresses it (`gltf-transform`) so the phone stays fast. Target: a few hundred KB per type.
 4. **Animation**: soldiers get a rig and a few short clips (idle, move, fire, fall) from an auto-rigging service (for example Mixamo or the 3D service's own rigging); tanks need no rig, the game turns the turret, recoils the gun and rocks the hull in code.
 5. **Into the game**: `.glb` files in `web/public/models/`, loaded by a new `web/src/figures3d.ts`; `block()` in `web/src/main.ts` returns a figure group instead of a box when the switch is on. Blocks remain the default.
 
@@ -50,5 +50,5 @@ Rules the figures must keep:
 - **Hidden information.** A face-down enemy block shows nothing. With Figures, a hidden enemy unit is a neutral, covered figure (a tarp or a generic silhouette) that does not tell infantry from armour, and its strength is not shown.
 - **Strength must be readable**: the base carries the unit's printed face (the same picture as the block label) or a strength bar, so the game stays playable.
 - Nation colours stay as on the blocks; Italian wood stays orange `#e66525`.
-- API keys never go in the repo: ask for them with the session's credential form. Every service is paid per use, so the session reports the cost of each run, and each step can be skipped by dropping in files made by hand.
+- API keys never go in the repo: ask for them with the session's credential form. The owner wants free services where possible: prefer open models and free allowances, say before using anything paid, report the cost of each run, and each step can be skipped by dropping in files made by hand.
 - Free Firebase plan: the models are static files served with the site, nothing goes into the database.
