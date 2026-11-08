@@ -38,7 +38,7 @@ function step(u: GMoveUnit, ctx: GMoveCtx, from: number, to: number, first: bool
   const c = connection(from, to)!, key = edgeKey(from, to), enemy = enemyOf(u.side);
   const occ = (a: number) => total(ctx.units(a)) + (ctx.assets ? total(ctx.assets(a)) : 0);
   const enemyIn = (a: number) => ctx.units(a)[enemy] + (ctx.assets?.(a)[enemy] ?? 0) > 0;
-  const syrianNight = (ctx.night ?? ctx.turn === 2) && u.side === 'syrian';
+  const night = ctx.night ?? ctx.turn === 2, syrianNight = night && u.side === 'syrian';
   if (c.kind === 'assembly' && !isAssembly(from)) return null;                                  // 14.22: no entering an Assembly area from the map
   if (c.sheet) {                                                                                 // a scenario sheet's box link: its printed MP, maybe one unit per phase
     const lim = c.once ? key : undefined; if (lim && ctx.crossedThisPhase?.has(lim)) return null;
@@ -46,10 +46,10 @@ function step(u: GMoveUnit, ctx: GMoveCtx, from: number, to: number, first: bool
   }
   if (c.kind === 'transfer') return first ? { cost: allowance, all: true } : null;               // 14.22: between the boxes for all MP
   if (c.kind === 'hermon') {                                                                     // 14.16: infantry class, from 59 / out to 59, all MP
-    if (u.cls !== 'infantry' || !first || syrianNight) return null;
+    if (u.cls !== 'infantry' || !first || night) return null;                                   // 14.03: nobody to or from Mt Hermon at night
     return { cost: allowance, all: true, stop: enemyIn(to) };
   }
-  if (syrianNight && (to === HERMON || from === HERMON)) return null;                            // 14.03
+  if (night && (to === HERMON || from === HERMON)) return null;                                  // 14.03
   if (u.side === 'syrian' && ctx.turn <= 4 && c.sector) return null;                            // 14.42
   const toArea = isAssembly(to) ? null : area(to);
   const fromSyria = !isAssembly(from) && area(from).syria;

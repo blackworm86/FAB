@@ -220,7 +220,7 @@ export function play(cfg: Cfg): Result {
       if (att === 'syrian' && chance(0.3)) act('syrian', 'setEngineerBridge', () => G.setEngineerBridge(g, b, pick(E.neighbors(a))), false);
       const ro = G.reinforceOptions(g, b); if (ro.length && chance(0.3)) act(def, 'defenderReinforceSA', () => E.defenderReinforceSA(g, b, pick(ro)), false);
     } else if (cfg.game === 'sicily') {
-      for (const s of [att, def]) { const air = avail(s).find((c) => c.kind === 'air_mission'); if (air && E.airOf(b, E.other(s)).length && chance(0.4)) act(s, 'dogfight', () => S.dogfight(g, b, air.id)); }
+      for (const s of [att, def]) { const air = avail(s).find((c) => c.kind === 'air_mission'); if (air && E.airOf(b, E.other(s)).length && !E.airOf(b, s).length && chance(0.4)) act(s, 'dogfight', () => S.dogfight(g, b, air.id)); }   // 16.32: the dogfight is the side's one air commitment
       const nav = b.assets[att].find((id) => E.chit(g, id).kind === 'naval_support'); if (nav && chance(0.5)) act(att, 'setNavalShock', () => S.setNavalShock(g, b, nav));
       const rg = b.assets[att].find((id) => ['ranger', 'commando'].includes(E.chit(g, id).subtype ?? '')); if (rg && chance(0.5)) act(att, 'setRangerFw', () => S.setRangerFw(g, b, rg));
     }
@@ -292,7 +292,7 @@ export function play(cfg: Cfg): Result {
         const [nm, f] = pick(tries2);
         act(s, `${nm} ${c.id}`, f, false); resolvePending();
         // a flanking invasion that landed on defenders may fight one round now (17.22)
-        if (cfg.game === 'sicily' && nm === 'playFlanking') for (const a of Object.keys(S.state(g).flank).map(Number)) if (E.contested(g, a) && !g.fought.includes(a) && chance(0.7)) fight(a);
+        if (cfg.game === 'sicily' && nm === 'playFlanking' && g.phasing === 'allied') for (const a of Object.keys(S.state(g).flank).map(Number)) if (E.contested(g, a) && !g.fought.includes(a)) fight(a);   // 17.22: the round is fought at once
       }
     }
   }
@@ -320,7 +320,7 @@ export function play(cfg: Cfg): Result {
       for (let k = 0; k < 40 && !stop; k++) {
         const must = E.mustFight(g);
         // airborne assaults first (Sicily 14.27a)
-        const first = cfg.game === 'sicily' ? S.state(g).airborneAreas.filter((a) => E.contested(g, a) && !g.fought.includes(a)) : [];
+        const fb = E.firstBattle(g), first = fb != null ? [fb] : cfg.game === 'sicily' ? S.state(g).airborneAreas.filter((a) => E.contested(g, a) && !g.fought.includes(a)) : [];   // 15.3 / 14.27a: fought first
         if (first.length) { fight(first[0]); continue; }
         if (must.length) { fight(pick(must)); continue; }
         const opt = E.contestedAreas(g).filter((a) => !g.fought.includes(a) && E.fighters(g, a, g.phasing, true).some((u) => !u.garrison));
@@ -465,7 +465,7 @@ describe('fuzz finding: Sicily air supply', () => {
     const u = unitOf(g, 'US03'); clear(g, ['US03']); u.area = 30; g.control[30] = 'allied';
     g.phase = 'btCombat'; g.phasing = 'allied'; E.endPhase(g); expect(g.phase).toBe('supply'); expect(u.unsupplied).toBe(true);
     const air = g.chits.find((c) => c.side === 'allied' && c.kind === 'air_mission')!; air.box = 'available';
-    S.airSupply(g, air.id, 30); expect(u.unsupplied).toBe(false);
+    S.airSupply(g, air.id, 30); expect(u.unsupplied).toBe(true); expect(E.supplyChecks(g).some((c) => c.unit.id === 'US03')).toBe(false);   // 16.34: the marker stays, no morale check
     E.endPhase(g);                                                                              // the Allied Supply Phase ends
     expect(E.inSupply(g, 'allied', 30)).toBe(false);                                            // 9.34a still applies after the Supply Phase
     g.turn = 2; g.phase = 'btCombat'; g.phasing = 'allied'; E.endPhase(g);                      // the next Allied Supply Phase: no air supply this time

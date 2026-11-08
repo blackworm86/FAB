@@ -14,6 +14,7 @@ export interface MoveCtx {
   roadblocks?: Set<number>;
   controller?: (area: number) => 'german' | 'allied' | undefined;
   extraCost?: (from: number, to: number) => number;   // roadblock markers (4.34), interdiction (17.2)
+  enemyAssets?: (area: number) => boolean;            // an area held by enemy assets alone (garrison, task force, defended roadblock): 5.34 counts it as enemy-held
 }
 export interface Reach { area: number; cost: number; fuel: boolean; mustStop: boolean; path: number[] }
 
@@ -36,7 +37,7 @@ export function reachable(u: MoveUnit, ctx: MoveCtx): Reach[] {
       const c = connection(from, to)!;
       if (c.restricted && u.cls === 'armor') continue;        // 14.1
       const atStart = from === u.area, first = atStart && !spent, enemyThere = occ(to)[enemy] > 0;
-      if (startContested && (enemyThere || (atStart && (occ(to).german > 0 && occ(to).allied > 0 || ctx.controller?.(to) === enemy)))) continue; // 5.34
+      if (startContested && (enemyThere || ctx.enemyAssets?.(to) || (atStart && (occ(to).german > 0 && occ(to).allied > 0 || ctx.controller?.(to) === enemy)))) continue; // 5.34
       let step = c.mp;
       if (occ(to).german + occ(to).allied > 0) step += 1;     // 5.32 entering an occupied area
       if (atStart && startContested) step += 1;                 // 5.32 leaving a contested area

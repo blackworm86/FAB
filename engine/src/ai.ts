@@ -518,6 +518,7 @@ function combat(g: Game, side: Side, level: Level): Action | null {
   if (g.phasing !== side) return null;
   if (CUR.id === 'sicily' && S.state(g).dropPending) for (const u of g.units.filter((x) => x.box === 'airborne_assault' && x.side === 'allied')) { const t = S.airDropTargets(g, u.id); const b = best(t, (a) => worth(g, a, side) - steps(g, a, E.other(side), side) * 0.5); return act('air drop', ['airDrop', u.id, b?.x ?? null], { unit: u.id, area: b?.x }); }
   const must = E.mustFight(g);
+  { const f = E.firstBattle(g); if (f != null) return act('fight', ['startBattle', f, false], { area: f }); }
   if (CUR.id === 'sicily') { const first = S.state(g).airborneAreas.filter((a) => E.contested(g, a) && !g.fought.includes(a)); if (first.length) return act('fight', ['startBattle', first[0], false], { area: first[0] }); }
   if (must.length) { const a = best(must, (x) => exchange(g, x, side, true).mine)!.x; return act('fight', ['startBattle', a, false], { area: a }); }
   const bt = g.phase === 'btCombat', opt = E.contestedAreas(g).filter((a) => !g.fought.includes(a) && E.fighters(g, a, side, true).some((u) => !u.garrison) && (!bt || E.newlyContested(g).includes(a) || freeRound(g)));

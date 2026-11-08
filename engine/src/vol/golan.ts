@@ -43,6 +43,7 @@ export interface GolanState {
   minesLeft?: number; startAt?: 'combat' | 'movement';    // 14.02: minefields the Israeli player still places at the start; the phase the scenario opens with once set up
   nafakh?: { s03Free: boolean; golani: boolean; staffOut: boolean };   // 22.46: the 33rd held back, Golani's release, the HQ Staff lost with Nafakh
   alowda?: { raids: number; cup?: string[]; drawn?: string[] };
+  samCancelled?: number[];                                // 16.12: areas where a SAM cancelled an Admin-Phase air mission (no replacement this phase)
   withdrew?: string[]; artyInt?: Side[];                 // 18.2: units that already rolled to leave a contested area this phase; 18.31: sides that interdicted with artillery this Admin Phase
   chem?: number; ghostsMade?: number;    // optional rules: chemical attacks so far (each one after the first gives Israel a VP); ghosts drawn from the Al-Owda cup       // 20.35 the commandos landed at the start; 20.36 the Israeli Reinforcements Draw Cup
 }
@@ -316,7 +317,7 @@ function afterMove(g: Game, u: Unit, opt: Opt) {
   for (const l of opt.limited ?? []) if (!V.crossed.includes(l)) V.crossed.push(l);
   if (unitsIn(g, to, other(u.side)).length && ((last.atDitch && !V.bridgedDitch.includes(key)) || last.rugged || last.escarpment || (last.river && (last.type !== 'road' || g.blown.includes(key))))) (V.assaultEntered[to] ??= []).push(u.id);   // 14.01 (a: rugged, escarpment, AT ditch)
   if (u.side === 'israeli' && !V.purpleLineCrossed && !isAssembly(from) && !garea(from).syria && !isAssembly(to) && garea(to).syria) purpleLineCrossed(g);
-  if (u.side === 'israeli' && V.raids.includes(to)) resolveRaid(g, u, to);
+  if (u.side === 'israeli' && V.raids.includes(to)) resolveRaid(g, u, to, opt.cost);
   if (u.side === 'syrian') { const c = raidUnitAt(g, to); if (c) { chit(g, c.chitId!).box = 'used'; c.area = null; c.str = 0; V.raids = V.raids.filter((a) => a !== to); V.raidPartial = V.raidPartial.filter((a) => a !== to); say(g, `${u.name} relieves the commandos in ${areas.get(to)!.name}`); } }
   if (u.side === 'israeli' && regular(u)) evacuateStrongpoint(g, from);
   ghostsMet(g, u, to, opt.cost);
@@ -340,9 +341,9 @@ function releaseUnit(g: Game, u: Unit, at?: number): boolean {
   return true;
 }
 /** 16.11a: the first Israeli unit into a raided area rolls: 1–2 the raid succeeds, 3–5 partly (the commandos do not fire back), 6+ the helicopters were shot down. */
-function resolveRaid(g: Game, u: Unit, a: number) {
+function resolveRaid(g: Game, u: Unit, a: number, cost: number) {
   const V = state(g), die = rollDie(g), r = g.opts.raidMod && eastOfSam(a) ? die - 1 : die, c = raidUnitAt(g, a); V.raids = V.raids.filter((x) => x !== a);   // optional: −1 east of the SAM barrier
-  if (r >= 6) { if (c) eliminate(g, c); say(g, `Commando raid in ${areas.get(a)!.name} fails (${r}): the helicopters are shot down`); return; }
+  if (r >= 6) { if (c) eliminate(g, c); u.moved = false; u.spent = cost; say(g, `Commando raid in ${areas.get(a)!.name} fails (${r}): the helicopters are shot down, ${u.name} may move on`); return; }
   if (r >= 3) V.raidPartial.push(a);
   say(g, `Commando raid in ${areas.get(a)!.name} ${r <= 2 ? 'succeeds' : 'partly succeeds'} (${r}): ${u.name} stops and must fight it`);
 }
@@ -426,7 +427,9 @@ function onPhase(g: Game, phase: string, when: 'start' | 'mid' | 'end') {
   if (phase === 'deploy' && when === 'end' && V.minesLeft) throw new Error(`place the Israeli minefields first (${V.minesLeft} left, 14.02)`);
   if (phase === 'deploy' && when === 'end') for (const sd of sidesOf(g)) if (setupReserves(g, sd).all && reservesLeft(g, sd)) throw new Error(`place the ${sd === 'israeli' ? 'Israeli' : 'Syrian'} reserve markers first (${reservesLeft(g, sd)} left)`);
   if (phase === 'deploy' && when === 'end' && alowdaRaidAreas(g).length) throw new Error(`land the Syrian commandos first (${alowdaCommandos(g).length} left, 20.35)`);
+  if (phase === 'admin' && when === 'end' && V.samTarget) throw new Error('Syria must answer the Israeli air mission first: fire a SAM or let it fly (16.12)');
   if (phase === 'admin' && when === 'end') V.intel = undefined;
+  if (phase === 'admin' && when === 'start') V.samCancelled = [];
   if (phase === 'supply' && when === 'mid' && g.phasing === 'israeli') {                              // 16.31b: interdiction lasts to the second player's Supply Phase
     g.interdicted = {};
     for (const c of g.chits) if (c.mission === 'interdiction' && c.box === 'map') { c.box = 'used'; c.area = undefined; c.mission = undefined; }
@@ -468,14 +471,18 @@ export function limits(g: Game, b: Battle, side: Side) {
   const V = state(g); if (g.control[HERMON] === 'syrian') V.hermonLost = true;                      // 16.21: for the rest of the game
   const hermon = side === 'israeli' && !V.hermonLost && g.control[HERMON] === 'israeli' && unitsIn(g, HERMON, 'israeli').length > 0;
   const samUp = g.chits.some((c) => c.kind === 'sam' && c.box === 'available');
-  return assetLimits(side as GSide, side === b.attacker, { mixedDivisions: (side === 'syrian' || !!g.opts.israeliDivisions) && mixedDivisions(g, b.area, side), israeliHoldsHermon: hermon, eastOfSamBarrier: eastOfSam(b.area), samAvailable: samUp });
+  const lim = assetLimits(side as GSide, side === b.attacker, { mixedDivisions: (side === 'syrian' || !!g.opts.israeliDivisions) && mixedDivisions(g, b.area, side), israeliHoldsHermon: hermon, eastOfSamBarrier: eastOfSam(b.area), samAvailable: samUp });
+  const alone = unitsIn(g, b.area, side).every((u) => u.garrison);                                  // 4.35, 16.24, 16.11a, 17.23: a garrison, raid or Lt. Zvika fighting alone
+  return alone ? { ...lim, artillery: 1, battle: 0, events: 0, air: 0, alone } : { ...lim, alone };
 }
 function canAssign(g: Game, b: Battle, side: Side, c: Chit, mode?: 'arty' | 'support'): string | null {
   const V = state(g), B = battleState(b);
   if (side !== b.attacker && B.ew?.pending) return 'answer the jamming first (17.33)';
   if (side !== b.attacker && B.defLocked) return 'all defending units are jammed: no artillery, air, SAM or battle assets (17.33)';
   const lim = limits(g, b, side), mine = b.assets[side].map((id) => chit(g, id));
-  if (c.kind === 'air_mission') {                                                                    // 16.31a, 16.22; air needs no supply
+  if (lim.alone && !isArty(c)) return 'a standing asset fighting alone gets one artillery asset only (4.35)';
+  if (c.kind === 'air_mission') {
+    if (lim.battle === 0 && (mode ?? 'arty') === 'support') return 'mixed divisions: air support may only fire as artillery (15.12)';                                                                    // 16.31a, 16.22; air needs no supply
     if (isNight(g)) return 'no air support on the night turn (14.03)';
     if (g.opts.syrianAirAttack && side === 'syrian' && b.attacker !== 'syrian') return 'Syrian air support flies close air support only when Syria attacks (18.4)';
     if (side === 'israeli' && B.samCancelled) return 'a SAM cancelled the air mission here: no replacement air asset in this battle (16.12)';
@@ -497,7 +504,7 @@ function canAssign(g: Game, b: Battle, side: Side, c: Chit, mode?: 'arty' | 'sup
 }
 const samAvailable = (g: Game) => g.chits.some((c) => c.kind === 'sam' && c.box === 'available');
 /** 16.12: an Israeli air asset placed east of the SAM barrier may be answered at once by an available SAM. */
-function onAssign(g: Game, b: Battle, c: Chit) { if (c.kind === 'air_mission' && c.side === 'israeli' && eastOfSam(b.area) && samAvailable(g)) state(g).samTarget = c.id; }
+function onAssign(g: Game, b: Battle, c: Chit) { if (c.kind === 'air_mission' && c.side === 'israeli' && eastOfSam(b.area) && samAvailable(g) && !(b.attacker === 'israeli' && battleState(b).defLocked)) state(g).samTarget = c.id; }   // 17.33: a jammed defence fires no SAM
 function beforeBegin(g: Game, b: Battle) { if (state(g).samTarget) throw new Error('the SAM answer to the air mission is pending (16.12)'); if (battleState(b).ew?.pending) throw new Error('the Defender must answer the jamming first (17.33)'); }
 /** The air mission taken back (or its battle withdrawn): no SAM answer is pending any more. */
 function onUnassign(g: Game, b: Battle, c: Chit) { const V = state(g), B = battleState(b); if (V.samTarget === c.id) V.samTarget = undefined; if (B.dcs) B.dcs = B.dcs.filter((x) => x !== c.id); }
@@ -527,7 +534,9 @@ function adjustFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground', lis
 /** 14.51b: the engineer survived both fire steps: the ditch is bridged as the attackers fire (it does not fire itself). */
 function beforeFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground') {
   const B = battleState(b); if (kind !== 'ground' || side !== b.attacker || !B.engBridge) return;
-  if (b.assets.syrian.some((id) => chit(g, id).kind === 'engineer')) { state(g).bridgedDitch.push(B.engBridge); say(g, `A Syrian engineer bridges the AT ditch ${B.engBridge} (14.51b)`); }
+  const engineers = b.assets.syrian.filter((id) => chit(g, id).kind === 'engineer').length;
+  if (b.engFw && engineers < 2) { B.engBridge = undefined; say(g, 'The one engineer removes the field works: the ditch is not bridged (6.33, 14.51b)'); return; }
+  if (engineers) { state(g).bridgedDitch.push(B.engBridge); say(g, `A Syrian engineer bridges the AT ditch ${B.engBridge} (14.51b)`); }
 }
 /** 17.34 Counterbattery: after the enemy artillery fired, 1–5 sends one of its artillery assets that many turns down the track. */
 function afterFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground') {
@@ -686,6 +695,8 @@ function assault(g: Game, area: number) {
   const att = blocks(g, area, g.phasing).filter(regular), in_ = state(g).assaultEntered[area] ?? [];
   return att.length > 0 && att.every((u) => in_.includes(u.id));
 }
+/** 22.17: a free Breakthrough combat round is still owed (read without spending it). */
+export const freeRoundLeft = (g: Game) => g.turn === 1 && g.phasing === 'syrian' && g.phase === 'btCombat' && state(g).freeCombatRound > 0;
 function freeBattle(g: Game) {
   const V = state(g); if (!(g.turn === 1 && g.phasing === 'syrian' && V.freeCombatRound > 0)) return false;
   V.freeCombatRound--; return true;                                                                   // 22.17
@@ -750,9 +761,10 @@ export function setEngineerBridge(g: Game, b: Battle, to: number | null) {
 }
 
 /* ---------- air missions in the Admin Phase (16.31b/c) and commando raids (16.11a) ---------- */
+const noSamReplay = (g: Game, a: number) => need(!(state(g).samCancelled ?? []).includes(a), 'a SAM cancelled an air mission over that area: no replacement this phase (16.12)');
 const airOk = (g: Game, a: number) => { need(!isNight(g), 'no air missions on the night turn (14.03)'); need(!isAssembly(a), 'not over an Assembly area'); };
 export function airInterdiction(g: Game, chitId: string, a: number) {
-  needAdmin(g); const c = avail(g, chitId, ['air_mission']); airOk(g, a); need(!g.interdicted[a], 'that area is already interdicted');
+  needAdmin(g); const c = avail(g, chitId, ['air_mission']); airOk(g, a); need(!g.interdicted[a], 'that area is already interdicted'); noSamReplay(g, a);
   c.box = 'map'; c.area = a; c.mission = 'interdiction'; g.interdicted[a] = c.id;
   if (c.side === 'israeli' && eastOfSam(a) && samAvailable(g)) state(g).samTarget = c.id;
   say(g, `Air interdiction over ${nameOf(a)} (16.31b)`, c.side);
@@ -770,7 +782,7 @@ export function artilleryInterdiction(g: Game, chitId: string, a: number) {
   say(g, `${c.name} interdicts ${nameOf(a)} (18.31)`, c.side);
 }
 export function airRecon(g: Game, chitId: string, a: number) {
-  needAdmin(g); const c = avail(g, chitId, ['air_mission']); airOk(g, a);
+  needAdmin(g); const c = avail(g, chitId, ['air_mission']); airOk(g, a); noSamReplay(g, a);
   need(unitsIn(g, a, other(c.side)).some(regular), 'reconnaissance over an enemy-occupied area');
   c.box = 'map'; c.area = a; c.mission = 'recon';
   if (c.side === 'israeli' && eastOfSam(a) && samAvailable(g)) { state(g).samTarget = c.id; say(g, `Air reconnaissance over ${nameOf(a)}: Syria may answer with a SAM (16.31c)`, c.side); return; }
@@ -795,6 +807,7 @@ export function fireSam(g: Game, samId: string) {
   const die = rollDie(g), res = samResult(isNafakh(g) ? Math.max(4, g.turn) : g.turn, die); sam.box = 'used'; V.samTarget = undefined;      // 22.46: Nafakh uses the turn 4-6 column
   const a = chit(g, airId!);
   if (a.mission === 'interdiction' && res !== 'none' && a.area != null) delete g.interdicted[a.area];
+  if (!b && res !== 'none' && a.area != null) (V.samCancelled ??= []).push(a.area);
   if (a.mission === 'recon' && res === 'none') finishRecon(g, a);
   if (res !== 'none') { a.mission = undefined; a.box = res === 'eliminated' ? 'eliminated' : 'used'; a.area = undefined; if (b) { for (const s of sidesOf(g)) dropAir(b, s, a.id); battleState(b).samCancelled = true; } }
   b?.rolls.push({ who: `SAM against ${a.name}`, sn: 0, dice: [die], hits: res === 'none' ? 0 : 1, kind: 'sam' });
@@ -895,6 +908,7 @@ const takeEvent = (g: Game, b: Battle, c: Chit, kind: string) => {
   const B = battleState(b);
   need(b.stage === 'setup', 'events are played before the first roll');
   need(c.box === 'available' && c.kind === kind, 'that event is not available');
+  need(!unitsIn(g, b.area, c.side).every((u) => u.garrison), 'a standing asset fighting alone plays no events (4.35)');
   need(!B.event[c.side], 'one event per side in a battle (6.22, 6.23)');
   B.event[c.side] = c.id; c.box = 'eliminated'; b.locked = true;                                            // 4.22 single use
   return c.side;
@@ -1027,6 +1041,6 @@ registerHooks('golan73', {
   
   sources, supplyStep, supplyFree: (_g, _s, a) => isAssembly(a) || a === HERMON, alwaysSupplied: (_g, u) => !!u.ghost || u.id === 'S17',
   victory: golanVictory, finalResult, onPhase, onBattle, freeBattle, assault, reinforce, afterDraw: (g) => { nafakhStaff(g); const d = g.chits.find((c) => c.kind === 'event_dugman5' && c.box === 'available'); if (d) resolveDugman(g, d); },
-  afterDeploy, onUnassign, keepAssigned, optional: GOLAN_OPTIONAL, absorbLoss, lossOk, recoverOk, ghostsMove: (g) => !!g.opts.advGhosts, reinforceOk: (g, b, u) => reinforceOptions(g, b).includes(u.id), stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2), stackRoom: (g, u, a) => (g.opts.advGhosts && u.side === 'israeli' ? ghostRoom(g, u, a) : undefined), appropriate: (g, u) => (isNafakh(g) ? (u.side === 'israeli' ? [NAF_NORTH] : [REAR, NAF.sheet.entry.Z]) : u.side === 'israeli' ? [ASSEMBLY.A, ASSEMBLY.B] : Object.values(ENTRY)), isNight, onAssign, beforeBegin, beforeFire, afterFire,
+  afterDeploy, onUnassign, keepAssigned, optional: GOLAN_OPTIONAL, absorbLoss, lossOk, recoverOk, ghostsMove: (g) => !!g.opts.advGhosts, reinforceOk: (g, b, u) => reinforceOptions(g, b).includes(u.id), stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2), stackRoom: (g, u, a) => (g.opts.advGhosts && u.side === 'israeli' ? ghostRoom(g, u, a) : undefined), firstBattle: (g) => state(g).airAssaultArea, appropriate: (g, u) => (isNafakh(g) ? (u.side === 'israeli' ? [NAF_NORTH] : [REAR, NAF.sheet.entry.Z]) : u.side === 'israeli' ? [ASSEMBLY.A, ASSEMBLY.B] : Object.values(ENTRY)), isNight, onAssign, beforeBegin, beforeFire, afterFire,
   lossAsset,   // 18.32: a supporting artillery asset may take a step loss (series loss pool)
 } as Partial<Volume>);
