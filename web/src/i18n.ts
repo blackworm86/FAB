@@ -25,7 +25,7 @@ export async function loadLang() {
 export function tr(s: string): string {
   if (LANG === 'en' || !s) return s;
   const t = D.text[s]; if (t != null) return t;
-  for (const [re, out] of PATS) if (re.test(s)) return s.replace(re, out);
+  for (const [re, out] of PATS) { const m = re.exec(s); if (m) return out.replace(/\$(\d)/g, (_, i: string) => { const v = m[+i] ?? ''; return D.text[v] ?? v; }); }      // the pattern's variable parts are translated too when the dictionary knows them (a side, "last action")
   if (COLLECT) missing.add(s);
   return s;
 }

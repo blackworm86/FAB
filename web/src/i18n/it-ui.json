@@ -3295,7 +3295,104 @@
   "Finish the panel first": "Prima completa il pannello",
   "Help": "Aiuto",
   "Dice move on by themselves (decisions still wait for you)": "I dadi proseguono da soli (le decisioni aspettano comunque te)",
-  "Full explanations of each option and rule": "Spiegazioni complete di ogni opzione e regola"
+  "Full explanations of each option and rule": "Spiegazioni complete di ogni opzione e regola",
+  "Layer": "Livello",
+  "Ctrl": "Contr.",
+  "No colour on the map": "Nessun colore sulla mappa",
+  "Supply: which areas trace supply": "Rifornimenti: quali aree tracciano il rifornimento",
+  "Rotate the map": "Ruota la mappa",
+  "Rotate the map a quarter turn": "Ruota la mappa di un quarto di giro",
+  "Map colour layer": "Livello di colore della mappa",
+  "Assets done": "Risorse pronte",
+  "No Special Action": "Nessuna Azione Speciale",
+  "Put away": "Metti via",
+  "What to do": "Cosa fare",
+  "Show on the map": "Mostra sulla mappa",
+  " Reinforce or retreat before the attacker commits his assets (6.21), or go on without.": " Rinforza o ritirati prima che l'attaccante impegni le sue risorse (6.21), oppure prosegui senza.",
+  "Reinforce or retreat before the attacker commits his assets (6.21), or go on without.": "Rinforza o ritirati prima che l'attaccante impegni le sue risorse (6.21), oppure prosegui senza.",
+  "the Defender first decides on a Special Action (6.21)": "prima il difensore decide su un'Azione Speciale (6.21)",
+  "The defender answers after you (6.22); you pick your point unit last.": "Il difensore risponde dopo di te (6.22); scegli la tua unità di punta per ultima.",
+  ", and a block to make it the point unit. The attacker's assets are on the table (6.23).": ", e un blocco come unità di punta. Le risorse dell'attaccante sono sul tavolo (6.23).",
+  "and pick your point unit.": "e scegli la tua unità di punta.",
+  "Must stop · costs a Special Action · selected": "Deve fermarsi · costa un'Azione Speciale · selezionata",
+  "strategic ·": "strategico ·",
+  "blown bridge": "ponte distrutto",
+  "In supply": "Rifornita",
+  "linked to a source": "collegata a una fonte",
+  "Supply source": "Fonte di rifornimento",
+  "labelled on the map": "indicata sulla mappa",
+  "hatched: no path to a source": "a righe: nessun percorso verso una fonte",
+  "Yours": "Tue",
+  "out of supply there": "lì sarebbe non rifornita",
+  "elite": "élite",
+  "veteran": "veterana",
+  "Field works removed": "Fortificazioni rimosse",
+  "FIELD WORKS REMOVED": "FORTIFICAZIONI RIMOSSE",
+  "German ↑": "Tedeschi ↑",
+  "Allied ↓": "Alleati ↓",
+  "german": "tedeschi",
+  "allied": "alleati",
+  "axis": "Asse",
+  "syrian": "siriani",
+  "israeli": "israeliani",
+  "German Marginal Victory": "Vittoria marginale tedesca",
+  "GERMAN MARGINAL VICTORY": "VITTORIA MARGINALE TEDESCA",
+  "German Operational Victory": "Vittoria operativa tedesca",
+  "GERMAN OPERATIONAL VICTORY": "VITTORIA OPERATIVA TEDESCA",
+  "German Decisive Victory": "Vittoria decisiva tedesca",
+  "GERMAN DECISIVE VICTORY": "VITTORIA DECISIVA TEDESCA",
+  "German Strategic Victory": "Vittoria strategica tedesca",
+  "GERMAN STRATEGIC VICTORY": "VITTORIA STRATEGICA TEDESCA",
+  "Allied Marginal Victory": "Vittoria marginale alleata",
+  "ALLIED MARGINAL VICTORY": "VITTORIA MARGINALE ALLEATA",
+  "Allied Operational Victory": "Vittoria operativa alleata",
+  "ALLIED OPERATIONAL VICTORY": "VITTORIA OPERATIVA ALLEATA",
+  "Allied Decisive Victory": "Vittoria decisiva alleata",
+  "ALLIED DECISIVE VICTORY": "VITTORIA DECISIVA ALLEATA",
+  "Allied Strategic Victory": "Vittoria strategica alleata",
+  "ALLIED STRATEGIC VICTORY": "VITTORIA STRATEGICA ALLEATA",
+  "Axis Marginal Victory": "Vittoria marginale dell'Asse",
+  "AXIS MARGINAL VICTORY": "VITTORIA MARGINALE DELL'ASSE",
+  "Axis Operational Victory": "Vittoria operativa dell'Asse",
+  "AXIS OPERATIONAL VICTORY": "VITTORIA OPERATIVA DELL'ASSE",
+  "Axis Decisive Victory": "Vittoria decisiva dell'Asse",
+  "AXIS DECISIVE VICTORY": "VITTORIA DECISIVA DELL'ASSE",
+  "Axis Strategic Victory": "Vittoria strategica dell'Asse",
+  "AXIS STRATEGIC VICTORY": "VITTORIA STRATEGICA DELL'ASSE",
+  "Syrian Marginal Victory": "Vittoria marginale siriana",
+  "SYRIAN MARGINAL VICTORY": "VITTORIA MARGINALE SIRIANA",
+  "Syrian Operational Victory": "Vittoria operativa siriana",
+  "SYRIAN OPERATIONAL VICTORY": "VITTORIA OPERATIVA SIRIANA",
+  "Syrian Decisive Victory": "Vittoria decisiva siriana",
+  "SYRIAN DECISIVE VICTORY": "VITTORIA DECISIVA SIRIANA",
+  "Syrian Strategic Victory": "Vittoria strategica siriana",
+  "SYRIAN STRATEGIC VICTORY": "VITTORIA STRATEGICA SIRIANA",
+  "Israeli Marginal Victory": "Vittoria marginale israeliana",
+  "ISRAELI MARGINAL VICTORY": "VITTORIA MARGINALE ISRAELIANA",
+  "Israeli Operational Victory": "Vittoria operativa israeliana",
+  "ISRAELI OPERATIONAL VICTORY": "VITTORIA OPERATIVA ISRAELIANA",
+  "Israeli Decisive Victory": "Vittoria decisiva israeliana",
+  "ISRAELI DECISIVE VICTORY": "VITTORIA DECISIVA ISRAELIANA",
+  "Israeli Strategic Victory": "Vittoria strategica israeliana",
+  "ISRAELI STRATEGIC VICTORY": "VITTORIA STRATEGICA ISRAELIANA",
+  "your assets are committed: now the Defender assigns (6.23)": "le tue risorse sono impegnate: ora assegna il difensore (6.23)",
+  "your assets are committed (6.22)": "le tue risorse sono impegnate (6.22)",
+  "your assets are committed (6.23)": "le tue risorse sono impegnate (6.23)",
+  "the Attacker assigns his assets first (6.22)": "prima assegna le risorse l'attaccante (6.22)",
+  ", then Begin combat.": ", poi Inizia il combattimento.",
+  "The defender has designated his (6.24).": "Il difensore ha già scelto la sua (6.24).",
+  "−1 STEP": "−1 STEP",
+  "GE": "TE",
+  "Game design": "Progetto del gioco",
+  "Digital edition": "Edizione digitale",
+  "Fast Action Battle Game": "Un gioco Fast Action Battle",
+  "A Fast Action Battle Game": "Un gioco Fast Action Battle",
+  "Elite Armor Strongpoint": "Caposaldo corazzato d'élite",
+  "Veteran Armor Strongpoint": "Caposaldo corazzato veterano",
+  "Green Armor Strongpoint": "Caposaldo corazzato di reclute",
+  "Elite Infantry Strongpoint": "Caposaldo di fanteria d'élite",
+  "Veteran Infantry Strongpoint": "Caposaldo di fanteria veterano",
+  "Green Infantry Strongpoint": "Caposaldo di fanteria di reclute"
  },
  "patterns": [
   [
@@ -8737,6 +8834,62 @@
   [
    "Playable only \\((\\d+)\\)",
    "Solo giocabili ($1)"
+  ],
+  [
+   "(.+) attacks: (?:tap|click) a card to add it\\.",
+   "$1 attaccano: scegli una carta da aggiungere."
+  ],
+  [
+   "(.+) defends: (?:tap|click) a card to add it",
+   "$1 difendono: scegli una carta da aggiungere"
+  ],
+  [
+   "(.+): Special Action\\?",
+   "$1: Azione Speciale?"
+  ],
+  [
+   "Next battle: (.+)",
+   "Prossima battaglia: $1"
+  ],
+  [
+   "(.+): (\\d+) VP",
+   "$1: $2 PV"
+  ],
+  [
+   "(\\d+) MP",
+   "$1 PM"
+  ],
+  [
+   "(\\d+) MP · no supply",
+   "$1 PM · senza rifornimento"
+  ],
+  [
+   "In supply: traces through (\\d+) areas? to (.+) \\(dotted line\\)\\.",
+   "Rifornita: traccia attraverso $1 aree fino a $2 (linea tratteggiata)."
+  ],
+  [
+   "In supply: it stands on a supply source\\.",
+   "Rifornita: si trova su una fonte di rifornimento."
+  ],
+  [
+   "(.+) · (elite|veteran|green)",
+   "$1 · $2"
+  ],
+  [
+   "(German|Allied|Axis|Syrian|Israeli) (Offensive fire|Defensive fire|artillery)",
+   "$2: $1"
+  ],
+  [
+   "(.+) Asset · (german|allied|axis|syrian|israeli)",
+   "$1 · $2"
+  ],
+  [
+   "Supply · (.+)",
+   "Rifornimenti · $1"
+  ],
+  [
+   "(.+): (?:tap|click) a block to make it your point unit",
+   "$1: scegli un blocco come tua unità di punta"
   ]
  ],
  "html": {}
