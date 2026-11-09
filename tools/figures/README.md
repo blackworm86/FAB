@@ -28,9 +28,13 @@ Leave out the type names to run every type. Every service run adds a line to `ru
 
 Vehicles and guns get no rig: the game turns the turret, recoils the gun and rocks the hull in code. If a model faces the wrong way, add `"yaw": 90` (degrees) to its type in `types.json` and run step 5 again.
 
+## In a cloud Claude session
+
+Node's own downloads ignore the session's network proxy unless told: run the steps as `NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt npm run …`. The environment allows `image.pollinations.ai`, `huggingface.co`, `router.huggingface.co` and `trellis-community-trellis.hf.space`.
+
 ## Keys
 
-Never put a key in the repo or in a file. The scripts read `HF_TOKEN` (Hugging Face, free account: huggingface.co/settings/tokens, "read" is enough) and `POLLINATIONS_TOKEN` (optional) from the environment only. In a cloud Claude session, the key is given through the session's credential form and the host must be allowed in the environment's network settings: `image.pollinations.ai`, `huggingface.co`, `*.hf.space` (the Space's own host), `router.huggingface.co`.
+Never put a key in the repo or in a file. The scripts read `HF_TOKEN` (Hugging Face, free account: huggingface.co/settings/tokens, "read" is enough) and `POLLINATIONS_TOKEN` (optional) from the environment only. In a cloud Claude session, the key is given through the session's credential form and the host must be allowed in the environment's network settings (see above).
 
 ## Rules the figures keep
 

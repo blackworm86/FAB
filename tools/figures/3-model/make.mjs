@@ -15,11 +15,10 @@ let app = null, made = 0;
 async function trellis(png) {
   const { Client, handle_file } = await import('@gradio/client');
   app ??= await Client.connect(space, process.env.HF_TOKEN ? { hf_token: process.env.HF_TOKEN } : {});
-  try {                                                        // shortcut: endpoint and argument names are those of the TRELLIS Space app.py; if the Space changes, the error below prints its new API
-    await app.predict('/start_session', {}).catch(() => {});
-    await app.predict('/image_to_3d', { image: handle_file(new Blob([png], { type: 'image/png' })), multiimages: [], seed: +flag('seed', 0), ss_guidance_strength: 7.5, ss_sampling_steps: 12, slat_guidance_strength: 3, slat_sampling_steps: 12, multiimage_algo: 'stochastic' });
-    const r = await app.predict('/extract_glb', { mesh_simplify: 0.95, texture_size: 1024 });
-    return Buffer.from(await (await fetch(r.data[0].url ?? r.data[0].path)).arrayBuffer());
+  try {                                                        // shortcut: the argument order is that of the TRELLIS Space's /generate_and_extract_glb (checked November 2026); if the Space changes, the error below prints its new API
+    const r = await app.predict('/generate_and_extract_glb', [handle_file(new Blob([png], { type: 'image/png' })), [], null, +flag('seed', 0), 7.5, 12, 3, 12, 'stochastic', 0.95, 1024]);
+    const glb = r.data[2] ?? r.data[1];                         // the download button's file, else the 3D viewer's
+    return Buffer.from(await (await fetch(glb.url)).arrayBuffer());
   } catch (e) { console.error(e?.message ?? e, '\nThe Space API now is:', JSON.stringify(await app.view_api(), null, 1).slice(0, 3000)); throw e; }
 }
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);

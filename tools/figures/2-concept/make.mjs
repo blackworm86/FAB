@@ -3,6 +3,7 @@
 //   node 2-concept/make.mjs [type ...] [--service=pollinations|hf] [--n=2]
 // pollinations: free, no key (image.pollinations.ai, FLUX). hf: Hugging Face FLUX.1-schnell, free monthly credits, needs HF_TOKEN.
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import sharp from 'sharp';
 import { logRun, pick, flag } from '../log.mjs';
 const P = JSON.parse(readFileSync(new URL('prompts.json', import.meta.url))), service = flag('service', 'pollinations'), N = +flag('n', 2);
 const get = {
@@ -17,7 +18,7 @@ for (const id of pick(Object.keys(P))) {
     const file = new URL(`${view}-${n}.png`, dir); if (existsSync(file)) continue;          // already made (or dropped in by hand): never paid for twice
     const r = await get(prompt, n, P[id].negative);
     if (!r.ok) { console.error(`${id} ${view}-${n}: ${r.status} ${(await r.text()).slice(0, 200)}`); continue; }
-    writeFileSync(file, Buffer.from(await r.arrayBuffer())); made++; console.log(`${id} ${view}-${n}`);
+    await sharp(Buffer.from(await r.arrayBuffer())).png().toFile(file.pathname);          // Pollinations may send JPEG: always store PNG made++; console.log(`${id} ${view}-${n}`);
     if (service === 'pollinations') await new Promise((ok) => setTimeout(ok, 16000));      // shortcut: the free tier allows about one image per 15 s; a token raises it
   }
 }
