@@ -110,6 +110,8 @@ export interface Volume {
   reinforceOk?: (g: Game, b: Battle, u: Unit) => boolean;
   /** Combat may not begin yet (a SAM answer or a jamming roll is pending): throw. */
   beforeBegin?: (g: Game, b: Battle) => void;
+  /** Who answers now during a battle's set-up, when the volume interrupts the usual order (Golan: the SAM answer 16.12, jamming 17.33). */
+  setupActor?: (g: Game, b: Battle) => Side | undefined;
   /** Before and after one side's dice of a firing step (an engineer bridging instead of firing; a counterbattery strike). */
   beforeFire?: (g: Game, b: Battle, side: Side, kind: 'arty' | 'ground') => void;
   afterFire?: (g: Game, b: Battle, side: Side, kind: 'arty' | 'ground') => void;

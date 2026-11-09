@@ -1,5 +1,8 @@
 // Golan '73: the rules audit of November 2026 (one test per fix).
 import { describe, expect, it } from 'vitest';
+import { passSA as passSA_, setReady as setReady_, type Battle as Battle_, type Game as Game_ } from '../src';
+/** 6.21-6.23: past the Defender's Special Action decision and the Attacker's assets, to the Defender's own asset step. */
+const defStep = (g: Game_, b: Battle_) => { if (b.defSA) passSA_(g, b); setReady_(g, b, b.attacker); };
 import { startBattle, beginCombat, canAssign, assign, moveOptions, endPhase, neighbors, inSupply, rollSupply, supplyChecks, firstBattle, golan, ai, type Game } from '../src';
 import { newGolanGame, unit, chit, give, move } from './golan-helpers';
 
@@ -10,7 +13,7 @@ const garrisonAlone = (g: Game) => { Object.assign(unit(g, 'S05'), { area: 22 })
 describe('Golan audit fixes', () => {
   it('4.35 / 16.24: a garrison fighting alone gets one artillery asset and nothing else', () => {
     const g = newGolanGame(21); garrisonAlone(g); give(g, 'IC30'); give(g, 'IC15');
-    const b = startBattle(g, 22);
+    const b = startBattle(g, 22); defStep(g, b);
     expect(canAssign(g, b, 'israeli', chit(g, 'IC01'))).toBeNull();                       // one artillery asset
     expect(canAssign(g, b, 'israeli', chit(g, 'IC15'))).toMatch(/4\.35/);                 // no battle asset
     expect(canAssign(g, b, 'israeli', chit(g, 'IC03'))).toMatch(/4\.35/);                 // no air

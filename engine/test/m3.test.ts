@@ -100,8 +100,8 @@ describe('retreat choice (6.5)', () => {
 
 describe('retreat before combat (Special Action)', () => {
   it('stops at the retreat step when several areas are legal, then ends the battle with an exploitation chance', () => {
-    const g = newGame(1), b = startBattle(g, 10), sa = g.chits.find((c) => c.kind === 'sa_block' && c.side === 'allied')!;      // area 10: Allied defenders, retreat to 23 or 25
-    sa.box = 'available';
+    const g = newGame(1), sa = g.chits.find((c) => c.kind === 'sa_block' && c.side === 'allied')!;      // area 10: Allied defenders, retreat to 23 or 25
+    sa.box = 'available'; const b = startBattle(g, 10);
     defenderRetreatSA(g, b);
     expect(sa.box).toBe('used'); expect(b.stage).toBe('retreat');
     const opts = retreatOptions(g, b), first = g.units.find((x) => x.id === b.retreat!.queue[0])!;
@@ -213,14 +213,18 @@ describe('4.1a unused Special Action', () => {
   });
 });
 
-import { setReady, cancelBattle, assign as assignChit } from '../src/game';
+import { setReady, cancelBattle, assign as assignChit, passSA, actorOf } from '../src/game';
 describe('battle set-up control', () => {
-  it('starts only when both sides are ready, and can be withdrawn before that', () => {
+  it('goes in the order of 6.21-6.23, starts when both sides are ready, and can be withdrawn until the Attacker commits', () => {
     const g = newGame(5); g.phase = 'combat'; g.phasing = 'german'; const a = mustFight(g)[0] ?? 11;
-    const b = startBattle(g, a); setReady(g, b, 'german'); expect(b.stage).toBe('setup');
-    setReady(g, b, 'german', false); cancelBattle(g); expect(g.battle).toBeNull();
-    const b2 = startBattle(g, a); setReady(g, b2, 'german'); setReady(g, b2, 'allied'); expect(b2.stage).not.toBe('setup');
-    expect(() => cancelBattle(g)).toThrow();
+    const sa = g.chits.find((c) => c.kind === 'sa_block' && c.side === 'allied')!; sa.box = 'available';
+    const b = startBattle(g, a); expect(b.defSA).toBe(true); expect(actorOf(g)).toBe('allied');                 // 6.21 the Defender decides on a Special Action first
+    expect(() => setReady(g, b, 'german')).toThrow(/6\.21/); passSA(g, b); expect(actorOf(g)).toBe('german');   // 6.22 then the Attacker assigns
+    expect(() => setReady(g, b, 'allied')).toThrow(/6\.22/); cancelBattle(g); expect(g.battle).toBeNull();
+    const b2 = startBattle(g, a); passSA(g, b2); setReady(g, b2, 'german'); expect(actorOf(g)).toBe('allied');  // 6.23 then the Defender
+    expect(() => setReady(g, b2, 'german', false)).toThrow(); expect(() => cancelBattle(g)).toThrow(/6\.22/);
+    expect(() => defenderRetreatSA(g, b2)).toThrow(/6\.21/);
+    setReady(g, b2, 'allied'); expect(b2.stage).not.toBe('setup');
   });
 });
 

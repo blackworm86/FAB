@@ -1,5 +1,8 @@
 // The Golan '73 rule book's own optional rules (18.1–18.5), each off unless chosen.
 import { describe, expect, it } from 'vitest';
+import { passSA as passSA_, setReady as setReady_, type Battle as Battle_, type Game as Game_ } from '../src';
+/** 6.21-6.23: past the Defender's Special Action decision and the Attacker's assets, to the Defender's own asset step. */
+const defStep = (g: Game_, b: Battle_) => { if (b.defSA) passSA_(g, b); setReady_(g, b, b.attacker); };
 import { assign, canAssign, contested, endPhase, mustFight, fireList, isArty, moveOptions, neighbors, startBattle, unitsIn, useGame, newGame, golan, VOLUMES, type Battle, type Game } from '../src';
 import { newGolanGame, unit, chit, give, fresh, move } from './golan-helpers';
 
@@ -9,7 +12,7 @@ const attack50 = (opts: Record<string, boolean> = {}, extra: string[] = []) => {
   const g = newGolanGame(6); Object.assign(g.opts, opts); g.phasing = 'israeli'; golan.state(g).samTarget = undefined;
   for (const id of ['I05', ...extra]) Object.assign(unit(g, id), { area: 50, disorder: 0 });
   for (const c of g.chits.filter((x) => x.kind === 'sa_block')) c.box = 'available';
-  const b = startBattle(g, 50); return { g, b };
+  const b = startBattle(g, 50); if (b.defSA) passSA_(g, b); return { g, b };
 };
 const sn = (g: Game, b: Battle, side: string, kind: 'arty' | 'ground', key: string) => fireList(g, b, side, kind).find((f) => f.key === key)?.sn;
 const regular = (g: Game, a: number, side: string) => unitsIn(g, a, side).filter((u) => !u.garrison && !u.fort && !u.ghost);
@@ -91,7 +94,7 @@ describe('Golan optional rules of the rule book (18.1–18.5)', () => {
 
   it('18.4 Syrian air support: only when Syria is the Attacker', () => {
     const run = (on: boolean, attacker: string) => {
-      const { g, b } = attack50({ syrianAirAttack: on }); g.turn = [1, 2, 3, 4, 5, 6].find((t) => { g.turn = t; return !golan.isNight(g); })!; b.attacker = attacker;
+      const { g, b } = attack50({ syrianAirAttack: on }); g.turn = [1, 2, 3, 4, 5, 6].find((t) => { g.turn = t; return !golan.isNight(g); })!; b.attacker = attacker; if (attacker !== 'syrian') defStep(g, b);
       const air = chit(g, give(g, g.chits.find((c) => c.side === 'syrian' && c.kind === 'air_mission')!.id));
       return canAssign(g, b, 'syrian', air, 'arty');
     };

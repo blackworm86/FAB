@@ -20,7 +20,7 @@ const lazy: Policy = (g, side) => {
   const b = g.battle;
   if (b) {
     const att = side === b.attacker;
-    if (b.stage === 'setup') return b.ready?.includes(side) ? null : run('ready', (x) => E.setReady(x, x.battle!, side));
+    if (b.stage === 'setup') return b.ready?.includes(side) || E.setupSide(g, b) !== side ? null : b.defSA ? run('no SA', (x) => E.passSA(x, x.battle!)) : run('ready', (x) => E.setReady(x, x.battle!, side));
     if (b.stage === 'done') return att ? run('close', (x) => E.closeBattle(x)) : null;
     if (b.stage === 'loss' && b.loss?.side === side) return run('losses', (x) => E.autoLosses(x, x.battle!));
     if (b.stage === 'attFirst' && att) return run('first', (x) => E.chooseFirstLoss(x, x.battle!, x.battle!.attPoint));
@@ -154,4 +154,19 @@ describe('computer opponent: the Bulge plays beyond combat', () => {
     const blown = g.blown.length, act = AI.next(g, 'german', 'normal')!;
     expect(act.label).toBe('repair the bridge'); act.run(g); expect(g.blown.length).toBe(blown - 1);
   });
+});
+
+describe('computer opponent: the combat round set-up follows 6.21-6.24', () => {
+  it('as Defender it decides on a Special Action first, then waits for the Attacker\'s assets before it assigns its own', () => {
+    E.useGame('bulge'); E.setRandom(null);
+    const g = E.newGame(1, { scenario: 'tournament' } as never); g.phase = 'combat'; g.phasing = 'german';
+    for (const c of g.chits) if (c.side === 'allied' && (c.kind === 'artillery' || c.kind === 'sa_block')) c.box = 'available';
+    const b = E.startBattle(g, 10);                                                                     // area 10: Allied defenders
+    expect(AI.next(g, 'german', 'hard')).toBeNull();                                                    // 6.21: not the Attacker's turn yet
+    const sa = AI.next(g, 'allied', 'hard')!; expect(sa.op[0]).toBe('passSA'); sa.run(g);
+    expect(AI.next(g, 'allied', 'hard')).toBeNull();                                                    // 6.22: the Attacker assigns first
+    E.setReady(g, b, 'german');
+    const ops: string[] = []; for (let i = 0; i < 10 && g.battle?.stage === 'setup'; i++) { const a = AI.next(g, 'allied', 'hard'); if (!a) break; ops.push(a.op[0] as string); a.run(g); }
+    expect(ops).toContain('assign'); expect(ops[ops.length - 1]).toBe('setReady'); expect(g.battle!.stage).not.toBe('setup');   // 6.23 then its own, and the round begins
+  }, 120_000);
 });

@@ -47,6 +47,7 @@ export interface Battle {
   vol?: Record<string, unknown>;   /** a volume's own battle state (Golan: the events played, jamming, counterbattery, the ditch an engineer bridges) */
   pending: number; pendingKind?: 'arty' | 'ground'; lossKind?: 'arty' | 'ground'; engFw: boolean; rolls: Roll[]; result?: string; exploit: boolean; unitHit: Record<Side, boolean>; mark: number; hit?: Record<Side, string[]>;
   ready?: Side[]; locked?: boolean;
+  defSA?: boolean;   /** 6.21: the Defender has still to decide on a Special Action (reinforce or retreat), before the Attacker assigns assets */
   pz150?: string;   /** 18.4 the 150th's first battle: its id, cleared once the morale check is done */
   defStart?: string[]; unabsorbed?: number; byArty?: boolean; lastDefPoint?: Unit;   /** 18.7 bookkeeping */
 }
@@ -734,7 +735,8 @@ export function startBattle(g: Game, a: number, viaSA = false, chitId?: string):
   }
   const pick = (us: Unit[]) => [...us].sort(pointOrder)[0]?.id ?? '', empty = <T,>(v: T) => Object.fromEntries(sidesOf(g).map((s) => [s, structuredClone(v)])) as Record<Side, T>;
   const b: Battle = { area: a, attacker: g.phasing, attPoint: pick(att), defPoint: pick(def), bt, riverAssault: g.riverAssault.includes(a), stage: 'setup', queue: [], assets: empty<string[]>([]), air: {}, pending: 0,
-    engFw: false, rolls: [], exploit: false, unitHit: empty(false), mark: g.log.length, hit: empty<string[]>([]), ready: [], locked: lockedAtStart };
+    engFw: false, rolls: [], exploit: false, unitHit: empty(false), mark: g.log.length, hit: empty<string[]>([]), ready: [], locked: lockedAtStart,
+    defSA: saAvailable(g, other(g.phasing)).length > 0 && [a, ...neighbors(a)].some((n) => unitsIn(g, n, other(g.phasing)).some((u) => !u.garrison && !u.fort && !u.ghost)) };
   { const pz = pz150In(g, b); if (pz) { if (pz.side === b.attacker) b.attPoint = pz.id; else b.defPoint = pz.id; } }
   g.battle = b; return b;
 }
@@ -750,8 +752,18 @@ export function assetLimits(g: Game, b: Battle, side: Side) {
   const onlyAssets = unitsIn(g, b.area, side).every((u) => u.garrison);
   return { arty: (attacker ? 2 : 1) + (us && !mixed && !onlyAssets ? 1 : 0), battle: !mixed && !onlyAssets, event: !mixed && !onlyAssets, mixed, pure, ech, pooled };
 }
+/** 6.21-6.24: whose step it is in a battle's set-up. The Defender decides on a Special Action, then the Attacker assigns assets (and his point unit),
+ *  then the Defender; with both ready, the Attacker begins the round. A volume may hand the step over for an answer (Golan: SAM, jamming). */
+export function setupSide(g: Game, b: Battle): Side { return CUR.setupActor?.(g, b) ?? orderSide(b); }
+const orderSide = (b: Battle): Side => { const def = other(b.attacker), r = b.ready ?? []; return b.defSA ? def : r.length === 2 ? b.attacker : r.includes(b.attacker) ? def : b.attacker; };
+const attackerBegun = (b: Battle) => !!b.ready?.includes(b.attacker) || b.assets[b.attacker].length > 0 || !!b.air[b.attacker];
+/** 6.21: the Defender goes on without a Special Action. */
+export function passSA(g: Game, b: Battle) { if (b.stage !== 'setup' || !b.defSA) throw new Error('no Special Action decision pending'); b.defSA = false; }
+const notYourStep = (g: Game, b: Battle, side: Side) => (b.defSA ? 'the Defender first decides on a Special Action (6.21)' : side === setupSide(g, b) ? null
+  : side === b.attacker ? 'your assets are committed: now the Defender assigns (6.23)' : 'the Attacker assigns his assets first (6.22)');
 export function canAssign(g: Game, b: Battle, side: Side, c: Chit, mode?: 'arty' | 'support'): string | null {
   if (b.stage !== 'setup') return 'assets are committed before the first roll';
+  { const w = notYourStep(g, b, side); if (w) return w; }
   if (c.side !== side || c.box !== 'available') return 'not in the Available Box';
   return CUR.canAssign(g, b, side, c, mode);
 }
@@ -784,7 +796,9 @@ export function assign(g: Game, b: Battle, id: string, mode?: 'arty' | 'support'
   if (c.kind === 'air_mission') { const a = { id, mode: mode ?? 'arty', unit }; if (b.air[c.side]) (b.air2 ??= {})[c.side] = a; else b.air[c.side] = a; } else b.assets[c.side].push(id);
   CUR.onAssign?.(g, b, c, mode, unit);
 }
-export function unassign(g: Game, b: Battle, id: string) {
+/** Take an asset back, in its owner's own set-up step only. */
+export function unassign(g: Game, b: Battle, id: string) { if (chit(g, id).side === orderSide(b)) dropAsset(g, b, id); }   /* an air mission may be taken back while its SAM answer waits (16.12) */
+function dropAsset(g: Game, b: Battle, id: string) {
   const c = chit(g, id); if (b.stage !== 'setup' || CUR.keepAssigned?.(g, b, c)) return; c.box = 'available';
   b.assets[c.side] = b.assets[c.side].filter((x) => x !== id); dropAir(b, c.side, id); CUR.onUnassign?.(g, b, c);
 }
@@ -932,6 +946,8 @@ export function beginCombat(g: Game, b: Battle) {
 /** Hot-seat shortcut stays beginCombat; online each side confirms its set-up and combat starts when both are ready. */
 export function setReady(g: Game, b: Battle, side: Side, on = true) {
   if (b.stage !== 'setup') throw new Error('already started');
+  if (!on) throw new Error('assets once committed stay committed (6.22, 6.23)');
+  { const w = notYourStep(g, b, side); if (w) throw new Error(w); }
   const r = (b.ready ??= []).filter((x) => x !== side); if (on) r.push(side); b.ready = r;
   if (r.length === 2 && !g.deferBegin) beginCombat(g, b);
 }
@@ -939,7 +955,8 @@ export function setReady(g: Game, b: Battle, side: Side, on = true) {
 export function cancelBattle(g: Game) {
   const b = g.battle; if (!b) throw new Error('no battle'); if (b.stage !== 'setup') throw new Error('combat has begun');
   if (b.locked) throw new Error('a Special Action was spent; the battle cannot be withdrawn');
-  for (const id of sidesOf(g).flatMap((s) => [...(b.assets[s] ?? []), ...airOf(b, s).map((a) => a.id)])) unassign(g, b, id);
+  if (b.ready?.includes(b.attacker)) throw new Error('the Attacker has committed his assets: the battle is fought (6.22)');
+  for (const id of sidesOf(g).flatMap((s) => [...(b.assets[s] ?? []), ...airOf(b, s).map((a) => a.id)])) dropAsset(g, b, id);
   g.battle = null;
 }
 export const exploitSn = (g: Game, u: Unit) => CUR.moraleSn(g, u, 'exploit');
@@ -1125,21 +1142,21 @@ function end(g: Game, b: Battle, result: string) {
 export function declineExploit(g: Game, b: Battle) { if (b.stage !== 'exploit') throw new Error('no exploitation pending'); b.exploitIds = undefined; b.stage = 'done'; say(g, `${b.attacker} declines the exploitation opportunity`); }
 export function closeBattle(g: Game) { if (g.battle?.stage !== 'done') throw new Error('battle not finished'); g.battle = null; settleUp(g); }
 export function defenderRetreatSA(g: Game, b: Battle, chitId?: string) {
-  if (b.stage !== 'setup') throw new Error('only before the first roll'); const def = other(b.attacker);
+  if (b.stage !== 'setup' || (!b.defSA && attackerBegun(b))) throw new Error('only as the Defender\'s first decision, before the Attacker assigns assets (6.21)'); const def = other(b.attacker);
   const us = unitsIn(g, b.area, def).filter((u) => !u.garrison && !u.fort && !u.ghost); if (!us.length) throw new Error('only units retreat: garrisons, defended roadblocks and strongpoints stay (16.21, 4.35, 15.6)');
   if (us.some((u) => u.unsupplied)) throw new Error('out-of-supply units may not be affected by Special Actions (9.34d)');
-  spendSA(g, def, us.map((x) => x.ech!), 'retreat before combat', chitId, b.area);
-  for (const id of [...b.assets[def], ...airOf(b, def).map((a) => a.id)]) unassign(g, b, id);               // assets already assigned go back to the Available Box
+  spendSA(g, def, us.map((x) => x.ech!), 'retreat before combat', chitId, b.area); b.defSA = false;
+  for (const id of [...b.assets[def], ...airOf(b, def).map((a) => a.id)]) dropAsset(g, b, id);               // assets already assigned go back to the Available Box
   b.locked = true; us.forEach((x) => clearInterdict(g, x));
   b.retreat = { side: def, queue: us.map((u) => u.id), moved: false, after: 'sa', h: 0, excess: 0 }; advanceRetreat(g, b);
 }
 export function defenderReinforceSA(g: Game, b: Battle, unitId: string, chitId?: string) {
-  if (b.stage !== 'setup') throw new Error('only before the first roll'); const def = other(b.attacker), u = g.units.find((x) => x.id === unitId)!;
+  if (b.stage !== 'setup' || (!b.defSA && attackerBegun(b))) throw new Error('only as the Defender\'s first decision, before the Attacker assigns assets (6.21)'); const def = other(b.attacker), u = g.units.find((x) => x.id === unitId)!;
   if (unitsIn(g, b.area, def).some((x) => x.id.startsWith('DR-') || x.heydte) || (!CUR.reinforceOk && unitsIn(g, b.area, def).every((x) => x.garrison))) throw new Error('a battle of standing assets alone may not be reinforced (4.35)');
   if ((u.cls === 'armor' && connection(u.area!, b.area)?.restricted) || (CUR.moveOk && !CUR.moveOk(g, u, b.area))) throw new Error('that unit may not cross into the battle area (14.1, 14.43)');
   if (u.side !== def || u.area == null || !neighbors(b.area).includes(u.area) || contested(g, u.area) || u.disorder || u.unsupplied || u.garrison || u.fort || u.ghost || !roomFor(g, u, b.area)) throw new Error('not a legal reinforcement');
   if (CUR.reinforceOk && !CUR.reinforceOk(g, b, u)) throw new Error('not a legal reinforcement here (8.23)');
-  spendSA(g, def, u.ech, 'reinforce a battle', chitId, b.area); b.locked = true; b.reinforced = u.id; clearInterdict(g, u); const from = u.area; u.area = b.area; u.from = from; updateControl(g, from); say(g, `${u.name} reinforces ${areas.get(b.area)!.name}`);
+  spendSA(g, def, u.ech, 'reinforce a battle', chitId, b.area); b.defSA = false; b.locked = true; b.reinforced = u.id; clearInterdict(g, u); const from = u.area; u.area = b.area; u.from = from; updateControl(g, from); say(g, `${u.name} reinforces ${areas.get(b.area)!.name}`);
 }
 /** 18.3: Peiper, exploiting in a Breakthrough Movement Phase on or before turn 3, may move with its full allowance once per game. */
 export const peiperCan = (g: Game, u: Unit) => !!g.opts.peiper && !g.peiperUsed && g.phase === 'btMove' && g.turn <= 3 && u.name === 'Peiper' && u.exploit && !u.moved && u.area != null && u.side === g.phasing;
@@ -1395,6 +1412,7 @@ export { updateControl, dropReserve, eliminate, needAdmin, supplied, fighters, r
 /** The point unit a side designates for a battle (6.24), and the engineer's option to remove field works instead of firing (6.33): plain state changes, so they can travel as actions. */
 export function setPoint(g: Game, b: Battle, side: Side, unitId: string) {
   if (b.stage !== 'setup') throw new Error('already started'); const u = g.units.find((x) => x.id === unitId);
+  { const w = notYourStep(g, b, side); if (w) throw new Error(w); }
   if (!u || u.side !== side || u.area !== b.area || u.garrison || u.ghost) throw new Error('not a legal point unit');
   if (side === b.attacker && u.disorder) throw new Error('a disordered unit cannot be the attacking point unit');
   if (side !== b.attacker && unitId === b.reinforced && g.units.some((x) => x.id === b.defPoint && x.area === b.area)) throw new Error('the reinforcing unit may not be the point unit while the original point unit stands (8.23)');
@@ -1404,11 +1422,11 @@ export function setPoint(g: Game, b: Battle, side: Side, unitId: string) {
 export function setEngFw(_g: Game, b: Battle, on: boolean) { if (!['setup', 'attArty', 'defArty', 'defFire', 'offFire'].includes(b.stage)) throw new Error('too late: the field works are removed before offensive fire (6.33)'); b.engFw = !!on; }
 
 /* ================= referee-lite: checks on a move written by the other browser ================= */
-/** Who has to act now: one side, or both (Prepare phases, battle set-up). */
+/** Who has to act now: one side, or both (Prepare phases). */
 export function actorOf(g: Game): Side | 'both' {
   if (g.pendingBlow) { const u = g.units.find((x) => x.id === g.pendingBlow!.unit); return u ? other(u.side) : 'both'; }
   const b = g.battle;
-  if (b) return b.stage === 'setup' ? 'both' : b.stage === 'loss' && b.loss ? b.loss.side : ['defArty', 'defFire', 'defChoice', 'retreat'].includes(b.stage) ? other(b.attacker) : b.attacker;
+  if (b) return b.stage === 'setup' ? setupSide(g, b) : b.stage === 'loss' && b.loss ? b.loss.side : ['defArty', 'defFire', 'defChoice', 'retreat'].includes(b.stage) ? other(b.attacker) : b.attacker;
   if (g.phase === 'admin' || g.phase === 'reinforcement' || g.phase === 'deploy') return 'both';         // the set-up: each side places its own pieces
   return g.phase === 'reaction' ? other(g.phasing) : g.phasing;
 }

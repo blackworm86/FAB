@@ -68,7 +68,9 @@ export const saChit = (g: G, side: string) => { const c = g.chits.find((x) => x.
 export const sa = (g: G, side: string) => { saChit(g, side).box = 'available'; };
 export const queue = (g: G, d: number[]) => { g.force = [...d]; };
 export const stage = (s: E.Battle['stage']) => (g: G) => !!g.battle && g.battle.stage !== s;
-export const begin = (g: G) => E.beginCombat(g, g.battle!);
+/** 6.21-6.23: the Defender goes on without a Special Action and the Attacker's assets are committed: the Defender's step. */
+export const answer = (g: G) => { const b = g.battle!; if (b.defSA) E.passSA(g, b); if (!b.ready?.includes(b.attacker)) E.setReady(g, b, b.attacker); };
+export const begin = (g: G) => { answer(g); E.beginCombat(g, g.battle!); };
 export const roll = (g: G) => E.roll_step(g, g.battle!);
 export const fightAt = (a: number) => (g: G) => { E.startBattle(g, a, g.phase === 'btCombat'); };
 export const GO: Target = { el: '.c-bar.b .go', label: 'main button' };

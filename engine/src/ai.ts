@@ -48,7 +48,7 @@ const OPS: Record<string, OpFn> = {
   move: (g, u: string, a: number) => E.move(g, u, a), setReserve: (g, u: string) => { const had = !!g.units.find((x) => x.id === u)?.interdict; try { E.setReserve(g, u, true); } catch (e) { if (!had) throw e; } },   /* a failed Greif interdict check (17.11) is an outcome, not an illegal action */ setPeiperFull: (g, u: string) => E.setPeiperFull(g, u, true), stratMove: (g, u: string, a: number) => E.stratMove(g, u, a),
   airDrop: (g, u: string, a: number | null) => S.airDrop(g, u, a), startBattle: (g, a: number, viaSA: boolean) => E.startBattle(g, a, viaSA),
   assign: (g, c: string, mode?: 'arty' | 'support', engFw?: boolean) => { E.assign(g, g.battle!, c, mode); if (engFw) E.setEngFw(g, g.battle!, true); },
-  setPoint: (g, side: Side, u: string) => E.setPoint(g, g.battle!, side, u), setReady: (g, side: Side) => E.setReady(g, g.battle!, side), closeBattle: (g) => E.closeBattle(g),
+  passSA: (g) => E.passSA(g, g.battle!), setPoint: (g, side: Side, u: string) => E.setPoint(g, g.battle!, side, u), setReady: (g, side: Side) => E.setReady(g, g.battle!, side), closeBattle: (g) => E.closeBattle(g),
   chooseLoss: (g, k: string) => E.chooseLoss(g, g.battle!, k), chooseFirstLoss: (g, k: string) => E.chooseFirstLoss(g, g.battle!, k), attackerChoice: (g, abort: boolean) => E.attackerChoice(g, g.battle!, abort),
   defenderChoice: (g, use: boolean) => E.defenderChoice(g, g.battle!, use), chooseRetreat: (g, a: number) => E.chooseRetreat(g, g.battle!, a), roll: (g) => E.roll_step(g, g.battle!),
   airSupply: (g, c: string, a: number) => (CUR.id === 'bulge' ? E.playAirSupply(g, c, a) : S.airSupply(g, c, a)), rollSupply: (g) => E.rollSupply(g),
@@ -538,7 +538,8 @@ const canPoint = (g: Game, b: Battle, side: Side, id: string) => { const x = str
 function battle(g: Game, b: Battle, side: Side, level: Level): Action | null {
   const att = side === b.attacker, foe = E.other(side), a = b.area;
   if (b.stage === 'setup') {
-    if (b.ready?.includes(side)) return null;
+    if (b.ready?.includes(side) || E.setupSide(g, b) !== side) return null;
+    if (b.defSA) return act('no Special Action', ['passSA']);                                          // 6.21 (shortcut: never reinforces or retreats by Special Action yet)
     if (CUR.id === 'golan73' && G.state(g).samTarget && side !== 'syrian') return null;                 // the SAM answer comes first (16.12)
     const ex = exchange(g, a, side, att), close = ex.mine < ex.theirs * 1.6, w = worth(g, a, side);
     if (level !== 'easy') for (const c of avail(g, side)) {

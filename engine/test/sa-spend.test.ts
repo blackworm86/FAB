@@ -37,10 +37,10 @@ describe('8.21-8.27 every Special Action use spends the chosen counter', () => {
 });
 
 describe('8.24 retreat before combat', () => {
-  const setup = () => { const g = E.newGame(1), b = E.startBattle(g, 10), sa = g.chits.find((c) => c.kind === 'sa_block' && c.side === 'allied')!; sa.box = 'available'; return { g, b, sa }; };
-  it('works with defender assets already assigned: they go back to Available', () => {
+  const setup = () => { const g = E.newGame(1), sa = g.chits.find((c) => c.kind === 'sa_block' && c.side === 'allied')!; sa.box = 'available'; const b = E.startBattle(g, 10); return { g, b, sa }; };
+  it('is the Defender\'s first decision, before any asset is assigned (6.21)', () => {
     const { g, b, sa } = setup(); const art = g.chits.find((c) => c.side === 'allied' && c.kind === 'artillery' && c.box !== 'map')!; art.box = 'available';
-    if (!E.canAssign(g, b, 'allied', art)) E.assign(g, b, art.id);
+    expect(E.canAssign(g, b, 'allied', art)).toMatch(/6\.21/);
     E.defenderRetreatSA(g, b, sa.id); while (b.stage === 'retreat') E.chooseRetreat(g, b, E.retreatOptions(g, b)[0]);
     expect(sa.box).toBe('used'); expect(art.box).toBe('available'); expect(b.stage).toBe('done'); expect(b.exploit).toBe(true);
   });

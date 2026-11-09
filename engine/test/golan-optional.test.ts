@@ -1,6 +1,6 @@
 // The additional optional rules of the Battle for Nafakh and Al-Owda scenario sheets (18.x), each off unless chosen.
 import { describe, expect, it } from 'vitest';
-import { newGame, startBattle, beginCombat, fireList, assign, moveOptions, victory, unitsIn, contested, neighbors, optionalRules, useGame, golan, VOLUMES, type Game, type Battle } from '../src';
+import { newGame, startBattle, beginCombat, passSA, setReady, fireList, assign, moveOptions, victory, unitsIn, contested, neighbors, optionalRules, useGame, golan, VOLUMES, type Game, type Battle } from '../src';
 import { reachable } from '../src/golan';
 import { connections, eastOfSam } from '../src/golan/map';
 import { areas } from '../src/map';
@@ -11,7 +11,7 @@ const attack50 = (opts: Record<string, boolean> = {}, extra: string[] = []) => {
   const g = newGolanGame(6); Object.assign(g.opts, opts); g.phasing = 'israeli'; golan.state(g).samTarget = undefined;
   for (const id of ['I05', ...extra]) Object.assign(unit(g, id), { area: 50, disorder: 0 });
   for (const c of g.chits.filter((x) => x.kind === 'sa_block')) c.box = 'available';                 // both reusable Special Actions in hand
-  const b = startBattle(g, 50); return { g, b };
+  const b = startBattle(g, 50); if (b.defSA) passSA(g, b); setReady(g, b, 'israeli'); return { g, b };   // the Syrian Defender's own asset step (6.23)
 };
 const sn = (g: Game, b: Battle, side: string, kind: 'arty' | 'ground', key: string) => fireList(g, b, side, kind).find((f) => f.key === key)?.sn;
 

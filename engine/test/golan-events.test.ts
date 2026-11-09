@@ -1,5 +1,8 @@
 // Golan '73 Admin-phase play, events and Special Actions (17.x, 8.x, 14.5, 14.6, 16.11, 16.31) and the alternate set-up, on the series engine.
 import { describe, expect, it } from 'vitest';
+import { passSA as passSA_, setReady as setReady_, type Battle as Battle_, type Game as Game_ } from '../src';
+/** 6.21-6.23: past the Defender's Special Action decision and the Attacker's assets, to the Defender's own asset step. */
+const defStep = (g: Game_, b: Battle_) => { if (b.defSA) passSA_(g, b); setReady_(g, b, b.attacker); };
 import { endPhase, moveOptions, mustFight, inSupply, contested, edgeKey, areas, neighbors, startBattle, beginCombat, roll_step as rollStep, defenderRetreatSA, chooseRetreat, retreatOptions,
   assign, canAssign, fireList, roadblock, rally, qualityReplacement, staffReplacement, setReserve, golan, type Game } from '../src';
 import * as AI from '../src/ai';
@@ -148,7 +151,7 @@ describe('combat events and Special Actions in battle', () => {
       const g = newGolanGame(seed); give(g, 'IC30');
       Object.assign(unit(g, 'I05'), { area: 50 });
       g.phasing = 'israeli'; const b = startBattle(g, 50);
-      golan.playCounterbattery(g, b, 'IC30');
+      golan.playCounterbattery(g, b, 'IC30'); defStep(g, b);
       const art = g.chits.find((c) => c.kind === 'artillery' && c.side === 'syrian' && c.box === 'available')!; assign(g, b, art.id);
       beginCombat(g, b); for (let i = 0; i < 5 && b.stage !== 'done' && golan.battleState(b).counterbattery.israeli; i++) rollStep(g, b);
       if (art.box === 'future') { expect(art.direct).toBe(true); expect(Number(art.turn)).toBeGreaterThan(1); hit = true; }

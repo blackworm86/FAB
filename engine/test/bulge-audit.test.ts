@@ -1,5 +1,8 @@
 // The Bulge and the Series Rules: the rules audit of November 2026 (one test per fix).
 import { describe, expect, it } from 'vitest';
+import { passSA as passSA_, setReady as setReady_, type Battle as Battle_, type Game as Game_ } from '../src';
+/** 6.21-6.23: past the Defender's Special Action decision and the Attacker's assets, to the Defender's own asset step. */
+const defStep = (g: Game_, b: Battle_) => { if (b.defSA) passSA_(g, b); setReady_(g, b, b.attacker); };
 import { contestedAreas, newGame, useGame, startBattle, beginCombat, roll_step, defenderChoice, chooseRetreat, retreatOptions, canAssign, chit, move, moveOptions, endPhase, supplyChecks, heydteDrop, saAvailable,
   activateBreakthrough, buildFieldWorks, placeTaskForce, defenderReinforceSA, alternateUse, setReserve, type Game } from '../src';
 
@@ -27,7 +30,7 @@ describe('Bulge audit fixes', () => {
   it('16.22: a Task Force is placed, never assigned to a battle, and one kept back can be placed on a later turn', () => {
     const g = fresh(3); const tf = chit(g, 'R71.0'); tf.box = 'available'; combat(g);
     const al = U(g, '101'), ge = U(g, '2 Pz'); clear(g, 47); al.area = 47; ge.area = 47; g.control[47] = 'allied';
-    const b = startBattle(g, 47); expect(canAssign(g, b, 'allied', tf)).toMatch(/16\.22/);
+    const b = startBattle(g, 47); defStep(g, b); expect(canAssign(g, b, 'allied', tf)).toMatch(/16\.22/);
     g.battle = null; g.turn = 3; g.phase = 'btCombat'; g.phasing = 'allied'; settle(g); endPhase(g); endPhase(g); expect(g.phase).toBe('reinforcement');
     expect(g.tfNew).toContain('R71.0'); expect(() => placeTaskForce(g, 'R71.0', 56)).not.toThrow();
   });
@@ -72,7 +75,7 @@ describe('Bulge audit fixes', () => {
   it('17.21: an Allied air mission may support an unsupplied area', () => {
     const g = fresh(11, { scenario: 'campaign' }); const air = chit(g, 'R41.0'); air.box = 'available';
     const ge = U(g, '2 Pz'), al = U(g, '106 Inf'); clear(g, 11); ge.area = 11; al.area = 11; al.unsupplied = true; g.control[11] = 'allied'; combat(g);
-    const b = startBattle(g, 11); expect(canAssign(g, b, 'allied', air)).toBeNull();
+    const b = startBattle(g, 11); defStep(g, b); expect(canAssign(g, b, 'allied', air)).toBeNull();
   });
   it('18.2: bid fuel never returns through the alternate event use', () => {
     const g = fresh(12, { bid: 2 }); g.phase = 'admin'; const bid = g.chits.find((c) => c.bid)!; bid.box = 'eliminated';

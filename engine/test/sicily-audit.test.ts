@@ -38,7 +38,7 @@ describe('Sicily audit fixes', () => {
   it('16.32: a side that committed air support may not also dogfight', () => {
     const g = newSicilyGame(8); combat(g, 'allied'); const a = boxArea(Object.keys(S.state(g).beachheads).map(Number)[0]); clear(g, a); unit(g, 'US03').area = a; const it = unit(g, 'IT05'); it.area = a; it.untried = false; g.control[a] = 'allied'; g.contestedAtMoveStart = [a];
     give(g, 'USC06a'); give(g, 'USC08a'); const ax = g.chits.find((c) => c.side === 'axis' && c.kind === 'air_mission')!; ax.box = 'available';
-    const b = E.startBattle(g, a); E.assign(g, b, 'USC06a', 'arty'); E.assign(g, b, ax.id, 'arty');
+    const b = E.startBattle(g, a); if (b.defSA) E.passSA(g, b); E.assign(g, b, 'USC06a', 'arty'); E.setReady(g, b, 'allied'); E.assign(g, b, ax.id, 'arty');
     expect(() => S.dogfight(g, b, 'USC08a')).toThrow(/16\.32/);
   });
   it('16.34: air supply keeps the unsupplied marker, spares the morale check and lets disorder adjust', () => {

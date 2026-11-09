@@ -199,8 +199,38 @@ export function play(cfg: Cfg): Result {
     const att = g.phasing, def = E.other(att);
     if (!act(att, `startBattle ${a}${viaSA ? ' (SA)' : ''}`, () => E.startBattle(g, a, viaSA), !viaSA)) return;
     let b = g.battle!;
-    // set-up: assets, point units, the volume's battle options
-    for (const s of [att, def]) {
+    // set-up in the order of 6.21-6.23: the Defender's Special Action decision, then the Attacker's assets, then the Defender's
+    if (b.defSA) {
+      const ro = cfg.game === 'golan73' ? G.reinforceOptions(g, b) : E.neighbors(a).flatMap((x) => E.unitsIn(g, x, def)).filter((u) => !u.garrison).map((u) => u.id);
+      if (chance(0.1)) act(def, 'defenderRetreatSA', () => E.defenderRetreatSA(g, b), false);
+      else if (ro.length && chance(0.3)) act(def, 'defenderReinforceSA', () => E.defenderReinforceSA(g, b, pick(ro)), false);
+      resolvePending(); if (!g.battle) return; b = g.battle;
+      if (b.stage === 'setup' && b.defSA) act(def, 'passSA', () => E.passSA(g, b));
+    }
+    /** The volume's own battle choices, each made by its side in that side's own set-up step. */
+    const options = (s: Side) => {
+      b = g.battle!; if (!b || b.stage !== 'setup') return;
+      if (cfg.game === 'golan73') {
+        const ew = avail(att).find((c) => c.kind === 'event_ew'); if (s === att && ew && chance(0.3)) act(att, 'playJamming', () => G.playJamming(g, b, ew.id), false);
+        if (G.battleState(b).ew?.pending) { const cm = avail(def).find((c) => c.kind === 'event_ew'); act(def, 'answerJamming', () => G.answerJamming(g, b, cm && chance(0.5) ? cm.id : undefined)); }
+        const cb = avail(s).find((c) => c.kind === 'event_counterbattery'); if (cb && chance(0.3)) act(s, 'playCounterbattery', () => G.playCounterbattery(g, b, cb.id), false);
+        const ch = G.chemicalOptions(g); if (s === 'syrian' && ch.length && chance(0.5)) act('syrian', 'playChemical', () => G.playChemical(g, pick(ch)));
+        const fl = G.flankOptions(g); if (s === 'israeli' && fl.length && chance(0.5)) act('israeli', 'playFlank', () => G.playFlank(g, pick(fl)), false);
+        if (s === 'israeli' && G.strongpointSwapOption(g) && chance(0.5)) act('israeli', 'swapStrongpointIntoAttack', () => G.swapStrongpointIntoAttack(g));
+        if (s === att && att === 'syrian' && chance(0.3)) act('syrian', 'setEngineerBridge', () => G.setEngineerBridge(g, b, pick(E.neighbors(a))), false);
+      } else if (cfg.game === 'sicily') {
+        const air = avail(s).find((c) => c.kind === 'air_mission'); if (air && E.airOf(b, E.other(s)).length && !E.airOf(b, s).length && chance(0.4)) act(s, 'dogfight', () => S.dogfight(g, b, air.id));   // 16.32: the dogfight is the side's one air commitment
+        const nav = b.assets[att].find((id) => E.chit(g, id).kind === 'naval_support'); if (s === att && nav && chance(0.5)) act(att, 'setNavalShock', () => S.setNavalShock(g, b, nav));
+        const rg = b.assets[att].find((id) => ['ranger', 'commando'].includes(E.chit(g, id).subtype ?? '')); if (s === att && rg && chance(0.5)) act(att, 'setRangerFw', () => S.setRangerFw(g, b, rg));
+      } else if (s === att && chance(0.3)) act(att, 'setEngFw', () => E.setEngFw(g, b, true));
+      resolvePending();
+    };
+    if (b.stage === 'setup') for (const s of [att, def]) {
+      if (s === def) {
+        resolvePending(); b = g.battle!; if (!b || b.stage !== 'setup') break;
+        if (chance(0.04) && !b.locked) { act(att, 'cancelBattle', () => E.cancelBattle(g)); return; }
+        act(att, 'setReady', () => E.setReady(g, b, att));
+      }
       for (const c of shuffle(avail(s))) {
         if (!chance(0.5)) continue;
         const mode = c.kind === 'air_mission' ? (chance(0.5) ? 'arty' : 'support') : undefined;
@@ -209,32 +239,15 @@ export function play(cfg: Cfg): Result {
         resolvePending(); b = g.battle!; if (!b) return;
       }
       if (chance(0.3)) { const us = E.unitsIn(g, a, s).filter((u) => !u.garrison && !u.ghost && (s !== att || !u.disorder)); if (us.length) act(s, 'setPoint', () => E.setPoint(g, b, s, pick(us).id), false); }
+      options(s); if (!g.battle) return; b = g.battle;
     }
-    if (cfg.game === 'golan73') {
-      const ew = avail(att).find((c) => c.kind === 'event_ew'); if (ew && chance(0.3)) act(att, 'playJamming', () => G.playJamming(g, b, ew.id), false);
-      if (G.battleState(b).ew?.pending) { const cm = avail(def).find((c) => c.kind === 'event_ew'); act(def, 'answerJamming', () => G.answerJamming(g, b, cm && chance(0.5) ? cm.id : undefined)); }
-      for (const s of [att, def]) { const cb = avail(s).find((c) => c.kind === 'event_counterbattery'); if (cb && chance(0.3)) act(s, 'playCounterbattery', () => G.playCounterbattery(g, b, cb.id), false); }
-      const ch = G.chemicalOptions(g); if (ch.length && chance(0.5)) act('syrian', 'playChemical', () => G.playChemical(g, pick(ch)));
-      const fl = G.flankOptions(g); if (fl.length && chance(0.5)) act('israeli', 'playFlank', () => G.playFlank(g, pick(fl)), false);
-      if (G.strongpointSwapOption(g) && chance(0.5)) act('israeli', 'swapStrongpointIntoAttack', () => G.swapStrongpointIntoAttack(g));
-      if (att === 'syrian' && chance(0.3)) act('syrian', 'setEngineerBridge', () => G.setEngineerBridge(g, b, pick(E.neighbors(a))), false);
-      const ro = G.reinforceOptions(g, b); if (ro.length && chance(0.3)) act(def, 'defenderReinforceSA', () => E.defenderReinforceSA(g, b, pick(ro)), false);
-    } else if (cfg.game === 'sicily') {
-      for (const s of [att, def]) { const air = avail(s).find((c) => c.kind === 'air_mission'); if (air && E.airOf(b, E.other(s)).length && !E.airOf(b, s).length && chance(0.4)) act(s, 'dogfight', () => S.dogfight(g, b, air.id)); }   // 16.32: the dogfight is the side's one air commitment
-      const nav = b.assets[att].find((id) => E.chit(g, id).kind === 'naval_support'); if (nav && chance(0.5)) act(att, 'setNavalShock', () => S.setNavalShock(g, b, nav));
-      const rg = b.assets[att].find((id) => ['ranger', 'commando'].includes(E.chit(g, id).subtype ?? '')); if (rg && chance(0.5)) act(att, 'setRangerFw', () => S.setRangerFw(g, b, rg));
-    }
-    if (cfg.game !== 'golan73' && chance(0.2)) { const n = E.neighbors(a).flatMap((x) => E.unitsIn(g, x, def)).filter((u) => !u.garrison); if (n.length) act(def, 'defenderReinforceSA', () => E.defenderReinforceSA(g, b, pick(n).id), false); }
-    if (cfg.game === 'bulge' && chance(0.3)) act(att, 'setEngFw', () => E.setEngFw(g, b, true));
-    if (chance(0.1)) act(def, 'defenderRetreatSA', () => E.defenderRetreatSA(g, b), false);
     resolvePending(); if (!g.battle) return; b = g.battle;
-    if (b.stage === 'setup' && chance(0.04) && !b.locked) { act(att, 'cancelBattle', () => E.cancelBattle(g)); return; }
     // the rounds
     for (let k = 0; k < 300 && g.battle && !stop; k++) {
       b = g.battle; const st = b.stage;
       const who = (E.actorOf(g) === 'both' ? att : E.actorOf(g)) as Side;
       if (st === 'done') { act(att, 'closeBattle', () => E.closeBattle(g)); return; }
-      if (st === 'setup') { resolvePending(); act(att, 'beginCombat', () => E.beginCombat(g, g.battle!)); continue; }
+      if (st === 'setup') { resolvePending(); if (!g.battle || g.battle.stage !== 'setup') continue; const w = E.setupSide(g, g.battle); act(w, 'setReady', () => E.setReady(g, g.battle!, w)); continue; }
       if (st === 'loss') { const keys = E.lossOptions(g, b); if (!keys.length) fail('loss stage with nothing to choose'); const who = b.loss!.side; if (chance(0.2)) act(who, 'autoLosses', () => E.autoLosses(g, b)); else act(who, 'chooseLoss', () => E.chooseLoss(g, b, pick(keys))); continue; }
       if (st === 'attFirst') { const keys = [b.attPoint, ...b.assets[att].filter((id) => E.isBattleAsset(E.chit(g, id)))]; act(att, 'chooseFirstLoss', () => E.chooseFirstLoss(g, b, pick(keys))); continue; }
       if (st === 'attChoice') { const abort = chance(0.25) && !E.VOLUME.canAbort?.(g, b); act(att, `attackerChoice ${abort}`, () => E.attackerChoice(g, b, abort)); continue; }
@@ -292,7 +305,7 @@ export function play(cfg: Cfg): Result {
         const [nm, f] = pick(tries2);
         act(s, `${nm} ${c.id}`, f, false); resolvePending();
         // a flanking invasion that landed on defenders may fight one round now (17.22)
-        if (cfg.game === 'sicily' && nm === 'playFlanking' && g.phasing === 'allied') for (const a of Object.keys(S.state(g).flank).map(Number)) if (E.contested(g, a) && !g.fought.includes(a)) fight(a);   // 17.22: the round is fought at once
+        if (cfg.game === 'sicily' && nm === 'playFlanking' && g.phasing === 'allied') for (const a of Object.keys(S.state(g).flank).map(Number)) if (E.contested(g, a) && !g.fought.includes(a) && E.VOLUME.battleAllowed?.(g, a)) fight(a);   // 17.22 (an older landing still contested fights in the Combat Phase): the round is fought at once
       }
     }
   }

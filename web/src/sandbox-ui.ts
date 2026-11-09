@@ -35,8 +35,6 @@ const SEATS = (): [DevSeat, string][] => [['both', 'Both'], ...E.VOLUME.sides.ma
 export function hotWant(): E.Side | null {
   if (!SANDBOX || !st.sbHot || M.g.over) return null;
   const a = actorNow(), cur = online.mySide(); if (a !== 'both') return a;
-  const b = M.g.battle;
-  if (b?.stage === 'setup') return cur && b.ready?.includes(cur) && !b.ready.includes(other(cur)) ? other(cur) : cur ?? M.g.phasing;
   if (cur && cur !== M.g.phasing && M.g.done?.includes(cur)) return M.g.phasing;                       // the other side said Done: back to the Phasing Player
   return cur ?? M.g.phasing;
 }

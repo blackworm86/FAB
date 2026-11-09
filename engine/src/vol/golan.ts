@@ -1037,6 +1037,7 @@ registerHooks('golan73', {
   newGame: newGolanGame as Volume['newGame'], markerKey: () => 'res', reach: golanReach, beforeMove, afterMove,
   stratAllowed: (g, u) => interdictedBy(g, u.area!) !== other(u.side) && !(isNight(g) && g.stratMoves >= (u.side === 'israeli' ? 2 : 1)), stratStep,   // 14.03: night strat-moves, Israel 2, Syria 1
   afterStrat: (g) => { g.stratMoves++; },
+  setupActor: (g, b) => (state(g).samTarget ? 'syrian' : battleState(b).ew?.pending ? other(b.attacker) : undefined),
   successNumber: golanSuccessNumber, adjustFire, canAssign, moraleSn: golanMoraleSn, retreatOk, retreatPrefer, onRetreat, noRetreat: (_g, u) => !!u.garrison,     // 16.24: garrisons never retreat (6.42c)
   
   sources, supplyStep, supplyFree: (_g, _s, a) => isAssembly(a) || a === HERMON, alwaysSupplied: (_g, u) => !!u.ghost || u.id === 'S17',

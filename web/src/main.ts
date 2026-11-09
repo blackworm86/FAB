@@ -1421,7 +1421,7 @@ function promptText() {
   if (g.pendingBlow) return `<b>${nm(other(g.units.find((x) => x.id === g.pendingBlow!.unit)!.side))}</b>: attempt to blow the bridge?`;
   if (b?.stage === 'retreat') return '<b>Choose the retreat area.</b>';
   if (b && b.stage === 'setup' && b.ready?.length === 2) return '<b>Both ready.</b> Blocks are revealed…';
-  if (b) return b.stage === 'setup' ? (() => { const me = online.mySide(), rd = (sd: E.Side) => b.ready?.includes(sd); return online.active && !online.both() && me ? `<b>${rd(me) ? 'You are ready.' : 'Tap an asset to add it, then press Ready.'}</b> Opponent: ${rd(other(me)) ? 'ready' : 'preparing'}.` : `<b>Tap a card to add it.</b>${gx(' Tap a block to make it the point unit.')}`; })() : b.stage === 'done' ? '' : rollView ? '' : b.stage.endsWith('Choice') ? 'Choose how to take the hits.' : STAGE_NAME[b.stage] ? stakes(b) : '';
+  if (b) return b.stage === 'setup' ? setupPrompt(b) : b.stage === 'done' ? '' : rollView ? '' : b.stage.endsWith('Choice') ? 'Choose how to take the hits.' : STAGE_NAME[b.stage] ? stakes(b) : '';
   const m = E.mustFight(g).length;
   switch (g.phase) {
     case 'deploy': return '<b>Set-up:</b> pick a block in the tray, then a lit area.';
@@ -1436,6 +1436,13 @@ function promptText() {
     default: return g.phase === 'supply' && g.supplyPending ? `<b>Supply check</b>${gx(': roll for the units that are cut off.')}` : 'Supply checked. End the phase.';
   }
 }
+/** 6.21-6.23: the battle set-up goes step by step: the Defender's Special Action decision, the Attacker's assets, then the Defender's. */
+function setupPrompt(b: E.Battle): string {
+  const who = E.setupSide(g, b), att = who === b.attacker;
+  if (who === CPU_SIDE || (online.active && !online.both() && who !== online.mySide())) return `<b>${nm(who)}</b> ${b.defSA ? 'decides on a Special Action…' : 'assigns assets…'}`;
+  if (b.defSA) return `<b>${nm(who)}: Special Action?</b>${gx(' Reinforce or retreat before the attacker commits his assets (6.21), or go on without.')}`;
+  return `<b>${nm(who)} ${att ? 'attacks' : 'defends'}: tap a card to add it.</b>${gx(att ? ' The defender answers after you (6.22).' : ' The attacker\'s assets are on the table (6.23).')}${gx(' Tap a block to make it the point unit.')}`;
+}
 function primary(): { label: string; fn: () => void; dis?: boolean } | null {
   const b = g.battle;
   if (rollView?.pos && !rollView.remote) return { label: 'Continue', fn: () => endRoll() };          // the dice have landed: one clear step on, the report stays readable until then
@@ -1443,11 +1450,12 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
   if (g.phase === 'supply' && g.supplyPending && !b && mine(g.phasing)) { const n = E.supplyChecks(g).length; return { label: n ? `Roll ${n} supply check${n > 1 ? 's' : ''}` : 'Continue', fn: () => act(() => E.rollSupply(g)) }; }      // the one red button is the next thing to do
   if (b) {
     if (b.stage === 'setup') {
-      const solo = !online.active || online.both(), me = online.mySide();
-      if (solo) { const why = VOL.blocksBegin(g); return { label: why ? 'Begin combat' : 'Begin combat', fn: () => (why ? say(why) : act(() => E.beginCombat(g, g.battle!))), dis: !!why }; }
-      if (!me) return null;
-      const on = b.ready?.includes(me);
-      return { label: on ? 'Waiting… tap to undo' : 'Ready', fn: () => act(() => { if (g.battle) E.setReady(g, g.battle, me, !on); }), dis: !on && !!VOL.blocksBegin(g) };   // the live battle: a remote write may have replaced the one this button was drawn for
+      const who = E.setupSide(g, b), solo = !online.active || online.both(), why = VOL.blocksBegin(g);
+      if (who === CPU_SIDE || (!solo && who !== online.mySide()) || b.ready?.includes(who)) return null;      // the other side's step
+      const go = (f: (x: E.Battle) => void) => () => act(() => { if (g.battle) f(g.battle); });            // the live battle: a remote write may have replaced the one this button was drawn for
+      if (b.defSA) return { label: 'No Special Action', fn: go((x) => E.passSA(g, x)) };
+      const first = who === b.attacker && !b.ready?.includes(b.attacker);
+      return { label: !solo ? 'Ready' : first ? 'Assets done' : 'Begin combat', fn: why ? () => say(why) : go((x) => E.setReady(g, x, who)), dis: !!why };
     }
     if (b.stage === 'done') return { label: 'Close battle', fn: () => act(() => { E.closeBattle(g); selArea = null; }) };
     if (b.stage.endsWith('Choice') || b.stage === 'retreat' || b.stage === 'attFirst' || b.stage === 'loss') return null;
@@ -1696,7 +1704,7 @@ function battleTable() {
       <span class="chp" title="Artillery assigned">${ico('artillery')}${arty}/${lim.arty}<small>arty</small></span>${rest || setup ? `<span class="chp" title="Battle assets and events">${ico('armor_asset')}${rest}<small>assets</small></span>` : ''}
       </div>`;
   };
-  const saRow = (() => { const s = other(att), us = E.unitsIn(g, b.area, s); if (!setup || !E.saAvailable(g, s).length) return ''; return `<div class="bsarow ${saOpen || reinforcing ? 'open' : ''}"><small class="gx">${nm(s)} Special Action</small>${ubtn(`${ico('plus')}<span>Special Action…</span>`, () => { saOpen = !saOpen; }, `satog ${saOpen ? 'on' : ''}`, !mine(s), 'Retreat before combat or bring in a neighbouring block (uses a Special Action)')}<span class="sabtns">${btn(`${ico('back')}<span class="bsa">Retreat (SA)</span>`, () => pickSA(s, us[0]?.ech, (sa) => E.defenderRetreatSA(g, g.battle!, sa)), 'ico', !mine(s) || !us.some((u) => !u.garrison), 'Retreat before combat (8.24): uses a Special Action; your units leave without disorder, garrisons stay; the attacker gets an exploitation chance')}${ubtn(`${ico('plus')}<span class="bsa">Reinforce (SA)</span>`, () => { reinforcing = !reinforcing; refresh(); }, `ico ${reinforcing ? 'on' : ''}`, !mine(s), 'Bring in a neighbouring block (uses a Special Action)')}</span></div>`; })();
+  const saRow = (() => { const s = other(att), us = E.unitsIn(g, b.area, s); if (!setup || !b.defSA) return ''; return `<div class="bsarow ${saOpen || reinforcing ? 'open' : ''}"><small class="gx">${nm(s)} Special Action</small>${ubtn(`${ico('plus')}<span>Special Action…</span>`, () => { saOpen = !saOpen; }, `satog ${saOpen ? 'on' : ''}`, !mine(s), 'Retreat before combat or bring in a neighbouring block (uses a Special Action)')}<span class="sabtns">${btn(`${ico('back')}<span class="bsa">Retreat (SA)</span>`, () => pickSA(s, us[0]?.ech, (sa) => E.defenderRetreatSA(g, g.battle!, sa)), 'ico', !mine(s) || !us.some((u) => !u.garrison), 'Retreat before combat (8.24): uses a Special Action; your units leave without disorder, garrisons stay; the attacker gets an exploitation chance')}${ubtn(`${ico('plus')}<span class="bsa">Reinforce (SA)</span>`, () => { reinforcing = !reinforcing; refresh(); }, `ico ${reinforcing ? 'on' : ''}`, !mine(s), 'Bring in a neighbouring block (uses a Special Action)')}</span></div>`; })();
   const covered = E.unitsIn(g, b.area).some((u) => !seen(u)), al = stats(b, P2), ge = stats(b, P1), tot = al.mean + ge.mean || 1;
   return `<div class="c-table slim ${rollView ? 'rolling' : ''}">${side(P2)}<div class="bmid"><div class="c-title">${g.fought.length + fightable().length > 1 ? `<small class="cnt" title="Battle ${g.fought.length + 1} of ${g.fought.length + fightable().length}">${Math.min(g.fought.length + 1, g.fought.length + fightable().length)}/${g.fought.length + fightable().length}</small>` : ''}${b.bt ? '<small class="cnt" title="Breakthrough combat">BT</small>' : ''}<b>${esc(L.name)}</b><span class="chp" title="Terrain defence number ${L.tdn}: attackers −${L.tdn} to hit">${ico('tree')}${L.tdn}</span>${g.fieldWorks.includes(b.area) ? `<span class="chp" title="Field works">${ico('gear')}</span>` : ''}${b.riverAssault ? `<span class="chp" title="River assault">${ico('wave')}</span>` : ''}</div>
     <div class="c-vs">${covered ? '<div class="big">?<span>:</span>?</div>' : `<div class="big" title="Expected hits per combat round: ${nm(P2)} : ${nm(P1)}"><small class="xs al">${VOL.tag[P2]}</small>${al.mean.toFixed(1)}<span>:</span>${ge.mean.toFixed(1)}<small class="xs ge">${VOL.tag[P1]}</small></div>${gx('<small class="xcap">expected hits per round</small>')}<div class="gauge"><i style="width:${(al.mean / tot) * 100}%"></i></div>`}</div></div>${side(P1)}${saRow}${setup ? engChoice(b) : ''}${setup && refusal ? `<div class="refuse">${ico('xbold')}<span><b>Not allowed:</b> ${esc(refusal)}</span></div>` : ''}</div>`;
