@@ -36,7 +36,7 @@ const QW: Record<Quality, number> = { green: 0.8, veteran: 1, elite: 1.25 };
 /** How many times a hard player fights a battle out before deciding (more: steadier, slower). */
 export const SIMS = { attack: 48, choice: 24 };
 /** Tuning numbers the arena changes (ARENA_TUNE), and whether the hard player plans its attacks first. */
-export const TUNE = { plan: true, planAt: 0.3, sd: true, asym: 0.4, vpBase: 6, tw1: 0.5, tw2: 1.5, ownCut: null as number | null, expose: 0.35 };
+export const TUNE = { plan: true, planAt: 0.3, sd: true, asym: 0.4, vpBase: 6, tw1: 0.5, tw2: 1.5, ownCut: null as number | null, expose: 0.35, supplyLine: 0 };
 
 /* ================= actions as data ================= */
 type OpFn = (g: Game, ...args: never[]) => unknown;
@@ -152,7 +152,14 @@ export function evaluateParts(g: Game, side: Side) {
   const held = new Set(g.units.filter((u) => u.side === foe && u.area != null && !u.garrison).map((u) => u.area!));
   for (const a of held) if (inPlay(g, a) && !E.inSupply(g, foe, a)) p.cutoff += 0.35 * steps(g, a, foe, side);          // cut off: weaker next Supply Phase
   if (first) { const obj = enemyObjective(g, side); for (const u of own(g, side)) if (regular(u)) p.approach -= 0.2 * (isBox(u.area!) ? 6 : Math.min(5, dist(g, u.area!, obj))); }      // still in a landing or assembly box: farthest of all
-  if (CUR.id === 'bulge' && TUNE.expose) for (const a of enemyReach(g, foe)) if (g.control[a] === side && !E.unitsIn(g, a, side).length) p.exposed -= TUNE.expose * vpWorth(a, side) * vpWeight(g);   // an empty objective the enemy can drive into next turn (2.4: passing takes it)
+  if (CUR.id === 'bulge' && TUNE.expose) {
+    const reach = enemyReach(g, foe);
+    for (const a of reach) if (g.control[a] === side && !E.unitsIn(g, a, side).length) p.exposed -= TUNE.expose * vpWorth(a, side) * vpWeight(g);   // an empty objective the enemy can drive into next turn (2.4: passing takes it)
+    if (TUNE.supplyLine) for (const a of areas.keys()) {                                               // a held objective whose supply line runs through empty areas the enemy can reach: its points are at risk too (19.1 needs supply)
+      if (g.control[a] !== side || !ownVp(a, side)) continue; const sp = E.supplyPath(g, side, a);
+      if (sp && sp.slice(1).some((x) => reach.has(x) && !E.unitsIn(g, x, side).length)) p.exposed -= TUNE.supplyLine * ownVp(a, side) * vpWeight(g);
+    }
+  }
   p.total = p.units + p.vp + p.sd + p.threat + p.chance + p.pressure + p.chits + p.cutoff + p.approach + p.exposed;
   return p;
 }
@@ -160,6 +167,8 @@ export function evaluateParts(g: Game, side: Side) {
 /* ================= helpers ================= */
 /** The victory points an area means to `side` if the enemy takes it: the enemy's own points there, and a shared objective counts both ways. */
 const vpWorth = (a: number, side: Side) => { const vp = areas.get(a)!.vp as unknown as Record<string, number | boolean>; return ((vp[E.other(side)] as number) || 0) + (vp.mutual ? 2 : 0); };
+/** The victory points `side` scores for holding an area (19.1). */
+const ownVp = (a: number, side: Side) => { const vp = areas.get(a)!.vp as unknown as Record<string, number | boolean>; return ((vp[side] as number) || 0) + (vp.mutual ? 1 : 0); };
 /** The areas `foe`'s blocks could enter or pass through on their next move (The Bulge's MP and costs, roughly: not past `side`'s blocks, no blown bridges,
  *  no armour over the restricted boundary). An empty area on such a path changes hands (2.4). */
 function enemyReach(g: Game, foe: Side): Set<number> {
