@@ -121,7 +121,7 @@ export function initTutorial(h: TutHost, course: Course) {
   }
   function draw() {
     const L = LESSONS[li], s = step(); if (!L || !s) return;
-    coach.className = `tut-coach ${menu ? 'is-menu' : `is-${s.kind ?? 'step'}`}`;
+    coach.className = `tut-coach ${menu ? 'is-menu' : `is-${s.kind ?? 'step'}`}${!menu && s.target ? ' has-target' : ''}`;
     coach.innerHTML = menu ? menuHtml() : stepHtml(L, s);
     translateDom(coach); linkRules(coach); coach.querySelectorAll('.tut-rule, .tut-why summary').forEach((e) => linkRules(e, true));      // rule numbers open the rules reference
     coach.querySelectorAll<HTMLElement>('[data-t]').forEach((b) => (b.onclick = () => {

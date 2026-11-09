@@ -1056,3 +1056,18 @@ p.stepped { cursor: pointer; border-left: 3px solid transparent; padding-left: 8
 @media (max-width: 700px) { .feed.top { display: none; } }
 /* a chit's name in its panel wraps onto a second line instead of being cut */
 .cbt b { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+/* phone sizes (9 November critique): no text under 12 px on the table, 44 px taps in the sheets, labels on two lines instead of cut */
+@media (max-width: 700px) {
+  .m2 small, .chp small, .arr small, .slot .lab, .slot small { font-size: 12px !important; }
+  .arr small { max-width: 84px; white-space: normal !important; overflow: hidden; text-overflow: clip !important; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.15; }
+  .tabs button span { font-size: 12px; }
+  .sheet .chip { min-height: 44px !important; } .mlchip { min-height: 44px; }
+  .c-dispatch:not(.chitbar) { max-height: 38% !important; overflow-y: auto; }      /* a block's card leaves most of the map in view */
+  .vbtns { flex-wrap: wrap !important; } .vbtns button { flex: 1 1 40%; white-space: normal; }      /* end screen: buttons wrap instead of cutting "New game" */
+}
+
+/* tutorial: the coach leads. Its Next/Start is the filled main button; on a reading step (nothing to tap on the table) the game's bottom bar steps back; the spotlight darkens the rest of the screen */
+.tut-coach button.tut-go { background: var(--gold); color: #1a1608; border-color: var(--gold); }
+body:has(.tut-coach:not(.has-target):not(.is-menu)) #ui .c-bar.b { opacity: .35; pointer-events: none; }
+.tut-ring { border-width: 4px; box-shadow: 0 0 0 9999px #0007, 0 0 0 6px #e7b04a55, 0 0 22px var(--gold); }
