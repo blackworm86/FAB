@@ -8,6 +8,7 @@ import { loadSicilyChitArt } from './sicily-art';
 import { useVolume, figKit, type LabelBox } from './vol';
 import type { PanelCtx } from './golan-ui';
 import { History } from './history';
+import { noSupplyTargets, supplySources } from './supply-plan';
 import * as SB from './sandbox';
 import { vpStrip, vpSheet, endPanel } from './score';
 import * as SBU from './sandbox-ui';
@@ -583,10 +584,20 @@ function buildLabels() {
 applyArt();
 if (map3d && VOL.art.relief) setTimeout(() => { map3d = false; setMap3d(true); }, 0); else map3d = false;           // a saved choice of the 3D map: loaded once the game is up
 /** Supply overlay: your own side (or the Phasing Player when you play both); computed once per refresh. */
-const supplySide = (): E.Side => online.mySide() ?? g.phasing;
+let supEnemy = false;                                                                              // the Supply layer shows the enemy's supply instead of yours
+const supplySide = (): E.Side => { const me = online.mySide() ?? g.phasing; return supEnemy ? other(me) : me; };
 let supCache = new Map<string, boolean>(), supKey = '';
 function supOk(sd: E.Side, a: number) { const k = `${g.turn}${g.phase}${g.log.length}${JSON.stringify(g.control).length}${g.units.map((u) => u.area).join()}`; if (k !== supKey) { supKey = k; supCache = new Map(); } const kk = sd + a; let v = supCache.get(kk); if (v == null) { v = E.inSupply(g, sd, a); supCache.set(kk, v); } return v; }
+/** Diagonal stripes for areas that are (or would be) out of supply: a pattern, so it never reads as the red of "must fight". */
+const hatchTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 32; const x = c.getContext('2d')!; x.fillStyle = '#ffffff55'; x.fillRect(0, 0, 32, 32); x.strokeStyle = '#fff'; x.lineWidth = 7; x.beginPath(); for (const d of [-32, 0, 32]) { x.moveTo(d, 32); x.lineTo(d + 32, 0); } x.stroke(); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(0.7, 0.7); return t; })();
+/** Destinations of the selected block where it would end up out of supply (supply-plan.ts), recomputed when the block or the board changes. */
+let noSup = new Set<number>(), noSupKey = '';
+function syncNoSup() {
+  const k = selUnit && !g.battle && g.phase !== 'strategic' ? `${selUnit}|${g.log.length}|${g.units.map((u) => u.area).join()}` : '';
+  if (k !== noSupKey) { noSupKey = k; noSup = k ? noSupplyTargets(g, selUnit!, optsFor(selUnit!).map((o) => o.area)) : new Set(); }
+}
 function paintAreas() {
+  syncNoSup();
   const strat = g.phase === 'strategic' && selUnit, opts = selUnit ? (strat ? E.stratOptions(g, selUnit).map((a) => ({ area: a, mustStop: false })) : E.moveOptions(g, selUnit)) : [];
   const fight = g.phase === 'combat' || g.phase === 'btCombat' ? fightable() : [], must = new Set(E.mustFight(g));
   const arr = new Map(arrOpts().map((x) => [x.area, x])), ret = new Set(g.battle?.stage === 'retreat' ? E.retreatOptions(g, g.battle) : []);      // once, not per area
@@ -601,9 +612,12 @@ function paintAreas() {
     const ar = arr.get(id); if (ar) { c = ar.sa ? MAPC.stop : MAPC.reach; o = 0.45; }
     if (ret.has(id)) { c = MAPC.reach; o = 0.5; }
     if (areaPick) { if (areaPick.areas.has(id)) { c = MAPC.reach; o = 0.5; } else if (o === 0) { c = 0x000000; o = 0.28; } }
-    if (tint === 'supply' && !g.battle && o === 0 && !tgt) { const sd = supplySide(), mine2 = g.control[id] === sd; if (!mine2) { c = 0x000000; o = 0.22; } else if (supOk(sd, id)) { c = 0xffffff; o = 0.16; } else { c = MAPC.cut; o = 0.5; } }      // your supplied areas stay light, cut-off ones red, the enemy's dimmed
+    let hatch = false;
+    if (tint === 'supply' && !g.battle && o === 0 && !tgt) { const sd = supplySide(); if (g.control[id] === sd) { if (supOk(sd, id)) { c = VOL.controlCol[sd] ?? 0xffffff; o = 0.3; } else { c = MAPC.cut; o = 0.55; hatch = true; } } }      // your supplied areas in your colour, cut-off ones hatched red, the enemy's left clear
+    if (r && noSup.has(id)) hatch = true;                                                              // a destination where the block would be out of supply
     if (!shownArea(id)) o = 0;
     else if (g.inPlay && !g.inPlay.includes(id)) { if (g.supplyOnly?.includes(id)) { c = 0x1d2a45; o = 0.5; } else { c = 0x000000; o = 0.62; } }      // Cold Shoulder: Zone 5 carries supply only (P.6)                                   // 24.33 outside the Introductory map sheet
+    if ((mat.map === hatchTex) !== hatch) { mat.map = hatch ? hatchTex : null; mat.needsUpdate = true; }
     mat.color.setHex(c); mat.opacity = o; m.visible = o > 0 && !show3d();                           // a clear overlay is not drawn at all; on the relief the ground paints it
     tintData.set([mat.color.r * 255, mat.color.g * 255, mat.color.b * 255, o * 255], id * 4); tintTex.needsUpdate = true;
   }
@@ -1082,10 +1096,11 @@ const coveredLabels = new Set<number>();
 let badges: Badge[] = [];
 function badgeList(): Badge[] {
   const out: Badge[] = [];
-  if (selUnit && !g.battle) { const u = g.units.find((x) => x.id === selUnit)!; for (const o of optsFor(selUnit)) out.push({ area: o.area, text: g.phase === 'strategic' ? '' : `${o.cost}`, cls: o.mustStop ? 'stop' : o.fuel && u.side === 'german' ? 'fuel' : 'ok' }); }
+  if (selUnit && !g.battle) { const u = g.units.find((x) => x.id === selUnit)!; for (const o of optsFor(selUnit)) out.push({ area: o.area, text: g.phase === 'strategic' ? '' : `${o.cost} MP${noSup.has(o.area) ? ' · no supply' : ''}`, cls: (o.mustStop ? 'stop' : o.fuel && u.side === 'german' ? 'fuel' : 'ok') + (noSup.has(o.area) ? ' nosup' : '') }); }
   for (const o of arrOpts()) if (o.sa) out.push({ area: o.area, text: 'SA', cls: 'stop' });              // plain entry areas are lit; only the ones that cost a Special Action are marked
   if (g.battle?.stage === 'retreat') for (const a of E.retreatOptions(g, g.battle)) out.push({ area: a, text: 'Retreat', cls: 'ok' });
   if (!g.battle && (g.phase === 'combat' || g.phase === 'btCombat') && allowed()) { const must = new Set(E.mustFight(g)); for (const a of fightable()) out.push({ area: a, text: must.has(a) ? 'Must fight' : 'May fight', cls: must.has(a) ? 'war' : 'opt' }); }
+  if (tint === 'supply' && !g.battle) for (const a of supplySources(g, supplySide(), MAP.areas.map((x) => x.id))) out.push({ area: a, text: 'Supply source', cls: 'src', key: `S${a}` });
   if (!g.battle && layers.numbers) for (const a of coveredLabels) out.push({ area: a, text: `${a} ${areaName(a)}`, cls: 'tint lab', key: `L${a}` });
   return out;
 }
@@ -1220,7 +1235,9 @@ function placeBadges() {
   { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(); fxLayer.place((area, unit) => { const ps = unit ? pieceScreen(unit) : null, c = center(area); v.set(c.x, 0, c.z).project(cam); const cx = r.left + (v.x * 0.5 + 0.5) * r.width, cy = r.top + (-v.y * 0.5 + 0.5) * r.height; return ps ? { x: ps.x, y: ps.y, cx, cy, rad: ps.rad, visible: true } : { x: cx, y: cy - 30, cx: cx - 1, cy, rad: 0, visible: v.z < 1 }; }); }
   placeFocus(); placeBubbles();
   const r = canvas.getBoundingClientRect(), v = new THREE.Vector3();
-  for (const [k, d] of badgeEls) { const id = +k.replace(/^L/, ''), p = d.classList.contains('lab') ? toWorld(LAB[id].x, LAB[id].y) : d.classList.contains('tint') ? toWorld(LAB[id].x, LAB[id].y + LAB[id].h / 2 + 40) : center(id); if (d.classList.contains('lab')) v.set(p.x, show3d() ? REL!.h(p.x, p.z) + 0.6 : 0.6, p.z).project(cam); else v.set(p.x, 2.2, p.z - 4).project(cam);      /* a label tag sits on its own area, not shifted like the move badges */ d.style.display = v.z < 1 ? '' : 'none'; d.style.transform = `translate(${(v.x * 0.5 + 0.5) * r.width}px, ${(-v.y * 0.5 + 0.5) * r.height}px) translate(-50%, -50%)`; }
+  for (const [k, d] of badgeEls) { const id = +k.replace(/^[LS]/, ''), p = d.classList.contains('lab') ? toWorld(LAB[id].x, LAB[id].y) : d.classList.contains('tint') ? toWorld(LAB[id].x, LAB[id].y + LAB[id].h / 2 + 40) : center(id); if (d.classList.contains('lab') || d.classList.contains('src')) v.set(p.x, show3d() ? REL!.h(p.x, p.z) + 0.6 : 0.6, p.z).project(cam); else v.set(p.x, 2.2, p.z - 4).project(cam);      /* a label tag sits on its own area, not shifted like the move badges */ let sx = (v.x * 0.5 + 0.5) * r.width, sy = (-v.y * 0.5 + 0.5) * r.height; const keep = selUnit && /\b(ok|stop|fuel)\b/.test(d.className), hw = d.offsetWidth / 2 + 6, hh = d.offsetHeight / 2 + 6, out = sx < hw || sx > r.width - hw || sy < hh || sy > r.height - hh;
+    if (keep) { sx = Math.min(r.width - hw, Math.max(hw, sx)); sy = Math.min(r.height - hh, Math.max(hh, sy)); d.classList.toggle('edge', out); }      // a destination off screen keeps its tag at the edge, so no "no supply" warning is missed
+    d.style.display = v.z < 1 ? '' : 'none'; d.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -50%)`; }
 }
 
 /* ---------- battle state shared with the view ---------- */
@@ -1609,8 +1626,8 @@ function dispatch() {
     const to = previewArea ?? hoverArea, o = to != null ? optsFor(u.id).find((x) => x.area === to) : null, n = fuelLeft(), strat = g.phase === 'strategic';
     const tags = [u.disorder === 1 ? 'disordered' : u.disorder === 2 ? 'recovering' : '', u.rec ? `${u.rec} recovery marker${u.rec > 1 ? 's' : ''} (−${u.rec} to fire)` : '', u.unsupplied ? 'unsupplied' : '', u.reserve ? 'reserve' : '', u.exploit ? 'exploit' : '', u.interdict ? 'interdicted' : ''].filter(Boolean);
     let route = '';
-    const sp = u.area != null && !u.garrison ? E.supplyPath(g, u.side, u.area) : null, supLine = u.area == null || u.garrison ? '' : sp ? `<p class="hint sup ok gx">${ico('fuel')} In supply: ${sp.length > 1 ? `traces through ${sp.length - 1} area${sp.length > 2 ? 's' : ''} to ${esc(areaName(sp.at(-1)!))} (blue line)` : 'it stands on a supply source'}.</p>` : `<p class="hint sup bad">${ico('warn')} Out of supply. ${esc(E.supplyWhy(g, u.side, u.area))}</p>`;
-    if (o) route = `<div class="route"><p class="tline"><b>→ ${esc(areaName(o.area))}</b> · ${strat ? 'strategic' : `${o.cost} MP`}${VOL.features.fuel && first(u.side) && g.opts.fuel && o.fuel ? ' · <span class="bad">fuel −1</span>' : ''}${o.mustStop ? ' · <span class="bad">stops: battle</span>' : ''}</p><h4>→ ${esc(areaName(o.area))}</h4>${strat ? row('Strategic move', 'any distance') : row('Movement', `${o.cost} MP`)}${VOL.features.fuel && first(u.side) && g.opts.fuel ? row('Fuel', o.fuel ? `−1 &nbsp;(${n} → ${n - 1})` : 'not needed', o.fuel ? 'bad' : '') : ''}${o.mustStop ? row('Stops here', 'enemy present, battle follows', 'bad') : ''}${btn('Move here', () => { previewArea = o.area; confirmMove(); }, 'primary')}</div>`;
+    const sp = u.area != null && !u.garrison ? E.supplyPath(g, u.side, u.area) : null, supLine = u.area == null || u.garrison ? '' : sp ? `<p class="hint sup ok">${ico('fuel')} In supply: ${sp.length > 1 ? `traces through ${sp.length - 1} area${sp.length > 2 ? 's' : ''} to ${esc(areaName(sp.at(-1)!))} (dotted line)` : 'it stands on a supply source'}.</p>` : `<p class="hint sup bad">${ico('warn')} Out of supply. ${esc(E.supplyWhy(g, u.side, u.area))}</p>`;
+    if (o) route = `<div class="route"><p class="tline"><b>→ ${esc(areaName(o.area))}</b> · ${strat ? 'strategic' : `${o.cost} MP`}${VOL.features.fuel && first(u.side) && g.opts.fuel && o.fuel ? ' · <span class="bad">fuel −1</span>' : ''}${o.mustStop ? ' · <span class="bad">stops: battle</span>' : ''}</p><h4>→ ${esc(areaName(o.area))}</h4>${strat ? row('Strategic move', 'any distance') : row('Movement', `${o.cost} MP`)}${noSup.has(o.area) ? row('Supply', '<span class="bad">out of supply there</span>') : ''}${VOL.features.fuel && first(u.side) && g.opts.fuel ? row('Fuel', o.fuel ? `−1 &nbsp;(${n} → ${n - 1})` : 'not needed', o.fuel ? 'bad' : '') : ''}${o.mustStop ? row('Stops here', 'enemy present, battle follows', 'bad') : ''}${btn('Move here', () => { previewArea = o.area; confirmMove(); }, 'primary')}</div>`;
     else if (optsFor(u.id).length) route = `<p class="hint gx">${optsFor(u.id).length} destination(s). Hover or click a highlighted area.</p>`;
     const can = ['movement', 'reaction', 'btMove'].includes(g.phase) && !u.garrison && !u.moved && g.moving?.id !== u.id;
     const mv = g.moving?.id === u.id ? E.allowance(g, u) : 0, left = mv ? Math.max(0, mv - (u.spent ?? 0)) : 0;
@@ -1758,8 +1775,9 @@ function ledger() {
 function legend() {
   if (tint === 'off') return '';
   const hex = (n: number) => '#' + n.toString(16).padStart(6, '0');
-  const items = tint === 'supply' ? [[0xffffff, 'Supplied', `${nm(supplySide())} areas`], [MAPC.cut, `Cut off (${cutOffCount(supplySide())})`, 'no path to a source'], [0x000000, 'Enemy', 'not your areas']] : tint === 'control' ? [[CONTROL_COL[P2], nm(P2), 'control'], [CONTROL_COL[P1], nm(P1), 'control'], [CONTROL_COL.contested, 'Contested', 'both sides present']] : tint === 'tdn' ? TDN_COL.map((c, i) => [c, `TDN ${i}`, (i ? `attackers −${i} to hit` : 'no modifier')]) : [[ZONE_COL[5], 'Zone 5', '5th Panzer Army'], [ZONE_COL[6], 'Zone 6', '6th Panzer Army'], [ZONE_COL[7], 'Zone 7', '7th Army']];
-  return `<div class="legend" aria-label="Overlay legend"><b>${tint === 'tdn' ? 'Terrain defence' : tint === 'control' ? 'Area control' : tint === 'supply' ? 'Supply' : 'Army zones'}</b>${items.map(([c, a, b]) => `<span><i style="background:${hex(c as number)}"></i>${a} <small>${b}</small></span>`).join('')}</div>`;
+  const items = tint === 'supply' ? [[VOL.controlCol[supplySide()] ?? 0xffffff, 'In supply', 'linked to a source'], [MAPC.cut, `Cut off (${cutOffCount(supplySide())})`, 'hatched: no path to a source'], [0xe7b04a, 'Supply source', 'labelled on the map']] : tint === 'control' ? [[CONTROL_COL[P2], nm(P2), 'control'], [CONTROL_COL[P1], nm(P1), 'control'], [CONTROL_COL.contested, 'Contested', 'both sides present']] : tint === 'tdn' ? TDN_COL.map((c, i) => [c, `TDN ${i}`, (i ? `attackers −${i} to hit` : 'no modifier')]) : [[ZONE_COL[5], 'Zone 5', '5th Panzer Army'], [ZONE_COL[6], 'Zone 6', '6th Panzer Army'], [ZONE_COL[7], 'Zone 7', '7th Army']];
+  const whose = tint === 'supply' ? `<div class="chips">${chip('Yours', !supEnemy, () => { supEnemy = false; relayer(); })}${chip('Enemy', supEnemy, () => { supEnemy = true; relayer(); })}</div>` : '';
+  return `<div class="legend" aria-label="Overlay legend"><b>${tint === 'tdn' ? 'Terrain defence' : tint === 'control' ? 'Area control' : tint === 'supply' ? `Supply · ${nm(supplySide())}` : 'Army zones'}</b>${whose}${items.map(([c, a, b]) => `<span><i style="background:${hex(c as number)}"></i>${a} <small>${b}</small></span>`).join('')}</div>`;
 }
 /* ---------- home: sign in, your games, a new game, join ---------- */
 let matches: Match[] = [];                                                                       // your games (the lobby): the table's title in the menu
