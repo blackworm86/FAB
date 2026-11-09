@@ -840,10 +840,10 @@ a.btnlink.primary { background: var(--gold); color: #1a1608; border-color: trans
 .blk .b3.israeli { box-shadow: 6px 6px 0 #1b80b4, 9px 12px 12px #000a; } .blk .b3.syrian { box-shadow: 6px 6px 0 #1d6131, 9px 12px 12px #000a; }
 .card2.wood.israeli { box-shadow: 0 5px 0 #1b80b4, 0 6px 0 #135c82, 0 12px 18px #000b; } .card2.wood.syrian { box-shadow: 0 5px 0 #1d6131, 0 6px 0 #144522, 0 12px 18px #000b; }
 /* admin sandbox: one floating button at the left edge (never in the top bar), and the game / scenario header of its panel */
-.sbfab { position: fixed; left: 10px; top: 164px; z-index: 25; display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: #0b0d08cc; color: var(--gold); border: 1px dashed var(--gold); border-radius: 22px; font: 700 12px var(--sfd); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; box-shadow: 0 4px 12px #000a; opacity: .78; }
+.sbfab { position: fixed; right: 10px; top: 164px; z-index: 25; display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: #0b0d08cc; color: var(--gold); border: 1px dashed var(--gold); border-radius: 22px; font: 700 12px var(--sfd); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; box-shadow: 0 4px 12px #000a; opacity: .78; }
 .sbfab:hover, .sbfab:focus-visible { opacity: 1; background: #0b0d08f2; }
 .sbfab svg { width: 18px; height: 18px; }
-@media (max-width: 700px) { .sbfab { padding: 9px; top: 150px; } .sbfab span { display: none; } }
+@media (max-width: 700px) { .sbfab { padding: 9px; top: 150px; right: 8px; } .sbfab span { display: none; } }
 .sbhead { padding-bottom: 6px; margin-bottom: 6px; border-bottom: 1px solid var(--line); } .sbhead > b { display: flex; align-items: center; gap: 6px; color: var(--gold); font: 700 13px var(--sfd); letter-spacing: .08em; text-transform: uppercase; } .sbhead b svg { width: 16px; height: 16px; }
 .sbhead .row select { flex: 1; min-width: 0; }
 
