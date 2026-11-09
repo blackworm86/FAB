@@ -1086,3 +1086,4 @@ body:has(.tut-coach:not(.has-target):not(.is-menu)) #ui .c-bar.b { opacity: .35;
   .c-bar.b:not(:has(.dchip)) .go, .c-bar.b:not(:has(.dchip)) .gowait { grid-column: 3 !important; }
   .c-bar.b:not(:has(.dchip)) .guidebtn { grid-column: 4 !important; align-self: center; }
 }
+.gauge { background: linear-gradient(90deg, color-mix(in srgb, var(--gauge-l, #9db36a) 70%, #000), #23251a 48%, #23251a 52%, color-mix(in srgb, var(--gauge-r, #b9bcc0) 70%, #000)); }

@@ -51,6 +51,7 @@ const KEY0 = TUT ? `fab-tutorial-${TUT.id}` : SANDBOX ? 'fab-sandbox' : TABLE ==
 function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif && x.roadblocks && x.pendingArrivals && x.fwOwner && Array.isArray(x.recover) ? x : null; } catch { return null; } }
 /** The volume (docs/design/one-engine.md): the address says which game, else the game saved for this table, else The Bulge. A shared table of another game reloads the page with its game. */
 const VOL = useVolume(TUT ? TUT.game : GAME_PARAM ?? load()?.game ?? 'bulge');
+document.documentElement.style.setProperty('--gauge-l', VOL.ink[VOL.sides[1]]); document.documentElement.style.setProperty('--gauge-r', VOL.ink[VOL.sides[0]]);      /* the VP gauge's ends in the sides' own colours */
 const [P1, P2] = VOL.sides, first = (sd: string) => sd === P1, near = (sd: string) => sd === VOL.bottom;     // near: the side whose map edge is at the bottom, whose rows sit toward +z
 const MAP = VOL.map, LAB: Record<string, LabelBox> = VOL.labels;
 // World unit = 1 cm. Every FAB map is the full 34 x 22 in sheet (86.36 x 55.88 cm); the drawing's width gives the pixels per cm.
