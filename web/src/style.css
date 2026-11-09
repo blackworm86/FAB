@@ -1077,3 +1077,12 @@ body:has(.tut-coach:not(.has-target):not(.is-menu)) #ui .c-bar.b { opacity: .35;
 .laysw b { font-size: 12px; color: #b3ad8b; }
 .legend small { font-size: 12px; color: #b3ad8b; }
 .volpanel b { display: block; } .volpanel b .ic { vertical-align: -3px; margin-right: 6px; }      /* the title flows as one line of text, so a rule link stays inside its brackets */
+.mapbubble .fwnote { font-size: 12px; color: #b3ad8b; white-space: nowrap; }      /* hits rolled vs hits to take, when field works absorbed one */
+@media (max-width: 700px) {
+  .mapbubble .fwnote { white-space: normal; max-width: 120px; line-height: 1.2; }
+  /* no shortcut chips: one row, the explanations button beside the main button, no empty lane */
+  .c-bar.b:not(:has(.dchip)) { grid-template-rows: 44px !important; height: auto !important; }
+  .c-bar.b:not(:has(.dchip)) > * { grid-row: 1 !important; }
+  .c-bar.b:not(:has(.dchip)) .go, .c-bar.b:not(:has(.dchip)) .gowait { grid-column: 3 !important; }
+  .c-bar.b:not(:has(.dchip)) .guidebtn { grid-column: 4 !important; align-self: center; }
+}

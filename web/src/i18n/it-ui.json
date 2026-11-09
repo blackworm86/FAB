@@ -8902,6 +8902,10 @@
   [
    "Drop your airborne units? first:",
    "Prima lancia le unità aviotrasportate:"
+  ],
+  [
+   "(\\d+) rolled − 1 absorbed by field works",
+   "$1 a segno − 1 assorbito dalle fortificazioni"
   ]
  ],
  "html": {}
