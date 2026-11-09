@@ -1996,8 +1996,8 @@ function driveSplit() {
 }
 let ctlKey = '', tgtKey = '';
 let playKey: string | null = null;
-/** Faster battles: a set-up step with nothing to choose, a roll with no choice before it, and the close of a finished battle happen by themselves.
- *  Real decisions (cards to add, a point unit to pick, hits, retreat) still wait; Settings > Dice OFF keeps every roll on a click. */
+/** Faster battles: a set-up step where the side has no card it could play and none on the table, a roll with no choice before it, and the close of a finished battle happen by themselves.
+ *  Real decisions (cards to add or take back, a point unit to pick, hits, retreat) still wait for the player's own confirmation; Settings > Dice OFF keeps every roll on a click. */
 let autoT = 0, autoKey = '', lastFight: number | null = null;
 function autoBattle() {
   const b = g.battle; if (TUTORIAL || !autoRoll || !b || rollView || cpuActing || g.over || !allowed()) return;      // the tutorials coach every step by hand
@@ -2008,7 +2008,7 @@ function autoBattle() {
   let go = false;
   if (['attArty', 'defArty', 'defFire', 'offFire'].includes(b.stage)) go = mine(rollSide) && p.label.startsWith('Roll');
   else if (b.stage === 'done') go = true;
-  else if (b.stage === 'setup' && !b.defSA && !airPick) { const who = E.setupSide(g, b); go = mine(who) && nothingToAdd(who) && (p.label === 'Assets done' || blocks(who) <= 1); }
+  else if (b.stage === 'setup' && !b.defSA && !airPick) { const who = E.setupSide(g, b); go = mine(who) && nothingToAdd(who) && !b.assets[who].length && !b.air[who] && !b.air2?.[who] && (p.label === 'Assets done' || blocks(who) <= 1); }      // only when the side had nothing at all to decide: once it has put a card on the table, it confirms itself (it may still take cards back)
   const k = `${b.area}|${b.stage}|${b.ready?.join()}|${b.rolls.length}`;
   if (!go || k === autoKey) return;
   autoKey = k; clearTimeout(autoT);
