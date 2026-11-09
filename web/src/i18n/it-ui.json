@@ -3292,7 +3292,10 @@
   "Keep playing": "Continua a giocare",
   "Pick one in the tray, then a lit area, or use the panel on the map.": "Scegline uno nel vassoio, poi un'area illuminata, oppure usa il pannello sulla mappa.",
   "finish the steps in the panel on the map, then end the set-up.": "completa i passi nel pannello sulla mappa, poi termina lo schieramento.",
-  "Finish the panel first": "Prima completa il pannello"
+  "Finish the panel first": "Prima completa il pannello",
+  "Help": "Aiuto",
+  "Dice move on by themselves (decisions still wait for you)": "I dadi proseguono da soli (le decisioni aspettano comunque te)",
+  "Full explanations of each option and rule": "Spiegazioni complete di ogni opzione e regola"
  },
  "patterns": [
   [
@@ -8722,6 +8725,10 @@
   [
    "Set-up: (\\d+) blocks? to place\\.",
    "Schieramento: blocchi da piazzare: $1."
+  ],
+  [
+   "Undo not possible: (.+)",
+   "Annullamento impossibile: $1"
   ]
  ],
  "html": {}

@@ -130,7 +130,7 @@ button.ico { min-width: 40px; min-height: 40px; display: inline-flex; align-item
 .slot .lab, .slot small, .arr small { font-size: 11px; } .slot.legal { border-color: var(--gold); background: #e7b04a33; }
 .c-title small.cnt { color: var(--ink); background: #ffffff14; padding: 1px 8px; margin: 0 8px 0 0; }
 .handtab { align-items: center; } .handtab details { position: relative; } .handtab summary { cursor: pointer; padding: 6px 10px; } .handtab ul { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin: 0 0 4px; padding: 10px 14px 10px 28px; list-style: disc; width: max-content; max-width: min(520px, 92vw); max-height: 40vh; overflow: auto; background: #0b0d08f5; border: 1px solid var(--line); font-size: 12px; text-align: left; z-index: 12; } .handtab li b { color: var(--ink); }
-.c-table.rolling { opacity: .25; pointer-events: none; }
+.c-table.rolling { opacity: .7; pointer-events: none; }      /* dimmed a little while dice roll, still readable */
 .ln { display: grid; grid-template-columns: 1fr auto auto auto; gap: 2px 12px; align-items: center; } .ln .who { width: auto; } .ln .mods { grid-column: 1 / -1; grid-row: 2; flex: none; } .ln .sn { grid-column: 2; grid-row: 1; } .ln .res { grid-column: 3; grid-row: 1; } .ln .cnt { grid-column: 4; grid-row: 1; }
 @media (max-width: 860px) { .c-table.rolling { visibility: hidden; } button.ico .bl { display: none; } button.ico { min-width: 44px; min-height: 44px; } button.go { min-height: 44px; } .handtab button { min-height: 44px; } }
 @media (max-width: 1500px) { button.ico .bl { display: none; } }
