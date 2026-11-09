@@ -1096,3 +1096,7 @@ body:has(.tut-coach:not(.has-target):not(.is-menu)) #ui .c-bar.b { opacity: .35;
 /* small taps: Legend chip, sheet chips (3D, AL), rule links in panels */
 @media (max-width: 700px), (pointer: coarse) { .mlchip { min-width: 44px; justify-content: center; } .sheet .chip { min-width: 44px; justify-content: center; } .maplegend .mlhead .ico { min-height: 44px; min-width: 44px; } }
 a.rlink { padding-block: 6px; margin-block: -6px; }
+.vtb { height: auto; min-height: 32px; padding: 2px 0; gap: 2px; align-content: center; } .vtb b, .vtb i { line-height: 1; }      /* turn and sudden-death numbers both inside the box */
+/* no automatic font boosting on phones and tablets; the VP strip grows with its boxes when text is larger */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+@media (min-width: 701px) { .vps { height: auto; min-height: 38px; padding-block: 3px; } }
