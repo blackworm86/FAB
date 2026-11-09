@@ -1,0 +1,193 @@
+<title>FAB Figure Workshop</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a field-order sheet in the game's war-room look (DESIGN.md): the five steps with counts, then one row per figure type that opens into its work order. */
+:root {
+  --bg: #0b0d08; --panel: #1d2114; --ink: #ddd7b5; --dim: #a7a78a; --line: #4a4d33; --accent: #e7b04a; --accent-ink: #1a1608; --gold: #e7b04a; --ok: #a9e08a; --warn: #f0a868; --chip: #262a1a; --red: #ff9c8a;
+  --display: "Saira Condensed", "Arial Narrow", sans-serif; --body: "JetBrains Mono", ui-monospace, monospace; --mono: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font: 14px/1.5 var(--body); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 60px }
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 22px }
+h1, h2, h3 { font-family: var(--display); font-weight: 700; letter-spacing: .02em; text-wrap: balance; margin: 0 }
+h1 { font-size: 2.1rem; line-height: 1.05 } h2 { font-size: 1.35rem; text-transform: uppercase; letter-spacing: .06em } h3 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: .06em }
+p { margin: 0; max-width: 68ch } .dim { color: var(--dim) } .mono { font-family: var(--mono); font-size: .82rem }
+a { color: var(--accent) } a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px }
+button, .btn { font: 600 .82rem var(--mono); color: var(--ink); background: var(--chip); border: 1px solid var(--line); padding: 7px 12px; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; min-height: 36px }
+button.go, .btn.go { background: var(--accent); border-color: var(--accent); color: var(--accent-ink) }
+button:disabled { opacity: .5; cursor: default }
+.lede { display: grid; gap: 8px }
+.steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; border: 1px solid var(--line); background: var(--panel) }
+.step { padding: 12px 14px; border-left: 1px solid var(--line); display: grid; gap: 4px; align-content: start }
+.step:first-child { border-left: 0 }
+.step .n { font: 600 .72rem var(--mono); color: var(--dim); letter-spacing: .08em; text-transform: uppercase }
+.step .count { font: 700 1.7rem var(--display); font-variant-numeric: tabular-nums } .step .count small { font-size: .95rem; color: var(--dim) }
+.step .who { font-size: .8rem; color: var(--dim) }
+.bar { height: 4px; background: var(--chip) } .bar i { display: block; height: 100%; background: var(--ok) }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.filters input, .filters select, textarea { font: .9rem var(--body); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 7px 10px; min-height: 36px }
+.filters input { flex: 1 1 200px; min-width: 0 }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden }
+.seg button { border: 0; border-radius: 0; background: var(--panel) } .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg) }
+.list { display: grid; border-top: 1px solid var(--line) }
+details.ty { border-bottom: 1px solid var(--line) }
+details.ty > summary { list-style: none; display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 4px; cursor: pointer }
+details.ty > summary::-webkit-details-marker { display: none }
+.thumb { width: 52px; height: 52px; border-radius: 4px; background: var(--chip); border: 1px solid var(--line); object-fit: cover; display: grid; place-items: center; font: 700 .7rem var(--mono); color: var(--dim); overflow: hidden }
+.thumb img { width: 100%; height: 100%; object-fit: cover }
+.name { min-width: 0 } .name b { font: 700 1.05rem var(--display); letter-spacing: .03em } .name .what { color: var(--dim); font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.pill { font: 600 .72rem var(--mono); padding: 3px 8px; border-radius: 99px; border: 1px solid currentColor; white-space: nowrap }
+.s0 { color: var(--dim) } .s1 { color: var(--ink) } .s2 { color: var(--warn) } .s3, .s4 { color: var(--accent) } .s5 { color: var(--ok) }
+.order { padding: 6px 4px 22px 68px; display: grid; gap: 18px }
+.order section { display: grid; gap: 10px; min-width: 0 }
+.order section > header { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap }
+.order section > header .tag { font: 600 .72rem var(--mono); color: var(--dim); text-transform: uppercase; letter-spacing: .08em }
+.views { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px }
+.view { background: var(--panel); border: 1px solid var(--line); padding: 10px; display: grid; gap: 8px; align-content: start; min-width: 0 }
+.view h4 { margin: 0; font: 600 .78rem var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--dim) }
+.prompt { font: .8rem/1.5 var(--body); max-height: 7.5em; overflow: auto; color: var(--ink) }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.big { width: 220px; max-width: 100%; aspect-ratio: 1; object-fit: contain; background: var(--chip); border: 1px solid var(--line); border-radius: 4px }
+.ask { font: .82rem var(--mono); background: var(--panel); border: 1px dashed var(--line); padding: 8px 10px; border-radius: 4px; overflow-wrap: anywhere }
+.note { width: 100%; min-height: 64px; resize: vertical }
+.msg { font: .82rem var(--mono); color: var(--warn) } .msg.ok { color: var(--ok) }
+.runs { width: 100%; border-collapse: collapse; font: .82rem var(--mono); font-variant-numeric: tabular-nums } .runs th, .runs td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line) } .scroll { overflow-x: auto }
+.empty { padding: 12px; border: 1px dashed var(--line); color: var(--dim); font-size: .9rem }
+@media (max-width: 760px) {
+  .steps { grid-template-columns: 1fr 1fr } .step { border-left: 0; border-top: 1px solid var(--line) } .step:nth-child(-n+2) { border-top: 0 } .step:nth-child(even) { border-left: 1px solid var(--line) }
+  .views { grid-template-columns: 1fr } .order { padding-left: 4px } details.ty > summary { grid-template-columns: 44px minmax(0, 1fr); } details.ty > summary .pill { grid-column: 2; justify-self: start } .thumb { width: 44px; height: 44px }
+}
+@media (prefers-reduced-motion: no-preference) { details.ty[open] .order { animation: open .18s ease-out } @keyframes open { from { opacity: .4; transform: translateY(-4px) } } }
+</style>
+
+<div class="wrap">
+  <div class="lede">
+    <p class="mono dim">Fast Action Battles · figures instead of blocks · docs/PARALLEL.md §3</p>
+    <h1>Figure Workshop</h1>
+    <p>Each figure type goes through five steps, made by free AI services. You make and pick the concept art here; Claude moves the files between the services, checks sizes and puts the finished figure in the game. Open a type to see its work order.</p>
+    <p class="msg" id="status">Connecting to the workshop records…</p>
+  </div>
+
+  <div class="steps" id="steps"></div>
+
+  <div class="filters">
+    <input id="q" type="search" placeholder="Search a type, unit or vehicle" aria-label="Search">
+    <div class="seg" role="group" aria-label="Volume" id="vols"></div>
+    <select id="stage" aria-label="Step"><option value="">Every step</option></select>
+  </div>
+
+  <div class="list" id="list"></div>
+
+  <section style="display:grid;gap:10px">
+    <h2>Runs and costs</h2>
+    <p class="dim">Every run of a service, free or paid. Claude adds a line after each run; add your own when you use a service by hand.</p>
+    <div class="scroll"><table class="runs"><thead><tr><th>When</th><th>Step</th><th>Service</th><th>Types</th><th>Cost</th></tr></thead><tbody id="runs"></tbody></table></div>
+    <form id="runform" class="row">
+      <input id="r-step" aria-label="Step" placeholder="Step (e.g. concept)" style="flex:1 1 120px;min-width:0">
+      <input id="r-svc" aria-label="Service" placeholder="Service (e.g. Gemini)" style="flex:1 1 140px;min-width:0">
+      <input id="r-what" aria-label="Types" placeholder="Types" style="flex:1 1 140px;min-width:0">
+      <input id="r-cost" aria-label="Cost" placeholder="free" style="flex:0 1 90px;min-width:0">
+      <button type="submit">Add run</button>
+    </form>
+  </section>
+</div>
+
+<script id="data" type="application/json">__DATA__</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+const D = JSON.parse(document.getElementById('data').textContent);
+const VOL = { all: 'All', bulge: 'Bulge', sicily: 'Sicily', golan73: 'Golan', any: 'Shared' };
+const STAGES = ['Prompts ready', 'Concept picked', 'Model made', 'Model approved', 'Animated', 'In the game'];
+const STEPS = [
+  ['1 · List and prompts', 'Claude', 'every type'], ['2 · Concept art', 'You, with a free image AI', 'picked'], ['3 · 3D model', 'TRELLIS, then Claude reduces it', 'approved'],
+  ['4 · Animation', 'You in Mixamo (soldiers)', 'animated'], ['5 · Into the game', 'Claude', 'in the game'],
+];
+const SERVICES = { trellis: 'https://huggingface.co/spaces/trellis-community/TRELLIS', meshy: 'https://www.meshy.ai', tripo: 'https://www.tripo3d.ai', mixamo: 'https://www.mixamo.com', gemini: 'https://gemini.google.com', bing: 'https://www.bing.com/images/create' };
+const rows = {}, runs = []; let db = null, assets = null, downloads = null, vol = 'all', open = new Set();
+const $ = (s, e = document) => e.querySelector(s);
+const h = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (v == null || v === false) continue; if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'text') e.textContent = v; else e.setAttribute(k, v === true ? '' : v); } for (const c of kids.flat()) if (c != null) e.append(c); return e; };
+const blob = (id) => '/_blob/' + id;
+/** How far a type has come: 0 prompts … 5 in the game (vehicles skip animation). */
+function stage(t) { const r = rows[t.id] || {}; return r.game ? 5 : t.kind === 'soldier' && r.rigged ? 4 : r.modelOk ? 3 : r.model ? 2 : r.pick ? 1 : 0; }
+const polli = (p, seed) => `https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?width=1024&height=1024&seed=${seed}&model=flux&nologo=true`;
+async function copy(text, btn) { try { await navigator.clipboard.writeText(text); btn.textContent = 'Copied'; } catch { const r = document.createRange(); r.selectNodeContents(btn.previousElementSibling ?? btn); getSelection().removeAllRanges(); getSelection().addRange(r); btn.textContent = 'Selected: copy it'; } setTimeout(() => (btn.textContent = 'Copy'), 1600); }
+const copyBtn = (text) => h('button', { type: 'button', onclick: (e) => copy(text, e.currentTarget) }, 'Copy');
+const say = (t, ok) => { const s = $('#status'); s.textContent = t; s.className = 'msg' + (ok ? ' ok' : ''); };
+async function save(id, patch) {
+  if (!db) return say('Saving needs the workshop records; reload the page.');
+  try { await db.doc('types/' + id).set({ ...(rows[id] || {}), ...patch, updated: new Date().toISOString() }); say('Saved.', true); } catch (e) { say('Not saved: ' + (e.code === 'not_granted' || e.code === 'forbidden' ? 'you can view this page but not change it.' : e.message || e.code)); }
+}
+
+function steps() {
+  const n = D.types.length, at = (k) => D.types.filter((t) => stage(t) >= k).length, anim = D.types.filter((t) => t.kind === 'soldier');
+  const counts = [n, at(1), at(3), anim.filter((t) => rows[t.id]?.rigged).length, at(5)], of = [n, n, n, anim.length, n];
+  $('#steps').replaceChildren(...STEPS.map(([name, who, word], i) => h('div', { class: 'step' }, h('span', { class: 'n', text: name }), h('span', { class: 'count' }, String(counts[i]), h('small', { text: ` / ${of[i]} ${word}` })), h('div', { class: 'bar' }, h('i', { style: `width:${(100 * counts[i]) / of[i]}%` })), h('span', { class: 'who', text: who }))));
+}
+
+function order(t) {
+  const r = rows[t.id] || {}, st = stage(t), soldier = t.kind === 'soldier';
+  const sec = (tag, title, ...kids) => h('section', {}, h('header', {}, h('span', { class: 'tag', text: tag }), h('h3', { text: title })), ...kids);
+  const views = h('div', { class: 'views' }, ...Object.entries(t.views).map(([v, p]) => h('div', { class: 'view' }, h('h4', { text: v === 'threequarter' ? 'three-quarter (the 3D input)' : v }), h('div', { class: 'prompt', text: p }),
+    h('div', { class: 'row' }, copyBtn(p), ...[1, 2, 3].map((s) => h('a', { class: 'btn', href: polli(p, s), target: '_blank', rel: 'noopener' }, `Try ${s}`))))));
+  const file = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp', id: 'pick-' + t.id, hidden: true, onchange: async (e) => {
+    const f = e.target.files[0]; if (!f) return; if (!assets) return say('Only editors of this page can upload pictures.');
+    say('Uploading…'); try { const a = await assets.upload(f); await save(t.id, { pick: a.id, pickName: f.name, model: null, modelOk: false }); } catch (err) { say('Upload failed: ' + (err.message || err.code)); } } });
+  const step2 = sec('Step 2 · you', 'Concept art', h('p', { class: 'dim', text: '"Try" opens a free picture from Pollinations (FLUX) in a new tab; each number is another variant. Save the one you like, or paste a prompt into Gemini or Bing Image Creator, then upload it here. The three-quarter view is what the 3D step uses.' }),
+    views, h('div', { class: 'row' }, h('span', { class: 'mono dim', text: 'Leave out:' }), h('span', { class: 'mono', text: D.negative }), copyBtn(D.negative)),
+    h('div', { class: 'row' }, h('a', { class: 'btn', href: SERVICES.gemini, target: '_blank', rel: 'noopener' }, 'Gemini'), h('a', { class: 'btn', href: SERVICES.bing, target: '_blank', rel: 'noopener' }, 'Bing Image Creator')),
+    h('div', { class: 'row' }, r.pick ? h('img', { class: 'big', src: blob(r.pick), alt: `Picked concept art for ${t.id}` }) : h('div', { class: 'empty', text: 'No picture picked yet.' }),
+      assets ? h('label', { class: 'btn go', for: 'pick-' + t.id }, r.pick ? 'Replace the picked picture' : 'Upload the picked picture') : null, file));
+  const ask3 = `Figure ${t.id}: the concept art is picked in the Figure Workshop. Please make the 3D model (step 3).`;
+  const step3 = sec('Step 3 · AI service and Claude', '3D model', h('p', { class: 'dim', text: `Claude sends the picked picture to TRELLIS (free Hugging Face GPU time), cuts the model to about ${t.tris} triangles for phones and posts a preview here. To do it yourself instead: upload the picture to one of these free services, download the .glb and attach it in the Claude chat.` }),
+    h('div', { class: 'row' }, ...['trellis', 'meshy', 'tripo'].map((k) => h('a', { class: 'btn', href: SERVICES[k], target: '_blank', rel: 'noopener' }, { trellis: 'TRELLIS (free)', meshy: 'Meshy (free tier)', tripo: 'Tripo (free tier)' }[k]))),
+    r.model ? h('div', { class: 'row' }, r.model.preview ? h('img', { class: 'big', src: blob(r.model.preview), alt: `Preview of the ${t.id} model` }) : null, h('div', { class: 'mono', text: `${r.model.tris ?? '?'} triangles · ${r.model.kb ?? '?'} KB · ${r.model.service ?? ''}` }))
+      : h('div', { class: 'row' }, h('div', { class: 'ask', text: ask3 }), copyBtn(ask3)),
+    r.model ? h('div', { class: 'row' }, h('button', { type: 'button', class: r.modelOk ? '' : 'go', onclick: () => save(t.id, { modelOk: !r.modelOk }) }, r.modelOk ? 'Approved · undo' : 'Approve the model'), h('span', { class: 'dim', text: 'Not right? Say what to change in the notes below and ask Claude to redo it.' })) : null);
+  const zip = async (btn) => {
+    try { btn.disabled = true; const z = new JSZip(); for (const [name, id] of Object.entries(r.mixamo)) z.file(name, await (await fetch(blob(id))).blob());
+      await downloads.save({ filename: `${t.id}-mixamo.zip`, data: await z.generateAsync({ type: 'blob' }) }); say('Saved the Mixamo upload.', true); } catch (e) { say(e.code === 'declined' ? 'Download cancelled.' : 'Could not save the file: ' + (e.message || e.code)); } finally { btn.disabled = false; } };
+  const step4 = soldier ? sec('Step 4 · you in Mixamo (free)', 'Animation',
+    h('p', { class: 'dim', text: 'Mixamo has no automatic access, so this step is by hand. 1) Download the upload file below and upload it at mixamo.com. 2) Place the markers (chin, wrists, elbows, knees, groin). 3) Download these clips as FBX Binary: idle "With Skin", the others "Without Skin". 4) Attach the four .fbx files in the Claude chat.' }),
+    h('div', { class: 'row' }, ...t.clips.map((c) => h('span', { class: 'pill s0', text: `${c}: ${D.clipNames[c]}` }))),
+    h('div', { class: 'row' }, r.mixamo && downloads ? h('button', { type: 'button', class: 'go', onclick: (e) => zip(e.currentTarget) }, 'Download the Mixamo upload') : h('span', { class: 'empty', text: 'Claude prepares the upload once the model is approved.' }),
+      h('a', { class: 'btn', href: SERVICES.mixamo, target: '_blank', rel: 'noopener' }, 'Open Mixamo'), r.rigged ? h('span', { class: 'pill s4', text: 'Animated' }) : null))
+    : sec('Step 4', 'Animation', h('p', { class: 'dim', text: t.kind === 'vehicle' || t.kind === 'gun' ? 'None needed: the game turns the turret, recoils the gun and rocks the hull in code.' : 'None needed.' }));
+  const step5 = sec('Step 5 · Claude', 'Into the game', h('p', { class: 'dim', text: `Scaled to ${t.size} cm (a block is 1.6), compressed for phones, and listed for the ${t.pieces} pieces that use it.` }),
+    r.game ? h('div', { class: 'mono', text: `In the game: ${r.game.kb ?? '?'} KB${r.game.at ? ' · ' + r.game.at.slice(0, 10) : ''}` }) : h('div', { class: 'empty', text: st >= (soldier ? 4 : 3) ? 'Ready: ask Claude to put it in the game.' : 'Waiting for the earlier steps.' }));
+  const note = h('textarea', { class: 'note', id: 'note-' + t.id, 'aria-label': 'Notes', placeholder: 'Notes for Claude: what to change, which variant you liked…' }); note.value = r.note || '';
+  note.addEventListener('change', () => save(t.id, { note: note.value }));
+  return h('div', { class: 'order' }, h('p', { text: t.what }), h('p', { class: 'dim', text: `Used by ${t.pieces} pieces: ${t.sample.join(', ')}${t.pieces > t.sample.length ? ', …' : ''}` }), step2, step3, step4, step5, sec('Notes', 'For Claude', note));
+}
+
+function list() {
+  const q = $('#q').value.trim().toLowerCase(), sf = $('#stage').value;
+  const shown = D.types.filter((t) => (vol === 'all' || t.vol === vol) && (!q || (t.id + ' ' + t.what + ' ' + t.sample.join(' ')).toLowerCase().includes(q)) && (sf === '' || stage(t) === +sf));
+  $('#list').replaceChildren(...(shown.length ? shown.map((t) => {
+    const r = rows[t.id] || {}, st = stage(t);
+    const d = h('details', { class: 'ty', open: open.has(t.id) || null, ontoggle: (e) => { if (e.target.open) { open.add(t.id); if (!e.target.querySelector('.order')) e.target.append(order(t)); } else open.delete(t.id); } },
+      h('summary', {}, h('span', { class: 'thumb' }, r.pick ? h('img', { src: blob(r.pick), alt: '' }) : t.kind.slice(0, 4)), h('span', { class: 'name' }, h('b', { text: t.id }), ' ', h('span', { class: 'mono dim', text: `${t.kind} · ${VOL[t.vol]} · ${t.pieces} pieces` }), h('div', { class: 'what', text: t.what })), h('span', { class: 'pill s' + st, text: STAGES[st] })));
+    if (open.has(t.id)) d.append(order(t)); return d;
+  }) : [h('div', { class: 'empty', text: 'No type matches. Clear the search or pick another volume or step.' })]));
+}
+function runRows() { $('#runs').replaceChildren(...(runs.length ? runs.map((r) => h('tr', {}, ...[r.at?.slice(0, 16).replace('T', ' '), r.step, r.service, r.what, r.cost].map((x) => h('td', { text: x ?? '' })))) : [h('tr', {}, h('td', { colspan: 5, class: 'dim', text: 'No runs yet. The first is the concept art for one type.' }))])); }
+function render() { steps(); list(); runRows(); }
+
+$('#vols').append(...Object.entries(VOL).map(([k, v]) => h('button', { type: 'button', 'aria-pressed': String(k === vol), onclick: (e) => { vol = k; $('#vols').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget))); list(); } }, v)));
+$('#stage').append(...STAGES.map((s, i) => h('option', { value: String(i), text: s })));
+$('#q').addEventListener('input', list); $('#stage').addEventListener('change', list);
+$('#runform').addEventListener('submit', async (e) => { e.preventDefault(); if (!db) return say('Adding runs needs the workshop records.'); const v = (id) => $(id).value.trim();
+  if (!v('#r-step') || !v('#r-svc')) return say('Give at least the step and the service.');
+  try { await db.collection('runs').add({ at: new Date().toISOString(), step: v('#r-step'), service: v('#r-svc'), what: v('#r-what'), cost: v('#r-cost') || 'free' }); e.target.reset(); say('Run added.', true); } catch (err) { say('Not added: ' + (err.message || err.code)); } });
+render();
+
+(async () => {
+  const c = window.claude; if (!c?.use) return say('Open this page on claude.ai to save picks and see progress. Prompts and links work here too.');
+  const timer = setTimeout(() => say('The workshop records are slow to answer; prompts and links still work.'), 10000);
+  [db, assets, downloads] = await Promise.all([c.use('db'), c.use('assets'), c.use('downloads')]);
+  if (!db) { clearTimeout(timer); return say('Sign in to claude.ai to save picks and see progress. Prompts and links work without it.'); }
+  db.collection('types').onSnapshot((s) => { clearTimeout(timer); for (const k of Object.keys(rows)) delete rows[k]; s.docs.forEach((d) => (rows[d.id] = d.data())); say(assets ? 'Up to date.' : 'Up to date. Only editors of this page can upload pictures.', true); render(); }, (e) => { clearTimeout(timer); say('Could not read the workshop records: ' + (e.message || e.code)); });
+  db.collection('runs').orderBy('at', 'desc').limit(200).onSnapshot((s) => { runs.length = 0; s.docs.forEach((d) => runs.push(d.data())); runRows(); }, () => {});
+})();
+</script>

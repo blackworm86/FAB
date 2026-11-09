@@ -41,7 +41,7 @@ Kick-off prompt for the session:
 
 > Read `docs/PARALLEL.md` §3. Before any code, show me a mockup of one Bulge area with Figures on (US infantry, German Panther, an artillery unit, one hidden enemy unit) on desktop and phone, and wait for my approval. Then build the pipeline for one unit type end to end, and only then the rest.
 
-**Status (November 2026):** the pipeline and the prompts for all 72 figure types are in `tools/figures/` (see its `README.md` and `PROMPTS.md`); no model has been made yet. The owner does not want Claude to model figures: every image, model and animation comes from the AI services. The shapes in `web/src/figures3d.ts` are a stand-in from the first mockup, off by default.
+**Status (November 2026):** the pipeline and the prompts for all 72 figure types are in `tools/figures/` (see its `README.md` and `PROMPTS.md`); no model has been made yet. The owner works through it on the Figure Workshop page (https://claude.ai/artifact/Luo4w2YdxJkw8KPzbFJ2jU; how Claude reads and updates it: `tools/figures/README.md`). The owner does not want Claude to model figures: every image, model and animation comes from the AI services. The shapes in `web/src/figures3d.ts` are a stand-in from the first mockup, off by default.
 
 Pipeline, one folder per step under `tools/figures/`, each step a script that reads the previous step's files, so a step can be redone with another service:
 1. **List**: from the unit data of each volume, the distinct figure types needed (e.g. US infantry, Panther, Tiger, M4 Sherman, Italian infantry, Centurion, T-55, Merkava, artillery, HQ). Real equipment of the period is fine; Vassal images and scans are reference only and never go into the repo or into a prompt.

@@ -39,3 +39,10 @@ Never put a key in the repo or in a file. The scripts read `HF_TOKEN` (Hugging F
 - A hidden enemy unit is always the same covered `cover` figure: it tells nothing about type or strength.
 - The base keeps the block's wood colour (Italian orange `#e66525`), and the unit's printed face stays readable on it.
 - Free Firebase plan: the models are static files served with the site; nothing goes in the database.
+
+## The Figure Workshop page
+
+The owner runs the pipeline from a private claude.ai page: https://claude.ai/artifact/Luo4w2YdxJkw8KPzbFJ2jU (source: `page/template.html`, rebuilt into `page/index.html` by `node page/build.mjs`; republish that file to the same URL after the types or prompts change). There the owner copies prompts, opens free Pollinations variants with one tap, uploads the picked concept art, approves models and leaves notes. Progress lives in the page's own records, read and written by Claude with the ArtifactData tool:
+
+- `types/<type id>`: `pick` (asset id of the picked picture; fetch it with the Artifact tool, `action: read`, `path: <asset id>`, and save it as `2-concept/<type>/pick.png`), `note`, `modelOk` (set by the owner); `model: {tris, kb, service, preview}` (preview = asset id of a PNG render), `mixamo: {"model.obj": id, "model.mtl": id, "texture.png": id}` (the page zips them for the owner), `rigged: true`, `game: {kb, at}` (set by Claude). Use `update`, pinned with `if_version`.
+- `runs/*`: `{at, step, service, what, cost}`, one per service run (the same line `runs.log` gets).
