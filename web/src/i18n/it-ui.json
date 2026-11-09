@@ -8892,6 +8892,10 @@
   [
    "(.+): (?:tap|click) a block to make it your point unit",
    "$1: scegli un blocco come tua unità di punta"
+  ],
+  [
+   "(\\d+) dice to roll",
+   "$1 dadi da tirare"
   ]
  ],
  "html": {}
