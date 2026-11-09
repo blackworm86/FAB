@@ -996,3 +996,9 @@ p.stepped { cursor: pointer; border-left: 3px solid transparent; padding-left: 8
 .langchip { position: fixed; right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); z-index: 70; display: inline-flex; border: 1px solid var(--line, #3a3e2c); background: #0b0d08; box-shadow: 0 6px 18px #000a; }
 .langchip button { min-width: 44px; min-height: 40px; background: none; border: 0; color: #9a9886; font: 700 14px/1 "Saira Condensed", sans-serif; letter-spacing: .12em; cursor: pointer; }
 .langchip button[aria-pressed="true"] { background: #e7b04a; color: #1a1608; }
+
+/* supply planning: a destination where the block would be out of supply (striped, like the hatched area), a supply source, a destination tag held at the screen edge */
+.bdg.nosup { background: repeating-linear-gradient(135deg, #7d2417 0 5px, #a7392b 5px 10px) !important; color: #fff !important; border-color: #fff !important; }
+.bdg.src { background: #0b0d08e6 !important; border: 1px solid var(--gold) !important; color: var(--gold) !important; min-width: 0; padding: 1px 6px; font-size: 12px; box-shadow: none; }
+.bdg.edge { opacity: .85; border-style: dashed !important; }
+.legend .chips { display: flex; gap: 4px; margin: 2px 0 4px; } .legend .chips .chip { padding: 2px 8px; font-size: 11px; min-height: 0; }
