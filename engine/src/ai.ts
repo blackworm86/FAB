@@ -36,7 +36,7 @@ const QW: Record<Quality, number> = { green: 0.8, veteran: 1, elite: 1.25 };
 /** How many times a hard player fights a battle out before deciding (more: steadier, slower). */
 export const SIMS = { attack: 48, choice: 24 };
 /** Tuning numbers the arena changes (ARENA_TUNE), and whether the hard player plans its attacks first. */
-export const TUNE = { plan: true, planAt: 0.3, sd: true, asym: 0.4, vpBase: 6, tw1: 0.5, tw2: 1.5, ownCut: null as number | null };
+export const TUNE = { plan: true, planAt: 0.3, sd: true, asym: 0.4, vpBase: 6, tw1: 0.5, tw2: 1.5, ownCut: null as number | null, expose: 0.35 };
 
 /* ================= actions as data ================= */
 type OpFn = (g: Game, ...args: never[]) => unknown;
@@ -141,7 +141,7 @@ const vpWeight = (g: Game) => TUNE.vpBase + 3 * Math.max(0, Math.min(1, (g.turn 
 export function evaluate(g: Game, side: Side): number { return evaluateParts(g, side).total; }
 /** The evaluation by its parts (for tuning). */
 export function evaluateParts(g: Game, side: Side) {
-  const foe = E.other(side); const p = { units: 0, vp: 0, sd: 0, threat: 0, chance: 0, pressure: 0, chits: 0, cutoff: 0, approach: 0, total: 0 };
+  const foe = E.other(side); const p = { units: 0, vp: 0, sd: 0, threat: 0, chance: 0, pressure: 0, chits: 0, cutoff: 0, approach: 0, exposed: 0, total: 0 };
   const first = E.sidesOf(g)[0] === side, tw = first ? TUNE.tw1 : TUNE.tw2, ownW = first ? 1 - TUNE.asym * (TUNE.ownCut ?? (CUR.id === 'golan73' ? 0 : 1)) : 1, foeW = first ? 1 + TUNE.asym : 1;      // Golan: the Syrian pays for every lost block in victory points, so its own steps keep their full worth      // the side that must take ground may count the enemy's steps for more than its own
   for (const u of g.units) if (u.area != null) p.units += u.side === side ? ownW * val(g, u, side) : -foeW * val(g, u, side);
   const v = E.victory(g), net = v[side] - v[foe]; p.vp = net * vpWeight(g);
@@ -152,11 +152,33 @@ export function evaluateParts(g: Game, side: Side) {
   const held = new Set(g.units.filter((u) => u.side === foe && u.area != null && !u.garrison).map((u) => u.area!));
   for (const a of held) if (inPlay(g, a) && !E.inSupply(g, foe, a)) p.cutoff += 0.35 * steps(g, a, foe, side);          // cut off: weaker next Supply Phase
   if (first) { const obj = enemyObjective(g, side); for (const u of own(g, side)) if (regular(u)) p.approach -= 0.2 * (isBox(u.area!) ? 6 : Math.min(5, dist(g, u.area!, obj))); }      // still in a landing or assembly box: farthest of all
-  p.total = p.units + p.vp + p.sd + p.threat + p.chance + p.pressure + p.chits + p.cutoff + p.approach;
+  if (CUR.id === 'bulge' && TUNE.expose) for (const a of enemyReach(g, foe)) if (g.control[a] === side && !E.unitsIn(g, a, side).length) p.exposed -= TUNE.expose * vpWorth(a, side) * vpWeight(g);   // an empty objective the enemy can drive into next turn (2.4: passing takes it)
+  p.total = p.units + p.vp + p.sd + p.threat + p.chance + p.pressure + p.chits + p.cutoff + p.approach + p.exposed;
   return p;
 }
 
 /* ================= helpers ================= */
+/** The victory points an area means to `side` if the enemy takes it: the enemy's own points there, and a shared objective counts both ways. */
+const vpWorth = (a: number, side: Side) => { const vp = areas.get(a)!.vp as unknown as Record<string, number | boolean>; return ((vp[E.other(side)] as number) || 0) + (vp.mutual ? 2 : 0); };
+/** The areas `foe`'s blocks could enter or pass through on their next move (The Bulge's MP and costs, roughly: not past `side`'s blocks, no blown bridges,
+ *  no armour over the restricted boundary). An empty area on such a path changes hands (2.4). */
+function enemyReach(g: Game, foe: Side): Set<number> {
+  const side = E.other(foe), out = new Set<number>();
+  for (const u of g.units) {
+    if (u.side !== foe || u.area == null || !regular(u) || u.disorder || u.unsupplied) continue;
+    const allow = u.cls === 'armor' ? 6 : 3, cost = new Map([[u.area, 0]]), todo = [u.area];
+    while (todo.length) {
+      const a = todo.shift()!, c0 = cost.get(a)!;
+      if (a !== u.area && E.unitsIn(g, a, side).length) continue;                                    // entering an occupied area ends the move
+      for (const n of neighbors(a)) {
+        const c = connection(a, n)!; if ((c.restricted && u.cls === 'armor') || (c.river && g.blown.includes(E.keyOf(a, n)))) continue;
+        const k = c0 + c.mp + (E.unitsIn(g, n).length ? 1 : 0); if (k > allow || (cost.get(n) ?? 99) <= k) continue;
+        cost.set(n, k); out.add(n); todo.push(n);
+      }
+    }
+  }
+  return out;
+}
 const own = (g: Game, side: Side) => g.units.filter((u) => u.side === side && u.area != null);
 const regular = (u: Unit) => !u.garrison && !u.fort && !u.ghost;
 const avail = (g: Game, side: Side) => E.boxOf(g, side, 'available');
