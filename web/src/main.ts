@@ -1035,7 +1035,7 @@ function click(e: PointerEvent) {
   if ((g.phase === 'combat' || g.phase === 'btCombat') && area != null && fightable().includes(area)) { selArea = area; selUnit = null; previewArea = null; const p = allowed() ? primary() : null; if (p && !p.dis && p.label.startsWith('Fight ')) return act(p.fn); return refresh(); }      // one tap on a battle area opens the battle
   const uu = unit ? g.units.find((x) => x.id === unit) : null;
   if (uu && g.moving && g.moving.id !== uu.id && mine(uu.side)) act(() => E.endMove(g));                 // another block: the one moving before is done for good
-  if (uu && seen(uu) && (mine(uu.side) || !['movement', 'strategic', 'reaction', 'btMove'].includes(g.phase))) { selUnit = unit!; selArea = uu.area; if (innerWidth < 700 && uu.area != null) lookAt(uu.area); }      // phones: the block's panel covers the lower map, so bring the block into view else { selArea = area; selUnit = null; }
+  if (uu && seen(uu) && (mine(uu.side) || !['movement', 'strategic', 'reaction', 'btMove'].includes(g.phase))) { selUnit = unit!; selArea = uu.area; if (uu.area != null) showAreas([uu.area, ...optsFor(uu.id).map((o) => o.area)]); }      // the block and its destinations in view      // phones: the block's panel covers the lower map, so bring the block into view else { selArea = area; selUnit = null; }
   previewArea = null; hoverArea = null; refresh();
 }
 canvas.addEventListener('pointermove', (e) => {
@@ -1494,7 +1494,7 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
       const first = who === b.attacker && !b.ready?.includes(b.attacker);
       return { label: first ? 'Assets done' : who === b.attacker ? 'Begin combat' : 'Done', fn: why ? () => say(why) : go((x) => E.setReady(g, x, who)), dis: !!why };
     }
-    if (b.stage === 'done') return { label: 'Close battle', fn: () => act(() => { lastFight = b.area; E.closeBattle(g); selArea = null; }) };
+    if (b.stage === 'done') return { label: 'Close battle', fn: () => { act(() => { lastFight = b.area; E.closeBattle(g); selArea = null; }); const m = E.mustFight(g); if (m.length && mine(g.phasing)) { const at = center(b.area); showAreas([[...m].sort((x, y) => center(x).distanceTo(at) - center(y).distanceTo(at))[0]]); } } };
     if (b.stage.endsWith('Choice') || b.stage === 'retreat' || b.stage === 'attFirst' || b.stage === 'loss') return null;
     return { label: `Roll ${STAGE_NAME[b.stage].toLowerCase()}`, fn: () => rollStage(g.battle!) };
   }
@@ -1845,6 +1845,14 @@ function homeGoal() {
 function frameSide(sd: E.Side) { const ids = MAP.areas.filter((a) => g.control[a.id] === sd && (!g.inPlay || g.inPlay.includes(a.id))).map((a) => center(a.id)); if (!ids.length) return;
   const x0 = Math.min(...ids.map((p) => p.x)), x1 = Math.max(...ids.map((p) => p.x)), z0 = Math.min(...ids.map((p) => p.z)), z1 = Math.max(...ids.map((p) => p.z));
   goal = { t: new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), dist: clampDist(Math.max(x1 - x0, (z1 - z0) * 1.3) * 0.95 + 8), pitch }; }
+/** True when the area's centre is inside the visible part of the screen (clear of the bars at top and bottom). */
+const onScreen = (a: number) => { const v = center(a).clone().project(cam); return Math.abs(v.x) < 0.85 && v.y > -0.6 && v.y < 0.75 && v.z < 1; };
+/** Bring areas into view when any of them is off screen: the camera frames them all, no closer than now. */
+function showAreas(ids: number[]) {
+  if (!ids.length || ids.every(onScreen)) return;
+  const ps = ids.map(center), x0 = Math.min(...ps.map((p) => p.x)), x1 = Math.max(...ps.map((p) => p.x)), z0 = Math.min(...ps.map((p) => p.z)), z1 = Math.max(...ps.map((p) => p.z));
+  goal = { t: new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), dist: clampDist(Math.max(dist, Math.max(x1 - x0, (z1 - z0) * 1.3) * 1.1 + 10)), pitch };
+}
 const cutOffCount = (sd: E.Side) => MAP.areas.filter((a) => g.control[a.id] === sd && !supOk(sd, a.id)).length;
 function layersHtml() {
   const mapChips = VOL.art.relief ? `<h4>Map</h4><div class="chips">${chip('2D', !map3d, () => setMap3d(false), 'The printed board, flat')}${chip('3D', map3d, () => setMap3d(true), VOL.art.reliefName)}</div>` : '';
@@ -1995,7 +2003,9 @@ function autoBattle() {
   autoT = window.setTimeout(() => { const q = primary(); if (g.battle && `${g.battle.area}|${g.battle.stage}|${g.battle.ready?.join()}|${g.battle.rolls.length}` === k && !rollView && q && !q.dis) act(q.fn); }, b.stage === 'done' ? 1600 : 700);
 }
 function refresh() {
-  { const ph = `${g.turn}${g.phasing}${g.phase}`; if (ph !== lastPhase) { lastPhase = ph; fxLayer.clear(); } }
+  { const ph = `${g.turn}${g.phasing}${g.phase}`; if (ph !== lastPhase) { const was = lastPhase; lastPhase = ph; fxLayer.clear(); if (was && !g.battle && mine(g.phasing) && allowed()) setTimeout(() => {      // a new step: what it is about comes into view
+      const ids = g.phase === 'combat' || g.phase === 'btCombat' ? E.mustFight(g) : ['movement', 'btMove'].includes(g.phase) ? [...new Set(g.units.filter((u) => u.side === g.phasing && u.area != null && optsFor(u.id).length).map((u) => u.area!))] : [];
+      if (ids.length && !ids.some(onScreen)) showAreas(ids); }, 0); } }
   { const ba = g.battle?.area ?? null; if (ba !== fxBattle) { if (ba != null) fxLayer.clear(); fxBattle = ba; } }      // a new battle clears the last one's messages
   E.setPlayArea(g.inPlay);
   { const k = (g.inPlay ?? []).join(); if (k !== playKey) { const first = playKey === null; playKey = k; if (!first) paintBoard(); if (g.inPlay || !first) goal = homeGoal(); } }
