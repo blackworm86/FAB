@@ -842,6 +842,11 @@ async function cpuStep() {
   cpuLast = a.label; cpuActing = true; cpuNote(a); cpuSummary = '';
   try {
     if (a.roll && g.battle && !['loss', 'retreat', 'attChoice', 'defChoice', 'attFirst', 'setup', 'done'].includes(g.battle.stage)) rollStage(g.battle);     // the dice are thrown on screen, as for a player
+    else if (a.op[0] === 'move') {                                                                       // one area at a time, as a player moves: each step is seen
+      const [, id, to] = a.op as [string, string, number]; cpuThinking = true;
+      try { for (let i = 0; i < 20; i++) { let more = false; act(() => { more = E.ai.walkStep(g, id, to); }); const at = g.units.find((x) => x.id === id)?.area; if (at != null && followFoe && !lock && !g.battle) lookAt(at); if (!more || g.pendingBlow) break; render(); const mark = g.log.length; cpuActing = false; await new Promise((ok) => setTimeout(ok, 450 * cpuPace())); cpuActing = true; if (g.log.length !== mark || g.over) break; } }   // the player's own clicks stay theirs while the block walks
+      finally { cpuThinking = false; }
+    }
     else { const run = a.run; if (a.area != null && followFoe && !lock && !g.battle) lookAt(a.area); act(() => { run(g); }); }
   } finally { cpuActing = false; }
   hist.clear('the computer moved');                                                                   // a player's undo never reaches back past the computer's moves
