@@ -866,7 +866,7 @@ async function cpuStep() {
   } finally { cpuActing = false; }
   hist.clear('the computer moved');                                                                   // a player's undo never reaches back past the computer's moves
   if ((a.label === 'end' || a.label === 'done') && !E.ai.turnOf(g, CPU_SIDE) && (cpuDid.moves || cpuDid.fights.length || cpuDid.cards)) cpuTell();   // its step is over and the move is the player's: what happened, in one line
-  render();
+  render(); cpuTick();                                                                                          // its next action: a walked move ends while it is still marked busy, so no redraw would ask
 }
 /** A line at the top while the computer plays. */
 function cpuBar() { return soloBar() || (CPU_SIDE && !soloWait && !g.over && E.ai.turnOf(g, CPU_SIDE) && !rollView ? `<div class="seatbar cpu"><span class="spin" aria-hidden="true"></span><span>${esc(nm(CPU_SIDE))} (computer) is playing…</span></div>` : cpuSummary && !g.over ? `<div class="seatbar cpu told"><span>${esc(cpuSummary)}</span>${ubtn(ico('close'), () => { cpuSummary = ''; }, 'ico', false, 'Close')}</div>` : ''); }

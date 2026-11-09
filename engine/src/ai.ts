@@ -36,6 +36,11 @@ type Est = { str: number; q: Quality; cls: 'armor' | 'infantry' };
 const QW: Record<Quality, number> = { green: 0.8, veteran: 1, elite: 1.25 };
 /** How many times a hard player fights a battle out before deciding (more: steadier, slower). */
 export const SIMS = { attack: 48, choice: 24, turn: 4 };
+/** How long (ms, on the clock) the hard player may think about one action before it settles for fewer play-outs (at least `SIMS.min` each), so a
+ *  slow phone gets a quick, slightly shallower move rather than minutes of waiting. Infinity in the arena, to measure the full strength. */
+export const BUDGET = { ms: 3000, min: 3 };
+let deadline = Infinity;
+const late = (i: number, min = BUDGET.min) => i >= min && performance.now() > deadline;
 /** Tuning numbers the arena changes (ARENA_TUNE), and whether the hard player plans its attacks first. */
 export const TUNE = { plan: true, planAt: 0.3, sd: true, asym: 0.4, vpBase: 6, tw1: 0.5, tw2: 1.5, ownCut: null as number | null, expose: 0.35, turn: true };
 
@@ -237,7 +242,7 @@ function simulate(g: Game, side: Side, n: number, prep?: (x: Game) => void): num
   const sides = E.sidesOf(g), src = E.randomSource(); E.setRandom(null);
   let total = 0, done = 0;
   try {
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < n && !late(i); i++) {
       const x = structuredClone(g); x.seed = ((g.seed + 1) * 2654435761 + (i + 1) * 40503 + g.rolls * 97) % 1e9; x.rolls = 0;
       mask(x, side);
       try { prep?.(x); } catch { continue; }
@@ -281,7 +286,8 @@ export function next(g: Game, side: Side, level: Level = 'normal'): Action | nul
   E.useGame(g.game ?? 'bulge'); setPlayArea(g.inPlay);
   if (g.over || !turnOf(g, side)) return null;
   const view = structuredClone(g); mask(view, side);                                                    // it thinks on what it may know: the enemy blocks it cannot see are stand-ins
-  return step(view, side, level);
+  deadline = level === 'hard' ? performance.now() + BUDGET.ms : Infinity;
+  try { return step(view, side, level); } finally { deadline = Infinity; }
 }
 function step(g: Game, side: Side, level: Level): Action | null {
   if (g.over || !turnOf(g, side)) return null;
@@ -536,7 +542,7 @@ function turnPlan(g: Game, side: Side): [string, number][] {
   const massed = (k: number) => { const used = new Set<string>(), out: [string, number][] = []; for (const p of targets.slice(0, k)) { const ids = p.ids.filter((id) => !used.has(id)); for (const id of ids) { used.add(id); out.push([id, p.a]); } } return out; };
   const cands = [[], attackPlan(g, side, opts), attackPlan(g, side, opts, -0.5), massed(1), massed(2), massed(3)];
   const seen = new Set<string>(), uniq = cands.filter((c) => { const k = JSON.stringify(c); if (seen.has(k)) return false; seen.add(k); return true; });
-  if (uniq.length < 2) return uniq[0] ?? [];
+  if (uniq.length < 2 || late(1, 0)) return uniq.length < 2 ? uniq[0] ?? [] : uniq[1];                 // out of time already: the attacks that pay
   return best(uniq, (moves) => playTurn(g, side, moves, SIMS.turn))!.x;
 }
 /** The mean position for `side` at the end of its player turn (before the Supply Phase) after making `moves`, on `n` copies with their own dice. */
@@ -544,7 +550,7 @@ function playTurn(g: Game, side: Side, moves: [string, number][], n: number): nu
   const sides = E.sidesOf(g), src = E.randomSource(); E.setRandom(null);
   let total = 0, done = 0;
   try {
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < n && !late(i, 1); i++) {
       const x = structuredClone(g); x.seed = ((g.seed + 7) * 2654435761 + (i + 1) * 40503 + g.rolls * 131) % 1e9; x.rolls = 0;
       mask(x, side);
       for (const [id, a] of moves) { try { walk(x, id, a); if (x.pendingBlow) E.resolveBlow(x, false); } catch { /* blocked on the way */ } }
