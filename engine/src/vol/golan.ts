@@ -860,6 +860,7 @@ export function playKingHassan(g: Game, chitId: string) {
 /** 17.31/17.32 replacements: one step to a supplied reduced unit of the matching class, even in a contested area. */
 export function playReplacement(g: Game, chitId: string, unitId: string) {
   needAdmin(g); const c = avail(g, chitId, ['replacement_arm', 'replacement_mech']), u = unit(g, unitId);
+  need(!u.fort, 'strongpoints never receive replacement steps (15.6)');
   need(u.side === c.side && reduced(u) && inSupply(g, u.side, u.area!), 'a supplied, reduced unit of your own');
   need(c.kind === 'replacement_arm' ? u.cls === 'armor' : u.symbol === 'mech' || u.cls === 'infantry', c.kind === 'replacement_arm' ? 'armor replacements go to armor-class units' : 'mechanized replacements go to mech or infantry-class units');
   u.str += 1; gone(c); say(g, `${u.name} gets a replacement step (17.3)`, c.side);

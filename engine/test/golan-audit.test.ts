@@ -100,3 +100,17 @@ describe('14.11 / 14.14 in strategic moves (the owner\'s ruling, 9 Nov 2026)', (
     expect(stratOptions(g, b.id)).not.toContain(36);
   });
 });
+
+describe('15.6 strongpoints get no replacement steps (the owner\'s ruling, 9 Nov 2026)', () => {
+  it('neither a Special Action, the command staff nor a replacement event adds a step to a reduced strongpoint', async () => {
+    const E = await import('../src');
+    const g = newGolanGame(43); g.turn = 3; g.phase = 'admin'; g.phasing = 'israeli';
+    const sp = g.units.find((u) => u.fort && u.area != null && u.max > 1)!; sp.str = sp.max - 1;
+    for (const c of g.chits) if (c.side === 'israeli' && ['sa_block', 'command_staff', 'replacement_arm', 'replacement_mech'].includes(c.kind)) c.box = 'available';
+    const id = (k: string) => g.chits.find((c) => c.side === 'israeli' && c.kind === k && c.box === 'available')!.id;
+    expect(() => E.qualityReplacement(g, sp.id)).toThrow(/strongpoint/);
+    expect(() => E.staffReplacement(g, id('command_staff'), sp.id)).toThrow();
+    expect(() => golan.playReplacement(g, id(sp.cls === 'armor' ? 'replacement_arm' : 'replacement_mech'), sp.id)).toThrow(/strongpoint/);
+    expect(sp.str).toBe(sp.max - 1);
+  });
+});

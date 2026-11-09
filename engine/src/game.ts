@@ -610,12 +610,13 @@ export function fieldWorksFor(g: Game, id: string, area: number) {
   g.fieldWorks.push(area); g.fwOwner[area] = c.side; c.box = 'used'; say(g, `${c.name} builds field works in ${areas.get(area)!.name}`, c.side);
 }
 function addStep(u: Unit, elite: boolean) {
-  const nq = u.q[u.str]; if (u.str >= u.max || u.unsupplied || (!elite && nq === 'elite')) throw new Error('that unit cannot receive a step');
+  const nq = u.q[u.str]; if (u.fort) throw new Error('strongpoints never receive replacement steps (15.6)');
+  if (u.str >= u.max || u.unsupplied || (!elite && nq === 'elite')) throw new Error('that unit cannot receive a step');
   u.str++;
 }
 export function eligibleForStep(c: Chit, u: Unit) {
   if (c.kind === 'event_arriving_regiment' && u.side === c.side && u.area == null && u.str === 0 && !u.garrison) return u.name === `${parseInt(c.division ?? '')} Inf`;     // 17.23 brings an eliminated division back
-  if (u.side !== c.side || u.area == null || u.garrison || u.unsupplied || u.str >= u.max) return false;
+  if (u.side !== c.side || u.area == null || u.garrison || u.fort || u.unsupplied || u.str >= u.max) return false;
   const arm = c.kind === 'replacement_arm' || c.kind === 'rebuild_or_replace_arm', inf = c.kind === 'replacement_inf' || c.kind === 'rebuild_or_replace_inf';
   if (c.kind === 'event_arriving_regiment') return u.name === `${parseInt(c.division ?? '')} Inf`;
   if (arm && u.cls !== 'armor') return false; if (inf && u.cls !== 'infantry') return false;
@@ -656,7 +657,7 @@ export function rally(g: Game, side: Side, area: number, chitId?: string) {
   for (const a of [area, ...neighbors(area)]) for (const u of blocks(g, a, side)) if (u.disorder && !u.unsupplied && (!only || u.ech === only)) u.disorder = 0;
 }
 export function qualityReplacement(g: Game, unitId: string, chitId?: string) {
-  needAdmin(g); const u = g.units.find((x) => x.id === unitId)!; if (u.area == null || u.str < 1 || u.garrison || u.unsupplied || u.str >= u.max) throw new Error('not eligible');   // 8.26: a supplied reduced unit on the map
+  needAdmin(g); const u = g.units.find((x) => x.id === unitId)!; if (u.area == null || u.str < 1 || u.garrison || u.fort || u.unsupplied || u.str >= u.max) throw new Error('not eligible (strongpoints never receive steps, Golan 15.6)');   // 8.26: a supplied reduced unit on the map
   spendSA(g, u.side, u.ech, 'Quality replacements', chitId, u.area!); u.str++; say(g, `${u.name} gains a step`, u.side);
 }
 export function staffReplacement(g: Game, id: string, unitId: string) {
