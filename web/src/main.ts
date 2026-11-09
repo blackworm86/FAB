@@ -1018,7 +1018,7 @@ function click(e: PointerEvent) {
   if (g.pendingBlow) return;
   if (selArr && area != null && arrOpts().some((o) => o.area === area)) { const id = selArr; selArr = null; return act(() => arrive(id, area)); }
   if (selUnit && area != null && optsFor(selUnit).some((o) => o.area === area)) { previewArea = area; return confirmMove(); }      // two taps: block, then where it goes (Undo takes it back)
-  if ((g.phase === 'combat' || g.phase === 'btCombat') && area != null && fightable().includes(area)) { selArea = selArea === area ? null : area; selUnit = null; previewArea = null; return refresh(); }
+  if ((g.phase === 'combat' || g.phase === 'btCombat') && area != null && fightable().includes(area)) { selArea = area; selUnit = null; previewArea = null; const p = allowed() ? primary() : null; if (p && !p.dis && p.label.startsWith('Fight ')) return act(p.fn); return refresh(); }      // one tap on a battle area opens the battle
   const uu = unit ? g.units.find((x) => x.id === unit) : null;
   if (uu && g.moving && g.moving.id !== uu.id && mine(uu.side)) act(() => E.endMove(g));                 // another block: the one moving before is done for good
   if (uu && seen(uu) && (mine(uu.side) || !['movement', 'strategic', 'reaction', 'btMove'].includes(g.phase))) { selUnit = unit!; selArea = uu.area; if (innerWidth < 700 && uu.area != null) lookAt(uu.area); }      // phones: the block's panel covers the lower map, so bring the block into view else { selArea = area; selUnit = null; }
@@ -1179,7 +1179,7 @@ function decisionTargets(): Tgt | null {
 /** The choice the battle is waiting for, as a bubble over the deciding side's row. */
 function decisionBubble(): string {
   const b = g.battle;
-  if (!b && !g.over && !rollView && allowed() && (g.phase === 'combat' || g.phase === 'btCombat') && selArea != null && fightable().includes(selArea)) { const p = primary(); if (p) return `<div class="mapbubble fighttag" data-area="${selArea}" data-tg=""><button class="primary" data-do="${reg(p.fn)}">${ico('burst')} Fight here</button></div>`; } if (!b || rollView || !['attChoice', 'defChoice', 'attFirst', 'loss'].includes(b.stage)) return '';
+  if (!b || rollView || !['attChoice', 'defChoice', 'attFirst', 'loss'].includes(b.stage)) return '';
   const who = b.stage === 'loss' && b.loss ? b.loss.side : b.stage === 'defChoice' ? other(b.attacker) : b.attacker;
   const tg = b.stage === 'loss' ? E.lossOptions(g, b) : b.stage === 'attFirst' ? [b.attPoint, ...b.assets[b.attacker].filter((x) => E.isBattleAsset(E.chit(g, x)))] : E.unitsIn(g, b.area, who).map((u) => u.id).concat(b.assets[who].filter((x) => E.isBattleAsset(E.chit(g, x))));
   const at = `data-area="${b.area}" data-tg="${tg.join(',')}"`;                                       // placed off the area by placeBubbles, with a line to each block it is about
@@ -1480,15 +1480,16 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
       const first = who === b.attacker && !b.ready?.includes(b.attacker);
       return { label: first ? 'Assets done' : who === b.attacker ? 'Begin combat' : 'Done', fn: why ? () => say(why) : go((x) => E.setReady(g, x, who)), dis: !!why };
     }
-    if (b.stage === 'done') return { label: 'Close battle', fn: () => act(() => { E.closeBattle(g); selArea = null; }) };
+    if (b.stage === 'done') return { label: 'Close battle', fn: () => act(() => { lastFight = b.area; E.closeBattle(g); selArea = null; }) };
     if (b.stage.endsWith('Choice') || b.stage === 'retreat' || b.stage === 'attFirst' || b.stage === 'loss') return null;
     return { label: `Roll ${STAGE_NAME[b.stage].toLowerCase()}`, fn: () => rollStage(g.battle!) };
   }
   const must = E.mustFight(g);
   if (g.phase === 'combat' || g.phase === 'btCombat') {                                              // the player picks the battle and starts it; nothing opens by itself
     const sel = selArea != null && fightable().includes(selArea) ? selArea : null;
-    if (sel != null) return { label: `Fight ${areaName(sel)}`, fn: () => { selUnit = null; battleFx = []; rollFx = []; if (g.phase === 'btCombat' && !E.newlyContested(g).includes(sel) && !(VOL.id === 'golan73' && E.golan.freeRoundLeft(g))) pickSA(g.phasing, undefined, (sa) => E.startBattle(g, sel, true, sa)); else E.startBattle(g, sel, g.phase === 'btCombat'); } };
-    if (must.length) return null;                                                                     // the prompt says: tap a red area
+    const fight = (a: number) => () => { selArea = a; selUnit = null; battleFx = []; rollFx = []; if (g.phase === 'btCombat' && !E.newlyContested(g).includes(a) && !(VOL.id === 'golan73' && E.golan.freeRoundLeft(g))) pickSA(g.phasing, undefined, (sa) => E.startBattle(g, a, true, sa)); else E.startBattle(g, a, g.phase === 'btCombat'); };
+    if (sel != null) return { label: `Fight ${areaName(sel)}`, fn: fight(sel) };
+    if (must.length && allowed() && mine(g.phasing)) { const at = lastFight != null ? center(lastFight) : null, next = at ? [...must].sort((x, y) => center(x).distanceTo(at) - center(y).distanceTo(at))[0] : must[0]; return { label: `Next battle: ${areaName(next)}`, fn: fight(next) }; }      // after a battle the button names the nearest one still to fight
   }
   if (online.active && !online.both() && (g.phase === 'admin' || g.phase === 'reinforcement')) {            // both sides work in these steps: the other side says it is done, the Phasing Player ends the step
     const me = online.mySide(); if (!me) return null;
@@ -1957,11 +1958,29 @@ function driveSplit() {
 }
 let ctlKey = '', tgtKey = '';
 let playKey: string | null = null;
+/** Faster battles: a set-up step with nothing to choose, a roll with no choice before it, and the close of a finished battle happen by themselves.
+ *  Real decisions (cards to add, a point unit to pick, hits, retreat) still wait; Settings > Dice > WAIT keeps every roll on a click. */
+let autoT = 0, autoKey = '', lastFight: number | null = null;
+function autoBattle() {
+  const b = g.battle; if (TUTORIAL || !autoRoll || !b || rollView || cpuActing || g.over || !allowed()) return;      // the tutorials coach every step by hand
+  const p = primary(); if (!p || p.dis) return;
+  const rollSide = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker);
+  const nothingToAdd = (sd: E.Side) => !g.chits.some((c) => c.side === sd && c.box === 'available' && (E.isArty(c) || E.isBattleAsset(c)) && !E.canAssign(g, b, sd, c));
+  const blocks = (sd: E.Side) => E.unitsIn(g, b.area, sd).filter((u) => !u.garrison).length;
+  let go = false;
+  if (['attArty', 'defArty', 'defFire', 'offFire'].includes(b.stage)) go = mine(rollSide) && p.label.startsWith('Roll');
+  else if (b.stage === 'done') go = true;
+  else if (b.stage === 'setup' && !b.defSA && !airPick) { const who = E.setupSide(g, b); go = mine(who) && nothingToAdd(who) && (p.label === 'Assets done' || blocks(who) <= 1); }
+  const k = `${b.area}|${b.stage}|${b.ready?.join()}|${b.rolls.length}`;
+  if (!go || k === autoKey) return;
+  autoKey = k; clearTimeout(autoT);
+  autoT = window.setTimeout(() => { const q = primary(); if (g.battle && `${g.battle.area}|${g.battle.stage}|${g.battle.ready?.join()}|${g.battle.rolls.length}` === k && !rollView && q && !q.dis) act(q.fn); }, b.stage === 'done' ? 1600 : 700);
+}
 function refresh() {
   { const ph = `${g.turn}${g.phasing}${g.phase}`; if (ph !== lastPhase) { lastPhase = ph; fxLayer.clear(); } }
   E.setPlayArea(g.inPlay);
   { const k = (g.inPlay ?? []).join(); if (k !== playKey) { const first = playKey === null; playKey = k; if (!first) paintBoard(); if (g.inPlay || !first) goal = homeGoal(); } }
-  SBU.hotseatSync(); cpuTick();
+  SBU.hotseatSync(); cpuTick(); setTimeout(autoBattle, 0);
   if (online.mode === 'remote') setTimeout(driveSplit, 0);
   { const key = `${online.devSeat}|${online.mySide()}|${g.battle?.attPoint}|${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
     if (key !== tgtKey) { tgtKey = key; tgt = reinforcing ? reinforceTargets() : decisionTargets() ?? (selChit && mine(g.chits.find((x) => x.id === selChit)?.side ?? P1) ? VOL.targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: (u) => unitPic(u), areaName }) : null); } }
