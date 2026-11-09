@@ -280,7 +280,7 @@ function moveCtx(g: Game): GMoveCtx {
     bridgedDitch: new Set(V.bridgedDitch), blownBridges: new Set(g.blown), minefields: new Set(V.minefields), crossedThisPhase: new Set(V.crossed),
     interdicted: (a) => interdictedBy(g, a) as GSide | undefined, raids: new Set(V.raids), roadblocks: new Map(Object.entries(g.roadblocks).map(([a, s]) => [+a, s as GSide])) };
 }
-const asMover = (g: Game, u: Unit, one: boolean): GMoveUnit => ({ slowField: !!g.opts.t62 && T62.has(u.id), side: u.side as GSide, cls: u.cls, area: u.area!, supplied: !u.unsupplied, disordered: u.disorder > 0, adjacentOnly: one || !!u.adjOnly, spent: u.spent, minefieldFailed: state(g).minefieldFailed.includes(u.id) });
+const asMover = (g: Game, u: Unit, one: boolean): GMoveUnit => ({ areasMoved: g.moving?.id === u.id ? g.moving.steps : 0, slowField: !!g.opts.t62 && T62.has(u.id), side: u.side as GSide, cls: u.cls, area: u.area!, supplied: !u.unsupplied, disordered: u.disorder > 0, adjacentOnly: one || !!u.adjOnly, spent: u.spent, minefieldFailed: state(g).minefieldFailed.includes(u.id) });
 function golanReach(g: Game, u: Unit, one: boolean): Opt[] {
   if (isNafakh(g) && u.id === 'S03' && !state(g).nafakh?.s03Free) return [];                       // 22.46: the 33rd holds Tel Fazra
   const ctx = { ...moveCtx(g), room: g.opts.advGhosts ? (a: number) => ghostRoom(g, u, a) : undefined };
@@ -1041,6 +1041,6 @@ registerHooks('golan73', {
   
   sources, supplyStep, supplyFree: (_g, _s, a) => isAssembly(a) || a === HERMON, alwaysSupplied: (_g, u) => !!u.ghost || u.id === 'S17',
   victory: golanVictory, finalResult, onPhase, onBattle, freeBattle, assault, reinforce, afterDraw: (g) => { nafakhStaff(g); const d = g.chits.find((c) => c.kind === 'event_dugman5' && c.box === 'available'); if (d) resolveDugman(g, d); },
-  afterDeploy, onUnassign, keepAssigned, optional: GOLAN_OPTIONAL, absorbLoss, lossOk, recoverOk, ghostsMove: (g) => !!g.opts.advGhosts, reinforceOk: (g, b, u) => reinforceOptions(g, b).includes(u.id), stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2), stackRoom: (g, u, a) => (g.opts.advGhosts && u.side === 'israeli' ? ghostRoom(g, u, a) : undefined), firstBattle: (g) => state(g).airAssaultArea, appropriate: (g, u) => (isNafakh(g) ? (u.side === 'israeli' ? [NAF_NORTH] : [REAR, NAF.sheet.entry.Z]) : u.side === 'israeli' ? [ASSEMBLY.A, ASSEMBLY.B] : Object.values(ENTRY)), isNight, onAssign, beforeBegin, beforeFire, afterFire,
+  afterDeploy, onUnassign, keepAssigned, optional: GOLAN_OPTIONAL, absorbLoss, lossOk, recoverOk, ghostsMove: (g) => !!g.opts.advGhosts, reinforceOk: (g, b, u) => reinforceOptions(g, b).includes(u.id), stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2), stackRoom: (g, u, a) => (g.opts.advGhosts && u.side === 'israeli' ? ghostRoom(g, u, a) : undefined), firstBattle: (g) => state(g).airAssaultArea, allowance: (g, u) => (isNight(g) && u.side === 'syrian' ? (u.cls === 'armor' ? 4 : 1) : u.cls === 'armor' ? 6 : 3), appropriate: (g, u) => (isNafakh(g) ? (u.side === 'israeli' ? [NAF_NORTH] : [REAR, NAF.sheet.entry.Z]) : u.side === 'israeli' ? [ASSEMBLY.A, ASSEMBLY.B] : Object.values(ENTRY)), isNight, onAssign, beforeBegin, beforeFire, afterFire,
   lossAsset,   // 18.32: a supporting artillery asset may take a step loss (series loss pool)
 } as Partial<Volume>);

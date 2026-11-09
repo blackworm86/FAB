@@ -48,6 +48,8 @@ export interface Volume {
   markerKey: (g: Game, u: Unit) => string;
   /** Raw reach of a unit this phase (its volume's boundary and cost rules); the series filters stacking, reaction and river limits after it. */
   reach: (g: Game, u: Unit, one: boolean) => Opt[];
+  /** The block's movement allowance in MP now (default 6 armor, 3 infantry). */
+  allowance?: (g: Game, u: Unit) => number;
   moveOk?: (g: Game, u: Unit, area: number) => boolean;
   /** Something that happens before the unit moves (a morale check, a raid); a string ends the move with that result. */
   beforeMove?: (g: Game, u: Unit, opt: Opt) => string | void;

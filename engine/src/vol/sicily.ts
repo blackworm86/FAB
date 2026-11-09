@@ -244,7 +244,7 @@ function sicilyReach(g: Game, u: Unit, one: boolean): Opt[] {
     const from = reachable({ side: u.side as SSide, cls: u.cls, area: box.area, supplied: true, disordered: u.disorder > 0, motorized: u.motorized, allowed: allowedZones(g, u) }, moveCtx(g));
     return [opt({ area: box.area, cost: 0, path: [a, box.area], mustStop: false }), ...from.map((r) => opt({ ...r, path: [a, ...r.path] }))];
   }
-  const r = reachable({ side: u.side as SSide, cls: u.cls, area: a, supplied: !u.unsupplied, disordered: u.disorder > 0, adjacentOnly: one || !!u.adjOnly, spent: u.spent, motorized: u.motorized, untried: u.untried,
+  const r = reachable({ side: u.side as SSide, cls: u.cls, area: a, supplied: !u.unsupplied, disordered: u.disorder > 0, adjacentOnly: one || !!u.adjOnly, spent: u.spent, motorized: u.motorized, untried: u.untried, leftContested: g.moving?.id === u.id && g.moving.left,
     allowed: allowedZones(g, u), extract: V.extract && nation(u) === 'german' && contested(g, a) }, moveCtx(g));
   return r.map(opt);
 }
@@ -661,7 +661,7 @@ export const beachheads = (g: Game) => Object.entries(state(g).beachheads).map((
 
 registerHooks('sicily', {
   newGame: newSicilyGame as Volume['newGame'], markerKey, reach: sicilyReach, moveOk, afterMove, stratAllowed, stratStep, afterStrat,
-  successNumber: sicilySn, adjustFire, canAssign, moraleSn: sicilyMoraleSn, retreatOk, retreatPrefer, onRetreat, noRetreat: (_g, u) => !!u.garrison, seaRetreat,
+  allowance: (g, u) => allowanceOf(u, g.moving?.id === u.id && g.moving.left), successNumber: sicilySn, adjustFire, canAssign, moraleSn: sicilyMoraleSn, retreatOk, retreatPrefer, onRetreat, noRetreat: (_g, u) => !!u.garrison, seaRetreat,
   mustFight: (g) => state(g).airborneAreas.filter((a) => contested(g, a)), retreatZone: (g, u, to) => u.side !== 'allied' || zoneOk(g, u, to),   // 14.27a, 14.43
   sources, supplyStep, unitSupply, supplyFree: (g, side, a) => g.airSupply?.area === a && g.airSupply.side === side, alwaysSupplied: (_g, u) => isLandingBox(u.area!) || !!u.garrison,
   victory: sicilyVictory, finalResult, onPhase, onBattle, assault, reinforce, afterDraw, afterDeploy, extraDraws, canAbort, beforeBegin, beforeFire, saFilter, onSpendSA, battleAllowed, reserveOk, onReserve, beforeRecycle, noReroute: true, staffReplaceOk: (_g, c) => c.side !== 'axis',
