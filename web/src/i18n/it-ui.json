@@ -2984,14 +2984,13 @@
   "Minefields (14.02)": "Campi minati (14.02)",
   "Lay a minefield": "Posa un campo minato",
   "Minefield: first area": "Campo minato: prima area",
-  "Lay the rest at random": "Posa il resto a caso",
+  "Place the rest for me": "Piazza il resto in automatico",
   "Reserve markers": "Segnalini di riserva",
   "one unit": "un'unità",
   "Mark a unit as reserve": "Metti un'unità in riserva",
   "Reserve marker": "Segnalino di riserva",
   "Take one back": "Riprendine uno",
   "Take the reserve marker off": "Togli il segnalino di riserva",
-  "Place the rest at random": "Piazza il resto a caso",
   "Commando landings (20.35)": "Sbarchi dei commando (20.35)",
   "Choose a landing area": "Scegli un'area di sbarco",
   "82nd Para (15.3)": "82nd Para (15.3)",
@@ -3066,7 +3065,6 @@
   "Alternate": "Alternativo",
   "Place the beachheads": "Piazza le teste di sbarco",
   "Invasion units (14.24)": "Unità d'invasione (14.24)",
-  "Place them all": "Piazzale tutte",
   "Drop into an area next to at least two areas holding its own army, before any battle. Against defenders it is a River Assault that cannot be aborted.": "Lanciati in un'area accanto ad almeno due aree con unità della propria armata, prima di ogni battaglia. Contro dei difensori è un River Assault che non si può interrompere.",
   "No drop zone is open: the unit is lost.": "Nessuna zona di lancio disponibile: l'unità è persa.",
   "Choose the drop zone": "Scegli la zona di lancio",
@@ -3291,7 +3289,10 @@
   "Fast": "Veloce",
   "How fast the computer makes its moves": "Quanto in fretta il computer fa le sue mosse",
   "Restart now": "Ricomincia ora",
-  "Keep playing": "Continua a giocare"
+  "Keep playing": "Continua a giocare",
+  "Pick one in the tray, then a lit area, or use the panel on the map.": "Scegline uno nel vassoio, poi un'area illuminata, oppure usa il pannello sulla mappa.",
+  "finish the steps in the panel on the map, then end the set-up.": "completa i passi nel pannello sulla mappa, poi termina lo schieramento.",
+  "Finish the panel first": "Prima completa il pannello"
  },
  "patterns": [
   [
@@ -8713,6 +8714,14 @@
   [
    "(\\d+) / (\\d+)",
    "$1 / $2"
+  ],
+  [
+   "Place (\\d+) more first",
+   "Piazzane prima altri $1"
+  ],
+  [
+   "Set-up: (\\d+) blocks? to place\\.",
+   "Schieramento: blocchi da piazzare: $1."
   ]
  ],
  "html": {}

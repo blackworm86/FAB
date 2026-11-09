@@ -76,7 +76,7 @@ export function sicilyPanel(g: Game, ctx: PanelCtx): string {
   const V = S.state(g), b = g.battle, out: string[] = [], live = ctx.get;
   if (g.phase === 'deploy') {
     const garr = g.units.filter((u) => u.untried && u.box === 'deploy').length;
-    if (ctx.mine('axis') && garr) out.push(`<div class="volpanel"><b>${ctx.ico('lock')} Italian garrisons (22.24)</b><span>${garr} untried garrisons to place face down, one per area, never with two tried units: drag them from the tray, or place them all at random.</span><div class="row">${ctx.btn('Place the rest at random', () => S.autoGarrisons(live()), 'primary')}</div></div>`);
+    if (ctx.mine('axis') && garr) out.push(`<div class="volpanel"><b>${ctx.ico('lock')} Italian garrisons (22.24)</b><span>${garr} untried garrisons to place face down, one per area, never with two tried units: drag them from the tray, or place them all at random.</span><div class="row">${ctx.btn('Place the rest for me', () => S.autoGarrisons(live()), 'primary')}</div></div>`);
     if (ctx.mine('allied') && !V.plan && !S.isSunrise(g)) {
       if (garr) out.push(`<div class="volpanel"><b>${ctx.ico('next')} Landing plan</b><span>The Axis places its garrisons first; then you choose the landing plan after seeing its set-up (22.24).</span></div>`);
       else {
@@ -90,7 +90,7 @@ export function sicilyPanel(g: Game, ctx: PanelCtx): string {
       }
     }
     const inv = g.units.filter((u) => !u.untried && u.box === 'deploy').length;
-    if (ctx.mine('allied') && V.plan && inv) out.push(`<div class="volpanel"><b>${ctx.ico('next')} Invasion units (14.24)</b><span>${inv} to place, two per beachhead of their own nationality: drag them from the tray, or place them all at once. The airborne divisions wait in the Airborne Assault box.</span><div class="row">${ctx.btn('Place them all', () => S.autoLanding(live()), 'primary')}</div></div>`);
+    if (ctx.mine('allied') && V.plan && inv) out.push(`<div class="volpanel"><b>${ctx.ico('next')} Invasion units (14.24)</b><span>${inv} to place, two per beachhead of their own nationality: drag them from the tray, or place them all at once. The airborne divisions wait in the Airborne Assault box.</span><div class="row">${ctx.btn('Place the rest for me', () => S.autoLanding(live()), 'primary')}</div></div>`);
   }
   if (!b && g.phase === 'combat' && g.phasing === 'allied' && V.dropPending && ctx.mine('allied')) {
     for (const u of g.units.filter((x) => x.box === 'airborne_assault' && x.side === 'allied')) {
