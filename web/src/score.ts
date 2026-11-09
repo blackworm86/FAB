@@ -37,9 +37,9 @@ export function vpStrip(g: E.Game, open: string) {
   const [p, q] = sides(g), v = E.victory(g), sd = track(g)[g.turn - 1]?.sd;
   return `<button class="vps" data-ui="${open}" title="Victory points: tap for the details" aria-label="Victory points, net ${netText(g, v.net)}">
     <span class="vlab">VP</span><span class="vtt"${track(g).some((t) => t.sd) ? ` data-cap="SUDDEN DEATH&#10;${T(p)} / ${T(q)}"` : ''} title="Under each turn: the net VP that wins at once that turn, ${N(p)} / ${N(q)}">${track(g).map((t, i) => `<span class="vtb ${i + 1 === g.turn ? 'now' : i + 1 < g.turn ? 'past' : ''}"><b>T${i + 1}</b>${t.sd ? `<i aria-label="sudden death at ${N(p)} +${t.sd[0]} or ${N(q)} +${t.sd[1]}">${t.sd[0]}/${t.sd[1]}</i>` : '<i class="no">–</i>'}</span>`).join('')}</span>
-    <span class="vlab al">${T(q)} ${v[q]}</span>
+    <span class="vlab al" title="${N(q)}: ${v[q]} VP">${T(q)}</span>
     <span class="gauge"><span class="z"></span>${sd ? `<span class="sd" style="left:${pos(-sd[1])}%"><span>${T(q)} wins ${sd[1]}</span></span><span class="sd" style="left:${pos(sd[0])}%"><span>${T(p)} wins ${sd[0]}</span></span>` : ''}<span class="nd" style="left:${pos(v.net)}%"></span></span>
-    <span class="vlab ge">${T(p)} ${v[p]}</span><span class="vlab net ${v.net > 0 ? 'ge' : v.net < 0 ? 'al' : ''}">${netText(g, v.net).toUpperCase()}</span></button>`;
+    <span class="vlab ge" title="${N(p)}: ${v[p]} VP">${T(p)}</span><span class="vlab net ${v.net > 0 ? 'ge' : v.net < 0 ? 'al' : ''}">${netText(g, v.net).toUpperCase()}</span></button>`;
 }
 
 /** The scenario's victory table: The Bulge's own tables, the series 19.3 table for the other volumes. */
