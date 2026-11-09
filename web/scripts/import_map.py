@@ -130,21 +130,26 @@ zone = {a['id']: a['zone'] for a in out['areas']}; P_ = {a['id']: _P(a['polygon'
 from shapely.geometry import LineString as _L
 wet = unary_union([_L(pts_of(e, 24)).buffer(6) for e in layers['Rivers'] if tag(e) == 'path' and e.get('d')])   # where a river is the border, the print shows the river alone
 army = ''; army_segs = {}; army_by = {}
-def army_side(ln, i, j, off=4.2):                                                     # a dashed line to each side of the border, coloured by the zone it lies in
-    for d in (off, -off):
-        o = ln.offset_curve(d)
-        if o.is_empty or o.geom_type != 'LineString': continue
-        m = o.interpolate(0.5, normalized=True); z = zone[i] if P_[i].distance(m) <= P_[j].distance(m) else zone[j]
-        army_by[z] = army_by.get(z, '') + '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in o.coords) + '"/>'
+zone_full = {}                                                                         # each zone boundary whole, river stretches included: its coloured sides are drawn once, continuous
 for i in P_:
     for j in P_:
         if i < j and zone[i] != zone[j] and P_[i].distance(P_[j]) < 2:
-            full = P_[i].boundary.intersection(P_[j].buffer(2.5)); g = full.difference(wet)
-            wg = full.intersection(wet)                                                # along a river the white line gives way to the river, the zone dashes run on along its banks
-            for ln in (getattr(wg, 'geoms', None) or [wg]):
-                if ln.geom_type == 'LineString' and ln.length > 6: army_side(ln, i, j, 6.5)
+            full = P_[i].boundary.intersection(P_[j].buffer(2.5)); g = full.difference(wet)      # along a river the white line gives way to the river; the zone dashes run on along its banks
+            zone_full.setdefault(tuple(sorted((zone[i], zone[j]))), []).append(full)
             for ln in (getattr(g, 'geoms', None) or [g]):
-                if ln.geom_type == 'LineString' and ln.length > 6: army += '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in ln.coords) + '"/>'; army_side(ln, i, j); army_segs.setdefault(tuple(sorted((zone[i], zone[j]))), []).append((ln, i))
+                if ln.geom_type == 'LineString' and ln.length > 6: army += '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in ln.coords) + '"/>'; army_segs.setdefault(tuple(sorted((zone[i], zone[j]))), []).append((ln, i))
+from shapely.ops import linemerge as _lm0
+ZU = {z: unary_union([P for k, P in P_.items() if zone[k] == z]) for z in set(zone.values())}
+for (za, zb), parts in zone_full.items():                                           # one dashed line 5.5 px to each side of the whole boundary, coloured by the zone on that side
+    m = _lm0(unary_union([q for q in parts if not q.is_empty]))
+    for ln in (list(m.geoms) if m.geom_type == 'MultiLineString' else [m] if m.geom_type == 'LineString' else []):
+        if ln.length < 6: continue
+        for d in (5.5, -5.5):
+            o = ln.simplify(0.6).offset_curve(d, join_style='round')
+            for oo in (list(o.geoms) if o.geom_type == 'MultiLineString' else [o]):
+                if oo.is_empty or oo.length < 6: continue
+                mid = oo.interpolate(0.5, normalized=True); z = za if ZU[za].distance(mid) <= ZU[zb].distance(mid) else zb
+                army_by[z] = army_by.get(z, '') + '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in oo.coords) + '"/>'
 ARMY = {5: '5th Panzer Army', 6: '6th Panzer Army', 7: '7th Army'}                     # as printed: each army's name along its boundary, on its own side, at the boundary's east end
 def army_caption(ln, za, zb):
     from shapely.geometry import LineString as _LS
