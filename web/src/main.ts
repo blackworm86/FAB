@@ -1730,6 +1730,7 @@ function cardTip() {
   const [t, d] = RULE[VOL.ruleKey(c.kind)] ?? [c.kind, ''], why = VOL.battleUse(g, b, c);
   return `<div class="cardtip">${chitPic(c)}<div><b>${esc(c.name)} <small>${esc(t)}</small></b><span>${esc(d.split("\n")[0])}</span>${why ? `<em>Cannot join: ${esc(why)}</em>` : '<em class="ok">Can join this battle</em>'}</div></div>`;
 }
+let handAll = false;
 function handCards() {
   const b = g.battle;
   if (!b && (g.phase === 'reinforcement' || g.phase === 'deploy')) return tray();
@@ -1742,7 +1743,9 @@ function handCards() {
   }
   if (g.phase !== 'admin') return '';
   const own = online.active && !online.both() ? online.mySide() : null, s = handSide ?? own ?? (g.battle && !mine(g.phasing) ? other(g.phasing) : g.phasing), cs = [...E.boxOf(g, s, 'available')].sort((x, y) => x.kind.localeCompare(y.kind) || x.name.localeCompare(y.name));
-  return `<div class="handtab"><button data-ui="${reg(() => { handSide = other(s); })}" class="${s}">${nm(s)} hand · ${cs.length} ${ico('swap')}</button></div><div class="c-hand" ${handStyle(cs.length)}>${fan(cs.map((c) => card(c)))}</div>`;
+  const live = cs.filter((c) => usableNow(c)), rest = cs.filter((c) => !usableNow(c)), shown = handAll || !live.length ? [...live, ...rest] : live;      // the cards you can play now first; the rest on request
+  const more = live.length && rest.length ? `<button data-ui="${reg(() => { handAll = !handAll; })}" aria-pressed="${handAll}">${handAll ? `Playable only (${live.length})` : `Show all ${cs.length}`}</button>` : '';
+  return `<div class="handtab"><button data-ui="${reg(() => { handSide = other(s); })}" class="${s}">${nm(s)} hand · ${cs.length} ${ico('swap')}</button>${more}</div><div class="c-hand" ${handStyle(shown.length)}>${fan(shown.map((c) => card(c)))}</div>`;
 }
 function stats(b: E.Battle, s: E.Side) {
   const ls = (['arty', 'ground'] as const).flatMap((k) => E.fireList(g, b, s, k)), pmf = E.hitPmf(ls.map((f) => ({ dice: f.dice, sn: f.sn })));

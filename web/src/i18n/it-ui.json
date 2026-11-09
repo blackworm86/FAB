@@ -8729,6 +8729,14 @@
   [
    "Undo not possible: (.+)",
    "Annullamento impossibile: $1"
+  ],
+  [
+   "Show all (\\d+)",
+   "Mostra tutte ($1)"
+  ],
+  [
+   "Playable only \\((\\d+)\\)",
+   "Solo giocabili ($1)"
   ]
  ],
  "html": {}
