@@ -371,7 +371,7 @@ ul.rl { margin: 4px 0; padding-left: 16px; } ul.rl li { margin: 2px 0; } .inspec
 .gauge { flex: 1; position: relative; height: 12px; min-width: 90px; border-radius: 6px; background: linear-gradient(90deg, #5a7a35, #2a3320 48%, #2a2d31 52%, #6d7684); }
 .gauge .z { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: #fff8; } .gauge .sd { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #d1432f; } .gauge .sd span { position: absolute; top: 14px; left: -22px; font-size: 9px; color: #ff8a7a; white-space: nowrap; }
 .gauge .nd { position: absolute; top: -6px; width: 12px; height: 24px; margin-left: -6px; border-radius: 3px; background: var(--gold); border: 2px solid #1a1608; box-shadow: 0 2px 6px #000; transition: left .6s; }
-@media (max-width: 700px) { .vtt, .vlab.net, .vps > .vlab:first-child { display: none; } .vps { gap: 8px; height: 44px; } }
+@media (max-width: 700px) { .vtt, .vps > .vlab:first-child { display: none; } .vps { gap: 8px; height: 44px; } }
 .vsheet { width: min(780px, 96vw); } .vsheet h3 { display: flex; justify-content: space-between; align-items: center; }
 .vtot { display: flex; gap: 12px; justify-content: center; align-items: center; font: 700 32px var(--sfd); } .vtot small { display: block; font-size: 11px; color: #999; text-align: center; letter-spacing: .1em; } .vtot i { color: #666; font-style: normal; }
 .vnote { text-align: center; margin: 2px 0 8px; } .vnote b { color: var(--gold); }
