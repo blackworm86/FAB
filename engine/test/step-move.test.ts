@@ -74,3 +74,20 @@ describe('the computer moves one area at a time', () => {
     expect(g.log.filter((l) => l.includes(u.name) && l.includes('→')).length).toBe(o.path.length - 1);   // one log line per step
   });
 });
+
+describe('18.3 KG Peiper step by step', () => {
+  it('Peiper\'s full move goes on area by area, then ends; the once-per-game use is spent', async () => {
+    const { setPeiperFull } = await import('../src');
+    useGame('bulge'); const g = newGame(8, { peiper: true } as never); g.turn = 2; g.phase = 'btMove'; g.phasing = 'german'; g.contestedAtMoveStart = contestedAreas(g);
+    const p = g.units.find((x) => x.name === 'Peiper')!; p.exploit = true; p.reserve = null; p.moved = false; p.spent = 0;
+    if (contestedAreas(g).includes(p.area!)) for (const u of g.units) if (u.area === p.area && u.side === 'allied') u.area = null;
+    expect(moveOptions(g, p.id).every((o) => o.path.length === 2)).toBe(true);                     // exploiting: one area
+    setPeiperFull(g, p.id, true);
+    const o = moveOptions(g, p.id).find((x) => x.path.length === 2 && !x.mustStop)!; move(g, p.id, o.area, true);
+    expect(g.moving?.id).toBe(p.id); expect(g.peiperUsed).toBe(true);
+    const more = moveOptions(g, p.id); expect(more.length).toBeGreaterThan(0);
+    const far = more.find((x) => x.path.length >= 3); if (far) expect(far.cost).toBeLessThanOrEqual(6);
+    endMove(g); expect(p.moved).toBe(true); expect(p.exploit).toBe(false); expect(p.peiperFull).toBeFalsy();
+    expect(g.log.filter((l) => l.includes('full movement allowance')).length).toBe(1);
+  });
+});

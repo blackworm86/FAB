@@ -459,14 +459,14 @@ function bulgeBeforeMove(g: Game, u: Unit, opt: Opt) { if (u.interdict && !inter
 /** Fuel (16.13), KG Peiper (18.3), Greif bridges taken (17.12), von der Heydte relieved and the paradrop result (16.11). */
 function bulgeAfterMove(g: Game, u: Unit, opt: Opt) {
   if (u.side === 'german' && opt.fuel && g.opts.fuel) { const f = fuelChits(g).sort((x, y) => +!!y.bid - +!!x.bid)[0]; if (f) { f.box = f.bid ? 'eliminated' : 'used'; say(g, `${f.bid ? 'bid ' : ''}fuel asset spent for ${u.name}${f.bid ? ' (eliminated, 18.2)' : ''}`); } }
-  if (u.peiperFull) { u.peiperFull = false; g.peiperUsed = true; say(g, 'KG Peiper uses its full movement allowance (18.3)'); }
+  if (u.peiperFull) { u.peiperFull = false; if (!g.peiperUsed) say(g, 'KG Peiper uses its full movement allowance (18.3)'); g.peiperUsed = true; }
   if (u.side === 'german') for (let i = 1; i < opt.path.length; i++) { const k = keyOf(opt.path[i - 1], opt.path[i]); if (g.greif[k]) { chit(g, g.greif[k]).box = 'eliminated'; delete g.greif[k]; say(g, 'Greif Team Bridge: the bridge is taken'); } }
   const hd = unitsIn(g, opt.area).find((x) => x.heydte);
   if (hd && u.side === 'german') { chit(g, hd.chitId!).box = 'used'; hd.area = null; hd.str = 0; say(g, 'von der Heydte is relieved and becomes a regular battle asset'); }
   paradropReveal(g, opt.area, u, opt.cost);
 }
 function finishMove(g: Game, u: Unit, opt: Opt, bridgeBlown: boolean, step?: { left: boolean }) {
-  const bc = u.bcross, wasExploit = u.exploit && !u.reserve, m = g.moving?.id === u.id ? g.moving : null;
+  const bc = u.bcross, peiper = !!u.peiperFull, wasExploit = u.exploit && !u.reserve && !peiper, m = g.moving?.id === u.id ? g.moving : null;   // 18.3: Peiper's full move goes on step by step
   for (const a of opt.path.slice(1)) if (g.roadblocks[a] && g.roadblocks[a] !== u.side) delete g.roadblocks[a];   // 4.34 (2016): a roadblock goes when an enemy unit pays its penalty, not when a friendly unit enters
   u.bcross = false;                                                                          // 14.62a the marker goes when the unit next moves
   const from = u.area!, to = opt.area, last = connection(opt.path[opt.path.length - 2], to)!, enemy = other(u.side);
@@ -482,12 +482,12 @@ function finishMove(g: Game, u: Unit, opt: Opt, bridgeBlown: boolean, step?: { l
   say(g, `${u.name} ${areas.get(from)!.name} → ${areas.get(to)!.name} (${opt.cost} MP)`);
   g.moving = null;
   if (step && !opt.mustStop && u.area === to && !wasExploit && !u.adjOnly && !u.disorder && !u.unsupplied && ['movement', 'reaction', 'btMove'].includes(g.phase)) {   // one area at a time: it may go on with the points left
-    u.moved = false; u.spent = opt.cost; u.bcross = bc; g.moving = { id: u.id, left: step.left, steps: (m?.steps ?? 0) + opt.path.length - 1, fuel: !!(m?.fuel || opt.fuel) };
+    u.moved = false; u.spent = opt.cost; u.bcross = bc; if (peiper) { u.exploit = true; u.peiperFull = true; } g.moving = { id: u.id, left: step.left, steps: (m?.steps ?? 0) + opt.path.length - 1, fuel: !!(m?.fuel || opt.fuel) };
     if (!moveOptions(g, u.id).length) endMove(g);
   }
 }
 /** The block moving step by step stops here (or another block is chosen, or the phase ends): its move is over. */
-export function endMove(g: Game) { const m = g.moving; if (!m) return; const u = g.units.find((x) => x.id === m.id); if (u) { u.moved = true; u.spent = 0; } g.moving = null; }
+export function endMove(g: Game) { const m = g.moving; if (!m) return; const u = g.units.find((x) => x.id === m.id); if (u) { u.moved = true; u.spent = 0; if (u.peiperFull) { u.peiperFull = undefined; u.exploit = false; } } g.moving = null; }
 /** The movement allowance of a block (MP), for showing how many points a moving block has left. */
 export const allowance = (g: Game, u: Unit) => CUR.allowance?.(g, u) ?? (u.cls === 'armor' ? 6 : 3);
 /** Move a block. `step`: the table's one-area-at-a-time move, after which the block may go on with the points it has left (the AI and the tests move in one go). */
