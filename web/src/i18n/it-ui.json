@@ -3392,7 +3392,9 @@
   "Green Armor Strongpoint": "Caposaldo corazzato di reclute",
   "Elite Infantry Strongpoint": "Caposaldo di fanteria d'élite",
   "Veteran Infantry Strongpoint": "Caposaldo di fanteria veterano",
-  "Green Infantry Strongpoint": "Caposaldo di fanteria di reclute"
+  "Green Infantry Strongpoint": "Caposaldo di fanteria di reclute",
+  "End reinforcement": "Fine rinforzi",
+  "End admin": "Fine amministrativa"
  },
  "patterns": [
   [

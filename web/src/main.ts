@@ -689,7 +689,7 @@ function chitPanel(c: E.Chit): string {
 /* ---------- flow ---------- */
 const STEPS = ['Prepare', 'Move', 'Fight', 'Breakthrough', 'Supply'], STEP_OF: Record<E.Phase, number> = { deploy: 1, reinforcement: 0, admin: 0, movement: 1, strategic: 1, combat: 2, reaction: 2, btMove: 3, btCombat: 3, supply: 4 };
 /** The red button that ends the step. */
-const endLabel = () => (g.phase === 'deploy' ? ((left) => { const n = left.filter((u) => u.side === g.phasing).length; return n ? `Place ${n} more first` : left.length ? 'Finish the panel first' : 'End set-up'; })(VOL.pendingPlace(g).map((id) => g.units.find((x) => x.id === id)!).filter((u) => mine(u.side))) : `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`);
+const endLabel = () => (g.phase === 'reinforcement' ? 'End reinforcement' : g.phase === 'deploy' ? ((left) => { const n = left.filter((u) => u.side === g.phasing).length; return n ? `Place ${n} more first` : left.length ? 'Finish the panel first' : 'End set-up'; })(VOL.pendingPlace(g).map((id) => g.units.find((x) => x.id === id)!).filter((u) => mine(u.side))) : `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`);
 const other = E.other;
 /** The printed sequence of play (the step bar): Breakthrough covers its movement and its combat. */
 const PHASES = ['Reinforcement', 'Admin', 'Movement', 'Strategic', 'Combat', 'Reaction', 'Breakthrough', 'Supply'], PHASE_OF: Record<E.Phase, number> = { deploy: 2, reinforcement: 0, admin: 1, movement: 2, strategic: 3, combat: 4, reaction: 5, btMove: 6, btCombat: 6, supply: 7 };
@@ -1494,7 +1494,7 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
       const first = who === b.attacker && !b.ready?.includes(b.attacker);
       return { label: first ? 'Assets done' : who === b.attacker ? 'Begin combat' : 'Done', fn: why ? () => say(why) : go((x) => E.setReady(g, x, who)), dis: !!why };
     }
-    if (b.stage === 'done') return { label: 'Close battle', fn: () => { act(() => { lastFight = b.area; E.closeBattle(g); selArea = null; }); const m = E.mustFight(g); if (m.length && mine(g.phasing)) { const at = center(b.area); showAreas([[...m].sort((x, y) => center(x).distanceTo(at) - center(y).distanceTo(at))[0]]); } } };
+    if (b.stage === 'done') return { label: 'Close battle', fn: () => { act(() => { lastFight = b.area; E.closeBattle(g); selArea = null; selUnit = null; });      /* the battle's block card goes with it */ const m = E.mustFight(g); if (m.length && mine(g.phasing)) { const at = center(b.area); showAreas([[...m].sort((x, y) => center(x).distanceTo(at) - center(y).distanceTo(at))[0]]); } } };
     if (b.stage.endsWith('Choice') || b.stage === 'retreat' || b.stage === 'attFirst' || b.stage === 'loss') return null;
     return { label: `Roll ${STAGE_NAME[b.stage].toLowerCase()}`, fn: () => rollStage(g.battle!) };
   }

@@ -15,7 +15,7 @@ function objectives(g: E.Game, s: E.Side) {
 const objRows = (g: E.Game, s: E.Side) => objectives(g, s).map((o) => `<div class="vrow ${o.ok ? '' : 'cut'}"><span>${esc(o.name)} (${o.id})${o.ok ? '' : ' · cut off'}</span><b>+${o.pts}</b></div>`).join('') || '<p class="hint">None held.</p>';
 /** Big units of the other side destroyed by `s` (+1 VP each). */
 const kills = (g: E.Game, s: E.Side, face: (u: E.Unit) => string) => g.elimLarge.map((id) => g.units.find((u) => u.id === id)).filter((u): u is E.Unit => !!u && u.side !== s)
-  .map((u) => `<span class="vkill" title="${esc(u.name)}">${face({ ...u, str: u.max })}</span>`).join('') || '<small class="hint">none yet</small>';
+  .map((u) => `<span class="vkill" title="${esc(u.name)}">${face({ ...u, str: u.max })}</span>`).join('') || `<small class="hint">${g.over ? 'none' : 'none yet'}</small>`;
 const pos = (n: number) => 50 + Math.max(-10, Math.min(10, n)) * 4.6;
 
 /** The slim strip under the top bar; `open` is the handler key for tapping it. */

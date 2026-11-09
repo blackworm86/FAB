@@ -1071,3 +1071,4 @@ p.stepped { cursor: pointer; border-left: 3px solid transparent; padding-left: 8
 .tut-coach button.tut-go { background: var(--gold); color: #1a1608; border-color: var(--gold); }
 body:has(.tut-coach:not(.has-target):not(.is-menu)) #ui .c-bar.b { opacity: .35; pointer-events: none; }
 .tut-ring { border-width: 4px; box-shadow: 0 0 0 9999px #0007, 0 0 0 6px #e7b04a55, 0 0 22px var(--gold); }
+@media (min-width: 861px) { #dice { top: 132px; } }      /* below the battle header, which stays readable while the dice roll */

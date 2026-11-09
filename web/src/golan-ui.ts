@@ -147,7 +147,7 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
     if (mines) {
       const keys = G.minefieldOptions(g).map((k) => k.split('-').map(Number)), ends = [...new Set(keys.flat())];
       const second = (a: number) => keys.filter((k) => k.includes(a)).map((k) => (k[0] === a ? k[1] : k[0]));
-      out.push(`<div class="volpanel"><b>${ctx.ico('warn')} Minefields (14.02)</b><span>${mines} still to lay, on any boundary but the AT ditch, escarpment, river, Mt Hermon or rugged ones; no area may have two mined boundaries.</span><div class="row">${ctx.ubtn('Lay a minefield', () => ctx.pickArea('Minefield: first area', ends, (a) => ctx.pickArea(`Minefield from ${ctx.areaName(a)}: the area across the boundary`, second(a), (b) => G.placeMinefield(live(), a, b))), 'primary')}${ctx.btn('Place the rest for me', () => G.autoMinefields(live()))}</div></div>`);
+      out.push(`<div class="volpanel"><b>${ctx.ico('warn')} Minefields (14.02)</b><span>${mines} still to lay, on any boundary but the AT ditch, escarpment, river, Mt Hermon or rugged ones; no area may have two mined boundaries.</span><div class="row">${ctx.ubtn('Lay a minefield', () => ctx.pickArea('Minefield: first area', ends, (a) => ctx.pickArea(`Minefield from ${ctx.areaName(a)}: the area across the boundary`, second(a), (b) => G.placeMinefield(live(), a, b))), sp ? '' : 'primary')}${ctx.btn('Place the rest for me', () => G.autoMinefields(live()))}</div></div>`);
     }
   }
   for (const sd of E.sidesOf(g)) {                                                                   // reserve markers placed at set-up (22.25, 20.34-20.35, 22.44)
