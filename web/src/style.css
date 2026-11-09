@@ -1051,3 +1051,6 @@ p.stepped { cursor: pointer; border-left: 3px solid transparent; padding-left: 8
 }
 /* picture tiles in a volume prompt (Golan 15.2 release): the block and its name, as the card chips */
 .volpanel .cbchips .pc { width: 66px !important; height: auto !important; min-height: 0; } .volpanel .cbchips .pc .b3 { --s: 38px !important; margin: 4px auto 14px; } .volpanel .cbchips .pc small { display: block; font-size: 10px; line-height: 1.1; }
+/* messages never share the map's top-left corner (legend, layer bar, phone tools): when they move up, they sit top right; on a phone they stay out of the way (the log is in the Menu) */
+.feed.top, .stage:has(.c-dispatch, .c-ledger) .feed { left: auto; right: 12px; justify-items: end; }
+@media (max-width: 700px) { .feed.top { display: none; } }
