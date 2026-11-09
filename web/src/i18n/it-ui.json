@@ -3407,7 +3407,11 @@
   "Out of supply (stripes)": "Non rifornito (a righe)",
   "AL": "AL",
   "Tap one in the tray, or use the panel.": "Toccane uno nel vassoio, oppure usa il pannello.",
-  "Click one in the tray, or use the panel.": "Scegline uno nel vassoio, oppure usa il pannello."
+  "Click one in the tray, or use the panel.": "Scegline uno nel vassoio, oppure usa il pannello.",
+  "last action (Ctrl+Z)": "ultima azione (Ctrl+Z)",
+  "German, Allied, both, watching": "Tedeschi, Alleati, entrambi, spettatore",
+  "Syrian, Israeli, both, watching": "Siriani, Israeliani, entrambi, spettatore",
+  "Allied, Axis, both, watching": "Alleati, Asse, entrambi, spettatore"
  },
  "patterns": [
   [
@@ -5753,26 +5757,6 @@
   [
    "The Germans control (\\d+) of (\\d+) Zone 6 areas",
    "I tedeschi controllano $1 di $2 aree della Zona 6"
-  ],
-  [
-   "Final score: German (\\d+), (\\w+) (\\d+) · net (.+)",
-   "Punteggio finale: tedesco $1, $2 $3 · netto $4"
-  ],
-  [
-   "Final score: Allied (\\d+), (\\w+) (\\d+) · net (.+)",
-   "Punteggio finale: alleato $1, $2 $3 · netto $4"
-  ],
-  [
-   "Final score: Syrian (\\d+), (\\w+) (\\d+) · net (.+)",
-   "Punteggio finale: siriano $1, $2 $3 · netto $4"
-  ],
-  [
-   "Final score: Israeli (\\d+), (\\w+) (\\d+) · net (.+)",
-   "Punteggio finale: israeliano $1, $2 $3 · netto $4"
-  ],
-  [
-   "Final score: Axis (\\d+), (\\w+) (\\d+) · net (.+)",
-   "Punteggio finale: dell'Asse $1, $2 $3 · netto $4"
   ],
   [
    "END OF GAME · SUDDEN DEATH, TURN (\\d+)",
@@ -8965,6 +8949,118 @@
   [
    "SUDDEN DEATH\\n(\\w+) / (\\w+)",
    "VITTORIA IMMEDIATA\n$1 / $2"
+  ],
+  [
+   "Final score: (\\w+) (\\d+), (\\w+) (\\d+) · net (\\w+) \\+(\\d+)",
+   "Punteggio finale: $1 $2, $3 $4 · netto $5 +$6"
+  ],
+  [
+   "Final score: (\\w+) (\\d+), (\\w+) (\\d+) · net even",
+   "Punteggio finale: $1 $2, $3 $4 · pari"
+  ],
+  [
+   "GERMAN MARGINAL VICTORY(.*)",
+   "VITTORIA MARGINALE TEDESCA$1"
+  ],
+  [
+   "GERMAN OPERATIONAL VICTORY(.*)",
+   "VITTORIA OPERATIVA TEDESCA$1"
+  ],
+  [
+   "GERMAN DECISIVE VICTORY(.*)",
+   "VITTORIA DECISIVA TEDESCA$1"
+  ],
+  [
+   "GERMAN STRATEGIC VICTORY(.*)",
+   "VITTORIA STRATEGICA TEDESCA$1"
+  ],
+  [
+   "GERMAN SUDDEN DEATH VICTORY(.*)",
+   "VITTORIA IMMEDIATA TEDESCA$1"
+  ],
+  [
+   "ALLIED MARGINAL VICTORY(.*)",
+   "VITTORIA MARGINALE ALLEATA$1"
+  ],
+  [
+   "ALLIED OPERATIONAL VICTORY(.*)",
+   "VITTORIA OPERATIVA ALLEATA$1"
+  ],
+  [
+   "ALLIED DECISIVE VICTORY(.*)",
+   "VITTORIA DECISIVA ALLEATA$1"
+  ],
+  [
+   "ALLIED STRATEGIC VICTORY(.*)",
+   "VITTORIA STRATEGICA ALLEATA$1"
+  ],
+  [
+   "ALLIED SUDDEN DEATH VICTORY(.*)",
+   "VITTORIA IMMEDIATA ALLEATA$1"
+  ],
+  [
+   "AXIS MARGINAL VICTORY(.*)",
+   "VITTORIA MARGINALE DELL'ASSE$1"
+  ],
+  [
+   "AXIS OPERATIONAL VICTORY(.*)",
+   "VITTORIA OPERATIVA DELL'ASSE$1"
+  ],
+  [
+   "AXIS DECISIVE VICTORY(.*)",
+   "VITTORIA DECISIVA DELL'ASSE$1"
+  ],
+  [
+   "AXIS STRATEGIC VICTORY(.*)",
+   "VITTORIA STRATEGICA DELL'ASSE$1"
+  ],
+  [
+   "AXIS SUDDEN DEATH VICTORY(.*)",
+   "VITTORIA IMMEDIATA DELL'ASSE$1"
+  ],
+  [
+   "SYRIAN MARGINAL VICTORY(.*)",
+   "VITTORIA MARGINALE SIRIANA$1"
+  ],
+  [
+   "SYRIAN OPERATIONAL VICTORY(.*)",
+   "VITTORIA OPERATIVA SIRIANA$1"
+  ],
+  [
+   "SYRIAN DECISIVE VICTORY(.*)",
+   "VITTORIA DECISIVA SIRIANA$1"
+  ],
+  [
+   "SYRIAN STRATEGIC VICTORY(.*)",
+   "VITTORIA STRATEGICA SIRIANA$1"
+  ],
+  [
+   "SYRIAN SUDDEN DEATH VICTORY(.*)",
+   "VITTORIA IMMEDIATA SIRIANA$1"
+  ],
+  [
+   "ISRAELI MARGINAL VICTORY(.*)",
+   "VITTORIA MARGINALE ISRAELIANA$1"
+  ],
+  [
+   "ISRAELI OPERATIONAL VICTORY(.*)",
+   "VITTORIA OPERATIVA ISRAELIANA$1"
+  ],
+  [
+   "ISRAELI DECISIVE VICTORY(.*)",
+   "VITTORIA DECISIVA ISRAELIANA$1"
+  ],
+  [
+   "ISRAELI STRATEGIC VICTORY(.*)",
+   "VITTORIA STRATEGICA ISRAELIANA$1"
+  ],
+  [
+   "ISRAELI SUDDEN DEATH VICTORY(.*)",
+   "VITTORIA IMMEDIATA ISRAELIANA$1"
+  ],
+  [
+   "(.*)\\((GERMAN|ALLIED|AXIS|SYRIAN|ISRAELI) (\\d+), (GERMAN|ALLIED|AXIS|SYRIAN|ISRAELI) (\\d+)\\)",
+   "$1($2 $3, $4 $5)"
   ]
  ],
  "html": {}
