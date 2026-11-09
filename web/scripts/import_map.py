@@ -130,8 +130,8 @@ zone = {a['id']: a['zone'] for a in out['areas']}; P_ = {a['id']: _P(a['polygon'
 from shapely.geometry import LineString as _L
 wet = unary_union([_L(pts_of(e, 24)).buffer(6) for e in layers['Rivers'] if tag(e) == 'path' and e.get('d')])   # where a river is the border, the print shows the river alone
 army = ''; army_segs = {}; army_by = {}
-def army_side(ln, i, j):                                                              # a dashed line 4 px to each side of the border, coloured by the zone it lies in
-    for d in (4.2, -4.2):
+def army_side(ln, i, j, off=4.2):                                                     # a dashed line to each side of the border, coloured by the zone it lies in
+    for d in (off, -off):
         o = ln.offset_curve(d)
         if o.is_empty or o.geom_type != 'LineString': continue
         m = o.interpolate(0.5, normalized=True); z = zone[i] if P_[i].distance(m) <= P_[j].distance(m) else zone[j]
@@ -139,7 +139,10 @@ def army_side(ln, i, j):                                                        
 for i in P_:
     for j in P_:
         if i < j and zone[i] != zone[j] and P_[i].distance(P_[j]) < 2:
-            g = P_[i].boundary.intersection(P_[j].buffer(2.5)).difference(wet)
+            full = P_[i].boundary.intersection(P_[j].buffer(2.5)); g = full.difference(wet)
+            wg = full.intersection(wet)                                                # along a river the white line gives way to the river, the zone dashes run on along its banks
+            for ln in (getattr(wg, 'geoms', None) or [wg]):
+                if ln.geom_type == 'LineString' and ln.length > 6: army_side(ln, i, j, 6.5)
             for ln in (getattr(g, 'geoms', None) or [g]):
                 if ln.geom_type == 'LineString' and ln.length > 6: army += '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in ln.coords) + '"/>'; army_side(ln, i, j); army_segs.setdefault(tuple(sorted((zone[i], zone[j]))), []).append((ln, i))
 ARMY = {5: '5th Panzer Army', 6: '6th Panzer Army', 7: '7th Army'}                     # as printed: each army's name along its boundary, on its own side, at the boundary's east end
