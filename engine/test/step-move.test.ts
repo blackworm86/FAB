@@ -62,3 +62,15 @@ describe('step moves', () => {
     void endPhase;
   });
 });
+
+describe('the computer moves one area at a time', () => {
+  it('a long computer move goes through every area of its route and takes control of the empty ones', async () => {
+    const { ai } = await import('../src');
+    const g = bulge(7); const u = g.units.find((x) => x.side === 'german' && x.cls === 'armor' && x.area != null && !x.garrison && moveOptions(g, x.id).some((o) => o.path.length >= 3 && !o.mustStop))!;
+    const o = moveOptions(g, u.id).find((x) => x.path.length >= 3 && !x.mustStop)!; for (const a of o.path.slice(1, -1)) if (!unitsIn(g, a).length) g.control[a] = 'allied';
+    ai.apply(g, ['move', u.id, o.area]);
+    expect(u.area).toBe(o.area); expect(u.moved).toBe(true); expect(g.moving ?? null).toBeNull();
+    for (const a of o.path.slice(1, -1)) if (!unitsIn(g, a).length) expect(g.control[a]).toBe('german');
+    expect(g.log.filter((l) => l.includes(u.name) && l.includes('→')).length).toBe(o.path.length - 1);   // one log line per step
+  });
+});

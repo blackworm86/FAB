@@ -19,6 +19,17 @@ import { CUR } from './volumes';
 export type Level = 'easy' | 'normal' | 'hard';
 /** One action, as data: `op` names an entry of `OPS` and its arguments; `run` applies it. */
 export type Op = [string, ...unknown[]];
+/** One area toward `to` by the cheapest way from where the block stands, as a player's step move (2.4 control, 5.34, fuel once).
+ *  Returns true while the block has more steps to go; at the end its move is closed. */
+export function walkStep(g: Game, id: string, to: number): boolean {
+  const opts = E.moveOptions(g, id), o = opts.find((x) => x.area === to); if (!o) { E.endMove(g); return false; }
+  const next = o.path.slice(1).find((a) => opts.some((x) => x.area === a))!;                         // a full friendly area is passed through, not stopped in (5.1)
+  const r = E.move(g, id, next, true);
+  if (r !== 'moved' || g.moving?.id !== id || next === to) { if (g.moving?.id === id) E.endMove(g); return false; }
+  return true;
+}
+/** The computer's move, one area at a time. */
+export function walk(g: Game, id: string, to: number) { for (let i = 0; i < 20 && walkStep(g, id, to); i++); }
 export interface Action { label: string; unit?: string; area?: number; chit?: string; roll?: boolean; op: Op; run: (g: Game) => void }
 type Est = { str: number; q: Quality; cls: 'armor' | 'infantry' };
 const QW: Record<Quality, number> = { green: 0.8, veteran: 1, elite: 1.25 };
@@ -45,7 +56,7 @@ const OPS: Record<string, OpFn> = {
   releaseDivision: (g, d: string, sa: string) => S.releaseDivision(g, d, sa), releaseOperationalReserve: (g, sa: string) => G.releaseOperationalReserve(g, sa), releaseGolani: (g, sa: string) => G.releaseGolani(g, sa), freeThe33rd: (g, sa: string) => G.freeThe33rd(g, sa),
   repairBridge: (g, c: string, a: number, to: number) => E.repairBridge(g, c, a, to), greifBridge: (g, c: string, a: number, b: number) => E.playGreifBridge(g, c, a, b), interdict: (g, c: string, u: string) => E.playInterdict(g, c, u),
   bodenplatte: (g, c: string) => E.playBodenplatte(g, c), heydteDrop: (g, c: string, a: 31 | 52) => E.heydteDrop(g, c, a), staffReserve: (g, c: string, u: string) => E.staffReserve(g, c, u), activateBreakthrough: (g, u: string) => E.activateBreakthrough(g, u),
-  move: (g, u: string, a: number) => E.move(g, u, a), setReserve: (g, u: string) => { const had = !!g.units.find((x) => x.id === u)?.interdict; try { E.setReserve(g, u, true); } catch (e) { if (!had) throw e; } },   /* a failed Greif interdict check (17.11) is an outcome, not an illegal action */ setPeiperFull: (g, u: string) => E.setPeiperFull(g, u, true), stratMove: (g, u: string, a: number) => E.stratMove(g, u, a),
+  move: (g, u: string, a: number) => walk(g, u, a), setReserve: (g, u: string) => { const had = !!g.units.find((x) => x.id === u)?.interdict; try { E.setReserve(g, u, true); } catch (e) { if (!had) throw e; } },   /* a failed Greif interdict check (17.11) is an outcome, not an illegal action */ setPeiperFull: (g, u: string) => E.setPeiperFull(g, u, true), stratMove: (g, u: string, a: number) => E.stratMove(g, u, a),
   airDrop: (g, u: string, a: number | null) => S.airDrop(g, u, a), startBattle: (g, a: number, viaSA: boolean) => E.startBattle(g, a, viaSA),
   assign: (g, c: string, mode?: 'arty' | 'support', engFw?: boolean) => { E.assign(g, g.battle!, c, mode); if (engFw) E.setEngFw(g, g.battle!, true); },
   passSA: (g) => E.passSA(g, g.battle!), setPoint: (g, side: Side, u: string) => E.setPoint(g, g.battle!, side, u), setReady: (g, side: Side) => E.setReady(g, g.battle!, side), closeBattle: (g) => E.closeBattle(g),

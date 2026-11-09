@@ -8,7 +8,6 @@ import { loadSicilyChitArt } from './sicily-art';
 import { useVolume, figKit, type LabelBox } from './vol';
 import type { PanelCtx } from './golan-ui';
 import { History } from './history';
-import { figure } from './figures3d';
 import * as SB from './sandbox';
 import { vpStrip, vpSheet, endPanel } from './score';
 import * as SBU from './sandbox-ui';
@@ -274,8 +273,6 @@ const texQueue: [THREE.Texture, string][] = [];
 function pumpTextures() { for (let n = 0; n < 6 && texQueue.length; n++) { const [t, src] = texQueue.shift()!; const im = new Image(); im.onload = () => { t.image = im; t.needsUpdate = true; lastInput = performance.now(); }; im.src = src; } }
 const svgTex = (key: string, svg: string) => { if (!labelTex.has(key)) { const t = new THREE.Texture(); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; texQueue.push([t, 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)]); labelTex.set(key, t); } return labelTex.get(key)!; };
 
-const FIGURES = (() => { try { return localStorage.getItem('fab-figures') === '1'; } catch { return false; } })();
-/* mockup only (docs/PARALLEL.md §3): draws the listed blocks as guns; goes when artillery figures are real */ const MOCKGUN = (() => { try { return localStorage.getItem('fab-fig-gun') ?? ''; } catch { return ''; } })();
 function block(u: E.Unit, hidden = false) {
   const flat = hidden && !!u.untried;                                   // Sicily 15.3: an untried garrison lies face down on the table, its label against the map
   const w = 1.6, h = 1.6, d = 0.8;                                    // 16 x 16 x 8 mm block
@@ -284,7 +281,6 @@ function block(u: E.Unit, hidden = false) {
     const chit = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new RoundedBoxGeometry(1.43, 0.12, 1.43, 2, 0.1), [chit, chit, new THREE.MeshStandardMaterial({ map: svgTex(u.id, VOL.unitSvg(u, g)), roughness: 0.7 }), chit, chit, chit]);      // a counter, like the other chits // 9/16 in chit
     m.position.y = 0.06; m.castShadow = true; m.rotation.y = viewRot(); return m;
   }
-  if (FIGURES && !flat) { const f = figure(hidden ? 'hidden' : MOCKGUN.includes(u.id) ? 'gun' : u.cls === 'armor' ? 'tank' : 'infantry', VOL.cssSide(u), wood.color.getHex(), hidden ? null : svgTex(`${u.id}-${u.str}`, VOL.unitSvg(u, g))); f.rotation.y = viewRot(); return f; }
   const face = hidden ? wood : new THREE.MeshStandardMaterial({ map: svgTex(`${u.id}-${u.str}`, VOL.unitSvg(u, g)), roughness: 0.6 });   // upright blocks show their blank back to the enemy
   const m = new THREE.Mesh(flat ? new THREE.BoxGeometry(w, d, h) : new THREE.BoxGeometry(w, h, d), [wood, wood, wood, wood, face, wood]); m.rotation.y = viewRot();
   m.position.y = (flat ? d : h) / 2; m.castShadow = true;
@@ -435,7 +431,7 @@ function drawPieces() {
     if (lab.some((l) => lay.spots.some((p) => Math.hypot(p.x - l.x, p.z - l.z) < l.r + 0.7))) coveredLabels.add(a.id);          // no room: the area's number and name ride on a tag above
     order.forEach((u, n) => {
       const hid = faceDown(u), m = block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
-      const flat = !FIGURES && cont && !hid && !u.garrison && u.up === a.id;                                                           // revealed blocks lie flat, label up, while the area is contested
+      const flat = cont && !hid && !u.garrison && u.up === a.id;                                                           // revealed blocks lie flat, label up, while the area is contested
       m.position.x = p.x; m.position.z = p.z;
       if (flat) { m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, viewRot(), 0); m.position.y = 0.4; }
       if (tgt?.units.has(u.id)) { const ring = new THREE.Mesh(new THREE.RingGeometry(1.15, 1.45, 40), new THREE.MeshBasicMaterial({ color: MAPC.ring, transparent: true, opacity: 0.95, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(p.x, 0.09, p.z); markers.add(ring); const glow = new THREE.Mesh(new THREE.CircleGeometry(1.15, 40), new THREE.MeshBasicMaterial({ color: MAPC.ring, transparent: true, opacity: 0.28 })); glow.rotation.x = -Math.PI / 2; glow.position.set(p.x, 0.085, p.z); markers.add(glow); }
@@ -842,6 +838,11 @@ async function cpuStep() {
   cpuLast = a.label; cpuActing = true; cpuNote(a); cpuSummary = '';
   try {
     if (a.roll && g.battle && !['loss', 'retreat', 'attChoice', 'defChoice', 'attFirst', 'setup', 'done'].includes(g.battle.stage)) rollStage(g.battle);     // the dice are thrown on screen, as for a player
+    else if (a.op[0] === 'move') {                                                                       // one area at a time, as a player moves: each step is seen
+      const [, id, to] = a.op as [string, string, number]; cpuThinking = true;
+      try { for (let i = 0; i < 20; i++) { let more = false; act(() => { more = E.ai.walkStep(g, id, to); }); const at = g.units.find((x) => x.id === id)?.area; if (at != null && followFoe && !lock && !g.battle) lookAt(at); if (!more || g.pendingBlow) break; render(); const mark = g.log.length; cpuActing = false; await new Promise((ok) => setTimeout(ok, 450 * cpuPace())); cpuActing = true; if (g.log.length !== mark || g.over) break; } }   // the player's own clicks stay theirs while the block walks
+      finally { cpuThinking = false; }
+    }
     else { const run = a.run; if (a.area != null && followFoe && !lock && !g.battle) lookAt(a.area); act(() => { run(g); }); }
   } finally { cpuActing = false; }
   hist.clear('the computer moved');                                                                   // a player's undo never reaches back past the computer's moves
