@@ -124,18 +124,24 @@ open('docs/maps/vector/import-report.txt', 'w').write('\n'.join(report) or 'no d
 import base64, os
 GP = 'docs/maps/vector/map-ground.jpg'                                                               # the print's paper washes and woods, redrawn by tools/bulge/ground.py
 woods_g = f'<clipPath id="land"><path fill-rule="evenodd" d="{land_d}"/></clipPath><g id="woods" clip-path="url(#land)"><image href="data:image/jpeg;base64,{base64.b64encode(open(GP, "rb").read()).decode()}" x="0" y="0" width="{W}" height="{H}" preserveAspectRatio="none"/></g>' if os.path.exists(GP) else '<g id="woods"></g>'
-# army boundaries: the white border edged with dashes in the two zones' colours, alternating, where areas of two army zones meet
+# army boundaries: the white border with a dashed line on each side in that side's zone colour, where areas of two army zones meet
 from shapely.geometry import Polygon as _P
 zone = {a['id']: a['zone'] for a in out['areas']}; P_ = {a['id']: _P(a['polygon']).buffer(0) for a in out['areas']}
 from shapely.geometry import LineString as _L
 wet = unary_union([_L(pts_of(e, 24)).buffer(6) for e in layers['Rivers'] if tag(e) == 'path' and e.get('d')])   # where a river is the border, the print shows the river alone
 army = ''; army_segs = {}; army_by = {}
+def army_side(ln, i, j):                                                              # a dashed line 4 px to each side of the border, coloured by the zone it lies in
+    for d in (4.2, -4.2):
+        o = ln.offset_curve(d)
+        if o.is_empty or o.geom_type != 'LineString': continue
+        m = o.interpolate(0.5, normalized=True); z = zone[i] if P_[i].distance(m) <= P_[j].distance(m) else zone[j]
+        army_by[z] = army_by.get(z, '') + '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in o.coords) + '"/>'
 for i in P_:
     for j in P_:
         if i < j and zone[i] != zone[j] and P_[i].distance(P_[j]) < 2:
             g = P_[i].boundary.intersection(P_[j].buffer(2.5)).difference(wet)
             for ln in (getattr(g, 'geoms', None) or [g]):
-                if ln.geom_type == 'LineString' and ln.length > 6: pth = '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in ln.coords) + '"/>'; army += pth; army_by[tuple(sorted((zone[i], zone[j])))] = army_by.get(tuple(sorted((zone[i], zone[j]))), '') + pth; army_segs.setdefault(tuple(sorted((zone[i], zone[j]))), []).append((ln, i))
+                if ln.geom_type == 'LineString' and ln.length > 6: army += '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in ln.coords) + '"/>'; army_side(ln, i, j); army_segs.setdefault(tuple(sorted((zone[i], zone[j]))), []).append((ln, i))
 ARMY = {5: '5th Panzer Army', 6: '6th Panzer Army', 7: '7th Army'}                     # as printed: each army's name along its boundary, on its own side, at the boundary's east end
 def army_caption(ln, za, zb):
     from shapely.geometry import LineString as _LS
@@ -173,7 +179,7 @@ base = f'''{head}
 </svg>'''
 lines = f'''{head}
 <g id="boundaries" fill="none" stroke="#fbfbf6" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">{bnd}</g>
-<g id="army" fill="none" stroke-linecap="butt" stroke-linejoin="round" stroke-width="9">{''.join(f'<g stroke="{ZONE_FILL[za]}" stroke-dasharray="8 18">{d}</g><g stroke="{ZONE_FILL[zb]}" stroke-dasharray="8 18" stroke-dashoffset="-13">{d}</g>' for (za, zb), d in army_by.items())}<g stroke="#fbfbf6" stroke-width="3.4">{army}</g></g>
+<g id="army" fill="none" stroke-linecap="butt" stroke-linejoin="round"><g stroke="#fbfbf6" stroke-width="3.4">{army}</g><g stroke-width="4" stroke-dasharray="8 5">{''.join(f'<g stroke="{ZONE_FILL[z]}">{d}</g>' for z, d in army_by.items())}</g></g>
 <g id="army-names" stroke="#eef0e6" stroke-width="2.4" paint-order="stroke">{army_text}</g>
 <g id="zone-strips">{zone_strips}</g>
 <g id="rivers" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#ffffff">{rivers_c}</g><g stroke="#1c78c0">{rivers}</g></g>
