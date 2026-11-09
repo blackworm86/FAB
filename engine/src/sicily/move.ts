@@ -13,6 +13,7 @@ export interface SMoveUnit {
   untried?: boolean;           // 15.3a an untried garrison: never into an enemy-occupied area
   allowed?: Set<string>;       // 14.3: the army zones this Allied unit may operate in (undefined: no restriction)
   extract?: boolean;           // 17.12: a German unit moving under the Tactical Extract
+  leftContested?: boolean;     // moving one area at a time, it started in a contested area (15.1: then it moves as infantry)
 }
 export interface SMoveCtx {
   units: (a: number) => Record<SSide, number>;                 // blocks and standing assets by side
@@ -33,7 +34,7 @@ export const allowanceOf = (u: { cls: 'armor' | 'infantry'; motorized?: boolean 
 export function reachable(u: SMoveUnit, ctx: SMoveCtx): SReach[] {
   const enemy = enemyOf(u.side), occ = ctx.units, spent = u.spent ?? 0;
   const startContested = occ(u.area).allied > 0 && occ(u.area).axis > 0;
-  const allowance = allowanceOf(u, startContested);
+  const allowance = allowanceOf(u, startContested || !!u.leftContested);
   const adjacentOnly = !(u.supplied ?? true) || !!u.disordered || !!u.adjacentOnly || !!u.extract;     // 9.33a; 17.12 is one step
   const best = new Map<number, SReach>([[u.area, { area: u.area, cost: spent, path: [u.area], mustStop: false }]]);
   const todo = [u.area];

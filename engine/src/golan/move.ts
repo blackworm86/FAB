@@ -7,6 +7,7 @@ export interface GMoveUnit {
   slowField?: boolean;         // optional T-62: +1 MP to cross a field connection
   side: GSide; cls: 'armor' | 'infantry'; area: number;
   supplied?: boolean; disordered?: boolean;
+  areasMoved?: number;         // areas already entered this move (one area at a time): the 14.03 night limit counts them
   immobile?: boolean;          // strongpoints and ghosts (15.6, 15.7), garrisons
   adjacentOnly?: boolean;      // exploitation / Special Action breakthrough move (7.31)
   spent?: number;              // MP already used this phase (a failed minefield attempt, 14.02)
@@ -94,7 +95,7 @@ export function reachable(u: GMoveUnit, ctx: GMoveCtx): GReach[] {
   if (u.immobile) return [];
   const syrianNight = (ctx.night ?? ctx.turn === 2) && u.side === 'syrian';                                     // 14.03
   const allowance = syrianNight ? (u.cls === 'armor' ? 4 : 1) : u.cls === 'armor' ? 6 : 3;
-  const maxAreas = syrianNight ? (u.cls === 'armor' ? 2 : 1) : Infinity;
+  const maxAreas = (syrianNight ? (u.cls === 'armor' ? 2 : 1) : Infinity) - (u.areasMoved ?? 0);
   const spent = u.spent ?? 0, enemy = enemyOf(u.side);
   const contested = (a: number) => !isAssembly(a) && ctx.units(a).israeli > 0 && ctx.units(a).syrian > 0;
   const startContested = contested(u.area);

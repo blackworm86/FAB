@@ -93,7 +93,9 @@ export interface Game {
   turn: number; lastTurn: number; phasing: Side; phase: Phase; units: Unit[]; chits: Chit[]; control: Record<number, Side>;
   fieldWorks: number[]; fwOwner: Record<number, Side>; riverAssault: number[]; blown: string[]; contestedAtMoveStart: number[]; fought: number[];
   markers: Record<Side, Record<string, number>>; stratMoves: number; riverCross: string[]; blowTried: number[]; entered: Record<number, { id: string; river: boolean; blown: boolean }[]>;
-  pendingBlow: { unit: string; path: number[]; spent?: number; fuel?: boolean } | null; greif: Record<string, string>; greifTried: string[]; fwBuilt: string[]; tfNew: string[]; elimLarge: string[]; captured: number[]; fuelAdded: boolean; opts: Opts;
+  pendingBlow: { unit: string; path: number[]; spent?: number; fuel?: boolean } | null;
+  /** The block moving step by step (one area at a time) and may still go on: whether it left a contested area (5.34), the areas entered so far, whether it paid fuel (16.13). */
+  moving?: { id: string; left: boolean; steps: number; fuel: boolean } | null; greif: Record<string, string>; greifTried: string[]; fwBuilt: string[]; tfNew: string[]; elimLarge: string[]; captured: number[]; fuelAdded: boolean; opts: Opts;
   roadblocks: Record<number, Side>; interdicted: Record<number, string>; pooled: number | null; airSupply: { area: number; side: Side; id: string; stamp: number } | null; revealed: string | null; arrived: string[]; pendingArrivals: string[];
   recover: Side[];
   battle: Battle | null; seed: number; rolls: number; log: string[]; over?: string;
@@ -401,11 +403,12 @@ export function placeTaskForce(g: Game, id: string, area: number) {
 const bulgeMarkerKey = (_g: Game, u: Unit) => (u.side === 'german' ? `z${zoneOf(u.area!)}` : zoneOf(u.area!) === 7 ? 'z7' : 'z56');
 const markerKey = (g: Game, u: Unit) => CUR.markerKey(g, u);
 export function canReserve(g: Game, u: Unit) {
-  return u.area != null && !u.garrison && !u.fort && (!u.ghost || !!CUR.ghostsMove?.(g)) && !u.reserve && !u.moved && !u.unsupplied && u.disorder === 0 && !contested(g, u.area) && (g.markers[u.side]?.[markerKey(g, u)] ?? 0) > 0 && (CUR.reserveOk?.(g, u) ?? true);
+  return g.moving?.id !== u.id && u.area != null && !u.garrison && !u.fort && (!u.ghost || !!CUR.ghostsMove?.(g)) && !u.reserve && !u.moved && !u.unsupplied && u.disorder === 0 && !contested(g, u.area) && (g.markers[u.side]?.[markerKey(g, u)] ?? 0) > 0 && (CUR.reserveOk?.(g, u) ?? true);
 }
 /** 3.22 / 5.21: the Phasing Player marks reserves in his Operational Movement Phase; `anyTime` is for Command Staff 8.33 and set-ups. */
 export function setReserve(g: Game, id: string, on: boolean, anyTime = false) {
   const u = g.units.find((x) => x.id === id)!;
+  if (on && g.moving && g.moving.id !== id) endMove(g);
   if (on && !anyTime && (g.phase !== 'movement' || u.side !== g.phasing)) throw new Error('reserves are marked by the phasing player in his Movement Phase (5.21)');
   if (on) { if (!canReserve(g, u)) throw new Error('no eligible reserve marker for this unit'); if (u.interdict && !interdictCheck(g, u)) { u.adjOnly = true; throw new Error('Greif interdict: morale check failed, it cannot be placed in reserve'); } const k = markerKey(g, u); g.markers[u.side][k]--; u.reserve = k; CUR.onReserve?.(g, u); }
   else if (u.reserve) { g.markers[u.side][u.reserve]++; u.reserve = null; }
@@ -426,7 +429,10 @@ export function moveOptions(g: Game, id: string): Opt[] {
   if (!ok) return [];
   const enemy = other(u.side), one = exploit && !reserveBt && !u.peiperFull;                            // 18.3 KG Peiper may use its full allowance once
   let r = CUR.reach(g, u, one);
-  if (exploit && !reserveBt) r = r.filter((x) => !x.path.some((p, i) => i > 0 && g.blown.includes(keyOf(x.path[i - 1], p))));                        // 7.31 no crossing of a blown bridge
+  if (exploit && !reserveBt) r = r.filter((x) => !x.path.some((p, i) => i > 0 && g.blown.includes(keyOf(x.path[i - 1], p))));
+  const mv = g.moving?.id === u.id ? g.moving : null;
+  if (mv?.left) r = r.filter((x) => !unitsIn(g, x.area, other(u.side)).length);                        // 5.34: having left a contested area, it may neither enter nor create another one
+  if (mv?.fuel) r = r.map((x) => ({ ...x, fuel: false }));                                             // 16.13: the move's fuel is already paid                        // 7.31 no crossing of a blown bridge
   return r.filter((x) => {
     if (CUR.moveOk && !CUR.moveOk(g, u, x.area)) return false;
     if (!roomFor(g, u, x.area)) return false;                                                          // 5.1
@@ -445,7 +451,7 @@ function bulgeReach(g: Game, u: Unit, one: boolean): Opt[] {
   const r = reachable({ side: u.side as 'german' | 'allied', cls: u.cls, area: u.area!, supplied: !u.unsupplied, disordered: u.disorder > 0, adjacentOnly: one || !!u.adjOnly, spent: u.spent, ownZone: one ? undefined : (ARMY(u) as 5 | 6 | 7 | undefined), boundaryPreauthorized: u.bcross },
     { occupants: occ, blownBridges: new Set(g.blown), roadblocks: new Set([...garr, ...markerAreas(g, enemy)]), enemyAssets: (a) => garr.has(a), controller: (a) => g.control[a] as 'german' | 'allied' | undefined,
       extraCost: (f, t) => (markerAreas(g, enemy).includes(t) ? 1 : 0) + (unitsIn(g, t).length && !blocks(g, t, 'german').length && !blocks(g, t, 'allied').length ? 1 : 0) + (u.side === 'german' ? (g.interdicted[f] ? 1 : 0) + (g.interdicted[t] ? 1 : 0) : 0) });   // 17.21: +1 to enter and +1 to leave
-  return r.filter((x) => !(u.side === 'german' && x.fuel && g.opts.fuel && !fuelChits(g).length));    // 16.13
+  return r.filter((x) => !(u.side === 'german' && x.fuel && g.opts.fuel && !fuelChits(g).length && !(g.moving?.id === u.id && g.moving.fuel)));    // 16.13
 }
 /** 17.11 Greif interdict: the unit rolls morale before it moves; failing, it may only move one area. */
 function bulgeBeforeMove(g: Game, u: Unit, opt: Opt) { if (u.interdict && !interdictCheck(g, u) && opt.path.length > 2) { u.adjOnly = true; return 'interdict'; } }
@@ -458,7 +464,8 @@ function bulgeAfterMove(g: Game, u: Unit, opt: Opt) {
   if (hd && u.side === 'german') { chit(g, hd.chitId!).box = 'used'; hd.area = null; hd.str = 0; say(g, 'von der Heydte is relieved and becomes a regular battle asset'); }
   paradropReveal(g, opt.area, u, opt.cost);
 }
-function finishMove(g: Game, u: Unit, opt: Opt, bridgeBlown: boolean) {
+function finishMove(g: Game, u: Unit, opt: Opt, bridgeBlown: boolean, step?: { left: boolean }) {
+  const bc = u.bcross, wasExploit = u.exploit && !u.reserve, m = g.moving?.id === u.id ? g.moving : null;
   for (const a of opt.path.slice(1)) if (g.roadblocks[a] && g.roadblocks[a] !== u.side) delete g.roadblocks[a];   // 4.34 (2016): a roadblock goes when an enemy unit pays its penalty, not when a friendly unit enters
   u.bcross = false;                                                                          // 14.62a the marker goes when the unit next moves
   const from = u.area!, to = opt.area, last = connection(opt.path[opt.path.length - 2], to)!, enemy = other(u.side);
@@ -472,8 +479,19 @@ function finishMove(g: Game, u: Unit, opt: Opt, bridgeBlown: boolean) {
   CUR.afterMove?.(g, u, opt);
   updateControl(g, from); updateControl(g, to);
   say(g, `${u.name} ${areas.get(from)!.name} → ${areas.get(to)!.name} (${opt.cost} MP)`);
+  g.moving = null;
+  if (step && !opt.mustStop && u.area === to && !wasExploit && !u.adjOnly && !u.disorder && !u.unsupplied && ['movement', 'reaction', 'btMove'].includes(g.phase)) {   // one area at a time: it may go on with the points left
+    u.moved = false; u.spent = opt.cost; u.bcross = bc; g.moving = { id: u.id, left: step.left, steps: (m?.steps ?? 0) + opt.path.length - 1, fuel: !!(m?.fuel || opt.fuel) };
+    if (!moveOptions(g, u.id).length) endMove(g);
+  }
 }
-export function move(g: Game, id: string, to: number) {
+/** The block moving step by step stops here (or another block is chosen, or the phase ends): its move is over. */
+export function endMove(g: Game) { const m = g.moving; if (!m) return; const u = g.units.find((x) => x.id === m.id); if (u) { u.moved = true; u.spent = 0; } g.moving = null; }
+/** The movement allowance of a block (MP), for showing how many points a moving block has left. */
+export const allowance = (g: Game, u: Unit) => CUR.allowance?.(g, u) ?? (u.cls === 'armor' ? 6 : 3);
+/** Move a block. `step`: the table's one-area-at-a-time move, after which the block may go on with the points it has left (the AI and the tests move in one go). */
+export function move(g: Game, id: string, to: number, step = false) {
+  if (g.moving && g.moving.id !== id) endMove(g);                                                 // another block: the one moving before is done for good
   if (g.pendingBlow) throw new Error('resolve the bridge-blowing attempt first');
   const opt = moveOptions(g, id).find((x) => x.area === to); if (!opt) throw new Error('illegal move');
   const u = g.units.find((x) => x.id === id)!;
@@ -483,7 +501,7 @@ export function move(g: Game, id: string, to: number) {
   if (last.river && (CUR.id !== 'golan73' || last.type === 'road') && !g.blown.includes(keyOf(prev, to)) && newly && !g.blowTried.includes(to) && (g.phase === 'movement' || g.phase === 'btMove')) {   // Golan 14.41: no bridge on a field connection
     g.pendingBlow = { unit: id, path: opt.path, fuel: opt.fuel || undefined, spent: (moveOptions(g, id).find((x) => x.area === opt.path[opt.path.length - 2])?.cost ?? 0) }; return 'blow';                                       // 5.35d the opponent may try to blow the bridge
   }
-  finishMove(g, u, opt, false); return 'moved';
+  finishMove(g, u, opt, false, step ? { left: g.moving?.id === id ? g.moving.left : contested(g, u.area!) } : undefined); return 'moved';
 }
 export function resolveBlow(g: Game, attempt: boolean) {
   const p = g.pendingBlow!; g.pendingBlow = null;
@@ -702,6 +720,8 @@ function paradropReveal(g: Game, area: number, mover: Unit, cost: number) {
 }
 export function buildFieldWorks(g: Game, id: string) {
   const u = g.units.find((x) => x.id === id)!;
+  if (g.moving?.id === id) throw new Error('it has started moving: no field works (5.23)');
+  if (g.moving) endMove(g);
   const ok = (g.phase === 'movement' && u.side === g.phasing) || (g.phase === 'reaction' && u.side !== g.phasing && !!u.reserve) || (g.phase === 'btMove' && u.side === g.phasing && (!!u.reserve || u.exploit));
   if (!ok || u.moved || u.area == null || u.garrison || u.fort || u.ghost || u.unsupplied || u.disorder || contested(g, u.area) || g.fieldWorks.includes(u.area)) throw new Error('needs a supplied unit in good order that has not moved, in an uncontested area without field works');
   if (u.interdict && !interdictCheck(g, u)) { u.adjOnly = true; throw new Error('Greif interdict: morale check failed, it cannot build field works'); }
@@ -1249,6 +1269,7 @@ export function setDone(g: Game, side: Side, on = true) { const d = (g.done ?? [
 export function endPhase(g: Game) {
   useGame(g.game ?? 'bulge'); setPlayArea(g.inPlay);
   if (g.phase === 'supply' && g.supplyPending) rollSupply(g);
+  endMove(g);
   settleUp(g);
   if (g.over) return;
   if (g.recover.length) throw new Error('choose the assets to recover first (4.1a)');
