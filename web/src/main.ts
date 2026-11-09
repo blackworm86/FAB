@@ -683,8 +683,8 @@ const other = E.other;
 /** The printed sequence of play (the step bar): Breakthrough covers its movement and its combat. */
 const PHASES = ['Reinforcement', 'Admin', 'Movement', 'Strategic', 'Combat', 'Reaction', 'Breakthrough', 'Supply'], PHASE_OF: Record<E.Phase, number> = { deploy: 2, reinforcement: 0, admin: 1, movement: 2, strategic: 3, combat: 4, reaction: 5, btMove: 6, btCombat: 6, supply: 7 };
 /** Areas a battle can start in now. Breakthrough Combat (8.22): areas contested before movement only with a Special Action available. */
-const fightable = () => { const nw = g.phase === 'btCombat' ? new Set(E.newlyContested(g)) : null, sa = nw && E.saAvailable(g, g.phasing).length > 0;
-  return E.contestedAreas(g).filter((a) => !g.fought.includes(a) && (!nw || nw.has(a) || sa)); };
+const fightable = () => { const nw = g.phase === 'btCombat' ? new Set(E.newlyContested(g)) : null, sa = nw && (E.saAvailable(g, g.phasing).length > 0 || (VOL.id === 'golan73' && E.golan.freeRoundLeft(g))), first = E.firstBattle(g);
+  return E.contestedAreas(g).filter((a) => !g.fought.includes(a) && (!nw || nw.has(a) || sa) && (first == null || a === first) && E.fighters(g, a, g.phasing, true).some((u) => !u.garrison)); };   // an attacker in good order (strongpoints and assets never attack)
 function idle(): boolean {                                                // phases with nothing to do are skipped for the player
   const p = g.phasing, o = other(p), us = (s: E.Side) => g.units.filter((u) => u.side === s && u.area != null && !u.garrison);
   switch (g.phase) {
@@ -1456,7 +1456,7 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
   const must = E.mustFight(g);
   if (g.phase === 'combat' || g.phase === 'btCombat') {                                              // the player picks the battle and starts it; nothing opens by itself
     const sel = selArea != null && fightable().includes(selArea) ? selArea : null;
-    if (sel != null) return { label: `Fight ${areaName(sel)}`, fn: () => { selUnit = null; battleFx = []; rollFx = []; if (g.phase === 'btCombat' && !E.newlyContested(g).includes(sel)) pickSA(g.phasing, undefined, (sa) => E.startBattle(g, sel, true, sa)); else E.startBattle(g, sel, g.phase === 'btCombat'); } };
+    if (sel != null) return { label: `Fight ${areaName(sel)}`, fn: () => { selUnit = null; battleFx = []; rollFx = []; if (g.phase === 'btCombat' && !E.newlyContested(g).includes(sel) && !(VOL.id === 'golan73' && E.golan.freeRoundLeft(g))) pickSA(g.phasing, undefined, (sa) => E.startBattle(g, sel, true, sa)); else E.startBattle(g, sel, g.phase === 'btCombat'); } };
     if (must.length) return null;                                                                     // the prompt says: tap a red area
   }
   if (online.active && !online.both() && (g.phase === 'admin' || g.phase === 'reinforcement')) {            // both sides work in these steps: the other side says it is done, the Phasing Player ends the step

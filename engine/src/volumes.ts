@@ -129,9 +129,15 @@ export interface Volume {
   canAbort?: (g: Game, b: Battle) => string | null;
   /** The Special Actions a side may use now, after the volume's own rules (Sicily 17.11: Patton's two-event cost). */
   saFilter?: (g: Game, side: Side, list: Chit[], ech?: string) => Chit[];
+  /** Contested areas the volume makes mandatory this Combat Phase beyond the newly contested ones (Sicily 14.27a). */
+  mustFight?: (g: Game) => number[];
+  /** A retreat destination inside the unit's own operating zone (Sicily 14.43): such paths are tried first. */
+  retreatZone?: (g: Game, u: Unit, to: number) => boolean;
   onSpendSA?: (g: Game, side: Side, c: Chit) => void;
   /** A battle may be opened here outside a Combat Phase (Sicily's Flanking Invasion lands into a defended area in the Admin Phase, 17.22). */
   battleAllowed?: (g: Game, area: number) => boolean;
+  /** An area whose battle must be fought before any other this phase (Golan 15.3). */
+  firstBattle?: (g: Game) => number | undefined;
   /** May this unit take a reserve marker (beyond the series conditions)? */
   reserveOk?: (g: Game, u: Unit) => boolean;
   /** A committed asset other than a battle asset that may take a step loss (Golan 18.32: artillery in direct support). */
