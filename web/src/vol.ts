@@ -114,7 +114,7 @@ function golan(): VolView {
     R: () => golanChitSvg({ id: 'M03', kind: 'reserve_marker', side: 'syrian', name: 'Reserve' }), RI: () => golanChitSvg({ id: 'R', kind: 'reserve_marker', side: 'israeli', name: 'Reserve' }) };      // the Syrian one as printed
   return {
     id: 'golan73', name: "Golan '73", info, sides: ['syrian', 'israeli'], bottom: 'israeli', tag: info.tag, sideName: info.sideName,
-    wood: { ...GOLAN_WOOD }, ink: { syrian: '#8fc46a', israeli: '#6fd0ea' }, controlCol: { syrian: 0x4f9a4a, israeli: 0x3ab0d0 },
+    wood: { ...GOLAN_WOOD }, ink: { syrian: '#8fc46a', israeli: '#6fd0ea' }, controlCol: { syrian: 0x4f9a4a, israeli: 0xe6dfc0 },
     map: { size: m.size, areas, connections: m.connections, entries: (golanEntries as { letter: string; x: number; y: number }[]).map((e) => ({ ...e, side: 'syrian' })) },      // the letters sit in the printed triangles (tools/golan73/board.py)
     labels,
     art: { labelFace: { family: '"Crimson Pro", "Times New Roman", serif', style: 'normal', weight: 600, halo: '#ddd3ae', ink: '#2a2418' }, base: './golan73/map-base.svg', lines: './golan73/map-lines.svg', vpIcons: { syrian: './icons/vp-golan-syrian.svg', israeli: './icons/vp-mutual.svg', mutual: './icons/vp-mutual.svg' }, relief: './golan73/', reliefName: 'The Golan Heights in relief, from Mt Hermon to the Sea of Galilee, with contour lines', entryDark: () => false, sheetBoxes },
@@ -155,7 +155,7 @@ function sicily(): VolView {
   };
   return {
     id: 'sicily', name: 'Sicily', info, sides: ['allied', 'axis'], bottom: 'allied', tag: info.tag, sideName: info.sideName,
-    wood: { ...SICILY_WOOD, allied: SICILY_WOOD.us, axis: SICILY_WOOD.german }, ink: { allied: '#7fb3e8', axis: '#b9bcc0' }, controlCol: { allied: 0x3f7fc8, axis: 0x8a9096 },
+    wood: { ...SICILY_WOOD, allied: SICILY_WOOD.us, axis: SICILY_WOOD.german }, ink: { allied: '#7fb3e8', axis: '#b9bcc0' }, controlCol: { allied: 0xe6dfc0, axis: 0x8a9096 },
     map: { size: m.size, areas, connections: E.VOLUMES.sicily.map.connections, entries: [] },
     labels,
     art: { labelFace: { family: '"Crimson Pro", "Times New Roman", serif', style: 'italic', weight: 600, halo: '#e6dbbd', ink: '#22201a' }, base: './sicily/map-base.svg', lines: './sicily/map-lines.svg', vpIcons: { german: './icons/vp-german.svg', allied: './icons/vp-allied.svg', mutual: './icons/vp-mutual.svg' }, relief: './sicily/', reliefName: 'Sicily in relief, from the Etna to the western capes, with contour lines, groves and woods', entryDark: () => false },
