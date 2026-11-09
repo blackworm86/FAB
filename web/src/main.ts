@@ -1018,6 +1018,7 @@ function click(e: PointerEvent) {
   if (g.pendingBlow) return;
   if (selArr && area != null && arrOpts().some((o) => o.area === area)) { const id = selArr; selArr = null; return act(() => arrive(id, area)); }
   if (selUnit && area != null && optsFor(selUnit).some((o) => o.area === area)) { previewArea = area; return confirmMove(); }      // two taps: block, then where it goes (Undo takes it back)
+  if (selUnit && area != null && !unit && ['movement', 'strategic', 'reaction', 'btMove'].includes(g.phase)) { const u = g.units.find((x) => x.id === selUnit); if (u && u.area !== area && mine(u.side)) { say(`${areaName(area)}: ${u.name} cannot go there${u.moved ? ' (it has already moved)' : !optsFor(u.id).length ? ' (it has no move left)' : ' this move. The lit areas are where it can go'}.`, true); return; } }      // a tap that does nothing says why
   if ((g.phase === 'combat' || g.phase === 'btCombat') && area != null && fightable().includes(area)) { selArea = area; selUnit = null; previewArea = null; const p = allowed() ? primary() : null; if (p && !p.dis && p.label.startsWith('Fight ')) return act(p.fn); return refresh(); }      // one tap on a battle area opens the battle
   const uu = unit ? g.units.find((x) => x.id === unit) : null;
   if (uu && g.moving && g.moving.id !== uu.id && mine(uu.side)) act(() => E.endMove(g));                 // another block: the one moving before is done for good
@@ -1451,7 +1452,7 @@ function promptText() {
       return selUnit ? `Tap a <b>green</b> area${gx(' to move there. <b>Brass</b>: must stop there. Wrong move? <b>Undo</b>.', ' · <b>brass</b> = stop')}` : `<b>Tap one of your blocks</b>${gx(' to move it, or <b>Can move</b> to go through them.', ' to move it.')}`;
     case 'strategic': return '<b>Tap a reserve block</b>, then a green area.';
     case 'combat': case 'btCombat': if (g.phase === 'btCombat' && !m && E.contestedAreas(g).some((a) => !g.fought.includes(a) && !E.newlyContested(g).includes(a))) return gx('<b>Breakthrough combat.</b> Newly contested areas are free; areas already contested before movement need a Special Action (brass tags).', '<b>Breakthrough combat:</b> orange = needs SA');
-      return m ? `<b>${m} battle${m > 1 ? 's' : ''} to fight.</b> Tap a red area.` : fightable().length ? '<b>Tap a contested area</b> to fight, or end the step.' : 'No battles left.';
+      return m ? '<b>Tap a red area.</b>' : fightable().length ? '<b>Tap a contested area</b> to fight, or end the step.' : 'No battles left.';
     case 'reaction': return `<b>${nm(other(g.phasing))} reserves</b> may react: select a reserve block.`;
     case 'btMove': return btArmor().length ? gx('<b>Breakthrough movement.</b> Reserve and exploiting blocks may move; armor that has not moved can move one area for a Special Action (brass tags).', '<b>Breakthrough:</b> orange = SA move') : `<b>Reserve and exploitation blocks</b> may move.${gx(' Select one.')}`;
     default: return g.phase === 'supply' && g.supplyPending ? `<b>Supply check</b>${gx(': roll for the units that are cut off.')}` : 'Supply checked. End the phase.';
@@ -1678,13 +1679,17 @@ function mapLegend() {
   return legendOpen ? legendCard(VOL.id, close) : `<button class="mlchip" aria-expanded="false" aria-label="Map legend" data-ui="${reg(() => { legendOpen = true; })}">${ico('info')}<span>Legend</span></button>`;
 }
 /** The map's own corner: the printed-map legend, the colour layer switch (one tap, no window) and the active layer's key right under it. */
+/** A quarter turn of the board, eased (phones have no right-drag to turn it). */
+function rotateQuarter() { const y0 = yaw; goal = null; anims.push({ t0: performance.now(), dur: 450, fn: (k) => { yaw = y0 + (Math.PI / 2) * (1 - (1 - k) * (1 - k)); lastInput = performance.now(); } }); }
 function mapDock() {
   if (g.battle) return '';                                                                              // the battle bar takes the top of the map
   if (legendOpen && hasLegend(VOL.id)) return mapLegend();
   type Opt = [typeof tint, string, string, string, string];      // layer, label, short label (phone), icon, what it shows
   const opts: Opt[] = [['off', 'None', 'None', 'close', 'No colour on the map'], ['tdn', 'TDN', 'TDN', 'tree', 'Terrain defence'], ...(VOL.features.zones ? [['zones', 'Zones', 'Zones', 'layers', 'Army zones'] as Opt] : []), ['control', 'Control', 'Ctrl', 'flag', 'Who holds each area'], ['supply', 'Supply', 'Supply', 'fuel', 'Supply: which areas trace supply']];
   const sw = opts.map(([v, label, short, icon, title]) => `<button aria-pressed="${tint === v}" title="${title}" aria-label="${title}" data-ui="${reg(() => { tint = v; relayer(); if (v === 'supply') frameSide(supplySide()); })}">${ico(icon)}<span class="l">${label}</span><span class="s">${short}</span></button>`).join('');
-  return `<div class="mapdock"><div class="dockrow">${mapLegend()}<div class="laysw" role="group" aria-label="Map colour layer"><b>Layer</b>${sw}</div></div>${legend()}</div>`;
+  const sel = selUnit || selArr || selChit || selArea != null;
+  const tools = `<div class="maptools"><button aria-label="Rotate the map a quarter turn" title="Rotate the map" data-ui="${reg(rotateQuarter)}">${ico('rotate')}</button>${sel ? `<button aria-label="Deselect" title="Deselect" data-ui="${reg(() => { selUnit = selArr = selChit = null; selArea = null; previewArea = null; })}">${ico('deselect')}<span>Deselect</span></button>` : ''}</div>`;
+  return `<div class="mapdock"><div class="dockrow">${mapLegend()}<div class="laysw" role="group" aria-label="Map colour layer"><b>Layer</b>${sw}</div></div>${legend()}${tools}</div>`;
 }
 /** The volume's prompts (set-up, drops, evacuation…). On a phone they fold down to a handle so the map can have the screen; they open again on a tap. */
 let volFolded = innerWidth <= 700, volFoldKey = '';
@@ -1978,6 +1983,7 @@ function autoBattle() {
 }
 function refresh() {
   { const ph = `${g.turn}${g.phasing}${g.phase}`; if (ph !== lastPhase) { lastPhase = ph; fxLayer.clear(); } }
+  { const ba = g.battle?.area ?? null; if (ba !== fxBattle) { if (ba != null) fxLayer.clear(); fxBattle = ba; } }      // a new battle clears the last one's messages
   E.setPlayArea(g.inPlay);
   { const k = (g.inPlay ?? []).join(); if (k !== playKey) { const first = playKey === null; playKey = k; if (!first) paintBoard(); if (g.inPlay || !first) goal = homeGoal(); } }
   SBU.hotseatSync(); cpuTick(); setTimeout(autoBattle, 0);
@@ -1990,7 +1996,7 @@ function refresh() {
 }
 const CALM = matchMedia('(prefers-reduced-motion: reduce)').matches;                               // no floating motion for players who asked for less motion
 let lastPhase = '';
-let lastInput = performance.now(), tick = 0;
+let lastInput = performance.now(), tick = 0, fxBattle: number | null = null;
 /** ?fps=1: a small corner counter (frames per second, slowest frame) for measuring on a real phone. */
 const fpsEl = new URLSearchParams(location.search).has('fps') ? Object.assign(document.body.appendChild(document.createElement('div')), { id: 'fps' }) : null;
 let fpsN = 0, fpsT = performance.now(), fpsWorst = 0, fpsLast = performance.now();
