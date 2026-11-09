@@ -205,7 +205,7 @@ button.go .ic, button.plain .ic, .row button .ic { width: 18px; height: 18px; ve
 .fx.elim { background: #3a0b0bf5; border-color: #ff2d2d; } .fx.elim b { font-size: 24px; color: #ff6a5e; } .fx.loss b { color: #ff9a5e; } .fx.dis { border-color: #e7b04a; background: #2a1f08f2; } .fx.dis b { color: #e7b04a; } .fx.fw { border-color: #7fb0ff; background: #0b1a2cf2; } .fx.fw b { color: #8fc0ff; } .fx.ret { border-color: #b8c0a0; background: #151a10f2; } .fx.cap { border-color: #7ee08d; background: #0c2010f2; } .fx.cap b { color: #7ee08d; }
 @keyframes fxpop { from { opacity: 0; scale: .4; } to { opacity: 1; scale: 1; } }
 .fxrow { display: flex; align-items: center; gap: 8px; padding: 5px 8px; margin: 4px 0; border-left: 0; background: #ffffff0f; } .fxrow .ic { width: 22px; height: 22px; flex: none; } .fxrow b { font: 700 15px var(--sfd); letter-spacing: .08em; } .fxrow span { font-size: 13px; opacity: .9; }
-.fxrow.elim { background: #ff2d2d26; } .fxrow.elim b { color: #ff6a5e; } .fxrow.loss b { color: #ff9a5e; } .fxrow.dis b { color: #e7b04a; } .fxrow.fw b { color: #8fc0ff; } .fxrow.cap b { color: #7ee08d; } .resline { margin: 2px 0 6px; font-weight: 700; }
+.fxrow.elim { background: #ff2d2d26; } .fxrow.elim b { color: #ff6a5e; } .fxrow.loss b { color: #ff9a5e; } .fxrow.dis b { color: #e7b04a; } .fxrow.fw b { color: var(--ink); } .fxrow.cap b { color: #7ee08d; } .resline { margin: 2px 0 6px; font-weight: 700; }
 @media (prefers-reduced-motion: reduce) { .fx { animation: none; } }
 .sheet.wide { width: min(760px, 96vw); } .tabrow { align-items: center; } .tabrow .sp { flex: 1; }
 .pcgrid { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; } .pc { width: 58px; height: 58px; padding: 0; background: none; border: 2px solid transparent; border-radius: 4px; flex: none; } .pc img { width: 100%; height: 100%; display: block; border-radius: 3px; } .pc.on { border-color: var(--gold); } .pc:disabled { opacity: .45; } .pcgrid .none { opacity: .6; }
@@ -298,7 +298,7 @@ button.go .ic, button.plain .ic, .row button .ic { width: 18px; height: 18px; ve
 @media (min-width: 900px) { .dock .card2, .card2 { width: 72px !important; height: 72px !important; } .c-hand { height: 96px !important; } }
 .c-hand { justify-content: safe center; }
 .mapbubble { flex-direction: row; display: flex !important; align-items: center; gap: 8px; padding: 3px 6px !important; max-width: none; } .mapbubble .hits { display: flex; flex-direction: column; align-items: center; line-height: 1; font: 700 22px var(--sfd) !important; margin: 0; } .mapbubble .hits small { font: 600 9px var(--sf); letter-spacing: .08em; text-transform: uppercase; color: var(--ink); } .mapbubble button.ab { min-width: 42px; min-height: 42px !important; padding: 0 8px; justify-content: center; } .mapbubble button.ab .ic { width: 22px; height: 22px; } .mapbubble .row { gap: 4px; } .mapbubble > span { max-width: 150px; font-size: 11.5px; text-align: left; } .mapbubble.wait b { font-size: 13px !important; }
-#marks { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; } .mm { position: absolute; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; box-shadow: 0 2px 6px #000a; } .mm .ic { width: 14px !important; height: 14px !important; stroke-width: 3; } .mm.go { background: #37d67a; color: #0b0d08; animation: mmp 1.8s ease-in-out infinite; } .mm.no { background: #0b0d08e6; border: 1px solid #8d9065; color: #e7b04a; width: 18px; height: 18px; } .mm.no .ic { width: 11px !important; height: 11px !important; }
+#marks { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; } .mm { position: absolute; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; box-shadow: 0 2px 6px #000a; } .mm .ic { width: 14px !important; height: 14px !important; stroke-width: 3; } .mm.go { background: #c8e86a; color: #0b0d08; animation: mmp 1.8s ease-in-out infinite; } .mm.no { background: #0b0d08e6; border: 1px solid #8d9065; color: #e7b04a; width: 18px; height: 18px; } .mm.no .ic { width: 11px !important; height: 11px !important; }
 @keyframes mmp { 50% { transform-origin: center; filter: brightness(1.25); } } @media (prefers-reduced-motion: reduce) { .mm.go { animation: none; } }
 /* admin sandbox */
 .sbx { position: absolute; left: 8px; top: 8px; z-index: 30; width: min(360px, calc(100vw - 16px)); max-height: calc(100% - 16px); overflow: auto; background: #0b0d08f2; border: 1px solid var(--line); padding: 8px 10px; font-size: 13px; }
@@ -359,7 +359,7 @@ ul.rl { margin: 4px 0; padding-left: 16px; } ul.rl li { margin: 2px 0; } .inspec
 .cin { display: flex; gap: 6px; padding: 8px; border-top: 1px solid var(--line); } .cin input { flex: 1; min-width: 0; background: #1a1d14; color: inherit; border: 1px solid var(--line); padding: 8px; font: inherit; font-size: 16px; } .cwatch { padding: 8px; margin: 0; }
 @media (max-width: 700px) { .chat { left: 0; right: 0; top: auto; bottom: 0; width: auto; height: min(58vh, 58dvh); border-radius: 12px 12px 0 0; z-index: 90; } }
 /* supply: the line's explanation and the Supply Phase list */
-.sup { margin: 4px 0; display: flex; gap: 6px; align-items: flex-start; } .sup .ic { flex: none; width: 16px; height: 16px; margin-top: 2px; } .sup.ok { color: #8be0ff; } .sup.bad { color: #ff8a7a; }
+.sup { margin: 4px 0; display: flex; gap: 6px; align-items: flex-start; } .sup .ic { flex: none; width: 16px; height: 16px; margin-top: 2px; } .sup.ok { color: var(--ink); } .sup.bad { color: #ff8a7a; }
 .supply .supl { display: flex; width: 100%; gap: 8px; align-items: center; padding: 5px 2px; background: none; border: 0; border-bottom: 1px solid #ffffff1a; color: inherit; text-align: left; cursor: pointer; }
 .supply .supl img { width: 34px; height: 34px; } .supply .supl span { flex: 1; display: grid; } .supply .supl small { opacity: .7; } .supply .sn { background: var(--gold); color: #111; padding: 2px 6px; white-space: nowrap; }
 #fps { position: fixed; left: 6px; bottom: 6px; z-index: 200; padding: 2px 6px; background: #000c; color: #9fe870; font: 12px monospace; pointer-events: none; }
@@ -790,7 +790,7 @@ button.go:disabled { background: #2a2d22; color: #8d9065; box-shadow: none; opac
 
 .mapkey { display: grid; gap: 5px; font-size: 12px; } .mapkey span { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .mapkey i { width: 16px; height: 12px; display: inline-block; flex: none; }
 .mapkey small { font-size: inherit; color: var(--line); } .askrow { border: 1px solid #d1432f88; background: #7d24171f; padding: 8px 10px; margin: 8px 0; scroll-margin-top: 8px; } .askrow p { margin: 0 0 6px; } .sheet:focus { outline: none; }
-.mapkey i.fuel { background: #1a1608; border: 1px solid var(--gold); } .mapkey .ar { font-family: var(--sf); letter-spacing: -2px; } .mapkey .ic { width: 16px; height: 16px; color: var(--ok); }
+.mapkey i.fuel { background: #1a1608; border: 1px solid var(--gold); } .mapkey .ar { font-family: var(--sf); letter-spacing: -2px; } .mapkey .ic { width: 16px; height: 16px; color: #c8e86a; }
 
 .fx.fw { border-color: var(--gold) !important; background: #2a1f08f2 !important; } .fx.fw b { color: var(--gold) !important; }     /* no blue outside the rivers */
 .vlab.net.ge { color: var(--ge) !important; } .vlab.net.al { color: var(--al) !important; }
@@ -1022,3 +1022,9 @@ p.stepped { cursor: pointer; border-left: 3px solid transparent; padding-left: 8
   .laysw button { min-width: 44px; min-height: 44px; justify-content: center; padding: 0 9px; flex: none; }
   .mapdock .mlchip { min-height: 44px; flex: none; } .mapdock .mlchip span { display: none; }
 }
+
+/* one meaning per colour: lime = you can go there, red = battle, dark stripes = out of supply */
+.bdg.ok { background: #c8e86a !important; color: #1a1608 !important; }
+.bdg.opt { background: #0b0d08e6 !important; color: #ff9c8a !important; border-color: #d1432f !important; }
+.bdg.nosup, .bdg.ok.nosup { background: repeating-linear-gradient(135deg, #23251a 0 5px, #4a4c3c 5px 10px) !important; color: #fff !important; border-color: #fff !important; }
+.mapkey i.nosupkey { background: repeating-linear-gradient(135deg, #23251a 0 3px, #d8d4c0 3px 6px); }

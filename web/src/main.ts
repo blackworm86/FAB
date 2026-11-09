@@ -436,7 +436,7 @@ function drawPieces() {
       m.position.x = p.x; m.position.z = p.z;
       if (flat) { m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, viewRot(), 0); m.position.y = 0.4; }
       if (tgt?.units.has(u.id)) { const ring = new THREE.Mesh(new THREE.RingGeometry(1.15, 1.45, 40), new THREE.MeshBasicMaterial({ color: MAPC.ring, transparent: true, opacity: 0.95, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(p.x, 0.09, p.z); markers.add(ring); const glow = new THREE.Mesh(new THREE.CircleGeometry(1.15, 40), new THREE.MeshBasicMaterial({ color: MAPC.ring, transparent: true, opacity: 0.28 })); glow.rotation.x = -Math.PI / 2; glow.position.set(p.x, 0.085, p.z); markers.add(glow); }
-      m.userData.unit = u.id; if (u.id === selUnit || (g.battle && !hid && (u.id === g.battle.attPoint || u.id === g.battle.defPoint))) { const o = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xffb347 })); m.add(o); }
+      m.userData.unit = u.id; if (u.id === selUnit || (g.battle && !hid && (u.id === g.battle.attPoint || u.id === g.battle.defPoint))) { const o = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xe7b04a })); m.add(o); }
       pieces.add(m);
       const tags: [string, string][] = []; const top = flat ? 0.85 : 1.66;
       if (u.disorder && !u.garrison) tags.push([u.disorder === 1 ? 'DIS' : 'REC', u.disorder === 1 ? '#8a1f1f' : '#a8741a']);
@@ -452,7 +452,7 @@ function drawPieces() {
   }
   if (g.battle) drawPointMarks(g.battle);
   if (!g.battle && (g.phase === 'combat' || g.phase === 'btCombat')) { const must = new Set(E.mustFight(g));         // each battle area gets its own edge, so neighbouring battles never merge into one patch
-    for (const id of fightable()) markers.add(outlineRibbon(id, -0.32, 0.22, must.has(id) ? MAPC.must : MAPC.fight)); }
+    for (const id of fightable()) markers.add(must.has(id) ? outlineRibbon(id, -0.32, 0.22, MAPC.must) : outlineRibbon(id, -0.26, 0.1, MAPC.fight)); }      // red is only for battles: must fight thick and filled, may fight a thin line
   // area markers: inside their own area, next to the group they belong to
   for (const a of MAP.areas) {
     const { base, cont } = rows.get(a.id)!, mine: { side?: E.Side; t: string; c: string }[] = [];
@@ -472,7 +472,7 @@ function drawPieces() {
 let tint: 'off' | 'tdn' | 'zones' | 'control' | 'supply' = (() => { try { const t = localStorage.getItem('fab-tint'); return t === 'tdn' || t === 'zones' || t === 'control' || t === 'supply' ? t : 'off'; } catch { return 'off'; } })();
 const TDN_COL = [0xf4e3a4, 0xc9a24f, 0x8a8f86, 0x4a5028], ZONE_COL: Record<number, number> = { 5: 0x3a3f46, 6: 0x951b81, 7: 0x009fe3 };   // the TDN colours are the printed TDN markers'
 /** Map overlays (DESIGN.md › Map overlays): one meaning per colour. Reach green, stop brass, must-fight red, optional fight brass, selection brass, supply in the side's colour. */
-const MAPC = { reach: 0x5d8b3a, stop: 0xe7b04a, preview: 0xf6e3a8, must: 0xd1432f, fight: 0xe7b04a, sel: 0xe7b04a, cut: 0xd1432f, supGe: 0xb9bcc0, supAl: 0x9db36a, ring: 0x8fc46a };
+const MAPC = { reach: 0xc8e86a, stop: 0xe7b04a, preview: 0xf6e3a8, must: 0xd1432f, fight: 0xd1432f, sel: 0xe7b04a, cut: 0xd8d4c0, supGe: 0xb9bcc0, supAl: 0x9db36a, ring: 0xc8e86a };
 const CONTROL_COL: Record<string, number> = { ...VOL.controlCol, contested: 0x9b59d0 };                      // allied green, axis grey, contested violet (red and yellow are the combat highlights)
 const tintOf = (id: number) => (tint === 'tdn' ? TDN_COL[E.areas.get(id)!.tdn] : tint === 'control' ? (E.contested(g, id) ? CONTROL_COL.contested : CONTROL_COL[g.control[id] ?? P1]) : ZONE_COL[E.areas.get(id)!.zone]);
 const hex6 = (n: number) => '#' + n.toString(16).padStart(6, '0');
@@ -588,8 +588,8 @@ let supEnemy = false;                                                           
 const supplySide = (): E.Side => { const me = online.mySide() ?? g.phasing; return supEnemy ? other(me) : me; };
 let supCache = new Map<string, boolean>(), supKey = '';
 function supOk(sd: E.Side, a: number) { const k = `${g.turn}${g.phase}${g.log.length}${JSON.stringify(g.control).length}${g.units.map((u) => u.area).join()}`; if (k !== supKey) { supKey = k; supCache = new Map(); } const kk = sd + a; let v = supCache.get(kk); if (v == null) { v = E.inSupply(g, sd, a); supCache.set(kk, v); } return v; }
-/** Diagonal stripes for areas that are (or would be) out of supply: a pattern, so it never reads as the red of "must fight". */
-const hatchTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 32; const x = c.getContext('2d')!; x.fillStyle = '#ffffff55'; x.fillRect(0, 0, 32, 32); x.strokeStyle = '#fff'; x.lineWidth = 7; x.beginPath(); for (const d of [-32, 0, 32]) { x.moveTo(d, 32); x.lineTo(d + 32, 0); } x.stroke(); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(0.7, 0.7); return t; })();
+/** Dark diagonal stripes over the area's own colour for areas that are (or would be) out of supply: a pattern, never a colour of its own. */
+const hatchTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 32; const x = c.getContext('2d')!; x.fillStyle = '#fff'; x.fillRect(0, 0, 32, 32); x.strokeStyle = '#23251a'; x.lineWidth = 6; x.beginPath(); for (const d of [-32, 0, 32]) { x.moveTo(d, 32); x.lineTo(d + 32, 0); } x.stroke(); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(0.7, 0.7); return t; })();
 /** Destinations of the selected block where it would end up out of supply (supply-plan.ts), recomputed when the block or the board changes. */
 let noSup = new Set<number>(), noSupKey = '';
 function syncNoSup() {
@@ -603,7 +603,7 @@ function paintAreas() {
   const arr = new Map(arrOpts().map((x) => [x.area, x])), ret = new Set(g.battle?.stage === 'retreat' ? E.retreatOptions(g, g.battle) : []);      // once, not per area
   for (const [id, m] of overlays) {
     const mat = m.material as THREE.MeshBasicMaterial; let c = 0xffffff, o = 0; const r = opts.find((x) => x.area === id);
-    if (r) { c = r.mustStop ? MAPC.stop : MAPC.reach; o = r.mustStop ? 0.34 : 0.4; } else if (fight.includes(id)) { c = must.has(id) ? MAPC.must : MAPC.fight; o = must.has(id) ? 0.34 : 0.26; }
+    if (r) { c = r.mustStop ? MAPC.stop : MAPC.reach; o = r.mustStop ? 0.34 : 0.4; } else if (fight.includes(id) && must.has(id)) { c = MAPC.must; o = 0.34; }
     if (id === (previewArea ?? hoverArea) && r) { c = MAPC.preview; o = 0.5; }
     if (id === selArea && !selUnit) { c = MAPC.sel; o = Math.max(o, 0.3); }
     if (id === kbArea && document.activeElement === canvas && o < 0.3) { c = 0xffffff; o = 0.3; }              // the keyboard cursor
@@ -613,7 +613,7 @@ function paintAreas() {
     if (ret.has(id)) { c = MAPC.reach; o = 0.5; }
     if (areaPick) { if (areaPick.areas.has(id)) { c = MAPC.reach; o = 0.5; } else if (o === 0) { c = 0x000000; o = 0.28; } }
     let hatch = false;
-    if (tint === 'supply' && !g.battle && o === 0 && !tgt) { const sd = supplySide(); if (g.control[id] === sd) { if (supOk(sd, id)) { c = VOL.controlCol[sd] ?? 0xffffff; o = 0.3; } else { c = MAPC.cut; o = 0.55; hatch = true; } } }      // your supplied areas in your colour, cut-off ones hatched red, the enemy's left clear
+    if (tint === 'supply' && !g.battle && o === 0 && !tgt) { const sd = supplySide(); if (g.control[id] === sd) { if (supOk(sd, id)) { c = VOL.controlCol[sd] ?? 0xffffff; o = 0.3; } else { c = MAPC.cut; o = 0.6; hatch = true; } } }      // your supplied areas in your colour, cut-off ones hatched red, the enemy's left clear
     if (r && noSup.has(id)) hatch = true;                                                              // a destination where the block would be out of supply
     if (!shownArea(id)) o = 0;
     else if (g.inPlay && !g.inPlay.includes(id)) { if (g.supplyOnly?.includes(id)) { c = 0x1d2a45; o = 0.5; } else { c = 0x000000; o = 0.62; } }      // Cold Shoulder: Zone 5 carries supply only (P.6)                                   // 24.33 outside the Introductory map sheet
@@ -1047,7 +1047,7 @@ function quad(v: THREE.Vector3[], c: [number, number, number, number], y: number
 }
 const rgb = (h: number, a = 1): [number, number, number, number] => { const c = new THREE.Color(h); return [c.r, c.g, c.b, a]; };
 type MoveKind = 'normal' | 'fuel' | 'minimum' | 'blown' | 'strat';
-const MOVE_COL: Record<MoveKind, [number, number]> = { normal: [0x8fc46a, 0x2c4419], fuel: [0xe7b04a, 0x5a3f08], minimum: [0xc9ccd2, 0x3a3d44], blown: [0xd1432f, 0x5c0f0a], strat: [0xddd7b5, 0x3a3826] };      // green = a normal move, brass = it burns fuel, steel = minimum move, red = across a blown bridge, paper = strategic
+const MOVE_COL: Record<MoveKind, [number, number]> = { normal: [0xc8e86a, 0x3a4a14], fuel: [0xe7b04a, 0x5a3f08], minimum: [0xc9ccd2, 0x3a3d44], blown: [0x8a8a80, 0x2a2a26], strat: [0xddd7b5, 0x3a3826] };      // green = a normal move, brass = it burns fuel, steel = minimum move, red = across a blown bridge, paper = strategic
 /** Movement: a tapered operations arrow with a soft shadow, a dark rim, a light core and a notched head; the tail fades in. */
 function moveArrow(path: number[], kind: MoveKind, blownAt = -1) {
   const pts = pathPts(path), [main, rim] = MOVE_COL[kind], n = pts.length, hl = Math.min(n - 2, 14), body = pts.slice(0, n - hl + 2), tip = pts[n - 1], base = pts[n - hl], d = new THREE.Vector3().subVectors(tip, base).setY(0).normalize(), nn = new THREE.Vector3(-d.z, 0, d.x);
@@ -1832,7 +1832,7 @@ function layersHtml() {
   const lay = (k: 'numbers' | 'tdn' | 'vp' | 'names', icon: string, title: string, label = '') => chip(label, layers[k], () => { layers[k] = !layers[k]; relayer(); }, title, icon);
   return `<div class="modal"><div class="sheet slim"><h3>${ico('eye')} View <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
     <h4>Printed</h4><div class="chips">${lay('numbers', 'hash', 'Area numbers and entry letters', 'Numbers')}${lay('tdn', 'tree', 'Terrain defence number', 'TDN')}${lay('vp', 'star', 'Victory points', 'VP')}${lay('names', 'text', 'Place names', 'Names')}</div>
-    <h4>Map key</h4><div class="mapkey"><span><i style="background:#5d8b3a"></i>Can go there</span><span><i style="background:#e7b04a"></i>Must stop · costs a Special Action</span><span><i class="fuel"></i>Uses fuel</span><span><i style="background:#d1432f"></i>Must fight · cut off</span><span><i style="background:transparent;border:2px solid #e7b04a"></i>May fight</span><span><b class="ar" style="color:#8fc46a">━▶</b>Move · <b class="ar" style="color:#e7b04a">━▶</b>with fuel · <b class="ar" style="color:#c9ccd2">━▶</b>minimum move · <b class="ar" style="color:#ddd7b5">━▶</b>strategic</span><span>${ico('back')}<small>over a block: it can still move</small></span></div>${mapChips}<h4>Camera</h4><div class="row"><button data-home>${ico('home')} Reset the camera</button></div></div></div>`;
+    <h4>Map key</h4><div class="mapkey"><span><i style="background:#c8e86a"></i>Can go there</span><span><i style="background:#e7b04a"></i>Must stop · costs a Special Action · selected</span><span><i class="fuel"></i>Uses fuel</span><span><i style="background:#d1432f"></i>Must fight</span><span><i style="background:transparent;border:2px solid #d1432f"></i>May fight</span><span><i class="nosupkey"></i>Out of supply</span><span><b class="ar" style="color:#c8e86a">━▶</b>Move · <b class="ar" style="color:#e7b04a">━▶</b>with fuel · <b class="ar" style="color:#c9ccd2">━▶</b>minimum move · <b class="ar" style="color:#ddd7b5">━▶</b>strategic · <b class="ar" style="color:#8a8a80">━╳</b>blown bridge</span><span>${ico('back')}<small>over a block: it can still move</small></span></div>${mapChips}<h4>Camera</h4><div class="row"><button data-home>${ico('home')} Reset the camera</button></div></div></div>`;
 }
 /** The game log, newest first, grouped by turn; each line tinted by the side it concerns. */
 /** A log line with its side prefix (GE / AL) as a coloured tag: side shown by colour and name. */
