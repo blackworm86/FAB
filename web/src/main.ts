@@ -628,7 +628,8 @@ function paintAreas() {
 
 /* ---------- camera ---------- */
 let target = new THREE.Vector3(17, 0, -3), yaw = 0, pitch = 1.0, dist = 36, opened = false;
-function placeCam() { cam.position.set(target.x + dist * Math.sin(yaw) * Math.cos(pitch), dist * Math.sin(pitch), target.z + dist * Math.cos(yaw) * Math.cos(pitch)); cam.lookAt(target); }
+function placeCam() { const hx = MW / (2 * S), hz = MH / (2 * S); target.x = Math.max(-hx, Math.min(hx, target.x)); target.z = Math.max(-hz, Math.min(hz, target.z));      /* the view never wanders off the map */
+  cam.position.set(target.x + dist * Math.sin(yaw) * Math.cos(pitch), dist * Math.sin(pitch), target.z + dist * Math.cos(yaw) * Math.cos(pitch)); cam.lookAt(target); }
 const ptrs = new Map<number, [number, number]>(); let moved = 0, pinch = 0;
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('pointerdown', (e) => { goal = null; canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; pinch = 0; });
@@ -2012,9 +2013,7 @@ function autoBattle() {
   autoT = window.setTimeout(() => { const q = primary(); if (g.battle && `${g.battle.area}|${g.battle.stage}|${g.battle.ready?.join()}|${g.battle.rolls.length}` === k && !rollView && q && !q.dis) act(q.fn); }, b.stage === 'done' ? 1600 : 700);
 }
 function refresh() {
-  { const ph = `${g.turn}${g.phasing}${g.phase}`; if (ph !== lastPhase) { const was = lastPhase; lastPhase = ph; fxLayer.clear(); if (was && !g.battle && mine(g.phasing) && allowed()) setTimeout(() => {      // a new step: what it is about comes into view
-      const ids = g.phase === 'combat' || g.phase === 'btCombat' ? E.mustFight(g) : ['movement', 'btMove'].includes(g.phase) ? [...new Set(g.units.filter((u) => u.side === g.phasing && u.area != null && optsFor(u.id).length).map((u) => u.area!))] : [];
-      if (ids.length && !ids.some(onScreen)) showAreas(ids); }, 0); } }
+  { const ph = `${g.turn}${g.phasing}${g.phase}`; if (ph !== lastPhase) { const was = lastPhase; lastPhase = ph; fxLayer.clear(); frameAt = performance.now() + (was ? 50 : 1500); } }      // on opening, after the first view has settled
   { const ba = g.battle?.area ?? null; if (ba !== fxBattle) { if (ba != null) fxLayer.clear(); fxBattle = ba; } }      // a new battle clears the last one's messages
   E.setPlayArea(g.inPlay);
   { const k = (g.inPlay ?? []).join(); if (k !== playKey) { const first = playKey === null; playKey = k; if (!first) paintBoard(); if (g.inPlay || !first) goal = homeGoal(); } }
@@ -2028,7 +2027,7 @@ function refresh() {
 }
 const CALM = matchMedia('(prefers-reduced-motion: reduce)').matches;                               // no floating motion for players who asked for less motion
 let lastPhase = '';
-let lastInput = performance.now(), tick = 0, fxBattle: number | null = null;
+let lastInput = performance.now(), tick = 0, fxBattle: number | null = null, frameAt = 0;
 /** ?fps=1: a small corner counter (frames per second, slowest frame) for measuring on a real phone. */
 const fpsEl = new URLSearchParams(location.search).has('fps') ? Object.assign(document.body.appendChild(document.createElement('div')), { id: 'fps' }) : null;
 let fpsN = 0, fpsT = performance.now(), fpsWorst = 0, fpsLast = performance.now();
@@ -2050,6 +2049,9 @@ function frame() {
     if (Math.abs(tilt - labelTilt) > 0.005) { labelTilt = tilt; for (const l of labelsGrp.children) if (l.userData.lh) { l.rotation.x = -Math.PI / 2 + tilt; l.position.y = l.userData.y0 + Math.sin(tilt) * l.userData.lh / 2; } } }
   if (!opened) { opened = true; if (!g.inPlay && !TUT) { target.copy(openingTarget()); if (innerWidth <= 700) { const ps = g.units.filter((u) => u.area != null && MAP.areas.some((x) => x.id === u.area)).map((u) => center(u.area!)), span = ps.length ? Math.max(...ps.map((p) => p.x)) - Math.min(...ps.map((p) => p.x)) : 40; dist = clampDist(span * 1.25 + 8); } } }      // the first frame looks at the front of this game; a phone frames the front's width, not the whole sheet
   placeCam(); runAnims(); settle(); renderer.render(scene, cam); renderFocus(); placeBadges();
+  if (frameAt && performance.now() > frameAt) { frameAt = 0; if (!g.battle && mine(g.phasing) && allowed()) {      // a new step (or the opening): what it is about comes into view
+    const ids = g.phase === 'combat' || g.phase === 'btCombat' ? E.mustFight(g).slice(0, 1) : ['movement', 'btMove'].includes(g.phase) ? [...new Set(g.units.filter((u) => u.side === g.phasing && u.area != null && optsFor(u.id).length).map((u) => u.area!))] : [];
+    if (ids.length && !ids.some(onScreen)) showAreas(ids); } }
 }
 SBU.initSandboxUi({
   get g() { return g; }, set g(v) { g = v; }, get selUnit() { return selUnit; }, set selUnit(v) { selUnit = v; }, get selChit() { return selChit; }, set selChit(v) { selChit = v; },
