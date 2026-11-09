@@ -107,6 +107,7 @@ for a in out['areas']:
     for i in range(vp['allied']): marks += cross(x + (i - (vp['allied'] - 1) / 2) * 24, y - 40, 10)
     for i in range(vp['german']): marks += f'<circle cx="{x}" cy="{y - 40 - i * 20}" r="9" fill="#2f78c8" stroke="#fff" stroke-width="1.5"/>' + star(x, y - 40 - i * 20, 6.5, '#fff', 'none')
     if vp['mutual']: marks += star(x, y - 40, 11, '#f2d21b', '#c3281c')
+ZONE_FILL = {5: '#878787', 6: '#951b81', 7: '#009fe3'}                                   # the army zones' own colours, as printed (grey 5th Panzer, purple 6th Panzer, blue 7th)
 strips = letters = ''; entry_marks = []
 E_SH = shapes('Entering_Zones'); used = set()
 for letter, e in sorted(entries.items()):
@@ -116,27 +117,25 @@ for letter, e in sorted(entries.items()):
     d, i = min(cand); q, c = E_SH[i]
     if d > 12: report.append(f'entry {letter}: nearest drawn strip is {d:.0f}px away'); continue
     used.add(i); ge = e['side'] == 'german'
-    bx = q.bounds; strips += f'<g data-float="{bx[0] - 3:.1f} {bx[1] - 3:.1f} {bx[2] - bx[0] + 6:.1f} {bx[3] - bx[1] + 6:.1f}">' + '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in q.exterior.coords) + f'Z" fill="{"#9fb0b8" if ge else "#2f9a52"}" stroke="#fff" stroke-width="1.6"/></g>'   # hovers over the relief in 3D
-    c = q.representative_point(); entry_marks.append({'letter': letter, 'x': round(c.x, 1), 'y': round(c.y, 1), 'side': e['side']}); letters += f'<text x="{c.x:.1f}" y="{c.y + 6:.1f}" text-anchor="middle" font-size="19" font-weight="700" fill="{"#111" if ge else "#fff"}" stroke="{"#fff" if ge else "#14502a"}" stroke-width="0.8" font-family="Arial, sans-serif">{letter}</text>'
+    bx = q.bounds; strips += f'<g data-float="{bx[0] - 3:.1f} {bx[1] - 3:.1f} {bx[2] - bx[0] + 6:.1f} {bx[3] - bx[1] + 6:.1f}">' + '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in q.exterior.coords) + f'Z" fill="{ZONE_FILL.get(areas[e["area"]]["zone"], "#9fb0b8") if ge else "#2f9a52"}" stroke="#fff" stroke-width="1.6"/></g>'   # German entries in their army zone's colour; hovers over the relief in 3D
+    c = q.representative_point(); entry_marks.append({'letter': letter, 'x': round(c.x, 1), 'y': round(c.y, 1), 'side': e['side']}); letters += f'<text x="{c.x:.1f}" y="{c.y + 6:.1f}" text-anchor="middle" font-size="19" font-weight="700" fill="#fff" stroke="{"#1a1608" if ge else "#14502a"}" stroke-width="0.8" font-family="Arial, sans-serif">{letter}</text>'
 report.extend(f'drawn entry strip {i} was not matched to an entry area' for i in range(len(E_SH)) if i not in used)
 open('docs/maps/vector/import-report.txt', 'w').write('\n'.join(report) or 'no differences'); print('\n'.join(report[:40]) or 'no differences')
 import base64, os
 GP = 'docs/maps/vector/map-ground.jpg'                                                               # the print's paper washes and woods, redrawn by tools/bulge/ground.py
 woods_g = f'<clipPath id="land"><path fill-rule="evenodd" d="{land_d}"/></clipPath><g id="woods" clip-path="url(#land)"><image href="data:image/jpeg;base64,{base64.b64encode(open(GP, "rb").read()).decode()}" x="0" y="0" width="{W}" height="{H}" preserveAspectRatio="none"/></g>' if os.path.exists(GP) else '<g id="woods"></g>'
-# army boundaries, as printed: the white border edged with grey dashes, where areas of two army zones meet
+# army boundaries: the white border edged with dashes in the two zones' colours, alternating, where areas of two army zones meet
 from shapely.geometry import Polygon as _P
 zone = {a['id']: a['zone'] for a in out['areas']}; P_ = {a['id']: _P(a['polygon']).buffer(0) for a in out['areas']}
 from shapely.geometry import LineString as _L
 wet = unary_union([_L(pts_of(e, 24)).buffer(6) for e in layers['Rivers'] if tag(e) == 'path' and e.get('d')])   # where a river is the border, the print shows the river alone
-army = ''; army_segs = {}
+army = ''; army_segs = {}; army_by = {}
 for i in P_:
     for j in P_:
         if i < j and zone[i] != zone[j] and P_[i].distance(P_[j]) < 2:
             g = P_[i].boundary.intersection(P_[j].buffer(2.5)).difference(wet)
             for ln in (getattr(g, 'geoms', None) or [g]):
-                if ln.geom_type == 'LineString' and ln.length > 6: army += '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in ln.coords) + '"/>'; army_segs.setdefault(tuple(sorted((zone[i], zone[j]))), []).append((ln, i))
-NB = 'docs/maps/vector/borders-national.json'                                         # the print's national borders along the east edge: German (magenta), Luxembourg (cyan); traced from the scan by position
-national = ''.join(f'<path d="M' + 'L'.join(f'{x} {y}' for x, y in pl) + f'" stroke="{col}"/>' for k, col in (('magenta', '#c2287f'), ('cyan', '#1aa3d6')) for pl in [json.load(open(NB))[k]]) if os.path.exists(NB) else ''
+                if ln.geom_type == 'LineString' and ln.length > 6: pth = '<path d="M' + 'L'.join(f'{x:.1f} {y:.1f}' for x, y in ln.coords) + '"/>'; army += pth; army_by[tuple(sorted((zone[i], zone[j])))] = army_by.get(tuple(sorted((zone[i], zone[j]))), '') + pth; army_segs.setdefault(tuple(sorted((zone[i], zone[j]))), []).append((ln, i))
 ARMY = {5: '5th Panzer Army', 6: '6th Panzer Army', 7: '7th Army'}                     # as printed: each army's name along its boundary, on its own side, at the boundary's east end
 def army_caption(ln, za, zb):
     from shapely.geometry import LineString as _LS
@@ -174,7 +173,7 @@ base = f'''{head}
 </svg>'''
 lines = f'''{head}
 <g id="boundaries" fill="none" stroke="#fbfbf6" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">{bnd}</g>
-<g id="army" fill="none" stroke-linecap="butt" stroke-linejoin="round"><g stroke="#6d706c" stroke-width="9" stroke-dasharray="8 5">{army}</g><g stroke="#fbfbf6" stroke-width="3.4">{army}</g></g>
+<g id="army" fill="none" stroke-linecap="butt" stroke-linejoin="round" stroke-width="9">{''.join(f'<g stroke="{ZONE_FILL[za]}" stroke-dasharray="8 18">{d}</g><g stroke="{ZONE_FILL[zb]}" stroke-dasharray="8 18" stroke-dashoffset="-13">{d}</g>' for (za, zb), d in army_by.items())}<g stroke="#fbfbf6" stroke-width="3.4">{army}</g></g>
 <g id="army-names" stroke="#eef0e6" stroke-width="2.4" paint-order="stroke">{army_text}</g>
 <g id="zone-strips">{zone_strips}</g>
 <g id="rivers" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#ffffff">{rivers_c}</g><g stroke="#1c78c0">{rivers}</g></g>
@@ -183,7 +182,6 @@ lines = f'''{head}
 <g id="cities" fill="url(#hatch)" stroke="#5a5f62" stroke-width="1.4">{cities}</g>
 <g id="towns">{towns}</g>
 <g id="outline" fill="none" stroke="#fbfbf6" stroke-width="4.6" stroke-linejoin="round">{outline}</g>
-<g id="national-borders" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">{national}</g>
 </svg>'''
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../tools')); from hatch import convert as hatch_free   # no <pattern> in a board file: see tools/hatch.py
 open('web/public/map-base.svg', 'w').write(base); open('web/public/map-lines.svg', 'w').write(hatch_free(lines)); print('svg', (len(base) + len(lines)) // 1024, 'KB')
