@@ -1034,3 +1034,18 @@ p.stepped { cursor: pointer; border-left: 3px solid transparent; padding-left: 8
 .maptools button { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 0 12px; background: #0b0d08cc; border: 1px solid var(--line); color: var(--gold); font: 600 13px var(--sfd); letter-spacing: .06em; text-transform: uppercase; }
 .maptools button .ic { width: 18px; height: 18px; }
 @media (max-width: 700px), (pointer: coarse) { .maptools { display: flex; } }
+
+/* phone top bar: the turn line gives way (smaller, then cut with …) so Menu, View and Pieces always stay on screen */
+@media (max-width: 520px) {
+  .c-stat { min-width: 0; flex: 1 1 auto; justify-content: flex-end; }
+  .c-stat > button { flex: none; }
+  .c-stat .tp { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; letter-spacing: .04em; font-size: 14px; }
+  .c-stat .tp small { display: none; }
+}
+/* phone bottom bar: the shortcut chips get the whole top lane; undo moves down beside the main button */
+@media (max-width: 700px) {
+  .c-bar.b { grid-template-columns: minmax(0, 1fr) 44px 112px 40px !important; }
+  .c-bar.b .dchips { grid-column: 1 / 4 !important; }
+  .c-bar.b .dundo { grid-column: 2 !important; grid-row: 2 !important; }
+  .c-bar.b .go, .c-bar.b .gowait { grid-column: 3 / 5 !important; }
+}
