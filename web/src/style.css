@@ -932,7 +932,7 @@ a.rlink:hover { border-bottom-style: solid; }
 /* the printed map's legend: a chip at the map's corner, the card in the print's own manner (paper, small rows, dark ink) */
 .mlchip { position: absolute; left: 12px; top: 12px; z-index: 6; display: flex; gap: 6px; align-items: center; min-height: 34px; padding: 4px 11px; background: #0b0d08cc; border: 1px solid var(--line); color: var(--gold); font: 600 13px var(--sfd); letter-spacing: .1em; text-transform: uppercase; }
 .mlchip .ic { width: 16px; height: 16px; } .mlchip:hover, .mlchip:focus-visible { background: #0b0d08f2; border-color: var(--gold); }
-.maplegend { position: absolute; left: 12px; top: 12px; z-index: 30; width: min(300px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow: auto; background: #e9e4cf; color: #23251d; border: 1px solid #8d9065; box-shadow: 0 6px 18px #000a; padding: 8px 12px 10px; font: 12.5px/1.25 var(--body, sans-serif); }
+.maplegend { position: absolute; left: 12px; top: 12px; z-index: 30; width: min(300px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow: auto; background: #e9e4cf; color: #23251d; border: 1px solid #8d9065; box-shadow: 0 6px 18px #000a; padding: 8px 12px 10px; font: 12.5px/1.3 var(--sf); }
 .maplegend .mlhead { display: flex; align-items: baseline; gap: 8px; } .maplegend .mlhead b { font: 700 17px var(--sfd); letter-spacing: .06em; } .maplegend .mlhead small { color: #5d5e4a; flex: 1; }
 .maplegend .mlhead .ico { color: #23251d; min-width: 32px; min-height: 32px; } .maplegend .mlsub { display: block; margin: 8px 0 2px; font: 700 13px var(--sfd); letter-spacing: .08em; text-transform: uppercase; color: #4a4b3a; }
 .maplegend ul { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 3px; } .maplegend li { display: flex; align-items: center; gap: 10px; } .maplegend li svg { flex: none; }
@@ -1087,3 +1087,12 @@ body:has(.tut-coach:not(.has-target):not(.is-menu)) #ui .c-bar.b { opacity: .35;
   .c-bar.b:not(:has(.dchip)) .guidebtn { grid-column: 4 !important; align-self: center; }
 }
 .gauge { background: linear-gradient(90deg, color-mix(in srgb, var(--gauge-l, #9db36a) 70%, #000), #23251a 48%, #23251a 52%, color-mix(in srgb, var(--gauge-r, #b9bcc0) 70%, #000)); }
+.bside h4 small.role { font: 600 11px var(--sfd); letter-spacing: .08em; text-transform: uppercase; color: #b3ad8b; margin-left: 2px; } .c-vs { display: grid; justify-items: center; } .c-vs .vlbl { font: 600 10.5px var(--sfd); letter-spacing: .1em; text-transform: uppercase; color: #b3ad8b; line-height: 1; }
+@media (max-width: 700px) { .bside h4 small.role { display: none; } }
+/* end screen: the actions stay in view at the bottom on every screen size */
+.vbtns { position: sticky; bottom: -24px; padding: 10px 12px; background: #0b0d08f2; border-top: 1px solid #8d906555; z-index: 1; }
+/* phone: the main button may wrap to two lines, so "Next battle: Udenbreth" is never cut */
+@media (max-width: 700px) { .c-bar.b .go { white-space: normal !important; line-height: 1.1; text-overflow: clip !important; } }
+/* small taps: Legend chip, sheet chips (3D, AL), rule links in panels */
+@media (max-width: 700px), (pointer: coarse) { .mlchip { min-width: 44px; justify-content: center; } .sheet .chip { min-width: 44px; justify-content: center; } .maplegend .mlhead .ico { min-height: 44px; min-width: 44px; } }
+a.rlink { padding-block: 6px; margin-block: -6px; }

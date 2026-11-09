@@ -3396,7 +3396,18 @@
   "End reinforcement": "Fine rinforzi",
   "End admin": "Fine amministrativa",
   "Drop the airborne first": "Prima il lancio aviotrasportato",
-  "choose the drop zone in the panel on the map (14.27a).": "scegli la zona di lancio nel pannello sulla mappa (14.27a)."
+  "choose the drop zone in the panel on the map (14.27a).": "scegli la zona di lancio nel pannello sulla mappa (14.27a).",
+  "attacks": "attacca",
+  "defends": "difende",
+  "expected hits": "colpi attesi",
+  "The game's own colours": "I colori del gioco",
+  "Your block can move there": "Il tuo blocco può andarci",
+  "Stop there, or selected": "Si ferma lì, oppure selezionato",
+  "A battle: must fight (filled) or may fight (outline)": "Una battaglia: deve combattere (pieno) o può combattere (contorno)",
+  "Out of supply (stripes)": "Non rifornito (a righe)",
+  "AL": "AL",
+  "Tap one in the tray, or use the panel.": "Toccane uno nel vassoio, oppure usa il pannello.",
+  "Click one in the tray, or use the panel.": "Scegline uno nel vassoio, oppure usa il pannello."
  },
  "patterns": [
   [
@@ -8906,6 +8917,54 @@
   [
    "(\\d+) rolled − 1 absorbed by field works",
    "$1 a segno − 1 assorbito dalle fortificazioni"
+  ],
+  [
+   "Battle (\\d+)/(\\d+)",
+   "Battaglia $1/$2"
+  ],
+  [
+   "(.+): German artillery (\\d+) hits?",
+   "$1: artiglieria tedesca $2 colpi"
+  ],
+  [
+   "(.+): Allied artillery (\\d+) hits?",
+   "$1: artiglieria alleata $2 colpi"
+  ],
+  [
+   "(.+): Syrian artillery (\\d+) hits?",
+   "$1: artiglieria siriana $2 colpi"
+  ],
+  [
+   "(.+): Israeli artillery (\\d+) hits?",
+   "$1: artiglieria israeliana $2 colpi"
+  ],
+  [
+   "(.+): Axis artillery (\\d+) hits?",
+   "$1: artiglieria dell'Asse $2 colpi"
+  ],
+  [
+   "(.+): German ground fire (\\d+) hits?",
+   "$1: fuoco terrestre tedesco $2 colpi"
+  ],
+  [
+   "(.+): Allied ground fire (\\d+) hits?",
+   "$1: fuoco terrestre alleato $2 colpi"
+  ],
+  [
+   "(.+): Syrian ground fire (\\d+) hits?",
+   "$1: fuoco terrestre siriano $2 colpi"
+  ],
+  [
+   "(.+): Israeli ground fire (\\d+) hits?",
+   "$1: fuoco terrestre israeliano $2 colpi"
+  ],
+  [
+   "(.+): Axis ground fire (\\d+) hits?",
+   "$1: fuoco terrestre dell'Asse $2 colpi"
+  ],
+  [
+   "SUDDEN DEATH\\n(\\w+) / (\\w+)",
+   "VITTORIA IMMEDIATA\n$1 / $2"
   ]
  ],
  "html": {}

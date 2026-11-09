@@ -145,7 +145,7 @@ export function initTutorial(h: TutHost, course: Course) {
     const busy = h.busy();
     ring.style.display = r && !busy ? 'block' : 'none'; dim.style.display = !r && !busy && !t ? 'block' : 'none';
     if (r) Object.assign(ring.style, { left: `${r.x}px`, top: `${r.y}px`, width: `${r.w}px`, height: `${r.h}px`, borderRadius: t && !('el' in t) ? '50%' : '10px' });
-    const W = innerWidth, H = innerHeight, top = (document.querySelector('#ui .tops')?.getBoundingClientRect().bottom ?? 80) + 8, bot = (document.querySelector('#ui .c-bar.b')?.getBoundingClientRect().top ?? H) - 8;
+    const W = innerWidth, H = innerHeight, top = Math.max(document.querySelector('#ui .tops')?.getBoundingClientRect().bottom ?? 80, document.querySelector('#ui .mapdock .dockrow')?.getBoundingClientRect().bottom ?? 0) + 8,      /* below the bars and the map's layer bar */ bot = (document.querySelector('#ui .c-bar.b')?.getBoundingClientRect().top ?? H) - 8;
     coach.style.visibility = busy ? 'hidden' : 'visible';
     coach.style.maxHeight = `${Math.max(200, bot - top)}px`;
     const cw = coach.offsetWidth, ch = coach.offsetHeight;
