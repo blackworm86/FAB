@@ -408,7 +408,6 @@ function golanVictory(g: Game): Record<Side, number> & { net: number } {
     if (ctl === 'israeli') pts.israeli += (a.vp.mutual ? 1 : 0) + ((isAlOwda(g) ? VP_EAST.has(a.id) : garea(a.id).syria) ? 1 : 0);   // 20.38: Al-Owda counts east of its Israeli VP Line, not the Purple Line
   }
   pts.israeli += Math.max(0, (state(g).chem ?? 0) - 1);                                                       // chemical warfare after the first use
-  if (isAlOwda(g)) pts.israeli += ALO.israeli.vp;                                                                // 20.37: Israel starts with 3 VPs
   return { ...pts, net: pts.syrian - pts.israeli };
 }
 const finalResult = (g: Game, net: number) => isNafakh(g) ? nafakhResult(g) : (net === 0 ? 'Draw (0 net VP)' : `${net > 0 ? 'Syrian' : 'Israeli'} ${Math.abs(net) >= 3 ? 'Operational' : 'Marginal'} Victory (${Math.abs(net)} net VP)`);

@@ -44,8 +44,8 @@ describe('Operation Al-Owda (20.3)', () => {
     expect(A.drawn).toHaveLength(14); expect(A.cup).toHaveLength(0);
     for (const id of ['I11', 'I12', 'I13', 'I14', 'I15', 'I16', 'I17', 'I18', 'I19', 'I20', 'I21', 'I22']) expect(unit(g, id).arrival).toBeGreaterThanOrEqual(2);
   });
-  it('Israel starts with 3 VPs; no sudden death; plays out to a result', () => {
-    const g = alowda(); expect(victory(g).israeli).toBeGreaterThanOrEqual(3);
+  it('20.37 the "3 VPs marked" are the marker\'s start (as Badr), not a bonus; no sudden death; plays out to a result', () => {
+    const g = alowda(); expect(victory(g).israeli).toBe(25);                                         // the counted areas only (the owner's ruling, 9 Nov 2026)
     placeAll(g); endPhase(g); expect(g.phase).toBe('movement'); expect(g.turn).toBe(1);
     playOut(g); expect(g.over).toMatch(/Victory|Draw/); expect(g.turn).toBe(6);
   });
