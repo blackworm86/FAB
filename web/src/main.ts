@@ -472,6 +472,8 @@ function drawPieces() {
 let tint: 'off' | 'tdn' | 'zones' | 'control' | 'supply' = (() => { try { const t = localStorage.getItem('fab-tint'); return t === 'tdn' || t === 'zones' || t === 'control' || t === 'supply' ? t : 'off'; } catch { return 'off'; } })();
 const TDN_COL = [0xf4e3a4, 0xc9a24f, 0x8a8f86, 0x4a5028], ZONE_COL: Record<number, number> = { 5: 0x3a3f46, 6: 0x951b81, 7: 0x009fe3 };   // the TDN colours are the printed TDN markers'
 /** Map overlays (DESIGN.md › Map overlays): one meaning per colour. Reach green, stop brass, must-fight red, optional fight brass, selection brass, supply in the side's colour. */
+/** How strong the lime of "you can move there" is: Sicily's yellow-green map needs it stronger to stand out. */
+const REACH_O = VOL.id === 'sicily' ? 0.62 : 0.4;
 const MAPC = { reach: 0xc8e86a, stop: 0xe7b04a, preview: 0xf6e3a8, must: 0xd1432f, fight: 0xd1432f, sel: 0xe7b04a, cut: 0xd8d4c0, supGe: 0xb9bcc0, supAl: 0x9db36a, ring: 0xc8e86a };
 const CONTROL_COL: Record<string, number> = { ...VOL.controlCol, contested: 0x9b59d0 };                      // allied green, axis grey, contested violet (red and yellow are the combat highlights)
 const tintOf = (id: number) => (tint === 'tdn' ? TDN_COL[E.areas.get(id)!.tdn] : tint === 'control' ? (E.contested(g, id) ? CONTROL_COL.contested : CONTROL_COL[g.control[id] ?? P1]) : ZONE_COL[E.areas.get(id)!.zone]);
@@ -603,7 +605,7 @@ function paintAreas() {
   const arr = new Map(arrOpts().map((x) => [x.area, x])), ret = new Set(g.battle?.stage === 'retreat' ? E.retreatOptions(g, g.battle) : []);      // once, not per area
   for (const [id, m] of overlays) {
     const mat = m.material as THREE.MeshBasicMaterial; let c = 0xffffff, o = 0; const r = opts.find((x) => x.area === id);
-    if (r) { c = r.mustStop ? MAPC.stop : MAPC.reach; o = r.mustStop ? 0.34 : 0.4; } else if (fight.includes(id) && must.has(id)) { c = MAPC.must; o = 0.34; }
+    if (r) { c = r.mustStop ? MAPC.stop : MAPC.reach; o = r.mustStop ? 0.34 : REACH_O; } else if (fight.includes(id) && must.has(id)) { c = MAPC.must; o = 0.34; }
     if (id === (previewArea ?? hoverArea) && r) { c = MAPC.preview; o = 0.5; }
     if (id === selArea && !selUnit) { c = MAPC.sel; o = Math.max(o, 0.3); }
     if (id === kbArea && document.activeElement === canvas && o < 0.3) { c = 0xffffff; o = 0.3; }              // the keyboard cursor
