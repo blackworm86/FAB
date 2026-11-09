@@ -8,10 +8,3 @@ skills-lock.json
 __pycache__/
 .vite/
 *-debug.log
-# figures pipeline: AI output stays local; the owner's picked concept images and the finished models in web/public/models are committed
-tools/figures/2-concept/*/*
-!tools/figures/2-concept/*/pick.png
-tools/figures/3-model/*/
-tools/figures/4-lowpoly/*/
-tools/figures/5-animate/*/
-tools/figures/runs.log
