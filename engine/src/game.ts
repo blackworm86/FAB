@@ -463,6 +463,7 @@ function finishMove(g: Game, u: Unit, opt: Opt, bridgeBlown: boolean) {
   u.bcross = false;                                                                          // 14.62a the marker goes when the unit next moves
   const from = u.area!, to = opt.area, last = connection(opt.path[opt.path.length - 2], to)!, enemy = other(u.side);
   const intoEnemy = unitsIn(g, to, enemy).length > 0;
+  for (const a of opt.path.slice(1, -1)) if (!unitsIn(g, a).length && g.control[a] !== u.side) { u.area = a; updateControl(g, a); say(g, `${u.name} passes through ${areas.get(a)!.name}: now ${CUR.sideName[u.side] ?? u.side}-controlled (2.4)`); }   // 2.4: control changes the instant a unit is sole occupant, passing through too
   const faceUp = unitsIn(g, to, enemy).some((x) => x.up === to);                              // 5.22 a unit entering a contested area whose forces are already face-up is revealed too
   u.from = intoEnemy ? opt.path[opt.path.length - 2] : from; u.area = to; if (faceUp) u.up = to; u.moved = true; u.adjOnly = false; u.spent = 0; dropReserve(g, u);   // into the enemy: the area it came from is the one across the boundary (an aborted river assault goes back there, 6.5)
   if (intoEnemy && last.river) { g.riverCross.push(keyOf(opt.path[opt.path.length - 2], to)); }

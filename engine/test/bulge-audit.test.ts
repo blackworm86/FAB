@@ -104,3 +104,16 @@ describe('Bulge audit fixes', () => {
     roll_step(g, b); expect(b.stage).toBe('done'); expect(b.result).toMatch(/good order/);
   });
 });
+
+describe('2.4 control along the path', () => {
+  it('a unit moving through vacant enemy-controlled areas takes control of each one it passes', () => {
+    const g = fresh(17); g.phase = 'movement'; g.phasing = 'german'; g.contestedAtMoveStart = contestedAreas(g);
+    const u = g.units.find((x) => x.side === 'german' && x.cls === 'armor' && x.area != null && !x.garrison && moveOptions(g, x.id).some((o) => o.path.length >= 3))!;
+    const o = moveOptions(g, u.id).find((x) => x.path.length >= 3)!, mid = o.path.slice(1, -1);
+    for (const a of mid) g.control[a] = 'allied';                                                    // pretend the way is Allied-held and empty
+    const ok = moveOptions(g, u.id).find((x) => x.area === o.area && x.path.join() === o.path.join()); expect(ok).toBeTruthy();
+    move(g, u.id, o.area);
+    for (const a of mid) expect(g.control[a]).toBe('german');
+    expect(u.area).toBe(o.area);
+  });
+});
