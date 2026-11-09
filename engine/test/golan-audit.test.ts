@@ -3,8 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { passSA as passSA_, setReady as setReady_, type Battle as Battle_, type Game as Game_ } from '../src';
 /** 6.21-6.23: past the Defender's Special Action decision and the Attacker's assets, to the Defender's own asset step. */
 const defStep = (g: Game_, b: Battle_) => { if (b.defSA) passSA_(g, b); setReady_(g, b, b.attacker); };
-import { startBattle, beginCombat, canAssign, assign, moveOptions, endPhase, neighbors, inSupply, rollSupply, supplyChecks, firstBattle, golan, ai, type Game } from '../src';
+import { startBattle, beginCombat, canAssign, assign, moveOptions, stratOptions, stratMove, setReserve, edgeKey, endPhase, neighbors, inSupply, rollSupply, supplyChecks, firstBattle, golan, ai, type Game } from '../src';
 import { newGolanGame, unit, chit, give, move } from './golan-helpers';
+const regular = (u: { garrison?: boolean; fort?: unknown; ghost?: unknown }) => !u.garrison && !u.fort && !u.ghost;
 
 const S = golan.state;
 /** The Israeli garrison in R. Magshimim (22) cut off: every neighbour Syrian-controlled, a Syrian block in the area. */
@@ -81,5 +82,21 @@ describe('Golan audit fixes', () => {
     Object.assign(s2, { area: 27 }); Object.assign(s1, { area: 27 }); Object.assign(unit(g, 'I05'), { area: 27 }); give(g, 'SC14a');
     const b = startBattle(g, 27);
     expect(canAssign(g, b, 'syrian', chit(g, 'SC14a'), 'support')).toMatch(/15\.12/); expect(canAssign(g, b, 'syrian', chit(g, 'SC14a'), 'arty')).toBeNull();
+  });
+});
+
+describe('14.11 / 14.14 in strategic moves (the owner\'s ruling, 9 Nov 2026)', () => {
+  it('only one unit crosses an escarpment or rugged boundary in the Strategic Movement Phase', () => {
+    const g = newGolanGame(42); g.turn = 3; g.phasing = 'israeli';
+    const [a, b] = g.units.filter((u) => u.side === 'israeli' && regular(u) && u.cls === 'armor').slice(0, 2);
+    for (const u of [a, b]) Object.assign(u, { area: 6, moved: false, unsupplied: false, disorder: 0, reserve: null });
+    for (const n of [6, 7, 36]) { for (const u of g.units) if (u.area === n && u !== a && u !== b) u.area = null; g.control[n] = 'israeli'; }
+    for (const n of [34, 42]) g.control[n] = 'syrian';                                                   // the other roads into Katzrin closed: only the 7-36 escarpment road is left
+    g.phase = 'movement'; for (const u of [a, b]) setReserve(g, u.id, true, true);
+    g.phase = 'strategic'; S(g).crossed = [];
+    expect(stratOptions(g, a.id)).toContain(36);
+    stratMove(g, a.id, 36);
+    expect(S(g).crossed).toContain(edgeKey(7, 36));
+    expect(stratOptions(g, b.id)).not.toContain(36);
   });
 });

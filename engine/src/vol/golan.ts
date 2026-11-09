@@ -381,6 +381,7 @@ function stratStep(g: Game, u: Unit, a: number, n: number): boolean {
   if (c.atDitch && !V.bridgedDitch.includes(edgeKey(a, n))) return false;
   if (u.side === 'syrian' && g.turn <= 4 && c.sector) return false;
   if (interdictedBy(g, n) === other(u.side) || (u.side === 'israeli' && V.raids.includes(n))) return false;
+  if ((c.escarpment || c.rugged) && V.crossed.includes(edgeKey(a, n))) return false;                   // 14.11/14.14 (player aid A.6, the owner's ruling): one unit per boundary in strategic moves too
   return true;
 }
 
@@ -420,6 +421,7 @@ const jordanCrossed = (g: Game) => g.units.some((u) => u.side === 'syrian' && re
 function onPhase(g: Game, phase: string, when: 'start' | 'mid' | 'end') {
   const V = state(g); nafakhStaff(g);
   if (phase === 'reinforcement' && when === 'start') V.minefieldFailed = [];
+  if (phase === 'strategic' && when === 'start') V.crossed = [];                                      // each phase counts its own crossings
   if ((phase === 'movement' || phase === 'btMove' || phase === 'reaction') && when === 'start') { V.crossed = []; V.assaultEntered = {}; V.withdrew = []; }
   if (phase === 'admin' && when === 'start') V.artyInt = [];
   if (phase === 'deploy' && when === 'end' && g.units.some((u) => u.box === 'deploy')) throw new Error('place every unit first');
@@ -1035,7 +1037,7 @@ export const specialActions = (g: Game, side: Side) => saAvailable(g, side);
 registerHooks('golan73', {
   newGame: newGolanGame as Volume['newGame'], markerKey: () => 'res', reach: golanReach, beforeMove, afterMove,
   stratAllowed: (g, u) => interdictedBy(g, u.area!) !== other(u.side) && !(isNight(g) && g.stratMoves >= (u.side === 'israeli' ? 2 : 1)), stratStep,   // 14.03: night strat-moves, Israel 2, Syria 1
-  afterStrat: (g) => { g.stratMoves++; },
+  afterStrat: (g, _u, path) => { g.stratMoves++; const V = state(g); for (let i = 1; i < path.length; i++) { const c = connection(path[i - 1], path[i])!; if (c.escarpment || c.rugged) V.crossed.push(edgeKey(path[i - 1], path[i])); } },
   setupActor: (g, b) => (state(g).samTarget ? 'syrian' : (b.vol as GolanBattle | undefined)?.ew?.pending ? other(b.attacker) : undefined),   // read only: battleState() would create the record
   successNumber: golanSuccessNumber, adjustFire, canAssign, moraleSn: golanMoraleSn, retreatOk, retreatPrefer, onRetreat, noRetreat: (_g, u) => !!u.garrison,     // 16.24: garrisons never retreat (6.42c)
   
