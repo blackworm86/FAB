@@ -524,19 +524,21 @@ export function resolveBlow(g: Game, attempt: boolean) {
 /** Strategic movement (5.4, 14.8): supplied reserve units, any friendly-controlled supplied area reachable over road/field links without blown bridges or enemy areas. */
 function clearInterdict(g: Game, u: Unit) { if (u.interdict) { chit(g, u.interdict).box = 'eliminated'; u.interdict = undefined; say(g, `${u.name}: interdict marker removed (Special Action movement)`); } }
 function dropGreif(g: Game, k: string) { if (g.greif[k]) { chit(g, g.greif[k]).box = 'eliminated'; delete g.greif[k]; } }
+/** Where a strat-move can go, each area with the area it is reached from (the route). */
+function stratReach(g: Game, u: Unit): Map<number, number> {
+  const prev = new Map<number, number>([[u.area!, -1]]), q = [u.area!];
+  while (q.length) { const a = q.shift()!; for (const n of neighbors(a)) {
+    if (prev.has(n) || g.control[n] !== u.side || unitsIn(g, n, other(u.side)).length || contested(g, n) || g.blown.includes(keyOf(a, n))) continue;
+    const step = CUR.stratStep ? CUR.stratStep(g, u, a, n) : true; if (!step) continue;
+    prev.set(n, a); if (step !== 'end') q.push(n);                                                // 'end': reachable, but not a way through (The Bulge: an interdicted area)
+  } }
+  return prev;
+}
 export function stratOptions(g: Game, id: string): number[] {
   const u = g.units.find((x) => x.id === id)!;
   if (g.phase !== 'strategic' || u.side !== g.phasing || !u.reserve || u.unsupplied || u.area == null || u.moved) return [];
   if (CUR.stratAllowed && !CUR.stratAllowed(g, u)) return [];
-  const seen = new Set<number>();
-  seen.add(u.area); const q = [u.area];
-  while (q.length) { const a = q.shift()!; for (const n of neighbors(a)) {
-    if (seen.has(n) || g.control[n] !== u.side || unitsIn(g, n, other(u.side)).length || contested(g, n) || g.blown.includes(keyOf(a, n))) continue;
-    const step = CUR.stratStep ? CUR.stratStep(g, u, a, n) : true; if (!step) continue;
-    seen.add(n); if (step !== 'end') q.push(n);                                                   // 'end': reachable, but not a way through (The Bulge: an interdicted area)
-  } }
-  seen.delete(u.area);
-  return [...seen].filter((a) => (!CUR.moveOk || CUR.moveOk(g, u, a)) && roomFor(g, u, a) && inSupply(g, u.side, a));
+  return [...stratReach(g, u).keys()].filter((a) => a !== u.area && (!CUR.moveOk || CUR.moveOk(g, u, a)) && roomFor(g, u, a) && inSupply(g, u.side, a));
 }
 /** The Bulge: one German strat-move per phase and it costs fuel (16.13); never across the restricted boundary; not through an interdicted area (17.2). */
 const bulgeStratAllowed = (g: Game, u: Unit) => !(u.side === 'german' && (g.stratMoves >= 1 || (g.opts.fuel && !fuelChits(g).length)));
@@ -544,8 +546,9 @@ const bulgeStratStep = (g: Game, u: Unit, a: number, n: number): boolean | 'end'
 const bulgeAfterStrat = (g: Game, u: Unit) => { if (u.side === 'german') { g.stratMoves++; if (g.opts.fuel) { const f = fuelChits(g).sort((x, y) => +!!y.bid - +!!x.bid)[0]; f.box = f.bid ? 'eliminated' : 'used'; } } };   // 18.2 bid fuel first, eliminated
 export function stratMove(g: Game, id: string, to: number) {
   if (!stratOptions(g, id).includes(to)) throw new Error('illegal strategic move');
-  const u = g.units.find((x) => x.id === id)!, from = u.area!;
-  CUR.afterStrat?.(g, u);
+  const u = g.units.find((x) => x.id === id)!, from = u.area!, prev = stratReach(g, u), path = [to];
+  while (prev.get(path[0])! >= 0) path.unshift(prev.get(path[0])!);
+  CUR.afterStrat?.(g, u, path);
   u.area = to; u.moved = true; dropReserve(g, u); updateControl(g, from); updateControl(g, to);
   say(g, `${u.name} strategic move ${areas.get(from)!.name} → ${areas.get(to)!.name}`);
 }

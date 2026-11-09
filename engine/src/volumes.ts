@@ -56,7 +56,7 @@ export interface Volume {
   afterMove?: (g: Game, u: Unit, opt: Opt) => void;
   stratAllowed?: (g: Game, u: Unit) => boolean;
   stratStep?: (g: Game, u: Unit, from: number, to: number) => boolean | 'end';   // 'end': may be reached but not passed through
-  afterStrat?: (g: Game, u: Unit) => void;
+  afterStrat?: (g: Game, u: Unit, path: number[]) => void;
   successNumber: (s: Shooter, t: Target, c: Setting) => { sn: number; parts: [string, number][] };
   /** Extra firing groups (brigade integrity) or changes to the list before the dice roll. */
   adjustFire?: (g: Game, b: Battle, side: Side, kind: 'arty' | 'ground', list: { key: string; who: string; shooter: Shooter; dice: number; sn: number; parts: [string, number][]; isAsset: boolean }[]) => void;
