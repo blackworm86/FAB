@@ -42,7 +42,7 @@ export const BUDGET = { ms: 3000, min: 3 };
 let deadline = Infinity;
 const late = (i: number, min = BUDGET.min) => i >= min && performance.now() > deadline;
 /** Tuning numbers the arena changes (ARENA_TUNE), and whether the hard player plans its attacks first. */
-export const TUNE = { plan: true, planAt: 0.3, sd: true, asym: 0.4, vpBase: 6, tw1: 0.5, tw2: 1.5, ownCut: null as number | null, expose: 0.35, turn: true };
+export const TUNE = { plan: true, planAt: 0.3, sd: true, asym: 0.4, vpBase: 6, tw1: 0.5, tw2: 1.5, ownCut: null as number | null, expose: 0.35, turn: true, horizon: 2 };
 
 /* ================= actions as data ================= */
 type OpFn = (g: Game, ...args: never[]) => unknown;
@@ -534,7 +534,7 @@ function attackPlan(g: Game, side: Side, plans = attackOptions(g, side), at = TU
   return out;
 }
 /** The turn-level plan (hard): a few whole offensives (no attack, the attacks that pay, everything promising, or all the weight on the best one, two or
- *  three targets), each played out to the end of the player turn on copies of the game (the rest of the turn by the plain player); the best one is made. */
+ *  three targets), each played out on copies of the game through the enemy's reply (TUNE.horizon 2; the rest by the plain player); the best one is made. */
 function turnPlan(g: Game, side: Side): [string, number][] {
   const opts = attackOptions(g, side), byArea = new Map<number, Plan[]>();
   for (const p of opts) (byArea.get(p.a) ?? byArea.set(p.a, []).get(p.a)!).push(p);
@@ -545,7 +545,7 @@ function turnPlan(g: Game, side: Side): [string, number][] {
   if (uniq.length < 2 || late(1, 0)) return uniq.length < 2 ? uniq[0] ?? [] : uniq[1];                 // out of time already: the attacks that pay
   return best(uniq, (moves) => playTurn(g, side, moves, SIMS.turn))!.x;
 }
-/** The mean position for `side` at the end of its player turn (before the Supply Phase) after making `moves`, on `n` copies with their own dice. */
+/** The mean position for `side` at the end of its player turn (before the Supply Phase; TUNE.horizon 2: at the end of the enemy's reply) after making `moves`, on `n` copies with their own dice. */
 function playTurn(g: Game, side: Side, moves: [string, number][], n: number): number {
   const sides = E.sidesOf(g), src = E.randomSource(); E.setRandom(null);
   let total = 0, done = 0;
@@ -554,7 +554,10 @@ function playTurn(g: Game, side: Side, moves: [string, number][], n: number): nu
       const x = structuredClone(g); x.seed = ((g.seed + 7) * 2654435761 + (i + 1) * 40503 + g.rolls * 131) % 1e9; x.rolls = 0;
       mask(x, side);
       for (const [id, a] of moves) { try { walk(x, id, a); if (x.pendingBlow) E.resolveBlow(x, false); } catch { /* blocked on the way */ } }
-      for (let k = 0; k < 800 && !x.over && x.phasing === side && x.turn === g.turn && x.phase !== 'supply'; k++) {
+      let left = false;
+      for (let k = 0; k < 2500 && !x.over; k++) {
+        if (x.phasing !== side) left = true;
+        if (TUNE.horizon < 2 ? left || x.turn !== g.turn || x.phase === 'supply' : left && x.phasing === side) break;
         let act: Action | null = null; for (const s of sides) { act = step(x, s, 'normal'); if (act) break; }
         if (!act) break; try { act.run(x); } catch { break; }
       }
