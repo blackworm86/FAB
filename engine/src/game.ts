@@ -47,6 +47,7 @@ export interface Battle {
   vol?: Record<string, unknown>;   /** a volume's own battle state (Golan: the events played, jamming, counterbattery, the ditch an engineer bridges) */
   pending: number; pendingKind?: 'arty' | 'ground'; lossKind?: 'arty' | 'ground'; engFw: boolean; rolls: Roll[]; result?: string; exploit: boolean; unitHit: Record<Side, boolean>; mark: number; hit?: Record<Side, string[]>;
   ready?: Side[]; locked?: boolean;
+  attPointDone?: boolean;   /** 6.24: the Attacker designated his point unit after the Defender's: the round may begin and the blocks are revealed */
   defSA?: boolean;   /** 6.21: the Defender has still to decide on a Special Action (reinforce or retreat), before the Attacker assigns assets */
   pz150?: string;   /** 18.4 the 150th's first battle: its id, cleared once the morale check is done */
   defStart?: string[]; unabsorbed?: number; byArty?: boolean; lastDefPoint?: Unit;   /** 18.7 bookkeeping */
@@ -773,8 +774,8 @@ export function assetLimits(g: Game, b: Battle, side: Side) {
   const onlyAssets = unitsIn(g, b.area, side).every((u) => u.garrison);
   return { arty: (attacker ? 2 : 1) + (us && !mixed && !onlyAssets ? 1 : 0), battle: !mixed && !onlyAssets, event: !mixed && !onlyAssets, mixed, pure, ech, pooled };
 }
-/** 6.21-6.24: whose step it is in a battle's set-up. The Defender decides on a Special Action, then the Attacker assigns assets (and his point unit),
- *  then the Defender; with both ready, the Attacker begins the round. A volume may hand the step over for an answer (Golan: SAM, jamming). */
+/** 6.21-6.24: whose step it is in a battle's set-up. The Defender decides on a Special Action, then the Attacker assigns assets, then the Defender
+ *  assigns his and designates his point unit, then the Attacker designates his point unit and begins the round (a second setReady). A volume may hand the step over for an answer (Golan: SAM, jamming). */
 export function setupSide(g: Game, b: Battle): Side { return CUR.setupActor?.(g, b) ?? orderSide(b); }
 const orderSide = (b: Battle): Side => { const def = other(b.attacker), r = b.ready ?? []; return b.defSA ? def : r.length === 2 ? b.attacker : r.includes(b.attacker) ? def : b.attacker; };
 const attackerBegun = (b: Battle) => !!b.ready?.includes(b.attacker) || b.assets[b.attacker].length > 0 || !!b.air[b.attacker];
@@ -782,9 +783,10 @@ const attackerBegun = (b: Battle) => !!b.ready?.includes(b.attacker) || b.assets
 export function passSA(g: Game, b: Battle) { if (b.stage !== 'setup' || !b.defSA) throw new Error('no Special Action decision pending'); b.defSA = false; }
 const notYourStep = (g: Game, b: Battle, side: Side) => (b.defSA ? 'the Defender first decides on a Special Action (6.21)' : side === setupSide(g, b) ? null
   : side === b.attacker ? 'your assets are committed: now the Defender assigns (6.23)' : 'the Attacker assigns his assets first (6.22)');
+const committed = (b: Battle, side: Side) => (b.ready?.includes(side) ? (side === b.attacker ? 'your assets are committed (6.22)' : 'your assets are committed (6.23)') : null);
 export function canAssign(g: Game, b: Battle, side: Side, c: Chit, mode?: 'arty' | 'support'): string | null {
   if (b.stage !== 'setup') return 'assets are committed before the first roll';
-  { const w = notYourStep(g, b, side); if (w) return w; }
+  { const w = notYourStep(g, b, side) ?? committed(b, side); if (w) return w; }
   if (c.side !== side || c.box !== 'available') return 'not in the Available Box';
   return CUR.canAssign(g, b, side, c, mode);
 }
@@ -818,7 +820,7 @@ export function assign(g: Game, b: Battle, id: string, mode?: 'arty' | 'support'
   CUR.onAssign?.(g, b, c, mode, unit);
 }
 /** Take an asset back, in its owner's own set-up step only. */
-export function unassign(g: Game, b: Battle, id: string) { if (chit(g, id).side === orderSide(b)) dropAsset(g, b, id); }   /* an air mission may be taken back while its SAM answer waits (16.12) */
+export function unassign(g: Game, b: Battle, id: string) { const s = chit(g, id).side; if (s === orderSide(b) && !committed(b, s)) dropAsset(g, b, id); }   /* an air mission may be taken back while its SAM answer waits (16.12) */
 function dropAsset(g: Game, b: Battle, id: string) {
   const c = chit(g, id); if (b.stage !== 'setup' || CUR.keepAssigned?.(g, b, c)) return; c.box = 'available';
   b.assets[c.side] = b.assets[c.side].filter((x) => x !== id); dropAir(b, c.side, id); CUR.onUnassign?.(g, b, c);
@@ -969,8 +971,9 @@ export function setReady(g: Game, b: Battle, side: Side, on = true) {
   if (b.stage !== 'setup') throw new Error('already started');
   if (!on) throw new Error('assets once committed stay committed (6.22, 6.23)');
   { const w = notYourStep(g, b, side); if (w) throw new Error(w); }
-  const r = (b.ready ??= []).filter((x) => x !== side); if (on) r.push(side); b.ready = r;
-  if (r.length === 2 && !g.deferBegin) beginCombat(g, b);
+  const r = (b.ready ??= []);
+  if (!r.includes(side)) r.push(side); else if (side === b.attacker && r.length === 2) b.attPointDone = true; else throw new Error('already done');
+  if (b.attPointDone && !g.deferBegin) beginCombat(g, b);
 }
 /** Withdraw from a battle that has not rolled yet, returning every assigned asset. Not possible once a Special Action was spent. */
 export function cancelBattle(g: Game) {
@@ -1434,7 +1437,7 @@ export { updateControl, dropReserve, eliminate, needAdmin, supplied, fighters, r
 /** The point unit a side designates for a battle (6.24), and the engineer's option to remove field works instead of firing (6.33): plain state changes, so they can travel as actions. */
 export function setPoint(g: Game, b: Battle, side: Side, unitId: string) {
   if (b.stage !== 'setup') throw new Error('already started'); const u = g.units.find((x) => x.id === unitId);
-  { const w = notYourStep(g, b, side); if (w) throw new Error(w); }
+  { const w = notYourStep(g, b, side) ?? (side === b.attacker && !b.ready?.includes(other(b.attacker)) ? 'the Defender designates his point unit first (6.24)' : null); if (w) throw new Error(w); }
   if (!u || u.side !== side || u.area !== b.area || u.garrison || u.ghost) throw new Error('not a legal point unit');
   if (side === b.attacker && u.disorder) throw new Error('a disordered unit cannot be the attacking point unit');
   if (side !== b.attacker && unitId === b.reinforced && g.units.some((x) => x.id === b.defPoint && x.area === b.area)) throw new Error('the reinforcing unit may not be the point unit while the original point unit stands (8.23)');

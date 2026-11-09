@@ -96,16 +96,16 @@ export class SplitSeat {
   }
   /** True when one of this seat's revealed blocks is hidden again, so its reveal must be withdrawn (the other seat's move may have hidden it). */
   stale(g: Game): boolean { const want = this.wanted(g); return Object.entries(this.reveals).some(([a, r]) => !(a in want) && g.units.some((u) => u.id === r.id && u.side === this.side)); }
-  /** The reveals this seat has to publish now (battle area once both are ready, an Intelligence target); they count as published from here on. */
+  /** The reveals this seat has to publish now (battle area once both point units are designated, an Intelligence target); they count as published from here on. */
   due(g: Game): Reveals {
     if (!this.priv) return {};
     const fresh = freshReveals(this.reveals, this.wanted(g)); this.reveals = { ...this.reveals, ...fresh }; return fresh;
   }
-  /** What the rules let the other side see right now: the battle area once both are ready, face-up blocks, an Intelligence target. */
+  /** What the rules let the other side see right now: the battle area once both point units are designated (6.24), face-up blocks, an Intelligence target. */
   wanted(g: Game): Reveals {
     if (!this.priv) return {};
     let want: Reveals = {};
-    const b = g.battle; if (b && b.stage === 'setup' && (b.ready?.length ?? 0) === 2) want = { ...want, ...revealsIn(g, this.side, b.area, this.priv) };
+    const b = g.battle; if (b && b.stage === 'setup' && b.attPointDone) want = { ...want, ...revealsIn(g, this.side, b.area, this.priv) };
     for (const u of g.units) if (u.side === this.side && u.up != null && u.up === u.area) want[aliasOf(this.priv, u.id)] = { id: u.id, ...secretOf(u) };            // blocks that are face-up (a battle, or entering a face-up area) are shown to the other side
     if (g.revealed && g.units.find((u) => u.id === g.revealed)?.side === this.side) want = { ...want, ...revealOf(g, g.revealed, this.priv) };
     return want;

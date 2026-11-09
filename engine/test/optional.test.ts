@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { newGame, mustFight, startBattle, beginCombat, roll_step, setPoint, boxOf, chit, areas, neighbors, connection, keyOf, repairBridge, moveOptions, move, setPeiperFull, peiperCan,
+import { newGame, mustFight, startBattle, beginCombat, roll_step, setPoint, passSA, setReady, boxOf, chit, areas, neighbors, connection, keyOf, repairBridge, moveOptions, move, setPeiperFull, peiperCan,
   endPhase, unitsIn, contested, OPTIONAL_RULES, type Game } from '../src';
 
 const clone = (g: Game) => JSON.parse(JSON.stringify(g)) as Game;
@@ -62,6 +62,7 @@ describe('optional rules (Play Book 18)', () => {
     const area = mustFight(g).find((a) => unitsIn(g, a, 'german').some((u) => u.id === pz.id)) ?? (() => { const a = mustFight(g)[0]; pz.area = a; return a; })();
     const b = startBattle(g, area); expect(b.attPoint).toBe(pz.id);
     const other = unitsIn(g, area, 'german').find((u) => u.id !== pz.id && !u.garrison);
+    if (b.defSA) passSA(g, b); setReady(g, b, 'german'); setReady(g, b, 'allied');                     // 6.24: the Attacker's point unit comes last
     if (other) expect(() => setPoint(g, b, 'german', other.id)).toThrow(/18.4/);
     g.force = [10, 10, 10, 10, 10, 10, 10, 10, 10, 10];                  // artillery misses, then the morale check fails (10)
     beginCombat(g, b); expect(g.pz150Done).toBe(true);

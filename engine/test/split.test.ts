@@ -52,7 +52,9 @@ describe('two seats play a split table', () => {
     play(ger, al, (g) => { startBattle(g, area); });
     play(ger, al, (g) => setReady(g, g.battle!, 'german'));
     play(al, ger, (g) => setReady(g, g.battle!, 'allied'));
-    // both ready: each side's blocks in the area are published, then the attacker begins combat on a game where all of them are known
+    play(ger, al, (g) => setReady(g, g.battle!, 'german'));                                            // 6.24 the Attacker's point unit, last
+    play(al, ger, () => undefined);                                                                       // the Defender's browser sees it and publishes its blocks
+    // both point units designated: each side's blocks in the area are published, then the attacker begins combat on a game where all of them are known
     play(ger, al, (g) => { const foe = g.units.filter((u) => u.side === 'allied' && u.area === area && !u.garrison); expect(foe.length).toBeGreaterThan(0); expect(foe.every((u) => !isPlaceholder(u))).toBe(true); beginCombat(g, g.battle!); });
     const seen = ger.open(JSON.parse(pub) as Game); expect(seen.units.filter((u) => u.area === area && isPlaceholder(u)).length).toBe(0);
     // the Allied block loses a step, retreats and is hidden again
@@ -66,6 +68,7 @@ describe('two seats play a split table', () => {
     const target = moved.area!;
     play(ger, al, (g) => { const mine = g.units.find((u) => u.side === 'german' && u.area != null && !u.garrison)!; mine.area = target; g.phase = 'combat'; g.phasing = 'german'; startBattle(g, target); setReady(g, g.battle!, 'german'); });
     play(al, ger, (g) => { setReady(g, g.battle!, 'allied'); });
+    play(ger, al, (g) => setReady(g, g.battle!, 'german')); play(al, ger, () => undefined);            // 6.24 the Attacker's point unit; the Defender's browser publishes
     const later = ger.open(JSON.parse(pub) as Game), now = later.units.find((u) => u.id === id)!;
     const truth = al.open(JSON.parse(pub) as Game).units.find((u) => u.id === id)!;
     expect(isPlaceholder(now)).toBe(false); expect(now.str).toBe(truth.str);            // not the strength it had when it was first revealed

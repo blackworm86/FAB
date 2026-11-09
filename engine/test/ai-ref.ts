@@ -425,7 +425,7 @@ const canPoint = (g: Game, b: Battle, side: Side, id: string) => { const x = str
 function battle(g: Game, b: Battle, side: Side, level: Level): Action | null {
   const att = side === b.attacker, foe = E.other(side), a = b.area;
   if (b.stage === 'setup') {
-    if (b.ready?.includes(side) || E.setupSide(g, b) !== side) return null;
+    if (E.setupSide(g, b) !== side || b.attPointDone || (b.ready?.includes(side) && !(att && b.ready.length === 2))) return null;   // its own step only; the Attacker's last one is his point unit (6.24)
     if (b.defSA) return act('no Special Action', ['passSA']);                                          // 6.21 (shortcut: never reinforces or retreats by Special Action yet)
     if (CUR.id === 'golan73' && G.state(g).samTarget && side !== 'syrian') return null;                 // the SAM answer comes first (16.12)
     const ex = exchange(g, a, side, att), close = ex.mine < ex.theirs * 1.6, w = worth(g, a, side);

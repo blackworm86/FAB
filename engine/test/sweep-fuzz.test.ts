@@ -212,7 +212,7 @@ export function play(cfg: Cfg): Result {
       b = g.battle!; if (!b || b.stage !== 'setup') return;
       if (cfg.game === 'golan73') {
         const ew = avail(att).find((c) => c.kind === 'event_ew'); if (s === att && ew && chance(0.3)) act(att, 'playJamming', () => G.playJamming(g, b, ew.id), false);
-        if (G.battleState(b).ew?.pending) { const cm = avail(def).find((c) => c.kind === 'event_ew'); act(def, 'answerJamming', () => G.answerJamming(g, b, cm && chance(0.5) ? cm.id : undefined)); }
+        if (G.battleState(b).ew?.pending) { const cm = avail(def).find((c) => c.kind === 'event_ew'); if (!(cm && chance(0.5) && act(def, 'answerJamming (EW)', () => G.answerJamming(g, b, cm.id), false))) act(def, 'answerJamming', () => G.answerJamming(g, g.battle!)); b = g.battle!; }   /* a refused try restores the game: use the live battle */   // 4.35: a lone standing asset plays no event
         const cb = avail(s).find((c) => c.kind === 'event_counterbattery'); if (cb && chance(0.3)) act(s, 'playCounterbattery', () => G.playCounterbattery(g, b, cb.id), false);
         const ch = G.chemicalOptions(g); if (s === 'syrian' && ch.length && chance(0.5)) act('syrian', 'playChemical', () => G.playChemical(g, pick(ch)));
         const fl = G.flankOptions(g); if (s === 'israeli' && fl.length && chance(0.5)) act('israeli', 'playFlank', () => G.playFlank(g, pick(fl)), false);
@@ -247,7 +247,7 @@ export function play(cfg: Cfg): Result {
       b = g.battle; const st = b.stage;
       const who = (E.actorOf(g) === 'both' ? att : E.actorOf(g)) as Side;
       if (st === 'done') { act(att, 'closeBattle', () => E.closeBattle(g)); return; }
-      if (st === 'setup') { resolvePending(); if (!g.battle || g.battle.stage !== 'setup') continue; const w = E.setupSide(g, g.battle); act(w, 'setReady', () => E.setReady(g, g.battle!, w)); continue; }
+      if (st === 'setup') { resolvePending(); if (!g.battle || g.battle.stage !== 'setup') continue; const w = E.setupSide(g, g.battle); if (w === att && g.battle.ready?.length === 2 && chance(0.3)) { const us = E.unitsIn(g, a, att).filter((u) => !u.garrison && !u.ghost && !u.disorder); if (us.length) act(att, 'setPoint', () => E.setPoint(g, g.battle!, att, pick(us).id), false); } act(w, 'setReady', () => E.setReady(g, g.battle!, w)); continue; }
       if (st === 'loss') { const keys = E.lossOptions(g, b); if (!keys.length) fail('loss stage with nothing to choose'); const who = b.loss!.side; if (chance(0.2)) act(who, 'autoLosses', () => E.autoLosses(g, b)); else act(who, 'chooseLoss', () => E.chooseLoss(g, b, pick(keys))); continue; }
       if (st === 'attFirst') { const keys = [b.attPoint, ...b.assets[att].filter((id) => E.isBattleAsset(E.chit(g, id)))]; act(att, 'chooseFirstLoss', () => E.chooseFirstLoss(g, b, pick(keys))); continue; }
       if (st === 'attChoice') { const abort = chance(0.25) && !E.VOLUME.canAbort?.(g, b); act(att, `attackerChoice ${abort}`, () => E.attackerChoice(g, b, abort)); continue; }

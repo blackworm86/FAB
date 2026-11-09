@@ -213,7 +213,7 @@ describe('4.1a unused Special Action', () => {
   });
 });
 
-import { setReady, cancelBattle, assign as assignChit, passSA, actorOf } from '../src/game';
+import { setReady, cancelBattle, assign as assignChit, passSA, actorOf, setPoint } from '../src/game';
 describe('battle set-up control', () => {
   it('goes in the order of 6.21-6.23, starts when both sides are ready, and can be withdrawn until the Attacker commits', () => {
     const g = newGame(5); g.phase = 'combat'; g.phasing = 'german'; const a = mustFight(g)[0] ?? 11;
@@ -224,7 +224,8 @@ describe('battle set-up control', () => {
     const b2 = startBattle(g, a); passSA(g, b2); setReady(g, b2, 'german'); expect(actorOf(g)).toBe('allied');  // 6.23 then the Defender
     expect(() => setReady(g, b2, 'german', false)).toThrow(); expect(() => cancelBattle(g)).toThrow(/6\.22/);
     expect(() => defenderRetreatSA(g, b2)).toThrow(/6\.21/);
-    setReady(g, b2, 'allied'); expect(b2.stage).not.toBe('setup');
+    expect(() => setPoint(g, b2, 'german', b2.attPoint)).toThrow(); setReady(g, b2, 'allied'); expect(b2.stage).toBe('setup');   // 6.24 the Defender's point unit first
+    expect(actorOf(g)).toBe('german'); setPoint(g, b2, 'german', b2.attPoint); setReady(g, b2, 'german'); expect(b2.stage).not.toBe('setup');
   });
 });
 

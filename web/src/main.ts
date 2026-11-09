@@ -1422,7 +1422,7 @@ function promptText() {
   if (g.over) return `<b>${esc(g.over)}</b> <button data-ui="${reg(() => { endHidden = false; })}">Result</button>`;
   if (g.pendingBlow) return `<b>${nm(other(g.units.find((x) => x.id === g.pendingBlow!.unit)!.side))}</b>: attempt to blow the bridge?`;
   if (b?.stage === 'retreat') return '<b>Choose the retreat area.</b>';
-  if (b && b.stage === 'setup' && b.ready?.length === 2) return '<b>Both ready.</b> Blocks are revealed…';
+  if (b && b.stage === 'setup' && b.attPointDone) return '<b>Point units designated.</b> Blocks are revealed…';
   if (b) return b.stage === 'setup' ? setupPrompt(b) : b.stage === 'done' ? '' : rollView ? '' : b.stage.endsWith('Choice') ? 'Choose how to take the hits.' : STAGE_NAME[b.stage] ? stakes(b) : '';
   const m = E.mustFight(g).length;
   switch (g.phase) {
@@ -1441,10 +1441,12 @@ function promptText() {
 }
 /** 6.21-6.23: the battle set-up goes step by step: the Defender's Special Action decision, the Attacker's assets, then the Defender's. */
 function setupPrompt(b: E.Battle): string {
-  const who = E.setupSide(g, b), att = who === b.attacker;
-  if (who === CPU_SIDE || (online.active && !online.both() && who !== online.mySide())) return `<b>${nm(who)}</b> ${b.defSA ? 'decides on a Special Action…' : 'assigns assets…'}`;
+  const who = E.setupSide(g, b), att = who === b.attacker, last = att && b.ready?.length === 2;
+  if (who === CPU_SIDE || (online.active && !online.both() && who !== online.mySide())) return `<b>${nm(who)}</b> ${b.defSA ? 'decides on a Special Action…' : last ? 'designates the point unit…' : 'assigns assets…'}`;
   if (b.defSA) return `<b>${nm(who)}: Special Action?</b>${gx(' Reinforce or retreat before the attacker commits his assets (6.21), or go on without.')}`;
-  return `<b>${nm(who)} ${att ? 'attacks' : 'defends'}: tap a card to add it.</b>${gx(att ? ' The defender answers after you (6.22).' : ' The attacker\'s assets are on the table (6.23).')}${gx(' Tap a block to make it the point unit.')}`;
+  if (last) return `<b>${nm(who)}: tap a block to make it your point unit</b>, then Begin combat.${gx(' The defender has designated his (6.24).')}`;
+  return att ? `<b>${nm(who)} attacks: tap a card to add it.</b>${gx(' The defender answers after you (6.22); you pick your point unit last.')}`
+    : `<b>${nm(who)} defends: tap a card to add it</b>${gx(', and a block to make it the point unit. The attacker\'s assets are on the table (6.23).', ' and pick your point unit.')}`;
 }
 function primary(): { label: string; fn: () => void; dis?: boolean } | null {
   const b = g.battle;
@@ -1454,11 +1456,11 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
   if (b) {
     if (b.stage === 'setup') {
       const who = E.setupSide(g, b), solo = !online.active || online.both(), why = VOL.blocksBegin(g);
-      if (who === CPU_SIDE || (!solo && who !== online.mySide()) || b.ready?.includes(who)) return null;      // the other side's step
+      if (who === CPU_SIDE || (!solo && who !== online.mySide()) || b.attPointDone || (b.ready?.includes(who) && !(who === b.attacker && b.ready.length === 2))) return null;      // the other side's step
       const go = (f: (x: E.Battle) => void) => () => act(() => { if (g.battle) f(g.battle); });            // the live battle: a remote write may have replaced the one this button was drawn for
       if (b.defSA) return { label: 'No Special Action', fn: go((x) => E.passSA(g, x)) };
       const first = who === b.attacker && !b.ready?.includes(b.attacker);
-      return { label: !solo ? 'Ready' : first ? 'Assets done' : 'Begin combat', fn: why ? () => say(why) : go((x) => E.setReady(g, x, who)), dis: !!why };
+      return { label: first ? 'Assets done' : who === b.attacker ? 'Begin combat' : 'Done', fn: why ? () => say(why) : go((x) => E.setReady(g, x, who)), dis: !!why };
     }
     if (b.stage === 'done') return { label: 'Close battle', fn: () => act(() => { E.closeBattle(g); selArea = null; }) };
     if (b.stage.endsWith('Choice') || b.stage === 'retreat' || b.stage === 'attFirst' || b.stage === 'loss') return null;
@@ -1919,12 +1921,12 @@ let lastView: E.Side | null = null;
 function syncView() {
   const v = viewSide(); if (v === lastView) return; const fresh = lastView === null; lastView = v; yaw = v !== VOL.bottom ? Math.PI : 0; if (!fresh) goal = g.inPlay ? homeGoal() : { t: openingTarget(), dist, pitch }; paintBoard();
 }
-/** Split tables: publish the blocks the other side may now see, and (attacker's seat) start combat once both sides are ready and their blocks are known. */
+/** Split tables: publish the blocks the other side may now see, and (attacker's seat) start combat once both point units are designated (6.24) and the blocks are known. */
 function driveSplit() {
   const me = online.mySide(); if (online.mode !== 'remote' || !me || !online.rev) return;
   void publishReveals(g);
   const b = g.battle;
-  if (b && b.stage === 'setup' && b.ready?.length === 2 && g.deferBegin && me === b.attacker && E.unitsIn(g, b.area).every((u) => u.name !== 'Hidden block') && !VOL.blocksBegin(g)) act(() => E.beginCombat(g, b));
+  if (b && b.stage === 'setup' && b.attPointDone && g.deferBegin && me === b.attacker && E.unitsIn(g, b.area).every((u) => u.name !== 'Hidden block') && !VOL.blocksBegin(g)) act(() => E.beginCombat(g, b));
 }
 let ctlKey = '', tgtKey = '';
 let playKey: string | null = null;
