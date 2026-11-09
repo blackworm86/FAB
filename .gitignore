@@ -12,5 +12,6 @@ __pycache__/
 tools/figures/2-concept/*/*
 !tools/figures/2-concept/*/pick.png
 tools/figures/3-model/*/
-tools/figures/4-animate/*/
+tools/figures/4-lowpoly/*/
+tools/figures/5-animate/*/
 tools/figures/runs.log

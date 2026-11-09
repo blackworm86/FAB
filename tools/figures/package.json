@@ -6,8 +6,10 @@
     "list": "node 1-list/list.mjs && node 2-concept/prompts.mjs",
     "concept": "node 2-concept/make.mjs",
     "model": "node 3-model/make.mjs",
-    "animate": "node 4-animate/make.mjs",
-    "game": "node 5-game/install.mjs",
+    "lowpoly": "node 4-lowpoly/make.mjs",
+    "animate": "node 5-animate/make.mjs",
+    "game": "node 6-game/install.mjs",
+    "page": "node page/build.mjs",
     "test": "node test.mjs"
   },
   "dependencies": {

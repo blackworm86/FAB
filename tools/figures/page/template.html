@@ -19,7 +19,7 @@ button, .btn { font: 600 .82rem var(--mono); color: var(--ink); background: var(
 button.go, .btn.go { background: var(--accent); border-color: var(--accent); color: var(--accent-ink) }
 button:disabled { opacity: .5; cursor: default }
 .lede { display: grid; gap: 8px }
-.steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; border: 1px solid var(--line); background: var(--panel) }
+.steps { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; border: 1px solid var(--line); background: var(--panel) }
 .step { padding: 12px 14px; border-left: 1px solid var(--line); display: grid; gap: 4px; align-content: start }
 .step:first-child { border-left: 0 }
 .step .n { font: 600 .72rem var(--mono); color: var(--dim); letter-spacing: .08em; text-transform: uppercase }
@@ -39,15 +39,14 @@ details.ty > summary::-webkit-details-marker { display: none }
 .thumb img { width: 100%; height: 100%; object-fit: cover }
 .name { min-width: 0 } .name b { font: 700 1.05rem var(--display); letter-spacing: .03em } .name .what { color: var(--dim); font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 .pill { font: 600 .72rem var(--mono); padding: 3px 8px; border-radius: 99px; border: 1px solid currentColor; white-space: nowrap }
-.s0 { color: var(--dim) } .s1 { color: var(--ink) } .s2 { color: var(--warn) } .s3, .s4 { color: var(--accent) } .s5 { color: var(--ok) }
+.s0 { color: var(--dim) } .s1 { color: var(--ink) } .s2, .s3 { color: var(--warn) } .s4, .s5 { color: var(--accent) } .s6 { color: var(--ok) }
 .order { padding: 6px 4px 22px 68px; display: grid; gap: 18px }
 .order section { display: grid; gap: 10px; min-width: 0 }
 .order section > header { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap }
 .order section > header .tag { font: 600 .72rem var(--mono); color: var(--dim); text-transform: uppercase; letter-spacing: .08em }
-.views { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px }
 .view { background: var(--panel); border: 1px solid var(--line); padding: 10px; display: grid; gap: 8px; align-content: start; min-width: 0 }
 .view h4 { margin: 0; font: 600 .78rem var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--dim) }
-.prompt { font: .8rem/1.5 var(--body); max-height: 7.5em; overflow: auto; color: var(--ink) }
+.prompt { font: .8rem/1.5 var(--body); max-height: 9em; overflow: auto; color: var(--ink) }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
 .big { width: 220px; max-width: 100%; aspect-ratio: 1; object-fit: contain; background: var(--chip); border: 1px solid var(--line); border-radius: 4px }
 .ask { font: .82rem var(--mono); background: var(--panel); border: 1px dashed var(--line); padding: 8px 10px; border-radius: 4px; overflow-wrap: anywhere }
@@ -57,7 +56,7 @@ details.ty > summary::-webkit-details-marker { display: none }
 .empty { padding: 12px; border: 1px dashed var(--line); color: var(--dim); font-size: .9rem }
 @media (max-width: 760px) {
   .steps { grid-template-columns: 1fr 1fr } .step { border-left: 0; border-top: 1px solid var(--line) } .step:nth-child(-n+2) { border-top: 0 } .step:nth-child(even) { border-left: 1px solid var(--line) }
-  .views { grid-template-columns: 1fr } .order { padding-left: 4px } details.ty > summary { grid-template-columns: 44px minmax(0, 1fr); } details.ty > summary .pill { grid-column: 2; justify-self: start } .thumb { width: 44px; height: 44px }
+  .order { padding-left: 4px } details.ty > summary { grid-template-columns: 44px minmax(0, 1fr); } details.ty > summary .pill { grid-column: 2; justify-self: start } .thumb { width: 44px; height: 44px }
 }
 @media (prefers-reduced-motion: no-preference) { details.ty[open] .order { animation: open .18s ease-out } @keyframes open { from { opacity: .4; transform: translateY(-4px) } } }
 </style>
@@ -66,7 +65,7 @@ details.ty > summary::-webkit-details-marker { display: none }
   <div class="lede">
     <p class="mono dim">Fast Action Battles · figures instead of blocks · docs/PARALLEL.md §3</p>
     <h1>Figure Workshop</h1>
-    <p>Each figure type goes through five steps, made by free AI services. You make and pick the concept art here; Claude moves the files between the services, checks sizes and puts the finished figure in the game. Open a type to see its work order.</p>
+    <p>Each figure type goes through six steps and ends as a low-poly figure: a few hundred flat faces in plain colours, like a painted war-game miniature. AI services draw the picture and build the 3D model; you choose and approve; Claude turns the model low-poly and puts it in the game. Open a type to see its work order.</p>
     <p class="msg" id="status">Connecting to the workshop records…</p>
   </div>
 
@@ -99,18 +98,18 @@ details.ty > summary::-webkit-details-marker { display: none }
 <script>
 const D = JSON.parse(document.getElementById('data').textContent);
 const VOL = { all: 'All', bulge: 'Bulge', sicily: 'Sicily', golan73: 'Golan', any: 'Shared' };
-const STAGES = ['Prompts ready', 'Concept picked', 'Model made', 'Model approved', 'Animated', 'In the game'];
+const STAGES = ['Prompt ready', 'Picture picked', '3D model made', 'Low-poly ready', 'Approved', 'Animated', 'In the game'];
 const STEPS = [
-  ['1 · List and prompts', 'Claude', 'every type'], ['2 · Concept art', 'You, with a free image AI', 'picked'], ['3 · 3D model', 'TRELLIS, then Claude reduces it', 'approved'],
-  ['4 · Animation', 'You in Mixamo (soldiers)', 'animated'], ['5 · Into the game', 'Claude', 'in the game'],
+  ['1 · List and prompts', 'Claude', 'every type'], ['2 · Picture', 'You, with a free image AI', 'picked'], ['3 · 3D model', 'An image-to-3D AI', 'made'],
+  ['4 · Low-poly', 'Claude, automatic; you approve', 'approved'], ['5 · Animation', 'You in Mixamo (soldiers)', 'animated'], ['6 · Into the game', 'Claude', 'in the game'],
 ];
-const SERVICES = { trellis: 'https://huggingface.co/spaces/trellis-community/TRELLIS', meshy: 'https://www.meshy.ai', tripo: 'https://www.tripo3d.ai', mixamo: 'https://www.mixamo.com', gemini: 'https://gemini.google.com', bing: 'https://www.bing.com/images/create' };
+const SERVICES = { trellis: 'https://huggingface.co/spaces/trellis-community/TRELLIS', meshy: 'https://www.meshy.ai', tripo: 'https://www.tripo3d.ai', mixamo: 'https://www.mixamo.com', gemini: 'https://gemini.google.com', chatgpt: 'https://chatgpt.com', bing: 'https://www.bing.com/images/create' };
 const rows = {}, runs = []; let db = null, assets = null, downloads = null, vol = 'all', open = new Set();
 const $ = (s, e = document) => e.querySelector(s);
 const h = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (v == null || v === false) continue; if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'text') e.textContent = v; else e.setAttribute(k, v === true ? '' : v); } for (const c of kids.flat()) if (c != null) e.append(c); return e; };
 const blob = (id) => '/_blob/' + id;
-/** How far a type has come: 0 prompts … 5 in the game (vehicles skip animation). */
-function stage(t) { const r = rows[t.id] || {}; return r.game ? 5 : t.kind === 'soldier' && r.rigged ? 4 : r.modelOk ? 3 : r.model ? 2 : r.pick ? 1 : 0; }
+/** How far a type has come: 0 prompt … 6 in the game (vehicles and guns skip animation). */
+function stage(t) { const r = rows[t.id] || {}; return r.game ? 6 : t.kind === 'soldier' && r.rigged ? 5 : r.modelOk ? 4 : r.model ? 3 : r.raw ? 2 : r.pick ? 1 : 0; }
 const polli = (p, seed) => `https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?width=1024&height=1024&seed=${seed}&model=flux&nologo=true`;
 async function copy(text, btn) { try { await navigator.clipboard.writeText(text); btn.textContent = 'Copied'; } catch { const r = document.createRange(); r.selectNodeContents(btn.previousElementSibling ?? btn); getSelection().removeAllRanges(); getSelection().addRange(r); btn.textContent = 'Selected: copy it'; } setTimeout(() => (btn.textContent = 'Copy'), 1600); }
 const copyBtn = (text) => h('button', { type: 'button', onclick: (e) => copy(text, e.currentTarget) }, 'Copy');
@@ -122,43 +121,43 @@ async function save(id, patch) {
 
 function steps() {
   const n = D.types.length, at = (k) => D.types.filter((t) => stage(t) >= k).length, anim = D.types.filter((t) => t.kind === 'soldier');
-  const counts = [n, at(1), at(3), anim.filter((t) => rows[t.id]?.rigged).length, at(5)], of = [n, n, n, anim.length, n];
+  const counts = [n, at(1), at(2), at(4), anim.filter((t) => rows[t.id]?.rigged).length, at(6)], of = [n, n, n, n, anim.length, n];
   $('#steps').replaceChildren(...STEPS.map(([name, who, word], i) => h('div', { class: 'step' }, h('span', { class: 'n', text: name }), h('span', { class: 'count' }, String(counts[i]), h('small', { text: ` / ${of[i]} ${word}` })), h('div', { class: 'bar' }, h('i', { style: `width:${(100 * counts[i]) / of[i]}%` })), h('span', { class: 'who', text: who }))));
 }
 
 function order(t) {
   const r = rows[t.id] || {}, st = stage(t), soldier = t.kind === 'soldier';
   const sec = (tag, title, ...kids) => h('section', {}, h('header', {}, h('span', { class: 'tag', text: tag }), h('h3', { text: title })), ...kids);
-  const views = h('div', { class: 'views' }, ...Object.entries(t.views).map(([v, p]) => h('div', { class: 'view' }, h('h4', { text: v === 'threequarter' ? 'three-quarter (the 3D input)' : v }), h('div', { class: 'prompt', text: p }),
-    h('div', { class: 'row' }, copyBtn(p), ...[1, 2, 3].map((s) => h('a', { class: 'btn', href: polli(p, s), target: '_blank', rel: 'noopener' }, `Try ${s}`))))));
   const file = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp', id: 'pick-' + t.id, hidden: true, onchange: async (e) => {
     const f = e.target.files[0]; if (!f) return; if (!assets) return say('Only editors of this page can upload pictures.');
-    say('Uploading…'); try { const a = await assets.upload(f); await save(t.id, { pick: a.id, pickName: f.name, model: null, modelOk: false }); } catch (err) { say('Upload failed: ' + (err.message || err.code)); } } });
-  const step2 = sec('Step 2 · you', 'Concept art', h('p', { class: 'dim', text: '"Try" opens a free picture from Pollinations (FLUX) in a new tab; each number is another variant. Save the one you like, or paste a prompt into Gemini or Bing Image Creator, then upload it here. The three-quarter view is what the 3D step uses.' }),
-    views, h('div', { class: 'row' }, h('span', { class: 'mono dim', text: 'Leave out:' }), h('span', { class: 'mono', text: D.negative }), copyBtn(D.negative)),
-    h('div', { class: 'row' }, h('a', { class: 'btn', href: SERVICES.gemini, target: '_blank', rel: 'noopener' }, 'Gemini'), h('a', { class: 'btn', href: SERVICES.bing, target: '_blank', rel: 'noopener' }, 'Bing Image Creator')),
-    h('div', { class: 'row' }, r.pick ? h('img', { class: 'big', src: blob(r.pick), alt: `Picked concept art for ${t.id}` }) : h('div', { class: 'empty', text: 'No picture picked yet.' }),
+    say('Uploading…'); try { const a = await assets.upload(f); await save(t.id, { pick: a.id, pickName: f.name, raw: null, model: null, modelOk: false }); } catch (err) { say('Upload failed: ' + (err.message || err.code)); } } });
+  const step2 = sec('Step 2 · you', 'Picture', h('p', { class: 'dim', text: 'One low-poly picture of the figure, seen in three-quarter view. "Try" opens a free picture from Pollinations in a new tab (each number is another variant; it may carry a watermark and a base). For a cleaner result paste the prompt into Gemini, ChatGPT or Bing Image Creator. Save the one you like and upload it here.' }),
+    h('div', { class: 'view' }, h('h4', { text: 'prompt' }), h('div', { class: 'prompt', text: t.prompt }), h('div', { class: 'row' }, copyBtn(t.prompt), ...[1, 2, 3].map((s) => h('a', { class: 'btn', href: polli(t.prompt, s), target: '_blank', rel: 'noopener' }, `Try ${s}`)),
+      h('a', { class: 'btn', href: SERVICES.gemini, target: '_blank', rel: 'noopener' }, 'Gemini'), h('a', { class: 'btn', href: SERVICES.chatgpt, target: '_blank', rel: 'noopener' }, 'ChatGPT'), h('a', { class: 'btn', href: SERVICES.bing, target: '_blank', rel: 'noopener' }, 'Bing'))),
+    h('div', { class: 'row' }, h('span', { class: 'mono dim', text: 'Leave out:' }), h('span', { class: 'mono', text: D.negative }), copyBtn(D.negative)),
+    h('div', { class: 'row' }, r.pick ? h('img', { class: 'big', src: blob(r.pick), alt: `Picked picture for ${t.id}` }) : h('div', { class: 'empty', text: 'No picture picked yet.' }),
       assets ? h('label', { class: 'btn go', for: 'pick-' + t.id }, r.pick ? 'Replace the picked picture' : 'Upload the picked picture') : null, file));
-  const ask3 = `Figure ${t.id}: the concept art is picked in the Figure Workshop. Please make the 3D model (step 3).`;
-  const step3 = sec('Step 3 · AI service and Claude', '3D model', h('p', { class: 'dim', text: `Claude sends the picked picture to TRELLIS (free Hugging Face GPU time), cuts the model to about ${t.tris} triangles for phones and posts a preview here. To do it yourself instead: upload the picture to one of these free services, download the .glb and attach it in the Claude chat.` }),
-    h('div', { class: 'row' }, ...['trellis', 'meshy', 'tripo'].map((k) => h('a', { class: 'btn', href: SERVICES[k], target: '_blank', rel: 'noopener' }, { trellis: 'TRELLIS (free)', meshy: 'Meshy (free tier)', tripo: 'Tripo (free tier)' }[k]))),
-    r.model ? h('div', { class: 'row' }, r.model.preview ? h('img', { class: 'big', src: blob(r.model.preview), alt: `Preview of the ${t.id} model` }) : null, h('div', { class: 'mono', text: `${r.model.tris ?? '?'} triangles · ${r.model.kb ?? '?'} KB · ${r.model.service ?? ''}` }))
-      : h('div', { class: 'row' }, h('div', { class: 'ask', text: ask3 }), copyBtn(ask3)),
-    r.model ? h('div', { class: 'row' }, h('button', { type: 'button', class: r.modelOk ? '' : 'go', onclick: () => save(t.id, { modelOk: !r.modelOk }) }, r.modelOk ? 'Approved · undo' : 'Approve the model'), h('span', { class: 'dim', text: 'Not right? Say what to change in the notes below and ask Claude to redo it.' })) : null);
+  const ask3 = `Figure ${t.id}: the picture is picked in the Figure Workshop. Please make the 3D model and the low-poly version (steps 3 and 4).`;
+  const step3 = sec('Step 3 · AI service', '3D model', h('p', { class: 'dim', text: 'An image-to-3D AI builds the model from the picked picture. Claude can send it to TRELLIS (free, open source) once the Hugging Face account works, or you do it in your browser: open one of these, upload the picture, download the .glb and attach it in the Claude chat.' }),
+    h('div', { class: 'row' }, ...['trellis', 'meshy', 'tripo'].map((k) => h('a', { class: 'btn', href: SERVICES[k], target: '_blank', rel: 'noopener' }, { trellis: 'TRELLIS (free)', meshy: 'Meshy (free tier, credit them)', tripo: 'Tripo (free tier)' }[k]))),
+    r.raw ? h('div', { class: 'mono', text: `Received: ${r.raw.faces ?? '?'} faces · ${r.raw.service ?? ''}` }) : h('div', { class: 'row' }, h('div', { class: 'ask', text: ask3 }), copyBtn(ask3)));
+  const step4 = sec('Step 4 · Claude, automatic', 'Low-poly', h('p', { class: 'dim', text: `The model is cut down to about ${t.tris} flat faces and painted with a palette of at most 16 plain colours taken from the AI's colours. Look at the preview and approve it, or say in the notes what to change (fewer faces, other colours, another picture).` }),
+    r.model ? h('div', { class: 'row' }, r.model.preview ? h('img', { class: 'big', src: blob(r.model.preview), alt: `Preview of the low-poly ${t.id}` }) : null, h('div', { class: 'mono', text: `${r.model.faces ?? '?'} faces · ${r.model.colours ?? '?'} colours · ${r.model.kb ?? '?'} KB` })) : h('div', { class: 'empty', text: 'Made as soon as the 3D model arrives.' }),
+    r.model ? h('div', { class: 'row' }, h('button', { type: 'button', class: r.modelOk ? '' : 'go', onclick: () => save(t.id, { modelOk: !r.modelOk }) }, r.modelOk ? 'Approved · undo' : 'Approve the low-poly figure')) : null);
   const zip = async (btn) => {
     try { btn.disabled = true; const z = new JSZip(); for (const [name, id] of Object.entries(r.mixamo)) z.file(name, await (await fetch(blob(id))).blob());
       await downloads.save({ filename: `${t.id}-mixamo.zip`, data: await z.generateAsync({ type: 'blob' }) }); say('Saved the Mixamo upload.', true); } catch (e) { say(e.code === 'declined' ? 'Download cancelled.' : 'Could not save the file: ' + (e.message || e.code)); } finally { btn.disabled = false; } };
-  const step4 = soldier ? sec('Step 4 · you in Mixamo (free)', 'Animation',
+  const step5 = soldier ? sec('Step 5 · you in Mixamo (free)', 'Animation',
     h('p', { class: 'dim', text: 'Mixamo has no automatic access, so this step is by hand. 1) Download the upload file below and upload it at mixamo.com. 2) Place the markers (chin, wrists, elbows, knees, groin). 3) Download these clips as FBX Binary: idle "With Skin", the others "Without Skin". 4) Attach the four .fbx files in the Claude chat.' }),
     h('div', { class: 'row' }, ...t.clips.map((c) => h('span', { class: 'pill s0', text: `${c}: ${D.clipNames[c]}` }))),
     h('div', { class: 'row' }, r.mixamo && downloads ? h('button', { type: 'button', class: 'go', onclick: (e) => zip(e.currentTarget) }, 'Download the Mixamo upload') : h('span', { class: 'empty', text: 'Claude prepares the upload once the model is approved.' }),
       h('a', { class: 'btn', href: SERVICES.mixamo, target: '_blank', rel: 'noopener' }, 'Open Mixamo'), r.rigged ? h('span', { class: 'pill s4', text: 'Animated' }) : null))
-    : sec('Step 4', 'Animation', h('p', { class: 'dim', text: t.kind === 'vehicle' || t.kind === 'gun' ? 'None needed: the game turns the turret, recoils the gun and rocks the hull in code.' : 'None needed.' }));
-  const step5 = sec('Step 5 · Claude', 'Into the game', h('p', { class: 'dim', text: `Scaled to ${t.size} cm (a block is 1.6), compressed for phones, and listed for the ${t.pieces} pieces that use it.` }),
-    r.game ? h('div', { class: 'mono', text: `In the game: ${r.game.kb ?? '?'} KB${r.game.at ? ' · ' + r.game.at.slice(0, 10) : ''}` }) : h('div', { class: 'empty', text: st >= (soldier ? 4 : 3) ? 'Ready: ask Claude to put it in the game.' : 'Waiting for the earlier steps.' }));
+    : sec('Step 5', 'Animation', h('p', { class: 'dim', text: t.kind === 'vehicle' || t.kind === 'gun' ? 'None needed: the game turns the turret, recoils the gun and rocks the hull in code.' : 'None needed.' }));
+  const step6 = sec('Step 6 · Claude', 'Into the game', h('p', { class: 'dim', text: `Scaled to ${t.size} cm (a block is 1.6), compressed for phones, and listed for the ${t.pieces} pieces that use it.` }),
+    r.game ? h('div', { class: 'mono', text: `In the game: ${r.game.kb ?? '?'} KB${r.game.at ? ' · ' + r.game.at.slice(0, 10) : ''}` }) : h('div', { class: 'empty', text: st >= (soldier ? 5 : 4) ? 'Ready: ask Claude to put it in the game.' : 'Waiting for the earlier steps.' }));
   const note = h('textarea', { class: 'note', id: 'note-' + t.id, 'aria-label': 'Notes', placeholder: 'Notes for Claude: what to change, which variant you liked…' }); note.value = r.note || '';
   note.addEventListener('change', () => save(t.id, { note: note.value }));
-  return h('div', { class: 'order' }, h('p', { text: t.what }), h('p', { class: 'dim', text: `Used by ${t.pieces} pieces: ${t.sample.join(', ')}${t.pieces > t.sample.length ? ', …' : ''}` }), step2, step3, step4, step5, sec('Notes', 'For Claude', note));
+  return h('div', { class: 'order' }, h('p', { text: t.what }), h('p', { class: 'dim', text: `Used by ${t.pieces} pieces: ${t.sample.join(', ')}${t.pieces > t.sample.length ? ', …' : ''}` }), step2, step3, step4, step5, step6, sec('Notes', 'For Claude', note));
 }
 
 function list() {
@@ -171,7 +170,7 @@ function list() {
     if (open.has(t.id)) d.append(order(t)); return d;
   }) : [h('div', { class: 'empty', text: 'No type matches. Clear the search or pick another volume or step.' })]));
 }
-function runRows() { $('#runs').replaceChildren(...(runs.length ? runs.map((r) => h('tr', {}, ...[r.at?.slice(0, 16).replace('T', ' '), r.step, r.service, r.what, r.cost].map((x) => h('td', { text: x ?? '' })))) : [h('tr', {}, h('td', { colspan: 5, class: 'dim', text: 'No runs yet. The first is the concept art for one type.' }))])); }
+function runRows() { $('#runs').replaceChildren(...(runs.length ? runs.map((r) => h('tr', {}, ...[r.at?.slice(0, 16).replace('T', ' '), r.step, r.service, r.what, r.cost].map((x) => h('td', { text: x ?? '' })))) : [h('tr', {}, h('td', { colspan: 5, class: 'dim', text: 'No runs yet.' }))])); }
 function render() { steps(); list(); runRows(); }
 
 $('#vols').append(...Object.entries(VOL).map(([k, v]) => h('button', { type: 'button', 'aria-pressed': String(k === vol), onclick: (e) => { vol = k; $('#vols').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget))); list(); } }, v)));
