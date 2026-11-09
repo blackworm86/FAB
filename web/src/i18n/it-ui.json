@@ -3394,7 +3394,9 @@
   "Veteran Infantry Strongpoint": "Caposaldo di fanteria veterano",
   "Green Infantry Strongpoint": "Caposaldo di fanteria di reclute",
   "End reinforcement": "Fine rinforzi",
-  "End admin": "Fine amministrativa"
+  "End admin": "Fine amministrativa",
+  "Drop the airborne first": "Prima il lancio aviotrasportato",
+  "choose the drop zone in the panel on the map (14.27a).": "scegli la zona di lancio nel pannello sulla mappa (14.27a)."
  },
  "patterns": [
   [
@@ -8896,6 +8898,10 @@
   [
    "(\\d+) dice to roll",
    "$1 dadi da tirare"
+  ],
+  [
+   "Drop your airborne units? first:",
+   "Prima lancia le unità aviotrasportate:"
   ]
  ],
  "html": {}

@@ -1076,3 +1076,4 @@ body:has(.tut-coach:not(.has-target):not(.is-menu)) #ui .c-bar.b { opacity: .35;
 .vtt[data-cap]::before { font-size: 10.5px; color: #ff9c8a; }
 .laysw b { font-size: 12px; color: #b3ad8b; }
 .legend small { font-size: 12px; color: #b3ad8b; }
+.volpanel b { display: block; } .volpanel b .ic { vertical-align: -3px; margin-right: 6px; }      /* the title flows as one line of text, so a rule link stays inside its brackets */

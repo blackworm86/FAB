@@ -689,7 +689,9 @@ function chitPanel(c: E.Chit): string {
 /* ---------- flow ---------- */
 const STEPS = ['Prepare', 'Move', 'Fight', 'Breakthrough', 'Supply'], STEP_OF: Record<E.Phase, number> = { deploy: 1, reinforcement: 0, admin: 0, movement: 1, strategic: 1, combat: 2, reaction: 2, btMove: 3, btCombat: 3, supply: 4 };
 /** The red button that ends the step. */
-const endLabel = () => (g.phase === 'reinforcement' ? 'End reinforcement' : g.phase === 'deploy' ? ((left) => { const n = left.filter((u) => u.side === g.phasing).length; return n ? `Place ${n} more first` : left.length ? 'Finish the panel first' : 'End set-up'; })(VOL.pendingPlace(g).map((id) => g.units.find((x) => x.id === id)!).filter((u) => mine(u.side))) : `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`);
+/** Sicily 14.27a: airborne units still to drop at the start of the Allied Combat Phase (they come before any battle). */
+const dropsLeft = () => (VOL.id === 'sicily' && g.phase === 'combat' && !g.battle && (g.vol as { dropPending?: boolean } | undefined)?.dropPending ? g.units.filter((u) => u.box === 'airborne_assault' && u.side === g.phasing).length : 0);
+const endLabel = () => (dropsLeft() ? 'Drop the airborne first' : g.phase === 'reinforcement' ? 'End reinforcement' : g.phase === 'deploy' ? ((left) => { const n = left.filter((u) => u.side === g.phasing).length; return n ? `Place ${n} more first` : left.length ? 'Finish the panel first' : 'End set-up'; })(VOL.pendingPlace(g).map((id) => g.units.find((x) => x.id === id)!).filter((u) => mine(u.side))) : `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`);
 const other = E.other;
 /** The printed sequence of play (the step bar): Breakthrough covers its movement and its combat. */
 const PHASES = ['Reinforcement', 'Admin', 'Movement', 'Strategic', 'Combat', 'Reaction', 'Breakthrough', 'Supply'], PHASE_OF: Record<E.Phase, number> = { deploy: 2, reinforcement: 0, admin: 1, movement: 2, strategic: 3, combat: 4, reaction: 5, btMove: 6, btCombat: 6, supply: 7 };
@@ -1465,6 +1467,7 @@ function promptText() {
       return selUnit ? `Tap a <b>green</b> area${gx(' to move there. <b>Brass</b>: must stop there. Wrong move? <b>Undo</b>.', ' · <b>brass</b> = stop')}` : `<b>Tap one of your blocks</b>${gx(' to move it, or <b>Can move</b> to go through them.', ' to move it.')}`;
     case 'strategic': return '<b>Tap a reserve block</b>, then a green area.';
     case 'combat': case 'btCombat': if (g.phase === 'btCombat' && !m && E.contestedAreas(g).some((a) => !g.fought.includes(a) && !E.newlyContested(g).includes(a))) return gx('<b>Breakthrough combat.</b> Newly contested areas are free; areas already contested before movement need a Special Action (brass tags).', '<b>Breakthrough combat:</b> orange = needs SA');
+      if (dropsLeft()) return `<b>Drop your airborne unit${dropsLeft() > 1 ? 's' : ''} first:</b> choose the drop zone in the panel on the map (14.27a).`;
       return m ? '<b>Tap a red area.</b>' : fightable().length ? '<b>Tap a contested area</b> to fight, or end the step.' : 'No battles left.';
     case 'reaction': return `<b>${nm(other(g.phasing))} reserves</b> may react: select a reserve block.`;
     case 'btMove': return btArmor().length ? gx('<b>Breakthrough movement.</b> Reserve and exploiting blocks may move; armor that has not moved can move one area for a Special Action (brass tags).', '<b>Breakthrough:</b> orange = SA move') : `<b>Reserve and exploitation blocks</b> may move.${gx(' Select one.')}`;
@@ -1512,7 +1515,7 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
     if (wait && SANDBOX && SBU.st.sbHot) return { label: `Pass to ${nm(other(me))}`, fn: () => SBU.hotPass(other(me)) };
     return { label: wait ? `Waiting for ${nm(other(me))}` : endLabel(), fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; selArea = null; }), dis: wait || !!g.recover.length || !!g.artyPick };
   }
-  return { label: endLabel(), fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; selArea = null; }), dis: !!E.mustFight(g).length || !!g.recover.length || !!g.artyPick || (g.phase === 'supply' && !!g.supplyPending) || (g.phase === 'deploy' && VOL.pendingPlace(g).some((id) => mine(g.units.find((u) => u.id === id)!.side))) };
+  return { label: endLabel(), fn: () => act(() => { E.endPhase(g); selUnit = null; previewArea = null; selChit = null; selArea = null; }), dis: !!dropsLeft() || !!E.mustFight(g).length || !!g.recover.length || !!g.artyPick || (g.phase === 'supply' && !!g.supplyPending) || (g.phase === 'deploy' && VOL.pendingPlace(g).some((id) => mine(g.units.find((u) => u.id === id)!.side))) };
 }
 /* ---------- the actions dock: shortcuts with counts, labelled undo ---------- */
 const lookAt = (a: number) => { const p = center(a); goal = { t: new THREE.Vector3(p.x, 0, p.z), dist: Math.min(dist, 30), pitch }; };
