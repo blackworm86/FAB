@@ -35,7 +35,8 @@ export function winner(g: Game, net: number): number {
   return net > 0 ? 1 : net < 0 ? -1 : 0;
 }
 
-describe.skipIf(!ENV.ARENA)('arena', () => {      // skipped, not absent, without ARENA: a test file with no suite fails the run (and the deploy)
+describe.skipIf(!ENV.ARENA)('arena', () => {
+  E.ai.BUDGET.ms = Infinity;                                                                          // full strength, the same on any machine      // skipped, not absent, without ARENA: a test file with no suite fails the run (and the deploy)
   if (ENV.ARENA_PLAN) E.ai.TUNE.plan = ENV.ARENA_PLAN === '1'; if (ENV.ARENA_TUNE) { Object.assign(E.ai.TUNE, JSON.parse(ENV.ARENA_TUNE)); console.log('TUNE', JSON.stringify(E.ai.TUNE)); }
   const games = (ENV.ARENA_GAMES_LIST ?? 'bulge,golan73,sicily').split(','), N = +(ENV.ARENA_GAMES ?? 4);
   const pairs = (ENV.ARENA_PAIRS ?? 'hard:normal,normal:easy').split(',').map((p) => p.split(':') as [Level, Level]);

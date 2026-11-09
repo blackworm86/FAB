@@ -5,6 +5,7 @@ import * as E from '../src';
 import type { Game, Side } from '../src';
 
 const AI = E.ai;
+AI.BUDGET.ms = Infinity;                                                                              // repeatable: no clock in the hard player's choices
 type Cfg = { game: 'bulge' | 'golan73' | 'sicily'; scenario: string; opts?: Record<string, unknown>; seed: number };
 type Policy = (g: Game, side: Side) => E.ai.Action | null;
 
