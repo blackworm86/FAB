@@ -142,6 +142,8 @@ export interface Volume {
   battleAllowed?: (g: Game, area: number) => boolean;
   /** An area whose battle must be fought before any other this phase (Golan 15.3). */
   firstBattle?: (g: Game) => number | undefined;
+  /** A side the rules make act out of turn now (Golan 15.2: Syria places the units released at the Purple Line). */
+  pendingSide?: (g: Game) => Side | undefined;
   /** May this unit take a reserve marker (beyond the series conditions)? */
   reserveOk?: (g: Game, u: Unit) => boolean;
   /** A committed asset other than a battle asset that may take a step loss (Golan 18.32: artillery in direct support). */

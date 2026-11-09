@@ -39,6 +39,7 @@ export interface GolanState {
   intel?: { side: Side; units: string[] };                // 16.31c: enemy blocks a reconnaissance showed, for the rest of the phase
   freeCombatRound: number;                                // 22.17: Syrian free Breakthrough combat rounds left on turn 1
   purpleLineCrossed: boolean; airReleased: number; hermonLost: boolean;
+  release?: { pick: boolean; place: string[] };           // 15.2/15.4a: the Syrian choice and placements the Israeli move waits for
   airAssaultArea?: number; samTarget?: string;            // 15.3; 16.12: the Israeli air mission a SAM may answer now
   minesLeft?: number; startAt?: 'combat' | 'movement';    // 14.02: minefields the Israeli player still places at the start; the phase the scenario opens with once set up
   nafakh?: { s03Free: boolean; golani: boolean; staffOut: boolean };   // 22.46: the 33rd held back, Golani's release, the HQ Staff lost with Nafakh
@@ -290,6 +291,7 @@ function golanReach(g: Game, u: Unit, one: boolean): Opt[] {
 }
 /** 14.02: crossing a minefield from the starting area costs +1 MP and a morale check; failing, the unit stays (having spent that 1 MP), may not try another minefield this turn, and may move on into a non-mined area. */
 function beforeMove(g: Game, u: Unit, opt: Opt) {
+  need(!state(g).release, 'Syria first places the units released at the Purple Line (15.2)');
   const w = withdrawal(g, u, opt); if (w) return w;
   if (u.side !== 'syrian') return;
   const key = edgeKey(opt.path[0], opt.path[1]); if (!state(g).minefields.includes(key)) return;
@@ -322,14 +324,33 @@ function afterMove(g: Game, u: Unit, opt: Opt) {
   if (u.side === 'israeli' && regular(u)) evacuateStrongpoint(g, from);
   ghostsMet(g, u, to, opt.cost);
 }
-/** 15.2, 15.4a: the first Israeli unit into Syria releases at once the 3rd Tank Division and two Strategic Reserve units of the Syrian
- *  player's choice (`choice`; by default the first two still held: Assad, then the 141st), each placed in a friendly-controlled Entry area.
- *  A unit with no open Entry area waits in the Arriving box for the next Reinforcement Phase. */
-export function purpleLineCrossed(g: Game, choice?: string[]) {
-  state(g).purpleLineCrossed = true;
-  const held = g.units.filter((x) => x.box === 'strategic_reserve'), sr = choice ? held.filter((u) => choice.includes(u.id)) : held;
-  for (const u of [...g.units.filter((x) => x.box === 'operational_reserve'), ...sr.slice(0, 2)]) if (!releaseUnit(g, u)) u.box = 'arriving';
-  say(g, 'Israeli units cross the Purple Line: the 3rd Tank Division and two Strategic Reserve units are released (15.2, 15.4a)');
+/** 15.2, 15.4a: the first Israeli unit into Syria releases at once the 3rd Tank Division and two Strategic Reserve units of the Syrian player's
+ *  choice. The Israeli move waits while the Syrian player picks the two (pickRelease) and places each released unit on one of its friendly-controlled
+ *  Entry areas (placeReleased); a unit with no open Entry area waits in the Arriving box for the next Reinforcement Phase. */
+export function purpleLineCrossed(g: Game) {
+  const V = state(g), sr = g.units.filter((x) => x.box === 'strategic_reserve'); V.purpleLineCrossed = true;
+  say(g, 'Israeli units cross the Purple Line: the 3rd Tank Division and two Strategic Reserve units of the Syrian player\'s choice are released (15.2, 15.4a)');
+  V.release = { pick: sr.length > 2, place: [] }; if (!V.release.pick) queueRelease(g, sr.map((u) => u.id));
+}
+/** The Strategic Reserve units the Syrian player chooses from (15.2), while the choice is open. */
+export const releaseChoices = (g: Game) => (state(g).release?.pick ? g.units.filter((x) => x.box === 'strategic_reserve') : []);
+export function pickRelease(g: Game, ids: string[]) {
+  const V = state(g), c = releaseChoices(g); need(V.release?.pick, 'no Strategic Reserve units to choose now');
+  need(ids.length === 2 && new Set(ids).size === 2 && ids.every((id) => c.some((u) => u.id === id)), 'choose two Strategic Reserve units (15.2)');
+  V.release!.pick = false; say(g, `Syria releases ${ids.map((id) => unit(g, id).name).join(' and ')} (15.2)`, 'syrian'); queueRelease(g, ids);
+}
+function queueRelease(g: Game, ids: string[]) { state(g).release!.place = [...g.units.filter((x) => x.box === 'operational_reserve').map((u) => u.id), ...ids]; settleRelease(g); }
+/** Released units with no open Entry area go to the Arriving box; the release ends when nothing is left to choose or place. */
+function settleRelease(g: Game) {
+  const V = state(g); if (!V.release) return;
+  for (const id of [...V.release.place]) { const u = unit(g, id); if (releaseAreas(g, u).length) continue; u.box = 'arriving'; V.release.place = V.release.place.filter((x) => x !== id); say(g, `${u.name}: no open Entry area, it arrives next Reinforcement Phase`, 'syrian'); }
+  if (!V.release.pick && !V.release.place.length) V.release = undefined;
+}
+/** The Entry areas a released unit may be placed on now. */
+export const releaseTargets = (g: Game, id: string) => (state(g).release?.place.includes(id) ? releaseAreas(g, unit(g, id)) : []);
+export function placeReleased(g: Game, id: string, a: number) {
+  need(releaseTargets(g, id).includes(a), 'a friendly-controlled Entry area of that unit, with room (15.2)');
+  const V = state(g); releaseUnit(g, unit(g, id), a); V.release!.place = V.release!.place.filter((x) => x !== id); settleRelease(g);
 }
 /** Friendly-controlled Entry areas of a released Syrian unit with room for it (14.61b, 15.2, 17.11). */
 export const releaseAreas = (g: Game, u: Unit) => (u.entry ?? []).map((l) => (l.startsWith('#') ? +l.slice(1) : ENTRY[l])).filter((a) => a != null && g.control[a] === u.side
@@ -420,6 +441,7 @@ const jordanCrossed = (g: Game) => g.units.some((u) => u.side === 'syrian' && re
 /* ================= phases ================= */
 function onPhase(g: Game, phase: string, when: 'start' | 'mid' | 'end') {
   const V = state(g); nafakhStaff(g);
+  if (when === 'end' && V.release) throw new Error('Syria first places the units released at the Purple Line (15.2)');
   if (phase === 'reinforcement' && when === 'start') V.minefieldFailed = [];
   if (phase === 'strategic' && when === 'start') V.crossed = [];                                      // each phase counts its own crossings
   if ((phase === 'movement' || phase === 'btMove' || phase === 'reaction') && when === 'start') { V.crossed = []; V.assaultEntered = {}; V.withdrew = []; }
@@ -866,10 +888,12 @@ export function playReplacement(g: Game, chitId: string, unitId: string) {
   u.str += 1; gone(c); say(g, `${u.name} gets a replacement step (17.3)`, c.side);
 }
 /** 4.21: any event may instead bring two assets back from the Eliminated Box to the cup (not commandos, SAMs, air support or garrisons, 17.4). */
+/** 4.21 with 17.4: the eliminated assets an event may bring back (never commandos, SAMs, air support or garrisons). */
+export const alternateEventCandidates = (g: Game, side: Side) => g.chits.filter((a) => a.side === side && a.box === 'eliminated' && !['commando', 'sam', 'air_mission', 'garrison', 'sa_block', 'command_staff'].includes(a.kind) && !a.kind.startsWith('event') && !a.kind.startsWith('replacement_') && a.kind !== 'special_action_event');
 export function alternateEventUse(g: Game, chitId: string, assetIds: string[]) {
   const c = chit(g, chitId);
   need(c.box === 'available' && (c.kind.startsWith('event') || c.kind.startsWith('replacement_') || c.kind === 'special_action_event'), 'play an event from the Available Box');   // 17.31/17.32 replacements are events
-  need(assetIds.length <= 2, 'two assets at most');
+  need(assetIds.length === Math.min(2, alternateEventCandidates(g, c.side).length), 'choose two assets from your Eliminated Box (4.21)');
   for (const id of assetIds) { const a = chit(g, id); need(a.side === c.side && a.box === 'eliminated' && !['commando', 'sam', 'air_mission', 'garrison'].includes(a.kind) && !a.kind.startsWith('event') && !a.kind.startsWith('replacement_') && a.kind !== 'special_action_event', `${a.name} cannot come back this way (17.4)`); }
   for (const id of assetIds) chit(g, id).box = 'cup';
   gone(c); say(g, `${c.name} used to bring back ${assetIds.length} asset(s) (4.21)`, c.side);
@@ -1044,6 +1068,6 @@ registerHooks('golan73', {
   
   sources, supplyStep, supplyFree: (_g, _s, a) => isAssembly(a) || a === HERMON, alwaysSupplied: (_g, u) => !!u.ghost || u.id === 'S17',
   victory: golanVictory, finalResult, onPhase, onBattle, freeBattle, assault, reinforce, afterDraw: (g) => { nafakhStaff(g); const d = g.chits.find((c) => c.kind === 'event_dugman5' && c.box === 'available'); if (d) resolveDugman(g, d); },
-  afterDeploy, onUnassign, keepAssigned, optional: GOLAN_OPTIONAL, absorbLoss, lossOk, recoverOk, ghostsMove: (g) => !!g.opts.advGhosts, reinforceOk: (g, b, u) => reinforceOptions(g, b).includes(u.id), stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2), stackRoom: (g, u, a) => (g.opts.advGhosts && u.side === 'israeli' ? ghostRoom(g, u, a) : undefined), firstBattle: (g) => state(g).airAssaultArea, allowance: (g, u) => (isNight(g) && u.side === 'syrian' ? (u.cls === 'armor' ? 4 : 1) : u.cls === 'armor' ? 6 : 3), appropriate: (g, u) => (isNafakh(g) ? (u.side === 'israeli' ? [NAF_NORTH] : [REAR, NAF.sheet.entry.Z]) : u.side === 'israeli' ? [ASSEMBLY.A, ASSEMBLY.B] : Object.values(ENTRY)), isNight, onAssign, beforeBegin, beforeFire, afterFire,
+  afterDeploy, onUnassign, keepAssigned, optional: GOLAN_OPTIONAL, absorbLoss, lossOk, recoverOk, ghostsMove: (g) => !!g.opts.advGhosts, reinforceOk: (g, b, u) => reinforceOptions(g, b).includes(u.id), stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2), stackRoom: (g, u, a) => (g.opts.advGhosts && u.side === 'israeli' ? ghostRoom(g, u, a) : undefined), firstBattle: (g) => state(g).airAssaultArea, pendingSide: (g) => (state(g).release ? 'syrian' : undefined), allowance: (g, u) => (isNight(g) && u.side === 'syrian' ? (u.cls === 'armor' ? 4 : 1) : u.cls === 'armor' ? 6 : 3), appropriate: (g, u) => (isNafakh(g) ? (u.side === 'israeli' ? [NAF_NORTH] : [REAR, NAF.sheet.entry.Z]) : u.side === 'israeli' ? [ASSEMBLY.A, ASSEMBLY.B] : Object.values(ENTRY)), isNight, onAssign, beforeBegin, beforeFire, afterFire,
   lossAsset,   // 18.32: a supporting artillery asset may take a step loss (series loss pool)
 } as Partial<Volume>);

@@ -22,6 +22,7 @@ export type Op = [string, ...unknown[]];
 /** One area toward `to` by the cheapest way from where the block stands, as a player's step move (2.4 control, 5.34, fuel once).
  *  Returns true while the block has more steps to go; at the end its move is closed. */
 export function walkStep(g: Game, id: string, to: number): boolean {
+  if (E.actorOf(g) !== 'both' && E.actorOf(g) !== g.units.find((x) => x.id === id)!.side) { E.endMove(g); return false; }   // the other side must act first (Golan 15.2): the block stops here
   const opts = E.moveOptions(g, id), o = opts.find((x) => x.area === to); if (!o) { E.endMove(g); return false; }
   const next = o.path.slice(1).find((a) => opts.some((x) => x.area === a))!;                         // a full friendly area is passed through, not stopped in (5.1)
   const r = E.move(g, id, next, true);
@@ -43,7 +44,7 @@ type OpFn = (g: Game, ...args: never[]) => unknown;
 const OPS: Record<string, OpFn> = {
   endPhase: (g) => E.endPhase(g), setDone: (g, side: Side) => E.setDone(g, side), resolveBlow: (g, yes: boolean) => E.resolveBlow(g, yes),
   recoverAsset: (g, side: Side, id: string | null) => E.recoverAsset(g, side, id), chooseArtyLoss: (g, id: string) => E.chooseArtyLoss(g, id),
-  fireSam: (g, id: string) => G.fireSam(g, id), declineSam: (g) => G.declineSam(g), answerJamming: (g, id: string | null) => G.answerJamming(g, g.battle!, id ?? undefined), pickMoraleLoss: (g, side: Side, id: string) => S.pickMoraleLoss(g, side, id), autoMoraleLoss: (g) => S.autoMoraleLoss(g),
+  pickRelease: (g, ids: string[]) => G.pickRelease(g, ids), placeReleased: (g, id: string, a: number) => G.placeReleased(g, id, a), fireSam: (g, id: string) => G.fireSam(g, id), declineSam: (g) => G.declineSam(g), answerJamming: (g, id: string | null) => G.answerJamming(g, g.battle!, id ?? undefined), pickMoraleLoss: (g, side: Side, id: string) => S.pickMoraleLoss(g, side, id), autoMoraleLoss: (g) => S.autoMoraleLoss(g),
   autoStrongpoints: (g) => G.autoStrongpoints(g, 'historical'), golanDeploy: (g, u: string, a: number) => G.deploy(g, u, a), autoMinefields: (g) => G.autoMinefields(g), autoReserves: (g, side: Side) => G.autoReserves(g, side),
   alowdaRaid: (g, c: string, a: number) => G.alowdaRaid(g, c, a), autoGarrisons: (g) => S.autoGarrisons(g), choosePlan: (g, br: string, us?: string) => S.choosePlan(g, 'historical', br, us), sicilyDeploy: (g, u: string, a: number) => S.deploy(g, u, a),
   placeTaskForce: (g, id: string, a: number) => E.placeTaskForce(g, id, a), placeArrival: (g, id: string, a: number) => E.placeArrival(g, id, a),
@@ -312,7 +313,7 @@ function both(g: Game, side: Side): Action | null {
 
 /* ================= choices the rules put to a side outside the sequence ================= */
 const jammed = (g: Game, side: Side) => CUR.id === 'golan73' && !!g.battle && g.battle.stage === 'setup' && side !== g.battle.attacker && !!G.battleState(g.battle).ew?.pending;   // 17.33: the Defender rolls before anything else
-const hasPending = (g: Game, side: Side) => jammed(g, side) || (!!g.pendingBlow && g.units.find((x) => x.id === g.pendingBlow!.unit)?.side !== side) || g.recover.includes(side) || (!!g.artyPick && side === 'german')
+const hasPending = (g: Game, side: Side) => jammed(g, side) || (CUR.id === 'golan73' && side === 'syrian' && !!G.state(g).release) || (!!g.pendingBlow && g.units.find((x) => x.id === g.pendingBlow!.unit)?.side !== side) || g.recover.includes(side) || (!!g.artyPick && side === 'german')
   || (CUR.id === 'golan73' && side === 'syrian' && !!G.state(g).samTarget) || (CUR.id === 'sicily' && !!S.state(g).moralePick?.[side]);
 function pending(g: Game, side: Side): Action | null {
   if (g.pendingBlow) {
@@ -326,6 +327,10 @@ function pending(g: Game, side: Side): Action | null {
     return act('recover an asset', ['recoverAsset', side, c?.id ?? null], { chit: c?.id });
   }
   if (g.artyPick && side === 'german') { const c = E.boxOf(g, 'german', 'used').filter((x) => x.kind === 'artillery').sort((a, b) => (a.ech === 'de_sr' ? 1 : 0) - (b.ech === 'de_sr' ? 1 : 0))[0]; if (c) return act('artillery attrition', ['chooseArtyLoss', c.id], { chit: c.id }); }
+  if (CUR.id === 'golan73' && side === 'syrian' && G.state(g).release) {                              // 15.2: the first two Strategic Reserve units, each on its first open Entry area
+    const R = G.state(g).release!; if (R.pick) return act('release', ['pickRelease', G.releaseChoices(g).slice(0, 2).map((u) => u.id)]);
+    const id = R.place[0]; return act('place released', ['placeReleased', id, G.releaseTargets(g, id)[0]], { unit: id });
+  }
   if (jammed(g, side)) { const cm = avail(g, side).find((c) => c.kind === 'event_ew'); return act(cm ? 'EW countermeasures' : 'answer the jamming', ['answerJamming', cm?.id ?? null], { chit: cm?.id }); }
   if (CUR.id === 'golan73' && side === 'syrian' && G.state(g).samTarget) { const sam = avail(g, 'syrian').find((c) => c.kind === 'sam'); return sam ? act('SAM fires', ['fireSam', sam.id], { chit: sam.id }) : act('no SAM', ['declineSam']); }
   if (CUR.id === 'sicily') { const V = S.state(g); if (V.moralePick?.[side]) { const pool = g.chits.filter((c) => c.side === 'axis' && c.nation === 'italian' && c.box === 'available' && c.kind !== 'command_staff' && (isArty(c) || isBattleAsset(c))).sort((a, b) => +isArty(a) - +isArty(b)); return pool.length ? act('Italian morale', ['pickMoraleLoss', side, pool[0].id], { chit: pool[0].id }) : act('Italian morale', ['autoMoraleLoss']); } }

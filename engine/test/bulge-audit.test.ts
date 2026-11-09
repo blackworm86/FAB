@@ -117,3 +117,16 @@ describe('2.4 control along the path', () => {
     expect(u.area).toBe(o.area);
   });
 });
+
+describe('4.21 the owner chooses the assets (the owner\'s ruling, 9 Nov 2026)', () => {
+  it('alternate use returns the two eliminated assets the player picked, and refuses any other count', async () => {
+    const { alternateUse, alternateCandidates } = await import('../src');
+    const g = fresh(18); g.phase = 'admin';
+    const ev = g.chits.find((c) => c.side === 'german' && c.kind === 'event_release')!; ev.box = 'available';
+    const el = g.chits.filter((c) => c.side === 'german' && ['artillery', 'engineer', 'fuel', 'armor_asset'].includes(c.kind)).slice(0, 4); for (const c of el) c.box = 'eliminated';
+    expect(alternateCandidates(g, 'german').length).toBeGreaterThanOrEqual(4);
+    expect(() => alternateUse(g, ev.id, [el[3].id])).toThrow(/two/);
+    alternateUse(g, ev.id, [el[2].id, el[3].id]);
+    expect(el[2].box).toBe('cup'); expect(el[3].box).toBe('cup'); expect(el[0].box).toBe('eliminated'); expect(ev.box).toBe('eliminated');
+  });
+});

@@ -1034,3 +1034,5 @@ p.stepped { cursor: pointer; border-left: 3px solid transparent; padding-left: 8
 .maptools button { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 0 12px; background: #0b0d08cc; border: 1px solid var(--line); color: var(--gold); font: 600 13px var(--sfd); letter-spacing: .06em; text-transform: uppercase; }
 .maptools button .ic { width: 18px; height: 18px; }
 @media (max-width: 700px), (pointer: coarse) { .maptools { display: flex; } }
+/* picture tiles in a volume prompt (Golan 15.2 release): the block and its name, as the card chips */
+.volpanel .cbchips .pc { width: 66px !important; height: auto !important; min-height: 0; } .volpanel .cbchips .pc .b3 { --s: 38px !important; margin: 4px auto 14px; } .volpanel .cbchips .pc small { display: block; font-size: 10px; line-height: 1.1; }

@@ -116,6 +116,8 @@ describe('Golan rules sweep (2)', () => {
     Object.assign(unit(g, 'I05'), { area: 50, box: undefined, moved: false, spent: 0, disorder: 0, unsupplied: false }); g.control[50] = 'israeli';
     move(g, 'I05', 64);
     expect(unit(g, 'I05').area).toBe(64);
+    const R = () => golan.state(g).release; if (R()?.pick) golan.pickRelease(g, golan.releaseChoices(g).slice(0, 2).map((x) => x.id));   // 15.2: Syria chooses and places at once
+    for (let i = 0; i < 6 && R(); i++) { const id = R()!.place[0]; golan.placeReleased(g, id, golan.releaseTargets(g, id)[0]); }
     const u = unit(g, 'S18');
     expect(u.area != null || g.pendingArrivals.includes(u.id)).toBe(true);
   });
