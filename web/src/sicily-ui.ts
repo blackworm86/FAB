@@ -66,9 +66,6 @@ export function sicilyTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): T
     ]); break;
     default: return null;
   }
-  if (k.startsWith('event') || k === 'special_action_event') {                                        // 4.21: any event can instead bring two assets back
-    if (works(g, (x) => E.alternateUse(x, id))) t.buttons.push({ icon: 'swap', label: 'Instead: bring two assets back to the cup', fn: run((x) => E.alternateUse(x, id)), title: '4.21: the event is spent to return two assets from the Eliminated Box to the cup' });
-  }
   return t;
 }
 export const sicilyBattleCard = (c: E.Chit) => E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission';

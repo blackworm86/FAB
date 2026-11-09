@@ -57,6 +57,8 @@ export interface VolView {
   markSvg: (code: string) => string | null;
   boxes: Record<string, string>;
   fieldWorks: (g: E.Game, id: string) => void;
+  /** 4.21: the eliminated assets this event could bring back (empty: not an event that can), and the play with the player's two picks. */
+  altBack: (g: E.Game, c: E.Chit) => E.Chit[]; altUse: (g: E.Game, id: string, ids: string[]) => void;
   limits: (g: E.Game, b: E.Battle, side: E.Side) => { arty: number; assets: number | null };
   placeOptions: (g: E.Game, id: string) => number[];      // where a block in a holding box may be placed now (Golan's alternate set-up)
   pendingPlace: (g: E.Game) => string[];
@@ -91,6 +93,7 @@ function bulge(): VolView {
     battleCard: (c) => E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission', battleUse: (g, b, c) => E.canAssign(g, b, c.side, c), playInBattle: () => false,
     panel: () => '', blocksBegin: () => null, edgeMarks: () => [], markSvg: (code) => mapMarkerSvg(code), boxes: {},
     fieldWorks: (g, id) => E.buildFieldWorks(g, id),
+    altBack: (g, c) => (E.isEvent(c) && c.kind !== 'event_delayed_response' ? E.alternateCandidates(g, c.side) : []), altUse: (g, id, ids) => E.alternateUse(g, id, ids),
     limits: (g, b, s) => { const l = E.assetLimits(g, b, s); return { arty: l.arty, assets: l.battle ? null : 0 }; },
     placeOptions: () => [], pendingPlace: () => [], place: () => {},
   };
@@ -128,6 +131,7 @@ function golan(): VolView {
     ruleArt: golanRuleArt,
     panel: golanPanel, blocksBegin: golanBlocksBegin, edgeMarks: golanEdgeMarks, markSvg: (code) => EDGE[code]?.() ?? mapMarkerSvg(code), boxes: GOLAN_BOXES,
     fieldWorks: (g, id) => G.unitFieldWorks(g, id),
+    altBack: (g, c) => (c.kind.startsWith('event') || c.kind.startsWith('replacement_') || c.kind === 'special_action_event' ? G.alternateEventCandidates(g, c.side) : []), altUse: (g, id, ids) => G.alternateEventUse(g, id, ids),
     limits: (g, b, s) => { const l = G.limits(g, b, s); return { arty: l.artillery, assets: l.battle }; },
     placeOptions: (g, id) => (g.phase === 'deploy' ? G.deployOptions(g, id) : []), pendingPlace: (g) => (g.phase === 'deploy' ? g.units.filter((u) => u.box === 'deploy').map((u) => u.id) : []), place: (g, id, a) => G.deploy(g, id, a),
   };
@@ -169,6 +173,7 @@ function sicily(): VolView {
     ruleArt: (key) => { const u = RAW_UNITS.get(key); if (u) return { svg: sicilyBlockSvg(u), wood: hexc(SICILY_WOOD[u.nation ?? 'us']), name: u.name }; const c = RAW_COUNTERS.get(key); return c ? { svg: sicilyChitSvg(c), name: c.name } : null; },
     panel: sicilyPanel, blocksBegin: sicilyBlocksBegin, edgeMarks: () => [], markSvg: (code) => (RESERVE[code] ? sicilyChitSvg(RAW_COUNTERS.get(RESERVE[code])!) : mapMarkerSvg(code)), boxes: SICILY_BOXES,
     fieldWorks: (g, id) => S.unitFieldWorks(g, id),
+    altBack: (g, c) => (E.isEvent(c) ? E.alternateCandidates(g, c.side) : []), altUse: (g, id, ids) => E.alternateUse(g, id, ids),
     limits: (_g, b, s) => ({ arty: s === b.attacker ? 2 : 1, assets: null }),
     placeOptions: (g, id) => (g.phase === 'deploy' ? S.deployOptions(g, id) : []), pendingPlace: (g) => (g.phase === 'deploy' ? g.units.filter((u) => u.box === 'deploy').map((u) => u.id) : []), place: (g, id, a) => S.deploy(g, id, a),
   };

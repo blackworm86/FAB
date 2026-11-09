@@ -114,3 +114,30 @@ describe('15.6 strongpoints get no replacement steps (the owner\'s ruling, 9 Nov
     expect(sp.str).toBe(sp.max - 1);
   });
 });
+
+describe('15.2 / 15.4a the Syrian player chooses the Purple Line release (the owner\'s ruling, 9 Nov 2026)', () => {
+  it('the Israeli move waits; Syria picks two Strategic Reserve units and places every released unit; then Israel goes on', async () => {
+    const E = await import('../src');
+    const g = newGolanGame(44); g.turn = 3; g.phase = 'movement'; g.phasing = 'israeli'; g.contestedAtMoveStart = E.contestedAreas(g);
+    const u = unit(g, 'I05'); Object.assign(u, { area: 50, moved: false, spent: 0, disorder: 0 }); for (const x of g.units) if (x.area === 64 || (x.area === 50 && x.side === 'syrian')) x.area = null; g.control[64] = 'syrian'; g.control[50] = 'israeli';
+    E.move(g, 'I05', 64);
+    expect(S(g).purpleLineCrossed).toBe(true); expect(E.actorOf(g)).toBe('syrian');
+    expect(golan.releaseChoices(g).map((x) => x.id).sort()).toEqual(['S21', 'S22', 'S23']);
+    const other = g.units.find((x) => x.side === 'israeli' && x.area != null && !x.garrison && !x.fort && !x.ghost && x.id !== 'I05' && E.moveOptions(g, x.id).length);
+    if (other) expect(() => E.move(g, other.id, E.moveOptions(g, other.id)[0].area)).toThrow(/15\.2/);
+    expect(() => golan.pickRelease(g, ['S21'])).toThrow(/two/);
+    golan.pickRelease(g, ['S22', 'S23']);
+    expect(unit(g, 'S21').box).toBe('strategic_reserve');
+    for (let i = 0; i < 6 && S(g).release; i++) { const id = S(g).release!.place[0]; golan.placeReleased(g, id, golan.releaseTargets(g, id)[0]); }
+    expect(S(g).release).toBeUndefined(); expect(E.actorOf(g)).toBe('israeli');
+    for (const id of ['S18', 'S19', 'S20', 'S22', 'S23']) expect(unit(g, id).area != null || unit(g, id).box === 'arriving').toBe(true);
+  });
+  it('the computer as Syria answers the release', async () => {
+    const E = await import('../src');
+    const g = newGolanGame(45); g.turn = 3; g.phase = 'movement'; g.phasing = 'israeli'; g.contestedAtMoveStart = E.contestedAreas(g);
+    Object.assign(unit(g, 'I05'), { area: 50, moved: false, spent: 0, disorder: 0 }); for (const x of g.units) if (x.area === 64 || (x.area === 50 && x.side === 'syrian')) x.area = null; g.control[64] = 'syrian'; g.control[50] = 'israeli';
+    E.move(g, 'I05', 64);
+    for (let i = 0; i < 8 && S(g).release; i++) { const a = ai.next(g, 'syrian', 'normal')!; ai.apply(g, a.op); }
+    expect(S(g).release).toBeUndefined();
+  });
+});

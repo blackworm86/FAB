@@ -22,6 +22,7 @@ export type Op = [string, ...unknown[]];
 /** One area toward `to` by the cheapest way from where the block stands, as a player's step move (2.4 control, 5.34, fuel once).
  *  Returns true while the block has more steps to go; at the end its move is closed. */
 export function walkStep(g: Game, id: string, to: number): boolean {
+  if (E.actorOf(g) !== 'both' && E.actorOf(g) !== g.units.find((x) => x.id === id)!.side) { E.endMove(g); return false; }   // the other side must act first (Golan 15.2): the block stops here
   const opts = E.moveOptions(g, id), o = opts.find((x) => x.area === to); if (!o) { E.endMove(g); return false; }
   const next = o.path.slice(1).find((a) => opts.some((x) => x.area === a))!;                         // a full friendly area is passed through, not stopped in (5.1)
   const r = E.move(g, id, next, true);
@@ -34,16 +35,16 @@ export interface Action { label: string; unit?: string; area?: number; chit?: st
 type Est = { str: number; q: Quality; cls: 'armor' | 'infantry' };
 const QW: Record<Quality, number> = { green: 0.8, veteran: 1, elite: 1.25 };
 /** How many times a hard player fights a battle out before deciding (more: steadier, slower). */
-export const SIMS = { attack: 48, choice: 24 };
+export const SIMS = { attack: 48, choice: 24, turn: 4 };
 /** Tuning numbers the arena changes (ARENA_TUNE), and whether the hard player plans its attacks first. */
-export const TUNE = { plan: true, planAt: 0.3, sd: true, asym: 0.4, vpBase: 6, tw1: 0.5, tw2: 1.5, ownCut: null as number | null, expose: 0.35 };
+export const TUNE = { plan: true, planAt: 0.3, sd: true, asym: 0.4, vpBase: 6, tw1: 0.5, tw2: 1.5, ownCut: null as number | null, expose: 0.35, turn: true };
 
 /* ================= actions as data ================= */
 type OpFn = (g: Game, ...args: never[]) => unknown;
 const OPS: Record<string, OpFn> = {
   endPhase: (g) => E.endPhase(g), setDone: (g, side: Side) => E.setDone(g, side), resolveBlow: (g, yes: boolean) => E.resolveBlow(g, yes),
   recoverAsset: (g, side: Side, id: string | null) => E.recoverAsset(g, side, id), chooseArtyLoss: (g, id: string) => E.chooseArtyLoss(g, id),
-  fireSam: (g, id: string) => G.fireSam(g, id), declineSam: (g) => G.declineSam(g), answerJamming: (g, id: string | null) => G.answerJamming(g, g.battle!, id ?? undefined), pickMoraleLoss: (g, side: Side, id: string) => S.pickMoraleLoss(g, side, id), autoMoraleLoss: (g) => S.autoMoraleLoss(g),
+  pickRelease: (g, ids: string[]) => G.pickRelease(g, ids), placeReleased: (g, id: string, a: number) => G.placeReleased(g, id, a), fireSam: (g, id: string) => G.fireSam(g, id), declineSam: (g) => G.declineSam(g), answerJamming: (g, id: string | null) => G.answerJamming(g, g.battle!, id ?? undefined), pickMoraleLoss: (g, side: Side, id: string) => S.pickMoraleLoss(g, side, id), autoMoraleLoss: (g) => S.autoMoraleLoss(g),
   autoStrongpoints: (g) => G.autoStrongpoints(g, 'historical'), golanDeploy: (g, u: string, a: number) => G.deploy(g, u, a), autoMinefields: (g) => G.autoMinefields(g), autoReserves: (g, side: Side) => G.autoReserves(g, side),
   alowdaRaid: (g, c: string, a: number) => G.alowdaRaid(g, c, a), autoGarrisons: (g) => S.autoGarrisons(g), choosePlan: (g, br: string, us?: string) => S.choosePlan(g, 'historical', br, us), sicilyDeploy: (g, u: string, a: number) => S.deploy(g, u, a),
   placeTaskForce: (g, id: string, a: number) => E.placeTaskForce(g, id, a), placeArrival: (g, id: string, a: number) => E.placeArrival(g, id, a),
@@ -312,7 +313,7 @@ function both(g: Game, side: Side): Action | null {
 
 /* ================= choices the rules put to a side outside the sequence ================= */
 const jammed = (g: Game, side: Side) => CUR.id === 'golan73' && !!g.battle && g.battle.stage === 'setup' && side !== g.battle.attacker && !!G.battleState(g.battle).ew?.pending;   // 17.33: the Defender rolls before anything else
-const hasPending = (g: Game, side: Side) => jammed(g, side) || (!!g.pendingBlow && g.units.find((x) => x.id === g.pendingBlow!.unit)?.side !== side) || g.recover.includes(side) || (!!g.artyPick && side === 'german')
+const hasPending = (g: Game, side: Side) => jammed(g, side) || (CUR.id === 'golan73' && side === 'syrian' && !!G.state(g).release) || (!!g.pendingBlow && g.units.find((x) => x.id === g.pendingBlow!.unit)?.side !== side) || g.recover.includes(side) || (!!g.artyPick && side === 'german')
   || (CUR.id === 'golan73' && side === 'syrian' && !!G.state(g).samTarget) || (CUR.id === 'sicily' && !!S.state(g).moralePick?.[side]);
 function pending(g: Game, side: Side): Action | null {
   if (g.pendingBlow) {
@@ -326,6 +327,10 @@ function pending(g: Game, side: Side): Action | null {
     return act('recover an asset', ['recoverAsset', side, c?.id ?? null], { chit: c?.id });
   }
   if (g.artyPick && side === 'german') { const c = E.boxOf(g, 'german', 'used').filter((x) => x.kind === 'artillery').sort((a, b) => (a.ech === 'de_sr' ? 1 : 0) - (b.ech === 'de_sr' ? 1 : 0))[0]; if (c) return act('artillery attrition', ['chooseArtyLoss', c.id], { chit: c.id }); }
+  if (CUR.id === 'golan73' && side === 'syrian' && G.state(g).release) {                              // 15.2: the first two Strategic Reserve units, each on its first open Entry area
+    const R = G.state(g).release!; if (R.pick) return act('release', ['pickRelease', G.releaseChoices(g).slice(0, 2).map((u) => u.id)]);
+    const id = R.place[0]; return act('place released', ['placeReleased', id, G.releaseTargets(g, id)[0]], { unit: id });
+  }
   if (jammed(g, side)) { const cm = avail(g, side).find((c) => c.kind === 'event_ew'); return act(cm ? 'EW countermeasures' : 'answer the jamming', ['answerJamming', cm?.id ?? null], { chit: cm?.id }); }
   if (CUR.id === 'golan73' && side === 'syrian' && G.state(g).samTarget) { const sam = avail(g, 'syrian').find((c) => c.kind === 'sam'); return sam ? act('SAM fires', ['fireSam', sam.id], { chit: sam.id }) : act('no SAM', ['declineSam']); }
   if (CUR.id === 'sicily') { const V = S.state(g); if (V.moralePick?.[side]) { const pool = g.chits.filter((c) => c.side === 'axis' && c.nation === 'italian' && c.box === 'available' && c.kind !== 'command_staff' && (isArty(c) || isBattleAsset(c))).sort((a, b) => +isArty(a) - +isArty(b)); return pool.length ? act('Italian morale', ['pickMoraleLoss', side, pool[0].id], { chit: pool[0].id }) : act('Italian morale', ['autoMoraleLoss']); } }
@@ -492,17 +497,17 @@ const PLANS = new Map<string, { key: string; at: number; moves: [string, number]
 /** The next move of the attack plan for this Movement Phase (worked out once per phase, kept while the phase lasts), or null when it is done. */
 function planned(g: Game, side: Side): [string, number] | null {
   const key = `${g.game}|${g.seed}|${side}|${g.turn}|${g.phasing}|${g.phase}`, held = PLANS.get(side);                  // the seed: another game of the same scenario never inherits this one's plan
-  const plan = held && held.key === key && held.at <= g.log.length ? held : { key, at: g.log.length, moves: attackPlan(g, side) }; PLANS.set(side, plan);     // a game put back to before the plan (the account's copy) plans again
+  const plan = held && held.key === key && held.at <= g.log.length ? held : { key, at: g.log.length, moves: TUNE.turn ? turnPlan(g, side) : attackPlan(g, side) }; PLANS.set(side, plan);     // a game put back to before the plan (the account's copy) plans again
   for (const [id, a] of plan.moves) { const u = g.units.find((x) => x.id === id); if (!u || u.moved || u.area === a) continue; if (E.moveOptions(g, id).some((o) => o.area === a)) return [id, a]; }
   return null;
 }
-/** Every enemy-held area in reach, the best group of blocks (up to the stacking room) to attack it with, judged by fighting the attack out;
- *  the attacks that pay, strongest first, no block in two of them. */
-function attackPlan(g: Game, side: Side): [string, number][] {
+type Plan = { a: number; ids: string[]; gain: number };
+/** Every enemy-held area in reach, attacked by the strongest 1, 2 or 3 blocks that can get there (up to the stacking room), each judged by fighting the attack out. */
+function attackOptions(g: Game, side: Side): Plan[] {
   const foe = E.other(side), base = evaluate(g, side), units = own(g, side).filter((u) => regular(u) && !u.moved && !u.disorder);
   const reach = new Map<number, Unit[]>();
   for (const u of units) for (const o of E.moveOptions(g, u.id)) if (E.unitsIn(g, o.area, foe).length && inPlay(g, o.area)) (reach.get(o.area) ?? reach.set(o.area, []).get(o.area)!).push(u);
-  const plans: { a: number; ids: string[]; gain: number }[] = [];
+  const plans: Plan[] = [];
   for (const [a, us] of reach) {
     const room = (CUR.stackLimit?.(g, a) ?? 2) - E.blocks(g, a, side).length; if (room <= 0) continue;
     const ranked = [...us].sort((x, y) => val(g, y, side) - val(g, x, side));
@@ -514,10 +519,43 @@ function attackPlan(g: Game, side: Side): [string, number][] {
       plans.push({ a, ids: grp.map((u) => u.id), gain });
     }
   }
-  plans.sort((p, q) => q.gain - p.gain);
+  return plans.sort((p, q) => q.gain - p.gain);
+}
+/** The attacks that pay (TUNE.planAt), strongest first, no block in two of them. */
+function attackPlan(g: Game, side: Side, plans = attackOptions(g, side), at = TUNE.planAt): [string, number][] {
   const used = new Set<string>(), out: [string, number][] = [];
-  for (const p of plans) { if (p.gain < TUNE.planAt || p.ids.some((id) => used.has(id)) || out.some((m) => m[1] === p.a)) continue; for (const id of p.ids) { used.add(id); out.push([id, p.a]); } }
+  for (const p of plans) { if (p.gain < at || p.ids.some((id) => used.has(id)) || out.some((m) => m[1] === p.a)) continue; for (const id of p.ids) { used.add(id); out.push([id, p.a]); } }
   return out;
+}
+/** The turn-level plan (hard): a few whole offensives (no attack, the attacks that pay, everything promising, or all the weight on the best one, two or
+ *  three targets), each played out to the end of the player turn on copies of the game (the rest of the turn by the plain player); the best one is made. */
+function turnPlan(g: Game, side: Side): [string, number][] {
+  const opts = attackOptions(g, side), byArea = new Map<number, Plan[]>();
+  for (const p of opts) (byArea.get(p.a) ?? byArea.set(p.a, []).get(p.a)!).push(p);
+  const targets = [...byArea.values()].map((ps) => ps.reduce((x, y) => (y.ids.length > x.ids.length ? y : x))).sort((x, y) => Math.max(...byArea.get(y.a)!.map((p) => p.gain)) - Math.max(...byArea.get(x.a)!.map((p) => p.gain)));
+  const massed = (k: number) => { const used = new Set<string>(), out: [string, number][] = []; for (const p of targets.slice(0, k)) { const ids = p.ids.filter((id) => !used.has(id)); for (const id of ids) { used.add(id); out.push([id, p.a]); } } return out; };
+  const cands = [[], attackPlan(g, side, opts), attackPlan(g, side, opts, -0.5), massed(1), massed(2), massed(3)];
+  const seen = new Set<string>(), uniq = cands.filter((c) => { const k = JSON.stringify(c); if (seen.has(k)) return false; seen.add(k); return true; });
+  if (uniq.length < 2) return uniq[0] ?? [];
+  return best(uniq, (moves) => playTurn(g, side, moves, SIMS.turn))!.x;
+}
+/** The mean position for `side` at the end of its player turn (before the Supply Phase) after making `moves`, on `n` copies with their own dice. */
+function playTurn(g: Game, side: Side, moves: [string, number][], n: number): number {
+  const sides = E.sidesOf(g), src = E.randomSource(); E.setRandom(null);
+  let total = 0, done = 0;
+  try {
+    for (let i = 0; i < n; i++) {
+      const x = structuredClone(g); x.seed = ((g.seed + 7) * 2654435761 + (i + 1) * 40503 + g.rolls * 131) % 1e9; x.rolls = 0;
+      mask(x, side);
+      for (const [id, a] of moves) { try { walk(x, id, a); if (x.pendingBlow) E.resolveBlow(x, false); } catch { /* blocked on the way */ } }
+      for (let k = 0; k < 800 && !x.over && x.phasing === side && x.turn === g.turn && x.phase !== 'supply'; k++) {
+        let act: Action | null = null; for (const s of sides) { act = step(x, s, 'normal'); if (act) break; }
+        if (!act) break; try { act.run(x); } catch { break; }
+      }
+      total += evaluate(x, side); done++;
+    }
+  } finally { E.setRandom(src); }
+  return done ? total / done : -1e9;
 }
 /** The hard player's judgement of one move: the position after it (an attack: after the battle it leads to, fought out many times with the
  *  blocks that can still join), against the position now. */

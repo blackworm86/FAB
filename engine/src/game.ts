@@ -641,13 +641,16 @@ export function playRebuild(g: Game, id: string, unitId: string, area: number) {
   if (!c.kind.startsWith('rebuild') || c.box !== 'available' || u.area != null || u.str !== 0 || !ownArmy || u.max !== 1 || u.side !== c.side || u.q[0] === 'elite' || (arm !== (u.cls === 'armor')) || g.control[area] !== c.side || !(areas.get(area)!.vp.allied || areas.get(area)!.vp.mutual || areas.get(area)!.vp.german)) throw new Error('cannot return that unit there');
   u.area = area; u.str = 1; c.box = 'eliminated'; say(g, `${u.name} returns to ${areas.get(area)!.name}`, c.side);
 }
-export function alternateUse(g: Game, id: string) {
+/** 4.21: the eliminated assets an event may bring back (never garrisons, Task Forces or bid fuel: 16.21, 16.22, 18.2). */
+export const alternateCandidates = (g: Game, side: Side) => boxOf(g, side, 'eliminated').filter((x) => isAsset(x) && x.kind !== 'garrison' && x.kind !== 'task_force' && !x.bid);
+/** 4.21: spend an event to put two eliminated assets of the owner's choice (`ids`) back in the cup; without `ids`, a fixed priority picks them (the computer, tests). */
+export function alternateUse(g: Game, id: string, ids?: string[]) {
   needAdmin(g); const c = chit(g, id);
   if (c.box !== 'available' || isAsset(c) || c.kind === 'sa_block') throw new Error('not an event');
   if (CUR.saFilter && !CUR.saFilter(g, c.side, boxOf(g, c.side, 'available'), c.ech).includes(c)) throw new Error('this event cannot be spent alone now');   // e.g. Sicily 17.11 Patton: two US events
-  const pri = ['engineer', 'artillery', 'rocket_artillery', 'armor_asset', 'infantry_asset', 'fuel'];
-  const back = boxOf(g, c.side, 'eliminated').filter((x) => isAsset(x) && x.kind !== 'garrison' && x.kind !== 'task_force' && !x.bid).sort(   // 18.2: bid fuel never returns   // 16.21 / 16.22: never garrisons or task forces
-    (a, b) => pri.indexOf(a.kind) - pri.indexOf(b.kind)).slice(0, 2);
+  const pri = ['engineer', 'artillery', 'rocket_artillery', 'armor_asset', 'infantry_asset', 'fuel'], cands = alternateCandidates(g, c.side);
+  const back = ids ? ids.map((x) => cands.find((y) => y.id === x)!) : [...cands].sort((a, b) => pri.indexOf(a.kind) - pri.indexOf(b.kind)).slice(0, 2);
+  if (ids && (back.some((x) => !x) || new Set(ids).size !== ids.length || ids.length !== Math.min(2, cands.length))) throw new Error('choose two assets from your Eliminated Box (4.21)');
   if (!back.length) throw new Error('no assets in the Eliminated Box to bring back (4.21)');
   back.forEach((x) => (x.box = 'cup')); c.box = 'eliminated'; CUR.onSpendSA?.(g, c.side, c); say(g, `${c.name} used as alternate event: ${back.map((x) => x.name).join(', ')} back to the cup`, c.side);
 }
@@ -1454,6 +1457,7 @@ export function setEngFw(_g: Game, b: Battle, on: boolean) { if (!['setup', 'att
 /** Who has to act now: one side, or both (Prepare phases). */
 export function actorOf(g: Game): Side | 'both' {
   if (g.pendingBlow) { const u = g.units.find((x) => x.id === g.pendingBlow!.unit); return u ? other(u.side) : 'both'; }
+  { const s = CUR.pendingSide?.(g); if (s) return s; }
   const b = g.battle;
   if (b) return b.stage === 'setup' ? setupSide(g, b) : b.stage === 'loss' && b.loss ? b.loss.side : ['defArty', 'defFire', 'defChoice', 'retreat'].includes(b.stage) ? other(b.attacker) : b.attacker;
   if (g.phase === 'admin' || g.phase === 'reinforcement' || g.phase === 'deploy') return 'both';         // the set-up: each side places its own pieces

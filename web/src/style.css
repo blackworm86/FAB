@@ -1049,3 +1049,5 @@ p.stepped { cursor: pointer; border-left: 3px solid transparent; padding-left: 8
   .c-bar.b .dundo { grid-column: 2 !important; grid-row: 2 !important; }
   .c-bar.b .go, .c-bar.b .gowait { grid-column: 3 / 5 !important; }
 }
+/* picture tiles in a volume prompt (Golan 15.2 release): the block and its name, as the card chips */
+.volpanel .cbchips .pc { width: 66px !important; height: auto !important; min-height: 0; } .volpanel .cbchips .pc .b3 { --s: 38px !important; margin: 4px auto 14px; } .volpanel .cbchips .pc small { display: block; font-size: 10px; line-height: 1.1; }

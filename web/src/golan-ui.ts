@@ -85,13 +85,11 @@ export function golanTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): Tg
     case 'sam': t.hint = 'SAMs answer Israeli air missions east of the barrier when they are flown (16.12)'; return t;
     default: return null;
   }
-  if (k.startsWith('event') || k === 'special_action_event') {                                        // 4.21: any event can instead bring two assets back
-    const back = g.chits.filter((x) => x.side === side && x.box === 'eliminated' && works(g, (y) => G.alternateEventUse(y, id, [x.id]))).slice(0, 2);
-    if (back.length) t.buttons.push({ icon: 'swap', label: `Instead: bring back ${back.map((x) => x.name).join(' and ')}`, fn: run((x) => G.alternateEventUse(x, id, back.map((y) => y.id))), title: '4.21: the event is spent to return two assets from the Eliminated Box to the cup' });
-  }
   return t;
 }
 
+/** The Strategic Reserve units the Syrian player has picked so far (15.2). */
+let relSel: string[] = [];
 /** Cards that go into a battle's set-up: assets, air support, and the two combat events. Returns the refusal, or null when the card can be played now. */
 export function golanBattleUse(g: Game, b: E.Battle, c: E.Chit): string | null {
   if (c.kind === 'event_ew') return b.stage !== 'setup' ? 'events are played before the first roll' : c.side === b.attacker ? (works(g, (x) => G.playJamming(x, x.battle!, c.id)) ? null : 'the Defender has already assigned assets, or an event was played') : (G.battleState(b).ew?.pending ? null : 'countermeasures answer a jamming (17.33)');
@@ -108,10 +106,17 @@ export const golanBattleCard = (c: E.Chit) => E.isArty(c) || E.isBattleAsset(c) 
 
 /** What the shared screen hands the volume's prompts. */
 export interface PanelCtx { btn: (label: string, f: () => void, cls?: string, dis?: boolean, title?: string) => string; ubtn: (label: string, f: () => void, cls?: string, dis?: boolean, title?: string) => string;
-  /** The game as it is now (a remote write may have replaced the one the panel was drawn for). */ get: () => Game; mine: (s: E.Side) => boolean; pickArea: (label: string, areas: number[], run: (a: number) => void) => void; areaName: (a: number) => string; ico: (k: string) => string }
+  /** The game as it is now (a remote write may have replaced the one the panel was drawn for). */ get: () => Game; mine: (s: E.Side) => boolean; face: (u: E.Unit) => string; pickArea: (label: string, areas: number[], run: (a: number) => void) => void; areaName: (a: number) => string; ico: (k: string) => string }
 /** The volume's own prompts, above the hand: the SAM answer, the air assault, the engineer's bridging choice, the jamming answer. */
 export function golanPanel(g: Game, ctx: PanelCtx): string {
   const V = G.state(g), b = g.battle, out: string[] = [], live = ctx.get;                            // the buttons act on the game as it is when tapped, not as it was drawn
+  if (V.release) {                                                                                     // 15.2, 15.4a: the Israeli move waits for the Syrian choice and placements
+    const own = ctx.mine('syrian'), tile = (u: E.Unit, f: () => void, on = false) => ctx.ubtn(`${ctx.face(u)}<small>${esc(u.name)}</small>`, f, `pc syrian ${on ? 'on' : ''}`, !own);
+    if (V.release.pick) {
+      const ch = G.releaseChoices(g); relSel = relSel.filter((id) => ch.some((u) => u.id === id));
+      out.push(`<div class="volpanel"><b>${ctx.ico('warn')} Purple Line crossed (15.2)</b><span>${own ? 'Israel has entered Syria. Choose two Strategic Reserve units to release:' : 'Israel has entered Syria: the Syrian player chooses two Strategic Reserve units to release.'}</span><div class="cbchips">${ch.map((u) => tile(u, () => { relSel = relSel.includes(u.id) ? relSel.filter((x) => x !== u.id) : [...relSel, u.id].slice(-2); }, relSel.includes(u.id))).join('')}</div><div class="row">${ctx.btn('Release these two', () => { const ids = relSel; relSel = []; G.pickRelease(live(), ids); }, 'primary', !own || relSel.length !== 2)}</div></div>`);
+    } else out.push(`<div class="volpanel"><b>${ctx.ico('warn')} Released units (15.2, 15.4a)</b><span>${own ? 'Tap a unit, then one of its lit Entry areas.' : 'The Syrian player places the released units.'}</span><div class="cbchips">${V.release.place.map((id) => { const u = g.units.find((x) => x.id === id)!; return tile(u, () => ctx.pickArea(`Entry area for ${u.name}`, G.releaseTargets(live(), id), (a) => G.placeReleased(live(), id, a))); }).join('')}</div></div>`);
+  }
   if (V.samTarget) {
     const air = E.chit(g, V.samTarget), sams = g.chits.filter((c) => c.kind === 'sam' && c.box === 'available'), own = ctx.mine('syrian');
     out.push(`<div class="volpanel sam"><b>${ctx.ico('warn')} SAM fire (16.12)</b><span>Syria may answer the Israeli ${esc(air.name)}${air.area != null && air.area < 100 ? ` over ${esc(ctx.areaName(air.area))}` : ''}.</span><div class="row">${sams.length ? ctx.btn(`Fire a SAM (${sams.length} ready)`, () => { G.fireSam(live(), sams[0].id); }, 'primary', !own) : ''}${ctx.btn('Let it fly', () => G.declineSam(g), '', !own)}</div></div>`);
