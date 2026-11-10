@@ -38,6 +38,9 @@ GMT's block wargame series **Fast Action Battles** as a browser game: a rules en
 
 ## 4. Open work, in the order the owner would want it
 
+**New plan (10 November 2026): `docs/AI-PLAN-BULGE.md`** rethinks the computer opponent from scratch (a judge learned from thousands of games, a commander that plans per turn, sampled hidden blocks, a measuring tool with uncertainty). It supersedes the tuning items below for The Bulge.
+
+
 1. **Re-measure the hard computer player.** Its strength numbers were taken while it could see face-down blocks (fixed since: it now thinks on a masked copy, `mask()` in `ai.ts`). Run the arena (below), then retune `ai.TUNE`. The owner wants Hard to be **hard to beat**; known weak spot: the German attacker in The Bulge loses most games by Allied sudden death on turn 4. Ideas: multi-turn planning for the attacker, better use of artillery and Special Actions.
    - Measured in November 2026 (Bulge, 16 seeds per seat): Hard as the Germans ends a mean 7–9 VP behind, against Hard and against `ref` alike; the Germans lose by sudden death on turn 4 (they start at net −11 and must reach −3). The fix needs a German plan (which mutual VP areas to take by turn 4, along which roads and bridges), not more single actions.
    - Re-measured 9 November 2026 after the rules audit, step-by-step movement and control along the path (`hard:ref`, 6 seeds per seat, mean net VP for Hard, before → after): Bulge as Germans −7.3 → −8.8, as Allies +8.7 → +8.7; Golan as Syria −3.5 → −4.3, as Israel +4.0 → +5.2; Sicily as Allies +0.3 → +0.8, as Axis +11.8 → +10.3. All within noise (about ±1.5 at this sample size): no change in strength.
