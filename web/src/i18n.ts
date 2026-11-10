@@ -12,7 +12,7 @@ export const LANGS: [Lang, string][] = [['en', 'English'], ['it', 'Italiano']];
 
 type Dict = { text: Record<string, string>; patterns: [string, string][]; html: Record<string, string> };
 let D: Dict = { text: {}, patterns: [], html: {} }, PATS: [RegExp, string][] = [];
-const COLLECT = /[?&]i18n=collect\b/.test(location.search), missing = new Set<string>();
+const COLLECT = typeof location !== 'undefined' && /[?&]i18n=collect\b/.test(location.search), missing = new Set<string>();
 if (COLLECT) Object.assign(window, { __i18nMissing: () => [...missing] });
 /** Load the dictionary for the chosen language (nothing to load for English). */
 export async function loadLang() {
