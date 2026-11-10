@@ -34,3 +34,12 @@ describe('the doctrine player', () => {
     }
   }, 120_000);
 });
+
+describe('the learned judge', () => {
+  it('gives a chance between 0 and 1 from either seat, and the two sides add up to 1', async () => {
+    const { winChance } = await import('../src/judge');
+    E.useGame('bulge'); const g = E.newGame(2, { scenario: 'tournament' });
+    for (const seat of ['german', 'allied'] as const) { const v = new Seat(seat, { german: 'a', allied: 'b' }, rng(3)).view(g), p = winChance(v, seat, 'german');
+      expect(p).toBeGreaterThan(0); expect(p).toBeLessThan(1); expect(p + winChance(v, seat, 'allied')).toBeCloseTo(1); }
+  });
+});

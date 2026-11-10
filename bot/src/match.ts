@@ -7,7 +7,7 @@ import { Seat } from './view';
 import { rng, type Player } from './random';
 
 export interface MatchResult { seed: number; winner: Side | null; result: string | null; net: number; turns: number; actions: number; refused: number; refusedBy: Record<string, number>; stuck: string | null; counts: Record<string, number>; ms: number; think: Record<string, { n: number; ms: number; max: number }> }
-export interface MatchOpts { scenario?: string; opts?: Record<string, unknown>; maxActions?: number; maxRefused?: number }
+export interface MatchOpts { scenario?: string; opts?: Record<string, unknown>; maxActions?: number; maxRefused?: number; /** called at the start of each phase, with each seat's view (recorded games) */ sample?: (view: Game, seat: Side) => void }
 
 export function playMatch(seed: number, players: Record<string, Player>, o: MatchOpts = {}): MatchResult {
   const t0 = performance.now();
@@ -17,9 +17,11 @@ export function playMatch(seed: number, players: Record<string, Player>, o: Matc
   const sides = E.sidesOf(g), salts = Object.fromEntries(sides.map((s) => [s, salt()])) as Record<Side, string>;
   const seats = Object.fromEntries(sides.map((s) => [s, new Seat(s, salts, rng(seed * 31 + s.length))])) as Record<Side, Seat>;
   const think = Object.fromEntries(sides.map((s) => [s, { n: 0, ms: 0, max: 0 }])), counts: Record<string, number> = {}, refusedBy: Record<string, number> = {};
-  let actions = 0, refused = 0, stuck: string | null = null;
+  let lastPhase = '', actions = 0, refused = 0, stuck: string | null = null;
   const max = o.maxActions ?? 30000, maxRefused = o.maxRefused ?? 200;
   while (!g.over && !stuck) {
+    const key = `${g.turn} ${g.phasing} ${g.phase}`;
+    if (o.sample && key !== lastPhase && !g.battle) { lastPhase = key; for (const s of sides) o.sample(seats[s].view(g), s); }
     const who = actors(g); if (!who.length) { stuck = 'nobody may act'; break; }
     const side = who[0], seat = seats[side];
     const view = seat.view(g), t = performance.now();
