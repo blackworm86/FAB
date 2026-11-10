@@ -4,15 +4,15 @@ Goal: replace the generic wooden 3D blocks with models of the real troops and ve
 
 ## 1. The tool (done)
 
-A local panel in the browser (Italian, like the original). Per piece: 2D concept (Gemini) → front/side/back views → 3D model (TRELLIS on the owner's PC, or Meshy) → automatic clean-up to a small flat-coloured `.glb` → preview next to the real block → copy into the game folder.
+A local panel in the browser (Italian, like the original). The **Produzione** tab runs the whole line in series: generate the concepts for every piece, pick the best of each in one gallery, then one button makes the front view, the 3D model and the clean-up for every chosen piece, skipping what is done; it can be stopped and resumed. Per piece (Pezzi tab, for redoing one): 2D concept (Gemini) → front/side/back views → 3D model (TRELLIS on the owner's PC, or Meshy) → automatic clean-up to a small flat-coloured `.glb` → preview next to the real block → copy into the game folder.
 
-- Start it: `tools/pezzi3d/AVVIA_PANNELLO.bat` (Windows), then `http://127.0.0.1:8078`. Details and Linux commands: `tools/pezzi3d/PIANO_SVILUPPO.md`.
+- Start it: `tools/pezzi3d/AVVIA_PANNELLO.bat` (Windows), then `http://127.0.0.1:8078`. A download of the kit on its own: `python tools/pezzi3d/strumenti/crea_zip.py` (the API key, concepts and raw models stay out). Details and Linux commands: `tools/pezzi3d/PIANO_SVILUPPO.md`.
 - What changed from the original kit: the five faction figures, the party and police props, and the procedural block-outs are gone; the list of pieces now comes from the game's own data (`tools/pezzi3d/strumenti/catalogo.py` reads `data/*/units.json`); materials are the piece's real colours plus a base slab `colore_fazione` that the game tints with the side's wood colour; a piece is kept inside the standing block's footprint (1.5 × 0.7); the neon/player-colour logic and the octagon base were removed. Port 8078, so it can run beside the Briano Borromeo panel; TRELLIS and the Gemini key are shared with it.
 - Tested here: the catalogue (`python tools/pezzi3d/strumenti/test_catalogo.py`), the panel loading all 32 pieces in a browser, and the clean-up on the kit's sample model (45,528 triangles → 791, 1.5 × 0.7 footprint, 0.6 high). **Not tested**: Gemini and TRELLIS calls (no key or GPU in the cloud session) and the Windows `.bat` files.
 
-## 2. What gets modelled: 32 types, not 211 blocks
+## 2. What gets modelled: 33 pieces for 211 blocks
 
-Blocks of the same side and class share one model (a German infantry block in The Bulge is the same figure group whichever division it is). The six Special Action blocks have no model.
+Blocks of the same side and class share one model (a German infantry block in The Bulge is the same figure group whichever division it is). The six Special Action blocks have no model. Plus one `hidden` piece for every unit the player cannot see.
 
 | Volume | Types (blocks) |
 |---|---|
@@ -38,25 +38,25 @@ Each type has a prompt subject with period equipment (Panther, Sherman, Centurio
 
 Licence: TRELLIS code is MIT but some modules it uses are research-only; check before any commercial use (the original kit notes this).
 
-## 4. How it would go into the game (not built)
+## 4. How it goes into the game (decided 10 November 2026, not built yet)
 
-The block is also the game's data carrier: turning it 90° shows strength, and a face-down block must stay blank to the enemy (the hidden-block rule). So a model cannot simply replace the block without changing how those two things read. Options:
+The owner's decision: **the model replaces the block completely.**
 
-1. **Model on top of the block (recommended).** The block stays as the base and keeps its face, strength and hidden side; the model stands on top (or beside it) and only shows when the block is face up for you. Nothing about the rules display changes; the Bulge cannot break.
-2. **Model replaces the block.** Strength shows as a pip tray or a number, hidden units as a generic crate. Better looking, but a large change to every layout and tutorial.
-
-Either way: models load lazily from `web/public/pezzi/` with a fallback to the plain block, behind a Settings switch, with a phone budget (instancing, hide models far from the camera), and the side colour applied to `colore_fazione` from the same wood table the blocks use. This needs the owner's decision and a mockup before any code.
+- **Strength**: shown as pips floating above the model, in the stickers' colours (red with a white ring = elite, black = veteran, white with a black ring = green), one pip per step left, always facing the camera. The kit's preview (`visualizzatore.html`) already draws them, to check the headroom over each model. The block no longer turns to show strength.
+- **Hidden units**: one extra piece, `hidden` (a tarpaulin over an anonymous load), replaces every block the player may not see (an enemy block face down, a Sicily untried garrison). Its tarpaulin and base are `colore_fazione`, so the game tints it with that side's wood colour (German grey, US green, Italian orange `#e66525`…), like the blank back of a block. No pips on it.
+- **Side colour**: `colore_fazione` on every model takes the block's wood colour from the same tables the blocks use (`BULGE_WOOD`, `GOLAN_WOOD`, `SICILY_WOOD`).
+- Models load from `web/public/pezzi/` (the kit's "Copia i modelli nel gioco" puts them there), with the old block as fallback while a type has no model, behind a Settings switch until every type exists. Phone budget: instancing, about 60k triangles on a busy map.
+- Still to do in the game, after the pilot pieces: a mockup for the owner (the pips, the hidden piece, selection highlight), then the code in `web/src/main.ts` `block()`.
 
 ## 5. Phases
 
 0. Kit adapted (done, this page).
 1. Pilot, three pieces end to end: US infantry (style anchor), US armour, German armour. Check the look next to the block in the preview.
 2. The remaining 29 types, volume by volume (Bulge first).
-3. Integration behind a Settings switch (after the owner picks option 1 or 2 and approves a mockup).
+3. Integration behind a Settings switch (after the owner approves a mockup of section 4).
 4. Later and optional: a different group for reduced strength (fewer figures per step), named leaders (Peiper…), strongpoint and bridge markers.
 
 ## 6. Open decisions for the owner
 
-1. Model on top of the block, or replacing it (section 4)?
-2. Are the group sizes right (three infantrymen, two tanks), or one single figure/vehicle per block?
-3. Should the group shrink as the block loses steps?
+1. Are the group sizes right (three infantrymen, two tanks), or one single figure/vehicle per block?
+2. Should the group shrink as the block loses steps?

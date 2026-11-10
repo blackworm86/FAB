@@ -63,6 +63,7 @@ textarea{width:100%;min-height:120px;background:#0E0E13;border:1px solid var(--l
 input[type=text],input[type=number],input[type=password],select{background:#0E0E13;border:1px solid var(--linea);padding:6px 8px;border-radius:2px}
 label.campo{display:flex;flex-direction:column;gap:3px;font-size:14px;color:var(--tenue)}
 label.spunta{display:flex;gap:6px;align-items:center;font-size:15px}
+.flusso li{margin:10px 0}.tab-serie{border-collapse:collapse;margin-top:16px;width:100%}.tab-serie td,.tab-serie th{padding:6px 10px;border-bottom:1px solid var(--linea);text-align:left}.tab-serie button{background:none;border:0;color:inherit;font:inherit;cursor:pointer;text-decoration:underline}.galleria-pezzo{margin-top:14px}.galleria-pezzo img{width:140px;cursor:pointer;border:2px solid transparent}.galleria-pezzo img:hover{border-color:var(--rosso)}
 .griglia{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}
 .miniatura{background:#0E0E13;border:1px solid var(--linea);display:flex;flex-direction:column}
 .miniatura img{width:100%;aspect-ratio:1;object-fit:contain;background:#D9D9D9}
@@ -98,7 +99,7 @@ iframe.visore{width:100%;height:70vh;border:1px solid var(--linea);background:#0
 </head>
 <body>
 <header>
-  <h1>FAB <span>3D</span> · officina dei pezzi <small class="nota" style="font-family:inherit;font-size:12px">v2026.11.10-fab1</small></h1>
+  <h1>FAB <span>3D</span> · officina dei pezzi <small class="nota" style="font-family:inherit;font-size:12px">v2026.11.10-fab2</small></h1>
   <div class="stati">
     <span class="chip" id="c-server"><i></i>Pannello</span>
     <span class="chip" id="c-gpu"><i></i>GPU</span>
@@ -107,7 +108,8 @@ iframe.visore{width:100%;height:70vh;border:1px solid var(--linea);background:#0
   </div>
 </header>
 <nav role="tablist">
-  <button role="tab" data-vista="pezzi" aria-selected="true">Pezzi</button>
+  <button role="tab" data-vista="serie" aria-selected="true">Produzione</button>
+  <button role="tab" data-vista="pezzi" aria-selected="false">Pezzi</button>
   <button role="tab" data-vista="sagome" aria-selected="false">Test sagome</button>
   <button role="tab" data-vista="anteprima" aria-selected="false">Anteprima e gioco</button>
   <button role="tab" data-vista="installa" aria-selected="false">Installazione</button>
@@ -124,7 +126,28 @@ iframe.visore{width:100%;height:70vh;border:1px solid var(--linea);background:#0
     (oppure scaricalo dalla scheda <b>Installazione</b>).
   </div>
 
-  <section class="vista attiva" id="v-pezzi">
+  <section class="vista attiva" id="v-serie">
+    <div class="sezione" style="max-width:1300px">
+      <div class="passo"><header><h3>Produzione in serie</h3></header><div class="corpo">
+        <p class="nota">Tu decidi solo due cose: <b>quale concept tenere</b> per ogni pezzo e <b>se il risultato finale va bene</b>. Tutto il resto lo fanno i pulsanti, pezzo dopo pezzo, saltando quello che è già fatto. Puoi fermarti quando vuoi e riprendere: si riparte da dove eri.</p>
+        <ol class="flusso">
+          <li><b>Concept</b>: <button class="btn primario serve-server" id="b-s-concept">Genera i concept mancanti</button>
+            <select id="s-quanti" aria-label="Immagini per pezzo"><option value="2">2 immagini per pezzo</option><option value="3" selected>3 immagini per pezzo</option><option value="4">4 immagini per pezzo</option></select>
+            <span class="nota">Con la chiave Gemini. Prima solo il pezzo di stile (US infantry): sceglilo qui sotto, poi ripremi per tutti gli altri.</span></li>
+          <li><b>Scegli</b>: clicca l’immagine migliore di ogni pezzo nella galleria qui sotto (per il pezzo di stile diventa anche lo stile).</li>
+          <li><b>Fai il resto</b>: <button class="btn primario serve-server" id="b-s-resto">Viste, 3D e pulizia per tutti i pezzi scelti</button>
+            <label class="spunta"><input type="checkbox" id="c-s-viste" checked> genera la vista frontale (Gemini) prima del 3D</label>
+            <span class="nota">Serve TRELLIS acceso. Senza Gemini usa il concept scelto come immagine per il 3D.</span></li>
+          <li><b>Controlla</b> la scheda Anteprima: un pezzo che non va si apre dalla tabella e si rifà solo quello.</li>
+        </ol>
+        <div class="riga"><button class="btn serve-server" id="b-s-ferma" disabled>Ferma dopo il pezzo in corso</button><span class="nota" id="s-avanzamento"></span></div>
+        <div id="s-galleria"></div>
+        <div style="overflow-x:auto"><table class="tab-serie" id="s-tabella"></table></div>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="vista" id="v-pezzi">
     <aside class="elenco" id="elenco"></aside>
     <div class="dettaglio" id="dettaglio"></div>
   </section>
@@ -220,6 +243,7 @@ iframe.visore{width:100%;height:70vh;border:1px solid var(--linea);background:#0
     <div class="sezione">
       <div class="passo"><header><h3>Come si usa</h3></header><div class="corpo">
         <ol>
+          <li><b>Produzione</b> è il modo veloce: concept per tutti, scegli nella galleria, poi un pulsante fa viste, 3D e pulizia per tutti. Le voci qui sotto servono per rifare un pezzo a mano.</li>
           <li><b>Installazione</b>: una volta sola, installa TRELLIS (scheda B) e, se vuoi, inserisci la chiave Gemini (scheda C).</li>
           <li><b>Pezzi → The Bulge · US infantry → Concept</b>: genera o carica qualche immagine, premi «Scegli» sulla migliore, poi «Usa come stile».</li>
           <li>Ripeti il concept per gli altri tipi (32 in tutto, in 3 volumi): l’immagine di stile viene allegata da sola.</li>
@@ -271,8 +295,8 @@ const CORREZIONI = [
   ["Ripara la vista", "The design changed. Fix it: same colors, same accessories, same proportions as the reference, only the camera angle changes."],
 ];
 const PULISCI_PEDINA = {base:true, senza_giocatore:true, colori:6, ruota:0, asse_z_su:false, dettaglio:2};
-const opzioniDi = pz => ({...PULISCI_PEDINA, altezza:pz.altezza, triangoli:pz.triangoli});
-const VERSIONE_PANNELLO = "2026.11.10-fab1";
+const opzioniDi = pz => ({...PULISCI_PEDINA, altezza:pz.altezza, triangoli:pz.triangoli, ...(pz.tinta ? {tinta:pz.tinta, senza_giocatore:false} : {})});
+const VERSIONE_PANNELLO = "2026.11.10-fab2";
 const AVVIA_BAT = "@echo off\nrem ==========================================================================\nrem  FAB · pezzi 3D - avvio del pannello\nrem  Doppio clic su questo file:\nrem   - chiude un eventuale pannello gia' aperto (anche di una versione vecchia)\nrem   - la prima volta installa Python (se manca) e le librerie del kit\nrem   - avvia il pannello e lo apre nel browser\nrem  Lascia aperta questa finestra mentre lavori. Per chiudere: chiudi la\nrem  finestra, oppure FERMA_PANNELLO.bat, oppure il pulsante nel pannello.\nrem ==========================================================================\nsetlocal\ncd /d \"%~dp0\"\ntitle FAB · pezzi 3D - Pannello\n\necho Chiudo un eventuale pannello gia' aperto...\ncall \"%~dp0strumenti\\ferma_porta.bat\" 8078\n\nset \"VENV_PY=%~dp0.venv\\Scripts\\python.exe\"\nif exist \"%VENV_PY%\" goto librerie\n\necho.\necho Prima configurazione: cerco Python...\nset \"PYBASE=\"\npy -3 -c \"import sys; assert sys.version_info >= (3, 10)\" >nul 2>nul && set \"PYBASE=py -3\"\nif defined PYBASE goto crea_venv\npython -c \"import sys; assert sys.version_info >= (3, 10)\" >nul 2>nul && set \"PYBASE=python\"\nif defined PYBASE goto crea_venv\n\necho Python non trovato: lo installo con winget (Python 3.12, solo per il tuo utente)...\nwinget install -e --id Python.Python.3.12 --scope user --silent --accept-package-agreements --accept-source-agreements\nset \"PYBASE=%LOCALAPPDATA%\\Programs\\Python\\Python312\\python.exe\"\nif exist \"%PYBASE%\" goto crea_venv\necho.\necho Non sono riuscito a installare Python automaticamente.\necho Installalo da https://www.python.org/downloads/ (spunta \"Add python.exe to PATH\")\necho e poi fai di nuovo doppio clic su questo file.\npause\nexit /b 1\n\n:crea_venv\necho Creo l'ambiente Python del kit nella cartella .venv ...\n%PYBASE% -m venv \"%~dp0.venv\"\nif not exist \"%VENV_PY%\" \"%PYBASE%\" -m venv \"%~dp0.venv\"\nif not exist \"%VENV_PY%\" (\n    echo Creazione dell'ambiente non riuscita.\n    pause\n    exit /b 1\n)\n\n:librerie\necho Controllo le librerie del kit...\n\"%VENV_PY%\" -m pip install --disable-pip-version-check -q --upgrade pip\n\"%VENV_PY%\" -m pip install --disable-pip-version-check -q -r \"%~dp0strumenti\\requisiti.txt\"\nif errorlevel 1 (\n    echo Installazione delle librerie non riuscita: controlla la connessione e riprova.\n    pause\n    exit /b 1\n)\n\nset \"APRI=--apri\"\n:avvio\necho.\necho Avvio il pannello. Lascia aperta questa finestra.\n\"%VENV_PY%\" \"%~dp0strumenti\\server_pannello.py\" %APRI%\nrem codice 3 = riavvio chiesto dal pannello: ricarica il codice aggiornato\nif errorlevel 3 if not errorlevel 4 (\n    set \"APRI=\"\n    echo Riavvio in corso...\n    \"%VENV_PY%\" -m pip install --disable-pip-version-check -q -r \"%~dp0strumenti\\requisiti.txt\"\n    goto avvio\n)\necho.\necho Il pannello e' stato chiuso.\npause\n";
 
 // =====================================================================
@@ -333,7 +357,7 @@ async function aggiornaStato(){
     aggiornaInstalla();
   }
   disegnaElenco();
-  if (!aggiornaStato.primo){ aggiornaStato.primo = true; disegnaDettaglio(); }
+  if (!aggiornaStato.primo){ aggiornaStato.primo = true; disegnaDettaglio(); disegnaSerie(); }
 }
 function chip(id, classe, testo){ const c=$(id); c.className = "chip " + classe; c.lastChild.textContent = testo; }
 
@@ -481,7 +505,7 @@ function formPulizia(pz){
   const o = opzioniDi(pz);
   const campo = (k, etichetta, tipo="text", extra="") => `<label class="campo">${etichetta}<input type="${tipo}" data-op="${k}" value="${o[k] ?? ""}" ${extra}></label>`;
   return `<div class="riga">
-    ${campo("altezza","Altezza (unità)","number","step='0.01' style='width:90px'") + campo("triangoli","Triangoli","number","style='width:90px'")}
+    ${pz.tinta ? campo("tinta","Colore del telo nel concept (diventa il legno della fazione)") : ""}${campo("altezza","Altezza (unità)","number","step='0.01' style='width:90px'") + campo("triangoli","Triangoli","number","style='width:90px'")}
     ${campo("colori","Colori piatti","number","min='2' max='12' style='width:70px'")}
     <label class="campo">Ruota (gradi)<span class="riga" style="margin:0"><input type="number" data-op="ruota" value="${o.ruota}" step="90" style="width:70px">
       <button class="btn piccolo" data-ruota="90">+90</button><button class="btn piccolo" data-ruota="180">180</button></span></label>
@@ -578,14 +602,15 @@ function collegaDettaglio(pz, x){
   if (bR) bR.onclick = async () => { if (!confirm("Togliere il modello finito di questo pezzo? (il grezzo resta)")) return; await api("/api/elimina", {percorso:x.pulito}); await lancia("/api/genera", {}, "Rigenero i pezzi"); disegnaDettaglio(); };
 }
 
-async function pulisci(pz){
-  const opzioni = document.querySelector("[data-op]") ? leggiOpzioni(pz) : opzioniDi(pz);
+async function pulisci(pz, serie){
+  const opzioni = !serie && document.querySelector("[data-op]") ? leggiOpzioni(pz) : opzioniDi(pz);
   const uscita = pz.tipo === "pedina" ? `modelli/definitivi/${pz.id}.glb` : `modelli/props/${pz.id}.glb`;
   const scelto = filePezzo(pz).scelto;
   if (opzioni.usa_concept !== false && scelto) opzioni.palette_da = scelto;
   delete opzioni.usa_concept;
-  await lancia("/api/pulisci", {ingresso:`modelli/ai_grezzi/${pz.id}.glb`, nome: pz.id, uscita, opzioni}, "Pulizia · " + pz.nome);
+  const r = await lancia("/api/pulisci", {ingresso:`modelli/ai_grezzi/${pz.id}.glb`, nome: pz.id, uscita, opzioni}, "Pulizia · " + pz.nome);
   disegnaDettaglio();
+  return r;
 }
 
 // =====================================================================
@@ -640,6 +665,75 @@ function anteprima(selettore, file){
 }
 
 // =====================================================================
+// Produzione in serie
+// =====================================================================
+let FERMA = false, IN_SERIE = false;
+const stileFile = () => trovaFile(F().scelti, "_stile");
+function disegnaSerie(){
+  const v = s => s ? "✓" : "–";
+  $("#s-tabella").innerHTML = `<tr><th>Pezzo</th><th>Volume</th><th>Blocchi</th><th>Concept</th><th>Vista</th><th>3D grezzo</th><th>Finito</th></tr>` +
+    TUTTI.map(pz => { const x = filePezzo(pz);
+      return `<tr><td><button data-apri="${pz.id}">${esc(pz.nome)}</button></td><td>${esc(pz.volume)}</td><td>${pz.blocchi.length || "tutti i nascosti"}</td><td>${v(x.scelto)}</td><td>${v(x.viste.fronte)}</td><td>${v(x.grezzo)}</td><td>${v(x.pulito)}</td></tr>`; }).join("");
+  $("#s-tabella").querySelectorAll("[data-apri]").forEach(b => b.onclick = () => { SELEZIONATO = b.dataset.apri; document.querySelector('nav [data-vista="pezzi"]').click(); disegnaElenco(); disegnaDettaglio(); });
+  const daScegliere = TUTTI.filter(pz => { const x = filePezzo(pz); return !x.scelto && x.esplorazione.length; });
+  $("#s-galleria").innerHTML = daScegliere.length ? "<h3>Da scegliere</h3>" + daScegliere.map(pz =>
+    `<div class="galleria-pezzo"><b>${esc(pz.nome)}</b> <span class="nota">${esc(pz.volume)}${pz.stile ? " · pezzo di stile" : ""}</span><div class="riga">${
+      filePezzo(pz).esplorazione.slice(0, 6).map(f => `<img src="${url(f)}" alt="${esc(pz.nome)}" data-pz="${pz.id}" data-f="${f}">`).join("")}</div></div>`).join("") : "";
+  $("#s-galleria").querySelectorAll("img").forEach(i => i.onclick = async () => {
+    const pz = TUTTI.find(p => p.id === i.dataset.pz), est = i.dataset.f.split(".").pop();
+    await rimuoviVecchio(F().scelti, pz.id); await api("/api/copia", {da:i.dataset.f, a:`concept/scelti/${pz.id}.${est}`});
+    if (pz.stile){ await rimuoviVecchio(F().scelti, "_stile"); await api("/api/copia", {da:i.dataset.f, a:`concept/scelti/_stile.${est}`}); }
+    toast("Scelto: " + pz.nome); await aggiornaStato(); disegnaSerie();
+  });
+}
+async function inSerie(etichetta, lista, passo){
+  if (IN_SERIE) return toast("C'è già una produzione in corso");
+  IN_SERIE = true; FERMA = false; $("#b-s-ferma").disabled = false;
+  let fatti = 0;
+  try {
+    for (const pz of lista){
+      if (FERMA) { toast("Fermato"); break; }
+      $("#s-avanzamento").textContent = `${etichetta}: ${fatti + 1} di ${lista.length} · ${pz.nome}`;
+      if (await passo(pz) === false) break;
+      fatti++; disegnaSerie();
+    }
+  } finally { IN_SERIE = false; $("#b-s-ferma").disabled = true; $("#s-avanzamento").textContent = `${etichetta}: ${fatti} pezzi fatti.`; await aggiornaStato(); disegnaSerie(); }
+}
+$("#b-s-ferma").onclick = () => { FERMA = true; toast("Mi fermo dopo il pezzo in corso"); };
+$("#b-s-concept").onclick = () => {
+  if (!STATO.gemini.configurata) return toast("Serve la chiave Gemini (scheda Installazione). Senza chiave usa «Copia prompt» nella scheda Pezzi.", 6000);
+  const quanti = +$("#s-quanti").value, stile = stileFile();
+  const lista = TUTTI.filter(pz => { const x = filePezzo(pz); return !x.scelto && x.esplorazione.length < quanti && (stile || pz.stile); });
+  if (!stile) toast("Prima il pezzo di stile: scegline il concept, poi ripremi per gli altri.", 6000);
+  inSerie("Concept", lista, async pz => {
+    for (let n = filePezzo(pz).esplorazione.length; n < quanti && !FERMA; n++) {
+      const r = await lancia("/api/gemini", {prompt: pz.prompt, riferimenti: pz.stile ? [] : [stile], cartella: "concept/esplorazione", nome: `${pz.id}_${ts()}`}, "Gemini · " + pz.nome);
+      if (!r || r.stato !== "fatto") return false;
+    }
+  });
+};
+$("#b-s-resto").onclick = () => {
+  const viste = $("#c-s-viste").checked && STATO.gemini.configurata;
+  if (!STATO.trellis.attivo) return toast("Accendi TRELLIS (scheda Installazione) e riprova.", 6000);
+  const lista = TUTTI.filter(pz => { const x = filePezzo(pz); return x.scelto && !x.pulito; });
+  if (!lista.length) return toast("Nessun pezzo scelto da completare");
+  inSerie("Viste, 3D e pulizia", lista, async pz => {
+    let x = filePezzo(pz);
+    if (viste && !x.viste.fronte){
+      const r = await lancia("/api/gemini", {prompt: VISTE.fronte, riferimenti:[x.scelto], cartella:"concept/viste_3d", nome:`${pz.id}_fronte`}, "Vista frontale · " + pz.nome);
+      if (!r || r.stato !== "fatto") return false;
+      x = filePezzo(pz);
+    }
+    if (!x.grezzo){
+      const r = await lancia("/api/trellis/genera", {id: pz.id, immagini: [x.viste.fronte || x.scelto], seed: Math.floor(Math.random() * 1e6), qualita: "rapida"}, "TRELLIS · " + pz.nome);
+      if (!r || r.stato !== "fatto") return false;
+    }
+    const r = await pulisci(pz, true);
+    if (!r || r.stato !== "fatto") return false;
+  });
+};
+
+// =====================================================================
 // Altre schede
 // =====================================================================
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
@@ -647,6 +741,7 @@ document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
   document.querySelectorAll(".vista").forEach(v => v.classList.toggle("attiva", v.id === "v-" + b.dataset.vista));
   if (b.dataset.vista === "anteprima") apriAnteprima();
   if (b.dataset.vista === "sagome") mostraFoglio();
+  if (b.dataset.vista === "serie") disegnaSerie();
 });
 function apriAnteprima(){
   if (!ONLINE) return;

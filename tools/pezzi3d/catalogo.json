@@ -684,6 +684,21 @@
     "GE06",
     "GE07"
    ]
+  },
+  {
+   "id": "hidden",
+   "volume": "tutti",
+   "volume_nome": "Tutti i volumi",
+   "fazione": "tutte",
+   "classe": "hidden",
+   "legno": "#8e9296",
+   "nome": "Hidden unit",
+   "gruppo": "one anonymous covered load",
+   "soggetto": "a military canvas tarpaulin draped over an unidentifiable low pile of crates and equipment, tied down with ropes, nothing recognisable underneath, no weapons showing. The tarpaulin is solid teal (#16A6A0), the ropes dark brown",
+   "altezza": 0.6,
+   "triangoli": 400,
+   "tinta": "#16A6A0",
+   "blocchi": []
   }
  ],
  "senza_modello": [

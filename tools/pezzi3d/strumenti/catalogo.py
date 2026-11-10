@@ -82,6 +82,16 @@ ALTEZZA = {"armor": 0.55, "mech": 0.6, "cavalry": 0.45, "recon": 0.45, "motorize
 ALTEZZA_FANTE = 0.8
 TRIANGOLI = 800
 
+# il pezzo "nascosto": sostituisce ogni blocco che il giocatore non può vedere (il retro del blocco).
+# Uno solo per tutti: il telo è in verde acqua segnaposto e diventa colore_fazione, così il gioco lo tinge
+# col legno della fazione (grigio tedesco, verde US, arancio italiano...).
+TINTA = "#16A6A0"
+NASCOSTO = {"id": "hidden", "volume": "tutti", "volume_nome": "Tutti i volumi", "fazione": "tutte", "classe": "hidden",
+            "legno": "#8e9296", "nome": "Hidden unit", "gruppo": "one anonymous covered load",
+            "soggetto": "a military canvas tarpaulin draped over an unidentifiable low pile of crates and equipment, tied down with ropes, "
+                        "nothing recognisable underneath, no weapons showing. The tarpaulin is solid teal (#16A6A0), the ropes dark brown",
+            "altezza": 0.6, "triangoli": 400, "tinta": TINTA, "blocchi": []}
+
 
 def tipo_di(vol, u):
     """Il simbolo NATO dice la classe (mech, airborne, cavalry...); cls è più grezzo."""
@@ -109,10 +119,13 @@ def costruisci():
                 "gruppo": GRUPPO[classe], "soggetto": S[chiave], "altezza": ALTEZZA.get(classe, ALTEZZA_FANTE),
                 "triangoli": TRIANGOLI, "blocchi": []})
             t["blocchi"].append(u["id"])
-    return list(tipi.values()), saltati
+    return list(tipi.values()) + [NASCOSTO], saltati
 
 
 def main():
+    if not (REPO / "data").is_dir():   # kit scaricato da solo, fuori dal repository: si usa il catalogo già pronto
+        print("catalogo: dati del gioco non trovati, uso catalogo.json così com'è")
+        return
     tipi, saltati = costruisci()
     (KIT / "catalogo.json").write_text(json.dumps({"tipi": tipi, "senza_modello": saltati}, indent=1, ensure_ascii=False), encoding="utf-8")
     (KIT / "catalogo.js").write_text("const CATALOGO = " + json.dumps(tipi, ensure_ascii=False) + ";\n", encoding="utf-8")

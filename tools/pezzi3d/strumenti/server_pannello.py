@@ -51,7 +51,7 @@ CONFIG_PREDEFINITA = {
     "modello_gemini": "gemini-3.1-flash-image-preview",
     "cartella_trellis": "C:\\BrianboruAI\\trellis" if WINDOWS else str(Path.home() / "trellis"),
     "precisione_trellis": "half",
-    "cartella_gioco": str(RADICE.parents[1] / "web" / "public" / "pezzi"),
+    "cartella_gioco": str(RADICE.parents[1] / "web" / "public" / "pezzi") if (RADICE.parents[1] / "web").is_dir() else "",
     "blender": "",
 }
 

@@ -152,7 +152,9 @@ def aggiorna_visualizzatore():
     modello = QUI / "visualizzatore_template.html"
     dati = {f.stem: base64.b64encode(f.read_bytes()).decode() for f in sorted((RADICE / "colorati").glob("*.glb"))}
     info = {t["id"]: {"nome": f"{t['nome']} · {t['volume']}", "budget": t["triangoli"], "blocchi": len(t["blocchi"])} for t in catalogo()}
-    html = modello.read_text(encoding="utf-8").replace("__MODELLI__", json.dumps(dati)).replace("__INFO__", json.dumps(info))
+    from catalogo import LEGNO
+    html = (modello.read_text(encoding="utf-8").replace("__MODELLI__", json.dumps(dati)).replace("__INFO__", json.dumps(info))
+            .replace("__LEGNI__", json.dumps(LEGNO)))
     (QUI.parent / "visualizzatore.html").write_text(html, encoding="utf-8")
     print(f"Visualizzatore aggiornato: {len(dati)} pezzi")
 

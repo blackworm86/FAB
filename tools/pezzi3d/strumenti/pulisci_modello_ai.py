@@ -24,7 +24,7 @@ COME LAVORA
      "conforme": anche i vicini vengono divisi quanto basta, così non si
      aprono buchi) finché il budget lo permette; ogni triangolo prende poi il
      colore che copre la maggior parte della sua superficie
-  7. assegna i materiali speciali (colore_giocatore, neon_giocatore) e
+  7. assegna i materiali speciali (colore_fazione: la parte che il gioco tinge col legno della fazione) e
      scrive un unico oggetto con vertici condivisi: il modello resta chiuso
      ("manifold") dove l'originale era chiuso
 
@@ -612,7 +612,7 @@ def assegna_materiali(palette, aree, args):
     else:
         i_tinta = int(np.argmax(aree))
     if i_tinta is not None:
-        nomi[i_tinta] = "colore_giocatore"
+        nomi[i_tinta] = "colore_fazione"
     if args.neon:
         i_neon = trova_neon(palette, args.neon, escludi=i_tinta)
         if i_neon is not None:

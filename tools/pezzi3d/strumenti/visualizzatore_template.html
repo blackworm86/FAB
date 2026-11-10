@@ -14,13 +14,13 @@ header{padding:12px 16px}h1{margin:0;font-size:18px}p{margin:4px 0 0;color:var(-
 </head>
 <body>
 <header><h1>Banco prova pezzi</h1>
-<p>Ogni pezzo sta accanto al blocco di legno vero (1,6 × 1,6 × 0,8): deve stare nell'impronta e leggersi alla stessa distanza. Trascina per girare. Pezzi pronti: <b id="n"></b></p></header>
+<p>Ogni pezzo sta accanto al blocco di legno che sostituisce (1,6 × 1,6 × 0,8), con i pallini della forza sospesi sopra (rosso = élite, nero = veterano, bianco = recluta). L'ultima riga è il pezzo nascosto in ogni legno di fazione. Trascina per girare. Pezzi pronti: <b id="n"></b></p></header>
 <canvas id="scena"></canvas>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-const MODELLI = __MODELLI__, INFO = __INFO__;
+const MODELLI = __MODELLI__, INFO = __INFO__, LEGNI = __LEGNI__;
 const canvas = document.getElementById("scena"), renderer = new THREE.WebGLRenderer({canvas, antialias:true});
 renderer.outputEncoding = THREE.sRGBEncoding;
 const scena = new THREE.Scene(); scena.background = new THREE.Color("#2b2d31");
@@ -28,22 +28,40 @@ const cam = new THREE.PerspectiveCamera(35, 1, 0.1, 200), ctrl = new THREE.Orbit
 ctrl.enableDamping = true; ctrl.maxPolarAngle = Math.PI * 0.47;
 scena.add(new THREE.HemisphereLight("#cfd6e6", "#2a2622", 0.9));
 const sole = new THREE.DirectionalLight("#fff", 0.9); sole.position.set(-4, 9, 6); scena.add(sole);
-const nomi = Object.keys(MODELLI), COL = 4, PX = 2.4, PZ = 2.2;
-document.getElementById("n").textContent = nomi.length + " su " + Object.keys(INFO).length;
+const nomi = Object.keys(MODELLI).filter(n => n !== "hidden"), COL = 4, PX = 2.4, PZ = 2.2;
+document.getElementById("n").textContent = Object.keys(MODELLI).length + " su " + Object.keys(INFO).length;
 const loader = new THREE.GLTFLoader();
 const blocco = () => { const g = new THREE.BoxGeometry(1.6, 1.6, 0.8); g.translate(0, 0.8, 0);
   return new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({color:"#8e9296"})); };
-nomi.forEach((nome, i) => {
+[...nomi, ...(MODELLI.hidden ? ["hidden"] : [])].forEach((nome, i) => {
   const bin = atob(MODELLI[nome]), buf = new Uint8Array(bin.length);
   for (let k = 0; k < bin.length; k++) buf[k] = bin.charCodeAt(k);
   loader.parse(buf.buffer, "", g => {
     const x = (i % COL) * PX, z = Math.floor(i / COL) * PZ;
+    if (nome === "hidden") return nascosti(g.scene);
     g.scene.position.set(x, 0, z); scena.add(g.scene);
     const b = blocco(); b.position.set(x + 1.7, 0, z); scena.add(b);
+    pallini(g.scene, ["elite", "veteran", "green"]);
   });
 });
-const righe = Math.ceil(nomi.length / COL) || 1;
-ctrl.target.set((Math.min(nomi.length, COL) - 1) * PX / 2 + 0.8, 0.3, (righe - 1) * PZ / 2);
+// pallini della forza: dischi sempre rivolti alla telecamera, sopra il pezzo (gli stessi colori degli adesivi)
+const PIP = {elite:["#e3222b", "#fff"], veteran:["#141414", "#141414"], green:["#fff", "#141414"]};
+function disco(q){ const c = document.createElement("canvas"); c.width = c.height = 64; const x = c.getContext("2d");
+  x.beginPath(); x.arc(32, 32, 28, 0, 7); x.fillStyle = PIP[q][1]; x.fill(); x.beginPath(); x.arc(32, 32, 21, 0, 7); x.fillStyle = PIP[q][0]; x.fill();
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return new THREE.Sprite(new THREE.SpriteMaterial({map:t})); }
+function pallini(oggetto, qualita){
+  const alto = new THREE.Box3().setFromObject(oggetto).max.y + 0.25;
+  qualita.forEach((q, i) => { const s = disco(q); s.scale.setScalar(0.22); s.position.set(oggetto.position.x + (i - (qualita.length - 1) / 2) * 0.28, alto, oggetto.position.z); scena.add(s); });
+}
+// il pezzo nascosto, una copia per legno: il gioco tinge colore_fazione come qui
+function nascosti(s){
+  const z = Math.ceil(nomi.length / COL) * PZ;
+  Object.values(LEGNI).forEach((legno, i) => { const c = s.clone(true); c.position.set(i * 1.8, 0, z);
+    c.traverse(o => { if (o.isMesh && o.material.name === "colore_fazione"){ o.material = o.material.clone(); o.material.color.set(legno).convertSRGBToLinear(); } });
+    scena.add(c); });
+}
+const righe = Math.ceil(nomi.length / COL) + (MODELLI.hidden ? 1 : 0) || 1;
+ctrl.target.set(Math.max(Math.min(nomi.length, COL) - 1, 2) * PX / 2 + 0.8, 0.3, (righe - 1) * PZ / 2);
 cam.position.set(ctrl.target.x, 7 + righe, ctrl.target.z + 7 + righe * 1.5);
 function giro(){ const w = canvas.clientWidth, h = canvas.clientHeight; if (canvas.width !== w || canvas.height !== h){ renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); } ctrl.update(); renderer.render(scena, cam); requestAnimationFrame(giro); }
 giro();

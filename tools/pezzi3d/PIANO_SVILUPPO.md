@@ -1,12 +1,18 @@
 # FAB · officina dei pezzi 3D
 
-Kit adattato da quello di Briano Borromeo 2077: stesso pannello nel browser (prompt → concept 2D → viste → modello 3D con TRELLIS o Meshy → pulizia → gioco), ma i pezzi sono i **32 tipi di blocco** di The Bulge, Golan '73 e Sicily '43. Il piano del progetto, le regole dei pezzi e le decisioni aperte sono in **`docs/ASSETS-3D.md`** del repository: leggi quello per primo.
+Kit adattato da quello di Briano Borromeo 2077: stesso pannello nel browser (prompt → concept 2D → viste → modello 3D con TRELLIS o Meshy → pulizia → gioco), ma i pezzi sono i **32 tipi di blocco** più il pezzo **nascosto** (il telo che copre le unità che non vedi, tinto col legno della fazione) di The Bulge, Golan '73 e Sicily '43. Il piano del progetto, le regole dei pezzi e le decisioni aperte sono in **`docs/ASSETS-3D.md`** del repository: leggi quello per primo.
 
 ## 1. Avvio rapido
 
 1. Doppio clic su **`AVVIA_PANNELLO.bat`** (Windows; la prima volta installa Python e le librerie). Il pannello è su `http://127.0.0.1:8078` (la porta 8077 resta a Briano Borromeo, i due pannelli possono restare aperti insieme).
 2. Scheda **Installazione**: TRELLIS e chiave Gemini sono gli stessi del kit di Briano Borromeo. Se TRELLIS è già installato in `C:\BrianboruAI\trellis`, il pannello lo trova da solo: non reinstallarlo.
-3. Scheda **Pezzi**: parti da **The Bulge · US infantry** (è il pezzo di stile: la sua immagine scelta viene allegata a tutti gli altri), poi segui i passi dall'alto in basso.
+3. Scheda **Produzione** (il modo veloce):
+   - **Genera i concept mancanti**: la prima volta fa solo il pezzo di stile (The Bulge · US infantry);
+   - nella galleria clicca l'immagine migliore: diventa il concept scelto (e, per il pezzo di stile, lo stile di tutti gli altri);
+   - ripremi **Genera i concept mancanti** per gli altri 32 pezzi, poi scegli nella galleria;
+   - accendi TRELLIS e premi **Viste, 3D e pulizia per tutti i pezzi scelti**: va da solo, pezzo dopo pezzo; «Ferma» e si riprende da dove eri;
+   - guarda la scheda **Anteprima**; un pezzo che non va si apre dalla tabella e si rifà nella scheda **Pezzi**, passo per passo.
+   Senza chiave Gemini: nella scheda Pezzi «Copia prompt», genera sul sito e trascina le immagini; poi la Produzione fa 3D e pulizia per tutti.
 4. Su Linux/macOS: `python3 -m venv .venv && .venv/bin/pip install -r strumenti/requisiti.txt && .venv/bin/python strumenti/server_pannello.py`.
 
 Il catalogo dei pezzi si rigenera da `data/*/units.json` a ogni avvio (`strumenti/catalogo.py`). I testi dei prompt (equipaggiamento reale di ogni tipo) si cambiano lì.
