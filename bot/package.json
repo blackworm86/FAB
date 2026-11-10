@@ -7,7 +7,8 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "random": "vite-node scripts/random-games.ts"
+    "random": "vite-node scripts/random-games.ts",
+    "arena": "vite-node scripts/arena.ts"
   },
   "devDependencies": { "@types/node": "22.10.2", "typescript": "5.6.3", "vitest": "2.1.8" }
 }

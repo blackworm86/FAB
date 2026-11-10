@@ -4,6 +4,7 @@ import { actors, apply, legalActions } from '../src/actions';
 import { Seat } from '../src/view';
 import { playMatch } from '../src/match';
 import { randomPlayer, rng } from '../src/random';
+import { doctrinePlayer } from '../src/doctrine';
 
 describe('the list of legal actions', () => {
   it('at the start of The Bulge the Germans may fight, and every listed action works on the real game', () => {
@@ -22,5 +23,14 @@ describe('random players', () => {
   for (const [seed, scenario] of [[1, 'intro'], [2, 'tournament'], [3, 'cold']] as const) it(`finish a ${scenario} game without getting stuck`, () => {
     const r = playMatch(seed, { german: randomPlayer(seed), allied: randomPlayer(seed + 100) }, { scenario });
     expect(r.stuck).toBeNull(); expect(r.result).toBeTruthy();
+  }, 120_000);
+});
+
+describe('the doctrine player', () => {
+  it('finishes a game from either seat and never gets an action refused by the table', () => {
+    for (const [german, allied] of [[doctrinePlayer(), randomPlayer(5)], [randomPlayer(6), doctrinePlayer()]]) {
+      const r = playMatch(4, { german, allied }, { scenario: 'intro' });
+      expect(r.stuck).toBeNull(); expect(r.refused).toBe(0);
+    }
   }, 120_000);
 });

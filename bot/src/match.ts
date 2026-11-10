@@ -6,7 +6,7 @@ import { actors, apply, type Action } from './actions';
 import { Seat } from './view';
 import { rng, type Player } from './random';
 
-export interface MatchResult { seed: number; winner: Side | null; result: string | null; net: number; turns: number; actions: number; refused: number; refusedBy: Record<string, number>; stuck: string | null; counts: Record<string, number>; ms: number }
+export interface MatchResult { seed: number; winner: Side | null; result: string | null; net: number; turns: number; actions: number; refused: number; refusedBy: Record<string, number>; stuck: string | null; counts: Record<string, number>; ms: number; think: Record<string, { n: number; ms: number; max: number }> }
 export interface MatchOpts { scenario?: string; opts?: Record<string, unknown>; maxActions?: number; maxRefused?: number }
 
 export function playMatch(seed: number, players: Record<string, Player>, o: MatchOpts = {}): MatchResult {
@@ -16,13 +16,15 @@ export function playMatch(seed: number, players: Record<string, Player>, o: Matc
   const r = rng(seed ^ 0x5eed), salt = () => Math.floor(r() * 2 ** 31).toString(36);
   const sides = E.sidesOf(g), salts = Object.fromEntries(sides.map((s) => [s, salt()])) as Record<Side, string>;
   const seats = Object.fromEntries(sides.map((s) => [s, new Seat(s, salts, rng(seed * 31 + s.length))])) as Record<Side, Seat>;
-  const counts: Record<string, number> = {}, refusedBy: Record<string, number> = {};
+  const think = Object.fromEntries(sides.map((s) => [s, { n: 0, ms: 0, max: 0 }])), counts: Record<string, number> = {}, refusedBy: Record<string, number> = {};
   let actions = 0, refused = 0, stuck: string | null = null;
   const max = o.maxActions ?? 30000, maxRefused = o.maxRefused ?? 200;
   while (!g.over && !stuck) {
     const who = actors(g); if (!who.length) { stuck = 'nobody may act'; break; }
     const side = who[0], seat = seats[side];
-    const a: Action | null = players[side](seat.view(g), side);
+    const view = seat.view(g), t = performance.now();
+    const a: Action | null = players[side](view, side);
+    const dt = performance.now() - t, th = think[side]; th.n++; th.ms += dt; th.max = Math.max(th.max, dt);      // thinking time only, not the view
     if (!a) { stuck = `${side} has no legal action (T${g.turn} ${g.phasing} ${g.phase}${g.battle ? ' battle ' + g.battle.stage : ''})`; break; }
     const prev = structuredClone(g);
     try { apply(g, a, (id) => seat.real(id)); }
@@ -37,5 +39,5 @@ export function playMatch(seed: number, players: Record<string, Player>, o: Matc
     if (++actions > max) stuck = 'too many actions: the game does not end';
   }
   const v = E.victory(g);
-  return { seed, winner: sides.find((x) => g.over?.toLowerCase().includes(x)) ?? null, result: g.over ?? null, net: v.net, turns: g.turn, actions, refused, refusedBy, stuck, counts, ms: performance.now() - t0 };
+  return { seed, winner: sides.find((x) => g.over?.toLowerCase().includes(x)) ?? null, result: g.over ?? null, net: v.net, turns: g.turn, actions, refused, refusedBy, stuck, counts, think, ms: performance.now() - t0 };
 }

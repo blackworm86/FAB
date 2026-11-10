@@ -1,10 +1,9 @@
 // Random against random for The Bulge, over every scenario and a few optional-rule mixes, split over the processor's cores.
 // Stage 2 test of docs/COMPUTER-PLAYER-PLAN.md: every game must reach its end without getting stuck.
 //   npm run random -- 1000            (games; default 100)
-import { spawn } from 'node:child_process';
-import { cpus } from 'node:os';
 import { playMatch, type MatchResult } from '../src/match';
 import { randomPlayer } from '../src/random';
+import { onAllCores } from './pool';
 
 export const MIXES: { scenario: string; opts: Record<string, unknown> }[] = [
   { scenario: 'tournament', opts: {} }, { scenario: 'campaign', opts: {} }, { scenario: 'intro', opts: {} }, { scenario: 'cold', opts: {} },
@@ -22,14 +21,8 @@ if (args[0] === 'worker') {
     process.stdout.write(JSON.stringify({ ...r, scenario: m.scenario, mix: seed % MIXES.length }) + '\n');
   }
 } else {
-  const n = +(args[0] ?? 100), k = Math.min(cpus().length, n), per = Math.ceil(n / k), t0 = Date.now();
-  const results: (MatchResult & { scenario: string })[] = [];
-  await Promise.all(Array.from({ length: k }, (_, i) => new Promise<void>((done) => {
-    const p = spawn('npx', ['vite-node', 'scripts/random-games.ts', '--', 'worker', String(1 + i * per), String(1 + Math.min(n, (i + 1) * per))], { stdio: ['ignore', 'pipe', 'inherit'] });
-    let buf = '';
-    p.stdout.on('data', (d) => { buf += d; const lines = buf.split('\n'); buf = lines.pop()!; for (const l of lines) if (l.startsWith('{')) { results.push(JSON.parse(l)); if (results.length % 50 === 0) console.error(`${results.length}/${n} games`); } });
-    p.on('close', () => done());
-  })));
+  const n = +(args[0] ?? 100), t0 = Date.now();
+  const results = await onAllCores<MatchResult & { scenario: string }>('scripts/random-games.ts', n);
   const stuck = results.filter((r) => r.stuck), sum = (f: (r: MatchResult) => number) => results.reduce((x, r) => x + f(r), 0);
   const used: Record<string, number> = {}, refused: Record<string, number> = {};
   for (const r of results) { for (const [k, v] of Object.entries(r.counts)) used[k] = (used[k] ?? 0) + v; for (const [k, v] of Object.entries(r.refusedBy)) refused[k] = (refused[k] ?? 0) + v; }
