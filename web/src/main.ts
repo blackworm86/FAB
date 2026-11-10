@@ -819,7 +819,7 @@ let cpuSummary = '';
 function cpuNote(a: E.ai.Action) {
   if (a.label === 'move' || a.label === 'strategic move') cpuDid.moves++;
   else if (a.label === 'fight' && a.area != null) cpuDid.fights.push(areaName(a.area));
-  else if (['replacement', 'rebuild', 'return', 'staff replacement', 'field works', 'port work', 'bridge the ditch', 'clear mines', 'rally', 'quality replacements', 'release', 'arriving battalion', 'army release', 'SSM strike', 'Lt. Zvika', 'air interdiction', 'release the division', 'operational reserve', 'Golani', 'the 33rd', 'air supply', 'repair the bridge', 'Greif bridge', 'Greif interdict', 'Bodenplatte', 'von der Heydte', 'staff reserve'].includes(a.label)) cpuDid.cards++;
+  else if (['replacement', 'rebuild', 'return', 'staff replacement', 'field works', 'port work', 'bridge the ditch', 'clear mines', 'rally', 'quality replacements', 'release', 'arriving battalion', 'army release', 'SSM strike', 'Lt. Zvika', 'air interdiction', 'release the division', 'operational reserve', 'Golani', 'the 33rd', 'air supply', 'repair the bridge', 'Greif bridge', 'Greif interdict', 'Bodenplatte', 'von der Heydte', 'staff reserve', 'blow the bridge', 'roadblock', 'defended roadblock', 'intelligence', 'pooled assets', 'army boundary', 'interdiction', 'assets back to the cup', 'reinforce the battle', 'retreat before combat'].includes(a.label)) cpuDid.cards++;
   else if (['arrive', 'task force', 'reserve', 'retreat', 'abort', 'breakthrough'].includes(a.label)) cpuDid.other++;
 }
 function cpuTell() {
