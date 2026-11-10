@@ -28,9 +28,7 @@ const L_WELCOME: Lesson = { id: 'g-welcome', topic: 'Welcome to the Golan', chap
   { title: 'Prepare, Move, Fight, Breakthrough, Supply', text: `<ul><li><b>Prepare</b>: new units and chits arrive, you draw chits and play some.</li><li><b>Move</b>: your blocks move.</li><li><b>Fight</b>: a battle in every area where both sides stand.</li><li><b>Breakthrough</b>: reserves and winners move again, and fight again.</li><li><b>Supply</b>: cut-off blocks check morale.</li></ul>
     <p>Syria plays the five steps, then Israel. After both, the score is checked. <b>Turn 2 is the night</b>: Syrian blocks crawl, nobody flies, and everyone shoots worse.</p>`, rule: '3.0 Sequence of play · 14.03 Night' },
   { title: 'The bottom bar', text: 'The line at the bottom says <b>what the game expects now</b>: here, seven battles to fight before the step can end. When nothing is owed, a red button <b>ends the step</b>. Next to it, <b>Undo</b> and <b>ⓘ</b> (short or full explanations). The chips are shortcuts to the blocks that can act.', target: { el: '.c-bar.b', label: 'bottom bar' } },
-  { title: 'Terrain', text: '<b>Tap View</b>, then turn on <b>TDN</b>: the darker an area, the harder it is to attack. The Golan has hills worth 2 and Mt Hermon worth 3.', target: { el: '[data-tint]', label: 'View button' }, done: (_g, q) => q('.modal .chip[title="Terrain defence"]') },
-  { title: 'Terrain defence', text: '<b>Turn on TDN.</b>', target: { el: '.modal .chip[title="Terrain defence"]', label: 'TDN chip' }, done: (_g, q) => q('.modal .chip.on[title="Terrain defence"]'), rule: '6.3 Terrain Defense Number' },
-  closeModal('<b>Close the View window.</b>'),
+  { title: 'Terrain defence', text: 'The <b>Layer bar</b> on the map chooses its colours. <b>Tap TDN</b>: the darker an area, the harder it is to attack. The Golan has hills worth 2 and Mt Hermon worth 3.', target: { el: '.laysw button[title="Terrain defence"]', label: 'TDN on the Layer bar' }, done: (_g, q) => q('.laysw button[aria-pressed="true"][title="Terrain defence"]'), rule: '6.3 Terrain Defense Number' },
   recap(['Syria scores its numbered objectives while it holds, occupies and supplies them; mutual stars score for either side.', 'Israel starts at 6 and scores for Syrian-side areas it holds.', 'Sudden death from turn 4; a supplied Syrian block west of the Jordan wins at once.', 'Five steps per player turn; turn 2 is the night.']),
 ] };
 
@@ -309,9 +307,7 @@ const L_SUPPLY: Lesson = { id: 'g-supply', topic: 'Supply on the Golan', chapter
   E.endPhase(g); g.log = []; return g;
 }, steps: [
   situation('The Supply step', `You play <b>Syria</b>. Syrian supply lines lead back to the entry areas V to Z through Syrian-held areas. On the Golan the line also obeys the ground: it may cross an unbridged ditch only from the area next to it, an escarpment only by road, and never a minefield.`, { look: 49 }),
-  { title: 'The supply colours', text: '<b>Tap View</b>, then turn on <b>Supply</b>.', target: { el: '[data-tint]', label: 'View button' }, done: (_g, q) => q('.modal .chip[title^="Supply"]') },
-  { title: 'Supply', text: '<b>Turn on Supply.</b>', target: { el: '.modal .chip[title^="Supply"]', label: 'Supply chip' }, done: (_g, q) => q('.modal .chip.on[title^="Supply"]') },
-  closeModal(),
+  { title: 'Supply', text: '<b>Tap Supply</b> on the Layer bar.', target: { el: '.laysw button[title^="Supply"]', label: 'Supply on the Layer bar' }, done: (_g, q) => q('.laysw button[aria-pressed="true"][title^="Supply"]') },
   tapUnit('S08', 'Kuneitra', '<b>Tap the 7th Recon in Kuneitra.</b> It traces straight back across the ditch, which it stands next to, towards entry area Y.', { rule: '14.93 Tracing a supply path' }),
   tapUnit('S06', 'El Rom', '<b>Tap the 68th Infantry in El Rom.</b> Its line runs through Tel Hermonit, Syrian-held though an Israeli block contests it, and over the <b>bridged</b> ditch to Jubata: bridged ditches are open for supply.'),
   tapUnit('S07', 'Masada', '<b>Tap the Moroccans in Masada.</b> Towards Zaura the escarpment blocks the line; only a road may cross it. The line goes by El Rom instead.'),

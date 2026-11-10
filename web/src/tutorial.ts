@@ -45,7 +45,7 @@ export function initTutorial(h: TutHost, course: Course) {
     return null;
   }
   const label = (t: Target | undefined) => !t ? '' : 'el' in t ? t.label : 'unit' in t ? (t.label ?? `${t.unit} block`) : (t.label ?? 'area');
-  const hint = (s: Step) => s.target ? `Tap the glowing ${label(s.target)}` : 'Tap Next to go on';
+  const hint = (s: Step) => s.target ? `${matchMedia('(pointer: coarse)').matches ? 'Tap' : 'Click'} the glowing ${label(s.target)}` : 'Tap Next to go on';
 
   function start(l: number, upTo = 0) {
     const fresh = l !== li || upTo === 0;
@@ -206,7 +206,7 @@ export function initTutorial(h: TutHost, course: Course) {
     /** Dev and checks: jump to a step of a lesson; what the coach points at now, and whether it is on screen. */
     jump(l: number, upTo = 0) { if (l >= 0 && l < LESSONS.length && upTo >= 0 && upTo < LESSONS[l].steps.length) start(l, upTo); },
     /** Dev and checks: play the current step the way the player would in engine terms (the coach's part, or the player's act) and go on. */
-    advance() { const s = step(); if (!s || h.busy()) return; if (s.auto) return onNext(); if (s.act) { h.act(() => s.act!(h.game()), s.title); if (!s.done) next(); return; } if (!s.done) next(); },
+    advance() { const s = step(); if (!s || h.busy()) return; if (s.auto) return onNext(); if (s.act) { h.act(() => s.act!(h.game()), s.title); if (!s.done) next(); return; } next(); /* a map tap the next step plays */ },
     targetEl() { return targetEl(step()?.target); },
     where() { const s = step(); const t = s?.target; return { lesson: li, step: si, title: s?.title, target: t ? label(t) : null, found: !t || !('el' in t) || !!targetEl(t), skipped: !!s?.skip?.(h.game()) }; },
     /** A tap on the map: false = blocked; otherwise the block and area to use (a tap on a stack or on a block standing in the area counts). */

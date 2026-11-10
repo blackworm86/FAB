@@ -3411,7 +3411,10 @@
   "last action (Ctrl+Z)": "ultima azione (Ctrl+Z)",
   "German, Allied, both, watching": "Tedeschi, Alleati, entrambi, spettatore",
   "Syrian, Israeli, both, watching": "Siriani, Israeliani, entrambi, spettatore",
-  "Allied, Axis, both, watching": "Alleati, Asse, entrambi, spettatore"
+  "Allied, Axis, both, watching": "Alleati, Asse, entrambi, spettatore",
+  "TDN on the Layer bar": "TDN sulla barra Livello",
+  "Zones on the Layer bar": "Zone sulla barra Livello",
+  "Supply on the Layer bar": "Rifornimenti sulla barra Livello"
  },
  "patterns": [
   [
@@ -9061,6 +9064,14 @@
   [
    "(.*)\\((GERMAN|ALLIED|AXIS|SYRIAN|ISRAELI) (\\d+), (GERMAN|ALLIED|AXIS|SYRIAN|ISRAELI) (\\d+)\\)",
    "$1($2 $3, $4 $5)"
+  ],
+  [
+   "Tap the glowing (.+?)(\\.?)",
+   "Tocca in evidenza: $1$2"
+  ],
+  [
+   "Click the glowing (.+?)(\\.?)",
+   "Clicca in evidenza: $1$2"
   ]
  ],
  "html": {}

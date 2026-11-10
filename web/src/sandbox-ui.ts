@@ -123,7 +123,7 @@ function sbDetail() {
       <div class="row">${sbChk('Field works', M.g.fieldWorks.includes(a), (v) => { M.g.fieldWorks = M.g.fieldWorks.filter((x) => x !== a); if (v) { M.g.fieldWorks.push(a); M.g.fwOwner[a] = M.g.control[a] ?? E.VOLUME.sides[1]; } })}${sbChk('River assault', M.g.riverAssault.includes(a), (v) => { M.g.riverAssault = M.g.riverAssault.filter((x) => x !== a); if (v) M.g.riverAssault.push(a); })}</div>
       <div class="lbrow">${E.unitsIn(M.g, a).map((x) => `<button class="lbt ${x.side}" data-u="${esc(x.id)}" title="${esc(x.name)}">${unitPic(x)}<small>${esc(x.name)}</small></button>`).join('')}</div></div></div>`;
   }
-  return '<p class="hint">Tap a piece below or a block or area on the map.</p>';
+  return `<p class="hint">${matchMedia('(pointer: coarse)').matches ? 'Tap' : 'Click'} a piece below or a block or area on the map.</p>`;
 }
 function sbPieces() {
   const u = st.sbPlace ? M.g.units.find((x) => x.id === st.sbPlace) : null;

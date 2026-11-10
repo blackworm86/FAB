@@ -720,7 +720,8 @@ let dragTargets: number[] = [];
 const hist = new History<E.Game>(); let note = '', selArr: string | null = null;
 /** Who may act right now: one side, or both while each handles its own assets (admin, reinforcement, battle set-up). */
 const actorNow = () => E.actorOf(g);
-const allowed = () => cpuActing || (!heldBad && !soloWait && !soloHold && !soloClash && (!online.active || online.both() || (online.mySide() != null && (actorNow() === 'both' || actorNow() === online.mySide()))));   // a held-back change waits for a decision first
+/* vs the computer the player closes every finished battle, the computer's too (cpuTick leaves it), so the result can be read */
+const allowed = () => cpuActing || (!!CPU_SIDE && g.battle?.stage === 'done') || (!heldBad && !soloWait && !soloHold && !soloClash && (!online.active || online.both() || (online.mySide() != null && (actorNow() === 'both' || actorNow() === online.mySide()))));   // a held-back change waits for a decision first
 /** In a shared-screen game every side is yours; online only your own seat's pieces. */
 const mine = (s: E.Side) => !online.active || online.both() || online.mySide() === s;
 const notYou = () => online.mySide() == null ? 'You are watching. Take a seat in the menu to play.' : `Wait for the ${nm(actorNow() as E.Side)} player.`;
@@ -844,12 +845,12 @@ function cpuThink(side: E.Side): Promise<E.ai.Action | null> {
 }
 /** After every redraw: if it is the computer's turn to act, its next action follows shortly (dice and effects are left to settle first). */
 function cpuTick() {
-  if (!CPU_SIDE || cpuTimer || cpuThinking || g.over || rollView || heldNext || soloWait || soloHold || soloClash || !E.ai.turnOf(g, CPU_SIDE)) return;
+  if (!CPU_SIDE || cpuTimer || cpuThinking || g.over || rollView || heldNext || soloWait || soloHold || soloClash || g.battle?.stage === 'done' || !E.ai.turnOf(g, CPU_SIDE)) return;      // a finished battle stays until the player closes it
   const delay = (cpuLast === 'ready' || cpuLast === 'done' ? 350 : /move|fight|arrive|place|retreat|strategic/.test(cpuLast) ? 900 : 600) * cpuPace();
   cpuTimer = window.setTimeout(cpuStep, delay);
 }
 async function cpuStep() {
-  cpuTimer = 0; if (!CPU_SIDE || cpuThinking || g.over || rollView || heldNext || soloWait || soloHold || soloClash || !E.ai.turnOf(g, CPU_SIDE)) return;
+  cpuTimer = 0; if (!CPU_SIDE || cpuThinking || g.over || rollView || heldNext || soloWait || soloHold || soloClash || g.battle?.stage === 'done' || !E.ai.turnOf(g, CPU_SIDE)) return;
   let a: E.ai.Action | null = null; const seen = JSON.stringify(g); cpuThinking = true;
   try { a = await cpuThink(CPU_SIDE); } catch (e) { console.error('computer opponent', e); } finally { cpuThinking = false; }
   if (JSON.stringify(g) !== seen) { cpuTick(); return; }                                              // the game moved on while it thought (a player's undo, another device): think again
@@ -1450,7 +1451,7 @@ function stakes(b: E.Battle) {
 }
 function promptText() {
   const b = g.battle;
-  if (rollView?.pos) return gx('<b>Read the dice:</b> green hits, salmon misses. Then continue.', '<b>Read the dice,</b> then continue.');
+  if (rollView?.pos) return autoRoll && !TUTORIAL ? gx('<b>Read the dice:</b> green hits, salmon misses. The battle goes on in a moment, or tap Continue.', '<b>Read the dice:</b> the battle goes on in a moment.') : gx('<b>Read the dice:</b> green hits, salmon misses. Then continue.', '<b>Read the dice,</b> then continue.');
   if (areaPick) return `<b>${esc(areaPick.label)}</b>, or tap elsewhere to cancel.`;
   if (reinforcing && b) return '<b>Tap a glowing neighbouring block</b> to bring it in, or tap the map to cancel.';
   if (airPick?.step === 'unit' && b) return '<b>Air Mission +2:</b> tap one of your blocks in the battle.';
@@ -1501,6 +1502,7 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
     }
     if (b.stage === 'done') return { label: 'Close battle', fn: () => { act(() => { lastFight = b.area; E.closeBattle(g); selArea = null; selUnit = null; });      /* the battle's block card goes with it */ const m = E.mustFight(g); if (m.length && mine(g.phasing)) { const at = center(b.area); showAreas([[...m].sort((x, y) => center(x).distanceTo(at) - center(y).distanceTo(at))[0]]); } } };
     if (b.stage.endsWith('Choice') || b.stage === 'retreat' || b.stage === 'attFirst' || b.stage === 'loss') return null;
+    if (autoRolls(b)) return { label: 'Rolling…', fn: () => {}, dis: true };      // the game rolls this one by itself (Settings > Dice)
     return { label: `Roll ${STAGE_NAME[b.stage].toLowerCase()}`, fn: () => rollStage(g.battle!) };
   }
   const must = E.mustFight(g);
@@ -1603,7 +1605,7 @@ function piecesHtml() {
   if (piecesTab === 'boxes') {
     const sec = (title: string, bx: E.Chit['box']) => { const cs = E.boxOf(g, sd, bx); return `<h4>${title} <small>${cs.length}</small></h4><div class="pcgrid">${cs.map((c) => pieceBtn(c, () => { inspectId = inspectId === c.id ? null : c.id; }, inspectId === c.id)).join('') || '<small class="none">none</small>'}</div>`; };
     const pick = inspectId ? g.chits.find((c) => c.id === inspectId && c.side === sd) : null;
-    body = `${pick ? `<div class="inspect" data-reveal="${pick.id}">${ruleCard(pick)}</div>` : '<p class="hint gx">Tap a piece to read what it does.</p>'}<h4>Cup <small>${E.boxOf(g, sd, 'cup').length} chits, drawn at random</small></h4>${sec('Available', 'available')}${sec('Used', 'used')}${sec('Eliminated', 'eliminated')}${(() => { const dead = g.units.filter((u) => u.side === sd && u.area == null && u.str <= 0 && !u.garrison && (u.arrival == null || u.arrival <= g.turn) && seen(u)); return dead.length ? `<h4>Eliminated blocks <small>${dead.length}${dead.some((u) => g.elimLarge.includes(u.id)) ? ` · ${dead.filter((u) => g.elimLarge.includes(u.id)).length} large (+1 VP each to the other side)` : ''}</small></h4><div class="oobrow">${dead.map((u) => `<div class="oobu" title="${esc(u.name)}">${unitPic({ ...u, str: u.max })}<small>${esc(u.name)}</small></div>`).join('')}</div>` : ''; })()}${(() => { const held = g.units.filter((u) => u.side === sd && u.area == null && u.str > 0 && u.box && seen(u)), boxes = [...new Set(held.map((u) => u.box!))];      // the volume's holding boxes (Golan: reserves, the air assault battalion, evacuated strongpoints)
+    body = `${pick ? `<div class="inspect" data-reveal="${pick.id}">${ruleCard(pick)}</div>` : `<p class="hint gx">${verb('Tap a piece to read what it does.')}</p>`}<h4>Cup <small>${E.boxOf(g, sd, 'cup').length} chits, drawn at random</small></h4>${sec('Available', 'available')}${sec('Used', 'used')}${sec('Eliminated', 'eliminated')}${(() => { const dead = g.units.filter((u) => u.side === sd && u.area == null && u.str <= 0 && !u.garrison && (u.arrival == null || u.arrival <= g.turn) && seen(u)); return dead.length ? `<h4>Eliminated blocks <small>${dead.length}${dead.some((u) => g.elimLarge.includes(u.id)) ? ` · ${dead.filter((u) => g.elimLarge.includes(u.id)).length} large (+1 VP each to the other side)` : ''}</small></h4><div class="oobrow">${dead.map((u) => `<div class="oobu" title="${esc(u.name)}">${unitPic({ ...u, str: u.max })}<small>${esc(u.name)}</small></div>`).join('')}</div>` : ''; })()}${(() => { const held = g.units.filter((u) => u.side === sd && u.area == null && u.str > 0 && u.box && seen(u)), boxes = [...new Set(held.map((u) => u.box!))];      // the volume's holding boxes (Golan: reserves, the air assault battalion, evacuated strongpoints)
       return boxes.map((bx) => `<h4>${esc(VOL.boxes[bx] ?? bx)} <small>${held.filter((u) => u.box === bx).length}</small></h4><div class="oobrow">${held.filter((u) => u.box === bx).map((u) => `<div class="oobu" title="${esc(u.name)}">${unitPic(u)}<small>${esc(u.name)}</small></div>`).join('')}</div>`).join(''); })()}`;
   } else {
     const rows: string[] = [];
@@ -1999,20 +2001,25 @@ let playKey: string | null = null;
 /** Faster battles: a set-up step where the side has no card it could play and none on the table, a roll with no choice before it, and the close of a finished battle happen by themselves.
  *  Real decisions (cards to add or take back, a point unit to pick, hits, retreat) still wait for the player's own confirmation; Settings > Dice OFF keeps every roll on a click. */
 let autoT = 0, autoKey = '', lastFight: number | null = null;
+const HOTSEAT = !CPU_SIDE && (!online.active || online.both());
+/** A fire roll the game makes by itself: dice on (Settings), not in a lesson, your own side's roll; in hot seat only the Phasing Player's. */
+function autoRolls(b: E.Battle) {
+  if (TUTORIAL || !autoRoll || !['attArty', 'defArty', 'defFire', 'offFire'].includes(b.stage) || !allowed()) return false;
+  const sd = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker);
+  return mine(sd) && (!HOTSEAT || sd === g.phasing);
+}
 function autoBattle() {
   const b = g.battle; if (TUTORIAL || !autoRoll || !b || rollView || cpuActing || g.over || !allowed()) return;      // the tutorials coach every step by hand
-  const p = primary(); if (!p || p.dis) return;
-  const rollSide = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker);
+  const p = primary(); if (!p || (p.dis && !autoRolls(b))) return;
   const nothingToAdd = (sd: E.Side) => !g.chits.some((c) => c.side === sd && c.box === 'available' && (E.isArty(c) || E.isBattleAsset(c)) && !E.canAssign(g, b, sd, c));
   const blocks = (sd: E.Side) => E.unitsIn(g, b.area, sd).filter((u) => !u.garrison).length;
   let go = false;
-  if (['attArty', 'defArty', 'defFire', 'offFire'].includes(b.stage)) go = mine(rollSide) && p.label.startsWith('Roll');
-  else if (b.stage === 'done') go = true;
+  if (['attArty', 'defArty', 'defFire', 'offFire'].includes(b.stage)) go = autoRolls(b);      // a finished battle waits for Close battle: the player reads the result first
   else if (b.stage === 'setup' && !b.defSA && !airPick) { const who = E.setupSide(g, b); go = mine(who) && nothingToAdd(who) && !b.assets[who].length && !b.air[who] && !b.air2?.[who] && (p.label === 'Assets done' || blocks(who) <= 1); }      // only when the side had nothing at all to decide: once it has put a card on the table, it confirms itself (it may still take cards back)
   const k = `${b.area}|${b.stage}|${b.ready?.join()}|${b.rolls.length}`;
   if (!go || k === autoKey) return;
   autoKey = k; clearTimeout(autoT);
-  autoT = window.setTimeout(() => { const q = primary(); if (g.battle && `${g.battle.area}|${g.battle.stage}|${g.battle.ready?.join()}|${g.battle.rolls.length}` === k && !rollView && q && !q.dis) act(q.fn); }, b.stage === 'done' ? 1600 : 700);
+  autoT = window.setTimeout(() => { const q = primary(); if (!g.battle || `${g.battle.area}|${g.battle.stage}|${g.battle.ready?.join()}|${g.battle.rolls.length}` !== k || rollView) return; if (autoRolls(g.battle)) rollStage(g.battle); else if (q && !q.dis) act(q.fn); }, 700);
 }
 function refresh() {
   { const ph = `${g.turn}${g.phasing}${g.phase}`; if (ph !== lastPhase) { const was = lastPhase; lastPhase = ph; fxLayer.clear(); frameAt = performance.now() + (was ? 50 : 1500); } }      // on opening, after the first view has settled
