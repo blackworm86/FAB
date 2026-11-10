@@ -221,7 +221,7 @@ function mount(D: RulesData, PIECE: Record<string, string[]>, o: RulesOptions, F
   });
   let tm = 0;
   input.addEventListener('input', () => { clearTimeout(tm); tm = window.setTimeout(() => doSearch(input.value), 140); });
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { const r = search(input.value.trim()); if (r[0]) go(r[0].s.id); } });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { clearTimeout(tm); const r = search(input.value.trim()); if (r[0]) go(r[0].s.id); } });      // the pending search must not replace the rule Enter opened
   root.addEventListener('keydown', (e) => {                                                          // the game's own keys (Enter, N, Esc, Ctrl+Z) stay out of the reader
     e.stopPropagation();
     if (e.key === 'Escape') { if (input.value && document.activeElement === input) doSearch(''); else close(); }
