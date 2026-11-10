@@ -1,4 +1,4 @@
-// The commander (stage 5 of docs/COMPUTER-PLAYER-PLAN.md). At the start of each of its Movement Phases it tries a few whole plans (styles of play for the rest of the player turn) on copies of the
+// The commander (stage 5 of docs/COMPUTER-PLAYER-PLAN.md). At the start of each of its Movement and Combat Phases it tries a few whole plans (styles of play for the rest of the player turn) on copies of the
 // game where the hidden enemy blocks are guessed, plays each copy to the end of the player turn, and keeps the plan
 // the learned judge likes best. In between, the chosen plan's doctrine makes the single moves. It explains its choice.
 import * as E from '../../engine/src';
@@ -40,19 +40,22 @@ export function commanderPlayer(seed: number, budgetMs = 4000): Commander {
   const r = rng(seed), reasons: string[] = [];
   let planned = '', style = DEFAULT_STYLE;
   const choose = (view: Game, side: Side) => {
-    const t0 = performance.now(), score = PLANS.map(() => ({ sum: 0, n: 0 }));
+    const t0 = performance.now(), runs: number[][] = PLANS.map(() => []);
     for (let round = 0; round === 0 || performance.now() - t0 < budgetMs; round++) {
       const guess = guessFull(view, side, r);                                       // the same guess for every plan in a round: a fair comparison
-      PLANS.forEach((p, i) => { score[i].sum += playOut(structuredClone(guess), side, p.style); score[i].n++; });
+      PLANS.forEach((p, i) => runs[i].push(playOut(structuredClone(guess), side, p.style)));
       if (round >= 7) break;
     }
-    const avg = score.map((x) => x.sum / x.n), best = avg.indexOf(Math.max(...avg)), p = PLANS[best];
-    reasons.push(`Turn ${view.turn} ${view.phase}: plan "${p.name}" (${p.why}): judged ${Math.round(100 * Math.min(1, avg[best]))}% to win, against ${PLANS.map((q, i) => `${q.name} ${Math.round(100 * avg[i])}%`).filter((_, i) => i !== best).join(', ')}; ${score[0].n} guesses of the hidden blocks.`);
+    const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length, avg = runs.map(mean);
+    // a plan replaces the steady one only if it beats it on the same guesses by more than the noise (otherwise the luckiest plan would win)
+    const edge = runs.map((xs) => { const d = xs.map((x, k) => x - runs[0][k]), m = mean(d), sd = Math.sqrt(mean(d.map((x) => (x - m) ** 2))); return m - sd / Math.sqrt(d.length); });
+    const best = edge.indexOf(Math.max(...edge)) > 0 && Math.max(...edge) > 0 ? edge.indexOf(Math.max(...edge)) : 0, p = PLANS[best];
+    reasons.push(`Turn ${view.turn} ${view.phase}: plan "${p.name}" (${p.why}): judged ${Math.round(100 * Math.min(1, avg[best]))}% to win, against ${PLANS.map((q, i) => `${q.name} ${Math.round(100 * Math.min(1, avg[i]))}%`).filter((_, i) => i !== best).join(', ')}; ${runs[0].length} guesses of the hidden blocks.`);
     return p.style;
   };
   const player = ((view, side) => {
     const key = `${view.turn} ${view.phasing} ${view.phase}`;
-    if (key !== planned && !view.battle && view.phase === 'movement' && view.phasing === side) { planned = key; style = choose(view, side); }
+    if (key !== planned && !view.battle && ['movement', 'combat', 'btCombat'].includes(view.phase) && view.phasing === side) { planned = key; style = choose(view, side); }
     return doctrinePlayer(style)(view, side);
   }) as Commander;
   player.reasons = reasons;
