@@ -32,7 +32,7 @@ Approved by the owner on 10 November 2026. The first computer opponent was remov
 |---|---|---|
 | 1 | Remove the old computer opponent completely | done 10 November 2026: site and code without any trace, everything else working |
 | 2 | Experimental area, the computer's view, the full list of choices, random player | done 10 November 2026: 1,000 random games over all four scenarios and option mixes, all finished, none stuck (`bot/`, `npm run random -- 1000`, 19 minutes on 4 cores) |
-| 3 | Measuring tool and reference players | the doctrine player beats random from both seats, margins printed |
+| 3 | Measuring tool and reference players | done 10 November 2026: 200 paired seeds (600 Tournament games), doctrine beats random from both seats: as German 68% wins against 1% (+0.67 ± 0.07), +8.8 ± 0.7 VP; as Allied 100% against 99%, +5.4 ± 0.5 VP; 2.5 ms per decision (`npm run arena`) |
 | 4 | Recorded games and the learned judge | the judge predicts the winner of unseen games clearly better than chance |
 | 5 | Commander, then rounds of improvement | it beats the doctrine player clearly from both seats; the owner playtests it |
 | 6 | Levels and phone speed | three measurably different levels, a few seconds per decision on the phone |
