@@ -693,7 +693,7 @@ const STEPS = ['Prepare', 'Move', 'Fight', 'Breakthrough', 'Supply'], STEP_OF: R
 /** The red button that ends the step. */
 /** Sicily 14.27a: airborne units still to drop at the start of the Allied Combat Phase (they come before any battle). */
 const dropsLeft = () => (VOL.id === 'sicily' && g.phase === 'combat' && !g.battle && (g.vol as { dropPending?: boolean } | undefined)?.dropPending ? g.units.filter((u) => u.box === 'airborne_assault' && u.side === g.phasing).length : 0);
-const endLabel = () => (dropsLeft() ? 'Drop the airborne first' : g.phase === 'reinforcement' ? 'End reinforcement' : g.phase === 'deploy' ? ((left) => { const n = left.filter((u) => u.side === g.phasing).length; return n ? `Place ${n} more first` : left.length ? 'Finish the panel first' : 'End set-up'; })(VOL.pendingPlace(g).map((id) => g.units.find((x) => x.id === id)!).filter((u) => mine(u.side))) : `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`);
+const endLabel = () => (dropsLeft() ? 'Drop the airborne first' : g.phase === 'reinforcement' ? 'End reinforcement' : g.phase === 'deploy' ? ((left) => { const n = left.filter((u) => u.side === g.phasing).length; return n ? `Place ${n} more first` : left.length ? 'Finish the panel first' : 'End set-up'; })(VOL.pendingPlace(g).map((id) => g.units.find((x) => x.id === id)!).filter((u) => mine(u.side))) : g.phase === 'reaction' ? 'End reaction' : `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`);
 const other = E.other;
 /** The printed sequence of play (the step bar): Breakthrough covers its movement and its combat. */
 const PHASES = ['Reinforcement', 'Admin', 'Movement', 'Strategic', 'Combat', 'Reaction', 'Breakthrough', 'Supply'], PHASE_OF: Record<E.Phase, number> = { deploy: 2, reinforcement: 0, admin: 1, movement: 2, strategic: 3, combat: 4, reaction: 5, btMove: 6, btCombat: 6, supply: 7 };
@@ -1335,7 +1335,7 @@ function usableNow(c: E.Chit): boolean {
       if (ok) liveSet.add(x.id); } }
   return liveSet.has(c.id);
 }
-const card = (c: E.Chit, r = 0, why: string | null = null) => `<div tabindex="0" role="button" class="card2 ${c.side} ${c.kind === 'sa_block' ? 'wood' : ''} ${why ? 'bad' : usableNow(c) ? 'live' : ''} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" style="--r:${r}deg" title="${esc(why ?? c.name + ' · ' + c.ech)}" aria-label="${esc(c.name)}">${chitPic(c)}</div>`;
+const card = (c: E.Chit, r = 0, why: string | null = null) => `<div tabindex="0" role="button" class="card2 ${c.side} ${c.kind === 'sa_block' ? 'wood' : ''} ${why ? 'bad' : usableNow(c) ? 'live' : ''} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" style="--r:${r}deg" title="${esc(why ?? c.name + ' · ' + c.ech)}" aria-label="${esc(c.name)}">${chitPic(c)}${g.battle ? `<span class="ckind">${E.isArty(c) ? 'Arty' : /air/.test(c.kind) ? 'Air' : 'Asset'}</span>` : ''}</div>`;      /* phones have no hover title: the kind is written on the card */
 /** How much neighbouring cards overlap so the whole hand fits: each card keeps at least 34 px (46 on phones) visible, and the hand scrolls when even that does not fit. */
 const overlapFor = (n: number) => { const cw = innerWidth >= 900 ? 72 : 62, avail = innerWidth - 40, visible = n > 1 ? Math.min(cw, Math.max(innerWidth < 900 ? 46 : 34, (avail - cw) / (n - 1))) : cw; return n > 1 ? Math.round(cw - visible) : 0; };
 const handStyle = (n: number) => `style="--ov:${overlapFor(n)}px"`;
@@ -1473,7 +1473,7 @@ function promptText() {
       if (dropsLeft()) return `<b>Drop your airborne unit${dropsLeft() > 1 ? 's' : ''} first:</b> choose the drop zone in the panel on the map (14.27a).`;
       return m ? '<b>Tap a red area.</b>' : fightable().length ? '<b>Tap a contested area</b> to fight, or end the step.' : 'No battles left.';
     case 'reaction': return `<b>${nm(other(g.phasing))} reserves</b> may react: select a reserve block.`;
-    case 'btMove': return btArmor().length ? gx('<b>Breakthrough movement.</b> Reserve and exploiting blocks may move; armor that has not moved can move one area for a Special Action (brass tags).', '<b>Breakthrough:</b> orange = SA move') : `<b>Reserve and exploitation blocks</b> may move.${gx(' Select one.')}`;
+    case 'btMove': return btArmor().length ? gx('<b>Breakthrough movement.</b> Reserve and exploiting blocks may move; armor that has not moved can move one area for a Special Action (brass tags).', '<b>Breakthrough:</b> brass tags = SA move') : `<b>Reserve and exploitation blocks</b> may move.${gx(' Select one.')}`;
     default: return g.phase === 'supply' && g.supplyPending ? `<b>Supply check</b>${gx(': roll for the units that are cut off.')}` : 'Supply checked. End the phase.';
   }
 }
@@ -1743,7 +1743,7 @@ function handCards() {
   if (!b && (g.phase === 'reinforcement' || g.phase === 'deploy')) return tray();
   if (b) {
     if (b.stage !== 'setup') return '';
-    const cs = ([b.attacker, other(b.attacker)] as E.Side[]).filter(mine).sort().flatMap((s) => E.boxOf(g, s, 'available').filter((c) => VOL.battleCard(c)));
+    const cs = ([b.attacker, other(b.attacker)] as E.Side[]).filter((sd) => mine(sd) && !b.ready?.includes(sd)).sort()      /* a side that confirmed its set-up no longer sees its cards */.flatMap((s) => E.boxOf(g, s, 'available').filter((c) => VOL.battleCard(c)));
     const ok = cs.filter((c) => !VOL.battleUse(g, b, c));
     const bad = cs.filter((c) => VOL.battleUse(g, b, c));
     return `<div class="handtab">${mine(b.attacker) ? btn(`${ico('close')}<span class="bl">Cancel</span>`, () => { E.cancelBattle(g); }, 'ico danger', !!b.locked, b.locked ? 'A Special Action was spent, so the battle must be fought' : 'Withdraw the attack and return every assigned asset') : ''}${ok.length && bad.length ? `<button data-ui="${reg(() => { handAll = !handAll; })}" aria-pressed="${handAll}">${handAll ? `Playable only (${ok.length})` : `Show all ${ok.length + bad.length}`}</button>` : ''}<button class="ico ${handInfo ? 'on' : ''}" data-ui="${reg(() => { handInfo = !handInfo; if (!handInfo) handInspect = null; })}" aria-pressed="${handInfo}" title="Rules: tap a card to read what it does instead of adding it" aria-label="Rules">${ico('info')}</button>${ok.length ? btn(`${ico('wand')}<span class="bl">Auto-fill</span>`, () => autoFill(g.battle!), 'ico', false, 'Auto-fill: place every asset that can legally join, artillery first') : ''}</div>${handInfo ? cardTip() : ''}<div class="c-hand" ${handStyle(handAll || !ok.length ? ok.length + bad.length : ok.length)}>${fan([...ok.map((c) => card(c)), ...(handAll || !ok.length ? bad.map((c) => card(c, 0, VOL.battleUse(g, b, c))) : [])])}</div>`;

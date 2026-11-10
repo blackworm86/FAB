@@ -215,7 +215,6 @@
   "Breakthrough movement.": "Movimento di sfondamento.",
   "Reserve and exploiting blocks may move; armor that has not moved can move one area for a Special Action (brass tags).": "I blocchi di riserva e in sfruttamento possono muovere; i corazzati che non hanno mosso possono muovere di un'area con un'Azione Speciale (etichette ottone).",
   "Breakthrough:": "Sfondamento:",
-  "orange = SA move": "arancione = movimento con AS",
   "Reserve and exploitation blocks": "I blocchi di riserva e in sfruttamento",
   "may move.": "possono muovere.",
   "Select one.": "Scegline uno.",
@@ -3419,7 +3418,11 @@
   "REINFORCES": "RINFORZA",
   "DISORDERED": "DISORDINATA",
   "ASSET LOST": "RISORSA PERSA",
-  "Dismiss": "Chiudi"
+  "Dismiss": "Chiudi",
+  "brass tags = SA move": "etichette ottone = movimento con AS",
+  "End reaction": "Fine reazione",
+  "Air": "Aereo",
+  "Asset": "Risorsa"
  },
  "patterns": [
   [
