@@ -80,7 +80,7 @@ S = {
 # altezza massima della figura, in unità di tabellone (il blocco è alto 1,6); i veicoli sono più bassi
 ALTEZZA = {"armor": 0.55, "mech": 0.6, "cavalry": 0.45, "recon": 0.45, "motorized_inf": 0.6, "ghost": 0.55}
 ALTEZZA_FANTE = 0.8
-TRIANGOLI = 800
+TRIANGOLI = 5000           # con la texture: Meshy a ~4000 poligoni tiene bene tre soldati (480 era troppo poco)
 
 # il pezzo "nascosto": sostituisce ogni blocco che il giocatore non può vedere (il retro del blocco).
 # Uno solo per tutti: il telo è in verde acqua segnaposto e diventa colore_fazione, così il gioco lo tinge
@@ -90,7 +90,7 @@ NASCOSTO = {"id": "hidden", "volume": "tutti", "volume_nome": "Tutti i volumi", 
             "legno": "#8e9296", "nome": "Hidden unit", "gruppo": "one anonymous covered load",
             "soggetto": "a military canvas tarpaulin draped over an unidentifiable low pile of crates and equipment, tied down with ropes, "
                         "nothing recognisable underneath, no weapons showing. The tarpaulin is solid teal (#16A6A0), the ropes dark brown",
-            "altezza": 0.6, "triangoli": 400, "tinta": TINTA, "blocchi": []}
+            "altezza": 0.6, "triangoli": 2000, "tinta": TINTA, "blocchi": []}
 
 
 def tipo_di(vol, u):

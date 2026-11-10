@@ -11,7 +11,7 @@
    "gruppo": "two tanks, one behind the other",
    "soggetto": "Panther Ausf. G tanks, Germany, December 1944: dark-yellow ambush camouflage with green stripes, long 75 mm gun, balkenkreuz on the turret side",
    "altezza": 0.55,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "B01",
     "B02",
@@ -38,7 +38,7 @@
    "gruppo": "one armoured half-track with two infantrymen walking beside it",
    "soggetto": "Panzergrenadiers, Germany, December 1944, with an Sd.Kfz. 251 half-track: field-grey uniforms and helmets, MP40 and StG44",
    "altezza": 0.6,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "B04",
     "B11",
@@ -58,7 +58,7 @@
    "gruppo": "a squad of three",
    "soggetto": "Volksgrenadiers, Germany, December 1944: M43 field caps or steel helmets with snow capes, field-grey greatcoats, Kar98k rifles, one with a Panzerfaust",
    "altezza": 0.8,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "B05",
     "B06",
@@ -87,7 +87,7 @@
    "gruppo": "a squad of three",
    "soggetto": "Fallschirmjager, Germany, December 1944: splinter-camouflage smocks, rounded paratrooper helmets, StG44 rifles",
    "altezza": 0.8,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "B07",
     "B28"
@@ -104,7 +104,7 @@
    "gruppo": "a squad of three",
    "soggetto": "Gebirgsjager, Germany, December 1944: field caps with edelweiss, mountain anoraks, rucksacks, Kar98k rifles",
    "altezza": 0.8,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "B34"
    ]
@@ -120,7 +120,7 @@
    "gruppo": "a squad of three",
    "soggetto": "US Army GIs, December 1944: M1 steel helmets, olive-drab wool overcoats, M1 Garand rifles, canvas gaiters, winter snow",
    "altezza": 0.8,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "B35",
     "B36",
@@ -152,7 +152,7 @@
    "gruppo": "two light vehicles, one behind the other",
    "soggetto": "an M8 Greyhound armoured car and an M5 Stuart light tank, US cavalry reconnaissance, December 1944: olive drab with white stars",
    "altezza": 0.45,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "B42",
     "B43",
@@ -171,7 +171,7 @@
    "gruppo": "two tanks, one behind the other",
    "soggetto": "M4A3 Sherman tanks, US Army, December 1944: olive-drab, white star on the hull, short 75 mm gun, stowage on the back deck",
    "altezza": 0.55,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "B44",
     "B45",
@@ -197,7 +197,7 @@
    "gruppo": "a squad of three",
    "soggetto": "US 101st Airborne paratroopers, December 1944: M1 helmets with netting, jump jackets with big pockets, M1 carbines, bandoliers",
    "altezza": 0.8,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "B51",
     "B52",
@@ -215,7 +215,7 @@
    "gruppo": "a squad of three",
    "soggetto": "British Tommies, December 1944: Mk II Brodie helmets, khaki battledress, Lee-Enfield rifles, webbing",
    "altezza": 0.8,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "B67",
     "B68",
@@ -233,7 +233,7 @@
    "gruppo": "two tanks, one behind the other",
    "soggetto": "Sherman Firefly tanks, British Army, December 1944: olive-drab, long 17-pounder gun, Allied star",
    "altezza": 0.55,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "B72"
    ]
@@ -249,7 +249,7 @@
    "gruppo": "a squad of three",
    "soggetto": "Israeli IDF infantry, October 1973: olive-green fatigues, M1 steel helmets, Uzi and FN FAL rifles, canvas webbing",
    "altezza": 0.8,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "I01",
     "I02",
@@ -270,7 +270,7 @@
    "gruppo": "two tanks, one behind the other",
    "soggetto": "Centurion (Sho't) tanks, Israel, October 1973: sand-yellow paint, 105 mm gun, rear stowage bins, Star of David on the hull",
    "altezza": 0.55,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "I03",
     "I04",
@@ -300,7 +300,7 @@
    "gruppo": "one armoured half-track with two infantrymen walking beside it",
    "soggetto": "IDF mechanised infantry, October 1973: an M3 half-track with a pintle machine gun, infantrymen in olive fatigues and steel helmets beside it",
    "altezza": 0.6,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "I08",
     "I11",
@@ -322,7 +322,7 @@
    "gruppo": "a squad of three",
    "soggetto": "IDF paratroopers, October 1973: red boots, red berets, olive fatigues, Uzi submachine guns, rucksacks",
    "altezza": 0.8,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "I19",
     "I20"
@@ -339,7 +339,7 @@
    "gruppo": "one dummy tank",
    "soggetto": "a decoy tank, Israel 1973: an inflatable or plywood dummy Centurion with a thin transparent ghostly look",
    "altezza": 0.55,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "I31",
     "I32",
@@ -357,7 +357,7 @@
    "gruppo": "a squad of three",
    "soggetto": "Syrian Army infantry, October 1973: olive-brown fatigues, steel helmets, AK-47 rifles, RPG-7 launcher",
    "altezza": 0.8,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "S01",
     "S02",
@@ -379,7 +379,7 @@
    "gruppo": "two armoured cars, one behind the other",
    "soggetto": "BRDM-2 amphibious armoured cars, Syria, October 1973: olive green, small turret with a machine gun",
    "altezza": 0.45,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "S08",
     "S11",
@@ -398,7 +398,7 @@
    "gruppo": "two tanks, one behind the other",
    "soggetto": "T-55 tanks, Syria, October 1973: dark olive-green, rounded cast turret, 100 mm gun, extra fuel drums on the rear deck",
    "altezza": 0.55,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "S09",
     "S12",
@@ -424,7 +424,7 @@
    "gruppo": "one armoured half-track with two infantrymen walking beside it",
    "soggetto": "Syrian mechanised infantry, October 1973: a BMP-1 armoured vehicle, infantrymen in olive fatigues beside it",
    "altezza": 0.6,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "S10",
     "S15",
@@ -444,7 +444,7 @@
    "gruppo": "a squad of three",
    "soggetto": "Syrian commando paratroopers, October 1973: camouflage uniforms, red berets, AK-47 rifles, light packs",
    "altezza": 0.8,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "S17"
    ]
@@ -460,7 +460,7 @@
    "gruppo": "two tanks, one behind the other",
    "soggetto": "M4 Sherman tanks, US Army, Sicily 1943: olive drab, white star, short 75 mm gun, desert dust",
    "altezza": 0.55,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "US01",
     "US02"
@@ -477,7 +477,7 @@
    "gruppo": "a squad of three",
    "soggetto": "US Army GIs, Sicily July 1943: M1 steel helmets, khaki-olive field uniforms, M1 Garand rifles, canvas leggings",
    "altezza": 0.8,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "US03",
     "US04",
@@ -500,7 +500,7 @@
    "gruppo": "a squad of three",
    "soggetto": "US 82nd Airborne paratroopers, Sicily 1943: M1942 jump jackets with large pockets, M1 helmets, M1 carbines",
    "altezza": 0.8,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "US09",
     "US10"
@@ -517,7 +517,7 @@
    "gruppo": "a squad of three",
    "soggetto": "British Eighth Army infantry, Sicily 1943: khaki drill shorts and shirts, Mk II Brodie helmets, Lee-Enfield rifles",
    "altezza": 0.8,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "BR01",
     "BR02",
@@ -543,7 +543,7 @@
    "gruppo": "a squad of three",
    "soggetto": "British 1st Airborne paratroopers, Sicily 1943: red berets, Denison smocks, Sten guns",
    "altezza": 0.8,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "BR11",
     "BR12"
@@ -560,7 +560,7 @@
    "gruppo": "two tanks, one behind the other",
    "soggetto": "Sherman and Churchill tanks, British Army, Sicily 1943: sand-khaki paint, 75 mm gun, Allied star",
    "altezza": 0.55,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "BR13",
     "BR14"
@@ -577,7 +577,7 @@
    "gruppo": "one truck with two infantrymen beside it",
    "soggetto": "Italian motorised infantry, Sicily 1943: a Fiat truck, soldiers in grey-green uniforms and M33 helmets beside it",
    "altezza": 0.6,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "IT01",
     "IT02"
@@ -594,7 +594,7 @@
    "gruppo": "a squad of three",
    "soggetto": "Italian Alpini mountain troops, Sicily 1943: feathered Alpini hats, grey-green wool uniforms, rucksacks, Carcano rifles",
    "altezza": 0.8,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "IT03",
     "IT04"
@@ -611,7 +611,7 @@
    "gruppo": "a squad of three",
    "soggetto": "Italian Royal Army infantry, Sicily 1943: grey-green uniforms, M33 steel helmets, Carcano rifles",
    "altezza": 0.8,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "IT05",
     "IT06",
@@ -630,7 +630,7 @@
    "gruppo": "a squad of three",
    "soggetto": "Italian coastal-defence troops, Sicily 1943: grey-green uniforms, M33 helmets, leggings, a machine gun on a tripod",
    "altezza": 0.8,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "IT09",
     "IT10",
@@ -674,7 +674,7 @@
    "gruppo": "one armoured half-track with two infantrymen walking beside it",
    "soggetto": "Hermann Goring Division panzergrenadiers, Sicily 1943, with a Panzer IV tank: sand-yellow paint, tropical uniforms, steel helmets",
    "altezza": 0.6,
-   "triangoli": 800,
+   "triangoli": 5000,
    "blocchi": [
     "GE01",
     "GE02",
@@ -696,7 +696,7 @@
    "gruppo": "one anonymous covered load",
    "soggetto": "a military canvas tarpaulin draped over an unidentifiable low pile of crates and equipment, tied down with ropes, nothing recognisable underneath, no weapons showing. The tarpaulin is solid teal (#16A6A0), the ropes dark brown",
    "altezza": 0.6,
-   "triangoli": 400,
+   "triangoli": 2000,
    "tinta": "#16A6A0",
    "blocchi": []
   }

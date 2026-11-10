@@ -629,6 +629,51 @@ def assegna_materiali(palette, aree, args):
 
 
 # ---------------------------------------------------------------------------
+# Modo "texture" (predefinito per FAB): tiene forma e texture del generatore
+# ---------------------------------------------------------------------------
+
+def pulisci_con_texture(args, budget_totale):
+    scena = trimesh.load(args.ingresso, force="scene")
+    geo = [(scena.geometry[n], t) for t, n in (scena.graph[k] for k in scena.graph.nodes_geometry)
+           if isinstance(scena.geometry[n], trimesh.Trimesh) and len(scena.geometry[n].faces)]
+    # shortcut: tiene la mesh più grande con la sua texture (Meshy e TRELLIS ne danno una sola); se servono più pezzi, unirli prima
+    g, trasf = max(geo, key=lambda x: len(x[0].faces))
+    g = g.copy(); g.apply_transform(trasf)
+    mat = _materiale_pbr(g.visual)
+    immagine = getattr(mat, "baseColorTexture", None) if mat is not None else None
+    uv = getattr(g.visual, "uv", None)
+    if immagine is None or uv is None:
+        sys.exit("Il modello non ha una texture: usa la pulizia a colori piatti (togli «tieni la texture»).")
+    tri_ingresso = len(g.faces)
+    base = gp.base_blocco(args.nome) if args.base else None
+    budget = budget_totale - (base.triangoli if base else 0)
+    forma = trimesh.Trimesh(g.vertices, g.faces, process=False)
+    # niente riduzione: ridurre un modello con texture strappa le cuciture (macchie scure). Il budget si dà al generatore.
+    if len(forma.faces) > budget:
+        print(f"ATTENZIONE: {tri_ingresso} triangoli, oltre il budget di {budget}: rigenera con meno poligoni "
+              f"(Meshy: Poly Count {budget}). Il modello resta com'è.")
+    M = matrice_posa(forma, args)
+    forma.apply_transform(M)
+    lato = min(args.texture_px, max(immagine.size))
+    img = immagine.convert("RGB").resize((lato, lato))
+    pbr = trimesh.visual.material.PBRMaterial(name="figura", baseColorTexture=img, metallicFactor=0.0, roughnessFactor=0.9)
+    forma.visual = trimesh.visual.TextureVisuals(uv=uv, material=pbr)
+    uscita_scena = trimesh.Scene()
+    uscita_scena.add_geometry(forma, node_name="figura", geom_name="figura")
+    if base:
+        b, _ = base.unito()
+        b.visual = trimesh.visual.TextureVisuals(material=trimesh.visual.material.PBRMaterial(
+            name="colore_fazione", baseColorFactor=[255, 255, 255, 255], metallicFactor=0.0, roughnessFactor=0.7))
+        uscita_scena.add_geometry(b, node_name="colore_fazione", geom_name="colore_fazione")
+    uscita = Path(args.uscita) if args.uscita else QUI.parent / "modelli" / "definitivi" / f"{args.nome}.glb"
+    uscita.parent.mkdir(parents=True, exist_ok=True)
+    uscita.write_bytes(uscita_scena.export(file_type="glb"))
+    tot = len(forma.faces) + (base.triangoli if base else 0)
+    print(f"\n{args.ingresso}  ->  {uscita}")
+    print(f"triangoli: {tri_ingresso} in ingresso, {tot} in uscita (budget {budget_totale}); texture {lato} px")
+
+
+# ---------------------------------------------------------------------------
 # Programma
 # ---------------------------------------------------------------------------
 
@@ -648,7 +693,11 @@ def main():
     ap.add_argument("--ruota", type=float, default=0.0)
     ap.add_argument("--asse-z-su", action="store_true")
     ap.add_argument("-o", "--uscita")
+    ap.add_argument("--texture", action="store_true", help="tiene forma e texture del generatore (consigliato per FAB)")
+    ap.add_argument("--texture-px", type=int, default=512, help="lato massimo della texture (default 512: 33 pezzi stanno nella memoria di un telefono)")
     args = ap.parse_args()
+    if args.texture:
+        return pulisci_con_texture(args, args.triangoli or gp.budget_di(args.nome))
 
     budget_totale = args.triangoli or gp.budget_di(args.nome)
     pezzo = gp.Pezzo(args.nome)

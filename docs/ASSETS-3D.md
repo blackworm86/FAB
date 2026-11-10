@@ -4,7 +4,7 @@ Goal: replace the generic wooden 3D blocks with models of the real troops and ve
 
 ## 1. The tool (done)
 
-A local panel in the browser (Italian, like the original). The **Produzione** tab runs the whole line in series: generate the concepts for every piece, pick the best of each in one gallery, then one button makes the front view, the 3D model and the clean-up for every chosen piece, skipping what is done; it can be stopped and resumed. Per piece (Pezzi tab, for redoing one): 2D concept (Gemini) → front/side/back views → 3D model (TRELLIS on the owner's PC, or Meshy) → automatic clean-up to a small flat-coloured `.glb` → preview next to the real block → copy into the game folder.
+A local panel in the browser (Italian, like the original). The **Produzione** tab runs the whole line in series: generate the concepts for every piece, pick the best of each in one gallery, then one button makes the front view, the 3D model and the clean-up for every chosen piece, skipping what is done; it can be stopped and resumed. Per piece (Pezzi tab, for redoing one): 2D concept (Gemini) → front/side/back views → 3D model (TRELLIS on the owner's PC, or Meshy) → automatic clean-up (pose, size to the block footprint, side-coloured base, texture shrunk to 512 px; the shape is never reduced, because reducing a textured model tears its texture seams) → preview next to the real block → copy into the game folder.
 
 - Start it: `tools/pezzi3d/AVVIA_PANNELLO.bat` (Windows), then `http://127.0.0.1:8078`. A download of the kit on its own: `python tools/pezzi3d/strumenti/crea_zip.py` (the API key, concepts and raw models stay out). Details and Linux commands: `tools/pezzi3d/PIANO_SVILUPPO.md`.
 - What changed from the original kit: the five faction figures, the party and police props, and the procedural block-outs are gone; the list of pieces now comes from the game's own data (`tools/pezzi3d/strumenti/catalogo.py` reads `data/*/units.json`); materials are the piece's real colours plus a base slab `colore_fazione` that the game tints with the side's wood colour; a piece is kept inside the standing block's footprint (1.5 × 0.7); the neon/player-colour logic and the octagon base were removed. Port 8078, so it can run beside the Briano Borromeo panel; TRELLIS and the Gemini key are shared with it.
@@ -31,8 +31,8 @@ Each type has a prompt subject with period equipment (Panther, Sherman, Centurio
 | Axes | Y up, front toward +Z, origin at the centre of the base, on the ground |
 | Footprint | at most 1.5 (X) × 0.7 (Z): no wider than the block standing |
 | Height | infantry 0.8, vehicles 0.45–0.6 (in `catalogo.py`) |
-| Budget | 800 triangles per piece (a busy map has about 60–80 pieces: ~60k triangles) |
-| Look | flat shading, no textures, solid colours; one slab named `colore_fazione` for the side colour |
+| Budget | 5,000 triangles per piece (2,000 for `hidden`), set in the generator (Meshy Poly Count 4,000); a busy map of 60–80 pieces is about 300–400k triangles, fine with instancing |
+| Look | the generator's own shape and texture, kept as they are (texture shrunk to 512 px); one base slab named `colore_fazione` for the side colour. The old flat-colour clean-up is still there (untick «tieni la texture») but cut soldiers to ~800 triangles and looked crude: tried and dropped on 10 November |
 | Files | `tools/pezzi3d/modelli/definitivi/<volume>_<side>_<class>.glb`, committed; concepts and raw models stay local |
 | References | never feed Vassal images or scans to Gemini/TRELLIS, and never commit them (owner rule). Style comes from the first chosen concept, US infantry |
 

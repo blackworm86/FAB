@@ -209,6 +209,8 @@ def op_pulisci(log, dati):
         cmd.append("--asse-z-su")
     if o.get("senza_giocatore"):
         cmd.append("--senza-giocatore")
+    if o.get("texture"):
+        cmd.append("--texture")
     esegui_processo(log, cmd, cwd=QUI)
     op_genera(log)
     return {"uscita": uscita.relative_to(RADICE).as_posix()}

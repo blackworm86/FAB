@@ -99,7 +99,7 @@ iframe.visore{width:100%;height:70vh;border:1px solid var(--linea);background:#0
 </head>
 <body>
 <header>
-  <h1>FAB <span>3D</span> · officina dei pezzi <small class="nota" style="font-family:inherit;font-size:12px">v2026.11.10-fab2</small></h1>
+  <h1>FAB <span>3D</span> · officina dei pezzi <small class="nota" style="font-family:inherit;font-size:12px">v2026.11.10-fab3</small></h1>
   <div class="stati">
     <span class="chip" id="c-server"><i></i>Pannello</span>
     <span class="chip" id="c-gpu"><i></i>GPU</span>
@@ -294,9 +294,9 @@ const CORREZIONI = [
   ["Variante diversa", "Make a different variant of this group with a different silhouette for the key feature, same style and same color rules."],
   ["Ripara la vista", "The design changed. Fix it: same colors, same accessories, same proportions as the reference, only the camera angle changes."],
 ];
-const PULISCI_PEDINA = {base:true, senza_giocatore:true, colori:6, ruota:0, asse_z_su:false, dettaglio:2};
+const PULISCI_PEDINA = {texture:true, base:true, senza_giocatore:true, colori:6, ruota:0, asse_z_su:false, dettaglio:2};
 const opzioniDi = pz => ({...PULISCI_PEDINA, altezza:pz.altezza, triangoli:pz.triangoli, ...(pz.tinta ? {tinta:pz.tinta, senza_giocatore:false} : {})});
-const VERSIONE_PANNELLO = "2026.11.10-fab2";
+const VERSIONE_PANNELLO = "2026.11.10-fab3";
 const AVVIA_BAT = "@echo off\nrem ==========================================================================\nrem  FAB · pezzi 3D - avvio del pannello\nrem  Doppio clic su questo file:\nrem   - chiude un eventuale pannello gia' aperto (anche di una versione vecchia)\nrem   - la prima volta installa Python (se manca) e le librerie del kit\nrem   - avvia il pannello e lo apre nel browser\nrem  Lascia aperta questa finestra mentre lavori. Per chiudere: chiudi la\nrem  finestra, oppure FERMA_PANNELLO.bat, oppure il pulsante nel pannello.\nrem ==========================================================================\nsetlocal\ncd /d \"%~dp0\"\ntitle FAB · pezzi 3D - Pannello\n\necho Chiudo un eventuale pannello gia' aperto...\ncall \"%~dp0strumenti\\ferma_porta.bat\" 8078\n\nset \"VENV_PY=%~dp0.venv\\Scripts\\python.exe\"\nif exist \"%VENV_PY%\" goto librerie\n\necho.\necho Prima configurazione: cerco Python...\nset \"PYBASE=\"\npy -3 -c \"import sys; assert sys.version_info >= (3, 10)\" >nul 2>nul && set \"PYBASE=py -3\"\nif defined PYBASE goto crea_venv\npython -c \"import sys; assert sys.version_info >= (3, 10)\" >nul 2>nul && set \"PYBASE=python\"\nif defined PYBASE goto crea_venv\n\necho Python non trovato: lo installo con winget (Python 3.12, solo per il tuo utente)...\nwinget install -e --id Python.Python.3.12 --scope user --silent --accept-package-agreements --accept-source-agreements\nset \"PYBASE=%LOCALAPPDATA%\\Programs\\Python\\Python312\\python.exe\"\nif exist \"%PYBASE%\" goto crea_venv\necho.\necho Non sono riuscito a installare Python automaticamente.\necho Installalo da https://www.python.org/downloads/ (spunta \"Add python.exe to PATH\")\necho e poi fai di nuovo doppio clic su questo file.\npause\nexit /b 1\n\n:crea_venv\necho Creo l'ambiente Python del kit nella cartella .venv ...\n%PYBASE% -m venv \"%~dp0.venv\"\nif not exist \"%VENV_PY%\" \"%PYBASE%\" -m venv \"%~dp0.venv\"\nif not exist \"%VENV_PY%\" (\n    echo Creazione dell'ambiente non riuscita.\n    pause\n    exit /b 1\n)\n\n:librerie\necho Controllo le librerie del kit...\n\"%VENV_PY%\" -m pip install --disable-pip-version-check -q --upgrade pip\n\"%VENV_PY%\" -m pip install --disable-pip-version-check -q -r \"%~dp0strumenti\\requisiti.txt\"\nif errorlevel 1 (\n    echo Installazione delle librerie non riuscita: controlla la connessione e riprova.\n    pause\n    exit /b 1\n)\n\nset \"APRI=--apri\"\n:avvio\necho.\necho Avvio il pannello. Lascia aperta questa finestra.\n\"%VENV_PY%\" \"%~dp0strumenti\\server_pannello.py\" %APRI%\nrem codice 3 = riavvio chiesto dal pannello: ricarica il codice aggiornato\nif errorlevel 3 if not errorlevel 4 (\n    set \"APRI=\"\n    echo Riavvio in corso...\n    \"%VENV_PY%\" -m pip install --disable-pip-version-check -q -r \"%~dp0strumenti\\requisiti.txt\"\n    goto avvio\n)\necho.\necho Il pannello e' stato chiuso.\npause\n";
 
 // =====================================================================
@@ -470,7 +470,7 @@ function disegnaDettaglio(){
       </div>
       <div>
         <h3 class="pix" style="font-size:13px">B · Meshy (sito)</h3>
-        <p class="nota" id="meshy-txt">Model → Image to 3D → <b>Smart Topology</b> → <b>Meshy T2</b> · Poly Count <b>${Math.round(pz.triangoli*0.6)}</b> · Texture <b>on</b> · Image Enhancement <b>off</b> · Pose <b>off</b> → Generate → Download <b>GLB</b>.
+        <p class="nota" id="meshy-txt">Model → Image to 3D → <b>Smart Topology</b> → <b>Meshy T2</b> · Poly Count <b>${Math.round(pz.triangoli*0.8)}</b> · Texture <b>on</b> · Image Enhancement <b>off</b> · Pose <b>off</b> → Generate → Download <b>GLB</b>.
         Immagine da caricare: <b>${pz.tipo==="pedina" ? `concept/viste_3d/${pz.id}_fronte` : `concept/scelti/${pz.id}`}</b></p>
         <p class="nota avviso">Sul piano Free di Meshy si scaricano solo i modelli generati con Meshy 5 (al massimo 10 al mese). Smart Topology, Meshy 6 e Meshy 7 si vedono ma non si scaricano senza un piano a pagamento.</p>
         <div class="riga"><a class="btn" href="https://www.meshy.ai/workspace" target="_blank" rel="noopener">Apri Meshy</a>
@@ -509,6 +509,7 @@ function formPulizia(pz){
     ${campo("colori","Colori piatti","number","min='2' max='12' style='width:70px'")}
     <label class="campo">Ruota (gradi)<span class="riga" style="margin:0"><input type="number" data-op="ruota" value="${o.ruota}" step="90" style="width:70px">
       <button class="btn piccolo" data-ruota="90">+90</button><button class="btn piccolo" data-ruota="180">180</button></span></label>
+    <label class="spunta"><input type="checkbox" data-op="texture" ${o.texture ? "checked" : ""}> tieni forma e texture del generatore (consigliato)</label>
     <label class="spunta"><input type="checkbox" data-op="asse_z_su"> modello sdraiato (Z in alto)</label>
     <label class="spunta"><input type="checkbox" data-op="usa_concept" checked> colori presi dal concept scelto</label>
     ${pz.tipo === "pedina" ? `<label class="spunta"><input type="checkbox" data-op="base" checked> base rettangolare nel legno della fazione</label>` : ""}
