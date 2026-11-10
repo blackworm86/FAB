@@ -118,7 +118,7 @@ if (ENV.AI_STATS) describe('stats', () => {
 });
 
 describe('computer opponent: the three levels play whole games', () => {
-  for (const [game, scenario] of [['bulge', 'tournament'], ['golan73', 'nafakh'], ['sicily', 'sunrise_bridge']] as [Cfg['game'], string][]) {
+  for (const [game, scenario] of [['bulge', 'tournament'], ['bulge', 'campaign'], ['bulge', 'intro'], ['bulge', 'cold'], ['golan73', 'nafakh'], ['sicily', 'sunrise_bridge']] as [Cfg['game'], string][]) {
     it(`${game} ${scenario}: hard against easy, both seatings, no illegal action`, () => {
       for (const [l1, l2] of [['hard', 'easy'], ['easy', 'hard']] as const) {
         const r = game2({ game, scenario, seed: 21 }, (g, s) => AI.next(g, s, l1), (g, s) => AI.next(g, s, l2));
