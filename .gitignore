@@ -8,3 +8,12 @@ skills-lock.json
 __pycache__/
 .vite/
 *-debug.log
+# 3D pieces kit (tools/pezzi3d): AI images and raw models stay local, the API key never leaves the PC; only modelli/definitivi is committed
+tools/pezzi3d/.venv/
+tools/pezzi3d/impostazioni.json
+tools/pezzi3d/concept/
+tools/pezzi3d/modelli/ai_grezzi/
+tools/pezzi3d/modelli/master/
+tools/pezzi3d/modelli/colorati/
+tools/pezzi3d/modelli/report.txt
+tools/pezzi3d/visualizzatore.html
