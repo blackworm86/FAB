@@ -7,14 +7,15 @@ import { PLAYERS } from '../src/players';
 import { rng } from '../src/random';
 import { onAllCores } from './pool';
 
-const MIX = ['doctrine', 'doctrine-10', 'doctrine-30', 'doctrine-60'];   // random Germans almost never win: games too one-sided to learn from
+// Each seat its own mix, so that both sides win often enough to learn from (random Germans almost never win, doctrine Allies almost always do).
+const MIX = { german: ['doctrine', 'doctrine-10', 'doctrine-30'], allied: ['random', 'random', 'doctrine-60', 'doctrine-30', 'doctrine'] };
 type Game = { seed: number; german: string; allied: string; winner: string | null; rows: { turn: number; seat: string; x: number[] }[] };   // x: the values of features(), in its order
 
 const args = process.argv.slice(2).filter((a) => a !== '--');
 if (args[0] === 'worker') {
   const [, from, to] = args.map(Number);
   for (let seed = from; seed < to; seed++) {
-    const r = rng(seed * 13), german = MIX[Math.floor(r() * MIX.length)], allied = MIX[Math.floor(r() * MIX.length)], rows: Game['rows'] = [];
+    const r = rng(seed * 13), german = MIX.german[Math.floor(r() * MIX.german.length)], allied = MIX.allied[Math.floor(r() * MIX.allied.length)], rows: Game['rows'] = [];
     const m = playMatch(seed, { german: PLAYERS[german](seed), allied: PLAYERS[allied](seed + 5) }, { scenario: 'tournament', sample: (v, seat) => rows.push({ turn: v.turn, seat, x: Object.values(features(v, seat)) }) });
     if (!m.stuck) process.stdout.write(JSON.stringify({ seed, german, allied, winner: m.winner, rows }) + '\n');
   }
