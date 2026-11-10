@@ -3422,7 +3422,8 @@
   "brass tags = SA move": "etichette ottone = movimento con AS",
   "End reaction": "Fine reazione",
   "Air": "Aereo",
-  "Asset": "Risorsa"
+  "Asset": "Risorsa",
+  "Remove the unit": "Rimuovi l'unità"
  },
  "patterns": [
   [

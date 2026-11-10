@@ -876,7 +876,8 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Tab') { const sheet = document.querySelector<HTMLElement>('#ui .modal > .sheet');      // Tab cycles inside an open menu instead of wandering onto the map behind it
     if (sheet) { const f = Array.from(sheet.querySelectorAll<HTMLElement>('button:not(:disabled), select, input, a[href], [tabindex="0"]')).filter((x) => x.offsetParent), a = document.activeElement;
       if (f.length && (e.shiftKey ? a === f[0] || a === sheet : a === f[f.length - 1] || !sheet.contains(a))) { e.preventDefault(); (e.shiftKey ? f[f.length - 1] : f[0]).focus(); } } }
-  if (e.key === 'Escape') { if (modal) { modal = null; render(); } else if (selUnit || selArr || selChit || selArea != null) { selUnit = selArr = selChit = null; selArea = null; previewArea = null; refresh(); } return; }
+  if (e.key === 'Escape') { const b = g.battle; if (modal) { modal = null; render(); } else if (b?.stage === 'setup' && !b.locked && mine(b.attacker) && allowed() && !b.assets[b.attacker].length && !b.ready?.length) act(() => E.cancelBattle(g));      /* Esc backs out of a battle just opened (nothing placed yet), like its Cancel button */
+    else if (selUnit || selArr || selChit || selArea != null) { selUnit = selArr = selChit = null; selArea = null; previewArea = null; refresh(); } return; }
   if (t === canvas && !modal) {
     const dir: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
     if (dir[e.key]) { e.preventDefault(); kbStep(...dir[e.key]); return; }

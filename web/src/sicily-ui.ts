@@ -95,7 +95,7 @@ export function sicilyPanel(g: Game, ctx: PanelCtx): string {
   if (!b && g.phase === 'combat' && g.phasing === 'allied' && V.dropPending && ctx.mine('allied')) {
     for (const u of g.units.filter((x) => x.box === 'airborne_assault' && x.side === 'allied')) {
       const t = S.airDropTargets(g, u.id);
-      out.push(`<div class="volpanel"><b>${ctx.ico('air_mission')} ${esc(u.name)}: airborne assault (14.27a)</b><span>${t.length ? 'Drop into an area next to at least two areas holding its own army, before any battle. Against defenders it is a River Assault that cannot be aborted.' : 'No drop zone is open: the unit is lost.'}</span><div class="row">${t.length ? ctx.ubtn('Choose the drop zone', () => ctx.pickArea(`${u.name}: tap the drop zone`, t, (a) => S.airDrop(live(), u.id, a)), 'primary') : ctx.btn('The unit is lost', () => S.airDrop(live(), u.id, null), 'primary')}</div></div>`);
+      out.push(`<div class="volpanel"><b>${ctx.ico('air_mission')} ${esc(u.name)}: airborne assault (14.27a)</b><span>${t.length ? 'Drop into an area next to at least two areas holding its own army, before any battle. Against defenders it is a River Assault that cannot be aborted.' : 'No drop zone is open: the unit is lost.'}</span><div class="row">${t.length ? ctx.ubtn('Choose the drop zone', () => ctx.pickArea(`${u.name}: tap the drop zone`, t, (a) => S.airDrop(live(), u.id, a)), 'primary') : ctx.btn('Remove the unit', () => S.airDrop(live(), u.id, null), 'primary')}</div></div>`);
     }
   }
   if ((g.phase === 'movement' || g.phase === 'strategic') && g.phasing === 'axis' && ctx.mine('axis')) {

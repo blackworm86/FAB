@@ -1111,3 +1111,4 @@ body:has(#ui .modal) #leaders, body:has(#ui .modal) #fx, body:has(#rules) #leade
   .vbtns { bottom: 0; flex-wrap: nowrap !important; gap: 6px; background: #0b0d08 !important; }
   .vbtns button { display: flex; align-items: center; flex: 1 1 0 !important; min-width: 0; flex-direction: column; gap: 2px; padding: 6px 4px; font-size: 12px; white-space: nowrap !important; min-height: 52px; justify-content: center; }
 }
+@media (min-width: 701px) { .dundo span { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.2; text-align: left; } }      /* "Undo: …" on two lines instead of cut */
