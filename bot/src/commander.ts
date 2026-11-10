@@ -1,5 +1,5 @@
 // The commander (stage 5 of docs/COMPUTER-PLAYER-PLAN.md). At the start of each of its Movement and Combat Phases it tries a few whole plans (styles of play for the rest of the player turn) on copies of the
-// game where the hidden enemy blocks are guessed, plays each copy to the end of the player turn, and keeps the plan
+// game where the hidden enemy blocks are guessed, plays each copy through the enemy's answer, and keeps the plan
 // the learned judge likes best. In between, the chosen plan's doctrine makes the single moves. It explains its choice.
 import * as E from '../../engine/src';
 import type { Game, Side } from '../../engine/src';
@@ -20,10 +20,13 @@ export const PLANS: { name: string; why: string; style: Style }[] = [
   { name: 'south', why: 'main effort in the south (Luxembourg City, Arlon)', style: { ...DEFAULT_STYLE, attackOdds: 1.1, focus: 7 } },
 ];
 
-/** Play a guessed game to the end of the current player turn with the plan for `me`, steady doctrine for the enemy; the judge's verdict for `me`. */
-function playOut(g: Game, me: Side, style: Style, maxActions = 600): number {
-  const mine = doctrinePlayer(style), theirs = doctrinePlayer(), turn = g.turn, phasing = g.phasing;
-  for (let k = 0; k < maxActions && !g.over && g.turn === turn && g.phasing === phasing; k++) {
+/** Play a guessed game through the end of the enemy's next player turn (its answer to the plan) with the plan for `me`,
+ *  steady doctrine for the enemy; the judge's verdict for `me`. */
+function playOut(g: Game, me: Side, style: Style, maxActions = 1500): number {
+  const mine = doctrinePlayer(style), theirs = doctrinePlayer();
+  let turns = 0, phasing = g.phasing;
+  for (let k = 0; k < maxActions && !g.over; k++) {
+    if (g.phasing !== phasing) { phasing = g.phasing; if (phasing === me || ++turns > 1) break; }       // my turn over, then the enemy's
     const side = actors(g)[0]; if (!side) break;
     const a = (side === me ? mine : theirs)(g, side); if (!a) break;
     try { apply(g, a); } catch { break; }
