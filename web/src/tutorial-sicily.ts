@@ -103,7 +103,7 @@ const husky = (phase: E.Phase, landed: boolean) => () => {
   avail(g, ['USC01', 'USC07a']); return g;
 };
 const L_LANDING: Lesson = { id: 's-landing', topic: 'The landings', chapter: CH2, ref: 'Ex 9', goal: 'From the beachheads into the coastal areas, against the garrisons', minutes: 4, side: 'allied', setup: husky('movement', false), steps: [
-  situation('D-Day', `You play the <b>Allies</b>, turn 1, Movement Phase. The <b>3rd Infantry</b> waits in <b>Joss (A1)</b> off Licata, the <b>1st Infantry</b> in <b>Dime (A2)</b> off Gela. A face-down garrison holds each town, dug in.
+  situation('D-Day', `Turn 1, Movement Phase. The <b>3rd Infantry</b> waits in <b>Joss (A1)</b> off Licata, the <b>1st Infantry</b> in <b>Dime (A2)</b> off Gela. A face-down garrison holds each town, dug in.
     <p>Landing takes a unit's <b>whole move</b> and needs no road: the arrow is the only way out of the box.</p>`, { look: 19 }),
   tapUnit('US05', 'The 3rd Infantry', '<b>Tap a 3rd Infantry block in Joss.</b> Only Licata lights up: the area its arrow points at.', { rule: '14.26 Landing' }),
   moveTo('US05', 20, 'Land at Licata', '<b>Tap Licata.</b> Landing against defenders makes a <b>beach assault</b>.', { rule: '14.27b Beach assault' }),
@@ -144,7 +144,7 @@ const L_BEACH: Lesson = { id: 's-beach', topic: 'Beach assault', chapter: CH2, r
 const L_ZONES: Lesson = { id: 's-zones', topic: 'Army boundaries', chapter: CH2, ref: 'Ex 5', goal: 'Zones, releasing a division with a Special Action', minutes: 4, side: 'allied', setup: () => {
   const g = sicilyTable(2, 'allied', 'admin', { BR03: 26, BR04: 26, BR07: 14 }); avail(g, ['BRC15']); return g;
 }, steps: [
-  situation('Catania', `You play the <b>Allies</b>, turn 2, Admin Phase. The British <b>5th Infantry</b> holds Catania, in zone B. With the historical plan the 8th Army may not leave zone B until its divisions are <b>released</b>; Regalbuto, inland, is zone A.
+  situation('Catania', `Turn 2, Admin Phase. The British <b>5th Infantry</b> holds Catania, in zone B. With the historical plan the 8th Army may not leave zone B until its divisions are <b>released</b>; Regalbuto, inland, is zone A.
     <p>A British division is released only by a <b>Special Action</b>, one division at a time (with one of the independent brigades if you like).</p>`, { look: 26 }),
   { title: 'The Special Action', text: '<b>Tap the Special Action</b> in your hand.', target: card('BRC15', 'Special Action card'), done: (_g, q) => q('.card2.sel[data-chit="BRC15"]') },
   { title: 'Release', text: '<b>Tap Release a division</b> among the choices above the hand.', target: { el: '.modes button[title^="Release"]', label: 'Release a division' }, done: (_g, q) => q('.modes button.on[title^="Release"]') },
@@ -170,7 +170,7 @@ const L_PORT: Lesson = { id: 's-port', topic: 'Ports', chapter: CH2, ref: 'Ex 4'
 const L_AIR: Lesson = { id: 's-air', topic: 'Interdiction and dogfights', chapter: CH2, ref: 'Ex 3', goal: 'The Allies slow the Axis; one German plane answers', minutes: 4, side: 'axis', setup: () => {
   const g = sicilyTable(2, 'axis', 'admin', { IT05: 57, IT06: 58, GE02: 59, GE03: 59, US03: 19 }); avail(g, ['USC06a', 'USC06b', 'GEC04']); return g;
 }, steps: [
-  situation('The west moves east', `You play the <b>Axis</b>, turn 2. Your units in the west want to march east to the landings: the <b>Aosta</b> blocks at Palermo and Alcamo, two <b>15th Panzergrenadier</b> blocks at Salemi.
+  situation('The west moves east', `Turn 2. Your units in the west want to march east to the landings: the <b>Aosta</b> blocks at Palermo and Alcamo, two <b>15th Panzergrenadier</b> blocks at Salemi.
     <p>The Allied player answers in the Admin Phase with <b>interdiction</b> over Bolognetta and Salemi: +1 point to enter and +1 to leave each. <b>Tap Show me.</b></p>`, { look: 57 }),
   { title: 'Two interdictions', text: 'Two Allied air support assets now sit over <b>Bolognetta</b> and <b>Salemi</b>. <b>Tap Show me</b> to see them placed.', rule: '16.33 Interdiction', auto: (g) => { S.airInterdiction(g, 'USC06a', 56); S.airInterdiction(g, 'USC06b', 59); } },
   { title: 'Your one plane', text: 'You have one <b>air support</b> asset. <b>Tap it</b> in your hand.', target: card('GEC04', 'Air Support card'), done: (_g, q) => q('.card2.sel[data-chit="GEC04"]') },

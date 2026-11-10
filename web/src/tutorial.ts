@@ -22,7 +22,7 @@ const store = { get: (k: string) => { try { return localStorage.getItem(k); } ca
 const q = (s: string, text?: string) => Array.from(document.querySelectorAll(enSel(s))).some((e) => !text || (e.textContent ?? '').includes(text) || (e.textContent ?? '').includes(tr(text)));      // the screen may be in Italian (4.6)
 const visible = (e: Element) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; };
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
-const SIDE_NAME: Record<string, string> = { german: 'Germany', allied: 'the Allies', israeli: 'Israel', syrian: 'Syria', axis: 'the Axis' };
+const SIDE_NAME: Record<string, string> = { german: 'the Germans', allied: 'the Allies', israeli: 'Israel', syrian: 'Syria', axis: 'the Axis' };
 
 export function initTutorial(h: TutHost, course: Course) {
   const KEY = `fab-tut:${course.id}`, DKEY = `${KEY}:done`, LESSONS = course.lessons;
