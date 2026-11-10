@@ -1116,3 +1116,4 @@ body:has(#ui .modal) #leaders, body:has(#ui .modal) #fx, body:has(#rules) #leade
 #ui .modal .pcgrid { gap: 8px !important; } #ui .modal .pcgrid .pc { width: 72px !important; height: 72px !important; }
 .log .ll, .feed .fl2 { display: flex; align-items: baseline; gap: 2px; } .stag { flex: none; } .lt { display: block; min-width: 0; } .lt::first-letter { text-transform: uppercase; }      /* log lines start with a capital (engine lines are written lower-case) */
 .maplegend .ar { font: 600 15px var(--sf); letter-spacing: -2px; }
+@media (max-width: 700px) { .sbx { top: 112px; max-height: calc(100% - 120px); } }      /* phones: the sandbox panel opens under the Layer bar and map tools, not over them */

@@ -149,7 +149,7 @@ const L_STRAT: Lesson = { id: 'g-strategic', topic: 'Strategic movement', chapte
   const g = golanTable(3, 'israeli', 'movement', { I11: A(), I05: 42, I03: 34, S13: 33 }); g.control[33] = 'syrian';
   E.setReserve(g, U(g, 'I11').id, true, true); g.phase = 'strategic'; g.stratMoves = 0; return g;
 }, steps: [
-  situation('From the assembly area to the front', `You play <b>Israel</b>. The <b>4th Mech</b> arrived in the <b>Northern Assembly Area</b> and was marked as reserve in the Move step: a block in an assembly box may carry a reserve marker. Now, in <b>Strategic movement</b>, it may travel by road through friendly, uncontested areas as far as the roads go.`, { look: 7 }),
+  situation('From the assembly area to the front', `The <b>4th Mech</b> arrived in the <b>Northern Assembly Area</b> and was marked as reserve in the Move step: a block in an assembly box may carry a reserve marker. Now, in <b>Strategic movement</b>, it may travel by road through friendly, uncontested areas as far as the roads go.`, { look: 7 }),
   tapUnit('I11', 'The 4th Mech', '<b>Tap the 4th Mech in the Northern Assembly Area.</b>', { rule: '14.72 Reserves in the assembly areas' }),
   { ...moveTo('I11', 30, 'To Tel Faris', '<b>Tap Tel Faris.</b> Up the escarpment by road, then along the roads to the southern front. Walking, the 4th Mech would have stopped at Yonatan.'), act: (g) => E.stratMove(g, U(g, 'I11').id, 30) },
   recap(['Strat-moves follow roads only, through friendly uncontested areas, never over an unbridged ditch or a blown bridge.', 'No limit per turn except the reserve markers you own, and two Israeli / one Syrian on the night turn.', 'A block in an assembly box may be a reserve.']),
@@ -162,7 +162,7 @@ const L_COMBAT: Lesson = { id: 'g-combat', topic: 'Combat with brigade integrity
   U(g, 'I11').str = 3; U(g, 'I12').str = 3; // as in the book: the brigade has 3 steps a block on this turn
   avail(g, ['IC11a', 'IC01', 'SC08', 'SC14a']); return g;
 }, steps: [
-  situation('Hushniyah', `You play <b>Israel</b>. Both blocks of the <b>4th Mech Brigade</b> attack the elite <b>91st Tank</b> in Hushniyah, which dug field works. You have an armour <b>Task Force</b> and the <b>405th+55th artillery</b> in hand; the Syrian player has the <b>89th artillery</b> and an <b>air support</b> asset.
+  situation('Hushniyah', `Both blocks of the <b>4th Mech Brigade</b> attack the elite <b>91st Tank</b> in Hushniyah, which dug field works. You have an armour <b>Task Force</b> and the <b>405th+55th artillery</b> in hand; the Syrian player has the <b>89th artillery</b> and an <b>air support</b> asset.
     <p>The round goes as in the series: assets, artillery, the defender's fire, the attacker's fire, hits, exploitation.</p>`, { look: 38 }),
   { title: 'Choose the battle', text: '<b>Tap Hushniyah.</b>', target: { area: 38 }, look: 38, tap: true, done: (g) => !!g.battle },
   { title: 'Fight', text: '<b>Tap Fight Hushniyah.</b>', target: GO, done: (g) => !!g.battle, act: fightAt(38) },
@@ -186,7 +186,7 @@ const L_ASSAULT: Lesson = { id: 'g-assault', topic: 'Crossing assault on a stron
   g.riverAssault = [28, 27]; U(g, 'S02').from = 79; U(g, 'S01').from = 79; g.control[28] = 'israeli'; g.control[27] = 'israeli';
   avail(g, ['SC10', 'SC14a', 'SC08']); return g;
 }, steps: [
-  situation('Juhader', `You play <b>Syria</b> on turn 1. The <b>112th Infantry</b> has crossed the ditch into Juhader, held by a veteran infantry <b>strongpoint</b>. A <b>crossing assault</b>: every attacker fires at −1 and none may exploit. You hold the <b>5th Engineers</b> and an <b>air support</b> asset.
+  situation('Juhader', `Turn 1. The <b>112th Infantry</b> has crossed the ditch into Juhader, held by a veteran infantry <b>strongpoint</b>. A <b>crossing assault</b>: every attacker fires at −1 and none may exploit. You hold the <b>5th Engineers</b> and an <b>air support</b> asset.
     <p>A strongpoint fires <b>one die</b> whatever its stars (−1 with a rifle symbol, +1 with a tank), counts as field works against you, cannot retreat, and is eliminated when its stars run out.</p>`, { look: 28 }),
   { title: 'Choose the battle', text: '<b>Tap Juhader.</b>', target: { area: 28 }, look: 28, tap: true, done: (g) => !!g.battle },
   { title: 'Fight', text: '<b>Tap Fight Juhader.</b>', target: GO, done: (g) => !!g.battle, act: fightAt(28) },
@@ -204,7 +204,7 @@ const L_ASSAULT: Lesson = { id: 'g-assault', topic: 'Crossing assault on a stron
 const L_AIR: Lesson = { id: 'g-airassault', topic: 'Air assault', chapter: CH2, ref: 'Ex 10', goal: 'The 82nd Para drops behind the line', minutes: 3, side: 'syrian', setup: () => {
   const g = golanTable(3, 'syrian', 'combat', { S06: 56, I06: 51 }); g.control[56] = 'syrian'; return g;
 }, steps: [
-  situation('The 82nd Para', `You play <b>Syria</b>. The paratroop battalion waits in its holding box. Once in the game, as the <b>first action of a Syrian Fight step</b>, it may land in any area east of the SAM barrier, or on <b>Mt Hermon</b>, even an Israeli-held one. If the area is then contested, the battle is fought at once, as an <b>air assault</b>. Not on the night turn.`, { look: 83 }),
+  situation('The 82nd Para', `The paratroop battalion waits in its holding box. Once in the game, as the <b>first action of a Syrian Fight step</b>, it may land in any area east of the SAM barrier, or on <b>Mt Hermon</b>, even an Israeli-held one. If the area is then contested, the battle is fought at once, as an <b>air assault</b>. Not on the night turn.`, { look: 83 }),
   { title: 'Choose the landing area', text: 'The panel offers the drop. <b>Tap Choose the landing area.</b>', rule: '15.3 Syrian paratroops', target: { el: '.volpanel button', text: 'landing', label: 'landing button' }, tap: true },
   { title: 'Mt Hermon', text: '<b>Tap Mt Hermon.</b> The Israeli garrison holds it: the area is contested and the battle must be fought now, under an assault marker. Only infantry-class battle assets and air support may join a fight on the mountain.', target: { area: 83 }, look: 83, done: (g) => area('S17', g) === 83, act: (g) => G.airAssault(g, 83) },
   { title: 'Fight', text: '<b>Tap Fight Mt Hermon.</b> The coach rolls the dice: the garrison fires one die, the paratroopers two. If the garrison falls, the mountain and its supply advantage for the Israeli artillery are yours.', rule: '16.21', target: GO, done: (g) => !g.battle && g.fought.includes(83), act: (g) => autoFight(g, 83) },
@@ -262,7 +262,7 @@ const L_RAID: Lesson = { id: 'g-raid', topic: 'Commando raids', chapter: CH2, re
   for (const c of g.chits.filter((x) => x.box === 'available')) c.box = 'cup';
   avail(g, ['SC40', 'SC35']); G.placeRaid(g, 'SC35', 24); g.log = []; return g;
 }, steps: [
-  situation('Helicopters in the night', `You play <b>Syria</b>. Last turn the <b>184th Commandos</b> landed at Ma'ale Gamla, on the escarpment road the Israeli reserves must climb. Now, in Prepare, you hold the <b>185th</b>. A raid may land in a <b>vacant Israeli area next to a Syrian block</b>: the <b>46th Tank</b> stands at Ramat Magshimim, next to El-Al.`, { look: 21 }),
+  situation('Helicopters in the night', `Last turn the <b>184th Commandos</b> landed at Ma'ale Gamla, on the escarpment road the Israeli reserves must climb. Now, in Prepare, you hold the <b>185th</b>. A raid may land in a <b>vacant Israeli area next to a Syrian block</b>: the <b>46th Tank</b> stands at Ramat Magshimim, next to El-Al.`, { look: 21 }),
   { title: 'The 185th Commandos', text: '<b>Tap the 185th Commandos.</b>', rule: '16.11a Commando raid', target: { el: ['.card2[data-chit="SC40"]', '.handtab button'], label: '185th Commandos card' }, done: (g, q) => q('.chitbar', 'Cdo') || q('.chitbar', 'Commando') || C(g, 'SC40').box === 'map' },
   { title: 'El-Al', text: '<b>Tap El-Al.</b> The commandos sit there: Israeli blocks may not strat-move or retreat into the area, and the first to enter pays +1 and triggers the raid roll.', target: { area: 21 }, look: 21, done: (g) => C(g, 'SC40').box === 'map', act: (g) => G.placeRaid(g, 'SC40', 21) },
   { title: 'The Israeli turn', text: 'The coach plays the rest of the Syrian turn. In the Israeli Move step the <b>4th Mech</b> at Ad Dardarah climbs towards Ma\'ale Gamla. <b>Tap Show me.</b>', auto: (g) => runTo(g, 3, 'israeli', 'movement') },
@@ -284,7 +284,7 @@ const L_BREAK: Lesson = { id: 'g-breakthrough', topic: 'Reaction and Breakthroug
   sa(g, 'israeli'); for (const u of g.units) u.moved = true; for (const id of ['S26', 'I19', 'I17', 'I21']) U(g, id).moved = false;
   g.contestedAtMoveStart = [31]; g.fought = [31]; g.phase = 'reaction'; return g;
 }, steps: [
-  situation('After the Israeli battles', `Turn 5. You play <b>Israel</b>, whose Fight step is over: Einot Peham is still contested, the <b>205th</b> cleared Zohar and carries an exploitation tag, the <b>317th Para</b> waits in reserve at Yonatan, the <b>670th</b> stands at Tel Saki, and your Special Action is in hand.
+  situation('After the Israeli battles', `Turn 5. The Israeli Fight step is over: Einot Peham is still contested, the <b>205th</b> cleared Zohar and carries an exploitation tag, the <b>317th Para</b> waits in reserve at Yonatan, the <b>670th</b> stands at Tel Saki, and your Special Action is in hand.
     <p>First the Syrian player <b>reacts</b>, then you break through.</p>`, { look: 31 }),
   { title: 'The Syrian reaction', text: 'A reacting reserve block may make a full move, even <b>into a contested area</b>, but may not create a new one. The <b>91st Tank</b>, in reserve at Tel Faris, reinforces Einot Peham. <b>Tap Show me.</b>', rule: '7.1 Reaction', auto: (g) => { E.move(g, U(g, 'S26').id, 31); while (g.phase === 'reaction') E.endPhase(g); } },
   tapUnit('I19', 'A reserve block', 'Breakthrough. First, a reserve block makes a full move: <b>tap the 317th Para at Yonatan.</b>', { rule: '7.3 Breakthrough movement' }),
@@ -306,7 +306,7 @@ const L_SUPPLY: Lesson = { id: 'g-supply', topic: 'Supply on the Golan', chapter
   G.state(g).bridgedDitch = ['57-61']; g.contestedAtMoveStart = [57]; g.fought = [57];
   E.endPhase(g); g.log = []; return g;
 }, steps: [
-  situation('The Supply step', `You play <b>Syria</b>. Syrian supply lines lead back to the entry areas V to Z through Syrian-held areas. On the Golan the line also obeys the ground: it may cross an unbridged ditch only from the area next to it, an escarpment only by road, and never a minefield.`, { look: 49 }),
+  situation('The Supply step', `Syrian supply lines lead back to the entry areas V to Z through Syrian-held areas. On the Golan the line also obeys the ground: it may cross an unbridged ditch only from the area next to it, an escarpment only by road, and never a minefield.`, { look: 49 }),
   { title: 'Supply', text: '<b>Tap Supply</b> on the Layer bar.', target: { el: '.laysw button[title^="Supply"]', label: 'Supply on the Layer bar' }, done: (_g, q) => q('.laysw button[aria-pressed="true"][title^="Supply"]') },
   tapUnit('S08', 'Kuneitra', '<b>Tap the 7th Recon in Kuneitra.</b> It traces straight back across the ditch, which it stands next to, towards entry area Y.', { rule: '14.93 Tracing a supply path' }),
   tapUnit('S06', 'El Rom', '<b>Tap the 68th Infantry in El Rom.</b> Its line runs through Tel Hermonit, Syrian-held though an Israeli block contests it, and over the <b>bridged</b> ditch to Jubata: bridged ditches are open for supply.'),
