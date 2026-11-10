@@ -12,9 +12,7 @@ import { noSupplyTargets, supplySources } from './supply-plan';
 import * as SB from './sandbox';
 import { vpStrip, vpSheet, endPanel } from './score';
 import * as SBU from './sandbox-ui';
-import { solo as soloAcct } from './online';
-import * as SOLO from './solo';
-import { online, startOnline, push, sit, setDevSeat, auth, lobby, journal, seatKey, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, SANDBOX, TUTORIAL, CPU, seatOf, seatName, type DevSeat, type Match } from './online';
+import { online, startOnline, push, sit, setDevSeat, auth, lobby, journal, seatKey, publishReveals, DEV, TABLE, HAS_TABLE, DEV_FAKE, SANDBOX, TUTORIAL, seatOf, seatName, type DevSeat, type Match } from './online';
 import { gameInfo, GAMES } from './games';
 import { BOXES, boxFront, boxSpine } from './covers';
 import { ICONS, ico } from './icons';
@@ -44,10 +42,7 @@ import { loadRelief, type Relief } from './relief';
 /* ---------- which game this page shows ---------- */
 const PARAMS = new URLSearchParams(location.search), GAME_PARAM = PARAMS.get('game');
 const TUT = TUTORIAL ? courseFor(PARAMS.get('tutorial')) : null;                                         // the tutorial course this page runs (docs/TUTORIAL.md)
-/** 4.4: a game against the computer has its own id (the address's `solo`, else a new one), kept on this device and in the player's account. */
-const SOLO_ID = CPU ? PARAMS.get('solo') ?? SOLO.newSoloId() : null;
-if (CPU && !PARAMS.get('solo')) { const u = new URL(location.href); u.searchParams.set('solo', SOLO_ID!); history.replaceState(null, '', u.href); }
-const KEY0 = TUT ? `fab-tutorial-${TUT.id}` : SANDBOX ? 'fab-sandbox' : TABLE === 'main' ? 'fab-demo2' : `fab-demo2-${TABLE}`, KEY = SOLO_ID ? SOLO.soloKey(SOLO_ID) : GAME_PARAM && GAME_PARAM !== 'bulge' ? `${KEY0}-${GAME_PARAM}` : KEY0;
+const KEY0 = TUT ? `fab-tutorial-${TUT.id}` : SANDBOX ? 'fab-sandbox' : TABLE === 'main' ? 'fab-demo2' : `fab-demo2-${TABLE}`, KEY = GAME_PARAM && GAME_PARAM !== 'bulge' ? `${KEY0}-${GAME_PARAM}` : KEY0;
 function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif && x.roadblocks && x.pendingArrivals && x.fwOwner && Array.isArray(x.recover) ? x : null; } catch { return null; } }
 /** The volume (docs/design/one-engine.md): the address says which game, else the game saved for this table, else The Bulge. A shared table of another game reloads the page with its game. */
 const VOL = useVolume(TUT ? TUT.game : GAME_PARAM ?? load()?.game ?? 'bulge');
@@ -98,31 +93,18 @@ const areaName = (a: number) => E.areas.get(a)!.name;
 
 /* ---------- state ---------- */
 let tut: ReturnType<typeof initTutorial> | null = null;
-/** 4.4: the computer's side (the address names it; the player holds the other seat) and the options of a new solo game from the address. */
-const CPU_SIDE: E.Side | null = CPU ? (VOL.sides.includes(CPU) ? CPU : P2) : null;
-if (CPU_SIDE) online.cpu = CPU_SIDE;
-const cpuOpts = (): Partial<E.Opts> => { const o: Record<string, unknown> = { ...VOL.defaultOpts }; const sc = PARAMS.get('scenario'); if (sc && VOL.scenarios.some((x) => x.id === sc)) o.scenario = sc; if (PARAMS.has('fuel')) o.fuel = PARAMS.get('fuel') === '1';
+/** The options of a new game from the address (scenario, fuel, optional rules): the sandbox's ready test situations. */
+const addressOpts = (): Partial<E.Opts> => { const o: Record<string, unknown> = { ...VOL.defaultOpts }; const sc = PARAMS.get('scenario'); if (sc && VOL.scenarios.some((x) => x.id === sc)) o.scenario = sc; if (PARAMS.has('fuel')) o.fuel = PARAMS.get('fuel') === '1';
   for (const k of (PARAMS.get('rules') ?? '').split(',').filter(Boolean)) { const [key, v] = k.split(':'); if (E.optionalRules().some((r) => r.key === key)) o[key] = key === 'bid' ? +(v ?? 0) : true; } return o as Partial<E.Opts>; };
-const SOLO_NEW = !!CPU && (PARAMS.has('new') || (!SOLO.localGame(SOLO_ID!) && !PARAMS.get('solo')));
-let g: E.Game = (() => { const s = HAS_TABLE && !SANDBOX && !TUTORIAL ? null : SOLO_NEW ? null : load(); return s && (s.game ?? 'bulge') === VOL.id ? s : E.newGame(undefined, CPU ? cpuOpts() : VOL.defaultOpts); })();   // a shared table starts from what the database sends, never from an old local copy
-/** 4.4: this device's list entry of the game, and whether the game is still to come from the account (opened on a device that does not have it). */
-let soloLast = '', soloHold = false, soloMeta: SOLO.SoloMeta | null = null, soloWait = !!CPU && !SOLO_NEW && !load();
-if (CPU) {
-  soloMeta = SOLO_NEW ? null : SOLO.localMeta(SOLO_ID!);
-  if (!soloMeta) soloMeta = SOLO.metaOf(g, { id: SOLO_ID!, cpu: CPU_SIDE!, title: `${VOL.name} · ${VOL.scenarios.find((x) => x.id === g.opts.scenario)?.name ?? ''}`, created: Date.now(), owner: '' });
-  if (SOLO_NEW) SOLO.pruneJournals(4, SOLO_ID!);                                                      // a new game: the replays of older games go first, before storage runs out
-  if (!soloWait) { soloLast = JSON.stringify(g); if (!SOLO.storeSafe(KEY, soloLast, SOLO_ID!)) storageFull(); SOLO.putLocalMeta(soloMeta); }
-  soloHold = !!soloMeta.owner && !soloWait; if (soloHold) setTimeout(() => { if (soloHold) { soloHold = false; render(); } }, 8000);      // an account's game: a moment to look for a newer copy before play goes on (offline: it carries on)
-  if (PARAMS.has('new')) { const u = new URL(location.href); for (const k of ['new', 'scenario', 'fuel', 'rules', 'level']) u.searchParams.delete(k); history.replaceState(null, '', u.href); }
-}
+let g: E.Game = (() => { const s = HAS_TABLE && !SANDBOX && !TUTORIAL ? null : load(); return s && (s.game ?? 'bulge') === VOL.id ? s : E.newGame(undefined, VOL.defaultOpts); })();   // a shared table starts from what the database sends, never from an old local copy
 setRulesContext({ game: VOL.id, title: VOL.name, art: (k) => VOL.ruleArt(k, g), fig: () => { const k = figKit(VOL, E.newGame(1, g.opts)); E.setPlayArea(g.inPlay); return k; } });      // a fresh game for every block's face (online the other side's are hidden); the play area stays this game's          // the rules reference shows this game's rulebooks and pieces
 let selArea: number | null = null, selUnit: string | null = null, selChit: string | null = null, previewArea: number | null = null, hoverArea: number | null = null, newOpts: E.Opts = { scenario: VOL.defaultOpts.scenario ?? 'tournament', fuel: !!VOL.defaultOpts.fuel };
 /** A prompt of the volume asked for an area (an air assault landing): the legal ones light up, a tap runs it. */
 let areaPick: { label: string; areas: Set<number>; run: (a: number) => void } | null = null;
 let applyingRemote = false;
 let oppTurn: boolean | null = null;                                                               // 4.3: was it the opponent's move when last seen
-const save = () => { if (heldNext || soloWait) return;                                             // a roll is on screen: its result is already saved; the board shown is older and must not be written back
-   const json = JSON.stringify(g); if (CPU) { if (!SOLO.storeSafe(KEY, json, SOLO_ID!)) storageFull(); soloSaved(json); } else { try { localStorage.setItem(KEY, json); } catch { /* storage off: the game still runs */ } } if (!applyingRemote) { void push(g); handOver(); record(true); } };
+const save = () => { if (heldNext) return;                                             // a roll is on screen: its result is already saved; the board shown is older and must not be written back
+   const json = JSON.stringify(g); try { localStorage.setItem(KEY, json); } catch { /* storage off: the game still runs */ } if (!applyingRemote) { void push(g); handOver(); record(true); } };
 /* 4.1 the replay journal: each change is a step; online each seat writes only its own blocks (the database keeps the journal unread until the game is over) */
 const rec = new Recorder(VOL.sides); let recLast = '', replayShown = false;
 function record(own: boolean, gm: E.Game = g) {
@@ -726,8 +708,11 @@ let dragTargets: number[] = [];
 const hist = new History<E.Game>(); let note = '', selArr: string | null = null;
 /** Who may act right now: one side, or both while each handles its own assets (admin, reinforcement, battle set-up). */
 const actorNow = () => E.actorOf(g);
-/* vs the computer the player closes every finished battle, the computer's too (cpuTick leaves it), so the result can be read */
-const allowed = () => cpuActing || (!!CPU_SIDE && g.battle?.stage === 'done') || (!heldBad && !soloWait && !soloHold && !soloClash && (!online.active || online.both() || (online.mySide() != null && (actorNow() === 'both' || actorNow() === online.mySide()))));   // a held-back change waits for a decision first
+/** In the set-up: does `s` still have pieces or set-up choices to place (Golan: minefields, reserves, the Al-Owda raid; Sicily: the Allied landing plan)? */
+const placing = (s: E.Side) => g.units.some((u) => u.box === 'deploy' && u.side === s)
+  || (g.game === 'golan73' && ((s === 'israeli' && !!E.golan.state(g).minesLeft) || (E.golan.setupReserves(g, s).all && E.golan.reservesLeft(g, s) > 0) || (s === 'syrian' && E.golan.alowdaRaidAreas(g).length > 0)))
+  || (g.game === 'sicily' && s === 'allied' && !E.sicily.state(g).plan);
+const allowed = () => (!heldBad && (!online.active || online.both() || (online.mySide() != null && (actorNow() === 'both' || actorNow() === online.mySide()))));   // a held-back change waits for a decision first
 /** In a shared-screen game every side is yours; online only your own seat's pieces. */
 const mine = (s: E.Side) => !online.active || online.both() || online.mySide() === s;
 const notYou = () => online.mySide() == null ? 'You are watching. Take a seat in the menu to play.' : `Wait for the ${nm(actorNow() as E.Side)} player.`;
@@ -739,7 +724,6 @@ let pendingFx: Fx[] = [], rollNoted = false;
 function noteFx(a: ReturnType<typeof snap>, x: E.Game, fresh?: boolean) { const d = diffFx(a, x); if (!d.length) return; battleFx.push(...d); if (fresh) { rollFx = d; pendingFx = d; } else showFx(d); }       // after a roll the effects wait for the dice to settle
 function act(f: () => void, after = '') {
   if (!allowed()) return say(notYou());
-  if (!cpuActing) cpuSummary = '';
   if (online.mode === 'remote' && !online.rev) return say('The game is still loading…');
   if (heldNext) commitRoll();
   const before = g.battle ? snap(g) : null, ck0 = g.checks?.length ?? 0;
@@ -761,122 +745,6 @@ function lockOf(a: E.Game, b: E.Game): string {
   return '';
 }
 function undo() { if (!allowed()) return say(notYou()); if (heldNext) return say('Wait for the dice to land'); const lbl = hist.label, r = hist.undo(g); if (!r.game) return say(r.why ?? 'Nothing to undo'); const p = r.game; p.log.push(`T${p.turn} ${nm(online.mySide() ?? p.phasing)} undid ${lbl ? '“' + lbl + '”' : 'an action'}`); g = p; selUnit = selChit = selArr = previewArea = hoverArea = null; note = ''; save(); refresh(); }
-/** This device could not store the game (storage full or off): say so once, so a player who is not signed in knows it will not survive a reload. */
-let storageTold = false;
-function storageFull() { if (storageTold) return; storageTold = true; setTimeout(() => say(online.account && !online.account.guest ? 'This device is out of storage: the game is kept in your account only.' : 'This device is out of storage: this game will be lost when the page closes. Sign in to keep it in your account, or delete old games on the home page.'), 0); }
-/* ---------- 4.4 keeping a game against the computer in the player's account ---------- */
-let soloTimer = 0, soloChecked = '', soloClash: { meta: SOLO.SoloMeta; json: string } | null = null, soloBusy = false;
-/** A change was saved on this device: count it, and send it to the account a moment later (the changes of that moment go as one write). */
-function soloSaved(json: string) {
-  if (!soloMeta || json === soloLast) return; soloLast = json;
-  soloMeta = { ...SOLO.metaOf(g, soloMeta), rev: soloMeta.rev + 1 }; SOLO.putLocalMeta(soloMeta);
-  if (!soloTimer) soloTimer = window.setTimeout(() => { void soloPush(); }, 1500);                       // at most 1.5 s behind, even while the computer keeps moving
-}
-const soloMine = () => soloAcct.on && !!soloMeta && (!soloMeta.owner || soloMeta.owner === online.uid);
-async function soloPush(force = false) {
-  clearTimeout(soloTimer); soloTimer = 0;
-  if (!soloMine() || soloBusy || soloClash || soloWait || soloChecked !== online.uid) return;
-  soloBusy = true;
-  try {
-    const m = { ...soloMeta!, owner: online.uid }, r = await soloAcct.save(m, JSON.stringify(g), force);
-    if (r === 'ok') { soloMeta = { ...soloMeta!, owner: online.uid, rev: m.rev, base: m.rev }; SOLO.putLocalMeta(soloMeta); }
-    else if (r === 'conflict') { const x = await soloAcct.load(SOLO_ID!); if (x) { soloClash = x; render(); } }
-  } finally { soloBusy = false; }
-  if (soloMeta && soloMeta.rev !== soloMeta.base && !soloClash && !soloTimer) soloTimer = window.setTimeout(() => { void soloPush(); }, 1500);      // saved meanwhile
-}
-/** Take the account's copy of the game in place of this device's. */
-function soloTake(x: { meta: SOLO.SoloMeta; json: string }) {
-  const ng = JSON.parse(x.json) as E.Game; if ((ng.game ?? 'bulge') !== VOL.id) return;
-  if (heldNext) commitRoll(); soloWait = false; soloClash = null;
-  g = ng; hist.clear(); selUnit = selChit = selArr = null; selArea = previewArea = hoverArea = null;
-  soloMeta = { ...x.meta, owner: online.uid, base: x.meta.rev };
-  soloLast = JSON.stringify(g); if (!SOLO.storeSafe(KEY, soloLast, SOLO_ID!)) storageFull(); SOLO.putLocalMeta(soloMeta); refresh();
-}
-/** Once the account is known: compare this device's copy with the account's. Unchanged on one side: the newer wins quietly; changed on both: the player chooses. */
-async function soloOnNet() {
-  if (!CPU || !online.account || online.account.guest || soloChecked === online.uid || !soloAcct.on) { if (soloWait && online.ready && online.account?.guest) render(); return; }
-  soloChecked = online.uid; soloHold = false; render();
-  if (soloMeta?.owner && soloMeta.owner !== online.uid) return;                                      // another account's game on this device: left alone
-  const x = await soloAcct.load(SOLO_ID!);
-  const c = SOLO.syncChoice(soloMeta, x?.meta.rev ?? null, soloWait);
-  if (c === 'gone') { soloWait = false; say('This game is not in your account.'); location.href = homeUrl(); return; }
-  if (c === 'take') return soloTake(x!);
-  if (c === 'push') return void soloPush();
-  soloClash = x; render();                                                                            // moved on both here and elsewhere
-}
-function soloBar() {
-  if (!CPU) return '';
-  if (soloWait) return `<div class="seatbar cpu"><span class="spin" aria-hidden="true"></span><span>${online.account && !online.account.guest ? 'Loading this game from your account…' : online.ready && online.account?.guest ? 'This game is in an account: sign in on the home page to open it.' : 'Loading…'}</span></div>`;
-  if (soloHold) return `<div class="seatbar cpu"><span class="spin" aria-hidden="true"></span><span>Checking your account for a newer copy…</span></div>`;
-  if (!soloClash) return '';
-  const t = soloClash.meta;
-  return `<div class="seatbar err"><span><b>Played on another device too.</b> There: turn ${t.turn}, ${esc(STEP_NAME[t.step] ?? t.step)}. Here: turn ${g.turn}, ${esc(STEP_NAME[g.phase] ?? g.phase)}.</span>${ubtn('Use the other device\'s', () => soloTake(soloClash!), 'primary')}${ubtn('Keep this one', () => { soloClash = null; void soloPush(true); })}</div>`;
-}
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && soloTimer) void soloPush(); });
-
-/* ---------- 4.4 the computer opponent: one action at a time, each shown on the table as a player's would be ---------- */
-let cpuActing = false, cpuTimer = 0, cpuLast = '', cpuThinking = false, cpuAskId = 0;
-/** How fast the computer plays (a setting): the pause between its actions is scaled by this. */
-let cpuSpeed: 'slow' | 'normal' | 'fast' = (() => { try { const v = localStorage.getItem('fab-cpu-speed'); return v === 'slow' || v === 'fast' ? v : 'normal'; } catch { return 'normal'; } })();
-const cpuPace = () => ({ slow: 1.7, normal: 1, fast: 0.45 })[cpuSpeed];
-/** What the computer did since the player last acted, told in one line once the move comes back to the player. */
-const cpuDid: { moves: number; fights: string[]; cards: number; other: number } = { moves: 0, fights: [], cards: 0, other: 0 };
-let cpuSummary = '';
-function cpuNote(a: E.ai.Action) {
-  if (a.label === 'move' || a.label === 'strategic move') cpuDid.moves++;
-  else if (a.label === 'fight' && a.area != null) cpuDid.fights.push(areaName(a.area));
-  else if (['replacement', 'rebuild', 'return', 'staff replacement', 'field works', 'port work', 'bridge the ditch', 'clear mines', 'rally', 'quality replacements', 'release', 'arriving battalion', 'army release', 'SSM strike', 'Lt. Zvika', 'air interdiction', 'release the division', 'operational reserve', 'Golani', 'the 33rd', 'air supply', 'repair the bridge', 'Greif bridge', 'Greif interdict', 'Bodenplatte', 'von der Heydte', 'staff reserve', 'blow the bridge', 'roadblock', 'defended roadblock', 'intelligence', 'pooled assets', 'army boundary', 'interdiction', 'assets back to the cup', 'reinforce the battle', 'retreat before combat'].includes(a.label)) cpuDid.cards++;
-  else if (['arrive', 'task force', 'reserve', 'retreat', 'abort', 'breakthrough'].includes(a.label)) cpuDid.other++;
-}
-function cpuTell() {
-  const parts: string[] = [];
-  if (cpuDid.moves) parts.push(`moved ${cpuDid.moves} block${cpuDid.moves > 1 ? 's' : ''}`);
-  if (cpuDid.fights.length) parts.push(`attacked ${[...new Set(cpuDid.fights)].slice(0, 3).join(', ')}${new Set(cpuDid.fights).size > 3 ? '…' : ''}`);
-  if (cpuDid.cards) parts.push(`played ${cpuDid.cards} card${cpuDid.cards > 1 ? 's' : ''}`);
-  cpuSummary = parts.length ? `${nm(CPU_SIDE!)} (computer): ${parts.join(', ')}.` : '';
-  cpuDid.moves = 0; cpuDid.fights = []; cpuDid.cards = 0; cpuDid.other = 0;
-}
-/** The level the computer plays at: the address (a new game), else the game's saved entry, else normal. */
-const CPU_LEVEL: E.ai.Level = (() => { const l = PARAMS.get('level') ?? soloMeta?.level; return l === 'easy' || l === 'hard' ? l : 'normal'; })();
-if (soloMeta && soloMeta.level !== CPU_LEVEL) { soloMeta = { ...soloMeta, level: CPU_LEVEL }; if (!soloWait) SOLO.putLocalMeta(soloMeta); }
-/** Its thinking runs in a worker thread, so the table never stutters; without workers it thinks on this thread. */
-const cpuWorker: Worker | null = (() => { try { return typeof Worker === 'function' ? new Worker(new URL('./cpu-worker.ts', import.meta.url), { type: 'module' }) : null; } catch { return null; } })();
-function cpuThink(side: E.Side): Promise<E.ai.Action | null> {
-  if (!cpuWorker) return Promise.resolve(E.ai.next(g, side, CPU_LEVEL));
-  const id = ++cpuAskId, json = JSON.stringify(g);
-  return new Promise((ok) => {
-    const onMsg = (e: MessageEvent<import('./cpu-worker').CpuReply>) => { if (e.data.id !== id) return; cpuWorker.removeEventListener('message', onMsg); const r = e.data; if (r.error) console.error('computer opponent', r.error); ok(r.op ? { label: r.label ?? '', unit: r.unit, area: r.area, chit: r.chit, roll: r.roll, op: r.op, run: (x) => { E.ai.apply(x, r.op!); } } : null); };
-    cpuWorker.addEventListener('message', onMsg); cpuWorker.postMessage({ id, json, side, level: CPU_LEVEL });
-  });
-}
-/** After every redraw: if it is the computer's turn to act, its next action follows shortly (dice and effects are left to settle first). */
-function cpuTick() {
-  if (!CPU_SIDE || cpuTimer || cpuThinking || g.over || rollView || heldNext || soloWait || soloHold || soloClash || g.battle?.stage === 'done' || !E.ai.turnOf(g, CPU_SIDE)) return;      // a finished battle stays until the player closes it
-  const delay = (cpuLast === 'ready' || cpuLast === 'done' ? 350 : /move|fight|arrive|place|retreat|strategic/.test(cpuLast) ? 900 : 600) * cpuPace();
-  cpuTimer = window.setTimeout(cpuStep, delay);
-}
-async function cpuStep() {
-  cpuTimer = 0; if (!CPU_SIDE || cpuThinking || g.over || rollView || heldNext || soloWait || soloHold || soloClash || g.battle?.stage === 'done' || !E.ai.turnOf(g, CPU_SIDE)) return;
-  let a: E.ai.Action | null = null; const seen = JSON.stringify(g); cpuThinking = true;
-  try { a = await cpuThink(CPU_SIDE); } catch (e) { console.error('computer opponent', e); } finally { cpuThinking = false; }
-  if (JSON.stringify(g) !== seen) { cpuTick(); return; }                                              // the game moved on while it thought (a player's undo, another device): think again
-  if (!a || rollView || heldNext) { cpuLast = ''; if (a) cpuTick(); return; }
-  cpuLast = a.label; cpuActing = true; cpuNote(a); cpuSummary = '';
-  try {
-    if (a.roll && g.battle && !['loss', 'retreat', 'attChoice', 'defChoice', 'attFirst', 'setup', 'done'].includes(g.battle.stage)) rollStage(g.battle);     // the dice are thrown on screen, as for a player
-    else if (a.op[0] === 'move') {                                                                       // one area at a time, as a player moves: each step is seen
-      const [, id, to] = a.op as [string, string, number]; cpuThinking = true;
-      try { for (let i = 0; i < 20; i++) { let more = false; act(() => { more = E.ai.walkStep(g, id, to); }); const at = g.units.find((x) => x.id === id)?.area; if (at != null && followFoe && !lock && !g.battle) lookAt(at); if (!more || g.pendingBlow) break; render(); const mark = g.log.length; cpuActing = false; await new Promise((ok) => setTimeout(ok, 450 * cpuPace())); cpuActing = true; if (g.log.length !== mark || g.over) break; } }   // the player's own clicks stay theirs while the block walks
-      finally { cpuThinking = false; }
-    }
-    else { const run = a.run; if (a.area != null && followFoe && !lock && !g.battle) lookAt(a.area); act(() => { run(g); }); }
-  } finally { cpuActing = false; }
-  hist.clear('the computer moved');                                                                   // a player's undo never reaches back past the computer's moves
-  if ((a.label === 'end' || a.label === 'done') && !E.ai.turnOf(g, CPU_SIDE) && (cpuDid.moves || cpuDid.fights.length || cpuDid.cards)) cpuTell();   // its step is over and the move is the player's: what happened, in one line
-  render(); cpuTick();                                                                                          // its next action: a walked move ends while it is still marked busy, so no redraw would ask
-}
-/** A line at the top while the computer plays. */
-function cpuBar() { return soloBar() || (CPU_SIDE && !soloWait && !g.over && E.ai.turnOf(g, CPU_SIDE) && !rollView ? `<div class="seatbar cpu"><span class="spin" aria-hidden="true"></span><span>${esc(nm(CPU_SIDE))} (computer) is playing…</span></div>` : cpuSummary && !g.over ? `<div class="seatbar cpu told"><span>${esc(cpuSummary)}</span>${ubtn(ico('close'), () => { cpuSummary = ''; }, 'ico', false, 'Close')}</div>` : ''); }
 window.addEventListener('keydown', (e) => {
   const t = e.target as HTMLElement | null, typing = !!t?.matches?.('input,select,textarea');
   if (e.key === 'Tab') { const sheet = document.querySelector<HTMLElement>('#ui .modal > .sheet');      // Tab cycles inside an open menu instead of wandering onto the map behind it
@@ -1276,7 +1144,7 @@ function rollStage(b: E.Battle) {
   const next = structuredClone(g), before = snap(g); E.roll_step(next, next.battle!); rollFx = []; noteFx(before, next, true); rollNoted = true;
   try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* storage off */ } void push(next);          // the result is stored at once; the board shows it when the dice land
   const fresh = next.battle!.rolls.slice(n0); heldNext = next;
-  rollView = { remote: cpuActing || undefined, morale: stage === 'exploit', title: `${nm(side)} ${STAGE_NAME[stage]}`, pos: null, groups: fresh.map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : first(side) ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: fl.find((f) => f.who === r.who)?.parts ?? [] })) };
+  rollView = { morale: stage === 'exploit', title: `${nm(side)} ${STAGE_NAME[stage]}`, pos: null, groups: fresh.map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : first(side) ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: fl.find((f) => f.who === r.who)?.parts ?? [] })) };
   if (!rollView.groups.length) { rollView = null; commitRoll(); return; }
   refresh();
   const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block';
@@ -1433,7 +1301,7 @@ function drag(ev: PointerEvent, el: HTMLElement) {
 /* ---------- views ---------- */
 function topBar() {
   const tr = (g.track ?? E.VOLUME.track)[g.turn - 1], i = first(g.phasing) ? 0 : 1, pAt = PHASE_OF[g.phase], phaseLabel = g.phase === 'deploy' ? 'Set-up' : PHASES[pAt];
-  const who = g.phase === 'deploy' && !E.ai.turnOf(g, g.phasing) && E.ai.turnOf(g, other(g.phasing)) ? other(g.phasing) : g.phasing;      // set-up: the side placing its pieces now (Sicily: the Allied landing plan after the Axis garrisons)
+  const who = g.phase === 'deploy' && !placing(g.phasing) && placing(other(g.phasing)) ? other(g.phasing) : g.phasing;      // set-up: the side placing its pieces now (Sicily: the Allied landing plan after the Axis garrisons)
   return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game" aria-label="Menu, log and new game">${ico('menu')}</button><div class="c-crumbs">${g.phase === 'deploy' ? '<span class="on">Set-up</span>' : ''}${PHASES.map((s, k) => `<span class="${g.phase === 'deploy' ? '' : k === pAt ? 'on' : k < pAt ? 'done' : ''}" title="${k + 1}. ${s}">${s}</span>`).join('')}</div>
     <div class="c-stat"><span class="tp" title="Turn ${g.turn}, ${nm(who)} player turn">T${g.turn} · <b class="${who}">${nm(who).toUpperCase()}</b><i class="ph"> · ${phaseLabel.toUpperCase()}${g.phase === 'deploy' ? '' : ` <small>${pAt + 1}/8</small>`}</i></span>${online.active && online.mode === 'remote' ? `<span class="syncdot ${/NOT SAVED/.test(online.sync) ? 'bad' : /saving|connecting/.test(online.sync) ? 'wait' : 'ok'}" title="${esc(online.sync)}" aria-label="${esc(online.sync)}"></span>` : ''}${online.active && !(!online.both() && online.mySide() === g.phasing) ? `<span>YOU<b class="${online.mySide() ?? ''}">${online.both() ? 'BOTH' : (online.mySide() ?? 'WATCHING').toUpperCase()}</b></span>` : ''}${online.devSwitch() ? `<button class="ico dev" data-seat title="Developer: switch seat (${nm(P1)}, ${nm(P2)}, both, watching)" aria-label="Switch seat">${ico('swap')}<span class="bl">Seat</span></button>` : ''}${g.phase === 'admin' || g.phase === 'reinforcement' ? `<span title="Chits drawn this turn (${nm(P1)} / ${nm(P2)})">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span>` : ''}${chatBtn()}<button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="View: map layers, colours, reset the camera" aria-label="View">${ico('eye')}<span class="bl">View</span></button><button class="ico" data-modal="boxes" title="Pieces: boxes, arrivals" aria-label="Pieces">${ico('boxes')}<span class="bl">Pieces</span></button></div></div>`;
 }
@@ -1488,7 +1356,7 @@ function promptText() {
 /** 6.21-6.23: the battle set-up goes step by step: the Defender's Special Action decision, the Attacker's assets, then the Defender's. */
 function setupPrompt(b: E.Battle): string {
   const who = E.setupSide(g, b), att = who === b.attacker, last = att && b.ready?.length === 2;
-  if (who === CPU_SIDE || (online.active && !online.both() && who !== online.mySide())) return `<b>${nm(who)}</b> ${b.defSA ? 'decides on a Special Action…' : last ? 'designates the point unit…' : 'assigns assets…'}`;
+  if (online.active && !online.both() && who !== online.mySide()) return `<b>${nm(who)}</b> ${b.defSA ? 'decides on a Special Action…' : last ? 'designates the point unit…' : 'assigns assets…'}`;
   if (b.defSA) return `<b>${nm(who)}: Special Action?</b>${gx(' Reinforce or retreat before the attacker commits his assets (6.21), or go on without.')}`;
   if (last) return `<b>${nm(who)}: tap a block to make it your point unit</b>, then Begin combat.${gx(' The defender has designated his (6.24).')}`;
   return att ? `<b>${nm(who)} attacks: tap a card to add it.</b>${gx(' The defender answers after you (6.22); you pick your point unit last.')}`
@@ -1501,8 +1369,8 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
   if (g.phase === 'supply' && g.supplyPending && !b && mine(g.phasing)) { const n = E.supplyChecks(g).length; return { label: n ? `Roll ${n} supply check${n > 1 ? 's' : ''}` : 'Continue', fn: () => act(() => E.rollSupply(g)) }; }      // the one red button is the next thing to do
   if (b) {
     if (b.stage === 'setup') {
-      const who = E.setupSide(g, b), solo = !online.active || online.both(), why = VOL.blocksBegin(g);
-      if (who === CPU_SIDE || (!solo && who !== online.mySide()) || b.attPointDone || (b.ready?.includes(who) && !(who === b.attacker && b.ready.length === 2))) return null;      // the other side's step
+      const who = E.setupSide(g, b), local = !online.active || online.both(), why = VOL.blocksBegin(g);
+      if ((!local && who !== online.mySide()) || b.attPointDone || (b.ready?.includes(who) && !(who === b.attacker && b.ready.length === 2))) return null;      // the other side's step
       const go = (f: (x: E.Battle) => void) => () => act(() => { if (g.battle) f(g.battle); });            // the live battle: a remote write may have replaced the one this button was drawn for
       if (b.defSA) return { label: 'No Special Action', fn: go((x) => E.passSA(g, x)) };
       const first = who === b.attacker && !b.ready?.includes(b.attacker);
@@ -1917,7 +1785,7 @@ function modalHtml() {
     if (menuTab !== 'Game') restartAsk = false;                                                   // the restart question never waits on another tab
     const body = menuTab === 'Log' ? logHtml()
       : menuTab === 'Help' ? `${coursesOf(VOL.id).length || RULES_GAMES.includes(VOL.id) ? `<h4>Learn</h4><div class="row">${RULES_GAMES.includes(VOL.id) ? ubtn(`${ico('info')} Rules reference`, () => { void showRules(); }, '', false, 'The full rulebooks, searchable (shortcut: ?)') : ''}${coursesOf(VOL.id).map((c) => ubtn(`${ico('info')} ${esc(c.title)}`, () => { location.href = tutUrl(c.id); })).join('')}</div>` : ''}${COARSE ? '' : `<h4>Keyboard</h4><dl class="keys"><dt>Tab</dt><dd>to the map (or “Skip to the map” first)</dd><dt>← ↑ → ↓</dt><dd>move between neighbouring areas</dd><dt>Enter</dt><dd>select or move there; on a button, press it</dd><dt>N</dt><dd>next block that can move</dd><dt>Esc</dt><dd>clear the selection, close a window</dd><dt>Ctrl+Z</dt><dd>undo</dd></dl>`}`
-      : menuTab === 'Settings' ? `<div class="sgrid"><div><h4>Play</h4>${srow('Dice roll by themselves', 'decisions still wait for you', swtch(autoRoll, () => { autoRoll = !autoRoll; try { localStorage.setItem('fab-autoroll', autoRoll ? '1' : '0'); } catch { /* private mode */ } }, 'Dice roll by themselves'))}${CPU_SIDE ? srow("Computer's pace", '', `<span class="seg">${(['slow', 'normal', 'fast'] as const).map((v) => chip(v === 'slow' ? 'Slow' : v === 'normal' ? 'Normal' : 'Fast', cpuSpeed === v, () => { cpuSpeed = v; try { localStorage.setItem('fab-cpu-speed', v); } catch { /* private mode */ } }, 'How fast the computer makes its moves')).join('')}</span>`) : ''}${srow('Full explanations', 'every option and rule', swtch(guide === 'full', () => setGuide(guide === 'full' ? 'short' : 'full'), 'Full explanations'))}${noticesSupported() ? srow('My-move notices', noticesBlocked() ? 'blocked in this browser: allow notices for this site' : 'when the game is out of sight', swtch(noticesOn(), () => { void setNotices(!noticesOn(), auth.token).then((m) => { say(m); render(); }); }, 'My-move notices')) : ''}</div>
+      : menuTab === 'Settings' ? `<div class="sgrid"><div><h4>Play</h4>${srow('Dice roll by themselves', 'decisions still wait for you', swtch(autoRoll, () => { autoRoll = !autoRoll; try { localStorage.setItem('fab-autoroll', autoRoll ? '1' : '0'); } catch { /* private mode */ } }, 'Dice roll by themselves'))}${srow('Full explanations', 'every option and rule', swtch(guide === 'full', () => setGuide(guide === 'full' ? 'short' : 'full'), 'Full explanations'))}${noticesSupported() ? srow('My-move notices', noticesBlocked() ? 'blocked in this browser: allow notices for this site' : 'when the game is out of sight', swtch(noticesOn(), () => { void setNotices(!noticesOn(), auth.token).then((m) => { say(m); render(); }); }, 'My-move notices')) : ''}</div>
         <div><h4>Screen</h4>${srow('Follow the other side', 'the camera goes to their moves', swtch(followFoe, () => { followFoe = !followFoe; try { localStorage.setItem('fab-follow', followFoe ? '1' : '0'); } catch { /* private mode */ } }, 'Follow the other side'))}${srow('Camera', '', resetBtn())}${srow('Language', '', `<span class="seg notr">${LANGS.map(([l]) => chip(l.toUpperCase(), LANG === l, () => setLang(l), l === 'it' ? 'Interfaccia in italiano (i regolamenti restano in inglese)' : 'Interface in English')).join('')}</span>`)}${srow('Rules in use', rulesInUse(g.opts), '')}</div></div>`
       : menuTab === 'Admin' ? `<div class="row">${ubtn(`${ico('wand')} Sandbox`, () => { location.href = `${homeUrl()}?sandbox=1`; })}${ubtn('Update rules', () => { modal = 'rules'; })}${VOL.sides.map((sd) => ubtn(`Free ${nm(sd)} seat`, () => { void auth.freeSeat(sd); })).join('')}</div>`
       : online.mode === 'remote' ? (() => {
@@ -1929,9 +1797,8 @@ function modalHtml() {
           <p class="hint">Connection: ${esc(online.sync)}</p>
           <p class="hint">${signed ? `Signed in as <b>${esc(a!.name || a!.email)}</b>` : 'You are watching as a guest.'}</p>
           ${own && TABLE !== 'main' ? `<div class="row">${ubtn(`${ico('close')} Delete this game`, () => { void dropMatch(m ?? { id: TABLE, title: TABLE, owner: '' }); }, 'danger')}</div>` : ''}`; })()
-      : CPU_SIDE ? `<h4>Players</h4><p class="hint">You play ${nm(other(CPU_SIDE))}; the computer plays ${nm(CPU_SIDE)}.</p>`
       : `<h4>Players</h4><p class="hint">Developer table. The Seat button in the top bar switches between ${nm(P1)}, ${nm(P2)}, both and watching; turn rules are enforced for the seat you hold.</p>`;
-    const newGame = `${online.active && !online.admin && !online.both() && !CPU_SIDE ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as E.Opts['scenario']; })}">${VOL.scenarios.filter((sc) => SANDBOX || !sc.testing).map((sc) => `<option value="${sc.id}" ${newOpts.scenario === sc.id ? 'selected' : ''}>${esc(sc.name)} (${esc(sc.sub)})</option>`).join('')}</select>
+    const newGame = `${online.active && !online.admin && !online.both() ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as E.Opts['scenario']; })}">${VOL.scenarios.filter((sc) => SANDBOX || !sc.testing).map((sc) => `<option value="${sc.id}" ${newOpts.scenario === sc.id ? 'selected' : ''}>${esc(sc.name)} (${esc(sc.sub)})</option>`).join('')}</select>
         </div>${VOL.features.fuel ? `${srow('German fuel rule', '', swtch(!!newOpts.fuel, () => { newOpts.fuel = !newOpts.fuel; }, 'German fuel rule'))}` : ''}${VOL.features.optional ? optChooser(newOpts, VOL.id) : ''}${restartAsk ? `<div class="askrow" data-reveal="restart"><p>Restart and lose the current game?</p><div class="row">${ubtn('Restart now', () => { restartAsk = false; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; save(); refresh(); }, 'danger')}${ubtn('Keep playing', () => { restartAsk = false; })}</div></div>` : `<div class="row">${ubtn('Restart', () => { restartAsk = true; }, 'danger')}</div>`}`}`;
     const all = menuTab === 'Game' ? `${body}${newGame}` : body;
     return `<div class="modal"><div class="sheet menu"><h3><span class="grow">Game</span>${ubtn(`${ico('back')}<span>Leave game</span>`, () => { location.href = homeUrl(); }, 'leave', false, 'Back to the home page (the game is saved)')}<button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
@@ -1968,7 +1835,7 @@ function renderInner() {
   const sheetKey = `${modal}:${menuTab}:${piecesTab}:${piecesSide}`, keepS = sheetKey === lastSheet ? (document.querySelector<HTMLElement>(SHEET_SCROLL)?.scrollTop ?? 0) : 0;   // a menu keeps its place on every click; another menu or tab starts at the top
   const shown = new Set(Array.from(document.querySelectorAll<HTMLElement>('#ui [data-reveal]')).map((e) => e.dataset.reveal));
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = `<a class="skipmap" href="#" data-ui="${reg(() => { (document.getElementById('gl') as HTMLElement).focus(); })}">Skip to the map</a><div class="tops">${topBar()}${vpStrip(g, reg(() => { scoreOpen = true; }))}</div>` + `<div class="stage">${SANDBOX ? (SBU.st.sbOpen ? SBU.sandboxPanel() : SBU.sandboxFab()) : ''}${seatBar()}${cpuBar()}${heldBad ? heldBadBar() : ''}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${volPanel()}${mapDock()}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${SBU.hotCoverHtml()}${saPickHtml()}${altPickHtml()}${airPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} Map`, () => { endHidden = true; }) + ubtn(`${ico('dice')} Replay`, () => { void showReplay(); }, '', false, 'Watch the whole game again, step by step') + ubtn(`${ico('plus')} New game`, () => { if (SANDBOX) { SBU.sbReset({ ...g.opts }); endHidden = false; } else if (CPU) location.href = `${location.pathname}?cpu=${CPU_SIDE}${VOL.id !== 'bulge' ? `&game=${VOL.id}` : ''}&scenario=${g.opts.scenario}${VOL.features.fuel ? `&fuel=${g.opts.fuel ? 1 : 0}` : ''}${optOn(g.opts, VOL.id).length ? `&rules=${optOn(g.opts, VOL.id).map((r) => (r.key === 'bid' ? `bid:${g.opts.bid}` : r.key)).join(',')}` : ''}&new=1`; else location.href = homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}</button>${undoBtn()}${!p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
+  $('#ui').innerHTML = `<a class="skipmap" href="#" data-ui="${reg(() => { (document.getElementById('gl') as HTMLElement).focus(); })}">Skip to the map</a><div class="tops">${topBar()}${vpStrip(g, reg(() => { scoreOpen = true; }))}</div>` + `<div class="stage">${SANDBOX ? (SBU.st.sbOpen ? SBU.sandboxPanel() : SBU.sandboxFab()) : ''}${seatBar()}${heldBad ? heldBadBar() : ''}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${volPanel()}${mapDock()}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${SBU.hotCoverHtml()}${saPickHtml()}${altPickHtml()}${airPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} Map`, () => { endHidden = true; }) + ubtn(`${ico('dice')} Replay`, () => { void showReplay(); }, '', false, 'Watch the whole game again, step by step') + ubtn(`${ico('plus')} New game`, () => { if (SANDBOX) { SBU.sbReset({ ...g.opts }); endHidden = false; } else location.href = homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}</button>${undoBtn()}${!p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
   const ui = $('#ui');
   { const d = ui.querySelector<HTMLElement>('.c-dispatch'); if (d) d.scrollTop = keepD; }
   { const s = ui.querySelector<HTMLElement>(SHEET_SCROLL); if (s) s.scrollTop = keepS; lastSheet = s ? sheetKey : '';
@@ -2021,7 +1888,7 @@ let playKey: string | null = null;
 /** Faster battles: a set-up step where the side has no card it could play and none on the table, a roll with no choice before it, and the close of a finished battle happen by themselves.
  *  Real decisions (cards to add or take back, a point unit to pick, hits, retreat) still wait for the player's own confirmation; Settings > Dice OFF keeps every roll on a click. */
 let autoT = 0, autoKey = '', lastFight: number | null = null;
-const HOTSEAT = !CPU_SIDE && (!online.active || online.both());
+const HOTSEAT = !online.active || online.both();
 /** A fire roll the game makes by itself: dice on (Settings), not in a lesson, your own side's roll; in hot seat only the Phasing Player's. */
 function autoRolls(b: E.Battle) {
   if (TUTORIAL || !autoRoll || !['attArty', 'defArty', 'defFire', 'offFire'].includes(b.stage) || !allowed()) return false;
@@ -2029,7 +1896,7 @@ function autoRolls(b: E.Battle) {
   return mine(sd) && (!HOTSEAT || sd === g.phasing);
 }
 function autoBattle() {
-  const b = g.battle; if (TUTORIAL || !autoRoll || !b || rollView || cpuActing || g.over || !allowed()) return;      // the tutorials coach every step by hand
+  const b = g.battle; if (TUTORIAL || !autoRoll || !b || rollView || g.over || !allowed()) return;      // the tutorials coach every step by hand
   const p = primary(); if (!p || (p.dis && !autoRolls(b))) return;
   const nothingToAdd = (sd: E.Side) => !g.chits.some((c) => c.side === sd && c.box === 'available' && (E.isArty(c) || E.isBattleAsset(c)) && !E.canAssign(g, b, sd, c));
   const blocks = (sd: E.Side) => E.unitsIn(g, b.area, sd).filter((u) => !u.garrison).length;
@@ -2046,7 +1913,7 @@ function refresh() {
   { const ba = g.battle?.area ?? null; if (ba !== fxBattle) { if (ba != null) fxLayer.clear(); else setTimeout(() => { if (!g.battle) fxLayer.clear(); }, 2500); fxBattle = ba; } }      // a new battle clears the last one's messages; a closed battle's go after a moment to read them      // a new battle clears the last one's messages
   E.setPlayArea(g.inPlay);
   { const k = (g.inPlay ?? []).join(); if (k !== playKey) { const first = playKey === null; playKey = k; if (!first) paintBoard(); if (g.inPlay || !first) goal = homeGoal(); } }
-  SBU.hotseatSync(); cpuTick(); setTimeout(autoBattle, 0);
+  SBU.hotseatSync(); setTimeout(autoBattle, 0);
   if (online.mode === 'remote') setTimeout(driveSplit, 0);
   { const key = `${online.devSeat}|${online.mySide()}|${g.battle?.attPoint}|${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
     if (key !== tgtKey) { tgtKey = key; tgt = reinforcing ? reinforceTargets() : decisionTargets() ?? (selChit && mine(g.chits.find((x) => x.id === selChit)?.side ?? P1) ? VOL.targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: (u) => unitPic(u), areaName }) : null); } }
@@ -2138,10 +2005,10 @@ void startOnline((rg) => { applyingRemote = true; if (heldNext) commitRoll(); co
     selUnit = keep(prevG, selUnit, (x) => x.units.find((u) => u.id === selUnit)); selChit = keep(prevG, selChit, (x) => x.chits.find((c) => c.id === selChit));
     selArr = keep(prevG, selArr, (x) => [x.pendingArrivals.includes(selArr!), x.units.find((u) => u.id === selArr)?.area]);
     if (!same) selArea = null; if (!selUnit) previewArea = null; hoverArea = null; } hist.remote(prevG, g, lockOf); if (rolled) hist.clear('dice rolled'); if (followFoe && online.lastBy && online.lastBy !== online.uid && !g.battle) { const mv = g.units.find((u) => { const o = prevG.units.find((x) => x.id === u.id); return o && u.area != null && o.area !== u.area; }); if (mv) lookAt(mv.area!); } try { save(); } finally { applyingRemote = false; } refresh();
-  { const cs = g.checks ?? [], k = cs.findIndex((c) => JSON.stringify(c) === ckLast); const fresh = ckLast === 'null' ? [] : k >= 0 ? cs.slice(k + 1) : []; if (fresh.length) showChecks(fresh); } }, () => { onNet(); void soloOnNet(); syncView(); render(); }, say, () => { try { sessionStorage.setItem('fab-notice', 'That game was deleted by its creator.'); } catch { /* private mode */ } location.href = homeUrl(); });       // the table is gone: nobody stays inside it
-if (SANDBOX && SB.PRESET_KEYS.some((k) => PARAMS.has(k))) void import('../../engine/src/ai').then((AI) => {     // a rules-checklist link: a fresh table set up on the rule's situation, once (the address is cleaned so a reload keeps the edits)
-  g = SB.preset(E.newGame(undefined, cpuOpts()), PARAMS, AI.next); hist.clear(); save();
+  { const cs = g.checks ?? [], k = cs.findIndex((c) => JSON.stringify(c) === ckLast); const fresh = ckLast === 'null' ? [] : k >= 0 ? cs.slice(k + 1) : []; if (fresh.length) showChecks(fresh); } }, () => { onNet(); syncView(); render(); }, say, () => { try { sessionStorage.setItem('fab-notice', 'That game was deleted by its creator.'); } catch { /* private mode */ } location.href = homeUrl(); });       // the table is gone: nobody stays inside it
+if (SANDBOX && SB.PRESET_KEYS.some((k) => PARAMS.has(k))) {     // a rules-checklist link: a fresh table set up on the rule's situation, once (the address is cleaned so a reload keeps the edits)
+  g = SB.preset(E.newGame(undefined, addressOpts()), PARAMS); hist.clear(); save();
   const q = new URLSearchParams(location.search); for (const k of [...SB.PRESET_KEYS, 'scenario', 'rules', 'fuel']) q.delete(k); history.replaceState(null, '', `${location.pathname}?${q}`);
   refresh(); if (PARAMS.get('case')) say(`Testing ${PARAMS.get('case')}`);
-});
+}
 if (import.meta.env.DEV || DEV_FAKE || SANDBOX || TUTORIAL) Object.assign(window, { __fab: { seat: (sd: E.Side) => { tutView = sd; refresh(); }, viewMap: (mx: number, my: number, d: number, pt: number, yw: number) => { const p = toWorld(mx, my); goal = { t: new THREE.Vector3(p.x, show3d() ? REL!.h(p.x, p.z) : 0, p.z), dist: d, pitch: pt, fast: true }; yaw = yw; }, tut: () => tut, unitAt: (id: string) => { const m = pieces.children.find((o) => o.userData.unit === id || o.userData.chit === id); if (!m) return null; const r = canvas.getBoundingClientRect(), v = m.getWorldPosition(new THREE.Vector3()).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, game: () => g, setGame: (x: E.Game) => { g = x; hist.clear(); save(); refresh(); }, at: (a: number) => { const p = center(a), r = canvas.getBoundingClientRect(), v = new THREE.Vector3(p.x, 0, p.z).project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }, project: (x: number, y: number, z: number) => { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(cam); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height }; }, online, setMatches: (m: Match[]) => { matches = m; }, iconList: () => Object.keys(ICONS).map((k) => ({ k, html: ico(k) })), fxDemo: () => FX_SAMPLES.map((f) => `<div class="fx ${f.cls}" style="position:static;animation:none;margin:8px;width:max-content">${ico(f.icon)}<b>${esc(f.head)}</b><small>${esc(f.text)}</small></div>`).join(''), sheets: () => sheets(VOL), setModal: (m: typeof modal) => { modal = m; render(); }, info: () => renderer.info.memory, rel: () => ({ tris: renderer.info.render.triangles, calls: renderer.info.render.calls, trees: (REL?.props.children[0] as THREE.InstancedMesh | undefined)?.count }), board: () => boardCv.toDataURL("image/png"), view: (x: number, z: number, d: number, pt: number, yw: number) => { goal = { t: new THREE.Vector3(x, 0, z), dist: d, pitch: pt, fast: true }; yaw = yw; }, layout: () => ({ MW, MH, S, pieces: pieces.children.map((o) => ({ unit: o.userData.unit as string, x: o.position.x, z: o.position.z })) }), E, get g() { return g; }, set g(v: E.Game) { g = v; }, refresh, act, sel: (u: string, a?: number) => { selUnit = u; selArea = g.units.find((x) => x.id === u)!.area; previewArea = a ?? null; refresh(); } } });

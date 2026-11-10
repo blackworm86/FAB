@@ -9,25 +9,6 @@
     },
     "users": {
       "$uid": {
-        "soloIndex": {
-          ".read": "auth != null && auth.uid === $uid",
-          "$id": {
-            ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && auth.uid === $uid",
-            ".validate": "$id.length <= 40 && newData.hasChildren(['id', 'game', 'cpu', 'title', 'rev', 'updated']) && newData.child('title').isString() && newData.child('title').val().length <= 80 && newData.child('rev').isNumber() && newData.child('id').val() === $id"
-          }
-        },
-        "solo": {
-          ".read": "auth != null && auth.uid === $uid",
-          "$id": {
-            ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && auth.uid === $uid",
-            ".validate": "$id.length <= 40",
-            "f": { "$k": { ".validate": "newData.isString() && newData.val().length <= 200000" } },
-            "units": { "$k": { ".validate": "newData.isString() && newData.val().length <= 4000" } },
-            "chits": { "$k": { ".validate": "newData.isString() && newData.val().length <= 2000" } },
-            "rev": { ".validate": "newData.isNumber()" },
-            "$other": { ".validate": false }
-          }
-        },
         "games": {
           ".read": "auth != null && auth.uid === $uid",
           "$id": {

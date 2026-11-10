@@ -643,7 +643,7 @@ export function playRebuild(g: Game, id: string, unitId: string, area: number) {
 }
 /** 4.21: the eliminated assets an event may bring back (never garrisons, Task Forces or bid fuel: 16.21, 16.22, 18.2). */
 export const alternateCandidates = (g: Game, side: Side) => boxOf(g, side, 'eliminated').filter((x) => isAsset(x) && x.kind !== 'garrison' && x.kind !== 'task_force' && !x.bid);
-/** 4.21: spend an event to put two eliminated assets of the owner's choice (`ids`) back in the cup; without `ids`, a fixed priority picks them (the computer, tests). */
+/** 4.21: spend an event to put two eliminated assets of the owner's choice (`ids`) back in the cup; without `ids`, a fixed priority picks them (tests). */
 export function alternateUse(g: Game, id: string, ids?: string[]) {
   needAdmin(g); const c = chit(g, id);
   if (c.box !== 'available' || isAsset(c) || c.kind === 'sa_block') throw new Error('not an event');
