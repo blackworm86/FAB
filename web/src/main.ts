@@ -38,11 +38,12 @@ import { initTutorial } from './tutorial';
 import { setRulesContext, showRules, linkRules, RULES_GAMES } from './rules-link';
 import { courseFor, coursesOf } from './tutorial-script';
 import { loadRelief, type Relief } from './relief';
+import { LAB_SIDE, lab, labHuman, labStep } from './lab';
 
 /* ---------- which game this page shows ---------- */
 const PARAMS = new URLSearchParams(location.search), GAME_PARAM = PARAMS.get('game');
 const TUT = TUTORIAL ? courseFor(PARAMS.get('tutorial')) : null;                                         // the tutorial course this page runs (docs/TUTORIAL.md)
-const KEY0 = TUT ? `fab-tutorial-${TUT.id}` : SANDBOX ? 'fab-sandbox' : TABLE === 'main' ? 'fab-demo2' : `fab-demo2-${TABLE}`, KEY = GAME_PARAM && GAME_PARAM !== 'bulge' ? `${KEY0}-${GAME_PARAM}` : KEY0;
+const KEY0 = TUT ? `fab-tutorial-${TUT.id}` : LAB_SIDE ? `fab-lab-${LAB_SIDE}` : SANDBOX ? 'fab-sandbox' : TABLE === 'main' ? 'fab-demo2' : `fab-demo2-${TABLE}`, KEY = GAME_PARAM && GAME_PARAM !== 'bulge' ? `${KEY0}-${GAME_PARAM}` : KEY0;
 function load(): E.Game | null { try { const s = localStorage.getItem(KEY); if (!s) return null; const x = JSON.parse(s); return x.chits && x.markers && x.greif && x.roadblocks && x.pendingArrivals && x.fwOwner && Array.isArray(x.recover) ? x : null; } catch { return null; } }
 /** The volume (docs/design/one-engine.md): the address says which game, else the game saved for this table, else The Bulge. A shared table of another game reloads the page with its game. */
 const VOL = useVolume(TUT ? TUT.game : GAME_PARAM ?? load()?.game ?? 'bulge');
@@ -472,9 +473,9 @@ const layers = (() => { const d = { numbers: true, tdn: true, vp: true, names: t
 const saveLayers = () => { try { localStorage.setItem('fab-layers', JSON.stringify(layers)); localStorage.setItem('fab-tint', tint); } catch { /* private mode */ } };
 /** Whose side of the table we look from: each player sits at their own edge of the printed map (Bulge: German at the bottom; Golan: Israeli at the bottom, by the lakes); a shared screen looks from the bottom. */
 let tutView: E.Side | null = null;                                                                             // the tutorial looks from the side its lesson's player plays
-const viewSide = (): E.Side => (online.active && !online.both() && online.mySide() ? online.mySide()! : tutView ?? VOL.bottom);
+const viewSide = (): E.Side => (labHuman() ?? (online.active && !online.both() && online.mySide() ? online.mySide()! : tutView ?? VOL.bottom));
 const farSide = () => viewSide() !== VOL.bottom;
-const fogSide = (): E.Side | 'spectator' | null => (online.active && !online.both() ? online.mySide() ?? 'spectator' : null);
+const fogSide = (): E.Side | 'spectator' | null => (labHuman() ?? (online.active && !online.both() ? online.mySide() ?? 'spectator' : null));
 const seen = (u: E.Unit) => E.visibleTo(g, u, fogSide());
 /** Sicily's untried garrisons (15.3) stand face down for both players, the owner too, until a battle reveals them. */
 const faceDown = (u: E.Unit) => !seen(u) || (!!u.untried && u.up !== u.area);
@@ -712,9 +713,10 @@ const actorNow = () => E.actorOf(g);
 const placing = (s: E.Side) => g.units.some((u) => u.box === 'deploy' && u.side === s)
   || (g.game === 'golan73' && ((s === 'israeli' && !!E.golan.state(g).minesLeft) || (E.golan.setupReserves(g, s).all && E.golan.reservesLeft(g, s) > 0) || (s === 'syrian' && E.golan.alowdaRaidAreas(g).length > 0)))
   || (g.game === 'sicily' && s === 'allied' && !E.sicily.state(g).plan);
-const allowed = () => (!heldBad && (!online.active || online.both() || (online.mySide() != null && (actorNow() === 'both' || actorNow() === online.mySide()))));   // a held-back change waits for a decision first
+let labActing = false;                                                                         // the experimental computer's own action (lab.ts)
+const allowed = () => labActing || (LAB_SIDE ? !heldBad && (actorNow() === 'both' || actorNow() === labHuman()) : (!heldBad && (!online.active || online.both() || (online.mySide() != null && (actorNow() === 'both' || actorNow() === online.mySide())))));   // a held-back change waits for a decision first
 /** In a shared-screen game every side is yours; online only your own seat's pieces. */
-const mine = (s: E.Side) => !online.active || online.both() || online.mySide() === s;
+const mine = (s: E.Side) => (LAB_SIDE ? s === labHuman() : !online.active || online.both() || online.mySide() === s);
 const notYou = () => online.mySide() == null ? 'You are watching. Take a seat in the menu to play.' : `Wait for the ${nm(actorNow() as E.Side)} player.`;
 /* ---------- what a hit did: step losses, eliminations, retreats, field works ---------- */
 let battleFx: Fx[] = [], rollFx: Fx[] = [];
@@ -1712,6 +1714,7 @@ function rulesInUse(o: Partial<E.Opts>, extra = true): string {
 }
 /** A slim bar over the table when you are not seated, or while you wait for an opponent. */
 function seatBar() {
+  if (LAB_SIDE) return `<div class="seatbar"><span>${ico('info')} Experimental: the computer plays ${nm(LAB_SIDE)}${lab.thinking ? ' · thinking…' : ''}${lab.reason ? ` — <small>${esc(lab.reason)}</small>` : ''}</span></div>`;
   if (online.mode !== 'remote' || !online.hasAccounts) return '';
   if (online.error) return `<div class="seatbar err"><span>${esc(online.error)}</span>${ubtn('OK', () => { online.error = ''; })}</div>`;
   const a = online.account, me = online.mySide(), s = online.seats, title = matches.find((m) => m.id === TABLE)?.title ?? 'a game of FAB';
@@ -1914,6 +1917,7 @@ function refresh() {
   E.setPlayArea(g.inPlay);
   { const k = (g.inPlay ?? []).join(); if (k !== playKey) { const first = playKey === null; playKey = k; if (!first) paintBoard(); if (g.inPlay || !first) goal = homeGoal(); } }
   SBU.hotseatSync(); setTimeout(autoBattle, 0);
+  if (LAB_SIDE) setTimeout(() => labStep(() => g, (f) => { labActing = true; try { act(f); } finally { labActing = false; } }, render), 0);
   if (online.mode === 'remote') setTimeout(driveSplit, 0);
   { const key = `${online.devSeat}|${online.mySide()}|${g.battle?.attPoint}|${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
     if (key !== tgtKey) { tgtKey = key; tgt = reinforcing ? reinforceTargets() : decisionTargets() ?? (selChit && mine(g.chits.find((x) => x.id === selChit)?.side ?? P1) ? VOL.targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: (u) => unitPic(u), areaName }) : null); } }

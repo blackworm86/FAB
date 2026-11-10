@@ -1,4 +1,5 @@
 // Every player the measuring tool can run, by name, older versions included (the hall of fame).
+import { commanderPlayer } from './commander';
 import { doctrinePlayer } from './doctrine';
 import { randomPlayer, rng, type Player } from './random';
 
@@ -8,6 +9,7 @@ const noisy = (base: Player, eps: number, seed: number): Player => { const r = r
 export const PLAYERS: Record<string, (seed: number) => Player> = {
   random: (seed) => randomPlayer(seed),
   doctrine: () => doctrinePlayer(),
+  commander: (seed) => commanderPlayer(seed, 2000),
   'doctrine-10': (seed) => noisy(doctrinePlayer(), 0.1, seed),
   'doctrine-30': (seed) => noisy(doctrinePlayer(), 0.3, seed),
   'doctrine-60': (seed) => noisy(doctrinePlayer(), 0.6, seed),
