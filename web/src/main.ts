@@ -1838,7 +1838,7 @@ function seatBar() {
 }
 const modChips = (parts: [string, number][]) => parts.map(([w, v]) => `<span class="m2 ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}" role="button" tabindex="0" data-ui="${reg(() => say(`${v > 0 ? '+' : '−'}${Math.abs(v)}: ${w}`, true))}" title="${esc(w)}" aria-label="${esc(`${v > 0 ? 'plus' : 'minus'} ${Math.abs(v)}, ${w}`)}">${ico(modIcon(w))}${v > 0 ? '+' : v < 0 ? '−' : ''}${v ? Math.abs(v) : ''}${modWord(w) ? ` <small>${modWord(w)}</small>` : ''}</span>`).join('');
 /** A toggle chip. With `icon` the icon replaces the tick; with an empty label it is icon-only and `title` names it. */
-const relayer = () => { saveLayers(); paintBoard(); paintAreas(); };
+const relayer = () => { saveLayers(); paintBoard(); paintAreas(); badges = g.battle ? [] : badgeList(); syncBadges(); };      // the source labels come and go with the Supply layer
 /** The camera takes in all the areas a side holds (the supply colour then always shows something). */
 /** Where a full-map game opens: the middle of the blocks on the map (the front), so no game opens on its empty margin. */
 function openingTarget() {
