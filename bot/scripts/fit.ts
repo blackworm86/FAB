@@ -33,14 +33,15 @@ const loss = (p: number, y: number) => -(y * Math.log(Math.max(p, 1e-6)) + (1 - 
 const perGame = (p: (x: number[]) => number) => test.map((g) => { const y = label(g), ps = g.rows.map((r) => p(r.x));
   return { loss: ps.reduce((t, q) => t + loss(q, y), 0) / ps.length, right: y === 0.5 ? NaN : ps.filter((q) => (q > 0.5) === (y === 1)).length / ps.length, early: y === 0.5 ? NaN : +((p(g.rows[0].x) > 0.5) === (y === 1)) }; });
 const meanMargin = (xs: number[]) => { xs = xs.filter((x) => !Number.isNaN(x)); const m = xs.reduce((a, b) => a + b, 0) / xs.length, sd = Math.sqrt(xs.reduce((a, x) => a + (x - m) ** 2, 0) / (xs.length - 1)); return `${m.toFixed(3)} ± ${(1.96 * sd / Math.sqrt(xs.length)).toFixed(3)}`; };
+const decided = test.filter((g) => g.winner), testRate = decided.filter((g) => g.winner === 'german').length / decided.length, majority = Math.max(testRate, 1 - testRate);   // always naming the side that won most unseen games
 const J = perGame(judge.p), V = perGame(vpOnly.p), B = perGame(() => base);
 const byTurn = Object.fromEntries([1, 2, 3, 4, 5].map((t) => { const rows = test.flatMap((g) => g.rows.filter((r) => r.turn === t).map((r) => ({ y: label(g), p: judge.p(r.x), v: vpOnly.p(r.x) }))).filter((r) => r.y !== 0.5);
-  return [`turn ${t}`, { judge: `${Math.round(100 * rows.filter((r) => (r.p > 0.5) === (r.y === 1)).length / rows.length)}%`, vpOnly: `${Math.round(100 * rows.filter((r) => (r.v > 0.5) === (r.y === 1)).length / rows.length)}%`, chance: `${Math.round(100 * Math.max(base, 1 - base))}%` }]; }));
+  return [`turn ${t}`, { judge: `${Math.round(100 * rows.filter((r) => (r.p > 0.5) === (r.y === 1)).length / rows.length)}%`, vpOnly: `${Math.round(100 * rows.filter((r) => (r.v > 0.5) === (r.y === 1)).length / rows.length)}%`, chance: `${Math.round(100 * majority)}%` }]; }));
 const report = {
-  games: { train: train.length, test: test.length }, positions: { train: train.reduce((t, g) => t + g.rows.length, 0), test: test.reduce((t, g) => t + g.rows.length, 0) }, germanWinRate: +base.toFixed(3),
+  games: { train: train.length, test: test.length }, positions: { train: train.reduce((t, g) => t + g.rows.length, 0), test: test.reduce((t, g) => t + g.rows.length, 0) }, germanWinRate: { train: +base.toFixed(3), unseen: +testRate.toFixed(3) },
   unseenGames: { logLoss: { judge: meanMargin(J.map((x) => x.loss)), vpOnly: meanMargin(V.map((x) => x.loss)), chance: meanMargin(B.map((x) => x.loss)) },
     lossGainOverChance: meanMargin(J.map((x, i) => B[i].loss - x.loss)), lossGainOverVpOnly: meanMargin(J.map((x, i) => V[i].loss - x.loss)),
-    favouriteWins: { judge: meanMargin(J.map((x) => x.right)), vpOnly: meanMargin(V.map((x) => x.right)), chance: Math.max(base, 1 - base).toFixed(3) },
+    favouriteWins: { judge: meanMargin(J.map((x) => x.right)), vpOnly: meanMargin(V.map((x) => x.right)), chance: majority.toFixed(3) },
     fromTheFirstPosition: { judge: meanMargin(J.map((x) => x.early)), vpOnly: meanMargin(V.map((x) => x.early)) }, byTurn },
   strongestFacts: names.map((n, j) => [n, +judge.w[j].toFixed(3)] as const).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 12),
 };

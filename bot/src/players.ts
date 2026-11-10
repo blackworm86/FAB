@@ -10,4 +10,5 @@ export const PLAYERS: Record<string, (seed: number) => Player> = {
   doctrine: () => doctrinePlayer(),
   'doctrine-10': (seed) => noisy(doctrinePlayer(), 0.1, seed),
   'doctrine-30': (seed) => noisy(doctrinePlayer(), 0.3, seed),
+  'doctrine-60': (seed) => noisy(doctrinePlayer(), 0.6, seed),
 };

@@ -7,7 +7,7 @@ import { PLAYERS } from '../src/players';
 import { rng } from '../src/random';
 import { onAllCores } from './pool';
 
-const MIX = ['random', 'doctrine', 'doctrine-10', 'doctrine-30'];
+const MIX = ['doctrine', 'doctrine-10', 'doctrine-30', 'doctrine-60'];   // random Germans almost never win: games too one-sided to learn from
 type Game = { seed: number; german: string; allied: string; winner: string | null; rows: { turn: number; seat: string; x: number[] }[] };   // x: the values of features(), in its order
 
 const args = process.argv.slice(2).filter((a) => a !== '--');
