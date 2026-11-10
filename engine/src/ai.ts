@@ -464,7 +464,7 @@ function movement(g: Game, side: Side, level: Level): Action | null {
       const a = o.area, enemy = E.unitsIn(g, a, foe).length > 0, w = worth(g, a, side); let s = 0;
       if (enemy) {
         if (g.phase === 'reaction' && !E.contested(g, a)) continue;
-        const others = (canReach.get(a) ?? []).filter((x) => x.id !== u.id && E.blocks(g, a, side).length + 1 < (CUR.stackLimit?.(g, a) ?? 2)).slice(0, 1);
+        const others = (canReach.get(a) ?? []).filter((x) => x.id !== u.id).sort((x, y) => val(g, y, side) - val(g, x, side)).slice(0, (CUR.stackLimit?.(g, a) ?? 2) - E.blocks(g, a, side).length > 1 ? 1 : 0);   // the strongest block that can still join
         const ex = exchange(g, a, side, g.phase !== 'reaction', [u, ...others.map((x) => x)]);
         const ratio = ex.mine / (ex.theirs + 0.3), def = steps(g, a, foe, side);
         if (g.phase === 'reaction') s = (w + 1) * Math.min(1.5, ratio) * 0.8;                              // reinforcing a defence
