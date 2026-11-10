@@ -387,7 +387,7 @@
   "with fuel ·": "con carburante ·",
   "minimum move ·": "movimento minimo ·",
   "over a block: it can still move": "su un blocco: può ancora muovere",
-  "Camera": "Camera",
+  "Camera": "Visuale",
   "Reset the camera": "Reimposta la camera",
   "Area numbers and entry letters": "Numeri delle aree e lettere d'ingresso",
   "Numbers": "Numeri",
@@ -3429,7 +3429,24 @@
   "all disordered, no losses": "tutti in disordine, nessuna perdita",
   "1 hit fewer, leave disordered": "1 colpo in meno, esce in disordine",
   "1 hit fewer, all disordered": "1 colpo in meno, tutti in disordine",
-  "the Germans": "i Tedeschi"
+  "the Germans": "i Tedeschi",
+  "Dice roll by themselves": "Dadi automatici",
+  "decisions still wait for you": "le decisioni aspettano sempre te",
+  "Computer's pace": "Ritmo del computer",
+  "Full explanations": "Spiegazioni complete",
+  "every option and rule": "ogni opzione e regola",
+  "My-move notices": "Avvisi del mio turno",
+  "when the game is out of sight": "quando il gioco non è in vista",
+  "blocked in this browser: allow notices for this site": "bloccati in questo browser: consenti gli avvisi per questo sito",
+  "Screen": "Schermo",
+  "Follow the other side": "Segui l'altra parte",
+  "the camera goes to their moves": "la telecamera va alle sue mosse",
+  "Back to the home page (the game is saved)": "Torna alla pagina iniziale (la partita è salvata)",
+  "Printed on the map": "Stampato sulla mappa",
+  "Area numbers": "Numeri delle aree",
+  "and entry letters": "e lettere d'ingresso",
+  "terrain defence": "difesa del terreno",
+  "Board": "Tabellone"
  },
  "patterns": [
   [
@@ -9103,6 +9120,10 @@
   [
    "(\\d+) rolled: the first is already taken",
    "$1 tirati: il primo è già assegnato"
+  ],
+  [
+   "You play (.+); the computer plays (.+)\\.",
+   "Giochi con $1; il computer gioca con $2."
   ]
  ],
  "html": {}
