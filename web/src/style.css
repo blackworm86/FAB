@@ -1114,3 +1114,5 @@ body:has(#ui .modal) #leaders, body:has(#ui .modal) #fx, body:has(#rules) #leade
 @media (min-width: 701px) { .dundo span { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.2; text-align: left; } }      /* "Undo: …" on two lines instead of cut */
 /* the Pieces window: chits large enough to read their printed name */
 #ui .modal .pcgrid { gap: 8px !important; } #ui .modal .pcgrid .pc { width: 72px !important; height: 72px !important; }
+.log .ll, .feed .fl2 { display: flex; align-items: baseline; gap: 2px; } .stag { flex: none; } .lt { display: block; min-width: 0; } .lt::first-letter { text-transform: uppercase; }      /* log lines start with a capital (engine lines are written lower-case) */
+.maplegend .ar { font: 600 15px var(--sf); letter-spacing: -2px; }

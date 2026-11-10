@@ -272,7 +272,13 @@ const pieces = new THREE.Group(); scene.add(pieces);
 const labelTex = new Map<string, THREE.Texture>();
 /** Piece pictures are decoded a few per frame, so the first load does not freeze the phone; a texture shows as soon as its picture is ready. */
 const texQueue: [THREE.Texture, string][] = [];
-function pumpTextures() { for (let n = 0; n < 6 && texQueue.length; n++) { const [t, src] = texQueue.shift()!; const im = new Image(); im.onload = () => { t.image = im; t.needsUpdate = true; lastInput = performance.now(); }; im.src = src; } }
+function pumpTextures() { for (let n = 0; n < 6 && texQueue.length; n++) { const [t, src] = texQueue.shift()!; const im = new Image(); im.onload = () => { t.image = im; t.needsUpdate = true; for (const m of texWait.get(t) ?? []) { m.map = t; m.color.set(0xffffff); m.needsUpdate = true; } texWait.delete(t); lastInput = performance.now(); }; im.src = src; } }
+/** A face whose picture is still loading shows the plain colour under it (wood, or the chit's ivory), not black; the picture goes on when it arrives. */
+const texWait = new Map<THREE.Texture, THREE.MeshStandardMaterial[]>();
+function faceMat(t: THREE.Texture, color: THREE.ColorRepresentation, roughness: number) {
+  if (t.image) return new THREE.MeshStandardMaterial({ map: t, roughness });
+  const m = new THREE.MeshStandardMaterial({ color, roughness }); texWait.set(t, [...(texWait.get(t) ?? []), m]); return m;
+}
 const svgTex = (key: string, svg: string) => { if (!labelTex.has(key)) { const t = new THREE.Texture(); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; texQueue.push([t, 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)]); labelTex.set(key, t); } return labelTex.get(key)!; };
 
 function block(u: E.Unit, hidden = false) {
@@ -280,10 +286,10 @@ function block(u: E.Unit, hidden = false) {
   const w = 1.6, h = 1.6, d = 0.8;                                    // 16 x 16 x 8 mm block
   const wood = new THREE.MeshStandardMaterial({ color: VOL.wood[VOL.cssSide(u)] ?? (VOL.cssSide(u) === 'british' ? 0x3f6fb8 : VOL.wood[u.side]), roughness: 0.75 });      // the wood by the block's class (Sicily: its nationality), else by its side
   if (u.garrison) {
-    const chit = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new RoundedBoxGeometry(1.43, 0.12, 1.43, 2, 0.1), [chit, chit, new THREE.MeshStandardMaterial({ map: svgTex(u.id, VOL.unitSvg(u, g)), roughness: 0.7 }), chit, chit, chit]);      // a counter, like the other chits // 9/16 in chit
+    const chit = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new RoundedBoxGeometry(1.43, 0.12, 1.43, 2, 0.1), [chit, chit, faceMat(svgTex(u.id, VOL.unitSvg(u, g)), 0xd9d4c4, 0.7), chit, chit, chit]);      // a counter, like the other chits // 9/16 in chit
     m.position.y = 0.06; m.castShadow = true; m.rotation.y = viewRot(); return m;
   }
-  const face = hidden ? wood : new THREE.MeshStandardMaterial({ map: svgTex(`${u.id}-${u.str}`, VOL.unitSvg(u, g)), roughness: 0.6 });   // upright blocks show their blank back to the enemy
+  const face = hidden ? wood : faceMat(svgTex(`${u.id}-${u.str}`, VOL.unitSvg(u, g)), wood.color, 0.6);   // upright blocks show their blank back to the enemy
   const m = new THREE.Mesh(flat ? new THREE.BoxGeometry(w, d, h) : new THREE.BoxGeometry(w, h, d), [wood, wood, wood, wood, face, wood]); m.rotation.y = viewRot();
   m.position.y = (flat ? d : h) / 2; m.castShadow = true;
   return m;
@@ -313,7 +319,7 @@ function tag(text: string, bg: string, size = 1.1) {
 const CHIT = 1.43;
 /** A cardboard counter lying on the board: the chit's own printed art on a thin rounded square. */
 function chit3d(c: E.Chit) {
-  const edge = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new RoundedBoxGeometry(CHIT, 0.12, CHIT, 2, 0.1), [edge, edge, new THREE.MeshStandardMaterial({ map: svgTex('chit:' + c.id, VOL.chitSvg(c)), roughness: 0.7 }), edge, edge, edge]);
+  const edge = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new RoundedBoxGeometry(CHIT, 0.12, CHIT, 2, 0.1), [edge, edge, faceMat(svgTex('chit:' + c.id, VOL.chitSvg(c)), 0xd9d4c4, 0.7), edge, edge, edge]);
   m.castShadow = true; m.position.y = 0.06; m.rotation.y = viewRot(); return m;
 }
 /** The outline of an area pushed outwards by `d` (cm), as a flat ribbon of width `w` lying on the board. */
@@ -632,7 +638,7 @@ function placeCam() { const hx = MW / (2 * S), hz = MH / (2 * S); target.x = Mat
   cam.position.set(target.x + dist * Math.sin(yaw) * Math.cos(pitch), dist * Math.sin(pitch), target.z + dist * Math.cos(yaw) * Math.cos(pitch)); cam.lookAt(target); }
 const ptrs = new Map<number, [number, number]>(); let moved = 0, pinch = 0;
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-canvas.addEventListener('pointerdown', (e) => { goal = null; canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; pinch = 0; });
+canvas.addEventListener('pointerdown', (e) => { goal = null; camTouched = true; canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; pinch = 0; });
 canvas.addEventListener('pointermove', (e) => {
   const p = ptrs.get(e.pointerId); if (!p) return; ptrs.set(e.pointerId, [e.clientX, e.clientY]);
   if (ptrs.size === 2) { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch) dist = clampDist(dist * pinch / d); pinch = d; moved = 99; return; }
@@ -642,7 +648,7 @@ canvas.addEventListener('pointermove', (e) => {
 });
 canvas.addEventListener('pointerup', (e) => { ptrs.delete(e.pointerId); if (moved < 6) click(e); });
 canvas.addEventListener('pointercancel', (e) => ptrs.delete(e.pointerId));
-canvas.addEventListener('wheel', (e) => { goal = null; e.preventDefault(); dist = clampDist(dist * Math.exp(e.deltaY * 0.0012)); }, { passive: false });
+canvas.addEventListener('wheel', (e) => { goal = null; camTouched = true; e.preventDefault(); dist = clampDist(dist * Math.exp(e.deltaY * 0.0012)); }, { passive: false });
 
 const ray = new THREE.Raycaster();
 function pick(e: PointerEvent) {
@@ -1872,14 +1878,14 @@ function layersHtml() {
   const lay = (k: 'numbers' | 'tdn' | 'vp' | 'names', icon: string, title: string, label = '') => chip(label, layers[k], () => { layers[k] = !layers[k]; relayer(); }, title, icon);
   return `<div class="modal"><div class="sheet slim"><h3>${ico('eye')} View <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
     <h4>Printed</h4><div class="chips">${lay('numbers', 'hash', 'Area numbers and entry letters', 'Numbers')}${lay('tdn', 'tree', 'Terrain defence number', 'TDN')}${lay('vp', 'star', 'Victory points', 'VP')}${lay('names', 'text', 'Place names', 'Names')}</div>
-    <h4>Map key</h4><div class="mapkey"><span><i style="background:#c8e86a"></i>Can go there</span><span><i style="background:#e7b04a"></i>Must stop · costs a Special Action · selected</span><span><i class="fuel"></i>Uses fuel</span><span><i style="background:#d1432f"></i>Must fight</span><span><i style="background:transparent;border:2px solid #d1432f"></i>May fight</span><span><i class="nosupkey"></i>Out of supply</span><span><b class="ar" style="color:#c8e86a">━▶</b>Move · <b class="ar" style="color:#e7b04a">━▶</b>with fuel · <b class="ar" style="color:#c9ccd2">━▶</b>minimum move · <b class="ar" style="color:#ddd7b5">━▶</b>strategic · <b class="ar" style="color:#8a8a80">━╳</b>blown bridge</span><span>${ico('back')}<small>over a block: it can still move</small></span></div>${mapChips}<h4>Camera</h4><div class="row"><button data-home>${ico('home')} Reset the camera</button></div></div></div>`;
+    ${mapChips}<h4>Camera</h4><div class="row"><button data-home>${ico('home')} Reset the camera</button></div></div></div>`;
 }
 /** The game log, newest first, grouped by turn; each line tinted by the side it concerns. */
 /** A log line with its side prefix (GE / AL) as a coloured tag: side shown by colour and name. */
 const TAGRE = VOL.sides.map((s) => VOL.tag[s]).join('|'), sideByTag = (t: string) => VOL.sides.find((s) => VOL.tag[s] === t || VOL.sideName[s] === t) ?? '';
 /** Engine log wording for the eye: side ids as names (german → German), and a real plural for hit(s). */
 const tidyLog = (x: string) => x.replace(new RegExp(`: (${VOL.sides.join('|')}) `, 'g'), (_, sd: string) => `: ${nm(sd)} `).replace(/(\d+) hit\(s\)/g, (_, n: string) => `${n} hit${n === '1' ? '' : 's'}`);
-const sideTag = (x0: string) => { const x = tidyLog(x0); const m = new RegExp(`^(${TAGRE})\\b ?`).exec(x); return m ? `<b class="stag ${sideByTag(m[1])}">${m[1]}</b> ${esc(x.slice(m[0].length))}` : esc(x); };
+const sideTag = (x0: string) => { const x = tidyLog(x0); const m = new RegExp(`^(${TAGRE})\\b ?`).exec(x); return m ? `<b class="stag ${sideByTag(m[1])}">${m[1]}</b> <span class="lt">${esc(x.slice(m[0].length))}</span>` : `<span class="lt">${esc(x)}</span>`; };
 /** The game log, newest first: a heading per turn, a smaller one per step, each line with its side tag (the step is in the heading, not on the line). */
 function logHtml() {
   const groups: { turn: string; steps: { step: string; lines: string[] }[] }[] = [];
@@ -1901,7 +1907,7 @@ function modalHtml() {
     if (menuTab !== 'New game') restartAsk = false;                                                   // the restart question never waits on another tab
     const body = menuTab === 'Log' ? logHtml()
       : menuTab === 'Help' ? `${coursesOf(VOL.id).length || RULES_GAMES.includes(VOL.id) ? `<h4>Learn</h4><div class="row">${RULES_GAMES.includes(VOL.id) ? ubtn(`${ico('info')} Rules reference`, () => { void showRules(); }, '', false, 'The full rulebooks, searchable (shortcut: ?)') : ''}${coursesOf(VOL.id).map((c) => ubtn(`${ico('info')} ${esc(c.title)}`, () => { location.href = tutUrl(c.id); })).join('')}</div>` : ''}<h4>Keyboard</h4><dl class="keys"><dt>Tab</dt><dd>to the map (or “Skip to the map” first)</dd><dt>← ↑ → ↓</dt><dd>move between neighbouring areas</dd><dt>Enter</dt><dd>select or move there; on a button, press it</dd><dt>N</dt><dd>next block that can move</dd><dt>Esc</dt><dd>clear the selection, close a window</dd><dt>Ctrl+Z</dt><dd>undo</dd></dl>`
-      : menuTab === 'Settings' ? `<h4>Dice</h4><div class="row">${ubtn(`<span class="sw ${autoRoll ? 'on' : ''}">${autoRoll ? 'ON' : 'OFF'}</span> Dice move on by themselves (decisions still wait for you)`, () => { autoRoll = !autoRoll; try { localStorage.setItem('fab-autoroll', autoRoll ? '1' : '0'); } catch { /* private mode */ } }, autoRoll ? 'on' : '')}</div><h4>Rules in use</h4><p>${rulesInUse(g.opts)}</p><h4>Map</h4><div class="row">${ubtn(`${ico('layers')} Map layers`, () => { modal = 'layers'; })}${ubtn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Explanations</h4><div class="row">${ubtn(`<span class="sw ${guide === 'full' ? 'on' : ''}">${guide === 'full' ? 'ON' : 'OFF'}</span> Full explanations of each option and rule`, () => setGuide(guide === 'full' ? 'short' : 'full'), guide === 'full' ? 'on' : '')}</div><h4>Opponent</h4>${CPU_SIDE ? `<div class="chips">${(['slow', 'normal', 'fast'] as const).map((v) => chip(v === 'slow' ? 'Slow' : v === 'normal' ? 'Normal pace' : 'Fast', cpuSpeed === v, () => { cpuSpeed = v; try { localStorage.setItem('fab-cpu-speed', v); } catch { /* private mode */ } }, 'How fast the computer makes its moves')).join('')}</div>` : ''}<div class="row">${ubtn(`<span class="sw ${followFoe ? 'on' : ''}">${followFoe ? 'ON' : 'OFF'}</span> Point the camera at the other player's moves`, () => { followFoe = !followFoe; try { localStorage.setItem('fab-follow', followFoe ? '1' : '0'); } catch { /* private mode */ } }, followFoe ? 'on' : '')}</div><h4>Language</h4><div class="chips notr">${LANGS.map(([l, n]) => chip(n, LANG === l, () => setLang(l), l === 'it' ? 'Interfaccia in italiano (i regolamenti restano in inglese)' : 'Interface in English')).join('')}</div>${noticesSupported() ? `<h4>Notices</h4><div class="row">${ubtn(`<span class="sw ${noticesOn() ? 'on' : ''}">${noticesOn() ? 'ON' : 'OFF'}</span> Tell me when it is my move while the game is out of sight`, () => { void setNotices(!noticesOn(), auth.token).then((m) => { say(m); render(); }); }, noticesOn() ? 'on' : '', false, noticesBlocked() ? 'Blocked in this browser: allow notices for this site in its settings' : 'A system notice when the other player hands you the move (this device only)')}</div>` : ''}`
+      : menuTab === 'Settings' ? `<h4>Dice</h4><div class="row">${ubtn(`<span class="sw ${autoRoll ? 'on' : ''}">${autoRoll ? 'ON' : 'OFF'}</span> Dice move on by themselves (decisions still wait for you)`, () => { autoRoll = !autoRoll; try { localStorage.setItem('fab-autoroll', autoRoll ? '1' : '0'); } catch { /* private mode */ } }, autoRoll ? 'on' : '')}</div><h4>Rules in use</h4><p>${rulesInUse(g.opts)}</p><h4>Map</h4><div class="row">${ubtn(`${ico('home')} Reset view`, () => { document.querySelector<HTMLElement>('[data-home]')?.click(); })}</div><h4>Explanations</h4><div class="row">${ubtn(`<span class="sw ${guide === 'full' ? 'on' : ''}">${guide === 'full' ? 'ON' : 'OFF'}</span> Full explanations of each option and rule`, () => setGuide(guide === 'full' ? 'short' : 'full'), guide === 'full' ? 'on' : '')}</div><h4>Opponent</h4>${CPU_SIDE ? `<div class="chips">${(['slow', 'normal', 'fast'] as const).map((v) => chip(v === 'slow' ? 'Slow' : v === 'normal' ? 'Normal pace' : 'Fast', cpuSpeed === v, () => { cpuSpeed = v; try { localStorage.setItem('fab-cpu-speed', v); } catch { /* private mode */ } }, 'How fast the computer makes its moves')).join('')}</div>` : ''}<div class="row">${ubtn(`<span class="sw ${followFoe ? 'on' : ''}">${followFoe ? 'ON' : 'OFF'}</span> Point the camera at the other player's moves`, () => { followFoe = !followFoe; try { localStorage.setItem('fab-follow', followFoe ? '1' : '0'); } catch { /* private mode */ } }, followFoe ? 'on' : '')}</div><h4>Language</h4><div class="chips notr">${LANGS.map(([l, n]) => chip(n, LANG === l, () => setLang(l), l === 'it' ? 'Interfaccia in italiano (i regolamenti restano in inglese)' : 'Interface in English')).join('')}</div>${noticesSupported() ? `<h4>Notices</h4><div class="row">${ubtn(`<span class="sw ${noticesOn() ? 'on' : ''}">${noticesOn() ? 'ON' : 'OFF'}</span> Tell me when it is my move while the game is out of sight`, () => { void setNotices(!noticesOn(), auth.token).then((m) => { say(m); render(); }); }, noticesOn() ? 'on' : '', false, noticesBlocked() ? 'Blocked in this browser: allow notices for this site in its settings' : 'A system notice when the other player hands you the move (this device only)')}</div>` : ''}`
       : menuTab === 'New game' ? `${online.active && !online.admin && !online.both() ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as E.Opts['scenario']; })}">${VOL.scenarios.filter((sc) => SANDBOX || !sc.testing).map((sc) => `<option value="${sc.id}" ${newOpts.scenario === sc.id ? 'selected' : ''}>${esc(sc.name)} (${esc(sc.sub)})</option>`).join('')}</select>
         </div>${VOL.features.fuel ? `<div class="row">${ubtn(`<span class="sw ${newOpts.fuel ? 'on' : ''}">${newOpts.fuel ? 'ON' : 'OFF'}</span> German fuel rule`, () => { newOpts.fuel = !newOpts.fuel; }, newOpts.fuel ? 'on' : '')}</div>` : ''}${VOL.features.optional ? optChooser(newOpts, VOL.id) : ''}${restartAsk ? `<div class="askrow" data-reveal="restart"><p>Restart and lose the current game?</p><div class="row">${ubtn('Restart now', () => { restartAsk = false; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; save(); refresh(); }, 'danger')}${ubtn('Keep playing', () => { restartAsk = false; })}</div></div>` : `<div class="row">${ubtn('Restart', () => { restartAsk = true; }, 'danger')}</div>`}`}`
       : menuTab === 'Admin' ? `<div class="row">${ubtn(`${ico('wand')} Sandbox`, () => { location.href = `${homeUrl()}?sandbox=1`; })}${ubtn('Update rules', () => { modal = 'rules'; })}${VOL.sides.map((sd) => ubtn(`Free ${nm(sd)} seat`, () => { void auth.freeSeat(sd); })).join('')}</div>`
@@ -2024,7 +2030,7 @@ function autoBattle() {
   autoT = window.setTimeout(() => { const q = primary(); if (!g.battle || `${g.battle.area}|${g.battle.stage}|${g.battle.ready?.join()}|${g.battle.rolls.length}` !== k || rollView) return; if (autoRolls(g.battle)) rollStage(g.battle); else if (q && !q.dis) act(q.fn); }, 700);
 }
 function refresh() {
-  { const ph = `${g.turn}${g.phasing}${g.phase}`; if (ph !== lastPhase) { const was = lastPhase; lastPhase = ph; fxLayer.clear(); frameAt = performance.now() + (was ? 50 : 1500); } }      // on opening, after the first view has settled
+  { const ph = `${g.turn}${g.phasing}${g.phase}`; if (ph !== lastPhase) { const was = lastPhase; lastPhase = ph; fxLayer.clear(); frameAt = performance.now() + 50; openFrame = !was || !camTouched; } }      // until the player first moves the map (the game may arrive after the page opens), the view jumps there instead of sliding
   { const ba = g.battle?.area ?? null; if (ba !== fxBattle) { if (ba != null) fxLayer.clear(); else setTimeout(() => { if (!g.battle) fxLayer.clear(); }, 2500); fxBattle = ba; } }      // a new battle clears the last one's messages; a closed battle's go after a moment to read them      // a new battle clears the last one's messages
   E.setPlayArea(g.inPlay);
   { const k = (g.inPlay ?? []).join(); if (k !== playKey) { const first = playKey === null; playKey = k; if (!first) paintBoard(); if (g.inPlay || !first) goal = homeGoal(); } }
@@ -2038,7 +2044,7 @@ function refresh() {
 }
 const CALM = matchMedia('(prefers-reduced-motion: reduce)').matches;                               // no floating motion for players who asked for less motion
 let lastPhase = '';
-let lastInput = performance.now(), tick = 0, fxBattle: number | null = null, frameAt = 0;
+let lastInput = performance.now(), tick = 0, fxBattle: number | null = null, frameAt = 0, openFrame = false, camTouched = false;
 /** ?fps=1: a small corner counter (frames per second, slowest frame) for measuring on a real phone. */
 const fpsEl = new URLSearchParams(location.search).has('fps') ? Object.assign(document.body.appendChild(document.createElement('div')), { id: 'fps' }) : null;
 let fpsN = 0, fpsT = performance.now(), fpsWorst = 0, fpsLast = performance.now();
@@ -2062,7 +2068,7 @@ function frame() {
   placeCam(); runAnims(); settle(); renderer.render(scene, cam); renderFocus(); placeBadges();
   if (frameAt && performance.now() > frameAt) { frameAt = 0; if (!g.battle && mine(g.phasing) && allowed()) {      // a new step (or the opening): what it is about comes into view
     const ids = g.phase === 'combat' || g.phase === 'btCombat' ? E.mustFight(g).slice(0, 1) : ['movement', 'btMove'].includes(g.phase) ? [...new Set(g.units.filter((u) => u.side === g.phasing && u.area != null && optsFor(u.id).length).map((u) => u.area!))] : [];
-    if (ids.length && !ids.some(onScreen)) showAreas(ids); } }
+    if (ids.length && !ids.some(onScreen)) { showAreas(ids); if (openFrame && goal) { target.copy(goal.t); dist = goal.dist; pitch = goal.pitch; goal = null; } } } openFrame = false; }
 }
 SBU.initSandboxUi({
   get g() { return g; }, set g(v) { g = v; }, get selUnit() { return selUnit; }, set selUnit(v) { selUnit = v; }, get selChit() { return selChit; }, set selChit(v) { selChit = v; },

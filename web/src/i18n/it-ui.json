@@ -3423,7 +3423,12 @@
   "End reaction": "Fine reazione",
   "Air": "Aereo",
   "Asset": "Risorsa",
-  "Remove the unit": "Rimuovi l'unità"
+  "Remove the unit": "Rimuovi l'unità",
+  "Move route: lime = move, brass = uses fuel, silver = minimum move, ivory = strategic, ╳ = blown bridge": "Percorso: lime = movimento, ottone = usa carburante, argento = movimento minimo, avorio = strategico, ╳ = ponte distrutto",
+  "Rolling…": "Tiro in corso…",
+  "all disordered, no losses": "tutti in disordine, nessuna perdita",
+  "1 hit fewer, leave disordered": "1 colpo in meno, esce in disordine",
+  "1 hit fewer, all disordered": "1 colpo in meno, tutti in disordine"
  },
  "patterns": [
   [
@@ -5813,10 +5818,6 @@
   [
    "sudden death at Axis \\+(\\d+) or (\\w+) \\+(\\d+)",
    "vittoria immediata a dell'Asse +$1 o $2 +$3"
-  ],
-  [
-   "SUDDEN DEATH\\n(.+)",
-   "VITTORIA IMMEDIATA\n$1"
   ],
   [
    "Replay: (.+)",
@@ -9089,6 +9090,18 @@
   [
    "(.+) CONTROL",
    "CONTROLLO $1"
+  ],
+  [
+   "lose (\\d+) steps?, hold the area",
+   "perdi $1 step, tieni l'area"
+  ],
+  [
+   "lose (\\d+) steps?, fight on",
+   "perdi $1 step, continua"
+  ],
+  [
+   "(\\d+) rolled: the first is already taken",
+   "$1 tirati: il primo è già assegnato"
   ]
  ],
  "html": {}

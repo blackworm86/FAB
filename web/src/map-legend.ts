@@ -60,7 +60,8 @@ export const hasLegend = (game: string) => !!LEGEND[game];
 const swatch = (bg: string, border = '#0006') => `<svg viewBox="0 0 30 30" width="22" height="22" aria-hidden="true"><rect x="3" y="6" width="24" height="18" rx="3" fill="${bg}" stroke="${border}" stroke-width="1.6"/></svg>`;
 /** The colours the game paints over the printed map (one meaning each). */
 const GAME: Row[] = [[swatch('#c8e86a'), 'Your block can move there'], [swatch('#e7b04a'), 'Stop there, or selected'], [swatch('#d1432f'), 'A battle: must fight (filled) or may fight (outline)'],
-  [`<svg viewBox="0 0 30 30" width="22" height="22" aria-hidden="true"><rect x="3" y="6" width="24" height="18" rx="3" fill="#d8d4c0" stroke="#0006" stroke-width="1.6"/><path d="M6 24L18 6M13 24L25 6M20 24L27 13.5" stroke="#23251a" stroke-width="3"/></svg>`, 'Out of supply (stripes)']];
+  [`<svg viewBox="0 0 30 30" width="22" height="22" aria-hidden="true"><rect x="3" y="6" width="24" height="18" rx="3" fill="#d8d4c0" stroke="#0006" stroke-width="1.6"/><path d="M6 24L18 6M13 24L25 6M20 24L27 13.5" stroke="#23251a" stroke-width="3"/></svg>`, 'Out of supply (stripes)'],
+  ['<b class="ar" style="color:#c8e86a">━▶</b>', 'Move route: lime = move, brass = uses fuel, silver = minimum move, ivory = strategic, ╳ = blown bridge']];
 export function legendCard(game: string, close: string) {
   const L = LEGEND[game]; if (!L) return '';
   const row = ([pic, label]: Row) => `<li>${pic}<span>${label}</span></li>`;
