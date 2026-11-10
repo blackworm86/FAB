@@ -31,7 +31,7 @@ Approved by the owner on 10 November 2026. The first computer opponent was remov
 | Stage | What | Done when |
 |---|---|---|
 | 1 | Remove the old computer opponent completely | done 10 November 2026: site and code without any trace, everything else working |
-| 2 | Experimental area, the computer's view, the full list of choices, random player | random players finish 1,000 games without getting stuck |
+| 2 | Experimental area, the computer's view, the full list of choices, random player | done 10 November 2026: 1,000 random games over all four scenarios and option mixes, all finished, none stuck (`bot/`, `npm run random -- 1000`, 19 minutes on 4 cores) |
 | 3 | Measuring tool and reference players | the doctrine player beats random from both seats, margins printed |
 | 4 | Recorded games and the learned judge | the judge predicts the winner of unseen games clearly better than chance |
 | 5 | Commander, then rounds of improvement | it beats the doctrine player clearly from both seats; the owner playtests it |
