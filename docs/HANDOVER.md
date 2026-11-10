@@ -37,7 +37,7 @@ GMT's block wargame series **Fast Action Battles** as a browser game: a rules en
 
 ## 4. Open work, in the order the owner would want it
 
-1. **The computer opponent, from scratch** (`docs/COMPUTER-PLAYER-PLAN.md`): stage 1, the removal, is done; next is stage 2 (the experimental area, the computer's view, the full list of legal choices, a random player).
+1. **The computer opponent, from scratch** (`docs/COMPUTER-PLAYER-PLAN.md`): stage 1, the removal, is done; stage 2 (the experimental area `bot/`, the computer's view, the full list of legal choices, a random player) is built: `bot/README.md`, `cd bot && npm test`, `npm run random -- 1000`. Next is stage 3 (the measuring tool and the doctrine player).
 
 4. **Interface leftovers** (lesson check: `node web/e2e/tutorials.mjs` walks every course and names a step whose button is missing; it still stops inside battles, where blind clicks derail it) from the 9 November critique, not yet decided by the owner: on the 3D relief cut-off areas show as a plain grey tint (the stripes are drawn on the 2D map only); battles in Sicily and Golan and online games were not re-tested with the faster battle flow.
 
