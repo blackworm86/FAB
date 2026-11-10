@@ -3446,7 +3446,11 @@
   "Area numbers": "Numeri delle aree",
   "and entry letters": "e lettere d'ingresso",
   "terrain defence": "difesa del terreno",
-  "Board": "Tabellone"
+  "Board": "Tabellone",
+  "No areas held · no big units destroyed.": "Nessuna area tenuta · nessuna grande unità distrutta.",
+  "tap a chit to read it": "tocca una pedina per leggerla",
+  "click a chit to read it": "clicca una pedina per leggerla",
+  "No chits here.": "Nessuna pedina qui."
  },
  "patterns": [
   [
@@ -9124,6 +9128,34 @@
   [
    "You play (.+); the computer plays (.+)\\.",
    "Giochi con $1; il computer gioca con $2."
+  ],
+  [
+   "(.+) · now",
+   "$1 · ora"
+  ],
+  [
+   "Other results \\((\\d+)\\)",
+   "Altri risultati ($1)"
+  ],
+  [
+   "(\\d+) chits, drawn at random: their faces stay hidden\\.",
+   "$1 pedine, pescate a caso: le facce restano nascoste."
+  ],
+  [
+   "Net (.+)",
+   "Netto $1"
+  ],
+  [
+   "Victory table · end of turn (\\d+)",
+   "Tabella della vittoria · fine del turno $1"
+  ],
+  [
+   "no sudden death this turn · areas count only when in supply \\(19\\.3\\)\\.(.*)",
+   "nessuna vittoria immediata in questo turno · le aree contano solo se rifornite (19.3).$1"
+  ],
+  [
+   "sudden death this turn at (.+) · areas count only when in supply \\(19\\.3\\)\\.(.*)",
+   "vittoria immediata in questo turno a $1 · le aree contano solo se rifornite (19.3).$2"
   ]
  ],
  "html": {}

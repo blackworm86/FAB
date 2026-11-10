@@ -49,10 +49,21 @@ function victoryTable(g: E.Game): [string, string][] {
   return [[`3+ ${N(p)} VP`, `${N(p)} Operational Victory`], [`1–2 ${N(p)} VP`, `${N(p)} Marginal Victory`], ['0', 'Draw'], [`1–2 ${N(q)} VP`, `${N(q)} Marginal Victory`], [`3+ ${N(q)} VP`, `${N(q)} Operational Victory`]];
 }
 function tableRows(g: E.Game, hit: string | null) { return `<div class="vtab">${victoryTable(g).map(([a, b]) => `<div class="${hit?.includes(b) ? 'on' : ''}">${esc(a)} = ${esc(b)}</div>`).join('')}</div>`; }
+/** The victory-table row that holds now (net > 0 favours the first side): "4+ X VP", "2–3 X VP", "0" ranges. */
+export function nowRow(rows: [string, string][], net: number, first: string): number {
+  return rows.findIndex(([a]) => { if (a === '0') return net === 0; const m = /^(\d+)(?:\+|–(\d+)) (.+) VP$/.exec(a); if (!m) return false;
+    const val = m[3] === first ? net : -net, lo = +m[1], hi = m[2] ? +m[2] : Infinity; return val >= lo && val <= hi; });
+}
 function columns(g: E.Game, face: (u: E.Unit) => string, v: Record<string, number>) {
   const [p, q] = sides(g);
-  return `<div class="vcols"><div><h4 class="ge">${N(p)} · ${v[p]} VP</h4>${objRows(g, p)}<h4>${N(q)} big units destroyed (+1 each)</h4><div class="vkills">${kills(g, p, face)}</div></div>
-    <div><h4 class="al">${N(q)} · ${v[q]} VP</h4>${objRows(g, q)}<h4>${N(p)} big units destroyed (+1 each)</h4><div class="vkills">${kills(g, q, face)}</div></div></div>`;
+  const side = (s: E.Side, o: E.Side) => { const objs = objectives(g, s), k = kills(g, s, face), none = !objs.length && k.startsWith('<small');
+    return `<div><h4 class="vh"><span class="${s === p ? 'ge' : 'al'}">${N(s)}</span><em>${v[s]} VP</em></h4>${none ? `<p class="hint">No areas held · no big units destroyed.</p>` : `<div class="vareas">${objRows(g, s)}</div>${k.startsWith('<small') ? `<div class="vrow"><span>${N(o)} big units destroyed (+1 each)</span><b>0</b></div>` : `<h4>${N(o)} big units destroyed (+1 each)</h4><div class="vkills">${k}</div>`}`}</div>`; };
+  return `<div class="vcols">${side(p, q)}${side(q, p)}</div>`;
+}
+function vtable(g: E.Game, net: number) {
+  const rows = victoryTable(g), [p] = sides(g), now = nowRow(rows, net, N(p)), row = ([a, b]: [string, string], i: number) => `<div class="vrow ${i === now ? 'now' : ''}"><span>${esc(a)}${i === now ? ' · now' : ''}</span><b>${esc(b)}</b></div>`;
+  const others = rows.filter((_, i) => i !== now);
+  return `<div class="vtwide">${rows.map(row).join('')}</div><div class="vtnarrow">${now >= 0 ? row(rows[now], now) : ''}<details><summary>Other results (${others.length})</summary>${rows.map((r, i) => (i === now ? '' : row(r, i))).join('')}</details></div>`;
 }
 
 /** The breakdown sheet opened from the strip. */
@@ -64,9 +75,9 @@ export function vpSheet(g: E.Game, face: (u: E.Unit) => string, close: string, i
     <h4>Zone 6 areas the Germans control</h4>${heldNames(g) || '<p class="hint">None.</p>'}<h4>Victory table (end of turn ${g.lastTurn})</h4>${tableRows(g, null)}</div></div>`; }
   const [p, q] = sides(g), v = E.victory(g), sd = track(g)[g.turn - 1]?.sd;
   return `<div class="modal"><div class="sheet vsheet"><h3>Victory points · turn ${g.turn} <button class="ico" data-ui="${close}" aria-label="Close">${icoClose}</button></h3>
-    <div class="vtot"><span class="al">${v[q]}<small>${N(q).toUpperCase()}</small></span><i>:</i><span class="ge">${v[p]}<small>${N(p).toUpperCase()}</small></span></div>
-    <p class="vnote">Net <b>${netText(g, v.net)}</b> · ${sd ? `sudden death this turn at ${N(p)} +${sd[0]} or ${N(q)} +${sd[1]}` : 'no sudden death this turn'}. Areas count only when in supply (19.3).${g.opts.bridgeLimit ? ` German bridge repairs left: <b>${g.bridgesLeft ?? 6}</b> of 6 (18.1).` : ''}</p>
-    ${columns(g, face, v)}<h4>Victory table (end of turn ${g.lastTurn})</h4>${tableRows(g, null)}</div></div>`;
+    <div class="vhead"><div class="vtot"><span class="al">${v[q]}<small>${N(q).toUpperCase()}</small></span><i>:</i><span class="ge">${v[p]}<small>${N(p).toUpperCase()}</small></span></div>
+    <p class="vnote"><b>Net ${netText(g, v.net)}</b>${sd ? `sudden death this turn at ${N(p)} +${sd[0]} or ${N(q)} +${sd[1]}` : 'no sudden death this turn'} · areas count only when in supply (19.3).${g.opts.bridgeLimit ? ` German bridge repairs left: <b>${g.bridgesLeft ?? 6}</b> of 6 (18.1).` : ''}</p></div>
+    ${columns(g, face, v)}<h4>Victory table · end of turn ${g.lastTurn}</h4>${vtable(g, v.net)}</div></div>`;
 }
 
 /** The end-of-game panel; `actions` are already-rendered buttons. */

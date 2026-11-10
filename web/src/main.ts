@@ -882,7 +882,7 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Tab') { const sheet = document.querySelector<HTMLElement>('#ui .modal > .sheet');      // Tab cycles inside an open menu instead of wandering onto the map behind it
     if (sheet) { const f = Array.from(sheet.querySelectorAll<HTMLElement>('button:not(:disabled), select, input, a[href], [tabindex="0"]')).filter((x) => x.offsetParent), a = document.activeElement;
       if (f.length && (e.shiftKey ? a === f[0] || a === sheet : a === f[f.length - 1] || !sheet.contains(a))) { e.preventDefault(); (e.shiftKey ? f[f.length - 1] : f[0]).focus(); } } }
-  if (e.key === 'Escape') { const b = g.battle; if (modal) { modal = null; render(); } else if (b?.stage === 'setup' && !b.locked && mine(b.attacker) && allowed() && !b.assets[b.attacker].length && !b.ready?.length) act(() => E.cancelBattle(g));      /* Esc backs out of a battle just opened (nothing placed yet), like its Cancel button */
+  if (e.key === 'Escape') { const b = g.battle; if (modal || scoreOpen) { modal = null; scoreOpen = false; render(); } else if (b?.stage === 'setup' && !b.locked && mine(b.attacker) && allowed() && !b.assets[b.attacker].length && !b.ready?.length) act(() => E.cancelBattle(g));      /* Esc backs out of a battle just opened (nothing placed yet), like its Cancel button */
     else if (selUnit || selArr || selChit || selArea != null) { selUnit = selArr = selChit = null; selArea = null; previewArea = null; refresh(); } return; }
   if (t === canvas && !modal) {
     const dir: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
@@ -1597,7 +1597,7 @@ function undoBtn(): string {
   return `<button class="dundo" ${can ? `data-undo` : 'disabled'} title="${esc(can ? txt + ' (Ctrl+Z)' : 'Undo is locked once dice are rolled or something hidden is shown')}">${ico(can ? 'undo' : 'lock')}<span>${esc(txt)}</span></button>`;
 }
 const recoverSel: Record<string, string | null> = {};
-let piecesTab: 'boxes' | 'arrivals' = 'boxes', piecesSide: E.Side | null = null, inspectId: string | null = null;
+let piecesBox: 'available' | 'cup' | 'used' | 'eliminated' = 'available', piecesTab: 'boxes' | 'arrivals' = 'boxes', piecesSide: E.Side | null = null, inspectId: string | null = null;
 /** A short reading of what a chit does, in the series' own vocabulary; the printed rule is the authority. */
 
 /** A chit's picture; the reusable Special Action is a wooden block (8.1), drawn like the arriving blocks. */
@@ -1608,12 +1608,21 @@ const pieceBtn = (c: E.Chit, f: () => void, on = false, dis = false) => `<button
 const ruleCard = (c: E.Chit) => { const [t] = RULE[VOL.ruleKey(c.kind)] ?? [c.kind, '']; return `<span class="big">${chitPic(c)}</span><div><h4>${esc(c.name)} <small>${esc(t)}</small></h4>${ruleHtml(VOL.ruleKey(c.kind), E.isEvent(c))}</div>`; };
 const seatedView = () => online.active && !online.both() && !!online.mySide();
 function piecesHtml() {
-  const sd = piecesSide ?? viewSide(), tabs = chip('Boxes', piecesTab === 'boxes', () => { piecesTab = 'boxes'; inspectId = null; }, 'Pieces in the boxes', 'boxes') + chip('Arrivals', piecesTab === 'arrivals', () => { piecesTab = 'arrivals'; inspectId = null; }, 'Arrivals by turn', 'calendar') + '<span class="sp"></span>' + [...VOL.sides].sort((x, y) => +(y === viewSide()) - +(x === viewSide())).map((x) => chip(VOL.tag[x], sd === x, () => { piecesSide = x; inspectId = null; }, seatedView() ? (x === viewSide() ? 'My pieces' : 'Opponent\'s pieces') : nm(x) + ' pieces')).join('');
+  const sd = piecesSide ?? viewSide(), seg = (h: string, cls = '') => `<span class="seg ${cls}">${h}</span>`;
+  const tabs = seg(chip('Boxes', piecesTab === 'boxes', () => { piecesTab = 'boxes'; inspectId = null; }, 'Pieces in the boxes') + chip('Arrivals', piecesTab === 'arrivals', () => { piecesTab = 'arrivals'; inspectId = null; }, 'Arrivals by turn'), 'ptabs');
+  const sideSw = seg([...VOL.sides].sort((x, y) => +(y === viewSide()) - +(x === viewSide())).map((x) => chip(VOL.tag[x], sd === x, () => { piecesSide = x; inspectId = null; }, seatedView() ? (x === viewSide() ? 'My pieces' : 'Opponent\'s pieces') : nm(x) + ' pieces')).join(''));
+  /** Identical chits (same name) share one tile with a count. */
+  const grid = (cs: E.Chit[]) => { const groups = new Map<string, E.Chit[]>(); for (const c of cs) groups.set(c.name, [...(groups.get(c.name) ?? []), c]);
+    return `<div class="pcgrid">${[...groups.values()].map((gr) => { const c = gr.find((x) => x.id === inspectId) ?? gr[0]; return `<span class="pcst">${pieceBtn(c, () => { inspectId = inspectId === c.id ? null : c.id; }, inspectId === c.id)}${gr.length > 1 ? `<b class="cnt">×${gr.length}</b>` : ''}</span>`; }).join('')}</div>`; };
   let body = '';
   if (piecesTab === 'boxes') {
-    const sec = (title: string, bx: E.Chit['box']) => { const cs = E.boxOf(g, sd, bx); return `<h4>${title} <small>${cs.length}</small></h4><div class="pcgrid">${cs.map((c) => pieceBtn(c, () => { inspectId = inspectId === c.id ? null : c.id; }, inspectId === c.id)).join('') || '<small class="none">none</small>'}</div>`; };
     const pick = inspectId ? g.chits.find((c) => c.id === inspectId && c.side === sd) : null;
-    body = `${pick ? `<div class="inspect" data-reveal="${pick.id}">${ruleCard(pick)}</div>` : `<p class="hint gx">${verb('Tap a piece to read what it does.')}</p>`}<h4>Cup <small>${E.boxOf(g, sd, 'cup').length} chits, drawn at random</small></h4>${sec('Available', 'available')}${sec('Used', 'used')}${sec('Eliminated', 'eliminated')}${(() => { const dead = g.units.filter((u) => u.side === sd && u.area == null && u.str <= 0 && !u.garrison && (u.arrival == null || u.arrival <= g.turn) && seen(u)); return dead.length ? `<h4>Eliminated blocks <small>${dead.length}${dead.some((u) => g.elimLarge.includes(u.id)) ? ` · ${dead.filter((u) => g.elimLarge.includes(u.id)).length} large (+1 VP each to the other side)` : ''}</small></h4><div class="oobrow">${dead.map((u) => `<div class="oobu" title="${esc(u.name)}">${unitPic({ ...u, str: u.max })}<small>${esc(u.name)}</small></div>`).join('')}</div>` : ''; })()}${(() => { const held = g.units.filter((u) => u.side === sd && u.area == null && u.str > 0 && u.box && seen(u)), boxes = [...new Set(held.map((u) => u.box!))];      // the volume's holding boxes (Golan: reserves, the air assault battalion, evacuated strongpoints)
+    const dead = g.units.filter((u) => u.side === sd && u.area == null && u.str <= 0 && !u.garrison && (u.arrival == null || u.arrival <= g.turn) && seen(u));
+    const boxes = [['available', 'Available'], ['cup', 'Cup'], ['used', 'Used'], ['eliminated', 'Eliminated']] as const;
+    const strip = `<div class="pstrip" role="group" aria-label="Boxes">${boxes.map(([bx, label]) => { const n = E.boxOf(g, sd, bx).length + (bx === 'eliminated' ? dead.length : 0); return `<button class="${piecesBox === bx ? 'on' : ''}" aria-pressed="${piecesBox === bx}" data-ui="${reg(() => { piecesBox = bx; inspectId = null; })}"><b>${n}</b><small>${label}</small></button>`; }).join('')}</div>`;
+    const cs = E.boxOf(g, sd, piecesBox), label = boxes.find(([b]) => b === piecesBox)![1];
+    const shown = piecesBox === 'cup' ? `<p class="hint">${cs.length} chits, drawn at random: their faces stay hidden.</p>` : `${cs.length ? `<h4>${label} <small>${verb('tap a chit to read it')}</small></h4>${grid(cs)}` : `<p class="hint">No chits here.</p>`}${piecesBox === 'eliminated' && dead.length ? `<h4>Eliminated blocks <small>${dead.length}${dead.some((u) => g.elimLarge.includes(u.id)) ? ` · ${dead.filter((u) => g.elimLarge.includes(u.id)).length} large (+1 VP each to the other side)` : ''}</small></h4><div class="oobrow">${dead.map((u) => `<div class="oobu" title="${esc(u.name)}">${unitPic({ ...u, str: u.max })}<small>${esc(u.name)}</small></div>`).join('')}</div>` : ''}`;
+    body = `${strip}${pick ? `<div class="inspect" data-reveal="${pick.id}">${ruleCard(pick)}</div>` : ''}${shown}${(() => { const held = g.units.filter((u) => u.side === sd && u.area == null && u.str > 0 && u.box && seen(u)), boxes = [...new Set(held.map((u) => u.box!))];      // the volume's holding boxes (Golan: reserves, the air assault battalion, evacuated strongpoints)
       return boxes.map((bx) => `<h4>${esc(VOL.boxes[bx] ?? bx)} <small>${held.filter((u) => u.box === bx).length}</small></h4><div class="oobrow">${held.filter((u) => u.box === bx).map((u) => `<div class="oobu" title="${esc(u.name)}">${unitPic(u)}<small>${esc(u.name)}</small></div>`).join('')}</div>`).join(''); })()}`;
   } else {
     const rows: string[] = [];
@@ -1625,7 +1634,7 @@ function piecesHtml() {
     const pick = inspectId ? g.chits.find((c) => c.id === inspectId && c.side === sd) : null;
     body = `${g.opts.randomReinf ? '<p class="warnbox"><span><b>Random reinforcements (18.9):</b> units are drawn from those due this turn and next, so the actual turn may differ.</span></p>' : ''}${pick ? `<div class="inspect" data-reveal="${pick.id}">${ruleCard(pick)}</div>` : ''}${rows.join('') || '<p class="hint">No more arrivals.</p>'}`;
   }
-  return `<div class="modal"><div class="sheet wide"><h3>${seatedView() ? (sd === viewSide() ? 'My pieces' : 'Opponent\'s pieces') : nm(sd) + ' pieces'} <button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3><div class="chips tabrow">${tabs}</div>${body}</div></div>`;
+  return `<div class="modal"><div class="sheet wide pieces"><h3><span class="grow">${seatedView() ? (sd === viewSide() ? 'My pieces' : 'Opponent\'s pieces') : nm(sd) + ' pieces'}</span>${tabs}${sideSw}<button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>${body}</div></div>`;
 }
 /** What the volume's own prompts may use: buttons, who is mine, an area pick on the map. */
 const panelCtx = (): PanelCtx => ({ get: () => g, btn, ubtn, mine, face: (u) => unitPic(u), areaName, ico, pickArea: (label, areas, run) => { areaPick = { label, areas: new Set(areas), run }; selUnit = selChit = selArr = null; refresh(); } });

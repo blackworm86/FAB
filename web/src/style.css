@@ -1142,3 +1142,20 @@ body:has(#ui .modal) #leaders, body:has(#ui .modal) #fx, body:has(#rules) #leade
 .seg .chip, .srow > button:not(.swb) { font: 600 13px var(--sfd) !important; letter-spacing: .08em !important; text-transform: uppercase; }
 .sheet.menu.view { width: min(560px, 94vw); } .sheet.menu.view > h3 .grow { display: inline-flex; align-items: center; gap: 8px; }
 .sgrid h4.ghost { visibility: hidden; } @media (max-width: 700px) { .sgrid h4.ghost { display: none; } }
+/* score window (10 Nov mockup): score and net side by side, areas in two short columns, today's result lit */
+.vsheet { width: min(760px, 94vw) !important; }
+.vhead { display: flex; align-items: center; gap: 18px; padding: 4px 0 8px; border-bottom: 1px solid #8d906522; } .vhead .vtot { margin: 0; flex: none; } .vhead .vnote { margin: 0; flex: 1; font-size: 12px; color: #9a9c7c; text-align: left; } .vhead .vnote > b:first-child { display: block; font: 700 17px var(--sfd); letter-spacing: .06em; color: var(--gold); }
+.vsheet h4.vh, .vend h4.vh { display: flex; justify-content: space-between; } .vsheet h4.vh em, .vend h4.vh em { font-style: normal; color: var(--ink); }
+.vareas { display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; } .vareas .hint { grid-column: 1 / -1; }
+.vsheet .vrow, .vend .vrow { min-height: 30px; padding: 2px 0; font-size: 12.5px; }
+.vtwide { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; } .vtnarrow { display: none; }
+.vrow.now { background: #e7b04a1f; outline: 1px solid var(--gold); padding-inline: 6px !important; }
+.vtnarrow summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; color: #9a9c7c; font: 600 13px var(--sfd); letter-spacing: .08em; text-transform: uppercase; }
+@media (max-width: 700px) { .vhead { gap: 12px; } .vtwide { display: none; } .vtnarrow { display: block; } .vsheet .vrow, .vend .vrow { min-height: 36px; } .vcols { grid-template-columns: 1fr !important; } }
+/* pieces window: switches in the header, one counter strip for the boxes, identical chits stacked */
+.sheet.pieces > h3 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .sheet.pieces > h3 .grow { flex: 1; }
+@media (max-width: 700px) { .sheet.pieces > h3 .ptabs { order: 5; } .sheet.pieces > h3::after { content: ""; order: 4; flex-basis: 100%; } }      /* phones: Boxes / Arrivals on a row of their own */
+.pstrip { display: flex; border: 1px solid #8d906555; margin: 6px 0 4px; } .pstrip button { flex: 1; min-height: 52px; padding: 6px 8px; border: 0; border-left: 1px solid #8d906555; background: none; color: var(--ink); text-align: left; } .pstrip button:first-child { border-left: 0; }
+.pstrip b { display: block; font: 700 20px var(--sfd); } .pstrip small { font: 600 11px var(--sfd); letter-spacing: .1em; color: #9a9c7c; text-transform: uppercase; } .pstrip button.on { background: #e7b04a1f; } .pstrip button.on b { color: var(--gold); }
+.pcst { position: relative; display: inline-block; } .pcst .cnt { position: absolute; right: -4px; top: -6px; min-width: 24px; padding: 1px 5px; border-radius: 10px; background: var(--gold); color: #0b0d08; font: 700 12px var(--sfd); text-align: center; pointer-events: none; }
+.sheet.pieces h4 { display: flex; justify-content: space-between; align-items: baseline; }
