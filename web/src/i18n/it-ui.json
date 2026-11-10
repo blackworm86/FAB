@@ -3381,7 +3381,6 @@
   "the Attacker assigns his assets first (6.22)": "prima assegna le risorse l'attaccante (6.22)",
   ", then Begin combat.": ", poi Inizia il combattimento.",
   "The defender has designated his (6.24).": "Il difensore ha già scelto la sua (6.24).",
-  "−1 STEP": "−1 STEP",
   "GE": "TE",
   "Game design": "Progetto del gioco",
   "Digital edition": "Edizione digitale",
@@ -3414,7 +3413,13 @@
   "Allied, Axis, both, watching": "Alleati, Asse, entrambi, spettatore",
   "TDN on the Layer bar": "TDN sulla barra Livello",
   "Zones on the Layer bar": "Zone sulla barra Livello",
-  "Supply on the Layer bar": "Rifornimenti sulla barra Livello"
+  "Supply on the Layer bar": "Rifornimenti sulla barra Livello",
+  "ELIMINATED": "ELIMINATA",
+  "RETREATS": "SI RITIRA",
+  "REINFORCES": "RINFORZA",
+  "DISORDERED": "DISORDINATA",
+  "ASSET LOST": "RISORSA PERSA",
+  "Dismiss": "Chiudi"
  },
  "patterns": [
   [
@@ -9072,6 +9077,14 @@
   [
    "Click the glowing (.+?)(\\.?)",
    "Clicca in evidenza: $1$2"
+  ],
+  [
+   "−(\\d+) STEP",
+   "−$1 STEP"
+  ],
+  [
+   "(.+) CONTROL",
+   "CONTROLLO $1"
   ]
  ],
  "html": {}
