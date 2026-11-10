@@ -62,6 +62,9 @@ const OPS: Record<string, OpFn> = {
   releaseDivision: (g, d: string, sa: string) => S.releaseDivision(g, d, sa), releaseOperationalReserve: (g, sa: string) => G.releaseOperationalReserve(g, sa), releaseGolani: (g, sa: string) => G.releaseGolani(g, sa), freeThe33rd: (g, sa: string) => G.freeThe33rd(g, sa),
   repairBridge: (g, c: string, a: number, to: number) => E.repairBridge(g, c, a, to), greifBridge: (g, c: string, a: number, b: number) => E.playGreifBridge(g, c, a, b), interdict: (g, c: string, u: string) => E.playInterdict(g, c, u),
   bodenplatte: (g, c: string) => E.playBodenplatte(g, c), heydteDrop: (g, c: string, a: 31 | 52) => E.heydteDrop(g, c, a), staffReserve: (g, c: string, u: string) => E.staffReserve(g, c, u), activateBreakthrough: (g, u: string) => E.activateBreakthrough(g, u),
+  blowBridges: (g, c: string, a: number, t: number) => E.blowBridges(g, c, a, [t]), roadblock: (g, c: string, a: number, d: boolean) => E.roadblock(g, c, a, d), staffBoundary: (g, c: string, u: string) => E.staffBoundary(g, c, u),
+  staffPool: (g, c: string, a: number) => E.staffPool(g, c, a), staffIntel: (g, c: string, u: string) => E.staffIntel(g, c, u), interdiction: (g, c: string, a: number) => E.playInterdiction(g, c, a), alternateUse: (g, c: string) => E.alternateUse(g, c),
+  buildFieldWorks: (g, u: string) => E.buildFieldWorks(g, u), retreatSA: (g) => E.defenderRetreatSA(g, g.battle!), reinforceSA: (g, u: string) => E.defenderReinforceSA(g, g.battle!, u),
   move: (g, u: string, a: number) => walk(g, u, a), setReserve: (g, u: string) => { const had = !!g.units.find((x) => x.id === u)?.interdict; try { E.setReserve(g, u, true); } catch (e) { if (!had) throw e; } },   /* a failed Greif interdict check (17.11) is an outcome, not an illegal action */ setPeiperFull: (g, u: string) => E.setPeiperFull(g, u, true), stratMove: (g, u: string, a: number) => E.stratMove(g, u, a),
   airDrop: (g, u: string, a: number | null) => S.airDrop(g, u, a), startBattle: (g, a: number, viaSA: boolean) => E.startBattle(g, a, viaSA),
   assign: (g, c: string, mode?: 'arty' | 'support', engFw?: boolean) => { E.assign(g, g.battle!, c, mode); if (engFw) E.setEngFw(g, g.battle!, true); },
@@ -375,8 +378,8 @@ function reinforce(g: Game, side: Side): Action | null {
   }
   for (const id of g.pendingArrivals) {
     const u = g.units.find((x) => x.id === id)!; if (u.side !== side) continue;
-    const o = E.arrivalOptions(g, id).filter((x) => !x.sa); if (!o.length) continue;
-    const b = best(o, (x) => need(g, x.area, side) * 2 + 1 / (1 + dist(g, x.area, enemyObjective(g, side))) - E.blocks(g, x.area, side).length * 0.3)!;
+    const o = E.arrivalOptions(g, id).filter((x) => !x.sa || CUR.id === 'bulge'); if (!o.length) continue;          // 8.27: another entry area for a Special Action, when it is worth one
+    const b = best(o, (x) => need(g, x.area, side) * 2 + 1 / (1 + dist(g, x.area, enemyObjective(g, side))) - E.blocks(g, x.area, side).length * 0.3 - (x.sa ? 1 : 0))!;
     return act('arrive', ['placeArrival', id, b.x.area], { unit: id, area: b.x.area });
   }
   return null;
@@ -412,6 +415,21 @@ function admin(g: Game, side: Side, level: Level): Action | null {
       if (k === 'event_bodenplatte') { const air = avail(g, E.other(side)).filter((x) => x.kind === 'air_mission').length; if (air) tries.push({ label: 'Bodenplatte', chit: c.id, bonus: 0.5 * air, op: ['bodenplatte', c.id] }); }
       if (E.heydteWindow(g, c)) for (const a of [31, 52] as const) tries.push({ label: 'von der Heydte', chit: c.id, area: a, bonus: 1, op: ['heydteDrop', c.id, a] });
       if (k === 'command_staff') for (const u of own(g, side).filter((x) => x.cls === 'armor' && E.canReserve(g, x) && near(g, x.area!, E.other(side), side) > 0)) tries.push({ label: 'staff reserve', chit: c.id, unit: u.id, bonus: 0.3, op: ['staffReserve', c.id, u.id] });
+      const foe = E.other(side), reach = side === 'allied' ? enemyReach(g, foe) : new Set<number>();
+      if (k === 'engineer' && side === 'allied') {                                                        // the defender's engineers: bridges blown in the enemy's face, roadblocks on his roads
+        for (const a of front) for (const n of E.bridgeTargets(g, side, a)) if (E.unitsIn(g, n, foe).some(regular)) tries.push({ label: 'blow the bridge', chit: c.id, area: a, bonus: 0.4 + 0.5 * (worth(g, a, side) + need(g, a, side)), op: ['blowBridges', c.id, a, n] });
+        for (const a of E.roadblockAreas(g, side).filter((x) => reach.has(x)).sort((x, y) => vpWorth(y, side) - vpWorth(x, side)).slice(0, 4)) for (const d of [false, true]) tries.push({ label: d ? 'defended roadblock' : 'roadblock', chit: c.id, area: a, bonus: 0.3 + 0.4 * vpWorth(a, side) + (d ? 0.2 : 0), op: ['roadblock', c.id, a, d] });
+      }
+      if (k === 'command_staff') {
+        const hidden = g.units.filter((u) => u.side === foe && u.area != null && regular(u) && !E.visibleTo(g, u, side) && neighbors(u.area).some((n) => E.unitsIn(g, n, side).some(regular))).slice(0, 4);
+        for (const u of hidden) tries.push({ label: 'intelligence', chit: c.id, unit: u.id, bonus: 0.25, op: ['staffIntel', c.id, u.id] });
+        if (side === 'allied') for (const a of front.filter((x) => worth(g, x, side) > 0).sort((x, y) => threat(g, y, side) - threat(g, x, side)).slice(0, 2)) tries.push({ label: 'pooled assets', chit: c.id, area: a, bonus: 0.3 + 0.3 * worth(g, a, side), op: ['staffPool', c.id, a] });
+        if (side === 'german') for (const u of own(g, side).filter((x) => x.cls === 'armor' && regular(x) && !x.bcross && near(g, x.area!, foe, side) > 0).slice(0, 3)) tries.push({ label: 'army boundary', chit: c.id, unit: u.id, bonus: 0.15, op: ['staffBoundary', c.id, u.id] });
+      }
+      if (k === 'air_mission' && side === 'allied' && avail(g, side).filter((x) => x.kind === 'air_mission').length > 1)    // one kept for the battles
+        for (const a of [...new Set(front.flatMap((f) => neighbors(f)))].filter((x) => g.control[x] === foe && E.unitsIn(g, x, foe).some(regular) && !g.interdicted[x]).sort((x, y) => steps(g, y, foe, side) - steps(g, x, foe, side)).slice(0, 3))
+          tries.push({ label: 'interdiction', chit: c.id, area: a, bonus: 0.3 + 0.1 * steps(g, a, foe, side), op: ['interdiction', c.id, a] });
+      if (!isAsset(c) && k !== 'sa_block' && E.alternateCandidates(g, side).length) tries.push({ label: 'assets back to the cup', chit: c.id, bonus: 0.3 * Math.min(2, E.alternateCandidates(g, side).length), op: ['alternateUse', c.id] });
     }
     if (k === 'event_arriving_battalion') { for (const u of own(g, side).filter((x) => x.brigade === c.brigade)) tries.push({ label: 'arriving battalion', chit: c.id, unit: u.id, bonus: 1, op: ['arrivingBattalion', c.id, { add: u.id }] }); for (const u of dead.filter((x) => x.brigade === c.brigade)) tries.push({ label: 'arriving battalion', chit: c.id, unit: u.id, bonus: 1, op: ['arrivingBattalion', c.id, { rebuild: u.id, assembly: 'A' }] }); }
     if (k === 'event_army_release') tries.push({ label: 'army release', chit: c.id, bonus: 3, op: ['playArmyRelease', c.id] });
@@ -477,6 +495,11 @@ function movement(g: Game, side: Side, level: Level): Action | null {
     if (deep && deep.s > 0.2) chosen = deep.x;
   } else if (cands.length && cands[0].s > 0.2) chosen = cands[0];
   if (chosen) return act('move', ['move', chosen.u.id, chosen.o.area], { unit: chosen.u.id, area: chosen.o.area });
+  if (g.phase === 'movement' && level !== 'easy' && CUR.id === 'bulge') {                               // 5.23: a block that stays digs in where the enemy is near and the area matters
+    const fw = own(g, side).filter((u) => regular(u) && !u.moved && !u.disorder && !u.unsupplied && !g.fieldWorks.includes(u.area!) && !E.contested(g, u.area!) && near(g, u.area!, foe, side) > 0);
+    const b = best(fw, (u) => need(g, u.area!, side) + worth(g, u.area!, side));
+    if (b && b.s > 0.5) return act('field works', ['buildFieldWorks', b.x.id], { unit: b.x.id, area: b.x.area! });
+  }
   if (g.phase === 'movement' && level !== 'easy') {                                                     // reserve markers on the best blocks left standing
     const cand = own(g, side).filter((u) => E.canReserve(g, u));
     const b = best(cand, (u) => val(g, u, side) + (u.cls === 'armor' ? 1 : 0) + (near(g, u.area!, foe, side) > 0 ? 0.5 : 0));
@@ -545,7 +568,7 @@ function turnPlan(g: Game, side: Side): [string, number][] {
   if (uniq.length < 2 || late(1, 0)) return uniq.length < 2 ? uniq[0] ?? [] : uniq[1];                 // out of time already: the attacks that pay
   return best(uniq, (moves) => playTurn(g, side, moves, SIMS.turn))!.x;
 }
-/** The mean position for `side` at the end of its player turn (before the Supply Phase; TUNE.horizon 2: at the end of the enemy's reply) after making `moves`, on `n` copies with their own dice. */
+/** The mean position for `side` after `TUNE.horizon` player turns (1: its own, before the Supply Phase; 2: and the enemy's reply; 3: and its next turn, the follow-up wave) after making `moves`, on `n` copies with their own dice. */
 function playTurn(g: Game, side: Side, moves: [string, number][], n: number): number {
   const sides = E.sidesOf(g), src = E.randomSource(); E.setRandom(null);
   let total = 0, done = 0;
@@ -554,10 +577,10 @@ function playTurn(g: Game, side: Side, moves: [string, number][], n: number): nu
       const x = structuredClone(g); x.seed = ((g.seed + 7) * 2654435761 + (i + 1) * 40503 + g.rolls * 131) % 1e9; x.rolls = 0;
       mask(x, side);
       for (const [id, a] of moves) { try { walk(x, id, a); if (x.pendingBlow) E.resolveBlow(x, false); } catch { /* blocked on the way */ } }
-      let left = false;
-      for (let k = 0; k < 2500 && !x.over; k++) {
-        if (x.phasing !== side) left = true;
-        if (TUNE.horizon < 2 ? left || x.turn !== g.turn || x.phase === 'supply' : left && x.phasing === side) break;
+      let at = side, turns = 1;                                                                           // player turns begun so far: 1 = its own
+      for (let k = 0; k < 4000 && !x.over; k++) {
+        if (x.phasing !== at) { at = x.phasing; turns++; }
+        if (turns > TUNE.horizon || (TUNE.horizon < 2 && (x.turn !== g.turn || x.phase === 'supply'))) break;
         let act: Action | null = null; for (const s of sides) { act = step(x, s, 'normal'); if (act) break; }
         if (!act) break; try { act.run(x); } catch { break; }
       }
@@ -615,13 +638,28 @@ function combat(g: Game, side: Side, level: Level): Action | null {
 }
 /** Golan 22.17: a free Breakthrough combat round is still owed (read without spending it). */
 const freeRound = (g: Game) => CUR.id === 'golan73' && g.turn === 1 && g.phasing === 'syrian' && G.state(g).freeCombatRound > 0;
+/** 6.21: the Defender's Special Action before the battle: go on, retreat (8.24) or bring in a neighbouring block (8.23). Hard fights each out on
+ *  copies; normal reinforces a valuable area it would lose and retreats from a hopeless fight over nothing; easy goes on. */
+function saDecision(g: Game, b: Battle, side: Side, level: Level): Action {
+  const pass: Op = ['passSA'], ok = (op: Op) => { const x = structuredClone(g); try { apply(x, op); return true; } catch { return false; } };
+  if (level === 'easy' || CUR.id !== 'bulge') return act('no Special Action', pass);
+  const a = b.area, foe = E.other(side), opts: Op[] = [pass];
+  if (ok(['retreatSA'])) opts.push(['retreatSA']);
+  for (const u of neighbors(a).flatMap((n) => E.unitsIn(g, n, side)).filter(regular).sort((x, y) => val(g, y, side) - val(g, x, side)).slice(0, 3)) if (ok(['reinforceSA', u.id])) opts.push(['reinforceSA', u.id]);
+  if (opts.length === 1) return act('no Special Action', pass);
+  let pick: Op = pass;
+  if (level === 'hard') pick = pickSim(g, side, level, opts, pass, (x, op) => apply(x, op));
+  else { const ex = exchange(g, a, side, false), w = worth(g, a, side), rf = opts.find((o) => o[0] === 'reinforceSA');
+    if (rf && w > 0 && ex.theirs > ex.mine * 1.5) pick = rf; else if (opts.some((o) => o[0] === 'retreatSA') && !w && ex.theirs > ex.mine * 2.5) pick = ['retreatSA']; }
+  return pick[0] === 'retreatSA' ? act('retreat before combat', pick, { area: a }) : pick[0] === 'reinforceSA' ? act('reinforce the battle', pick, { unit: pick[1] as string, area: a }) : act('no Special Action', pass);
+}
 /** May this block be made the point unit (the rules pin it in some battles: 18.4, 8.23)? */
 const canPoint = (g: Game, b: Battle, side: Side, id: string) => { const x = structuredClone(g); try { E.setPoint(x, x.battle!, side, id); return true; } catch { return false; } };
 function battle(g: Game, b: Battle, side: Side, level: Level): Action | null {
   const att = side === b.attacker, foe = E.other(side), a = b.area;
   if (b.stage === 'setup') {
     if (E.setupSide(g, b) !== side || b.attPointDone || (b.ready?.includes(side) && !(att && b.ready.length === 2))) return null;   // its own step only; the Attacker's last one is his point unit (6.24)
-    if (b.defSA) return act('no Special Action', ['passSA']);                                          // 6.21 (shortcut: never reinforces or retreats by Special Action yet)
+    if (b.defSA) return saDecision(g, b, side, level);                                                   // 6.21
     if (CUR.id === 'golan73' && G.state(g).samTarget && side !== 'syrian') return null;                 // the SAM answer comes first (16.12)
     const ex = exchange(g, a, side, att), close = ex.mine < ex.theirs * 1.6, w = worth(g, a, side);
     if (level !== 'easy') for (const c of avail(g, side)) {
