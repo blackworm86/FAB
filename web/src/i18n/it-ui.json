@@ -9214,6 +9214,18 @@
   [
    "Map layers, legend and rotate: (.+)",
    "Livelli della mappa, legenda e rotazione: $1"
+  ],
+  [
+   "ARMY ZONE (\\d+)",
+   "ZONA ARMATA $1"
+  ],
+  [
+   "(\\d+)th Panzer Army",
+   "$1ª Armata Panzer"
+  ],
+  [
+   "(\\d+)th Army",
+   "$1ª Armata"
   ]
  ],
  "html": {}

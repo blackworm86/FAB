@@ -168,7 +168,7 @@ const boardFile = (src: string) => { let p = boardText.get(src); if (!p) { p = f
 const svgUrl = (t: string) => URL.createObjectURL(new Blob([t], { type: 'image/svg+xml' }));
 const baseImg = new Image(), linesImg = new Image(); baseImg.onload = linesImg.onload = () => paintBoard();
 const flipped = new Map<HTMLImageElement, HTMLImageElement>();
-for (const [im, src] of [[baseImg, VOL.art.base], [linesImg, VOL.art.lines]] as const) boardFile(src).then((t) => { im.src = svgUrl(t); if (t.includes('data-flip=')) flipped.set(im, loadImg(svgUrl(flipSvg(t)))); }).catch(() => { im.src = src; });
+for (const [im, src] of [[baseImg, VOL.art.base], [linesImg, VOL.art.lines]] as const) boardFile(src).then((t0) => { const t = t0.replace(/>([^<>]*(?:ARMY ZONE|Army)[^<>]*)</g, (_, x: string) => `>${esc(tr(x))}<`);      /* the printed army lettering follows the language */ im.src = svgUrl(t); if (t.includes('data-flip=')) flipped.set(im, loadImg(svgUrl(flipSvg(t)))); }).catch(() => { im.src = src; });
 const facing = (im: HTMLImageElement) => { const f = camFar ? flipped.get(im) : undefined; return f && f.naturalWidth ? f : im; };
 /** The map drawings are turned into pixels once and reused: redrawing the detailed SVG on every colour change is what made phones stall. */
 const flat = new Map<HTMLImageElement, HTMLCanvasElement>();
