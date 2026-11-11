@@ -3435,7 +3435,20 @@
   "Medium": "Medie",
   "Large": "Grandi",
   "Huge": "Enormi",
-  "Soldiers and tanks, one per unit": "Soldati e carri, uno per unità"
+  "Soldiers and tanks, one per unit": "Soldati e carri, uno per unità",
+  "Keep this game": "Tieni questa partita",
+  "Hot seat": "Stesso schermo",
+  "two players on this screen, a cover between turns": "due giocatori su questo schermo, una copertura tra i turni",
+  "Skip empty phases": "Salta le fasi vuote",
+  "like a real game": "come in una partita vera",
+  "Next dice": "Prossimi dadi",
+  "none queued: rolls come from the seed": "nessuno in coda: i tiri vengono dal seme",
+  "every block off the map": "tutti i blocchi fuori mappa",
+  "Optional rules for the next Reset": "Regole opzionali per il prossimo Reset",
+  "Exploiting": "In sfruttamento",
+  "Move freely": "Sposta liberamente",
+  "Chits": "Pedine",
+  "Go": "Vai"
  },
  "patterns": [
   [
@@ -9113,6 +9126,22 @@
   [
    "sudden death this turn at (.+) · areas count only when in supply \\(19\\.3\\)\\.(.*)",
    "vittoria immediata in questo turno a $1 · le aree contano solo se rifornite (19.3).$2"
+  ],
+  [
+   "Tap an area on the map to (move|place) it",
+   "Tocca un'area sulla mappa per piazzarlo"
+  ],
+  [
+   "Start (.+) again from its first turn\\? This sandbox game is lost\\.",
+   "Ricominciare $1 dal primo turno? Questa partita sandbox va persa."
+  ],
+  [
+   "Reserve (\\d+)",
+   "Riserva $1"
+  ],
+  [
+   "queued: (.+)",
+   "in coda: $1"
   ]
  ],
  "html": {}
