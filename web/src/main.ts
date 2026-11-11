@@ -16,6 +16,7 @@ import { online, startOnline, push, sit, setDevSeat, auth, lobby, journal, seatK
 import { gameInfo, GAMES } from './games';
 import { BOXES, boxFront, boxSpine } from './covers';
 import { ICONS, ico } from './icons';
+import { PIP } from './block-kit';
 import { esc, nm, flipSvg } from './util';
 import { sheets } from './sheets';
 import { pips, ABBR, chitLabel, BTN_ICON, iconify, STAGE_NAME, ok10, faces, modIcon, modWord } from './table-text';
@@ -1700,7 +1701,22 @@ function mapLegend() {
   if (!hasLegend(VOL.id)) return '';
   const close = `<button class="ico" aria-label="Close the legend" data-ui="${reg(() => { legendOpen = false; })}">${ico('close')}</button>`;
   if (g.battle) return '';                                                                              // the battle bar takes the top of the map
-  return legendOpen ? legendCard(VOL.id, close) : `<button class="mlchip" aria-expanded="false" aria-label="Map legend" data-ui="${reg(() => { legendOpen = true; legendShownAt = performance.now(); })}">${ico('info')}<span>Legend</span></button>`;
+  return legendOpen ? legendCard(VOL.id, close, pieceKey()) : `<button class="mlchip" aria-expanded="false" aria-label="Map legend" data-ui="${reg(() => { legendOpen = true; legendShownAt = performance.now(); })}">${ico('info')}<span>Legend</span></button>`;
+}
+/** The legend's "Markers on the pieces", drawn with the same art and colours the map uses (VOL.markSvg, tag(), PIP), so the key cannot drift from the board. */
+function pieceKey(): [string, string][] {
+  const img = (code: string, bg: string) => { const svg = VOL.markSvg(code); return svg ? `<img alt="" width="22" height="22" src="${svgUri(svg)}">` : `<svg viewBox="0 0 22 22" width="22" height="22" aria-hidden="true"><rect x="1" y="1" width="20" height="20" fill="${bg}" stroke="#fff" stroke-width="1.4"/><text x="11" y="15" text-anchor="middle" font-size="${code.length > 2 ? 7 : 9}" font-weight="700" fill="#fff" font-family="Arial Narrow, Arial, sans-serif">${code}</text></svg>`; };
+  const dot = (q: string, x: number) => { const [f, s2] = PIP[q]; return `<circle cx="${x}" cy="11" r="4" fill="${f}" stroke="${s2 === f ? '#141414' : s2}" stroke-width="1.2"/>`; };
+  const sides = VOL.sides, res = [...new Set(sides.map((sd) => VOL.reserveTag({ side: sd, reserve: null } as unknown as E.Unit)))];
+  const rows: [string, string][] = [
+    [`<svg viewBox="0 0 34 22" width="34" height="22" aria-hidden="true">${dot('elite', 6)}${dot('veteran', 17)}${dot('green', 28)}</svg>`, 'Pips: one per step the unit still has; the colour is the quality of that step: red elite, black veteran, white green'],
+    ['<svg viewBox="0 0 26 22" width="26" height="22" aria-hidden="true"><circle cx="13" cy="11" r="8" fill="none" stroke="#c8e86a" stroke-width="2.6"/><circle cx="13" cy="11" r="10.4" fill="none" stroke="#c8e86a66" stroke-width="1.6"/></svg>', 'Lime halo: can still move, build field works or go into reserve this step (Skip in its card sets it aside)'],
+    ['<svg viewBox="0 0 22 22" width="22" height="22" aria-hidden="true"><circle cx="11" cy="11" r="10" fill="#e7b04a"/><circle cx="11" cy="11" r="4.3" fill="none" stroke="#1a1608" stroke-width="2.2"/><path d="M11 3.5v3M11 15.5v3M3.5 11h3M15.5 11h3" stroke="#1a1608" stroke-width="2.2" stroke-linecap="round"/></svg>', 'Gold target: the point unit of the battle'],
+    [img('DIS', '#8a1f1f'), 'Disordered'], [img('REC', '#a8741a'), 'Recovering from disorder'], [img('OOS', '#b8312f'), 'Out of supply'],
+    [res.map((r) => img(r, '#2d6cb0')).join(''), `Reserve marker${res.length > 1 ? 's' : ''}`], [img('E', '#d9741c'), 'Exploitation (may move in Breakthrough)'], [img('RA', '#2a7fb8'), 'River assault'],
+    ...(VOL.id === 'bulge' ? [[img('GI', '#8a2f9c'), 'Greif team interdiction'], [img('B', '#8a6a1c'), 'Boundary crossing (left its army zone)']] as [string, string][] : []),
+  ];
+  return rows;
 }
 /** The map's own corner: the printed-map legend, the colour layer switch (one tap, no window) and the active layer's key right under it. */
 /** A quarter turn of the board, eased (phones have no right-drag to turn it). */

@@ -3187,9 +3187,9 @@
   "Take off the map": "Togli dalla mappa",
   "Deselect": "Deseleziona",
   "Good order": "Buon ordine",
-  "Disordered": "Disordinata",
+  "Disordered": "In disordine",
   "Recovering": "In recupero",
-  "Out of supply": "Non rifornita",
+  "Out of supply": "Senza rifornimento",
   "Moved": "Ha mosso",
   "Exploitation": "Sfruttamento",
   "Face-up": "Scoperta",
@@ -3484,7 +3484,14 @@
   "End strategic": "Fine strategico",
   "End combat": "Fine combattimento",
   "End breakthrough moves": "Fine movimenti di sfondamento",
-  "End breakthrough battles": "Fine battaglie di sfondamento"
+  "End breakthrough battles": "Fine battaglie di sfondamento",
+  "Pips: one per step the unit still has; the colour is the quality of that step: red elite, black veteran, white green": "Pallini: uno per ogni step rimasto; il colore è la qualità di quello step: rosso élite, nero veterano, bianco recluta",
+  "Lime halo: can still move, build field works or go into reserve this step (Skip in its card sets it aside)": "Alone lime: può ancora muovere, costruire opere campali o andare in riserva in questo passo (Salta nella sua scheda la mette da parte)",
+  "Gold target: the point unit of the battle": "Mirino oro: unità di punta della battaglia",
+  "Recovering from disorder": "In recupero dal disordine",
+  "Exploitation (may move in Breakthrough)": "Sfruttamento (può muovere nello Sfondamento)",
+  "Greif team interdiction": "Interdizione della squadra Greif",
+  "Boundary crossing (left its army zone)": "Attraversamento del confine (uscita dalla zona d'armata)"
  },
  "patterns": [
   [
