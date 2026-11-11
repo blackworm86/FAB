@@ -9,7 +9,7 @@ import { ASSET_STEPS, assetsInHand, makeOrders, type Orders } from './orders';
 
 const HIDDEN_STEPS = 2.5;          // a hidden enemy block, on average
 /** The doctrine's settings; a commander plan is one set of them. */
-export interface Style { attackOdds: number; assets: number; reserves: number; hold: boolean; /** army zone of the main effort (5 centre, 6 north, 7 south): deep objectives elsewhere are ignored */ focus?: number; /** the first doctrine, kept for measuring: no orders */ v1?: boolean }
+export interface Style { attackOdds: number; assets: number; reserves: number; hold: boolean; /** army zone of the main effort (5 centre, 6 north, 7 south): deep objectives elsewhere are ignored */ focus?: number; /** the first doctrine, kept for measuring: no orders */ v1?: boolean; /** before 12 Nov, kept for measuring: abort judged on the blocks alone */ abortV1?: boolean }
 export const DEFAULT_STYLE: Style = { attackOdds: 1.3, assets: 2, reserves: 2, hold: true };   // attackOdds: our steps against theirs, terrain included, to start or join a fight
 
 const steps = (us: Unit[]) => us.reduce((t, u) => t + (u.garrison ? 1 : E.isPlaceholder(u) ? HIDDEN_STEPS : u.str), 0);
@@ -55,7 +55,7 @@ export function score(g: Game, s: Side, a: Action, dist: Map<number, number>, st
     case 'setReady': return 1;
     case 'autoLosses': return 1;
     case 'chooseFirstLoss': return a.args[1] === b?.attPoint ? 1 : null;
-    case 'attackerChoice': return (a.args[1] as boolean) === (b != null && odds(g, b.area, s) < 1) ? 1 : 0.5;     // abort only when outmatched
+    case 'attackerChoice': return (a.args[1] as boolean) === (b != null && odds(g, b.area, s, st.abortV1 ? 0 : b.assets[s].length * ASSET_STEPS) < 1) ? 1 : 0.5;     // abort only when outmatched, the assets already in the battle counted
     case 'defenderChoice': return (a.args[1] as boolean) === (b?.pendingKind === 'arty' || (b != null && steps(fighting(g, b.area, s)) <= b.pending && worth(b.area, s) === 0)) ? 1 : 0.5;
     case 'declineExploit': return 0.5;
     case 'startBattle': {
