@@ -411,9 +411,7 @@ function drawPieces() {
   const rOf = (u: E.Unit) => { const t = troops && !faceDown(u) ? troopOf(u.id) : null; return t ? troopR(t) : u.garrison ? 0.75 : 0.95; };      // a figure takes its own footprint
   coveredLabels.clear();
   /** The printed number plate and name (drawn upright for the viewer) are kept clear: blocks go around them when the area has room. */
-  const labelSpots = (id: number) => { const L = LAB[id]; if (!L) return []; const r = L.h / 2, out: { x: number; z: number; r: number }[] = [];
-    for (let dx = -L.w / 2 + r; dx <= L.w / 2 - r + 0.1; dx += Math.max(4, r * 0.8)) { const w = toWorld(L.x + dx, L.y); out.push({ x: w.x, z: w.z, r: r / S }); }
-    if (!out.length) { const w = toWorld(L.x, L.y); out.push({ x: w.x, z: w.z, r: Math.max(L.w, L.h) / 2 / S }); } return out; };
+  const labelSpots = (_id: number): { x: number; z: number; r: number }[] => [];      // no printed label to keep clear of: the area tag sits under the pieces
   const taken = new Map<number, { x: number; z: number; r: number }[]>(), edgeTaken: { x: number; z: number; r: number }[] = [];
   /** Spot inside the area nearest to (x, z) whose footprint (radius r) is fully inside it and clear of what is already there. */
   const inArea = (id: number, x: number, z: number, r: number) => {
@@ -504,7 +502,9 @@ const CONTROL_COL: Record<string, number> = { ...VOL.controlCol, contested: 0x9b
 const tintOf = (id: number) => (tint === 'tdn' ? TDN_COL[E.areas.get(id)!.tdn] : tint === 'control' ? (E.contested(g, id) ? CONTROL_COL.contested : CONTROL_COL[g.control[id] ?? P1]) : ZONE_COL[E.areas.get(id)!.zone]);
 const hex6 = (n: number) => '#' + n.toString(16).padStart(6, '0');
 /** What is printed on the map, and how. */
-const layers = (() => { const d = { numbers: true, tdn: true, vp: true, names: true }; try { return { ...d, ...JSON.parse(localStorage.getItem('fab-layers') ?? '{}') }; } catch { return d; } })();
+const layers = { numbers: true, tdn: true, vp: true, names: true };      // the printed labels gave way to the area tags (labelMode); entry letters stay on the board
+/** Area tags: on, see-through (the one under the mouse in full) or off; the player's choice, kept on this device. */
+let labelMode: 'on' | 'tr' | 'off' = (() => { try { const v = localStorage.getItem('fab-labels'); return v === 'tr' || v === 'off' ? v : 'on'; } catch { return 'on'; } })(), tagHover: number | null = null;
 const saveLayers = () => { try { localStorage.setItem('fab-layers', JSON.stringify(layers)); localStorage.setItem('fab-tint', tint); } catch { /* private mode */ } };
 /** Whose side of the table we look from: each player sits at their own edge of the printed map (Bulge: German at the bottom; Golan: Israeli at the bottom, by the lakes); a shared screen looks from the bottom. */
 let tutView: E.Side | null = null;                                                                             // the tutorial looks from the side its lesson's player plays
@@ -586,17 +586,7 @@ function buildLabels() {
   labelsGrp.children.forEach((o) => { (o as THREE.Mesh).geometry.dispose(); ((o as THREE.Mesh).material as THREE.Material).dispose(); }); labelsGrp.clear();
   floatCards(); labelTilt = -1;      // new labels take the current tilt on the next frame
   const PAD = 12, lk = `${+layers.numbers}${+layers.tdn}${+layers.vp}${+layers.names}${Object.values(vpIcons).every((i) => i.naturalWidth > 0)}`, K = 4;
-  for (const a of MAP.areas) {
-    const L = LAB[a.id]; if (!L || L.mode === 'none' || (!layers.numbers && !layers.tdn && !layers.vp && !layers.names)) continue;      // a box prints its own code on the board
-    let t = labelTexCache.get(a.id + lk);
-    if (!t) { const cv = document.createElement('canvas'); cv.width = Math.ceil((L.w + 2 * PAD) * K); cv.height = Math.ceil((L.h + 2 * PAD) * K); const c = cv.getContext('2d')!; c.scale(K, K); c.translate(L.w / 2 + PAD, L.h / 2 + PAD); drawLabel(c, a, layers, vpIcons, L);
-      t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; labelTexCache.set(a.id + lk, t); }
-    const m = new THREE.Mesh(new THREE.PlaneGeometry((L.w + 2 * PAD) / S, (L.h + 2 * PAD) / S), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
-    const p = toWorld(L.x, L.y); m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, textRot(), 0); m.userData.area = a.id; m.userData.lh = (L.h + 2 * PAD) / S;
-    let y = 0.006;
-    if (show3d()) { y = 0; for (const dx of [-0.5, 0, 0.5]) for (const dz of [-0.5, 0, 0.5]) y = Math.max(y, REL!.h(p.x + (dx * L.w) / S, p.z + (dz * L.h) / S)); y += 0.03; }      // level, at the highest ground under it
-    m.position.set(p.x, y, p.z); m.userData.y0 = y; m.renderOrder = 2; labelsGrp.add(m);
-  }
+  /* the area's number, TDN, VP and name: the area tags (syncTags), not printed cards */
   for (const bx of (VOL.art.sheetBoxes ?? []).filter((x) => shownArea(x.id))) {                     // a scenario sheet's own box, on a card above the dimmed map around it
     const K2 = 3, cv = document.createElement('canvas'); cv.width = bx.w * K2; cv.height = bx.h * K2; const c = cv.getContext('2d')!; c.scale(K2, K2);
     c.fillStyle = hex6(VOL.controlCol[bx.side] ?? 0x666666); c.fillRect(0, 0, bx.w, bx.h); c.lineWidth = 4; c.strokeStyle = '#141416'; c.strokeRect(2, 2, bx.w - 4, bx.h - 4);
@@ -1031,9 +1021,7 @@ function badgeList(): Badge[] {
   if (selUnit && !g.battle) { const u = g.units.find((x) => x.id === selUnit)!; for (const o of optsFor(selUnit)) out.push({ area: o.area, text: g.phase === 'strategic' ? '' : `${o.cost} MP${noSup.has(o.area) ? ' · no supply' : ''}`, cls: (o.mustStop ? 'stop' : o.fuel && u.side === 'german' ? 'fuel' : 'ok') + (noSup.has(o.area) ? ' nosup' : '') }); }
   for (const o of arrOpts()) if (o.sa) out.push({ area: o.area, text: 'SA', cls: 'stop' });              // plain entry areas are lit; only the ones that cost a Special Action are marked
   if (g.battle?.stage === 'retreat') for (const a of E.retreatOptions(g, g.battle)) out.push({ area: a, text: 'Retreat', cls: 'ok' });
-  if (!g.battle && (g.phase === 'combat' || g.phase === 'btCombat') && allowed()) { const must = new Set(E.mustFight(g)); for (const a of fightable()) out.push({ area: a, text: must.has(a) ? 'Must fight' : 'May fight', cls: must.has(a) ? 'war' : 'opt' }); }
   if (tint === 'supply' && !g.battle) for (const a of supplySources(g, supplySide(), MAP.areas.map((x) => x.id))) out.push({ area: a, text: 'Supply source', cls: 'src', key: `S${a}` });
-  if (!g.battle && layers.numbers) for (const a of coveredLabels) out.push({ area: a, text: `${a} ${areaName(a)}`, cls: 'tint lab', key: `L${a}` });
   return out;
 }
 const badgeEls = new Map<string, HTMLElement>();
@@ -1041,6 +1029,36 @@ function syncBadges() {
   const layer = $('#badges'); layer.innerHTML = ''; badgeEls.clear();
   for (const b of badges) { const d = document.createElement('div'); d.className = 'bdg ' + b.cls; d.textContent = tr(b.text); layer.appendChild(d); badgeEls.set(b.key ?? String(b.area), d); }
 }
+/* ---------- area tags (owner's drawing, 11 November): the TDN shape holding the area number, the TDN to subtract in its corner, the name, the VP marks.
+   One size on screen, upright, in the middle of an empty area and just under the pieces of a busy one; Labels on the Layer bar: on, see-through, off. */
+const TDN_SHAPE = ['<circle cx="12" cy="12" r="10.5"/>', '<rect x="1.5" y="1.5" width="21" height="21" rx="2"/>', '<polygon points="6,1.5 18,1.5 23.5,12 18,22.5 6,22.5 0.5,12"/>', '<polygon points="0.8,2 23.2,2 12,23"/>'];
+const tagEls = new Map<number, HTMLElement>(); let tagKey = '';
+function syncAreaTags() {
+  const key = `${labelMode}|${g.inPlay?.join() ?? ''}`; if (key === tagKey) return; tagKey = key;
+  const layer = $('#tags'); layer.innerHTML = ''; tagEls.clear(); layer.className = labelMode;
+  if (labelMode === 'off') return;
+  for (const a of MAP.areas) {
+    const L = LAB[a.id], ar = E.areas.get(a.id); if (!L || L.mode === 'none' || !ar || !shownArea(a.id)) continue;
+    const t = Math.max(0, Math.min(3, ar.tdn)), v = ar.vp as Record<string, number | boolean>;
+    const vps = [...Object.keys(VOL.art.vpIcons).filter((k) => k !== 'mutual').flatMap((k) => Array<string>(typeof v[k] === 'number' ? (v[k] as number) : 0).fill(VOL.art.vpIcons[k])), ...(v.mutual ? [VOL.art.vpIcons.mutual] : [])];
+    const d = document.createElement('div'); d.className = `atag t${t}`;
+    d.innerHTML = `<span class="sw"><svg viewBox="0 0 24 24" aria-hidden="true">${TDN_SHAPE[t]}<text x="12" y="${t === 3 ? 9.6 : 12}" class="${a.id >= 100 ? 'n3' : a.id >= 10 ? 'n2' : ''}">${a.id}</text></svg>${t ? `<b>−${t}</b>` : ''}</span><span class="nm">${esc(areaName(a.id))}</span>${vps.map((src) => `<img alt="" src="${src}">`).join('')}`;
+    layer.appendChild(d); tagEls.set(a.id, d);
+  }
+}
+function placeAreaTags() {
+  const layer = $('#tags'); if (labelMode === 'off' || !tagEls.size) return;
+  layer.style.display = g.battle ? 'none' : ''; if (g.battle) return;                                       // the battle has the screen
+  const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(), under = new Map<number, number>();
+  for (const u of g.units) if (u.area != null && tagEls.has(u.area)) { const p = pieceScreen(u.id); if (p) under.set(u.area, Math.max(under.get(u.area) ?? -1e9, p.y - r.top + p.rad * 0.8)); }
+  for (const [id, d] of tagEls) {
+    const c = center(id); v.set(c.x, show3d() ? REL!.h(c.x, c.z) : 0, c.z).project(cam);
+    const sx = (v.x * 0.5 + 0.5) * r.width, by = under.get(id), sy = by != null ? by + 15 : (-v.y * 0.5 + 0.5) * r.height;      // a busy area: just under its lowest piece
+    d.style.display = v.z < 1 ? '' : 'none'; d.style.transform = `translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px) translate(-50%, -50%)`;
+    d.classList.toggle('hov', labelMode === 'tr' && (id === tagHover || id === selArea));
+  }
+}
+canvas.addEventListener('pointermove', (e) => { if (labelMode !== 'tr' || e.buttons) return; const a = pick(e).area ?? null; if (a !== tagHover) tagHover = a; });
 /** Focus on the battle. The whole table is drawn blurred and dimmed by the browser; a second canvas draws the contested area again, sharp, with its pieces (so nothing inside is cut),
  *  and the area's exact edge glows. */
 const canvas2 = document.getElementById('gl2') as HTMLCanvasElement;
@@ -1170,6 +1188,7 @@ function placeBadges() {
   for (const [k, d] of badgeEls) { const id = +k.replace(/^[LS]/, ''), p = d.classList.contains('lab') ? toWorld(LAB[id].x, LAB[id].y) : d.classList.contains('tint') ? toWorld(LAB[id].x, LAB[id].y + LAB[id].h / 2 + 40) : center(id); if (d.classList.contains('lab') || d.classList.contains('src')) v.set(p.x, show3d() ? REL!.h(p.x, p.z) + 0.6 : 0.6, p.z).project(cam); else v.set(p.x, 2.2, p.z - 4).project(cam);      /* a label tag sits on its own area, not shifted like the move badges */ let sx = (v.x * 0.5 + 0.5) * r.width, sy = (-v.y * 0.5 + 0.5) * r.height; const keep = selUnit && /\b(ok|stop|fuel)\b/.test(d.className), hw = d.offsetWidth / 2 + 6, hh = d.offsetHeight / 2 + 6, out = sx < hw || sx > r.width - hw || sy < hh || sy > r.height - hh;
     if (keep) { sx = Math.min(r.width - hw, Math.max(hw, sx)); sy = Math.min(r.height - hh, Math.max(hh, sy)); d.classList.toggle('edge', out); }      // a destination off screen keeps its tag at the edge, so no "no supply" warning is missed
     d.style.display = v.z < 1 ? '' : 'none'; d.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -50%)`; }
+  placeAreaTags();
 }
 
 /* ---------- battle state shared with the view ---------- */
@@ -1625,6 +1644,11 @@ function mapLegend() {
 /** The map's own corner: the printed-map legend, the colour layer switch (one tap, no window) and the active layer's key right under it. */
 /** A quarter turn of the board, eased (phones have no right-drag to turn it). */
 function rotateQuarter() { const y0 = yaw; goal = null; anims.push({ t0: performance.now(), dur: 450, fn: (k) => { yaw = y0 + (Math.PI / 2) * (1 - (1 - k) * (1 - k)); lastInput = performance.now(); } }); }
+/** One button for the area tags: on → see-through → off, kept on this device. */
+const LABEL_NEXT = { on: 'tr', tr: 'off', off: 'on' } as const, LABEL_NAME = { on: 'On', tr: 'See-through', off: 'Off' };
+function labelsBtn() {
+  return `<div class="laysw labsw"><button aria-pressed="${labelMode !== 'off'}" title="Area labels: ${LABEL_NAME[labelMode]} (tap for ${LABEL_NAME[LABEL_NEXT[labelMode]]})" aria-label="Area labels: ${LABEL_NAME[labelMode]}" data-ui="${reg(() => { labelMode = LABEL_NEXT[labelMode]; try { localStorage.setItem('fab-labels', labelMode); } catch { /* private mode */ } syncAreaTags(); })}"><b>Labels</b>${ico('eye')}<span class="l">${LABEL_NAME[labelMode]}</span></button></div>`;
+}
 function mapDock() {
   if (g.battle) return '';                                                                              // the battle bar takes the top of the map
   if (legendOpen && hasLegend(VOL.id)) return mapLegend();
@@ -1633,7 +1657,7 @@ function mapDock() {
   const sw = opts.map(([v, label, short, icon, title]) => `<button aria-pressed="${tint === v}" title="${title}" aria-label="${title}" data-ui="${reg(() => { tint = v; relayer(); if (v === 'supply') frameSide(supplySide()); })}">${ico(icon)}<span class="l">${label}</span><span class="s">${short}</span></button>`).join('');
   const sel = selUnit || selArr || selChit || selArea != null;
   const tools = `<div class="maptools"><button aria-label="Rotate the map a quarter turn" title="Rotate the map" data-ui="${reg(rotateQuarter)}">${ico('rotate')}</button>${sel ? `<button aria-label="Deselect" title="Deselect" data-ui="${reg(() => { selUnit = selArr = selChit = null; selArea = null; previewArea = null; hoverArea = null; refresh(); })}">${ico('deselect')}<span>Deselect</span></button>` : ''}</div>`;
-  return `<div class="mapdock"><div class="dockrow">${mapLegend()}<div class="laysw" role="group" aria-label="Map colour layer"><b>Layer</b>${sw}</div></div>${legend()}${tools}</div>`;
+  return `<div class="mapdock"><div class="dockrow">${mapLegend()}<div class="laysw" role="group" aria-label="Map colour layer"><b>Layer</b>${sw}</div>${labelsBtn()}</div>${legend()}${tools}</div>`;
 }
 /** The volume's prompts (set-up, drops, evacuation…). On a phone they fold down to a handle so the map can have the screen; they open again on a tap. */
 let volFolded = innerWidth <= 700, volFoldKey = '';
@@ -1791,15 +1815,13 @@ function showAreas(ids: number[]) {
 const cutOffCount = (sd: E.Side) => MAP.areas.filter((a) => g.control[a.id] === sd && !supOk(sd, a.id)).length;
 const resetBtn = () => ubtn(`${ico('home')}<span>Reset view</span>`, () => { goal = homeGoal(); yaw = viewRot(); });
 function layersHtml() {
-  const lay = (k: 'numbers' | 'tdn' | 'vp' | 'names', title: string, sub: string) => srow(title, sub, swtch(layers[k], () => { layers[k] = !layers[k]; relayer(); }, title));
   const map = VOL.art.relief ? srow('Map', VOL.art.reliefName, `<span class="seg">${chip('2D', !map3d, () => setMap3d(false), 'The printed board, flat')}${chip('3D', map3d, () => setMap3d(true), VOL.art.reliefName)}</span>`) : '';
   const setTroops = (on: boolean) => { troopsOn = on; try { localStorage.setItem('fab-troops', on ? '1' : '0'); } catch { /* private mode */ } refresh(); };
   const units = FIG_VOLS.includes(VOL.id) ? srow('Units', 'on either map', `<span class="seg">${chip('Blocks', !troopsOn, () => setTroops(false), 'The wooden blocks')}${chip('Figures', troopsOn, () => setTroops(true), 'Soldiers and tanks, one per unit')}</span>`) : '';
   const setSize = (z: number) => { troopSize = z; setZoom(z); try { localStorage.setItem('fab-troop-size', String(z)); } catch { /* private mode */ } refresh(); };
   const size = FIG_VOLS.includes(VOL.id) && troopsOn ? srow('Figure size', '', `<span class="seg">${([[1, 'Small'], [1.5, 'Medium'], [2, 'Large'], [2.5, 'Huge']] as const).map(([z, w]) => chip(w, troopSize === z, () => setSize(z), `Figures ${z}×`)).join('')}</span>`) : '';
   return `<div class="modal"><div class="sheet menu view"><h3><span class="grow">${ico('eye')} View</span><button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
-    <div class="mbody"><div class="sgrid"><div><h4>Printed on the map</h4>${lay('numbers', 'Area numbers', 'and entry letters')}${lay('tdn', 'TDN', 'terrain defence')}</div><div><h4 class="ghost" aria-hidden="true">&nbsp;</h4>${lay('vp', 'Victory points', '')}${lay('names', 'Place names', '')}</div></div>
-    <h4>Board</h4><div class="sgrid"><div>${map || srow('Camera', '', resetBtn())}${units}${size}</div><div>${map ? srow('Camera', '', resetBtn()) : ''}</div></div></div></div></div>`;
+    <div class="mbody"><h4>Board</h4><div class="sgrid"><div>${map || srow('Camera', '', resetBtn())}${units}${size}</div><div>${map ? srow('Camera', '', resetBtn()) : ''}</div></div></div></div></div>`;
 }
 /** The game log, newest first, grouped by turn; each line tinted by the side it concerns. */
 /** A log line with its side prefix (GE / AL) as a coloured tag: side shown by colour and name. */
@@ -1962,7 +1984,7 @@ function refresh() {
   { const key = `${online.devSeat}|${online.mySide()}|${g.battle?.attPoint}|${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
     if (key !== tgtKey) { tgtKey = key; tgt = reinforcing ? reinforceTargets() : decisionTargets() ?? (selChit && mine(g.chits.find((x) => x.id === selChit)?.side ?? P1) ? VOL.targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: (u) => unitPic(u), areaName }) : null); } }
   if (tint === 'control') { const k = JSON.stringify(g.control) + E.contestedAreas(g).join(); if (k !== ctlKey) { ctlKey = k; paintBoard(); } }
-  syncView(); syncBattleCam(); drawPieces(); paintAreas(); drawRoute(); badges = g.battle ? [] : badgeList(); syncBadges(); syncMoveMarks(); syncTags(); render();
+  syncView(); syncBattleCam(); drawPieces(); paintAreas(); drawRoute(); badges = g.battle ? [] : badgeList(); syncBadges(); syncMoveMarks(); syncTags(); syncAreaTags(); render();
   if (!rollView) { const cv = $('#dice'); if (cv && cv.style.display !== 'none') { clearDice(); cv.style.display = 'none'; } }
 }
 const CALM = matchMedia('(prefers-reduced-motion: reduce)').matches;                               // no floating motion for players who asked for less motion
