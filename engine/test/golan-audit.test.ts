@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { passSA as passSA_, setReady as setReady_, type Battle as Battle_, type Game as Game_ } from '../src';
 /** 6.21-6.23: past the Defender's Special Action decision and the Attacker's assets, to the Defender's own asset step. */
 const defStep = (g: Game_, b: Battle_) => { if (b.defSA) passSA_(g, b); setReady_(g, b, b.attacker); };
-import { startBattle, beginCombat, canAssign, assign, moveOptions, stratOptions, stratMove, setReserve, edgeKey, endPhase, neighbors, inSupply, rollSupply, supplyChecks, firstBattle, golan, ai, type Game } from '../src';
+import { startBattle, beginCombat, canAssign, assign, moveOptions, stratOptions, stratMove, setReserve, edgeKey, endPhase, neighbors, inSupply, rollSupply, supplyChecks, firstBattle, golan, type Game } from '../src';
 import { newGolanGame, unit, chit, give, move } from './golan-helpers';
 const regular = (u: { garrison?: boolean; fort?: unknown; ghost?: unknown }) => !u.garrison && !u.fort && !u.ghost;
 
@@ -74,7 +74,6 @@ describe('Golan audit fixes', () => {
   it('15.3: the air assault landing is fought before any other battle', () => {
     const g = newGolanGame(30); Object.assign(unit(g, 'I05'), { area: 83 }); golan.airAssault(g, 83);
     expect(firstBattle(g)).toBe(83); expect(() => startBattle(g, 27)).toThrow(/Hermon/);
-    expect(ai.next(g, 'syrian', 'normal')?.op).toEqual(['startBattle', 83, false]);
   });
   it('15.12: with mixed Syrian divisions air support may only fire as artillery', () => {
     const g = newGolanGame(31); g.turn = 3; g.phase = 'combat'; g.contestedAtMoveStart = [];
@@ -131,13 +130,5 @@ describe('15.2 / 15.4a the Syrian player chooses the Purple Line release (the ow
     for (let i = 0; i < 6 && S(g).release; i++) { const id = S(g).release!.place[0]; golan.placeReleased(g, id, golan.releaseTargets(g, id)[0]); }
     expect(S(g).release).toBeUndefined(); expect(E.actorOf(g)).toBe('israeli');
     for (const id of ['S18', 'S19', 'S20', 'S22', 'S23']) expect(unit(g, id).area != null || unit(g, id).box === 'arriving').toBe(true);
-  });
-  it('the computer as Syria answers the release', async () => {
-    const E = await import('../src');
-    const g = newGolanGame(45); g.turn = 3; g.phase = 'movement'; g.phasing = 'israeli'; g.contestedAtMoveStart = E.contestedAreas(g);
-    Object.assign(unit(g, 'I05'), { area: 50, moved: false, spent: 0, disorder: 0 }); for (const x of g.units) if (x.area === 64 || (x.area === 50 && x.side === 'syrian')) x.area = null; g.control[64] = 'syrian'; g.control[50] = 'israeli';
-    E.move(g, 'I05', 64);
-    for (let i = 0; i < 8 && S(g).release; i++) { const a = ai.next(g, 'syrian', 'normal')!; ai.apply(g, a.op); }
-    expect(S(g).release).toBeUndefined();
   });
 });

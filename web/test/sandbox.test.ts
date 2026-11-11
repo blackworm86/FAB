@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import * as E from '../../engine/src';
 import { preset } from '../src/sandbox';
 
-const make = (game: string, q: string, opts: Partial<E.Opts> = {}) => { E.useGame(game); return preset(E.newGame(7, opts), new URLSearchParams(q), E.ai.next); };
+const make = (game: string, q: string, opts: Partial<E.Opts> = {}) => { E.useGame(game); return preset(E.newGame(7, opts), new URLSearchParams(q)); };
 describe('sandbox preset', () => {
   for (const [game, scenario] of [['bulge', 'tournament'], ['sicily', 'tournament'], ['golan73', 'badr'], ['golan73', 'nafakh'], ['sicily', 'campaign']] as const)
     it(`${game} ${scenario}: set up, a battle opens in the Combat Phase`, () => {

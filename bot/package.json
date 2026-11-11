@@ -1,0 +1,16 @@
+{
+  "name": "fab-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The experimental computer player (docs/COMPUTER-PLAYER-PLAN.md). Uses the engine only through its public functions.",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "random": "vite-node scripts/random-games.ts",
+    "arena": "vite-node scripts/arena.ts",
+    "record": "vite-node scripts/record.ts",
+    "fit": "vite-node scripts/fit.ts"
+  },
+  "devDependencies": { "@types/node": "22.10.2", "typescript": "5.6.3", "vitest": "2.1.8" }
+}
