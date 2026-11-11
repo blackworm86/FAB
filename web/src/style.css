@@ -1203,8 +1203,12 @@ body:has(#ui .modal) #leaders, body:has(#ui .modal) #fx, body:has(#rules) #leade
 .atag svg text { font: 700 11px var(--sfd); text-anchor: middle; dominant-baseline: central; fill: #1b1c14; } .atag svg text.n3 { font-size: 8px; } .atag svg text.n2 { font-size: 10px; } .atag.t3 svg text { fill: #f3ecd0; }
 .atag .sw b { position: absolute; right: -7px; top: -6px; min-width: 14px; height: 14px; border-radius: 50%; background: #1b1c14; border: 1px solid #efe4b8; color: #efe4b8; font: 700 9px/12px var(--sfd); text-align: center; }
 .atag .nm { margin-left: 4px; } .atag img { width: 13px; height: 13px; object-fit: contain; filter: drop-shadow(0 0 1px #fffa); }
-#tags.tr .atag { opacity: .45; background: rgba(14, 15, 10, .35); border-color: rgba(231, 176, 74, .18); box-shadow: none; transition: opacity .12s; }
-#tags.tr .atag.hov { opacity: 1; background: rgba(14, 15, 10, .9); border-color: var(--gold); box-shadow: 0 0 0 2px #e7b04a55, 0 2px 8px #000a; z-index: 1; }
+#tags .atag { opacity: .45; background: rgba(14, 15, 10, .35); border-color: rgba(231, 176, 74, .18); box-shadow: none; transition: opacity .12s; }
+#tags.solid .atag { opacity: 1; background: rgba(14, 15, 10, .66); border-color: rgba(231, 176, 74, .35); box-shadow: 0 1px 4px #0006; }
+#tags .atag.hov { opacity: 1; background: rgba(14, 15, 10, .9); border-color: var(--gold); box-shadow: 0 0 0 2px #e7b04a55, 0 2px 8px #000a; z-index: 1; }
 .labsw { margin-left: 6px; } .labsw button { gap: 6px; } .labsw button b { color: #b3ad8b; font: 600 12px var(--sfd); letter-spacing: .12em; }
 .labsw button[aria-pressed="true"] b { color: #1a1608; }
 @media (max-width: 700px) { .labsw { margin-left: 4px; flex: none; } .labsw button b, .labsw button .ic { display: none; } .labsw button .l { display: inline !important; } .atag { height: 22px; font-size: 12px; } }
+/* zoomed far out: a VP area shows only its VP marks; the area under the mouse (or selected) keeps its whole tag */
+#tags.far .atag:not(.hov) { background: none; border-color: transparent; box-shadow: none; opacity: .9; padding: 0; gap: 1px; }
+#tags.far .atag:not(.hov) .sw, #tags.far .atag:not(.hov) .nm { display: none; }
