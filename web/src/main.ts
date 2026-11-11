@@ -1839,12 +1839,20 @@ function frameSide(sd: E.Side) { const ids = MAP.areas.filter((a) => g.control[a
   const x0 = Math.min(...ids.map((p) => p.x)), x1 = Math.max(...ids.map((p) => p.x)), z0 = Math.min(...ids.map((p) => p.z)), z1 = Math.max(...ids.map((p) => p.z));
   goal = { t: new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), dist: clampDist(Math.max(x1 - x0, (z1 - z0) * 1.3) * 0.95 + 8), pitch }; }
 /** True when the area's centre is inside the visible part of the screen (clear of the bars at top and bottom). */
-const onScreen = (a: number) => { const v = center(a).clone().project(cam); return Math.abs(v.x) < 0.85 && v.y > -0.6 && v.y < 0.75 && v.z < 1; };
+/** The part of the canvas no panel covers, in normalised screen units (-1..1): the sandbox panel on the right, the block card or battle report at the bottom right. */
+function freeView() {
+  const r = canvas.getBoundingClientRect(); let x1 = 0.85, y0 = -0.6;
+  for (const q of ['.sbx', '.c-dispatch', '.c-ledger']) { const e = document.querySelector<HTMLElement>(`#ui ${q}`); if (!e || !e.offsetParent) continue; const b = e.getBoundingClientRect(); if (b.width > r.width * 0.6) { y0 = Math.max(y0, 1 - ((b.top - r.top) / r.height) * 2 + 0.05); continue; } x1 = Math.min(x1, ((b.left - r.left) / r.width) * 2 - 1 - 0.05); }
+  return { x0: -0.85, x1: Math.max(-0.3, x1), y0: Math.min(0.3, y0), y1: 0.75 };
+}
+const onScreen = (a: number) => { const v = center(a).clone().project(cam), f = freeView(); return v.x > f.x0 && v.x < f.x1 && v.y > f.y0 && v.y < f.y1 && v.z < 1; };
 /** Bring areas into view when any of them is off screen: the camera frames them all, no closer than now. */
 function showAreas(ids: number[]) {
   if (!ids.length || ids.every(onScreen)) return;
   const ps = ids.map(center), x0 = Math.min(...ps.map((p) => p.x)), x1 = Math.max(...ps.map((p) => p.x)), z0 = Math.min(...ps.map((p) => p.z)), z1 = Math.max(...ps.map((p) => p.z));
-  goal = { t: new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), dist: clampDist(Math.max(dist, Math.max(x1 - x0, (z1 - z0) * 1.3) * 1.1 + 10)), pitch };
+  const f = freeView(), d = clampDist(Math.max(dist, Math.max(x1 - x0, (z1 - z0) * 1.3) * 1.1 + 10)), t = new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2);
+  const shift = -((f.x0 + f.x1) / 2) * d * 0.45 * (innerWidth / innerHeight) * 0.5;      // a panel on the right: aim to the right so the areas land in the free part (approximate, camera faces the map)
+  goal = { t: t.add(new THREE.Vector3(Math.cos(yaw) * shift, 0, -Math.sin(yaw) * shift)), dist: d, pitch };
 }
 const cutOffCount = (sd: E.Side) => MAP.areas.filter((a) => g.control[a.id] === sd && !supOk(sd, a.id)).length;
 const resetBtn = () => ubtn(`${ico('home')}<span>Reset view</span>`, () => { goal = homeGoal(); yaw = viewRot(); });
