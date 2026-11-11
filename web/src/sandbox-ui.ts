@@ -54,6 +54,7 @@ function sbResetNow(opts: Partial<E.Opts>) {
 const resetAskHtml = () => { const o = st.resetAsk; if (!o) return ''; const sc = M.scenarios.find((x) => x.id === o.scenario)?.name ?? 'this scenario';
   return `<div class="askrow sbask"><p>Start ${esc(sc)} again from its first turn? This sandbox game is lost.</p><div class="row">${ubtn(`${ico('undo')} Reset`, () => sbResetNow(o), 'danger')}${ubtn('Keep this game', () => { st.resetAsk = null; })}</div></div>`; };
 const openSb = (v: boolean) => { st.sbOpen = v; try { localStorage.setItem('fab-sb-open', v ? '1' : '0'); } catch { /* private mode */ } };
+export const closeSb = () => openSb(false);
 /** The sandbox's only control on the playing screen: a small floating button at the left edge, clear of the bars and the map's middle. */
 export function sandboxFab() {
   return `<button class="sbfab" data-ui="${reg(() => openSb(true))}" title="Sandbox tools (admin testing)" aria-label="Open the sandbox tools">${ico('wand')}<span>Sandbox</span></button>`;

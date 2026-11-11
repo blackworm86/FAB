@@ -9198,6 +9198,10 @@
   [
    "Battle over\\.",
    "Battaglia finita."
+  ],
+  [
+   "Filled: (.+) share of the expected hits · empty: (.+)",
+   "Pieno: quota di $1 dei colpi attesi · vuoto: $2"
   ]
  ],
  "html": {}
