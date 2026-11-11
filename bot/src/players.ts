@@ -10,7 +10,7 @@ export const PLAYERS: Record<string, (seed: number) => Player> = {
   random: (seed) => randomPlayer(seed),
   doctrine: () => doctrinePlayer(),
   'doctrine-v3': () => doctrinePlayer({ ...DEFAULT_STYLE, v3: true }),      // before the operational rules (12 November 2026)
-  ...Object.fromEntries(['rotate', 'reserve', 'breakthrough', 'greif', 'quality', 'assets'].map((r) => [`doctrine-no-${r}`, () => doctrinePlayer({ ...DEFAULT_STYLE, skip: [r] })])),   // each operational rule off, for measuring
+  ...Object.fromEntries(['reserve', 'breakthrough', 'greif', 'quality', 'assets'].map((r) => [`doctrine-no-${r}`, () => doctrinePlayer({ ...DEFAULT_STYLE, skip: [r] })])),   // each operational rule off, for measuring
   'doctrine-v2': () => doctrinePlayer({ ...DEFAULT_STYLE, abortV1: true }),      // before the abort fix (12 November 2026)
   'doctrine-v1': () => doctrinePlayer({ ...DEFAULT_STYLE, v1: true }),      // before the attack orders (11 November 2026)
   commander: (seed) => commanderPlayer(seed, 2000),

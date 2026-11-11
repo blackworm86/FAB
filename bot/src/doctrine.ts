@@ -9,7 +9,7 @@ import { ASSET_STEPS, assetsInHand, makeOrders, type Orders } from './orders';
 
 const HIDDEN_STEPS = 2.5;          // a hidden enemy block, on average
 /** The doctrine's settings; a commander plan is one set of them. */
-export interface Style { attackOdds: number; assets: number; reserves: number; hold: boolean; /** army zone of the main effort (5 centre, 6 north, 7 south): deep objectives elsewhere are ignored */ focus?: number; /** the first doctrine, kept for measuring: no orders */ v1?: boolean; /** before 12 Nov, kept for measuring: abort judged on the blocks alone */ abortV1?: boolean; /** before the operational rules (12 Nov), kept for measuring: no rotation, reserves for strategic moves, breakthroughs, events */ v3?: boolean; /** operational rules switched off one by one, for measuring each: 'rotate', 'reserve', 'breakthrough', 'greif', 'quality', 'assets' */ skip?: string[] }
+export interface Style { attackOdds: number; assets: number; reserves: number; hold: boolean; /** army zone of the main effort (5 centre, 6 north, 7 south): deep objectives elsewhere are ignored */ focus?: number; /** the first doctrine, kept for measuring: no orders */ v1?: boolean; /** before 12 Nov, kept for measuring: abort judged on the blocks alone */ abortV1?: boolean; /** before the operational rules (12 Nov), kept for measuring: reserves for strategic moves, breakthroughs, events */ v3?: boolean; /** operational rules switched off one by one, for measuring each: 'reserve', 'breakthrough', 'greif', 'quality', 'assets' (rotation of worn blocks was measured harmful twice and removed, 12 Nov) */ skip?: string[] }
 export const DEFAULT_STYLE: Style = { attackOdds: 1.3, assets: 2, reserves: 2, hold: true };   // attackOdds: our steps against theirs, terrain included, to start or join a fight
 
 const steps = (us: Unit[]) => us.reduce((t, u) => t + (u.garrison ? 1 : E.isPlaceholder(u) ? HIDDEN_STEPS : u.str), 0);
@@ -24,7 +24,6 @@ const attacker = (g: Game, s: Side, st: Style) => !st.v1 && s === E.sidesOf(g)[0
 const backing = (g: Game, s: Side, st: Style) => (attacker(g, s, st) ? Math.min(st.assets, assetsInHand(g, s)) * ASSET_STEPS : 0);
 /** The attacker's operational rules (rotation, reserves, breakthroughs, events) are on. */
 const ops = (g: Game, s: Side, st: Style, rule = '') => attacker(g, s, st) && !st.v3 && !st.skip?.includes(rule);
-const worn = (u: Unit) => u.disorder > 0 || u.str * 2 <= u.max;
 const enemyNear = (g: Game, a: number, s: Side) => E.neighbors(a).some((n) => fighting(g, n, E.other(s)).length > 0);
 const worth = (a: number, s: Side) => { const v = E.areas.get(a)!.vp; return (v.mutual ? 1 : 0) + (s === 'german' ? v.german : v.allied); };
 
@@ -92,7 +91,6 @@ export function score(g: Game, s: Side, a: Action, dist: Map<number, number>, st
     case 'move': case 'stratMove': {
       const u = unit(a.args[0]), to = a.args[1] as number, from = u.area!, order = orders.get(u.id);
       if (order != null) return order === to ? 6 + u.str / 10 : null;                                  // an ordered block goes to its objective, nowhere else
-      if (ops(g, s, st, 'rotate') && a.fn === 'move' && worn(u) && enemyNear(g, from, s) && !E.contested(g, from) && !enemyNear(g, to, s) && !fighting(g, to, E.other(s)).length) return 1;   // rotation: a worn block leaves the line to fresh ones
       if (E.contested(g, from) && odds(g, from, s) < st.attackOdds) return null;                         // do not leave a fight we may lose
       if (st.hold && worth(from, s) > 0 && g.control[from] === s && enemyNear(g, from, s) && fighting(g, from, s).length <= 1) return null;   // hold the objective
       if (fighting(g, to, E.other(s)).length && odds(g, to, s, u.str) < st.attackOdds) return null;        // no attack against bad odds
