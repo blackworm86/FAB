@@ -25,7 +25,7 @@
   "End move": "Fine movimento",
   "End fight": "Fine combattimento",
   "End breakthrough": "Fine sfondamento",
-  "End supply": "Fine rifornimenti",
+  "End supply": "Fine rifornimento",
   "Reinforcement": "Rinforzi",
   "Admin": "Amministrativa",
   "Movement": "Movimento",
@@ -3367,7 +3367,7 @@
   "Veteran Infantry Strongpoint": "Caposaldo di fanteria veterano",
   "Green Infantry Strongpoint": "Caposaldo di fanteria di reclute",
   "End reinforcement": "Fine rinforzi",
-  "End admin": "Fine amministrativa",
+  "End admin": "Fine amministrazione",
   "Drop the airborne first": "Prima il lancio aviotrasportato",
   "choose the drop zone in the panel on the map (14.27a).": "scegli la zona di lancio nel pannello sulla mappa (14.27a).",
   "attacks": "attacca",
@@ -3476,7 +3476,15 @@
   "Skip": "Salta",
   "Skipped · undo": "Saltata · annulla",
   "Nothing to do for this unit in this step: no halo, left out of Can move": "Niente da fare per questa unità in questo passo: senza alone, esclusa da Può muovere",
-  "Lime halo: can still act this step (move, field works or reserve); Skip in its card sets it aside": "Alone lime: può ancora agire in questo passo (muovere, opere campali o riserva); Salta nella sua scheda la mette da parte"
+  "Lime halo: can still act this step (move, field works or reserve); Skip in its card sets it aside": "Alone lime: può ancora agire in questo passo (muovere, opere campali o riserva); Salta nella sua scheda la mette da parte",
+  "<b>Set-up:</b> drag a block from the tray to a lit area, or use the panel.": "<b>Schieramento:</b> trascina un blocco dal vassoio su un'area illuminata, o usa il pannello.",
+  "View: 2D or 3D, blocks or figures, reset the camera": "Vista: 2D o 3D, blocchi o figure, ripristina la visuale",
+  "CHITS": "PEDINE",
+  "End movement": "Fine movimento",
+  "End strategic": "Fine strategico",
+  "End combat": "Fine combattimento",
+  "End breakthrough moves": "Fine movimenti di sfondamento",
+  "End breakthrough battles": "Fine battaglie di sfondamento"
  },
  "patterns": [
   [
@@ -9226,6 +9234,10 @@
   [
    "(\\d+)th Army",
    "$1ª Armata"
+  ],
+  [
+   "Chits each side draws this turn \\((.+) / (.+)\\)",
+   "Pedine che ogni parte pesca in questo turno ($1 / $2)"
   ]
  ],
  "html": {}
