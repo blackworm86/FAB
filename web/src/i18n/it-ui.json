@@ -9166,6 +9166,22 @@
   [
    "Lesson (\\d+) of (\\d+)",
    "Lezione $1 di $2"
+  ],
+  [
+   "(\\d+) hits rolled, 1 already taken: (\\d+) left",
+   "$1 colpi tirati, 1 già assegnato: ne restano $2"
+  ],
+  [
+   "Close it: (\\d+) battles? left\\.",
+   "Chiudila: restano $1 battaglie."
+  ],
+  [
+   "Close it\\.",
+   "Chiudila."
+  ],
+  [
+   "Battle over\\.",
+   "Battaglia finita."
   ]
  ],
  "html": {}

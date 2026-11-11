@@ -1221,3 +1221,4 @@ body:has(#ui .modal) #leaders, body:has(#ui .modal) #fx, body:has(#rules) #leade
 /* red is for battles: a step loss pops up in the miss salmon, and End move steps back to an outline while a block is half-way through its move */
 .fx.loss { border-color: #ff9c8a; background: #1c1410f2; } .fx.loss b { color: #ff9c8a; }
 button.go.quiet { background: transparent !important; color: #ff9c8a !important; border: 1px solid #d1432f88 !important; box-shadow: none !important; }
+.mapbubble:not([style*="transform"]) { visibility: hidden; }      /* not placed yet: never flash in the corner */
