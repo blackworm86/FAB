@@ -1222,3 +1222,5 @@ body:has(#ui .modal) #leaders, body:has(#ui .modal) #fx, body:has(#rules) #leade
 .fx.loss { border-color: #ff9c8a; background: #1c1410f2; } .fx.loss b { color: #ff9c8a; }
 button.go.quiet { background: transparent !important; color: #ff9c8a !important; border: 1px solid #d1432f88 !important; box-shadow: none !important; }
 .mapbubble:not([style*="transform"]) { visibility: hidden; }      /* not placed yet: never flash in the corner */
+.linkbtn { display: inline; min-height: 0 !important; padding: 0 2px !important; border: 0 !important; background: none !important; color: var(--gold) !important; font: inherit !important; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.maplegend { max-height: calc(100vh - 230px); overflow-y: auto; overscroll-behavior: contain; }      /* the key grew a section: it scrolls inside the map, never past the bottom bar */

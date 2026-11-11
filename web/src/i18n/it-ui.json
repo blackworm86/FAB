@@ -3456,7 +3456,23 @@
   "Roll the dice": "Tira i dadi",
   "Dim": "Tenui",
   "Search a name, unit or kind": "Cerca un nome, unità o tipo",
-  "The log fills in as the turn goes on.": "Il registro si riempie man mano che il turno procede."
+  "The log fills in as the turn goes on.": "Il registro si riempie man mano che il turno procede.",
+  "Markers on the pieces": "Indicatori sui pezzi",
+  "Pips: one per step; red ones are steps already lost": "Pallini: uno per step; quelli rossi sono step già persi",
+  "Can still move this step (grey dash: cannot)": "Può ancora muovere in questo passo (trattino grigio: no)",
+  "Gold dot: can build field works · blue dot: can go into reserve": "Punto oro: può costruire opere campali · punto blu: può andare in riserva",
+  "Point unit of the battle": "Unità di punta della battaglia",
+  "Disordered · REC: recovering": "In disordine · REC: in recupero",
+  "In reserve": "In riserva",
+  "Exploiting (Breakthrough)": "In sfruttamento (Sfondamento)",
+  "Interdicted from the air": "Interdetto dal cielo",
+  "disordered (DIS)": "in disordine (DIS)",
+  "recovering (REC)": "in recupero (REC)",
+  "out of supply (OOS)": "senza rifornimento (OOS)",
+  "exploiting (E)": "in sfruttamento (E)",
+  "interdicted (GI)": "interdetto (GI)",
+  "Markers?": "Indicatori?",
+  "What the markers on the pieces mean": "Cosa significano gli indicatori sui pezzi"
  },
  "patterns": [
   [

@@ -62,9 +62,18 @@ const swatch = (bg: string, border = '#0006') => `<svg viewBox="0 0 30 30" width
 const GAME: Row[] = [[swatch('#c8e86a'), 'Your block can move there'], [swatch('#e7b04a'), 'Stop there, or selected'], [swatch('#d1432f'), 'A battle: must fight (filled) or may fight (outline)'],
   [`<svg viewBox="0 0 30 30" width="22" height="22" aria-hidden="true"><rect x="3" y="6" width="24" height="18" rx="3" fill="#d8d4c0" stroke="#0006" stroke-width="1.6"/><path d="M6 24L18 6M13 24L25 6M20 24L27 13.5" stroke="#23251a" stroke-width="3"/></svg>`, 'Out of supply (stripes)'],
   ['<b class="ar" style="color:#c8e86a">━▶</b>', 'Move route: lime = move, brass = uses fuel, silver = minimum move, ivory = strategic, ╳ = blown bridge']];
+/** The small markers on and above the pieces (the selected block's card says the same in words). */
+const tagPic = (txt: string, bg: string) => `<svg viewBox="0 0 34 22" width="30" height="20" aria-hidden="true"><rect x="1" y="2" width="32" height="18" rx="3" fill="${bg}"/><text x="17" y="15" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" font-family="Arial Narrow, Arial, sans-serif">${txt}</text></svg>`;
+const PIECES: Row[] = [
+  ['<svg viewBox="0 0 30 22" width="30" height="20" aria-hidden="true"><circle cx="8" cy="11" r="3.4" fill="#fff" stroke="#222"/><circle cx="16" cy="11" r="3.4" fill="#fff" stroke="#222"/><circle cx="24" cy="11" r="3.4" fill="#d1432f" stroke="#222"/></svg>', 'Pips: one per step; red ones are steps already lost'],
+  ['<svg viewBox="0 0 30 22" width="30" height="20" aria-hidden="true"><circle cx="15" cy="11" r="9" fill="#c8e86a"/><path d="M19 11H11M14 7l-4 4 4 4" stroke="#0b0d08" stroke-width="2.2" fill="none"/></svg>', 'Can still move this step (grey dash: cannot)'],
+  ['<svg viewBox="0 0 30 22" width="30" height="20" aria-hidden="true"><circle cx="11" cy="11" r="4.5" fill="#e7b04a"/><circle cx="21" cy="11" r="4.5" fill="#2d6cb0"/></svg>', 'Gold dot: can build field works · blue dot: can go into reserve'],
+  ['<svg viewBox="0 0 30 22" width="30" height="20" aria-hidden="true"><circle cx="15" cy="11" r="8" fill="#e7b04a"/><circle cx="15" cy="11" r="4" fill="none" stroke="#0b0d08" stroke-width="2"/><path d="M15 3v4M15 15v4M7 11h4M19 11h4" stroke="#0b0d08" stroke-width="2"/></svg>', 'Point unit of the battle'],
+  [tagPic('DIS', '#8a1f1f'), 'Disordered · REC: recovering'], [tagPic('OOS', '#b8312f'), 'Out of supply'], [tagPic('R', '#2d6cb0'), 'In reserve'], [tagPic('E', '#d9741c'), 'Exploiting (Breakthrough)'], [tagPic('GI', '#8a2f9c'), 'Interdicted from the air'],
+];
 export function legendCard(game: string, close: string) {
   const L = LEGEND[game]; if (!L) return '';
   const row = ([pic, label]: Row) => `<li>${pic}<span>${label}</span></li>`;
   return `<div class="maplegend" role="dialog" aria-label="Map legend: ${L.title}"><div class="mlhead"><b>Map legend</b><small>${L.title}</small>${close}</div>
-    <ul class="mlrows">${L.rows.map(row).join('')}</ul><b class="mlsub">Terrain defence (TDN)</b><ul class="mlrows tdn">${TDN.map(row).join('')}</ul><b class="mlsub">The game's own colours</b><ul class="mlrows">${GAME.map(row).join('')}</ul></div>`;
+    <ul class="mlrows">${L.rows.map(row).join('')}</ul><b class="mlsub">Terrain defence (TDN)</b><ul class="mlrows tdn">${TDN.map(row).join('')}</ul><b class="mlsub">The game's own colours</b><ul class="mlrows">${GAME.map(row).join('')}</ul><b class="mlsub">Markers on the pieces</b><ul class="mlrows">${PIECES.map(row).join('')}</ul></div>`;
 }
