@@ -3424,7 +3424,12 @@
   "No areas held · no big units destroyed.": "Nessuna area tenuta · nessuna grande unità distrutta.",
   "tap a chit to read it": "tocca una pedina per leggerla",
   "click a chit to read it": "clicca una pedina per leggerla",
-  "No chits here.": "Nessuna pedina qui."
+  "No chits here.": "Nessuna pedina qui.",
+  "Units": "Unità",
+  "on either map": "su entrambe le mappe",
+  "Figures": "Figure",
+  "The wooden blocks": "I blocchi di legno",
+  "Soldiers and tanks, one per step": "Soldati e carri, uno per passo"
  },
  "patterns": [
   [

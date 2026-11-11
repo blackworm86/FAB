@@ -40,13 +40,13 @@ Licence: TRELLIS code is MIT but some modules it uses are research-only; check b
 
 ## 4. In the game (The Bulge: built 11 November 2026)
 
-Mockup approved by the owner: https://claude.ai/artifact/SpjUQ4nNP3885wy4kxiTop. Code: `web/src/troops.ts` (loading, placement, look), wired in `drawPieces()` in `web/src/main.ts`; tests `web/test/troops.test.ts`. Switch: Settings > Screen > **3D figures** (on by default; off in the tutorials, whose texts talk about blocks). Any unit without figures, and every unit while the figures load, is the usual block.
+Mockup approved by the owner: https://claude.ai/artifact/SpjUQ4nNP3885wy4kxiTop. Code: `web/src/troops.ts` (loading, placement, look), wired in `drawPieces()` in `web/src/main.ts`; tests `web/test/troops.test.ts`. Switch: the View window, Board > **Units: Blocks / Figures**, separate from Map 2D / 3D, so any combination works (Figures by default; blocks in the tutorials, whose texts talk about blocks). Any unit without figures, and every unit while the figures load, is the usual block.
 
 - **One figure per step**: a 4-step unit shows 4 figures (the type's figures in turn), a 1-step unit 1. The figures are single models in `web/public/pezzi/` with `bulge.json` (block id → type → figure files), made by `tools/pezzi3d/strumenti/separa_figure.py` from the owner's group models.
 - **One real scale** (1 m = 0.18 board units, so a soldier is about 0.32 and a Sherman 0.53 tall), then each area draws its units **as big as the area allows**: it tries 3× real size and steps down (`SIZES`) until every unit fits inside the area, clear of the printed name plate and of the other units.
 - **Placement**: each unit gets its own spot inside its area, the first near the centre and the next ones as far apart as they fit; the figures deploy round it facing the nearest area that holds the other side's units: infantry in an open line (every other man a step back), vehicles in a wedge. In a contested area each side deploys in its own half (the near side toward +z) facing the other; in a battle close-up the game's battle spots are kept and the formation fits round them.
 - **Side colour**: a rounded ring round the unit's figures in its block wood colour, with a faint fill (the owner's pick of four options). Selected or battle point unit: the ring is brass.
-- **Strength**: the pips float above the unit as one strip that always faces the camera, coloured by quality at the current strength (red elite, black veteran, white green).
+- **Strength**: the pips float above the unit as one strip that always faces the camera, coloured by quality at the current strength (red elite with a white ring, black veteran with a white ring, white green with a black ring).
 - **Hidden units** (an enemy block face down): the plain wooden block, as before. No tarpaulin piece (dropped by the owner).
 - Taps: a tap on a figure, or inside its ring, picks the unit. The block "turns to its new strength" animation does not run for figures.
 - Measured: a full Bulge start is about 61,000 triangles, 267 draw calls. Figures: about 1,200–2,600 triangles each, 256 px textures, 4.2 MB for the 27 Bulge figures.

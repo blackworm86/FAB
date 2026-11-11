@@ -95,7 +95,7 @@ export function fitAt(t: Pick<Troop, 'vehicle' | 'size'>, n: number, R: number, 
   throw new Error('unreachable');
 }
 
-const PIP: Record<string, [string, string]> = { elite: ['#e3222b', '#ffffff'], veteran: ['#141414', '#141414'], green: ['#ffffff', '#141414'] };
+const PIP: Record<string, [string, string]> = { elite: ['#e3222b', '#ffffff'], veteran: ['#141414', '#ffffff'], green: ['#ffffff', '#141414'] };
 const pipMats = new Map<string, THREE.SpriteMaterial>();
 /** The unit's pips as one strip that always faces the camera and stays level on screen. */
 function pips(n: number, q: string) {
