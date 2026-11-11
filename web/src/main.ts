@@ -884,7 +884,7 @@ function reinforceTargets(): Tgt | null {
 let frameKey = '';
 /** The battle camera: held on the contested area (fitted to it), where the player can still zoom and orbit but not pan away. */
 let lock: { c: THREE.Vector3; d: number } | null = null;
-const clampDist = (d: number) => (lock ? Math.min(lock.d * 1.7, Math.max(lock.d * 0.45, d)) : Math.min(innerWidth < 700 ? 64 : 110, Math.max(7, d)));      // phones: never so far out that the map leaves a black band
+const clampDist = (d: number) => (lock ? Math.min(lock.d * 1.7, Math.max(lock.d * 0.45, d)) : Math.min(innerWidth < 700 ? 64 : 72, Math.max(7, d)));      // desktop: no further out than the map filling most of the screen (it shrank into a corner)      // phones: never so far out that the map leaves a black band
 function areaWorld(id: number) { return MAP.areas.find((a) => a.id === id)!.polygon.map(([x, y]) => toWorld(x, y)); }
 function syncBattleCam() {
   const b = g.battle; let key = b ? `${b.area}:${b.stage === 'setup' ? 's' : 'f'}` : '';
@@ -1192,8 +1192,9 @@ function placeBadges() {
   { const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(); fxLayer.place((area, unit) => { const ps = unit ? pieceScreen(unit) : null, c = center(area); v.set(c.x, 0, c.z).project(cam); const cx = r.left + (v.x * 0.5 + 0.5) * r.width, cy = r.top + (-v.y * 0.5 + 0.5) * r.height; return ps ? { x: ps.x, y: ps.y, cx, cy, rad: ps.rad, visible: true } : { x: cx, y: cy - 30, cx: cx - 1, cy, rad: 0, visible: v.z < 1 }; }); }
   placeFocus(); placeBubbles();
   const r = canvas.getBoundingClientRect(), v = new THREE.Vector3();
-  for (const [k, d] of badgeEls) { const id = +k.replace(/^[LS]/, ''), p = d.classList.contains('lab') ? toWorld(LAB[id].x, LAB[id].y) : d.classList.contains('tint') ? toWorld(LAB[id].x, LAB[id].y + LAB[id].h / 2 + 40) : center(id); if (d.classList.contains('lab') || d.classList.contains('src')) v.set(p.x, show3d() ? REL!.h(p.x, p.z) + 0.6 : 0.6, p.z).project(cam); else v.set(p.x, 2.2, p.z - 4).project(cam);      /* a label tag sits on its own area, not shifted like the move badges */ let sx = (v.x * 0.5 + 0.5) * r.width, sy = (-v.y * 0.5 + 0.5) * r.height; const keep = selUnit && /\b(ok|stop|fuel)\b/.test(d.className), hw = d.offsetWidth / 2 + 6, hh = d.offsetHeight / 2 + 6, out = sx < hw || sx > r.width - hw || sy < hh || sy > r.height - hh;
-    if (keep) { sx = Math.min(r.width - hw, Math.max(hw, sx)); sy = Math.min(r.height - hh, Math.max(hh, sy)); d.classList.toggle('edge', out); }      // a destination off screen keeps its tag at the edge, so no "no supply" warning is missed
+  const dockBottom = (document.querySelector('#ui .mapdock')?.getBoundingClientRect().bottom ?? r.top) - r.top;      // the Layer bar and map tools: move badges stay below them
+  for (const [k, d] of badgeEls) { const id = +k.replace(/^[LS]/, ''), p = d.classList.contains('lab') ? toWorld(LAB[id].x, LAB[id].y) : d.classList.contains('tint') ? toWorld(LAB[id].x, LAB[id].y + LAB[id].h / 2 + 40) : center(id); if (d.classList.contains('lab') || d.classList.contains('src')) v.set(p.x, show3d() ? REL!.h(p.x, p.z) + 0.6 : 0.6, p.z).project(cam); else v.set(p.x, 2.2, p.z - 4).project(cam);      /* a label tag sits on its own area, not shifted like the move badges */ let sx = (v.x * 0.5 + 0.5) * r.width, sy = (-v.y * 0.5 + 0.5) * r.height; const sy0 = sy; const keep = selUnit && /\b(ok|stop|fuel)\b/.test(d.className), hw = d.offsetWidth / 2 + 6, hh = d.offsetHeight / 2 + 6, out = sx < hw || sx > r.width - hw || sy < hh || sy > r.height - hh;
+    if (keep) { const top = Math.max(hh, dockBottom + hh); sx = Math.min(r.width - hw, Math.max(hw, sx)); sy = Math.min(r.height - hh, Math.max(top, sy)); d.classList.toggle('edge', out || sy !== sy0); }      // a destination off screen keeps its tag at the edge, so no "no supply" warning is missed
     d.style.display = v.z < 1 ? '' : 'none'; d.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -50%)`; }
   placeAreaTags();
 }
