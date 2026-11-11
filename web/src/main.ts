@@ -267,7 +267,7 @@ const svgTex = (key: string, svg: string) => { if (!labelTex.has(key)) { const t
 
 const woodOf = (u: E.Unit) => VOL.wood[VOL.cssSide(u)] ?? (VOL.cssSide(u) === 'british' ? 0x3f6fb8 : VOL.wood[u.side]);
 /** 3D figures in place of the blocks (The Bulge; Settings > Screen). Until the figures have loaded, and for any unit without figures, the block is drawn. */
-let troopsOn = (() => { try { return localStorage.getItem('fab-troops') !== '0'; } catch { return true; } })(), troopsReady = false, troopsAsked = false;
+let troopsOn = (() => { try { return localStorage.getItem('fab-troops') === '1'; } catch { return false; } })(), troopsReady = false, troopsAsked = false;
 let troopSize = (() => { try { return +(localStorage.getItem('fab-troop-size') ?? '') || 1.5; } catch { return 1.5; } })(); setZoom(troopSize);
 /** Volumes with figures in web/public/pezzi (<volume>.json). */
 const FIG_VOLS = ['bulge', 'golan73', 'sicily'];
