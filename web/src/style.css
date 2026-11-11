@@ -1193,3 +1193,18 @@ body:has(#ui .modal) #leaders, body:has(#ui .modal) #fx, body:has(#rules) #leade
 .sbx .sbhead::after { content: ""; order: 4; flex-basis: 100%; }
 .sbx .lbd { flex-wrap: wrap; } .sbx .lbd > .t { flex: 1 1 200px !important; } .sbx .lbd > .step { margin-left: auto; }
 .sbx .sbgo { display: block; } .sbx .sbgo .ic { vertical-align: -2px; margin-right: 4px; }
+/* area tags (owner's drawing, 11 Nov): TDN shape with the area number, TDN badge, name, VP marks; one size on screen; Labels on the Layer bar sets on / see-through / off */
+#tags { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+.atag { position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px 0 2px; border-radius: 12px; background: rgba(14, 15, 10, .66); border: 1px solid rgba(231, 176, 74, .35); color: #f3ecd0; font: 600 13px var(--sfd); letter-spacing: .03em; white-space: nowrap; box-shadow: 0 1px 4px #0006; will-change: transform; }
+.atag .sw { position: relative; display: inline-block; width: 21px; height: 21px; flex: none; }
+.atag svg { width: 21px; height: 21px; display: block; overflow: visible; }
+.atag svg circle, .atag svg rect, .atag svg polygon { stroke: #1b1c14; stroke-width: 1.4; }
+.atag.t0 svg circle { fill: #efe4b8; } .atag.t1 svg rect { fill: #e2b44c; } .atag.t2 svg polygon { fill: #a4a59a; } .atag.t3 svg polygon { fill: #3d4a2c; }
+.atag svg text { font: 700 11px var(--sfd); text-anchor: middle; dominant-baseline: central; fill: #1b1c14; } .atag svg text.n3 { font-size: 8px; } .atag svg text.n2 { font-size: 10px; } .atag.t3 svg text { fill: #f3ecd0; }
+.atag .sw b { position: absolute; right: -7px; top: -6px; min-width: 14px; height: 14px; border-radius: 50%; background: #1b1c14; border: 1px solid #efe4b8; color: #efe4b8; font: 700 9px/12px var(--sfd); text-align: center; }
+.atag .nm { margin-left: 4px; } .atag img { width: 13px; height: 13px; object-fit: contain; filter: drop-shadow(0 0 1px #fffa); }
+#tags.tr .atag { opacity: .45; background: rgba(14, 15, 10, .35); border-color: rgba(231, 176, 74, .18); box-shadow: none; transition: opacity .12s; }
+#tags.tr .atag.hov { opacity: 1; background: rgba(14, 15, 10, .9); border-color: var(--gold); box-shadow: 0 0 0 2px #e7b04a55, 0 2px 8px #000a; z-index: 1; }
+.labsw { margin-left: 6px; } .labsw button { gap: 6px; } .labsw button b { color: #b3ad8b; font: 600 12px var(--sfd); letter-spacing: .12em; }
+.labsw button[aria-pressed="true"] b { color: #1a1608; }
+@media (max-width: 700px) { .labsw { margin-left: 4px; flex: none; } .labsw button b, .labsw button .ic { display: none; } .labsw button .l { display: inline !important; } .atag { height: 22px; font-size: 12px; } }

@@ -3448,7 +3448,11 @@
   "Exploiting": "In sfruttamento",
   "Move freely": "Sposta liberamente",
   "Chits": "Pedine",
-  "Go": "Vai"
+  "Go": "Vai",
+  "Labels": "Etichette",
+  "See-through": "Trasparenti",
+  "On": "Attive",
+  "Off": "Spente"
  },
  "patterns": [
   [
@@ -9142,6 +9146,14 @@
   [
    "queued: (.+)",
    "in coda: $1"
+  ],
+  [
+   "Area labels: (.+) \\(tap for (.+)\\)",
+   "Etichette delle aree: $1 (tocca per $2)"
+  ],
+  [
+   "Area labels: (.+)",
+   "Etichette delle aree: $1"
   ]
  ],
  "html": {}
