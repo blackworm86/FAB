@@ -23,6 +23,7 @@ import { sheets } from './sheets';
 import { pips, ABBR, chitLabel, BTN_ICON, iconify, STAGE_NAME, ok10, faces, modIcon, modWord } from './table-text';
 import { initChat, chatBtn, chatHtml, bindChat } from './chat';
 import { acts, actv, resetActs, reg, regv, ubtn, btn, chip, srow, swtch } from './ui-kit';
+import { loadTroops, troopOf, deploy, fitAt, roomOf, troopGroup, type Place } from './troops';
 import { optChooser, optOn } from './opt-rules';
 import { Recorder, unitsOf, localJournal, buildSteps } from './journal';
 import { openReplay } from './replay';
@@ -281,10 +282,18 @@ function faceMat(t: THREE.Texture, color: THREE.ColorRepresentation, roughness: 
 }
 const svgTex = (key: string, svg: string) => { if (!labelTex.has(key)) { const t = new THREE.Texture(); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; texQueue.push([t, 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)]); labelTex.set(key, t); } return labelTex.get(key)!; };
 
+const woodOf = (u: E.Unit) => VOL.wood[VOL.cssSide(u)] ?? (VOL.cssSide(u) === 'british' ? 0x3f6fb8 : VOL.wood[u.side]);
+/** 3D figures in place of the blocks (The Bulge; Settings > Screen). Until the figures have loaded, and for any unit without figures, the block is drawn. */
+let troopsOn = (() => { try { return localStorage.getItem('fab-troops') !== '0'; } catch { return true; } })(), troopsReady = false, troopsAsked = false;
+function wantTroops() {
+  if (!troopsOn || TUTORIAL || VOL.id !== 'bulge') return false;
+  if (!troopsAsked) { troopsAsked = true; void loadTroops(VOL.id).then((ok) => { troopsReady = ok; if (ok) refresh(); }).catch(() => { /* no figures: blocks stay */ }); }
+  return troopsReady;
+}
 function block(u: E.Unit, hidden = false) {
   const flat = hidden && !!u.untried;                                   // Sicily 15.3: an untried garrison lies face down on the table, its label against the map
   const w = 1.6, h = 1.6, d = 0.8;                                    // 16 x 16 x 8 mm block
-  const wood = new THREE.MeshStandardMaterial({ color: VOL.wood[VOL.cssSide(u)] ?? (VOL.cssSide(u) === 'british' ? 0x3f6fb8 : VOL.wood[u.side]), roughness: 0.75 });      // the wood by the block's class (Sicily: its nationality), else by its side
+  const wood = new THREE.MeshStandardMaterial({ color: woodOf(u), roughness: 0.75 });      // the wood by the block's class (Sicily: its nationality), else by its side
   if (u.garrison) {
     const chit = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }), m = new THREE.Mesh(new RoundedBoxGeometry(1.43, 0.12, 1.43, 2, 0.1), [chit, chit, faceMat(svgTex(u.id, VOL.unitSvg(u, g)), 0xd9d4c4, 0.7), chit, chit, chit]);      // a counter, like the other chits // 9/16 in chit
     m.position.y = 0.06; m.castShadow = true; m.rotation.y = viewRot(); return m;
@@ -297,7 +306,7 @@ function block(u: E.Unit, hidden = false) {
 const markers = new THREE.Group(); scene.add(markers);
 /** Remove a group's children and free their geometry and materials; the cached textures are shared and stay. */
 function disposeAll(group: THREE.Group) {
-  group.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh && !(o as THREE.LineSegments).isLineSegments) return; m.geometry?.dispose(); for (const mat of ([] as THREE.Material[]).concat(m.material)) mat.dispose(); });
+  group.traverse((o) => { const m = o as THREE.Mesh; if ((!m.isMesh && !(o as THREE.LineSegments).isLineSegments) || o.userData.shared) return; m.geometry?.dispose(); for (const mat of ([] as THREE.Material[]).concat(m.material)) mat.dispose(); });
   group.clear();
 }
 const tagTex = new Map<string, THREE.CanvasTexture>();
@@ -392,8 +401,16 @@ function drawPointMarks(b: E.Battle) {
     const d = discSprite('point', 0.26), c = farSide() ? -1 : 1; d.position.set(o.position.x + 0.58 * c, o.position.y > 0.6 ? 1.95 : 0.9, o.position.z - 0.58 * c); d.userData.anchor = uid; markers.add(d);                 // a back corner of the block, clear of its pips and symbol d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
   }
 }
+/** The direction a side's units face in an area: toward the nearest area holding the other side's units (straight ahead when none). */
+function faceTo(id: number, side: E.Side): [number, number] {
+  const me = toWorld(...POLE.get(id)!); let best: [number, number] = [0, near(side) ? -1 : 1], d = 1e9;
+  for (const a of MAP.areas) if (a.id !== id && E.unitsIn(g, a.id).some((u) => u.side !== side)) { const p = toWorld(...POLE.get(a.id)!), dd = Math.hypot(p.x - me.x, p.z - me.z); if (dd < d) { d = dd; best = [(p.x - me.x) / dd, (p.z - me.z) / dd]; } }
+  return best;
+}
+const facingOf = (cont: boolean, battle: boolean, id: number, u: E.Unit): [number, number] => (cont || battle ? [0, near(u.side) ? -1 : 1] : faceTo(id, u.side));
 function drawPieces() {
   disposeAll(pieces); disposeAll(markers);
+  const troops = wantTroops();
   coveredLabels.clear();
   /** The printed number plate and name (drawn upright for the viewer) are kept clear: blocks go around them when the area has room. */
   const labelSpots = (id: number) => { const L = LAB[id]; if (!L) return []; const r = L.h / 2, out: { x: number; z: number; r: number }[] = [];
@@ -437,15 +454,36 @@ function drawPieces() {
     }
     if (g.battle?.area === a.id) { const b = g.battle; lay.spots = order.map((u) => { const same = order.filter((x) => x.side === u.side); return battleSpot(b, u.side, 'unit', same.indexOf(u), same.length); }); }
     if (lab.some((l) => lay.spots.some((p) => Math.hypot(p.x - l.x, p.z - l.z) < l.r + 0.7))) coveredLabels.add(a.id);          // no room: the area's number and name ride on a tag above
+    const places: (Place | null)[] = order.map(() => null);
+    if (troops && order.some((u) => !faceDown(u) && troopOf(u.id))) {
+      const calm = !cont && g.battle?.area !== a.id, face = (u: E.Unit) => facingOf(cont, !calm && !cont, a.id, u);
+      const room = roomOf(areaWorld(a.id)), spread = 2.4 * Math.sqrt(cellsOf(a.id).length * 0.0616 / Math.PI), want = (us: E.Unit[]) => us.map((u) => ({ t: faceDown(u) ? null : troopOf(u.id), n: u.str }));
+      let dep: Place[] | null = null;
+      if (calm) dep = deploy(want(order), room, base, spread, face(order[0]), lay.saved, a.id);
+      else if (g.battle?.area !== a.id) {                                                                      // contested: each side in its own half (the near side toward +z), facing the other
+        const sides = [...new Set(order.map((u) => u.side))], got = new Map<string, Place>(); let obst = [...lay.saved], ok = true;
+        for (const sd of sides) { const us = order.filter((u) => u.side === sd), half: typeof room = (x, z, r) => room(x, z, r) && (near(sd) ? z > base.z + 0.3 : z < base.z - 0.3);
+          const d = deploy(want(us), half, base, spread, face(us[0]), obst, a.id + sides.indexOf(sd)); if (!d) { ok = false; break; }
+          us.forEach((u, i) => got.set(u.id, d[i])); obst = [...obst, ...d.flatMap((p) => p.fig.map(([x, z]) => ({ x, z, r: p.r })))]; }
+        if (ok) dep = order.map((u) => got.get(u.id)!);
+      }
+      if (dep) { order.forEach((u, n) => { places[n] = dep[n]; }); lay.spots = dep.map((d) => ({ x: d.fig.reduce((s, f) => s + f[0], 0) / d.fig.length, z: d.fig.reduce((s, f) => s + f[1], 0) / d.fig.length }));
+        taken.set(a.id, [...lay.saved, ...dep.flatMap((d) => d.fig.map(([x, z]) => ({ x, z, r: d.r })))]); }          // markers placed later keep clear of every figure
+      else { const room = roomOf(areaWorld(a.id));                                                           // contested or battle: the game's own spots, each as wide as its neighbours and the border allow
+        order.forEach((u, n) => { const t = troopOf(u.id), q = lay.spots[n]; if (!t || faceDown(u)) return;
+          let R = Math.min(1.8, ...lay.spots.filter((_, i) => i !== n).map((o) => Math.hypot(o.x - q.x, o.z - q.z) / 2 - 0.05)); while (R > 0.9 && g.battle?.area !== a.id && !room(q.x, q.z, R)) R -= 0.1;
+          places[n] = fitAt(t, u.str, Math.max(0.9, R), q.x, q.z, face(u), a.id * 31 + n); }); }
+    }
     order.forEach((u, n) => {
-      const hid = faceDown(u), m = block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
-      const flat = cont && !hid && !u.garrison && u.up === a.id;                                                           // revealed blocks lie flat, label up, while the area is contested
-      m.position.x = p.x; m.position.z = p.z;
+      const hid = faceDown(u), t = places[n] && !hid ? troopOf(u.id) : null, sel = u.id === selUnit || (!!g.battle && !hid && (u.id === g.battle.attPoint || u.id === g.battle.defPoint));
+      const m = t ? troopGroup(t, places[n]!, Math.atan2(...facingOf(cont, g.battle?.area === a.id, a.id, u)), woodOf(u), u.str, u.q[u.str - 1] ?? 'veteran', sel) : block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
+      const flat = !t && cont && !hid && !u.garrison && u.up === a.id;                                                     // revealed blocks lie flat, label up, while the area is contested
+      if (!t) { m.position.x = p.x; m.position.z = p.z; }
       if (flat) { m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, viewRot(), 0); m.position.y = 0.4; }
       if (tgt?.units.has(u.id)) { const ring = new THREE.Mesh(new THREE.RingGeometry(1.15, 1.45, 40), new THREE.MeshBasicMaterial({ color: MAPC.ring, transparent: true, opacity: 0.95, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(p.x, 0.09, p.z); markers.add(ring); const glow = new THREE.Mesh(new THREE.CircleGeometry(1.15, 40), new THREE.MeshBasicMaterial({ color: MAPC.ring, transparent: true, opacity: 0.28 })); glow.rotation.x = -Math.PI / 2; glow.position.set(p.x, 0.085, p.z); markers.add(glow); }
-      m.userData.unit = u.id; if (u.id === selUnit || (g.battle && !hid && (u.id === g.battle.attPoint || u.id === g.battle.defPoint))) { const o = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xe7b04a })); m.add(o); }
+      m.userData.unit = u.id; if (sel && !t) { const o = new THREE.LineSegments(new THREE.EdgesGeometry((m as THREE.Mesh).geometry), new THREE.LineBasicMaterial({ color: 0xe7b04a })); m.add(o); }
       pieces.add(m);
-      const tags: [string, string][] = []; const top = flat ? 0.85 : 1.66;
+      const tags: [string, string][] = []; const top = t ? (m.userData.top as number) + 0.55 : flat ? 0.85 : 1.66;
       if (u.disorder && !u.garrison) tags.push([u.disorder === 1 ? 'DIS' : 'REC', u.disorder === 1 ? '#8a1f1f' : '#a8741a']);
       if (u.rec) { if (u.rec <= 3) for (let k = 0; k < u.rec; k++) tags.push(['REC', '#a8741a']); else tags.push([`REC×${u.rec}`, '#a8741a']); }      // artillery vs armour (optional): one recovery marker per hit this battle
       if (u.reserve) tags.push([VOL.reserveTag(u), '#2d6cb0']); if (u.exploit) tags.push(['E', '#d9741c']); if (u.unsupplied && !u.garrison) tags.push(['OOS', '#b8312f']); if (u.interdict) tags.push(['GI', '#8a2f9c']); if (u.bcross) tags.push(['B', '#8a6a1c']); if (g.riverAssault.includes(a.id) && u.side === g.phasing && !u.garrison) tags.push(['RA', '#2a7fb8']);
@@ -653,7 +691,8 @@ canvas.addEventListener('wheel', (e) => { goal = null; camTouched = true; e.prev
 const ray = new THREE.Raycaster();
 function pick(e: PointerEvent) {
   const r = canvas.getBoundingClientRect(); ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), cam);
-  const hits = ray.intersectObjects(pieces.children, false), units = [...new Set(hits.map((h) => h.object.userData.unit as string | undefined).filter((x): x is string => !!x))];
+  const own = (o: THREE.Object3D) => { let x: THREE.Object3D | null = o; while (x && x.parent !== pieces) x = x.parent; return x ?? o; };          // a figure answers for its unit
+  const hits = ray.intersectObjects(pieces.children, true).map((h) => ({ ...h, object: own(h.object) })), units = [...new Set(hits.map((h) => h.object.userData.unit as string | undefined).filter((x): x is string => !!x))];
   const hitPiece = hits.find((h) => h.object.userData.unit || h.object.userData.chit) ?? hits[0];                      // a marker lying on a block does not hide the block
   if (units.length > 1 && selUnit && units.includes(selUnit)) return { unit: units[(units.indexOf(selUnit) + 1) % units.length], chit: undefined, area: areaAt(ray) };   // tapping a stack again picks the next block in it
   return { unit: hitPiece?.object.userData.unit as string | undefined, chit: hitPiece?.object.userData.chit as string | undefined, area: areaAt(ray) };
@@ -1300,7 +1339,7 @@ function commitRoll() {
   }
   const turned = next.units.filter((u) => { const o = prev.units.find((x) => x.id === u.id); return o && u.area != null && u.str < o.str; }).map((u) => u.id);
   g = next; save(); refresh();
-  for (const id of turned) anims.push({ t0: performance.now(), dur: 700, fn: (k) => { const m = pieces.children.find((o) => o.userData.unit === id); if (m) m.rotation.y = viewRot() + (1 - (1 - (1 - k) ** 3)) * Math.PI / 2; } });   // the block turns to its new strength
+  for (const id of turned) anims.push({ t0: performance.now(), dur: 700, fn: (k) => { const m = pieces.children.find((o) => o.userData.unit === id); if (m && !m.userData.troop) m.rotation.y = viewRot() + (1 - (1 - (1 - k) ** 3)) * Math.PI / 2; } });   // the block turns to its new strength
 }
 function runAnims() {
   const now = performance.now();
@@ -1918,7 +1957,7 @@ function modalHtml() {
     const body = menuTab === 'Log' ? logHtml()
       : menuTab === 'Help' ? `${coursesOf(VOL.id).length || RULES_GAMES.includes(VOL.id) ? `<h4>Learn</h4><div class="row">${RULES_GAMES.includes(VOL.id) ? ubtn(`${ico('info')} Rules reference`, () => { void showRules(); }, '', false, 'The full rulebooks, searchable (shortcut: ?)') : ''}${coursesOf(VOL.id).map((c) => ubtn(`${ico('info')} ${esc(c.title)}`, () => { location.href = tutUrl(c.id); })).join('')}</div>` : ''}${COARSE ? '' : `<h4>Keyboard</h4><dl class="keys"><dt>Tab</dt><dd>to the map (or “Skip to the map” first)</dd><dt>← ↑ → ↓</dt><dd>move between neighbouring areas</dd><dt>Enter</dt><dd>select or move there; on a button, press it</dd><dt>N</dt><dd>next block that can move</dd><dt>Esc</dt><dd>clear the selection, close a window</dd><dt>Ctrl+Z</dt><dd>undo</dd></dl>`}`
       : menuTab === 'Settings' ? `<div class="sgrid"><div><h4>Play</h4>${srow('Dice roll by themselves', 'decisions still wait for you', swtch(autoRoll, () => { autoRoll = !autoRoll; try { localStorage.setItem('fab-autoroll', autoRoll ? '1' : '0'); } catch { /* private mode */ } }, 'Dice roll by themselves'))}${CPU_SIDE ? srow("Computer's pace", '', `<span class="seg">${(['slow', 'normal', 'fast'] as const).map((v) => chip(v === 'slow' ? 'Slow' : v === 'normal' ? 'Normal' : 'Fast', cpuSpeed === v, () => { cpuSpeed = v; try { localStorage.setItem('fab-cpu-speed', v); } catch { /* private mode */ } }, 'How fast the computer makes its moves')).join('')}</span>`) : ''}${srow('Full explanations', 'every option and rule', swtch(guide === 'full', () => setGuide(guide === 'full' ? 'short' : 'full'), 'Full explanations'))}${noticesSupported() ? srow('My-move notices', noticesBlocked() ? 'blocked in this browser: allow notices for this site' : 'when the game is out of sight', swtch(noticesOn(), () => { void setNotices(!noticesOn(), auth.token).then((m) => { say(m); render(); }); }, 'My-move notices')) : ''}</div>
-        <div><h4>Screen</h4>${srow('Follow the other side', 'the camera goes to their moves', swtch(followFoe, () => { followFoe = !followFoe; try { localStorage.setItem('fab-follow', followFoe ? '1' : '0'); } catch { /* private mode */ } }, 'Follow the other side'))}${srow('Camera', '', resetBtn())}${srow('Language', '', `<span class="seg notr">${LANGS.map(([l]) => chip(l.toUpperCase(), LANG === l, () => setLang(l), l === 'it' ? 'Interfaccia in italiano (i regolamenti restano in inglese)' : 'Interface in English')).join('')}</span>`)}${srow('Rules in use', rulesInUse(g.opts), '')}</div></div>`
+        <div><h4>Screen</h4>${VOL.id === 'bulge' ? srow('3D figures', 'soldiers and tanks instead of blocks', swtch(troopsOn, () => { troopsOn = !troopsOn; try { localStorage.setItem('fab-troops', troopsOn ? '1' : '0'); } catch { /* private mode */ } refresh(); }, '3D figures')) : ''}${srow('Follow the other side', 'the camera goes to their moves', swtch(followFoe, () => { followFoe = !followFoe; try { localStorage.setItem('fab-follow', followFoe ? '1' : '0'); } catch { /* private mode */ } }, 'Follow the other side'))}${srow('Camera', '', resetBtn())}${srow('Language', '', `<span class="seg notr">${LANGS.map(([l]) => chip(l.toUpperCase(), LANG === l, () => setLang(l), l === 'it' ? 'Interfaccia in italiano (i regolamenti restano in inglese)' : 'Interface in English')).join('')}</span>`)}${srow('Rules in use', rulesInUse(g.opts), '')}</div></div>`
       : menuTab === 'Admin' ? `<div class="row">${ubtn(`${ico('wand')} Sandbox`, () => { location.href = `${homeUrl()}?sandbox=1`; })}${ubtn('Update rules', () => { modal = 'rules'; })}${VOL.sides.map((sd) => ubtn(`Free ${nm(sd)} seat`, () => { void auth.freeSeat(sd); })).join('')}</div>`
       : online.mode === 'remote' ? (() => {
         const a = online.account, signed = !!a && !a.guest, me = online.mySide(), title = matches.find((m) => m.id === TABLE)?.title ?? TABLE, m = matches.find((x) => x.id === TABLE), own = !!m && (m.owner === online.uid || online.admin);

@@ -274,11 +274,11 @@ iframe.visore{width:100%;height:70vh;border:1px solid var(--linea);background:#0
 // =====================================================================
 const STILE = `Low poly 3D game miniature for a historical board wargame: faceted geometric shapes with clearly visible flat polygons, flat shading, solid flat colors with no textures and no gradients, chunky toy-like proportions, realistic period-accurate uniforms, vehicles and colors, muted natural palette (no neon, no glow).`;
 const STILE_RIF = `Use the attached image ONLY as the style reference: same low poly rendering, same faceted flat-shaded look, same chunky proportions, same lighting, same light grey background, same framing. Do not copy the subject.`;
-const INQUADRA = `Framing: the whole group seen together, arranged compactly side by side along the long axis, no base, no ground, no cast shadow, slight three-quarter front view from slightly above, centered with margin around, flat light grey background (#D9D9D9), soft even studio lighting, no text, no logo, no watermark.`;
+const INQUADRA = `Framing: the single figure whole and alone, no other soldiers or vehicles, no base, no ground, no cast shadow, slight three-quarter front view from slightly above, centered with margin around, flat light grey background (#D9D9D9), soft even studio lighting, no text, no logo, no watermark.`;
 // un pezzo per tipo del catalogo (strumenti/catalogo.py): il primo è quello dello stile
 const PEZZI = CATALOGO.map(t => ({...t, tipo:"pedina", gruppo:t.volume_nome, chiave:t.gruppo, stile:t.id === "bulge_us_inf",
   prompt:`Create an image.${t.id === "bulge_us_inf" ? " " + STILE : " " + STILE_RIF}
-Subject: ${t.gruppo} of ${t.soggetto}. Together they are ONE game piece that stands for a military unit. Make the most recognisable feature of the unit big and simple.
+Subject: ${t.gruppo} of ${t.soggetto}. The game repeats this figure once per step of strength, so draw exactly one. Make its most recognisable feature big and simple.
 ${INQUADRA}`}));
 const TUTTI = PEZZI;
 

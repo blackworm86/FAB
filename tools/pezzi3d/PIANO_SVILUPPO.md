@@ -17,6 +17,8 @@ Kit adattato da quello di Briano Borromeo 2077: stesso pannello nel browser (pro
 
 Il catalogo dei pezzi si rigenera da `data/*/units.json` a ogni avvio (`strumenti/catalogo.py`). I testi dei prompt (equipaggiamento reale di ogni tipo) si cambiano lì.
 
+**Dal modello al gioco.** Il gioco usa figure SINGOLE (una per passo di forza) e le schiera da solo. Quando i modelli puliti di un volume sono in `modelli/definitivi/`, lancia `python strumenti/separa_figure.py --volume bulge`: scrive le figure in `web/public/pezzi/` del repository. Se un modello contiene più figure (i gruppi di The Bulge) le taglia; aggiungi ogni nuovo tipo alla tabella `TIPI` dello script. Dettagli in `docs/ASSETS-3D.md`.
+
 ## 2. Cartelle
 
 ```

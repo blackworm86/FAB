@@ -9,8 +9,7 @@ for vol in catalogo.VOLUMI:
     ids = {u["id"] for u in L}
     usati = {b for t in tipi if t["volume"] == vol for b in t["blocchi"]} | (set(saltati) & ids)
     assert usati == ids, f"{vol}: blocchi senza pezzo {sorted(ids - usati)}"
-assert len({t["id"] for t in tipi}) == len(tipi) and all(t["blocchi"] for t in tipi if t["id"] != "hidden")
-assert all(t["legno"] == catalogo.LEGNO[t["fazione"]] for t in tipi if t["id"] != "hidden")
-assert tipi[-1]["id"] == "hidden" and tipi[-1]["tinta"]
+assert len({t["id"] for t in tipi}) == len(tipi) and all(t["blocchi"] for t in tipi)
+assert all(t["legno"] == catalogo.LEGNO[t["fazione"]] for t in tipi)
 assert len(saltati) == 6          # i blocchi Special Action non hanno un modello
 print(f"ok: {len(tipi)} tipi")

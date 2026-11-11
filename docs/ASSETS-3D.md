@@ -10,9 +10,9 @@ A local panel in the browser (Italian, like the original). The **Produzione** ta
 - What changed from the original kit: the five faction figures, the party and police props, and the procedural block-outs are gone; the list of pieces now comes from the game's own data (`tools/pezzi3d/strumenti/catalogo.py` reads `data/*/units.json`); materials are the piece's real colours plus a base slab `colore_fazione` that the game tints with the side's wood colour; a piece is kept inside the standing block's footprint (1.5 × 0.7); the neon/player-colour logic and the octagon base were removed. Port 8078, so it can run beside the Briano Borromeo panel; TRELLIS and the Gemini key are shared with it.
 - Tested here: the catalogue (`python tools/pezzi3d/strumenti/test_catalogo.py`), the panel loading all 32 pieces in a browser, and the clean-up on the kit's sample model (45,528 triangles → 791, 1.5 × 0.7 footprint, 0.6 high). **Not tested**: Gemini and TRELLIS calls (no key or GPU in the cloud session) and the Windows `.bat` files.
 
-## 2. What gets modelled: 33 pieces for 211 blocks
+## 2. What gets modelled: 32 types for 211 blocks
 
-Blocks of the same side and class share one model (a German infantry block in The Bulge is the same figure group whichever division it is). The six Special Action blocks have no model. Plus one `hidden` piece for every unit the player cannot see.
+Blocks of the same side and class share one model (a German infantry block in The Bulge is the same figure group whichever division it is). The six Special Action blocks have no model.
 
 | Volume | Types (blocks) |
 |---|---|
@@ -38,25 +38,29 @@ Each type has a prompt subject with period equipment (Panther, Sherman, Centurio
 
 Licence: TRELLIS code is MIT but some modules it uses are research-only; check before any commercial use (the original kit notes this).
 
-## 4. How it goes into the game (decided 10 November 2026, not built yet)
+## 4. In the game (The Bulge: built 11 November 2026)
 
-The owner's decision: **the model replaces the block completely.**
+Mockup approved by the owner: https://claude.ai/artifact/SpjUQ4nNP3885wy4kxiTop. Code: `web/src/troops.ts` (loading, placement, look), wired in `drawPieces()` in `web/src/main.ts`; tests `web/test/troops.test.ts`. Switch: Settings > Screen > **3D figures** (on by default; off in the tutorials, whose texts talk about blocks). Any unit without figures, and every unit while the figures load, is the usual block.
 
-- **Strength**: shown as pips floating above the model, in the stickers' colours (red with a white ring = elite, black = veteran, white with a black ring = green), one pip per step left, always facing the camera. The kit's preview (`visualizzatore.html`) already draws them, to check the headroom over each model. The block no longer turns to show strength.
-- **Hidden units**: one extra piece, `hidden` (a tarpaulin over an anonymous load), replaces every block the player may not see (an enemy block face down, a Sicily untried garrison). Its tarpaulin and base are `colore_fazione`, so the game tints it with that side's wood colour (German grey, US green, Italian orange `#e66525`…), like the blank back of a block. No pips on it.
-- **Side colour**: `colore_fazione` on every model takes the block's wood colour from the same tables the blocks use (`BULGE_WOOD`, `GOLAN_WOOD`, `SICILY_WOOD`).
-- Models load from `web/public/pezzi/` (the kit's "Copia i modelli nel gioco" puts them there), with the old block as fallback while a type has no model, behind a Settings switch until every type exists. Phone budget: instancing, about 60k triangles on a busy map.
-- Still to do in the game, after the pilot pieces: a mockup for the owner (the pips, the hidden piece, selection highlight), then the code in `web/src/main.ts` `block()`.
+- **One figure per step**: a 4-step unit shows 4 figures (the type's figures in turn), a 1-step unit 1. The figures are single models in `web/public/pezzi/` with `bulge.json` (block id → type → figure files), made by `tools/pezzi3d/strumenti/separa_figure.py` from the owner's group models.
+- **One real scale** (1 m = 0.18 board units, so a soldier is about 0.32 and a Sherman 0.53 tall), then each area draws its units **as big as the area allows**: it tries 3× real size and steps down (`SIZES`) until every unit fits inside the area, clear of the printed name plate and of the other units.
+- **Placement**: each unit gets its own spot inside its area, the first near the centre and the next ones as far apart as they fit; the figures deploy round it facing the nearest area that holds the other side's units: infantry in an open line (every other man a step back), vehicles in a wedge. In a contested area each side deploys in its own half (the near side toward +z) facing the other; in a battle close-up the game's battle spots are kept and the formation fits round them.
+- **Side colour**: a rounded ring round the unit's figures in its block wood colour, with a faint fill (the owner's pick of four options). Selected or battle point unit: the ring is brass.
+- **Strength**: the pips float above the unit as one strip that always faces the camera, coloured by quality at the current strength (red elite, black veteran, white green).
+- **Hidden units** (an enemy block face down): the plain wooden block, as before. No tarpaulin piece (dropped by the owner).
+- Taps: a tap on a figure, or inside its ring, picks the unit. The block "turns to its new strength" animation does not run for figures.
+- Measured: a full Bulge start is about 61,000 triangles, 267 draw calls. Figures: about 1,200–2,600 triangles each, 256 px textures, 4.2 MB for the 27 Bulge figures.
+- Known limits: two US infantrymen lost most of their rifle when the group models were cut (Meshy fused it to the next soldier) and a few soldiers keep a tiny rifle tip; regenerating those as single figures fixes it. Golan and Sicily have no figures yet.
 
 ## 5. Phases
 
-0. Kit adapted (done, this page).
-1. Pilot, three pieces end to end: US infantry (style anchor), US armour, German armour. Check the look next to the block in the preview.
-2. The remaining 29 types, volume by volume (Bulge first).
-3. Integration behind a Settings switch (after the owner approves a mockup of section 4).
-4. Later and optional: a different group for reduced strength (fewer figures per step), named leaders (Peiper…), strongpoint and bridge markers.
+0. Kit adapted (done).
+1. The Bulge: 11 types modelled by the owner in Meshy, cut into single figures, in the game behind Settings > Screen > 3D figures (done, 11 November 2026).
+2. Golan '73 and Sicily '43: generate **one single soldier or vehicle per type** in Meshy (the kit's prompts now ask for that), add each type to `TIPI` in `separa_figure.py` with 1 figure per file, run it with `--volume golan73` / `sicily`, then allow the volume in `wantTroops()` in `main.ts`.
+3. Later and optional: redo the two US infantrymen with cut rifles; named leaders (Peiper…); strongpoint and bridge markers as models.
 
-## 6. Open decisions for the owner
+## 6. Decided by the owner
 
-1. Are the group sizes right (three infantrymen, two tanks), or one single figure/vehicle per block?
-2. Should the group shrink as the block loses steps?
+- Models replace the blocks; strength as floating pips; one figure per step (11 November 2026).
+- Units deploy inside their area, spread out, facing the enemy, as big as the area allows.
+- Side colour: a ground ring round the unit. Hidden units stay plain blocks.
