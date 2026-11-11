@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { variant, yawOf, radius, grid } from '../src/troops';
+import { variant, yawOf, radius, grid, foot } from '../src/troops';
 
 describe('troops', () => {
   it('each unit always shows the same one of its type\'s figures, and the figures vary between units', () => {
@@ -31,5 +31,10 @@ describe('troops', () => {
   it('a contested area: the two sides in separate rows, the first side toward -z', () => {
     const [far, nearSide] = grid([[[1, 1], [1, 1]], [[1, 1]]], 4);
     expect(Math.max(...far.map((p) => p[1]))).toBeLessThan(Math.min(...nearSide.map((p) => p[1])));
+  });
+  it('a turned figure takes the box round it: lengthwise, crosswise or on the diagonal', () => {
+    const t = { size: new THREE.Vector3(0.5, 0.5, 1.5) }, [w0, d0] = foot(t, 0), [w1, d1] = foot(t, Math.PI / 2), [w2, d2] = foot(t, Math.PI / 4);
+    expect(d0).toBeGreaterThan(w0); expect(w1).toBeCloseTo(d0); expect(d1).toBeCloseTo(w0);
+    expect(w2).toBeCloseTo(d2); expect(w2).toBeGreaterThan(w0); expect(w2).toBeLessThan(w0 + d0);
   });
 });

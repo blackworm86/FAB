@@ -42,8 +42,8 @@ export const variant = (unitId: string, count: number) => [...unitId].reduce((h,
 export const yawOf = (side: string) => (side === 'german' ? -Math.PI / 2 : Math.PI / 2);
 /** A unit's footprint on the map for a facing: [width along x, depth along z], with room for its ring. */
 export function foot(t: Pick<Troop, 'size'>, yaw: number): [number, number] {
-  const across = Math.abs(Math.sin(yaw)) > 0.5, x = t.size.x * zoom + 0.3, z = t.size.z * zoom + 0.3;
-  return across ? [z, x] : [x, z];
+  const x = t.size.x * zoom + 0.3, z = t.size.z * zoom + 0.3, c = Math.abs(Math.cos(yaw)), sn = Math.abs(Math.sin(yaw));   // the box round the turned figure
+  return [x * c + z * sn, x * sn + z * c];
 }
 /** An ordered layout: each group (a side) in rows of at most cols units, the groups one under the other (the first toward -z),
  * all centred on (0, 0). Returns each unit's centre, group by group. Nothing overlaps: every unit gets its full footprint plus gap. */
