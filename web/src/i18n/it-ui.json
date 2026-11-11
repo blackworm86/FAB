@@ -3472,7 +3472,11 @@
   "exploiting (E)": "in sfruttamento (E)",
   "interdicted (GI)": "interdetto (GI)",
   "Markers?": "Indicatori?",
-  "What the markers on the pieces mean": "Cosa significano gli indicatori sui pezzi"
+  "What the markers on the pieces mean": "Cosa significano gli indicatori sui pezzi",
+  "Skip": "Salta",
+  "Skipped · undo": "Saltata · annulla",
+  "Nothing to do for this unit in this step: no halo, left out of Can move": "Niente da fare per questa unità in questo passo: senza alone, esclusa da Può muovere",
+  "Lime halo: can still act this step (move, field works or reserve); Skip in its card sets it aside": "Alone lime: può ancora agire in questo passo (muovere, opere campali o riserva); Salta nella sua scheda la mette da parte"
  },
  "patterns": [
   [

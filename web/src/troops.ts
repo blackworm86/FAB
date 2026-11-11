@@ -89,6 +89,7 @@ function ring(w: number, d: number, color: THREE.ColorRepresentation, selected: 
   const edge = new THREE.Mesh(new THREE.ShapeGeometry(outer), new THREE.MeshBasicMaterial({ color: col }));
   const fill = new THREE.Mesh(new THREE.ShapeGeometry(rect(w, d, rr)), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, depthWrite: false }));      // a solid base in the side's colour: the side reads at a glance (the figures' own colours are close)
   for (const m of [edge, fill]) { m.rotation.x = -Math.PI / 2; m.position.y = 0.03; g.add(m); }
+  g.userData.base = true;      // main.ts sizes the act-now halo on it
   return g;
 }
 /** A unit drawn as its figure, centred on the group's origin (the spot the block would take). */

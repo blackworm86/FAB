@@ -1153,13 +1153,30 @@ let moveMarks: { el: HTMLElement; unit: string }[] = [];
 /** Other things a block can do this step: build field works (4.33-style fortify) or take a reserve marker. */
 const fwOk = (u: E.Unit) => ['movement', 'reaction', 'btMove'].includes(g.phase) && !u.garrison && !u.moved && u.area != null && !u.unsupplied && !u.disorder && !E.contested(g, u.area) && !g.fieldWorks.includes(u.area) && ((g.phase === 'movement' && u.side === g.phasing) || (g.phase === 'reaction' && u.side !== g.phasing && !!u.reserve) || (g.phase === 'btMove' && u.side === g.phasing && (!!u.reserve || !!u.exploit)));
 const rsOk = (u: E.Unit) => g.phase === 'movement' && u.side === g.phasing && E.canReserve(g, u);
+/** Units the player set aside this step ("Skip"): no halo, out of "Can move"; a new step clears the list. */
+let skipped = new Set<string>(), skipKey = '';
+const skipNow = () => { const k = `${g.turn}|${g.phasing}|${g.phase}`; if (k !== skipKey) { skipKey = k; skipped = new Set(); } return skipped; };
+/** Can this unit still do something this step (move, build field works, take a reserve marker)? */
+function canAct(u: E.Unit) {
+  if (skipNow().has(u.id)) return false;
+  let can = false; if (!u.moved) { try { can = (g.phase === 'strategic' ? (u.reserve ? E.stratOptions(g, u.id).length : 0) : E.moveOptions(g, u.id).length) > 0; } catch { can = false; } }
+  return can || fwOk(u) || rsOk(u);
+}
+/** Units that can still act wear a lime halo on the ground (owner, 11 Nov: no marks floating over the pips). */
+const halos = new THREE.Group(); scene.add(halos);
+const haloMat = [new THREE.MeshBasicMaterial({ color: 0xc8e86a, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide }), new THREE.MeshBasicMaterial({ color: 0xc8e86a, transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide })];
 function syncMoveMarks() {
-  const layer = document.getElementById('marks')!; layer.innerHTML = ''; moveMarks = [];
+  document.getElementById('marks')!.querySelectorAll('.mm').forEach((e) => e.remove()); moveMarks = [];
+  halos.children.forEach((o) => (o as THREE.Mesh).geometry.dispose()); halos.clear();
   const actor = g.phase === 'reaction' ? other(g.phasing) : g.phasing;
   if (g.over || g.battle || g.pendingBlow || selUnit || !['movement', 'strategic', 'reaction', 'btMove'].includes(g.phase) || !allowed() || !mine(actor)) return;
-  for (const u of g.units.filter((x) => x.side === actor && x.area != null && !x.garrison && seen(x))) {
-    let can = false; if (!u.moved) { try { can = (g.phase === 'strategic' ? (u.reserve ? E.stratOptions(g, u.id).length : 0) : E.moveOptions(g, u.id).length) > 0; } catch { can = false; } }
-    const fw = fwOk(u), rs = rsOk(u), el = document.createElement('div'); el.className = 'mm ' + (can ? 'go' : 'no'); el.innerHTML = ico(can ? 'back' : 'minus') + (fw ? '<i class="mmx fw" title="Can fortify"></i>' : '') + (rs ? '<i class="mmx rs" title="Can go in reserve"></i>' : ''); el.title = can ? `${u.name} can move` : `${u.name} cannot move`; layer.appendChild(el); moveMarks.push({ el, unit: u.id });
+  const box = new THREE.Box3(), size = new THREE.Vector3(), c = new THREE.Vector3();
+  for (const u of g.units.filter((x) => x.side === actor && x.area != null && !x.garrison && seen(x) && canAct(x))) {
+    const o = pieces.children.find((x) => x.userData.unit === u.id); if (!o) continue;
+    o.updateMatrixWorld(true); let base: THREE.Object3D = o; o.traverse((x) => { if (x.userData.base) base = x; });      // a figure: its base, not its gun or floating pips
+    box.setFromObject(base).getSize(size); box.getCenter(c); const y = box.min.y + 0.04;
+    const rect = (w: number, d: number) => { const r = Math.min(w, d) / 2, x = w / 2, z = d / 2, sh = new THREE.Shape(); sh.moveTo(-x + r, -z); sh.lineTo(x - r, -z); sh.quadraticCurveTo(x, -z, x, -z + r); sh.lineTo(x, z - r); sh.quadraticCurveTo(x, z, x - r, z); sh.lineTo(-x + r, z); sh.quadraticCurveTo(-x, z, -x, z - r); sh.lineTo(-x, -z + r); sh.quadraticCurveTo(-x, -z, -x + r, -z); return sh; };
+    ([[0.1, 0.3, 0], [0.3, 0.62, 1]] as const).forEach(([a, b, k]) => { const sh = rect(size.x + 2 * b, size.z + 2 * b); sh.holes.push(new THREE.Path(rect(size.x + 2 * a, size.z + 2 * a).getPoints())); const m = new THREE.Mesh(new THREE.ShapeGeometry(sh, 6), haloMat[k]); m.rotation.x = -Math.PI / 2; m.position.set(c.x, y, c.z); m.renderOrder = 1; halos.add(m); });
   }
 }
 /* ---------- option tags on the map: what a Special Action buys, which battles are free (docs/playtest3 mockups) ---------- */
@@ -1468,8 +1485,8 @@ const lookAt = (a: number) => { const p = center(a); goal = { t: new THREE.Vecto
 let canMoveKey = '', canMoveIds: string[] = [];
 /** My blocks that can still move in this step (cached until the game changes). */
 function canMove(): string[] {
-  const k = `${g.turn}${g.phase}${g.phasing}${g.log.length}${hist.length}${online.devSeat}`; if (k === canMoveKey) return canMoveIds; canMoveKey = k;
-  canMoveIds = ['movement', 'reaction', 'btMove'].includes(g.phase) ? g.units.filter((u) => u.area != null && !u.moved && !u.garrison && mine(u.side) && E.moveOptions(g, u.id).length).map((u) => u.id) : [];
+  const k = `${g.turn}${g.phase}${g.phasing}${g.log.length}${hist.length}${online.devSeat}${skipNow().size}`; if (k === canMoveKey) return canMoveIds; canMoveKey = k;
+  canMoveIds = ['movement', 'reaction', 'btMove'].includes(g.phase) ? g.units.filter((u) => u.area != null && !u.moved && !u.garrison && mine(u.side) && !skipNow().has(u.id) && E.moveOptions(g, u.id).length).map((u) => u.id) : [];
   return canMoveIds;
 }
 /** The next item after the current one, round and round. */
@@ -1617,7 +1634,7 @@ function dispatch() {
     const warns = (noFuel ? `<div class="warnbox">${ico('fuel')}<span><b>No fuel left</b>${gx('. German blocks may move at most 3 MP this turn and cannot use strategic movement (16.13).', ': 3 MP max, no strategic move.')}</span></div>` : '')
       + (u.interdict && mine(u.side) && ['movement', 'reaction', 'btMove', 'admin'].includes(g.phase) ? `<div class="warnbox bad">${ico('warn')}<span><b>Greif Interdict</b>${gx(' on this block. Moving it, building field works or taking a reserve marker triggers a morale check (+2). Fail: it may only stay or move one area (17.11).', ': moving triggers a morale check (+2).')}</span></div>` : '');
     return `<div class="c-dispatch ${o ? 'previewing' : ''}">${warns}<h3 class="${u.side}">${esc(u.name)}</h3><div class="pipsrow">${pips(u)} <small>${u.garrison ? 'asset' : u.cls} · ${mv ? 'moving · ' : ''}${tags.join(' · ') || 'in order'}${hasLegend(VOL.id) ? ` <button class="linkbtn" data-ui="${reg(() => { legendOpen = true; })}" title="What the markers on the pieces mean">Markers?</button>` : ''}</small></div>${moving}${seen(u) ? supLine : ''}${route}
-      <div class="row">${mv && mine(u.side) ? btn('Stop here', () => { E.endMove(g); selUnit = null; }, 'primary', false, 'This block\'s move ends here') : ''}${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve', () => E.setReserve(g, u.id, false)) : btn('Reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u))) : ''}${fw ? btn('Fortify', () => VOL.fieldWorks(g, u.id)) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn('Activate (SA)', () => pickSA(u.side, u.ech, (sa) => E.activateBreakthrough(g, u.id, sa)), '', !E.saAvailable(g, u.side, u.ech).length) : ''}${E.peiperCan(g, u) ? btn(`${u.peiperFull ? ico('check') : ''}KG Peiper: full move (18.3)`, () => E.setPeiperFull(g, u.id, !u.peiperFull), u.peiperFull ? 'primary' : '', false, 'Once per game, up to turn 3: this exploitation move uses Peiper\'s full movement allowance instead of one area') : ''}</div></div>`;
+      <div class="row">${mv && mine(u.side) ? btn('Stop here', () => { E.endMove(g); selUnit = null; }, 'primary', false, 'This block\'s move ends here') : ''}${!mv && mine(u.side) && ['movement', 'strategic', 'reaction', 'btMove'].includes(g.phase) && (skipNow().has(u.id) || canAct(u)) ? ubtn(skipNow().has(u.id) ? 'Skipped · undo' : 'Skip', () => { if (skipped.has(u.id)) skipped.delete(u.id); else { skipped.add(u.id); selUnit = null; } refresh(); }, '', false, 'Nothing to do for this unit in this step: no halo, left out of Can move') : ''}${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve', () => E.setReserve(g, u.id, false)) : btn('Reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u))) : ''}${fw ? btn('Fortify', () => VOL.fieldWorks(g, u.id)) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn('Activate (SA)', () => pickSA(u.side, u.ech, (sa) => E.activateBreakthrough(g, u.id, sa)), '', !E.saAvailable(g, u.side, u.ech).length) : ''}${E.peiperCan(g, u) ? btn(`${u.peiperFull ? ico('check') : ''}KG Peiper: full move (18.3)`, () => E.setPeiperFull(g, u.id, !u.peiperFull), u.peiperFull ? 'primary' : '', false, 'Once per game, up to turn 3: this exploitation move uses Peiper\'s full movement allowance instead of one area') : ''}</div></div>`;
   }
   return '';
 }
