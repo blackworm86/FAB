@@ -3453,7 +3453,8 @@
   "See-through": "Trasparenti",
   "On": "Attive",
   "Off": "Spente",
-  "Roll the dice": "Tira i dadi"
+  "Roll the dice": "Tira i dadi",
+  "Dim": "Tenui"
  },
  "patterns": [
   [
@@ -9155,6 +9156,10 @@
   [
    "Area labels: (.+)",
    "Etichette delle aree: $1"
+  ],
+  [
+   "first of (\\d+) hits already taken",
+   "primo dei $1 colpi già assegnato"
   ]
  ],
  "html": {}

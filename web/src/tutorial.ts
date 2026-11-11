@@ -45,7 +45,7 @@ export function initTutorial(h: TutHost, course: Course) {
     return null;
   }
   const label = (t: Target | undefined) => !t ? '' : 'el' in t ? t.label : 'unit' in t ? (t.label ?? `${t.unit} block`) : (t.label ?? 'area');
-  const hint = (s: Step) => s.target ? `${matchMedia('(pointer: coarse)').matches ? 'Tap' : 'Click'} the glowing ${label(s.target)}` : 'Tap Next to go on';
+  const tapWord = matchMedia('(pointer: coarse)').matches ? 'Tap' : 'Click', hint = (s: Step) => s.target ? `${tapWord} the glowing ${label(s.target)}` : `${tapWord} Next to go on`;
 
   function start(l: number, upTo = 0) {
     const fresh = l !== li || upTo === 0;

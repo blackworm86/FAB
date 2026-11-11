@@ -1208,8 +1208,13 @@ body:has(#ui .modal) #leaders, body:has(#ui .modal) #fx, body:has(#rules) #leade
 #tags .atag.hov { opacity: 1; background: rgba(14, 15, 10, .9); border-color: var(--gold); box-shadow: 0 0 0 2px #e7b04a55, 0 2px 8px #000a; z-index: 1; }
 .labsw { margin-left: 6px; } .labsw button { gap: 6px; } .labsw button b { color: #b3ad8b; font: 600 12px var(--sfd); letter-spacing: .12em; }
 .labsw button[aria-pressed="true"] b { color: #1a1608; }
-@media (max-width: 700px) { .labsw { margin-left: 4px; flex: none; } .labsw button b, .labsw button .ic { display: none; } .labsw button .l { display: inline !important; } .atag { height: 22px; font-size: 12px; } }
+@media (max-width: 700px) { .labsw { margin-left: 4px; flex: none; } .labsw button b, .labsw button .ic { display: none; }  .atag { height: 22px; font-size: 12px; } }
 /* zoomed far out: a VP area shows only its VP marks; the area under the mouse (or selected) keeps its whole tag */
 #tags.far .atag:not(.hov) { background: none; border-color: transparent; box-shadow: none; opacity: .9; padding: 0; gap: 1px; }
 #tags.far .atag:not(.hov) .sw, #tags.far .atag:not(.hov) .nm { display: none; }
 .sheet.menu > h3, .sheet.menu > .tabs { flex: none; }      /* a long tab (the log) scrolls inside; the title and tabs never shrink away */
+/* the Labels control is a view setting, not a layer: no selected-layer brass fill; the eye and the state word say what it does */
+.labsw button, .labsw button[aria-pressed="true"] { background: transparent; color: var(--gold); }
+.labsw button[aria-pressed="false"] { color: #9a9c7c; } .labsw button[aria-pressed="true"] b, .labsw button b { color: #b3ad8b; }
+.labsw button:hover { background: #ffffff10; }
+@media (max-width: 700px) { .labsw button .ic { display: inline-block !important; width: 16px; height: 16px; } .labsw button { gap: 4px; padding: 0 8px; } }
