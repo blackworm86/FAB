@@ -21,7 +21,7 @@ import { sheets } from './sheets';
 import { pips, ABBR, chitLabel, BTN_ICON, iconify, STAGE_NAME, ok10, faces, modIcon, modWord } from './table-text';
 import { initChat, chatBtn, chatHtml, bindChat } from './chat';
 import { acts, actv, resetActs, reg, regv, ubtn, btn, chip, srow, swtch } from './ui-kit';
-import { loadTroops, troopOf, troopGroup, radius as troopR, setZoom } from './troops';
+import { loadTroops, troopOf, troopGroup, radius as troopR, setZoom, foot, grid, yawOf } from './troops';
 import { optChooser, optOn } from './opt-rules';
 import { Recorder, unitsOf, localJournal, buildSteps } from './journal';
 import { openReplay } from './replay';
@@ -270,7 +270,7 @@ const woodOf = (u: E.Unit) => VOL.wood[VOL.cssSide(u)] ?? (VOL.cssSide(u) === 'b
 let troopsOn = (() => { try { return localStorage.getItem('fab-troops') !== '0'; } catch { return true; } })(), troopsReady = false, troopsAsked = false;
 let troopSize = (() => { try { return +(localStorage.getItem('fab-troop-size') ?? '') || 1.5; } catch { return 1.5; } })(); setZoom(troopSize);
 /** Volumes with figures in web/public/pezzi (<volume>.json). */
-const FIG_VOLS = ['bulge', 'golan73'];
+const FIG_VOLS = ['bulge', 'golan73', 'sicily'];
 function wantTroops() {
   if (!troopsOn || TUTORIAL || !FIG_VOLS.includes(VOL.id)) return false;
   if (!troopsAsked) { troopsAsked = true; void loadTroops(VOL.id).then((ok) => { troopsReady = ok; if (ok) refresh(); }).catch(() => { /* no figures: blocks stay */ }); }
@@ -387,9 +387,28 @@ function drawPointMarks(b: E.Battle) {
     const d = discSprite('point', 0.26), c = farSide() ? -1 : 1; d.position.set(o.position.x + 0.58 * c, o.position.y > 0.6 ? 1.95 : 0.9, o.position.z - 0.58 * c); d.userData.anchor = uid; markers.add(d);                 // a back corner of the block, clear of its pips and symbol d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
   }
 }
+/** Where a unit's figure faces: The Bulge outside battle, by side (Germans west, Allies east: yawOf); elsewhere, and in any battle or
+ * contested area, toward the other side's edge of the map (the near side's edge is at +z, so it faces -z). */
+const faceYaw = (u: E.Unit, cont: boolean, battle: boolean) => (VOL.id === 'bulge' && !cont && !battle ? undefined : near(u.side) ? Math.PI : 0);
 function drawPieces() {
   disposeAll(pieces); disposeAll(markers);
-  const troops = wantTroops(), rOf = (u: E.Unit) => { const t = troops && !faceDown(u) ? troopOf(u.id) : null; return t ? troopR(t) : u.garrison ? 0.75 : 0.95; };      // a figure takes its own footprint
+  const troops = wantTroops();
+  /** Figures: the area's units in an ordered grid centred in the area (each side a block of rows in a contested area, the far side toward -z),
+   * every unit its own footprint, so nothing overlaps; the widest layout that keeps every unit inside the area. */
+  const gridLay = (id: number, order: E.Unit[], cont: boolean) => {
+    const saved = [...(taken.get(id) ?? [])], poly = areaWorld(id), c = toWorld(...pole(MAP.areas.find((x) => x.id === id)!.polygon));
+    const fp = (u: E.Unit): [number, number] => { const t = !faceDown(u) ? troopOf(u.id) : null; return t ? foot(t, faceYaw(u, cont, false) ?? yawOf(u.side)) : u.garrison ? [1.5, 1.5] : [1.75, 0.95]; };
+    const groups = cont ? [order.filter((u) => !near(u.side)), order.filter((u) => near(u.side))] : [order], feet = groups.map((gr) => gr.map(fp));
+    let best: { x: number; z: number; w: number; d: number }[][] = [], fit = -1;
+    for (let cols = Math.max(...groups.map((x) => x.length)); cols >= 1; cols--) {
+      const at = grid(feet, cols).map((gr, i) => gr.map(([x, z], j) => ({ x: c.x + x, z: c.z + z, w: feet[i][j][0], d: feet[i][j][1] })));
+      const n = at.flat().filter((q) => [[-1, -1], [1, -1], [1, 1], [-1, 1]].every(([sx, sz]) => inPoly(q.x + sx * q.w / 2, q.z + sz * q.d / 2, poly))).length;
+      if (n > fit) { fit = n; best = at; } if (n === order.length) break;
+    }
+    taken.set(id, [...saved, ...best.flat().map((q) => ({ x: q.x, z: q.z, r: Math.max(q.w, q.d) / 2 }))]);       // markers placed later keep clear of every unit
+    return { spots: order.map((u) => { const i = groups.findIndex((gr) => gr.includes(u)); return best[i][groups[i].indexOf(u)]; }), tight: false, saved };
+  };
+  const rOf = (u: E.Unit) => { const t = troops && !faceDown(u) ? troopOf(u.id) : null; return t ? troopR(t) : u.garrison ? 0.75 : 0.95; };      // a figure takes its own footprint
   coveredLabels.clear();
   /** The printed number plate and name (drawn upright for the viewer) are kept clear: blocks go around them when the area has room. */
   const labelSpots = (id: number) => { const L = LAB[id]; if (!L) return []; const r = L.h / 2, out: { x: number; z: number; r: number }[] = [];
@@ -424,7 +443,7 @@ function drawPieces() {
         const r = rOf(u), p = column ? inArea(a.id, base.x, base.z + idx * 1.8, r) : inArea(a.id, base.x + idx * 1.75, base.z + (cont ? row : 0.4), r); if ((p as { tight?: boolean }).tight) tight = true; return p; });
       return { spots, tight, saved };
     };
-    let lay = place(false);
+    let lay = troops && g.battle?.area !== a.id && order.length ? gridLay(a.id, order, cont) : place(false);
     if (lay.tight && order.length > 1) { taken.set(a.id, lay.saved); const col = place(true); if (!col.tight) lay = col; else { taken.set(a.id, lay.saved); lay = place(false); } }
     if (cont && lay.tight && g.battle?.area !== a.id) {                                             // a crowded contested area: the two sides in facing rows (German row, Allied row), never mixed or stacked
       taken.set(a.id, lay.saved); const pl = toWorld(...POLE.get(a.id)!);
@@ -436,8 +455,8 @@ function drawPieces() {
     if (lab.some((l) => lay.spots.some((p) => Math.hypot(p.x - l.x, p.z - l.z) < l.r + 0.7))) coveredLabels.add(a.id);          // no room: the area's number and name ride on a tag above
     order.forEach((u, n) => {
       const hid = faceDown(u), t = troops && !hid ? troopOf(u.id) : null, sel = u.id === selUnit || (!!g.battle && !hid && (u.id === g.battle.attPoint || u.id === g.battle.defPoint));
-      // in a battle or contested area the two rows face each other (the near side's row is toward +z); elsewhere Germans face west, the Allies east
-      const m = t ? troopGroup(t, u.id, u.side, woodOf(u), u.str, u.q[u.str - 1] ?? 'veteran', sel, cont || g.battle?.area === a.id ? (near(u.side) ? Math.PI : 0) : undefined) : block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
+      // facing: faceYaw (The Bulge: Germans west, Allies east; battles, contested areas and the other volumes: toward the other side's edge)
+      const m = t ? troopGroup(t, u.id, u.side, woodOf(u), u.str, u.q[u.str - 1] ?? 'veteran', sel, faceYaw(u, cont, g.battle?.area === a.id)) : block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
       const flat = !t && cont && !hid && !u.garrison && u.up === a.id;                                                     // revealed blocks lie flat, label up, while the area is contested
       m.position.x = p.x; m.position.z = p.z;
       if (flat) { m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, viewRot(), 0); m.position.y = 0.4; }

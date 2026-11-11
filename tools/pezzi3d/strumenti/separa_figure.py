@@ -45,6 +45,12 @@ TIPI = {
     "golan73_syrian_inf": (1, 0, 0, 1.8, "tutte"), "golan73_syrian_airborne": (1, 0, 0, 1.8, "tutte"),
     "golan73_syrian_armor": (1, 0, 90, 2.35, "tutte"), "golan73_syrian_mech": (1, 0, 90, 2.07, "tutte"),     # T-55, BMP-1
     "golan73_syrian_recon": (1, 0, 90, 2.3, "tutte"),                                                         # BRDM-2
+    # Sicily '43: come Golan, una figura per file e veicoli col muso verso -X
+    "sicily_us_inf": (1, 0, 0, 1.8, "tutte"), "sicily_us_airborne": (1, 0, 0, 1.8, "tutte"), "sicily_us_armor": (1, 0, 90, 2.97, "tutte"),
+    "sicily_british_inf": (1, 0, 0, 1.8, "tutte"), "sicily_british_airborne": (1, 0, 0, 1.8, "tutte"), "sicily_british_armor": (1, 0, 90, 2.97, "tutte"),
+    "sicily_german_mech": (1, 0, 90, 2.68, "tutte"),                                                         # Panzer IV
+    "sicily_italian_inf": (1, 0, 0, 1.8, "tutte"), "sicily_italian_mountain_inf": (1, 0, 0, 1.8, "tutte"), "sicily_italian_garrison": (1, 0, 0, 1.8, "tutte"),
+    "sicily_italian_motorized_inf": (1, 0, 90, 2.5, "tutte"),                                                # autocarro
 }
 VEICOLI = ("armor", "cavalry", "mech", "recon", "motorized", "ghost")
 veicolo = lambda tipo: any(v in tipo for v in VEICOLI)

@@ -1,0 +1,143 @@
+{
+ "tipi": {
+  "sicily_us_armor": {
+   "figure": [
+    "sicily_us_armor_0.glb"
+   ],
+   "veicolo": true
+  },
+  "sicily_us_inf": {
+   "figure": [
+    "sicily_us_inf_0.glb"
+   ],
+   "veicolo": false
+  },
+  "sicily_us_airborne": {
+   "figure": [
+    "sicily_us_airborne_0.glb"
+   ],
+   "veicolo": false
+  },
+  "sicily_british_inf": {
+   "figure": [
+    "sicily_british_inf_0.glb"
+   ],
+   "veicolo": false
+  },
+  "sicily_british_airborne": {
+   "figure": [
+    "sicily_british_airborne_0.glb"
+   ],
+   "veicolo": false
+  },
+  "sicily_british_armor": {
+   "figure": [
+    "sicily_british_armor_0.glb"
+   ],
+   "veicolo": true
+  },
+  "sicily_italian_motorized_inf": {
+   "figure": [
+    "sicily_italian_motorized_inf_0.glb"
+   ],
+   "veicolo": true
+  },
+  "sicily_italian_mountain_inf": {
+   "figure": [
+    "sicily_italian_mountain_inf_0.glb"
+   ],
+   "veicolo": false
+  },
+  "sicily_italian_inf": {
+   "figure": [
+    "sicily_italian_inf_0.glb"
+   ],
+   "veicolo": false
+  },
+  "sicily_italian_garrison": {
+   "figure": [
+    "sicily_italian_garrison_0.glb"
+   ],
+   "veicolo": false
+  },
+  "sicily_german_mech": {
+   "figure": [
+    "sicily_german_mech_0.glb"
+   ],
+   "veicolo": true
+  }
+ },
+ "blocchi": {
+  "US01": "sicily_us_armor",
+  "US02": "sicily_us_armor",
+  "US03": "sicily_us_inf",
+  "US04": "sicily_us_inf",
+  "US05": "sicily_us_inf",
+  "US06": "sicily_us_inf",
+  "US07": "sicily_us_inf",
+  "US08": "sicily_us_inf",
+  "US11": "sicily_us_inf",
+  "US12": "sicily_us_inf",
+  "US09": "sicily_us_airborne",
+  "US10": "sicily_us_airborne",
+  "BR01": "sicily_british_inf",
+  "BR02": "sicily_british_inf",
+  "BR03": "sicily_british_inf",
+  "BR04": "sicily_british_inf",
+  "BR05": "sicily_british_inf",
+  "BR06": "sicily_british_inf",
+  "BR07": "sicily_british_inf",
+  "BR08": "sicily_british_inf",
+  "BR09": "sicily_british_inf",
+  "BR10": "sicily_british_inf",
+  "BR15": "sicily_british_inf",
+  "BR11": "sicily_british_airborne",
+  "BR12": "sicily_british_airborne",
+  "BR13": "sicily_british_armor",
+  "BR14": "sicily_british_armor",
+  "IT01": "sicily_italian_motorized_inf",
+  "IT02": "sicily_italian_motorized_inf",
+  "IT03": "sicily_italian_mountain_inf",
+  "IT04": "sicily_italian_mountain_inf",
+  "IT05": "sicily_italian_inf",
+  "IT06": "sicily_italian_inf",
+  "IT07": "sicily_italian_inf",
+  "IT08": "sicily_italian_inf",
+  "IT09": "sicily_italian_garrison",
+  "IT10": "sicily_italian_garrison",
+  "IT11": "sicily_italian_garrison",
+  "IT12": "sicily_italian_garrison",
+  "IT13": "sicily_italian_garrison",
+  "IT14": "sicily_italian_garrison",
+  "IT15": "sicily_italian_garrison",
+  "IT16": "sicily_italian_garrison",
+  "IT17": "sicily_italian_garrison",
+  "IT18": "sicily_italian_garrison",
+  "IT19": "sicily_italian_garrison",
+  "IT20": "sicily_italian_garrison",
+  "IT21": "sicily_italian_garrison",
+  "IT22": "sicily_italian_garrison",
+  "IT23": "sicily_italian_garrison",
+  "IT24": "sicily_italian_garrison",
+  "IT25": "sicily_italian_garrison",
+  "IT26": "sicily_italian_garrison",
+  "IT27": "sicily_italian_garrison",
+  "IT28": "sicily_italian_garrison",
+  "IT29": "sicily_italian_garrison",
+  "IT30": "sicily_italian_garrison",
+  "IT31": "sicily_italian_garrison",
+  "IT32": "sicily_italian_garrison",
+  "IT33": "sicily_italian_garrison",
+  "IT34": "sicily_italian_garrison",
+  "IT35": "sicily_italian_garrison",
+  "IT36": "sicily_italian_garrison",
+  "IT37": "sicily_italian_garrison",
+  "GE01": "sicily_german_mech",
+  "GE02": "sicily_german_mech",
+  "GE03": "sicily_german_mech",
+  "GE04": "sicily_german_mech",
+  "GE05": "sicily_german_mech",
+  "GE06": "sicily_german_mech",
+  "GE07": "sicily_german_mech"
+ }
+}

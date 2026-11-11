@@ -37,10 +37,31 @@ export const troopOf = (unitId: string) => troops.get(byUnit[unitId]) ?? null;
 
 /** Which of its type's figures a unit shows: fixed per unit, so neighbouring units of one type look different. */
 export const variant = (unitId: string, count: number) => [...unitId].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % count;
-/** Each side faces the enemy's edge of the map (yaw about Y; a figure is modelled facing +z). The Bulge: Germans west, Allies east;
- * Golan '73 (Syria at the top of the map, Israel at the bottom): Syrians down the map, Israelis up it. */
-const FACING: Record<string, number> = { german: -Math.PI / 2, allied: Math.PI / 2, syrian: 0, israeli: Math.PI };
-export const yawOf = (side: string) => FACING[side] ?? 0;
+/** The Bulge: Germans face west, the Allies east (yaw about Y; a figure is modelled facing +z). The other volumes pass their own
+ * facing (each side toward the other's edge of the map: main.ts). */
+export const yawOf = (side: string) => (side === 'german' ? -Math.PI / 2 : Math.PI / 2);
+/** A unit's footprint on the map for a facing: [width along x, depth along z], with room for its ring. */
+export function foot(t: Pick<Troop, 'size'>, yaw: number): [number, number] {
+  const across = Math.abs(Math.sin(yaw)) > 0.5, x = t.size.x * zoom + 0.3, z = t.size.z * zoom + 0.3;
+  return across ? [z, x] : [x, z];
+}
+/** An ordered layout: each group (a side) in rows of at most cols units, the groups one under the other (the first toward -z),
+ * all centred on (0, 0). Returns each unit's centre, group by group. Nothing overlaps: every unit gets its full footprint plus gap. */
+export function grid(groups: [number, number][][], cols: number, gap = 0.15): [number, number][][] {
+  const rows: { items: [number, number][]; g: number; i0: number }[] = [];
+  groups.forEach((gr, g) => { for (let i = 0; i < gr.length; i += cols) rows.push({ items: gr.slice(i, i + cols), g, i0: i }); });
+  const depth = (r: { items: [number, number][] }) => Math.max(...r.items.map((f) => f[1]));
+  const total = rows.reduce((a, r) => a + depth(r), 0) + gap * (rows.length - 1) + 0.3 * (groups.filter((x) => x.length).length - 1);
+  const out = groups.map((gr) => gr.map(() => [0, 0] as [number, number]));
+  let z = -total / 2, prev = -1;
+  for (const r of rows) {
+    if (prev !== -1 && r.g !== prev) z += 0.3;                                    // a little more room between the two sides
+    const d = depth(r), w = r.items.reduce((a, f) => a + f[0], 0) + gap * (r.items.length - 1); let x = -w / 2;
+    r.items.forEach((f, k) => { out[r.g][r.i0 + k] = [x + f[0] / 2, z + d / 2]; x += f[0] + gap; });
+    z += d + gap; prev = r.g;
+  }
+  return out;
+}
 /** Footprint radius of a unit's figure, for the block layout (never less than a small disc, so pips and ring stay clear of the next unit). */
 export const radius = (t: Pick<Troop, 'size'>) => Math.max(0.55, Math.max(t.size.x, t.size.z) * zoom / 2 + 0.12);
 
