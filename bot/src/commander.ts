@@ -3,7 +3,7 @@
 // the learned judge likes best. In between, the chosen plan's doctrine makes the single moves. It explains its choice.
 import * as E from '../../engine/src';
 import type { Game, Side } from '../../engine/src';
-import { actors, apply } from './actions';
+import { actors, apply, legalActions, type Action } from './actions';
 import { DEFAULT_STYLE, doctrinePlayer, type Style } from './doctrine';
 import { guessFull } from './guess';
 import { winChance } from './judge';
@@ -36,6 +36,44 @@ function playOut(g: Game, me: Side, style: Style, maxActions = 1500): number {
   return winChance(g, me, me) + 0.002 * vp;                       // the points break ties when the judge is sure either way
 }
 
+/** Play a guessed game until no battle is open (the decision's consequences), then the judge's verdict for `me`. */
+function playBattle(g: Game, me: Side, style: Style, maxActions = 300): number {
+  const mine = doctrinePlayer(style), theirs = doctrinePlayer();
+  for (let k = 0; k < maxActions && !g.over && (g.battle || g.pendingBlow); k++) {
+    const side = actors(g)[0]; if (!side) break;
+    const a = (side === me ? mine : theirs)(g, side); if (!a) break;
+    try { apply(g, a); } catch { break; }
+  }
+  if (g.over) return g.over.toLowerCase().includes(me) ? 1 : 0;
+  return winChance(g, me, me) + 0.002 * E.victory(g).net * (me === E.sidesOf(g)[0] ? 1 : -1);
+}
+
+/** The battle decisions worth a look ahead: which battle to fight (or none), press on or abort, retreat or not, where to, exploit or not. */
+const place = (a: unknown) => E.areas.get(a as number)?.name ?? String(a);
+/** A battle decision in plain words. */
+const say = (a: Action) => ({ startBattle: () => `fight at ${place(a.args[0])}`, endPhase: () => 'fight no more battles this phase', attackerChoice: () => (a.args[1] ? 'abort the attack' : 'press on'),
+  defenderChoice: () => (a.args[1] ? 'fall back to absorb a hit' : 'stand and take the losses'), chooseRetreat: () => `retreat to ${place(a.args[1])}`, declineExploit: () => 'not exploit the victory', roll_step: () => 'exploit the victory' } as Record<string, () => string>)[a.fn]?.() ?? a.fn;
+const LOOK = new Set(['startBattle', 'attackerChoice', 'defenderChoice', 'chooseRetreat', 'declineExploit']);
+const lookable = (v: Game, a: Action) => LOOK.has(a.fn) || (a.fn === 'roll_step' && v.battle?.stage === 'exploit') || (a.fn === 'endPhase' && ['combat', 'btCombat'].includes(v.phase) && !v.battle);
+
+/** Among the options open at a battle decision, the one the judge prefers after the battle is played out on guessed copies;
+ *  the doctrine's own choice stays unless another beats it beyond the noise. */
+function lookAhead(view: Game, side: Side, style: Style, base: Action, r: () => number, budgetMs: number): { a: Action; why?: string } {
+  const opts = legalActions(view, side).filter((a) => lookable(view, a));
+  const bi = opts.findIndex((a) => JSON.stringify(a) === JSON.stringify(base));
+  if (opts.length < 2 || bi < 0) return { a: base };
+  const t0 = performance.now(), runs: number[][] = opts.map(() => []);
+  for (let round = 0; round < 6 && (round < 2 || performance.now() - t0 < budgetMs); round++) {
+    const guess = guessFull(view, side, r);
+    opts.forEach((a, i) => { const g = structuredClone(guess); try { apply(g, a); runs[i].push(playBattle(g, side, style)); } catch { runs[i].push(-1); } });
+  }
+  const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+  const edge = runs.map((xs) => { const d = xs.map((x, k) => x - runs[bi][k]), m = mean(d), sd = Math.sqrt(mean(d.map((x) => (x - m) ** 2))); return m - sd / Math.sqrt(d.length); });
+  const top = edge.indexOf(Math.max(...edge));
+  if (top === bi || edge[top] <= 0) return { a: base };
+  return { a: opts[top], why: `Turn ${view.turn} ${view.phase}: ${say(opts[top])} rather than ${say(base)}: judged ${Math.round(100 * Math.min(1, mean(runs[top])))}% against ${Math.round(100 * Math.min(1, mean(runs[bi])))}% after playing the battle out.` };
+}
+
 export interface Commander extends Player { reasons: string[] }
 
 /** budgetMs: thinking time for one plan choice; the plans are tried in turns on fresh guesses until it runs out. */
@@ -59,7 +97,10 @@ export function commanderPlayer(seed: number, budgetMs = 4000): Commander {
   const player = ((view, side) => {
     const key = `${view.turn} ${view.phasing} ${view.phase}`;
     if (key !== planned && !view.battle && ['movement', 'combat', 'btCombat'].includes(view.phase) && view.phasing === side) { planned = key; style = choose(view, side); }
-    return doctrinePlayer(style)(view, side);
+    const base = doctrinePlayer(style)(view, side);
+    if (!base || !lookable(view, base)) return base;
+    const { a, why } = lookAhead(view, side, style, base, r, budgetMs / 4); if (why) reasons.push(why);
+    return a;
   }) as Commander;
   player.reasons = reasons;
   return player;
