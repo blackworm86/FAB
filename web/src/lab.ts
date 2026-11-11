@@ -33,9 +33,10 @@ export function labDownload(g: E.Game) {
 /** The computer's turn to act now (in the Admin and Reinforcement Phases it waits until the other side is done). */
 export const labTurn = (g: E.Game) => !!LAB_SIDE && !g.over && actors(g)[0] === LAB_SIDE;
 
-/** If it is the computer's turn, think and then carry out its action through `act`. */
-export function labStep(game: () => E.Game, act: (f: () => void) => void, refresh: () => void) {
-  const g = game(); if (!LAB_SIDE || busy || !labTurn(g)) return;
+/** If it is the computer's turn, think and then carry out its action through `act`; its battle rolls go through `roll`, the table's dice,
+ *  and it waits while dice are on screen (`waiting`). */
+export function labStep(game: () => E.Game, act: (f: () => void) => void, refresh: () => void, roll: () => void, waiting: () => boolean) {
+  const g = game(); if (!LAB_SIDE || busy || waiting() || !labTurn(g)) return;
   seat ??= new Seat(LAB_SIDE, Object.fromEntries(E.sidesOf(g).map((s) => [s, Math.random().toString(36).slice(2)])) as Record<E.Side, string>, rng(Date.now() % 1e9));
   worker ??= new Worker(new URL('./lab-worker.ts', import.meta.url), { type: 'module' });
   busy = true; lab.thinking = true; refresh();
@@ -44,7 +45,7 @@ export function labStep(game: () => E.Game, act: (f: () => void) => void, refres
     if (id !== next) return; next++;                                          // answered once only (the worker or the time limit)
     clearTimeout(timer); w.onmessage = null; if (reason) lab.reason = reason;
     if (a) note({ at: new Date().toISOString(), turn: g.turn, phasing: g.phasing, phase: g.phase, battle: g.battle ? `${g.battle.area} ${E.areas.get(g.battle.area)?.name} ${g.battle.stage}` : undefined, fn: a.fn, args: a.args.map((x) => (typeof x === 'string' ? s.real(x) : x)), reason: reason ?? undefined, timedOut: timedOut || undefined });
-    setTimeout(() => { busy = false; lab.thinking = false; if (a && labTurn(game())) act(() => apply(game(), a, (x) => s.real(x))); else refresh(); }, PACE_MS);   // the game the table holds now
+    setTimeout(() => { busy = false; lab.thinking = false; if (a && labTurn(game())) { if (a.fn === 'roll_step' && game().battle) roll(); else act(() => apply(game(), a, (x) => s.real(x))); } else refresh(); }, PACE_MS);   // the game the table holds now
   };
   let timedOut = false;
   const timer = setTimeout(() => { worker?.terminate(); worker = null; lab.fallback++; timedOut = true; done(doctrinePlayer()(view, LAB_SIDE)); }, TIMEOUT_MS);

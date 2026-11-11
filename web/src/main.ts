@@ -1985,7 +1985,7 @@ function refresh() {
   E.setPlayArea(g.inPlay);
   { const k = (g.inPlay ?? []).join(); if (k !== playKey) { const first = playKey === null; playKey = k; if (!first) paintBoard(); if (g.inPlay || !first) goal = homeGoal(); } }
   SBU.hotseatSync(); setTimeout(autoBattle, 0);
-  if (LAB_SIDE) setTimeout(() => labStep(() => g, (f) => { labActing = true; try { act(f); } finally { labActing = false; } }, render), 0);
+  if (LAB_SIDE) { const as = (f: () => void) => { labActing = true; try { f(); } finally { labActing = false; } }; setTimeout(() => labStep(() => g, (f) => as(() => act(f)), render, () => as(() => { if (g.battle) rollStage(g.battle); }), () => !!rollView || !!heldNext), 0); }      // the computer's dice are thrown on the table like a player's
   if (online.mode === 'remote') setTimeout(driveSplit, 0);
   { const key = `${online.devSeat}|${online.mySide()}|${g.battle?.attPoint}|${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
     if (key !== tgtKey) { tgtKey = key; tgt = reinforcing ? reinforceTargets() : decisionTargets() ?? (selChit && mine(g.chits.find((x) => x.id === selChit)?.side ?? P1) ? VOL.targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, { area: selArea, mode: tgtMode, setArea: (a) => { selArea = a; }, setMode: (m) => { tgtMode = m; }, face: (u) => unitPic(u), areaName }) : null); } }
