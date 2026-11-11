@@ -9202,6 +9202,14 @@
   [
    "Filled: (.+) share of the expected hits · empty: (.+)",
    "Pieno: quota di $1 dei colpi attesi · vuoto: $2"
+  ],
+  [
+   "Map: (.+)",
+   "Mappa: $1"
+  ],
+  [
+   "Map layers, legend and rotate: (.+)",
+   "Livelli della mappa, legenda e rotazione: $1"
   ]
  ],
  "html": {}

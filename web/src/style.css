@@ -1224,3 +1224,27 @@ button.go.quiet { background: transparent !important; color: #ff9c8a !important;
 .mapbubble:not([style*="transform"]) { visibility: hidden; }      /* not placed yet: never flash in the corner */
 .linkbtn { display: inline; min-height: 0 !important; padding: 0 2px !important; border: 0 !important; background: none !important; color: var(--gold) !important; font: inherit !important; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .maplegend { max-height: calc(100vh - 230px); overflow-y: auto; overscroll-behavior: contain; }      /* the key grew a section: it scrolls inside the map, never past the bottom bar */
+/* the score inside the top bar (one bar instead of two): the current turn and the next two with their sudden-death numbers, a short gauge, the net; the full track is in the score window */
+.c-bar.t .vps { flex: none; width: auto !important; min-width: 0; height: 40px !important; min-height: 0 !important; padding: 2px 8px !important; gap: 6px; border: 1px solid #8d906566 !important; background: transparent !important; margin: 0 3px; }
+.c-bar.t .vps > .vlab:first-child, .c-bar.t .vps .vtt::before { display: none; }
+.c-bar.t .vps .vtb.past, .c-bar.t .vps .vtb.now + .vtb + .vtb ~ .vtb { display: none; }
+.c-bar.t .vps .vtb { width: 34px; height: 30px; }
+.c-bar.t .vps .gauge { width: 90px; flex: none; }
+@media (max-width: 1500px) { .c-bar.t .vps .gauge, .c-bar.t .vps > .vlab.al:not(.net), .c-bar.t .vps > .vlab.ge:not(.net) { display: none; } }
+@media (max-width: 700px) { .c-bar.t .vps { padding: 0 8px !important; height: 34px !important; margin: 0 2px; } .c-bar.t .vps > :not(.nets) { display: none !important; } .c-bar.t .vps .nets { display: inline !important; font-size: 13px; } }
+
+.vps .nets { display: none; }
+@media (max-width: 1500px) { .c-bar.t .vps .vtb.now + .vtb ~ .vtb { display: none; } }      /* narrower desktops: this turn and the next */
+/* phones: one Map button folds the layers, the legend chip and Rotate; the Labels control stays beside it (owner-approved mockup, 11 Nov) */
+.mapmenu-btn { display: none; }
+@media (max-width: 700px) {
+  .mapmenu-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; background: #0b0d08e6; border: 1px solid var(--line); color: var(--gold); font: 600 13px var(--sfd); letter-spacing: .08em; text-transform: uppercase; }
+  .mapmenu-btn .ic { width: 16px; height: 16px; }
+  .mapdock:not(.menuopen) .dockrow > .mlchip, .mapdock:not(.menuopen) .dockrow > .laysw:not(.labsw), .mapdock:not(.menuopen) .maptools button[title="Rotate the map"] { display: none !important; }
+  .mapdock.menuopen .dockrow { flex-wrap: wrap; }
+  .mapdock.menuopen .dockrow > .laysw:not(.labsw) { order: 5; flex-basis: 100%; flex-direction: column; overflow: visible; }
+  .mapdock.menuopen .dockrow > .laysw:not(.labsw) b { display: none; }
+  .mapdock.menuopen .dockrow > .laysw:not(.labsw) button { justify-content: flex-start; border-left: 0; border-top: 1px solid #8d906555; min-height: 44px; padding: 0 14px; }
+  .mapdock.menuopen .dockrow > .laysw:not(.labsw) button .ic, .mapdock.menuopen .dockrow > .laysw:not(.labsw) button .l { display: inline !important; } .mapdock.menuopen .dockrow > .laysw:not(.labsw) button .s { display: none !important; }
+  .mapdock.menuopen .dockrow > .mlchip { order: 6; }
+}
