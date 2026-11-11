@@ -347,6 +347,8 @@ function discSprite(kind: 'x' | 'point', size: number) { disc(kind, size); const
  *  formation may reach past the area border. */
 /** How far the battle formation reaches from the area's pole (cm), on the deeper side. */
 function formationReach(b: E.Battle) {
+  const fr = battleFrame(b);
+  if (fr) return Math.max(...VOL.sides.map((sd) => { const u = Math.max(1, Math.ceil(E.unitsIn(g, b.area, sd).length / 5)), n = b.assets[sd].length + E.airOf(b, sd).length, a = Math.ceil(n / 5); return fr.rd / 2 + 0.3 + u * fr.rd + (a ? 0.5 + a * 1.7 : 0); }), 2.5 * fr.gx);
   return Math.max(...VOL.sides.map((sd) => { const u = Math.max(1, Math.ceil(E.unitsIn(g, b.area, sd).length / 5)), n = b.assets[sd].length + E.airOf(b, sd).length, a = Math.ceil(n / 5); return 1.35 + u * 1.9 + (a ? 0.5 + a * 1.7 : 0); }), 5 * 1.95 / 2 + 1);
 }
 /** Panels over the battle (header at the top, report and hand at the bottom): the view is shifted so the battle sits in the clear band between them. */
@@ -361,9 +363,34 @@ function fitBattleView() {
   if (shift !== viewShift) { viewShift = shift; if (shift) cam.setViewOffset(r.width, r.height, 0, shift, r.width, r.height); else cam.clearViewOffset(); }
   return clear / r.height;
 }
+// ---- where figures face and stand (docs/ASSETS-3D.md): the way they last moved, toward the attacker, toward the nearest enemy ----
+const CTR = new Map<number, THREE.Vector3>(), ctr = (id: number) => CTR.get(id) ?? (CTR.set(id, toWorld(...pole(MAP.areas.find((x) => x.id === id)!.polygon))), CTR.get(id)!);
+const yawTo = (dx: number, dz: number) => Math.atan2(dx, dz);                                       // a figure is modelled facing +z
+/** A contested area: the attacking side (the battle's, else the side that moved in, the phasing side first) and the way it came from. */
+const frontOf = (id: number, us: E.Unit[]): { att: E.Side; v: [number, number] } => {
+  const came = (sd: E.Side) => us.filter((u) => u.side === sd && u.from != null && u.from !== id && MAP.areas.some((x) => x.id === u.from));
+  const sides = [...new Set(us.map((u) => u.side))];
+  const att = g.battle?.area === id ? g.battle.attacker : came(g.phasing).length ? g.phasing : sides.find((sd) => came(sd).length) ?? (sides.includes(g.phasing) ? g.phasing : sides[0]);
+  const c0 = ctr(id); let vx = 0, vz = 0; for (const u of came(att)) { const q = ctr(u.from!); vx += q.x - c0.x; vz += q.z - c0.z; }
+  if (Math.hypot(vx, vz) < 1e-6) { const y = sideYaw(att); vx = -Math.sin(y); vz = -Math.cos(y); }      // no move recorded: from the attackers' own side of the front
+  const l = Math.hypot(vx, vz); return { att, v: l > 1e-6 ? [vx / l, vz / l] : [0, near(att) ? 1 : -1] };
+};
+/** A side's usual facing: The Bulge, Germans west and Allies east; the other volumes, toward the other side's edge of the map. */
+const sideYaw = (sd: E.Side) => (VOL.id === 'bulge' ? yawOf(sd) : near(sd) ? Math.PI : 0);
+/** The battle formation when figures are drawn: along the attack (the attackers on the side they came from, `v`), each row as wide
+ * as the widest figure and as deep as the deepest, so nothing overlaps. null with blocks (the block formation keeps its rows). */
+function battleFrame(b: E.Battle) {
+  if (!wantTroops()) return null;
+  const us = E.unitsIn(g, b.area), f = frontOf(b.area, us), feet = us.map((u) => { const t = seen(u) ? troopOf(u.id) : null; return t ? foot(t, 0) : [1.75, 0.95]; });
+  return { ...f, p: [-f.v[1], f.v[0]] as [number, number], gx: Math.max(1.95, ...feet.map((q) => q[0] + 0.2)), rd: Math.max(1.9, ...feet.map((q) => q[1] + 0.3)) };
+}
 function battleSpot(b: E.Battle, sd: E.Side, kind: 'unit' | 'asset', i: number, n: number) {
   const base = toWorld(...POLE.get(b.area)!), dir = near(sd) ? 1 : -1, per = 5, row = Math.floor(i / per), inRow = Math.min(per, n - row * per), col = i % per;
-  const units = E.unitsIn(g, b.area, sd).length, unitRows = Math.max(1, Math.ceil(units / per));
+  const units = E.unitsIn(g, b.area, sd).length, unitRows = Math.max(1, Math.ceil(units / per)), fr = battleFrame(b);
+  if (fr) {                                                                                              // figures: along the attack, spaced by their footprints
+    const lat = (col - (inRow - 1) / 2) * (kind === 'unit' ? fr.gx : 1.75), d = (sd === fr.att ? 1 : -1) * (kind === 'unit' ? fr.rd / 2 + 0.3 + row * fr.rd : fr.rd / 2 + 0.3 + unitRows * fr.rd + 0.5 + row * 1.7);
+    return { x: base.x + lat * fr.p[0] + d * fr.v[0], z: base.z + lat * fr.p[1] + d * fr.v[1] };
+  }
   const depth = kind === 'unit' ? 1.35 + row * 1.9 : 1.35 + unitRows * 1.9 + 0.5 + row * 1.7;
   return { x: base.x + (col - (inRow - 1) / 2) * (kind === 'unit' ? 1.95 : 1.75), z: base.z + dir * depth };
 }
@@ -390,31 +417,16 @@ function drawPointMarks(b: E.Battle) {
 function drawPieces() {
   disposeAll(pieces); disposeAll(markers);
   const troops = wantTroops();
-  // ---- where figures face (docs/ASSETS-3D.md): the way they last moved, toward the attacker, toward the nearest enemy ----
-  const CTR = new Map<number, THREE.Vector3>(), ctr = (id: number) => CTR.get(id) ?? (CTR.set(id, toWorld(...pole(MAP.areas.find((x) => x.id === id)!.polygon))), CTR.get(id)!);
-  const yawTo = (dx: number, dz: number) => Math.atan2(dx, dz);                                       // a figure is modelled facing +z
-  const held = new Map<E.Side, number[]>(); for (const u of g.units) if (u.area != null && MAP.areas.some((x) => x.id === u.area)) held.set(u.side, [...(held.get(u.side) ?? []), u.area]);
-  /** A contested area: the attacking side (the battle's, else the side that moved in, the phasing side first) and the way it came from. */
-  const frontOf = (id: number, us: E.Unit[]): { att: E.Side; v: [number, number] } => {
-    const came = (sd: E.Side) => us.filter((u) => u.side === sd && u.from != null && u.from !== id && MAP.areas.some((x) => x.id === u.from));
-    const sides = [...new Set(us.map((u) => u.side))];
-    const att = g.battle?.area === id ? g.battle.attacker : came(g.phasing).length ? g.phasing : sides.find((sd) => came(sd).length) ?? (sides.includes(g.phasing) ? g.phasing : sides[0]);
-    const c0 = ctr(id); let vx = 0, vz = 0; for (const u of came(att)) { const q = ctr(u.from!); vx += q.x - c0.x; vz += q.z - c0.z; }
-    if (Math.hypot(vx, vz) < 1e-6) { let d = 1e9; for (const a of held.get(att) ?? []) { const q = ctr(a), dd = Math.hypot(q.x - c0.x, q.z - c0.z); if (a !== id && dd < d) { d = dd; vx = q.x - c0.x; vz = q.z - c0.z; } } }   // nobody has moved yet: from their nearest friends
-    const l = Math.hypot(vx, vz); return { att, v: l > 1e-6 ? [vx / l, vz / l] : [0, near(att) ? 1 : -1] };
-  };
   const fronts = new Map<number, { att: E.Side; v: [number, number] }>();
   /** A unit's facing. Battle close-up: its row faces the other. Contested: the attackers face in from where they came, the defenders face them.
-   * Elsewhere: the way it last moved; a unit that has not moved faces the nearest area holding the other side; else its side's usual way. */
+   * Elsewhere: the way it last moved; a unit that has not moved faces the way of the front (sideYaw). */
   const heading = (u: E.Unit, id: number, cont: boolean, battle: boolean) => {
-    if (battle) return near(u.side) ? Math.PI : 0;
+    if (battle) { const fr = g.battle && battleFrame(g.battle); return fr ? (u.side === fr.att ? yawTo(-fr.v[0], -fr.v[1]) : yawTo(fr.v[0], fr.v[1])) : near(u.side) ? Math.PI : 0; }
     const f = cont ? fronts.get(id) : undefined;
     if (f) return u.side === f.att ? yawTo(-f.v[0], -f.v[1]) : yawTo(f.v[0], f.v[1]);
     const here = ctr(id);
     if (u.from != null && u.from !== id && MAP.areas.some((x) => x.id === u.from)) { const q = ctr(u.from); return yawTo(here.x - q.x, here.z - q.z); }
-    let best: THREE.Vector3 | null = null, d = 1e9;
-    for (const [sd, ids] of held) if (sd !== u.side) for (const a of ids) { const q = ctr(a), dd = Math.hypot(q.x - here.x, q.z - here.z); if (a !== id && dd < d) { d = dd; best = q; } }
-    return best ? yawTo(best.x - here.x, best.z - here.z) : VOL.id === 'bulge' ? yawOf(u.side) : near(u.side) ? Math.PI : 0;
+    return sideYaw(u.side);                                                                           // not moved yet: the direction of the front
   };
   /** Figures: the area's units in an ordered grid centred in the area (each side a block of rows in a contested area, the far side toward -z),
    * every unit its own footprint, so nothing overlaps; the widest layout that keeps every unit inside the area. */
