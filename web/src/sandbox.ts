@@ -64,16 +64,30 @@ export function report(ns: Note[], g: E.Game, version: string) {
 }
 
 /* ---------- a ready test situation from the address (the rules checklist links here) ---------- */
+function autoSetup(g: E.Game, sides: E.Side[]) {
+  const G = E.golan;
+  for (let i = 0; i < 400 && g.phase === 'deploy'; i++) {
+    try {
+      if (g.game === 'sicily') E.sicily.autoDeploy(g);
+      else if (g.game === 'golan73') {
+        if (g.units.some((u) => u.box === 'deploy' && (u.fort || u.ghost))) { G.autoStrongpoints(g, 'historical'); continue; }
+        const u = g.units.find((x) => x.box === 'deploy'), o = u ? G.deployOptions(g, u.id) : [];
+        if (u && o.length) { G.deploy(g, u.id, o[0]); continue; }
+        if (G.state(g).minesLeft) { G.autoMinefields(g); continue; }
+        if (sides.some((s) => G.reservesLeft(g, s) > 0)) { for (const s of sides) G.autoReserves(g, s); continue; }
+        const c = G.alowdaCommandos(g)[0], ra = G.alowdaRaidAreas(g); if (c && ra.length) { G.alowdaRaid(g, c.id, ra[0]); continue; }
+      }
+      E.endPhase(g);
+    } catch { break; }
+  }
+}
 /** Address keys that ask for one: `at=turn.side.phase`, `chits=kind,side:kind` (made available), `battle=1` (a battle opened), `case=` (the rule tested, written in the log), `setup=0` (stay in the set-up). */
 export const PRESET_KEYS = ['at', 'chits', 'battle', 'case', 'setup'];
-type Next = (g: E.Game, s: E.Side, level: 'easy') => { run: (g: E.Game) => void } | null;
-/** A new game finished setting up (the computer places the set-up pieces), then moved to the situation the address asks for. */
-export function preset(g: E.Game, q: URLSearchParams, next: Next): E.Game {
+/** A new game finished setting up by the rules' own quick placements (Golan: historical strongpoints, each block in its first legal area,
+ *  minefields, reserves, the Al-Owda raid; Sicily: the quick set-up), then moved to the situation the address asks for. */
+export function preset(g: E.Game, q: URLSearchParams): E.Game {
   const sides = E.sidesOf(g);
-  for (let i = 0; i < 400 && g.phase === 'deploy' && q.get('setup') !== '0'; i++) {
-    const a = sides.map((s) => next(g, s, 'easy')).find(Boolean);
-    try { if (a) a.run(g); else E.endPhase(g); } catch { break; }
-  }
+  if (q.get('setup') !== '0') autoSetup(g, sides);
   const [t, s, p] = (q.get('at') ?? '').split('.'), battle = q.get('battle') === '1';
   const side = sides.includes(s as E.Side) ? (s as E.Side) : g.phasing, phase = PHASES.some(([k]) => k === p) ? (p as E.Phase) : battle ? 'combat' : null;
   if (phase || +t) jump(g, +t || g.turn, side, phase ?? g.phase);

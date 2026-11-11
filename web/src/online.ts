@@ -3,7 +3,6 @@
  *  and writes only what changed. The seat decides who may act. In development (`?dev=1`) a seat switch lets one tab play both sides. */
 import { setRandom, SplitSeat, VOLUME, type Game, type Side, type Priv, type Reveals } from '../../engine/src';
 import { rtdbStore } from './store-rtdb';
-import type { SoloMeta } from './solo';
 
 export interface Seats { german?: string | null; allied?: string | null; germanName?: string | null; alliedName?: string | null }
 /** A game as listed in the lobby: who made it, which game and rules, who sits where. */
@@ -27,9 +26,6 @@ export interface Store {
   watchChat(next: (m: ChatMsg[]) => void): void; sendChat(side: Side, text: string): Promise<string>;
   /** 4.1 the replay journal: add a step part ('pub', or a seat's own blocks), and read it all once the game is over. */
   addJournal?(part: 'pub' | SeatKey, d: string): Promise<void>; readJournal?(): Promise<Record<string, Record<string, { at: number; d: string }>> | null>;
-  /** 4.4 games against the computer kept in the account: the list (live), one game, saving (refused as 'conflict' when the account moved on past `m.base`, unless forced), deleting. */
-  soloList?(next: (m: SoloMeta[]) => void): void; soloLoad?(id: string): Promise<{ meta: SoloMeta; json: string } | null>;
-  soloSave?(m: SoloMeta, json: string, force?: boolean): Promise<'ok' | 'conflict' | string>; soloDelete?(id: string): Promise<string>;
   /** Accounts and the lobby. */
   account(): Account; onAccount(f: (a: Account) => void): void;
   google(): Promise<string>; emailSignIn(email: string, password: string): Promise<string>; emailRegister(email: string, password: string, name: string): Promise<string>;
@@ -49,10 +45,10 @@ export const TABLE = params.get('table') || 'main';
 export const HAS_TABLE = params.has('table'), DEV_FAKE = DEV && params.has('fake');
 /** The admin sandbox (`?sandbox`): a private test table in this browser; the account is only read to check that it is an admin. */
 export const SANDBOX = params.has('sandbox');
+/** The experimental computer opponent (`?lab=german|allied`, lab.ts): a local game like the sandbox. */
+export const LAB = params.has('lab') && !SANDBOX && !params.has('table');
 /** The tutorial: a local game in this browser, nothing written online. */
 export const TUTORIAL = params.has('tutorial') && !SANDBOX && !params.has('table');
-/** 4.4 A game against the computer (`?cpu=<the side the computer plays>`): local, nothing written online, no account needed. */
-export const CPU = !SANDBOX && !TUTORIAL && !params.has('table') ? params.get('cpu') : null;
 /** The seat a side sits in: the database keeps the keys german (First Player) and allied (Second Player) for every game. */
 export type SeatKey = 'german' | 'allied';
 export const seatKey = (s: Side): SeatKey => (s === VOLUME.sides[1] ? 'allied' : 'german');
@@ -66,17 +62,14 @@ export const online = {
   /** 'off' = not connected, 'local' = a development table on this machine, 'remote' = shared through the database. */
   mode: 'off' as 'off' | 'local' | 'remote', uid: '', seats: {} as Seats, rev: 0, error: '', sync: 'connecting' as string, ready: false,
   lastBy: '', chat: [] as ChatMsg[], devSeat: 'both' as DevSeat, enemyAlias: new Map<string, string>(), account: null as Account | null, admin: false, hasAccounts: false,
-  /** 4.4: the side the computer plays at this table (the player holds the other seat). */
-  cpu: null as Side | null,
   mySide(): Side | null {
-    if (this.cpu) return this.cpu === VOLUME.sides[0] ? VOLUME.sides[1] : VOLUME.sides[0];
     if (this.devSwitch()) return this.devSeat !== 'both' && this.devSeat !== 'watch' ? this.devSeat : null;
     return this.seats.german === this.uid && this.uid ? seatSide('german') : this.seats.allied === this.uid && this.uid ? seatSide('allied') : null;
   },
   /** True when this client may act for whoever's turn it is (the development "both" seat). */
-  both() { return !this.cpu && (this.mode === 'off' || (this.devSwitch() && this.devSeat === 'both')); },
+  both() { return (this.mode === 'off' || LAB || (this.devSwitch() && this.devSeat === 'both')); },      // the computer game (lab.ts) is a shared screen: lab.ts says which side is the computer's
   /** The seat switch exists only where no real opponent can be harmed: the sandbox, the two-tab fake store, a local development table. Never on a shared table, whatever the address says. */
-  devSwitch() { return !this.cpu && (SANDBOX || DEV_FAKE || (DEV && this.mode === 'local')); },
+  devSwitch() { return (SANDBOX || DEV_FAKE || (DEV && this.mode === 'local')); },
   get active() { return this.mode !== 'off'; },
 };
 
@@ -100,17 +93,13 @@ const savedLater = () => { writing = false; if (rebuildLater) { rebuildLater = f
 export async function startOnline(remote: (g: Game) => void, changed: () => void, say: (m: string) => void = () => {}, gone: () => void = () => {}) {
   onRemote = remote; onChange = changed; notify = say; onGone = gone;
   if (TUTORIAL) { online.ready = true; changed(); return; }
-  if (CPU) { online.mode = 'local'; online.ready = true; changed();                                             // 4.4: the table is this browser's at once; the account (if any) comes after, to keep the game there too
-    try { store = await Promise.race([rtdbStore(TABLE), new Promise<null>((ok) => setTimeout(() => ok(null), 15000))]); } catch { store = null; }
-    if (store) { const sync = (a: Account) => { online.account = a; online.uid = a.uid; online.admin = a.admin; onChange(); }; sync(store.account()); store.onAccount(sync); online.hasAccounts = true; }
-    return; }
   try {
     const fake = DEV ? params.get('fake') : null, make = async () => (fake === 'german' || fake === 'allied' ? (await import('./store-fake')).fakeStore(fake) : rtdbStore(TABLE));
     store = await Promise.race([make(), new Promise<never>((_, no) => setTimeout(() => no(new Error('Could not reach the game database. Check the database address and your connection.')), 15000))]);
     if (store && (fake === 'german' || fake === 'allied')) online.devSeat = seatSide(fake);                  // a stand-in store plays one seat per tab
   } catch (e) { online.error = String(e); store = null; }
   if (!store) { if (DEV) online.mode = 'local'; online.ready = true; changed(); return; }
-  if (SANDBOX) {                                                                                   // only the account: the game stays in this browser
+  if (SANDBOX || LAB) {                                                                            // only the account: the game stays in this browser
     const sync = (a: Account) => { online.account = a; online.uid = a.uid; online.admin = a.admin; onChange(); }; sync(store.account()); store.onAccount(sync);
     online.mode = 'local'; online.ready = true; online.hasAccounts = true; changed(); return;
   }
@@ -166,14 +155,6 @@ export const auth = {
   google: () => run((s) => s.google()), signOut: () => run((s) => s.signOut()),
   signIn: (e: string, p: string) => run((s) => s.emailSignIn(e, p)), register: (e: string, p: string, n: string) => run((s) => s.emailRegister(e, p, n)),
   reset: (e: string) => run((s) => s.resetPassword(e)), token: async () => (store?.idToken ? store.idToken().catch(() => null) : null), freeSeat: (side: Side) => run((s) => s.freeSeat(seatKey(side))),
-};
-/** 4.4 games against the computer in the player's account (nothing when signed out or offline). */
-export const solo = {
-  get on() { return !!store?.soloSave && !!online.account && !online.account.guest; },
-  list: (next: (m: SoloMeta[]) => void) => { if (solo.on) store!.soloList!(next); },
-  load: (id: string) => (solo.on ? store!.soloLoad!(id).catch(() => null) : Promise.resolve(null)),
-  save: (m: SoloMeta, json: string, force = false) => (solo.on ? store!.soloSave!(m, json, force).catch((e) => String(e?.message ?? e)) : Promise.resolve('signed out')),
-  remove: (id: string) => (solo.on ? store!.soloDelete!(id) : Promise.resolve('')),
 };
 export const lobby = {
   create: async (m: Parameters<Store['createMatch']>[0], seat: SeatKey | null, json: string) => (store ? store.createMatch(m, seat, json) : '!Online play is not set up'),

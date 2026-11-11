@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Officina dei pezzi · FAB · pezzi 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen&family=Barlow+Semi+Condensed:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --fondo:#121217; --pannello:#1B1B22; --pannello2:#23232C; --linea:#33333F; --testo:#ECEAF0; --tenue:#9C98A8;
+  --rosso:#E3122E; --verde:#2BC48A; --giallo:#F2C230; --blu:#3D8BF2;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--fondo);color:var(--testo);font:16px/1.45 "Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
+  display:grid;grid-template-rows:auto auto 1fr;min-height:100%}
+h1,h2,h3,.pix{font-family:Silkscreen,"Courier New",monospace;font-weight:400;letter-spacing:.02em}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:#8FB8FF}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:12px 20px;background:#0C0C10;border-bottom:1px solid var(--linea)}
+header h1{font-size:19px;margin:0}
+header h1 span{color:var(--rosso)}
+.stati{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border:1px solid var(--linea);border-radius:2px;font-size:14px;background:var(--pannello)}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--tenue);display:inline-block}
+.chip.ok i{background:var(--verde)} .chip.ko i{background:var(--rosso)} .chip.medio i{background:var(--giallo)}
+nav{display:flex;gap:2px;padding:0 20px;background:#0C0C10;border-bottom:1px solid var(--linea);overflow-x:auto}
+nav button{background:none;border:0;padding:10px 14px;cursor:pointer;color:var(--tenue);border-bottom:3px solid transparent;font-family:Silkscreen,monospace;font-size:13px;white-space:nowrap}
+nav button[aria-selected=true]{color:var(--testo);border-bottom-color:var(--rosso)}
+main{min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.vista{display:none;flex:1;min-height:0;overflow:auto}
+.vista.attiva{display:block}
+.banner{margin:16px 20px 0;padding:12px 16px;border-left:4px solid var(--giallo);background:var(--pannello)}
+.banner code{background:#000;padding:1px 6px}
+/* pezzi */
+#v-pezzi.attiva{display:grid;grid-template-columns:250px 1fr}
+.elenco{border-right:1px solid var(--linea);overflow:auto;padding:12px 0;background:var(--pannello)}
+.elenco h3{font-size:11px;color:var(--tenue);margin:14px 16px 6px}
+.elenco button{display:flex;justify-content:space-between;align-items:center;width:100%;padding:8px 16px;border:0;background:none;cursor:pointer;text-align:left}
+.elenco button[aria-current=true]{background:var(--pannello2);box-shadow:inset 3px 0 0 var(--rosso)}
+.punti{display:flex;gap:3px}
+.punti b{width:9px;height:9px;border:1px solid var(--tenue);display:inline-block}
+.punti b.si{background:var(--verde);border-color:var(--verde)}
+.dettaglio{overflow:auto;padding:20px 24px 140px}
+.dettaglio h2{font-size:22px;margin:0 0 4px}
+.sotto{color:var(--tenue);margin:0 0 18px}
+.passo{background:var(--pannello);border:1px solid var(--linea);margin-bottom:16px}
+.passo>header{background:none;border:0;padding:12px 16px 0;display:flex;gap:12px;align-items:baseline}
+.passo>header h3{font-size:15px;margin:0}
+.passo>header .num{font-family:Silkscreen,monospace;color:var(--rosso)}
+.passo>header .fatto{margin-left:auto;font-size:13px;color:var(--verde)}
+.corpo{padding:12px 16px 16px}
+.riga{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+.btn{padding:7px 12px;border:1px solid var(--linea);background:var(--pannello2);cursor:pointer;border-radius:2px;color:var(--testo);text-decoration:none;display:inline-block}
+.btn:hover{border-color:var(--tenue)}
+.btn.primario{background:var(--rosso);border-color:var(--rosso);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.piccolo{padding:3px 8px;font-size:14px}
+textarea{width:100%;min-height:120px;background:#0E0E13;border:1px solid var(--linea);padding:10px;resize:vertical;font-size:14px;line-height:1.4}
+input[type=text],input[type=number],input[type=password],select{background:#0E0E13;border:1px solid var(--linea);padding:6px 8px;border-radius:2px}
+label.campo{display:flex;flex-direction:column;gap:3px;font-size:14px;color:var(--tenue)}
+label.spunta{display:flex;gap:6px;align-items:center;font-size:15px}
+.flusso li{margin:10px 0}.tab-serie{border-collapse:collapse;margin-top:16px;width:100%}.tab-serie td,.tab-serie th{padding:6px 10px;border-bottom:1px solid var(--linea);text-align:left}.tab-serie button{background:none;border:0;color:inherit;font:inherit;cursor:pointer;text-decoration:underline}.galleria-pezzo{margin-top:14px}.galleria-pezzo img{width:140px;cursor:pointer;border:2px solid transparent}.galleria-pezzo img:hover{border-color:var(--rosso)}
+.griglia{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}
+.miniatura{background:#0E0E13;border:1px solid var(--linea);display:flex;flex-direction:column}
+.miniatura img{width:100%;aspect-ratio:1;object-fit:contain;background:#D9D9D9}
+.miniatura .azioni{display:flex;flex-wrap:wrap;gap:4px;padding:6px}
+.miniatura.scelta{border-color:var(--verde);box-shadow:0 0 0 1px var(--verde)}
+.miniatura.selezionata{border-color:var(--giallo);box-shadow:0 0 0 1px var(--giallo)}
+.zona{border:1px dashed var(--linea);padding:14px;text-align:center;color:var(--tenue);font-size:15px;cursor:pointer}
+.zona.sopra{border-color:var(--giallo);color:var(--testo)}
+.viste3{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.slot{background:#0E0E13;border:1px solid var(--linea);padding:10px}
+.slot img{width:100%;aspect-ratio:1;object-fit:contain;background:#D9D9D9;margin-bottom:8px}
+.slot .vuoto{aspect-ratio:1;display:grid;place-items:center;color:var(--tenue);background:#16161C;margin-bottom:8px}
+.due{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.anteprima3d{height:300px;background:#1F2125;border:1px solid var(--linea);position:relative}
+.anteprima3d canvas{width:100%;height:100%;display:block}
+.anteprima3d .etichetta{position:absolute;left:8px;top:6px;font-size:13px;color:var(--tenue);pointer-events:none}
+.nota{font-size:14px;color:var(--tenue)}
+.nota.avviso{color:var(--giallo)}
+pre.report{background:#0E0E13;border:1px solid var(--linea);padding:10px;overflow:auto;font-size:13px}
+.consolle{position:fixed;left:0;right:0;bottom:0;background:#08080B;border-top:2px solid var(--rosso);max-height:40vh;display:none;flex-direction:column;z-index:20}
+.consolle.aperta{display:flex}
+.consolle header{padding:6px 14px;gap:10px}
+.consolle header h3{font-size:13px;margin:0}
+.consolle pre{margin:0;padding:8px 14px 14px;overflow:auto;font-size:13px;line-height:1.35;white-space:pre-wrap;flex:1}
+.stato-lavoro{font-size:13px}
+.sezione{max-width:980px;margin:20px auto;padding:0 20px}
+.sezione .passo{margin-bottom:20px}
+iframe.visore{width:100%;height:70vh;border:1px solid var(--linea);background:#000}
+.toast{position:fixed;right:16px;top:16px;background:var(--pannello2);border:1px solid var(--linea);padding:10px 14px;z-index:30;display:none;max-width:420px}
+.toast.vis{display:block}
+@media (max-width:900px){#v-pezzi.attiva{grid-template-columns:1fr}.elenco{max-height:220px}.due{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>FAB <span>3D</span> · officina dei pezzi <small class="nota" style="font-family:inherit;font-size:12px">v2026.11.11-fab4</small></h1>
+  <div class="stati">
+    <span class="chip" id="c-server"><i></i>Pannello</span>
+    <span class="chip" id="c-gpu"><i></i>GPU</span>
+    <span class="chip" id="c-trellis"><i></i>TRELLIS</span>
+    <span class="chip" id="c-gemini"><i></i>Gemini API</span>
+  </div>
+</header>
+<nav role="tablist">
+  <button role="tab" data-vista="serie" aria-selected="true">Produzione</button>
+  <button role="tab" data-vista="pezzi" aria-selected="false">Pezzi</button>
+  <button role="tab" data-vista="sagome" aria-selected="false">Test sagome</button>
+  <button role="tab" data-vista="anteprima" aria-selected="false">Anteprima e gioco</button>
+  <button role="tab" data-vista="installa" aria-selected="false">Installazione</button>
+  <button role="tab" data-vista="guida" aria-selected="false">Guida</button>
+</nav>
+<main>
+  <div id="aggiorna" class="banner" hidden>
+    <b>Hai aggiornato i file del kit</b>, ma il motore del pannello sta ancora usando la versione precedente.
+    <button class="btn primario" id="b-riavvia-banner" style="margin-left:8px">Riavvia il pannello</button>
+  </div>
+  <div id="offline" class="banner" hidden>
+    Il pannello è aperto come file, senza il suo motore: puoi leggere e copiare i prompt, ma i pulsanti che eseguono comandi sono spenti.
+    Chiudi questa pagina e fai doppio clic su <code>AVVIA_PANNELLO.bat</code> nella cartella del kit
+    (oppure scaricalo dalla scheda <b>Installazione</b>).
+  </div>
+
+  <section class="vista attiva" id="v-serie">
+    <div class="sezione" style="max-width:1300px">
+      <div class="passo"><header><h3>Produzione in serie</h3></header><div class="corpo">
+        <p class="nota">Tu decidi solo due cose: <b>quale concept tenere</b> per ogni pezzo e <b>se il risultato finale va bene</b>. Tutto il resto lo fanno i pulsanti, pezzo dopo pezzo, saltando quello che è già fatto. Puoi fermarti quando vuoi e riprendere: si riparte da dove eri.</p>
+        <ol class="flusso">
+          <li><b>Concept</b>: <button class="btn primario serve-server" id="b-s-concept">Genera i concept mancanti</button>
+            <select id="s-quanti" aria-label="Immagini per pezzo"><option value="2">2 immagini per pezzo</option><option value="3" selected>3 immagini per pezzo</option><option value="4">4 immagini per pezzo</option></select>
+            <span class="nota">Con la chiave Gemini. Prima solo il pezzo di stile (US infantry): sceglilo qui sotto, poi ripremi per tutti gli altri.</span></li>
+          <li><b>Scegli</b>: clicca l’immagine migliore di ogni pezzo nella galleria qui sotto (per il pezzo di stile diventa anche lo stile).</li>
+          <li><b>Fai il resto</b>: <button class="btn primario serve-server" id="b-s-resto">Viste, 3D e pulizia per tutti i pezzi scelti</button>
+            <label class="spunta"><input type="checkbox" id="c-s-viste" checked> genera la vista frontale (Gemini) prima del 3D</label>
+            <span class="nota">Serve TRELLIS acceso. Senza Gemini usa il concept scelto come immagine per il 3D.</span></li>
+          <li><b>Controlla</b> la scheda Anteprima: un pezzo che non va si apre dalla tabella e si rifà solo quello.</li>
+        </ol>
+        <div class="riga"><button class="btn serve-server" id="b-s-ferma" disabled>Ferma dopo il pezzo in corso</button><span class="nota" id="s-avanzamento"></span></div>
+        <div id="s-galleria"></div>
+        <div style="overflow-x:auto"><table class="tab-serie" id="s-tabella"></table></div>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="vista" id="v-pezzi">
+    <aside class="elenco" id="elenco"></aside>
+    <div class="dettaglio" id="dettaglio"></div>
+  </section>
+
+  <section class="vista" id="v-sagome">
+    <div class="sezione">
+      <div class="passo"><header><h3>Test delle sagome</h3></header><div class="corpo">
+        <p class="nota">Prende i concept scelti di tutti i pezzi, li riempie di nero e li rimpicciolisce a 32 pixel: se si distinguono qui, si distingueranno sul tabellone.</p>
+        <div class="riga"><button class="btn primario serve-server" id="b-sagome">Esegui il test</button></div>
+        <div id="foglio"></div>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="vista" id="v-anteprima">
+    <div class="sezione" style="max-width:1300px">
+      <div class="passo"><header><h3>Anteprima di tutti i pezzi</h3></header><div class="corpo">
+        <div class="riga">
+          <button class="btn primario serve-server" id="b-rigenera">Rigenera tutti i pezzi</button>
+          <button class="btn serve-server" id="b-cartella-modelli">Apri la cartella dei modelli</button>
+          <span class="nota">Ogni pezzo è accanto al blocco di legno vero, per confrontare impronta e altezza.</span>
+        </div>
+        <iframe class="visore" id="visore" title="Visualizzatore dei pezzi"></iframe>
+        <pre class="report" id="report"></pre>
+      </div></div>
+      <div class="passo"><header><h3>Copia nel gioco</h3></header><div class="corpo">
+        <div class="riga">
+          <label class="campo" style="flex:1">Cartella degli asset del gioco
+            <input type="text" id="i-gioco" placeholder="es. C:\FAB\web\public\pezzi"></label>
+          <button class="btn serve-server" id="b-salva-gioco">Salva</button>
+          <button class="btn primario serve-server" id="b-copia-gioco">Copia i modelli nel gioco</button>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="vista" id="v-installa">
+    <div class="sezione">
+      <div class="passo"><header><span class="num">A</span><h3>Pannello</h3></header><div class="corpo">
+        <p>Il pannello ha bisogno di un piccolo motore locale che esegue i comandi. Lo avvia <b>AVVIA_PANNELLO.bat</b>: la prima volta installa da solo Python (se manca) e le librerie, poi apre questa pagina.</p>
+        <div class="riga"><button class="btn" id="b-scarica-avvio">Scarica AVVIA_PANNELLO.bat</button>
+        <span class="nota">Salvalo nella cartella principale del kit (dove c’è PIANO_SVILUPPO.md).</span></div>
+        <div class="riga">
+          <button class="btn serve-server" id="b-riavvia">Riavvia il pannello</button>
+          <button class="btn serve-server" id="b-ferma">Ferma il pannello</button>
+          <span class="nota" id="versione-info"></span>
+        </div>
+        <p class="nota"><b>Per aggiornare il kit:</b> estrai il nuovo ZIP sopra la cartella (i tuoi concept, modelli e impostazioni non vengono toccati), poi premi «Riavvia il pannello» oppure fai doppio clic su AVVIA_PANNELLO.bat: chiude da solo la versione vecchia. Senza riavvio i comandi restano quelli vecchi.</p>
+      </div></div>
+
+      <div class="passo"><header><span class="num">B</span><h3>TRELLIS in locale (modelli 3D gratis sulla tua GPU)</h3></header><div class="corpo">
+        <div id="gpu-info" class="nota"></div>
+        <div class="riga">
+          <label class="campo" style="flex:1">Cartella di installazione (senza spazi, servono ~25 GB)
+            <input type="text" id="i-trellis-dir"></label>
+          <label class="spunta"><input type="checkbox" id="i-cuda" checked> installa CUDA Toolkit 12.8 (consigliato per GTX 10)</label>
+        </div>
+        <div class="riga">
+          <button class="btn primario serve-server" id="b-installa">Installa / ripara TRELLIS</button>
+          <span class="nota">20–60 minuti. Windows chiederà due volte il permesso di amministratore (Visual C++ e CUDA).</span>
+        </div>
+        <div class="riga">
+          <label class="campo">Precisione
+            <select id="i-precisione"><option value="half">half: meno memoria (consigliata)</option><option value="full">full: più veloce su GTX 10, rischio memoria esaurita</option></select></label>
+          <button class="btn primario serve-server" id="b-avvia-trellis">Avvia TRELLIS</button>
+          <button class="btn serve-server" id="b-interrompi">Interrompi la generazione</button>
+          <button class="btn serve-server" id="b-ferma-trellis">Ferma TRELLIS</button>
+          <span class="nota" id="trellis-stato"></span>
+        </div>
+        <p class="nota">TRELLIS si apre in una finestra nera a parte: lasciala aperta e non cliccarci dentro (Windows la mette in pausa). Al primo avvio scarica i suoi modelli, alcuni GB.</p>
+      </div></div>
+
+      <div class="passo"><header><span class="num">C</span><h3>Gemini API (concept generati direttamente dal pannello)</h3></header><div class="corpo">
+        <p class="nota">Facoltativa. Senza chiave usi Gemini dal sito con i pulsanti «Copia prompt» e trascini qui le immagini. Con la chiave il pannello genera e salva da solo. La chiave si crea su <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>; la generazione di immagini via API di solito è a pagamento (pochi centesimi a immagine): controlla i prezzi nella console.</p>
+        <div class="riga">
+          <label class="campo" style="flex:1">Chiave API<input type="password" id="i-chiave" autocomplete="off"></label>
+          <label class="campo" style="flex:1">Modello<input type="text" id="i-modello"></label>
+          <button class="btn serve-server" id="b-salva-gemini">Salva</button>
+        </div>
+      </div></div>
+
+      <div class="passo"><header><span class="num">D</span><h3>Blender (facoltativo)</h3></header><div class="corpo">
+        <div class="riga">
+          <label class="campo" style="flex:1">Percorso di blender.exe (vuoto = cerca da solo)<input type="text" id="i-blender"></label>
+          <button class="btn serve-server" id="b-salva-blender">Salva</button>
+        </div>
+        <p class="nota" id="blender-stato"></p>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="vista" id="v-guida">
+    <div class="sezione">
+      <div class="passo"><header><h3>Come si usa</h3></header><div class="corpo">
+        <ol>
+          <li><b>Produzione</b> è il modo veloce: concept per tutti, scegli nella galleria, poi un pulsante fa viste, 3D e pulizia per tutti. Le voci qui sotto servono per rifare un pezzo a mano.</li>
+          <li><b>Installazione</b>: una volta sola, installa TRELLIS (scheda B) e, se vuoi, inserisci la chiave Gemini (scheda C).</li>
+          <li><b>Pezzi → The Bulge · US infantry → Concept</b>: genera o carica qualche immagine, premi «Scegli» sulla migliore, poi «Usa come stile».</li>
+          <li>Ripeti il concept per gli altri tipi (32 in tutto, in 3 volumi): l’immagine di stile viene allegata da sola.</li>
+          <li><b>Test sagome</b>: controlla che fanteria e mezzi si distinguano a 32 pixel.</li>
+          <li>Per ogni tipo: <b>Viste</b> (almeno la frontale), <b>Modello 3D</b> (TRELLIS o Meshy), <b>Pulizia</b>.</li>
+          <li><b>Anteprima e gioco</b>: controlla tutto nel visore e copia i modelli nel gioco.</li>
+        </ol>
+        <p class="nota">Il documento <b>PIANO_SVILUPPO.md</b> contiene le regole tecniche del kit, i dettagli di Meshy e Blender; il piano per FAB è in <b>docs/ASSETS-3D.md</b> del repository.</p>
+      </div></div>
+    </div>
+  </section>
+</main>
+
+<div class="consolle" id="consolle" role="log" aria-live="polite">
+  <header><h3 id="c-titolo">Lavoro</h3><span class="stato-lavoro" id="c-stato"></span>
+    <button class="btn piccolo" id="c-chiudi" style="margin-left:auto">Chiudi</button></header>
+  <pre id="c-log"></pre>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="catalogo.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+// =====================================================================
+// Dati dei pezzi e prompt
+// =====================================================================
+const STILE = `Low poly 3D game miniature for a historical board wargame: faceted geometric shapes with clearly visible flat polygons, flat shading, solid flat colors with no textures and no gradients, chunky toy-like proportions, realistic period-accurate uniforms, vehicles and colors, muted natural palette (no neon, no glow).`;
+const STILE_RIF = `Use the attached image ONLY as the style reference: same low poly rendering, same faceted flat-shaded look, same chunky proportions, same lighting, same light grey background, same framing. Do not copy the subject.`;
+const INQUADRA = `Framing: the single figure whole and alone, no other soldiers or vehicles, no base, no ground, no cast shadow, slight three-quarter front view from slightly above, centered with margin around, flat light grey background (#D9D9D9), soft even studio lighting, no text, no logo, no watermark.`;
+// un pezzo per tipo del catalogo (strumenti/catalogo.py): il primo è quello dello stile
+const PEZZI = CATALOGO.map(t => ({...t, tipo:"pedina", gruppo:t.volume_nome, chiave:t.gruppo, stile:t.id === "bulge_us_inf",
+  prompt:`Create an image.${t.id === "bulge_us_inf" ? " " + STILE : " " + STILE_RIF}
+Subject: ${t.gruppo} of ${t.soggetto}. The game repeats this figure once per step of strength, so draw exactly one. Make its most recognisable feature big and simple.
+${INQUADRA}`}));
+const TUTTI = PEZZI;
+
+const VISTE = {
+  fronte:`Redraw exactly this group, keeping the same design, colors, proportions and low poly style. Straight front view, orthographic, no perspective. Neutral standing pose, arms close to the body, feet together. Full body centered with margin. Flat light grey background (#D9D9D9), even flat lighting, no shadows, no base, no ground, no text.`,
+  lato:`Same group, same design, colors and proportions, same low poly style. Exact left side view (profile), orthographic, no perspective. Same neutral pose, arms close to the body. Full body centered. Flat light grey background (#D9D9D9), even flat lighting, no shadows, no base, no text.`,
+  retro:`Same group, same design, colors and proportions, same low poly style. Exact back view, orthographic, no perspective. Same neutral pose. Full body centered. Flat light grey background (#D9D9D9), even flat lighting, no shadows, no base, no text.`,
+};
+const CORREZIONI = [
+  ["Elemento chiave più grande", "Same group, but make the most recognisable feature twice as big and simplify everything else: fewer small details, bigger flat shapes."],
+  ["Più low poly", "Same group, but more low poly: fewer polygons, bigger flat facets, no smooth curves."],
+  ["Togli dettagli", "Same group, but remove all text, logos, patterns and small decorations."],
+  ["Variante diversa", "Make a different variant of this group with a different silhouette for the key feature, same style and same color rules."],
+  ["Ripara la vista", "The design changed. Fix it: same colors, same accessories, same proportions as the reference, only the camera angle changes."],
+];
+const PULISCI_PEDINA = {texture:true, base:true, senza_giocatore:true, colori:6, ruota:0, asse_z_su:false, dettaglio:2};
+const opzioniDi = pz => ({...PULISCI_PEDINA, altezza:pz.altezza, triangoli:pz.triangoli, ...(pz.tinta ? {tinta:pz.tinta, senza_giocatore:false} : {})});
+const VERSIONE_PANNELLO = "2026.11.11-fab4";
+const AVVIA_BAT = "@echo off\nrem ==========================================================================\nrem  FAB · pezzi 3D - avvio del pannello\nrem  Doppio clic su questo file:\nrem   - chiude un eventuale pannello gia' aperto (anche di una versione vecchia)\nrem   - la prima volta installa Python (se manca) e le librerie del kit\nrem   - avvia il pannello e lo apre nel browser\nrem  Lascia aperta questa finestra mentre lavori. Per chiudere: chiudi la\nrem  finestra, oppure FERMA_PANNELLO.bat, oppure il pulsante nel pannello.\nrem ==========================================================================\nsetlocal\ncd /d \"%~dp0\"\ntitle FAB · pezzi 3D - Pannello\n\necho Chiudo un eventuale pannello gia' aperto...\ncall \"%~dp0strumenti\\ferma_porta.bat\" 8078\n\nset \"VENV_PY=%~dp0.venv\\Scripts\\python.exe\"\nif exist \"%VENV_PY%\" goto librerie\n\necho.\necho Prima configurazione: cerco Python...\nset \"PYBASE=\"\npy -3 -c \"import sys; assert sys.version_info >= (3, 10)\" >nul 2>nul && set \"PYBASE=py -3\"\nif defined PYBASE goto crea_venv\npython -c \"import sys; assert sys.version_info >= (3, 10)\" >nul 2>nul && set \"PYBASE=python\"\nif defined PYBASE goto crea_venv\n\necho Python non trovato: lo installo con winget (Python 3.12, solo per il tuo utente)...\nwinget install -e --id Python.Python.3.12 --scope user --silent --accept-package-agreements --accept-source-agreements\nset \"PYBASE=%LOCALAPPDATA%\\Programs\\Python\\Python312\\python.exe\"\nif exist \"%PYBASE%\" goto crea_venv\necho.\necho Non sono riuscito a installare Python automaticamente.\necho Installalo da https://www.python.org/downloads/ (spunta \"Add python.exe to PATH\")\necho e poi fai di nuovo doppio clic su questo file.\npause\nexit /b 1\n\n:crea_venv\necho Creo l'ambiente Python del kit nella cartella .venv ...\n%PYBASE% -m venv \"%~dp0.venv\"\nif not exist \"%VENV_PY%\" \"%PYBASE%\" -m venv \"%~dp0.venv\"\nif not exist \"%VENV_PY%\" (\n    echo Creazione dell'ambiente non riuscita.\n    pause\n    exit /b 1\n)\n\n:librerie\necho Controllo le librerie del kit...\n\"%VENV_PY%\" -m pip install --disable-pip-version-check -q --upgrade pip\n\"%VENV_PY%\" -m pip install --disable-pip-version-check -q -r \"%~dp0strumenti\\requisiti.txt\"\nif errorlevel 1 (\n    echo Installazione delle librerie non riuscita: controlla la connessione e riprova.\n    pause\n    exit /b 1\n)\n\nset \"APRI=--apri\"\n:avvio\necho.\necho Avvio il pannello. Lascia aperta questa finestra.\n\"%VENV_PY%\" \"%~dp0strumenti\\server_pannello.py\" %APRI%\nrem codice 3 = riavvio chiesto dal pannello: ricarica il codice aggiornato\nif errorlevel 3 if not errorlevel 4 (\n    set \"APRI=\"\n    echo Riavvio in corso...\n    \"%VENV_PY%\" -m pip install --disable-pip-version-check -q -r \"%~dp0strumenti\\requisiti.txt\"\n    goto avvio\n)\necho.\necho Il pannello e' stato chiuso.\npause\n";
+
+// =====================================================================
+// Stato e comunicazione con il server
+// =====================================================================
+let ONLINE = false, STATO = null, SELEZIONATO = "bulge_us_inf", LEGNO_ANTEPRIMA = "";
+const sel = {};               // immagine selezionata per le correzioni, per pezzo
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ts = () => new Date().toISOString().replace(/\D/g,"").slice(4,14);
+
+function toast(msg, ms=3500){ const t=$("#toast"); t.textContent=msg; t.classList.add("vis"); clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.remove("vis"), ms); }
+
+async function api(percorso, corpo){
+  const r = await fetch(percorso, corpo === undefined ? {} : {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(corpo)});
+  const j = await r.json().catch(() => ({errore:"risposta non valida"}));
+  if (!r.ok || j.errore) throw new Error(j.errore || ("errore " + r.status));
+  return j;
+}
+
+function segui(idLavoro, titolo){
+  return new Promise(risolvi => {
+    const c = $("#consolle"); c.classList.add("aperta");
+    $("#c-titolo").textContent = titolo; $("#c-stato").textContent = "in corso…"; $("#c-log").textContent = "";
+    const giro = async () => {
+      let l;
+      try { l = await api("/api/lavoro?id=" + idLavoro); } catch(e){ setTimeout(giro, 1500); return; }
+      const pre = $("#c-log"); const inFondo = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 30;
+      pre.textContent = l.log.join("\n"); if (inFondo) pre.scrollTop = pre.scrollHeight;
+      if (l.stato === "in_corso") { setTimeout(giro, 1000); return; }
+      $("#c-stato").textContent = l.stato === "fatto" ? "completato" : "non riuscito";
+      $("#c-stato").style.color = l.stato === "fatto" ? "var(--verde)" : "var(--rosso)";
+      await aggiornaStato(); risolvi(l);
+    };
+    giro();
+  });
+}
+async function lancia(percorso, corpo, titolo){
+  try { const r = await api(percorso, corpo); return await segui(r.lavoro, titolo); }
+  catch(e){ toast("Errore: " + e.message, 6000); return null; }
+}
+$("#c-chiudi").onclick = () => $("#consolle").classList.remove("aperta");
+
+async function aggiornaStato(){
+  try { STATO = await api("/api/stato"); ONLINE = true; }
+  catch(e){ ONLINE = false; }
+  $("#offline").hidden = ONLINE;
+  $("#aggiorna").hidden = !(ONLINE && (STATO.versione !== VERSIONE_PANNELLO || STATO.versione_su_disco !== STATO.versione));
+  document.querySelectorAll(".serve-server").forEach(b => { b.disabled = !ONLINE; if(!ONLINE) b.title = "Serve il pannello avviato con AVVIA_PANNELLO.bat"; });
+  chip("#c-server", ONLINE ? "ok" : "ko", ONLINE ? "Pannello attivo" : "Pannello offline");
+  if (ONLINE){
+    const g = STATO.gpu;
+    chip("#c-gpu", g ? "ok" : "medio", g ? g.nome : "GPU NVIDIA non trovata");
+    const t = STATO.trellis;
+    chip("#c-trellis", t.attivo ? (t.attivo.busy ? "medio" : "ok") : (t.installato ? "medio" : "ko"),
+         t.attivo ? (t.attivo.busy ? "TRELLIS al lavoro" : "TRELLIS pronto") : (t.installato ? "TRELLIS spento" : "TRELLIS non installato"));
+    chip("#c-gemini", STATO.gemini.configurata ? "ok" : "medio", STATO.gemini.configurata ? "Gemini API" : "Gemini via sito");
+    aggiornaInstalla();
+  }
+  disegnaElenco();
+  if (!aggiornaStato.primo){ aggiornaStato.primo = true; disegnaDettaglio(); disegnaSerie(); }
+}
+function chip(id, classe, testo){ const c=$(id); c.className = "chip " + classe; c.lastChild.textContent = testo; }
+
+// =====================================================================
+// File del pezzo
+// =====================================================================
+const F = () => STATO ? STATO.file : {esplorazione:[],scelti:[],viste:[],grezzi:[],definitivi:[],props:[],report:""};
+const stem = p => p.split("/").pop().replace(/\.[^.]+$/,"");
+function trovaFile(lista, nomeStem){ return lista.find(p => stem(p) === nomeStem); }
+function filePezzo(pz){
+  const f = F();
+  const scelto = trovaFile(f.scelti, pz.id);
+  const viste = Object.fromEntries(Object.keys(VISTE).map(v => [v, trovaFile(f.viste, `${pz.id}_${v}`)]));
+  const grezzo = trovaFile(f.grezzi, pz.id);
+  const tentativi = f.grezzi.filter(p => stem(p).startsWith(pz.id + "__"));
+  const pulito = pz.tipo === "pedina" ? trovaFile(f.definitivi, pz.id) : trovaFile(f.props, pz.id);
+  const esplorazione = f.esplorazione.filter(p => stem(p).startsWith(pz.id + "_"));
+  return {scelto, viste, grezzo, tentativi, pulito, esplorazione};
+}
+function avanzamento(pz){
+  const x = filePezzo(pz);
+  const passi = [!!x.scelto];
+  if (pz.tipo === "pedina") passi.push(!!x.viste.fronte);
+  passi.push(!!x.grezzo, !!x.pulito);
+  return passi;
+}
+const url = p => "/" + p + "?v=" + Date.now();
+
+// =====================================================================
+// Elenco
+// =====================================================================
+function disegnaElenco(){
+  const gruppi = [...new Set(PEZZI.map(p => p.gruppo))].map(g => [g, PEZZI.filter(p => p.gruppo === g)]);
+  $("#elenco").innerHTML = gruppi.map(([g, l]) => `<h3>${g}</h3>` + l.map(pz =>
+    `<button data-id="${pz.id}" aria-current="${pz.id===SELEZIONATO}"><span>${esc(pz.nome)}</span>
+     <span class="punti">${avanzamento(pz).map(s=>`<b class="${s?"si":""}"></b>`).join("")}</span></button>`).join("")).join("");
+  $("#elenco").querySelectorAll("button").forEach(b => b.onclick = () => { SELEZIONATO = b.dataset.id; disegnaElenco(); disegnaDettaglio(); });
+}
+
+// =====================================================================
+// Dettaglio del pezzo
+// =====================================================================
+function disegnaDettaglio(){
+  liberaAnteprime();
+  const pz = TUTTI.find(p => p.id === SELEZIONATO); LEGNO_ANTEPRIMA = pz.legno;
+  const x = filePezzo(pz);
+  const stileOk = F().scelti.some(p => stem(p) === "_stile");
+  const n = pz.tipo === "pedina" ? ["1","2","3","4"] : ["1","—","2","3"];
+  const d = $("#dettaglio");
+  d.innerHTML = `
+  <h2>${esc(pz.nome)}</h2>
+  <p class="sotto">${pz.tipo === "pedina" ? "Composizione: " + esc(pz.chiave) + " · " + pz.blocchi.length + " blocchi usano questo pezzo" : ""}</p>
+
+  <section class="passo"><header><span class="num">${n[0]}</span><h3>Concept 2D</h3>${x.scelto?'<span class="fatto">scelto ✓</span>':""}</header><div class="corpo">
+    <textarea id="t-prompt" spellcheck="false">${esc(pz.prompt)}</textarea>
+    <div class="riga">
+      <button class="btn primario serve-server" id="b-gen" ${STATO && STATO.gemini.configurata ? "" : "disabled title='Inserisci la chiave Gemini nella scheda Installazione'"}>Genera con Gemini API</button>
+      ${pz.stile ? "" : `<label class="spunta"><input type="checkbox" id="c-stile" ${stileOk?"checked":"disabled"}> allega l’immagine di stile ${stileOk?"":"(non ancora scelta: falla da The Bulge · US infantry)"}</label>`}
+      <button class="btn" data-copia="t-prompt">Copia prompt</button>
+      <a class="btn" href="https://gemini.google.com/app" target="_blank" rel="noopener">Apri Gemini</a>
+    </div>
+    ${pz.stile ? "" : `<p class="nota">Sul sito di Gemini allega a mano <b>concept/scelti/_stile.png</b> insieme al prompt.</p>`}
+    <div class="zona serve-server" id="z-concept">Trascina qui le immagini scaricate da Gemini (o clicca per sceglierle)</div>
+    <div class="riga">
+      <label class="campo">Correzione sull’immagine selezionata (gialla)
+        <select id="s-corr">${CORREZIONI.map((c,i)=>`<option value="${i}">${esc(c[0])}</option>`).join("")}</select></label>
+      <button class="btn serve-server" id="b-corr-api">Correggi con Gemini API</button>
+      <button class="btn" id="b-corr-copia">Copia testo correzione</button>
+    </div>
+    <div class="griglia">${x.esplorazione.map(p => `
+      <div class="miniatura ${sel[pz.id]===p?"selezionata":""}" data-file="${p}">
+        <img src="${url(p)}" alt="" loading="lazy">
+        <div class="azioni">
+          <button class="btn piccolo serve-server" data-azione="scegli">Scegli</button>
+          ${pz.stile ? `<button class="btn piccolo serve-server" data-azione="stile">Usa come stile</button>` : ""}
+          <button class="btn piccolo" data-azione="seleziona">Seleziona</button>
+          <button class="btn piccolo serve-server" data-azione="elimina">Elimina</button>
+        </div></div>`).join("") || '<p class="nota" style="grid-column:1/-1">Nessuna immagine ancora.</p>'}</div>
+    ${x.scelto ? `<p class="nota" style="margin-top:12px">Concept scelto:</p><div class="griglia"><div class="miniatura scelta"><img src="${url(x.scelto)}" alt="Concept scelto"></div></div>` : ""}
+  </div></section>
+
+  ${pz.tipo === "pedina" ? `
+  <section class="passo"><header><span class="num">2</span><h3>Viste per il 3D</h3>${x.viste.fronte?'<span class="fatto">frontale pronta ✓</span>':""}</header><div class="corpo">
+    <p class="nota">Basta la vista frontale; laterale e posteriore migliorano schiena e fianchi. ${x.scelto ? "" : "Prima scegli un concept."}</p>
+    <div class="viste3">${Object.keys(VISTE).map(v => `
+      <div class="slot" data-vista="${v}">
+        <div class="pix" style="font-size:12px;margin-bottom:6px">${v}</div>
+        ${x.viste[v] ? `<img src="${url(x.viste[v])}" alt="Vista ${v}">` : `<div class="vuoto">vuota</div>`}
+        <div class="riga">
+          <button class="btn piccolo primario serve-server" data-azione="genvista" ${STATO && STATO.gemini.configurata && x.scelto ? "" : "disabled"}>Genera</button>
+          <button class="btn piccolo" data-azione="copiavista">Copia prompt</button>
+          <button class="btn piccolo serve-server" data-azione="caricavista">Carica</button>
+          ${x.viste[v] ? `<button class="btn piccolo serve-server" data-azione="eliminavista">Elimina</button>` : ""}
+        </div>
+      </div>`).join("")}</div>
+  </div></section>` : ""}
+
+  <section class="passo"><header><span class="num">${n[2]}</span><h3>Modello 3D</h3>${x.grezzo?'<span class="fatto">pronto ✓</span>':""}</header><div class="corpo">
+    <div class="due">
+      <div>
+        <h3 class="pix" style="font-size:13px">A · TRELLIS sul tuo PC</h3>
+        <div class="riga">
+          ${pz.tipo === "pedina" ? `<label class="campo">Immagini<select id="s-imm"><option value="fronte">solo la frontale</option><option value="tutte">tutte le viste pronte</option></select></label>` : ""}
+          <label class="campo">Qualità<select id="s-qual"><option value="rapida">rapida (12 passi)</option><option value="alta">alta (25 passi)</option></select></label>
+          <label class="campo">Seed<input type="number" id="i-seed" value="${Math.floor(Math.random()*9000)+1}" style="width:90px"></label>
+        </div>
+        <div class="riga"><button class="btn primario serve-server" id="b-trellis" ${STATO && STATO.trellis.attivo ? "" : "disabled title='Avvia TRELLIS dalla scheda Installazione'"}>Genera con TRELLIS</button>
+        <label class="spunta"><input type="checkbox" id="c-autopulisci" checked> poi pulisci subito</label></div>
+        <p class="nota">${STATO && STATO.trellis.attivo ? "Ogni tentativo usa un seed diverso: se il risultato non convince, rigenera." : "TRELLIS non è avviato: scheda Installazione → Avvia TRELLIS."}</p>
+      </div>
+      <div>
+        <h3 class="pix" style="font-size:13px">B · Meshy (sito)</h3>
+        <p class="nota" id="meshy-txt">Model → Image to 3D → <b>Smart Topology</b> → <b>Meshy T2</b> · Poly Count <b>${Math.round(pz.triangoli*0.8)}</b> · Texture <b>on</b> · Image Enhancement <b>off</b> · Pose <b>off</b> → Generate → Download <b>GLB</b>.
+        Immagine da caricare: <b>${pz.tipo==="pedina" ? `concept/viste_3d/${pz.id}_fronte` : `concept/scelti/${pz.id}`}</b></p>
+        <p class="nota avviso">Sul piano Free di Meshy si scaricano solo i modelli generati con Meshy 5 (al massimo 10 al mese). Smart Topology, Meshy 6 e Meshy 7 si vedono ma non si scaricano senza un piano a pagamento.</p>
+        <div class="riga"><a class="btn" href="https://www.meshy.ai/workspace" target="_blank" rel="noopener">Apri Meshy</a>
+          <button class="btn serve-server" id="b-cartella-imm">Apri la cartella dell’immagine</button></div>
+        <div class="zona serve-server" id="z-glb">Trascina qui il file .glb scaricato da Meshy</div>
+      </div>
+    </div>
+    ${x.tentativi.length ? `<p class="nota" style="margin-top:12px">Tentativi (il più recente in alto). «Usa» lo rende il modello corrente.</p>
+      <div class="riga">${x.tentativi.slice(0,10).map(p=>`<button class="btn piccolo serve-server" data-usa="${p}">Usa ${esc(stem(p).split("__")[1])}</button>`).join("")}</div>` : ""}
+    ${x.grezzo ? `<div class="anteprima3d" id="a-grezzo" style="margin-top:12px"><span class="etichetta">modello grezzo corrente</span></div>
+      <div class="riga"><button class="btn piccolo serve-server" data-blender="${x.grezzo}">Apri in Blender</button></div>` : ""}
+  </div></section>
+
+  <section class="passo"><header><span class="num">${n[3]}</span><h3>Pulizia e conformità</h3>${x.pulito?'<span class="fatto">nel gioco ✓</span>':""}</header><div class="corpo">
+    ${formPulizia(pz)}
+    <div class="riga">
+      <button class="btn primario serve-server" id="b-pulisci" ${x.grezzo ? "" : "disabled"}>Pulisci e aggiorna i pezzi</button>
+      ${x.pulito ? `<button class="btn serve-server" id="b-ripristina">Togli il modello</button><button class="btn serve-server" data-blender="${x.pulito}">Apri in Blender</button>` : ""}
+    </div>
+    <p class="nota">I colori finali vengono dal concept scelto (non dalla texture del modello, che ha ombre e sbavature). Se la figura guarda di lato o di spalle, usa «Ruota» e ripeti. Se manca un colore importante alza «Colori piatti»; se ci sono macchie abbassalo.</p>
+    ${x.pulito ? `<div class="anteprima3d" id="a-pulito"><span class="etichetta">pezzo finale (la base prende il legno della fazione)</span></div>` : ""}
+  </div></section>
+  ${sezioneDividi(pz, x)}`;
+
+  collegaDettaglio(pz, x);
+  if (x.grezzo) anteprima("#a-grezzo", x.grezzo);
+  if (x.pulito) { anteprima("#a-pulito", x.pulito); divisore(pz, x); }
+  aggiornaServeServer();
+}
+function aggiornaServeServer(){ document.querySelectorAll(".serve-server").forEach(b => { if(!ONLINE) b.disabled = true; }); }
+
+function formPulizia(pz){
+  const o = opzioniDi(pz);
+  const campo = (k, etichetta, tipo="text", extra="") => `<label class="campo">${etichetta}<input type="${tipo}" data-op="${k}" value="${o[k] ?? ""}" ${extra}></label>`;
+  return `<div class="riga">
+    ${pz.tinta ? campo("tinta","Colore del telo nel concept (diventa il legno della fazione)") : ""}${campo("altezza","Altezza (unità)","number","step='0.01' style='width:90px'") + campo("triangoli","Triangoli","number","style='width:90px'")}
+    ${campo("colori","Colori piatti","number","min='2' max='12' style='width:70px'")}
+    <label class="campo">Ruota (gradi)<span class="riga" style="margin:0"><input type="number" data-op="ruota" value="${o.ruota}" step="90" style="width:70px">
+      <button class="btn piccolo" data-ruota="90">+90</button><button class="btn piccolo" data-ruota="180">180</button></span></label>
+    <label class="spunta"><input type="checkbox" data-op="texture" ${o.texture ? "checked" : ""}> tieni forma e texture del generatore (consigliato)</label>
+    <label class="spunta"><input type="checkbox" data-op="asse_z_su"> modello sdraiato (Z in alto)</label>
+    <label class="spunta"><input type="checkbox" data-op="usa_concept" checked> colori presi dal concept scelto</label>
+    ${pz.tipo === "pedina" ? `<label class="spunta"><input type="checkbox" data-op="base" checked> base rettangolare nel legno della fazione</label>` : ""}
+    <label class="campo">Dettaglio dei colori<select data-op="dettaglio">
+      <option value="0">0 · un colore per triangolo</option><option value="1">1 · poco</option>
+      <option value="2" selected>2 · normale</option><option value="3">3 · massimo</option></select></label>
+  </div>`;
+}
+function leggiOpzioni(pz){
+  const o = opzioniDi(pz);
+  document.querySelectorAll("[data-op]").forEach(i => { o[i.dataset.op] = i.type === "checkbox" ? i.checked : i.value; });
+  return o;
+}
+
+function collegaDettaglio(pz, x){
+  const d = $("#dettaglio");
+  d.querySelectorAll("[data-copia]").forEach(b => b.onclick = () => copia($("#" + b.dataset.copia).value));
+  // concept
+  const bGen = $("#b-gen");
+  if (bGen) bGen.onclick = async () => {
+    const rif = (!pz.stile && $("#c-stile") && $("#c-stile").checked) ? [trovaFile(F().scelti, "_stile")] : [];
+    await lancia("/api/gemini", {prompt: $("#t-prompt").value, riferimenti: rif, cartella: "concept/esplorazione", nome: `${pz.id}_${ts()}`}, "Gemini · " + pz.nome);
+    disegnaDettaglio();
+  };
+  zona("#z-concept", "image/*", async files => {
+    for (const f of files) await caricaImmagine(f, "concept/esplorazione", `${pz.id}_${ts()}${Math.random().toString(36).slice(2,5)}.png`);
+    await aggiornaStato(); disegnaDettaglio();
+  });
+  d.querySelectorAll(".miniatura[data-file]").forEach(m => m.querySelectorAll("[data-azione]").forEach(b => b.onclick = async () => {
+    const file = m.dataset.file, est = file.split(".").pop();
+    try {
+      if (b.dataset.azione === "scegli"){ await rimuoviVecchio(F().scelti, pz.id); await api("/api/copia", {da:file, a:`concept/scelti/${pz.id}.${est}`}); toast("Concept scelto"); }
+      if (b.dataset.azione === "stile"){ await rimuoviVecchio(F().scelti, "_stile"); await api("/api/copia", {da:file, a:`concept/scelti/_stile.${est}`}); toast("Immagine di stile impostata"); }
+      if (b.dataset.azione === "seleziona"){ sel[pz.id] = file; disegnaDettaglio(); return; }
+      if (b.dataset.azione === "elimina"){ if (!confirm("Eliminare questa immagine?")) return; await api("/api/elimina", {percorso:file}); }
+      await aggiornaStato(); disegnaDettaglio();
+    } catch(e){ toast("Errore: " + e.message, 6000); }
+  }));
+  const testoCorr = () => CORREZIONI[+$("#s-corr").value][1];
+  $("#b-corr-copia").onclick = () => copia(testoCorr());
+  $("#b-corr-api").onclick = async () => {
+    const rif = sel[pz.id] || x.scelto;
+    if (!rif) return toast("Seleziona prima un’immagine (pulsante «Seleziona»)");
+    if (!(STATO && STATO.gemini.configurata)) return toast("Serve la chiave Gemini (scheda Installazione)");
+    await lancia("/api/gemini", {prompt: testoCorr() + " Keep everything else identical.", riferimenti:[rif], cartella:"concept/esplorazione", nome:`${pz.id}_${ts()}`}, "Correzione · " + pz.nome);
+    disegnaDettaglio();
+  };
+  // viste
+  d.querySelectorAll(".slot[data-vista]").forEach(s => s.querySelectorAll("[data-azione]").forEach(b => b.onclick = async () => {
+    const v = s.dataset.vista;
+    if (b.dataset.azione === "copiavista") return copia(VISTE[v]);
+    if (b.dataset.azione === "genvista"){
+      await rimuoviVecchio(F().viste, `${pz.id}_${v}`);
+      await lancia("/api/gemini", {prompt: VISTE[v], riferimenti:[x.scelto], cartella:"concept/viste_3d", nome:`${pz.id}_${v}`}, `Vista ${v} · ${pz.nome}`);
+    }
+    if (b.dataset.azione === "caricavista"){
+      const f = await scegliFile("image/*"); if (!f) return;
+      await rimuoviVecchio(F().viste, `${pz.id}_${v}`);
+      await caricaImmagine(f, "concept/viste_3d", `${pz.id}_${v}.png`);
+    }
+    if (b.dataset.azione === "eliminavista") await api("/api/elimina", {percorso: x.viste[v]});
+    await aggiornaStato(); disegnaDettaglio();
+  }));
+  // 3D
+  $("#b-trellis").onclick = async () => {
+    let imm;
+    if (pz.tipo === "pedina"){
+      if (!x.viste.fronte) return toast("Manca la vista frontale (passo 2)");
+      imm = $("#s-imm").value === "tutte" ? Object.values(x.viste).filter(Boolean) : [x.viste.fronte];
+    } else {
+      if (!x.scelto) return toast("Manca il concept scelto (passo 1)");
+      imm = [x.scelto];
+    }
+    const r = await lancia("/api/trellis/genera", {id: pz.id, immagini: imm, seed: +$("#i-seed").value, qualita: $("#s-qual").value}, "TRELLIS · " + pz.nome);
+    if (r && r.stato === "fatto" && $("#c-autopulisci").checked) return pulisci(pz);
+    disegnaDettaglio();
+  };
+  zona("#z-glb", ".glb", async files => {
+    const f = files[0]; if (!f || !/\.glb$/i.test(f.name)) return toast("Serve un file .glb");
+    const b64 = await leggiBase64(f);
+    await api("/api/salva_file", {cartella:"modelli/ai_grezzi", nome:`${pz.id}__meshy_${ts()}.glb`, base64:b64, anche_come:`${pz.id}.glb`});
+    toast("Modello caricato"); await aggiornaStato(); disegnaDettaglio();
+  });
+  $("#b-cartella-imm").onclick = () => api("/api/apri_cartella", {percorso: pz.tipo === "pedina" ? "concept/viste_3d" : "concept/scelti"}).catch(e => toast(e.message));
+  d.querySelectorAll("[data-usa]").forEach(b => b.onclick = async () => { await api("/api/copia", {da:b.dataset.usa, a:`modelli/ai_grezzi/${pz.id}.glb`}); toast("Modello corrente aggiornato"); await aggiornaStato(); disegnaDettaglio(); });
+  d.querySelectorAll("[data-blender]").forEach(b => b.onclick = () => api("/api/blender", {percorso:b.dataset.blender}).then(()=>toast("Apro Blender…")).catch(e => toast(e.message, 6000)));
+  // pulizia
+  d.querySelectorAll("[data-ruota]").forEach(b => b.onclick = () => { const i = d.querySelector("[data-op=ruota]"); i.value = ((+i.value + +b.dataset.ruota) % 360); });
+  $("#b-pulisci").onclick = () => pulisci(pz);
+  const bR = $("#b-ripristina");
+  if (bR) bR.onclick = async () => { if (!confirm("Togliere il modello finito di questo pezzo? (il grezzo resta)")) return; await api("/api/elimina", {percorso:x.pulito}); await lancia("/api/genera", {}, "Rigenero i pezzi"); disegnaDettaglio(); };
+}
+
+async function pulisci(pz, serie){
+  const opzioni = !serie && document.querySelector("[data-op]") ? leggiOpzioni(pz) : opzioniDi(pz);
+  const uscita = pz.tipo === "pedina" ? `modelli/definitivi/${pz.id}.glb` : `modelli/props/${pz.id}.glb`;
+  const scelto = filePezzo(pz).scelto;
+  if (opzioni.usa_concept !== false && scelto) opzioni.palette_da = scelto;
+  delete opzioni.usa_concept;
+  const r = await lancia("/api/pulisci", {ingresso:`modelli/ai_grezzi/${pz.id}.glb`, nome: pz.id, uscita, opzioni}, "Pulizia · " + pz.nome);
+  disegnaDettaglio();
+  return r;
+}
+
+// =====================================================================
+// Utilità di interfaccia
+// =====================================================================
+async function rimuoviVecchio(lista, nomeStem){ for (const p of lista.filter(p => stem(p) === nomeStem)) await api("/api/elimina", {percorso:p}); }
+function copia(testo){ navigator.clipboard.writeText(testo).then(() => toast("Copiato negli appunti"), () => { prompt("Copia il testo:", testo); }); }
+function leggiBase64(f){ return new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = ko; r.readAsDataURL(f); }); }
+async function caricaImmagine(f, cartella, nome){
+  // converte qualunque formato in PNG, così i nomi restano prevedibili
+  const img = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ko; i.src = URL.createObjectURL(f); });
+  const c = document.createElement("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight;
+  c.getContext("2d").drawImage(img, 0, 0);
+  await api("/api/salva_file", {cartella, nome, base64: c.toDataURL("image/png")});
+}
+function scegliFile(accetta){ return new Promise(ok => { const i = document.createElement("input"); i.type="file"; i.accept=accetta; i.onchange = () => ok(i.files[0]); i.click(); }); }
+function zona(selettore, accetta, gestisci){
+  const z = $(selettore); if (!z) return;
+  z.onclick = () => { if (!ONLINE) return; const i = document.createElement("input"); i.type="file"; i.accept=accetta; i.multiple=true; i.onchange = () => gestisci([...i.files]); i.click(); };
+  z.ondragover = e => { e.preventDefault(); z.classList.add("sopra"); };
+  z.ondragleave = () => z.classList.remove("sopra");
+  z.ondrop = e => { e.preventDefault(); z.classList.remove("sopra"); if (ONLINE) gestisci([...e.dataTransfer.files]); else toast("Avvia prima il pannello con AVVIA_PANNELLO.bat"); };
+}
+
+// anteprime 3D
+const ANTEPRIME = [];
+function liberaAnteprime(){ ANTEPRIME.splice(0).forEach(a => { a.attivo = false; a.renderer.dispose(); }); }
+function anteprima(selettore, file){
+  const box = $(selettore); if (!box || !window.THREE) return;
+  const renderer = new THREE.WebGLRenderer({antialias:true}); renderer.outputEncoding = THREE.sRGBEncoding;
+  box.appendChild(renderer.domElement);
+  const scena = new THREE.Scene(); scena.background = new THREE.Color("#2B2E33").convertSRGBToLinear();
+  scena.add(new THREE.HemisphereLight("#d8deea", "#2a2622", 0.9));
+  const sole = new THREE.DirectionalLight("#fff", 0.9); sole.position.set(-3, 6, 5); scena.add(sole);
+  const cam = new THREE.PerspectiveCamera(35, 1, 0.01, 100);
+  const ctrl = new THREE.OrbitControls(cam, renderer.domElement); ctrl.enableDamping = true;
+  const a = {renderer, attivo:true}; ANTEPRIME.push(a);
+  new THREE.GLTFLoader().load(url(file), g => {
+    const s = g.scene; scena.add(s);
+    // la base è bianca nei file: in anteprima la mostro nel legno della fazione
+    s.traverse(o => { if (!o.isMesh) return; const n = o.material.name;
+      if (n === "colore_fazione") o.material.color.set(LEGNO_ANTEPRIMA || "#8e9296").convertSRGBToLinear(); });
+    const b = new THREE.Box3().setFromObject(s), c = b.getCenter(new THREE.Vector3()), r = b.getSize(new THREE.Vector3()).length();
+    ctrl.target.copy(c); cam.position.copy(c).add(new THREE.Vector3(0, r*0.7, r*1.9)); cam.near = r/100; cam.far = r*20; cam.updateProjectionMatrix();
+    let tri = 0; s.traverse(o => { if (o.isMesh) tri += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count)/3; });
+    box.querySelector(".etichetta").textContent += ` · ${Math.round(tri)} triangoli`;
+  }, undefined, () => { box.querySelector(".etichetta").textContent += " · impossibile leggere il file"; });
+  const giro = () => { if (!a.attivo) return;
+    const w = box.clientWidth, h = box.clientHeight; if (renderer.domElement.width !== w * devicePixelRatio){ renderer.setPixelRatio(devicePixelRatio); renderer.setSize(w, h, false); cam.aspect = w/h; cam.updateProjectionMatrix(); }
+    ctrl.update(); renderer.render(scena, cam); requestAnimationFrame(giro); };
+  giro();
+}
+
+// =====================================================================
+// Dividi in figure: ogni triangolo del modello va a una figura o è scartato
+// =====================================================================
+const COLORI_FIG = ["#FF9A3C", "#3CC8FF", "#E05CFF", "#FFE14A", "#7CFF6B", "#FF5C7A"], SCARTO = "#3A3A3A";
+function sezioneDividi(pz, x){
+  if (!x.pulito) return "";
+  const salvata = (F().divisioni || []).some(p => stem(p) === pz.id);
+  return `<section class="passo"><header><span class="num">5</span><h3>Dividi in figure</h3>${salvata ? '<span class="fatto">salvata ✓</span>' : ""}</header><div class="corpo">
+    <p class="nota">Il gioco usa UNA figura per unità. Se il modello ne contiene più di una, dividile qui: ogni colore è una figura, il <b>grigio scuro</b> è scartato (briciole, pezzi del vicino). <b>Parte intera</b>: un clic dà tutta la parte toccata (un fucile, una torretta, un corpo) alla figura scelta. <b>Pennello</b>: trascina col tasto sinistro per dipingere i triangoli; col pennello la vista si gira col tasto destro.</p>
+    <div class="riga">
+      <label class="campo">Figure nel modello<select id="d-k">${[1,2,3,4,5,6].map(n => `<option>${n}</option>`).join("")}</select></label>
+      <button class="btn serve-server" id="d-proposta">Proposta automatica</button>
+      <label class="campo">Strumento<select id="d-strumento"><option value="parte">Parte intera</option><option value="pennello">Pennello</option></select></label>
+      <label class="campo">Pennello<input type="range" id="d-raggio" min="1" max="20" value="5" style="width:110px"></label>
+      <button class="btn" id="d-annulla">Annulla</button>
+    </div>
+    <div class="riga" id="d-figure"></div>
+    <div class="riga">
+      <label class="campo">Gira per guardare avanti (gradi)<input type="number" id="d-gradi" step="90" style="width:80px"></label>
+      <label class="campo">Altezza reale (m)<input type="number" id="d-altezza" step="0.1" style="width:80px"></label>
+      <button class="btn primario serve-server" id="d-salva">Salva e crea le figure</button>
+    </div>
+    <div class="anteprima3d" id="a-dividi" style="height:480px"><span class="etichetta">caricamento…</span></div>
+  </div></section>`;
+}
+function divisore(pz, x){
+  const box = $("#a-dividi"); if (!box || !window.THREE) return;
+  const D = {k:1, lab:null, attiva:0, storia:[], comp:null, geo:null, centri:null};
+  const renderer = new THREE.WebGLRenderer({antialias:true}); renderer.outputEncoding = THREE.sRGBEncoding; box.appendChild(renderer.domElement);
+  const scena = new THREE.Scene(); scena.background = new THREE.Color("#2B2E33").convertSRGBToLinear();
+  scena.add(new THREE.HemisphereLight("#d8deea", "#2a2622", 1.0)); const sole = new THREE.DirectionalLight("#fff", 0.7); sole.position.set(-3, 6, 5); scena.add(sole);
+  const cam = new THREE.PerspectiveCamera(35, 1, 0.001, 100), ctrl = new THREE.OrbitControls(cam, renderer.domElement); ctrl.enableDamping = true;
+  const a = {renderer, attivo:true}; ANTEPRIME.push(a);
+  let mesh = null;
+  const colora = () => { const c = D.geo.attributes.color, col = new THREE.Color();
+    for (let f = 0; f < D.lab.length; f++){ col.set(D.lab[f] < 0 ? SCARTO : COLORI_FIG[D.lab[f] % COLORI_FIG.length]).convertSRGBToLinear(); for (let v = 0; v < 3; v++) c.setXYZ(3 * f + v, col.r, col.g, col.b); }
+    c.needsUpdate = true; contatori(); };
+  const contatori = () => { const n = new Array(D.k).fill(0); let s = 0; for (const l of D.lab) l < 0 ? s++ : n[l]++;
+    $("#d-figure").innerHTML = n.map((q, j) => `<button class="btn piccolo" data-fig="${j}" aria-pressed="${D.attiva === j}" style="border-color:${COLORI_FIG[j]};${D.attiva === j ? `background:${COLORI_FIG[j]};color:#111` : ""}">Figura ${j + 1} · ${q}</button>`).join("")
+      + `<button class="btn piccolo" data-fig="-1" aria-pressed="${D.attiva === -1}" style="${D.attiva === -1 ? "background:#888;color:#111" : ""}">Scarta · ${s}</button>`;
+    document.querySelectorAll("[data-fig]").forEach(b => b.onclick = () => { D.attiva = +b.dataset.fig; contatori(); }); };
+  const usa = d => { D.k = d.k; D.lab = Int16Array.from(d.etichette); D.storia = []; D.attiva = 0; $("#d-k").value = d.k; $("#d-gradi").value = d.gradi; $("#d-altezza").value = d.altezza; colora(); };
+  const proponi = async nuova => { const r = await lancia("/api/dividi/proposta", {id: pz.id, k: nuova ? +$("#d-k").value : null, nuova}, "Divisione · " + pz.nome);
+    if (r && r.stato === "fatto" && D.geo) { if (r.risultato.divisione.etichette.length !== D.lab.length) return toast("La divisione salvata non corrisponde più al modello: premi «Proposta automatica»", 7000); usa(r.risultato.divisione); } };
+  new THREE.GLTFLoader().load(url(x.pulito), g => {
+    g.scene.updateMatrixWorld(true);
+    g.scene.traverse(o => { if (o.isMesh && (o.name === "figura" || o.material.name === "figura") && !mesh) mesh = o; });
+    if (!mesh) { box.querySelector(".etichetta").textContent = "nel modello non c'è la parte «figura»"; return; }
+    D.geo = mesh.geometry.toNonIndexed(); D.geo.applyMatrix4(mesh.matrixWorld);   // triangoli nello stesso ordine del file: è quello che legge separa_figure.py
+    const nf = D.geo.attributes.position.count / 3; D.lab = new Int16Array(nf);
+    D.geo.setAttribute("color", new THREE.BufferAttribute(new Float32Array(nf * 9), 3));
+    const mat = mesh.material.clone(); mat.vertexColors = true; const vista = new THREE.Mesh(D.geo, mat); scena.add(vista);
+    // parti intere: triangoli che condividono un vertice (stessa posizione, anche sulle cuciture della texture)
+    const P = D.geo.attributes.position, padre = new Int32Array(nf).map((_, i) => i), trova = i => { while (padre[i] !== i) i = padre[i] = padre[padre[i]]; return i; }, chi = new Map();
+    D.centri = new Float32Array(nf * 3);
+    for (let f = 0; f < nf; f++) for (let v = 0; v < 3; v++) { const i = 3 * f + v, key = `${P.getX(i).toFixed(5)},${P.getY(i).toFixed(5)},${P.getZ(i).toFixed(5)}`;
+      D.centri[3 * f] += P.getX(i) / 3; D.centri[3 * f + 1] += P.getY(i) / 3; D.centri[3 * f + 2] += P.getZ(i) / 3;
+      if (chi.has(key)) { const a2 = trova(f), b2 = trova(chi.get(key)); if (a2 !== b2) padre[a2] = b2; } else chi.set(key, f); }
+    D.comp = Int32Array.from({length: nf}, (_, f) => trova(f));
+    const b = new THREE.Box3().setFromBufferAttribute(P), c = b.getCenter(new THREE.Vector3()); D.r = b.getSize(new THREE.Vector3()).length();
+    ctrl.target.copy(c); cam.position.copy(c).add(new THREE.Vector3(0, D.r * 0.6, D.r * 1.4)); cam.near = D.r / 200; cam.far = D.r * 20; cam.updateProjectionMatrix();
+    box.querySelector(".etichetta").textContent = `${nf} triangoli · ${new Set(D.comp).size} parti`;
+    usa({k: 1, gradi: 0, altezza: 1.8, etichette: new Array(nf).fill(0)}); proponi(false);
+  }, undefined, () => { box.querySelector(".etichetta").textContent = "impossibile leggere il modello"; });
+  // clic e pennello
+  const ray = new THREE.Raycaster(), tocca = e => { const r = renderer.domElement.getBoundingClientRect();
+    ray.setFromCamera({x: (e.clientX - r.left) / r.width * 2 - 1, y: -(e.clientY - r.top) / r.height * 2 + 1}, cam); return ray.intersectObject(scena.children.find(o => o.isMesh && o.geometry === D.geo) || scena, false)[0]; };
+  let giu = null, pittura = false;
+  const pennello = h => { const rr = D.r * +$("#d-raggio").value / 200, p = h.point; let cambiato = false;
+    for (let f = 0; f < D.lab.length; f++) { const dx = D.centri[3 * f] - p.x, dy = D.centri[3 * f + 1] - p.y, dz = D.centri[3 * f + 2] - p.z; if (dx * dx + dy * dy + dz * dz <= rr * rr && D.lab[f] !== D.attiva) { D.lab[f] = D.attiva; cambiato = true; } }
+    if (cambiato) colora(); };
+  const el = renderer.domElement;
+  el.addEventListener("pointerdown", e => { if (!D.lab || e.button !== 0) return; giu = [e.clientX, e.clientY];
+    if ($("#d-strumento").value === "pennello") { D.storia.push(D.lab.slice()); pittura = true; const h = tocca(e); if (h) pennello(h); } });
+  el.addEventListener("pointermove", e => { if (pittura) { const h = tocca(e); if (h) pennello(h); } });
+  el.addEventListener("pointerup", e => { if (pittura) { pittura = false; return; }
+    if (!giu || Math.hypot(e.clientX - giu[0], e.clientY - giu[1]) > 5 || $("#d-strumento").value !== "parte") return;
+    const h = tocca(e); if (!h) return; const c = D.comp[h.faceIndex]; D.storia.push(D.lab.slice());
+    for (let f = 0; f < D.lab.length; f++) if (D.comp[f] === c) D.lab[f] = D.attiva; colora(); });
+  $("#d-strumento").onchange = () => { const p = $("#d-strumento").value === "pennello"; ctrl.mouseButtons = {LEFT: p ? null : THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: p ? THREE.MOUSE.ROTATE : THREE.MOUSE.PAN}; };
+  $("#d-annulla").onclick = () => { if (D.storia.length) { D.lab = D.storia.pop(); colora(); } };
+  $("#d-k").onchange = () => { D.k = +$("#d-k").value; for (let f = 0; f < D.lab.length; f++) if (D.lab[f] >= D.k) D.lab[f] = D.k - 1; if (D.attiva >= D.k) D.attiva = 0; colora(); };
+  $("#d-proposta").onclick = () => proponi(true);
+  $("#d-salva").onclick = async () => {
+    const r = await lancia("/api/dividi/salva", {id: pz.id, k: D.k, gradi: +$("#d-gradi").value || 0, altezza: +$("#d-altezza").value || 1.8, etichette: Array.from(D.lab)}, "Figure · " + pz.nome);
+    if (r && r.stato === "fatto") toast("Figure create: " + D.k);
+  };
+  const giro = () => { if (!a.attivo) return;
+    const w = box.clientWidth, h = box.clientHeight; if (renderer.domElement.width !== Math.floor(w * devicePixelRatio)){ renderer.setPixelRatio(devicePixelRatio); renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
+    ctrl.update(); renderer.render(scena, cam); requestAnimationFrame(giro); };
+  giro();
+}
+
+// =====================================================================
+// Produzione in serie
+// =====================================================================
+let FERMA = false, IN_SERIE = false;
+const stileFile = () => trovaFile(F().scelti, "_stile");
+function disegnaSerie(){
+  const v = s => s ? "✓" : "–";
+  $("#s-tabella").innerHTML = `<tr><th>Pezzo</th><th>Volume</th><th>Blocchi</th><th>Concept</th><th>Vista</th><th>3D grezzo</th><th>Finito</th></tr>` +
+    TUTTI.map(pz => { const x = filePezzo(pz);
+      return `<tr><td><button data-apri="${pz.id}">${esc(pz.nome)}</button></td><td>${esc(pz.volume)}</td><td>${pz.blocchi.length || "tutti i nascosti"}</td><td>${v(x.scelto)}</td><td>${v(x.viste.fronte)}</td><td>${v(x.grezzo)}</td><td>${v(x.pulito)}</td></tr>`; }).join("");
+  $("#s-tabella").querySelectorAll("[data-apri]").forEach(b => b.onclick = () => { SELEZIONATO = b.dataset.apri; document.querySelector('nav [data-vista="pezzi"]').click(); disegnaElenco(); disegnaDettaglio(); });
+  const daScegliere = TUTTI.filter(pz => { const x = filePezzo(pz); return !x.scelto && x.esplorazione.length; });
+  $("#s-galleria").innerHTML = daScegliere.length ? "<h3>Da scegliere</h3>" + daScegliere.map(pz =>
+    `<div class="galleria-pezzo"><b>${esc(pz.nome)}</b> <span class="nota">${esc(pz.volume)}${pz.stile ? " · pezzo di stile" : ""}</span><div class="riga">${
+      filePezzo(pz).esplorazione.slice(0, 6).map(f => `<img src="${url(f)}" alt="${esc(pz.nome)}" data-pz="${pz.id}" data-f="${f}">`).join("")}</div></div>`).join("") : "";
+  $("#s-galleria").querySelectorAll("img").forEach(i => i.onclick = async () => {
+    const pz = TUTTI.find(p => p.id === i.dataset.pz), est = i.dataset.f.split(".").pop();
+    await rimuoviVecchio(F().scelti, pz.id); await api("/api/copia", {da:i.dataset.f, a:`concept/scelti/${pz.id}.${est}`});
+    if (pz.stile){ await rimuoviVecchio(F().scelti, "_stile"); await api("/api/copia", {da:i.dataset.f, a:`concept/scelti/_stile.${est}`}); }
+    toast("Scelto: " + pz.nome); await aggiornaStato(); disegnaSerie();
+  });
+}
+async function inSerie(etichetta, lista, passo){
+  if (IN_SERIE) return toast("C'è già una produzione in corso");
+  IN_SERIE = true; FERMA = false; $("#b-s-ferma").disabled = false;
+  let fatti = 0;
+  try {
+    for (const pz of lista){
+      if (FERMA) { toast("Fermato"); break; }
+      $("#s-avanzamento").textContent = `${etichetta}: ${fatti + 1} di ${lista.length} · ${pz.nome}`;
+      if (await passo(pz) === false) break;
+      fatti++; disegnaSerie();
+    }
+  } finally { IN_SERIE = false; $("#b-s-ferma").disabled = true; $("#s-avanzamento").textContent = `${etichetta}: ${fatti} pezzi fatti.`; await aggiornaStato(); disegnaSerie(); }
+}
+$("#b-s-ferma").onclick = () => { FERMA = true; toast("Mi fermo dopo il pezzo in corso"); };
+$("#b-s-concept").onclick = () => {
+  if (!STATO.gemini.configurata) return toast("Serve la chiave Gemini (scheda Installazione). Senza chiave usa «Copia prompt» nella scheda Pezzi.", 6000);
+  const quanti = +$("#s-quanti").value, stile = stileFile();
+  const lista = TUTTI.filter(pz => { const x = filePezzo(pz); return !x.scelto && x.esplorazione.length < quanti && (stile || pz.stile); });
+  if (!stile) toast("Prima il pezzo di stile: scegline il concept, poi ripremi per gli altri.", 6000);
+  inSerie("Concept", lista, async pz => {
+    for (let n = filePezzo(pz).esplorazione.length; n < quanti && !FERMA; n++) {
+      const r = await lancia("/api/gemini", {prompt: pz.prompt, riferimenti: pz.stile ? [] : [stile], cartella: "concept/esplorazione", nome: `${pz.id}_${ts()}`}, "Gemini · " + pz.nome);
+      if (!r || r.stato !== "fatto") return false;
+    }
+  });
+};
+$("#b-s-resto").onclick = () => {
+  const viste = $("#c-s-viste").checked && STATO.gemini.configurata;
+  if (!STATO.trellis.attivo) return toast("Accendi TRELLIS (scheda Installazione) e riprova.", 6000);
+  const lista = TUTTI.filter(pz => { const x = filePezzo(pz); return x.scelto && !x.pulito; });
+  if (!lista.length) return toast("Nessun pezzo scelto da completare");
+  inSerie("Viste, 3D e pulizia", lista, async pz => {
+    let x = filePezzo(pz);
+    if (viste && !x.viste.fronte){
+      const r = await lancia("/api/gemini", {prompt: VISTE.fronte, riferimenti:[x.scelto], cartella:"concept/viste_3d", nome:`${pz.id}_fronte`}, "Vista frontale · " + pz.nome);
+      if (!r || r.stato !== "fatto") return false;
+      x = filePezzo(pz);
+    }
+    if (!x.grezzo){
+      const r = await lancia("/api/trellis/genera", {id: pz.id, immagini: [x.viste.fronte || x.scelto], seed: Math.floor(Math.random() * 1e6), qualita: "rapida"}, "TRELLIS · " + pz.nome);
+      if (!r || r.stato !== "fatto") return false;
+    }
+    const r = await pulisci(pz, true);
+    if (!r || r.stato !== "fatto") return false;
+  });
+};
+
+// =====================================================================
+// Altre schede
+// =====================================================================
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x === b));
+  document.querySelectorAll(".vista").forEach(v => v.classList.toggle("attiva", v.id === "v-" + b.dataset.vista));
+  if (b.dataset.vista === "anteprima") apriAnteprima();
+  if (b.dataset.vista === "sagome") mostraFoglio();
+  if (b.dataset.vista === "serie") disegnaSerie();
+});
+function apriAnteprima(){
+  if (!ONLINE) return;
+  $("#visore").src = "/visualizzatore.html?v=" + Date.now();
+  $("#report").textContent = F().report || "";
+  $("#i-gioco").value = STATO.cartella_gioco || "";
+}
+function mostraFoglio(){
+  const f = F().scelti.find(p => p.endsWith("_test_sagome.png"));
+  $("#foglio").innerHTML = f ? `<img src="${url(f)}" alt="Foglio del test delle sagome" style="max-width:100%;background:#fff;margin-top:12px">` : '<p class="nota">Nessun test ancora.</p>';
+}
+$("#b-sagome").onclick = async () => { await lancia("/api/test_sagome", {}, "Test sagome"); mostraFoglio(); };
+$("#b-rigenera").onclick = async () => { await lancia("/api/genera", {}, "Rigenero i pezzi"); apriAnteprima(); };
+$("#b-cartella-modelli").onclick = () => api("/api/apri_cartella", {percorso:"modelli"}).catch(e => toast(e.message));
+$("#b-salva-gioco").onclick = async () => { await api("/api/impostazioni", {cartella_gioco: $("#i-gioco").value}); toast("Salvato"); aggiornaStato(); };
+$("#b-copia-gioco").onclick = () => lancia("/api/gioco/copia", {}, "Copia nel gioco");
+
+function aggiornaInstalla(){
+  const g = STATO.gpu, t = STATO.trellis;
+  let testo = g ? `GPU rilevata: <b>${esc(g.nome)}</b> · compute capability ${esc(g.compute_cap)} · driver ${esc(g.driver)} · ${esc(g.memoria)}.` : "Nessuna GPU NVIDIA rilevata: TRELLIS non può funzionare, usa Meshy.";
+  if (g && parseFloat(g.compute_cap) < 7){
+    testo += `<br><span class="avviso">Serie GTX 10: il pacchetto standard di TRELLIS installa PyTorch per CUDA 12.8, che non funziona più su queste schede. L’installer lo sostituisce con la versione per CUDA 12.6 e alla fine prova la GPU. Le GTX 10 calcolano lentamente in mezza precisione: se una generazione è troppo lenta prova «full».</span>`;
+  }
+  $("#gpu-info").innerHTML = testo;
+  if (!$("#i-trellis-dir").value) $("#i-trellis-dir").value = t.cartella;
+  $("#i-precisione").value = t.precisione;
+  $("#trellis-stato").textContent = t.attivo ? (t.attivo.busy ? "TRELLIS sta lavorando" : "TRELLIS pronto su 127.0.0.1:7960")
+    : t.installato ? "installato, spento" : t.scaricato ? "scaricato ma installazione incompleta" : "non installato";
+  $("#blender-stato").textContent = STATO.blender ? "Blender trovato: " + STATO.blender : "Blender non trovato.";
+  $("#versione-info").textContent = `Versione del motore: ${STATO.versione} · versione dei file: ${STATO.versione_su_disco}`;
+  if (!$("#i-modello").value) $("#i-modello").value = STATO.gemini.modello;
+}
+$("#b-installa").onclick = () => lancia("/api/trellis/installa", {destinazione: $("#i-trellis-dir").value.trim(), cuda_toolkit: $("#i-cuda").checked}, "Installazione TRELLIS");
+$("#b-avvia-trellis").onclick = async () => {
+  try {
+    const r = await api("/api/trellis/avvia", {precisione: $("#i-precisione").value});
+    toast(r.gia_attivo ? "TRELLIS è già attivo" : "Avvio TRELLIS in una finestra a parte: il primo avvio richiede qualche minuto", 7000);
+  } catch(e){ toast("Errore: " + e.message, 7000); }
+};
+async function riavvia(){
+  try { await api("/api/riavvia", {}); } catch(e){}
+  toast("Riavvio del pannello…", 8000);
+  const prova = async (n) => {
+    await new Promise(r => setTimeout(r, 1500));
+    try { const s = await api("/api/stato"); if (s.versione) { location.reload(); return; } } catch(e){}
+    if (n < 20) prova(n + 1); else toast("Il pannello non è ripartito: fai doppio clic su AVVIA_PANNELLO.bat", 10000);
+  };
+  prova(0);
+}
+$("#b-riavvia").onclick = riavvia;
+$("#b-riavvia-banner").onclick = riavvia;
+$("#b-ferma").onclick = async () => {
+  if (!confirm("Fermare il pannello? Per riaprirlo userai AVVIA_PANNELLO.bat.")) return;
+  try { await api("/api/ferma", {}); } catch(e){}
+  setTimeout(aggiornaStato, 1500);
+};
+$("#b-ferma-trellis").onclick = () => api("/api/trellis/ferma", {}).then(r => { toast(r.messaggio || "Fatto"); aggiornaStato(); }).catch(e => toast(e.message, 6000));
+$("#b-interrompi").onclick = () => api("/api/trellis/interrompi", {}).then(() => toast("Richiesta di interruzione inviata"));
+$("#b-salva-gemini").onclick = async () => { await api("/api/impostazioni", {chiave_gemini: $("#i-chiave").value.trim(), modello_gemini: $("#i-modello").value.trim()}); $("#i-chiave").value = ""; toast("Impostazioni Gemini salvate"); aggiornaStato().then(disegnaDettaglio); };
+$("#b-salva-blender").onclick = async () => { await api("/api/impostazioni", {blender: $("#i-blender").value.trim()}); toast("Salvato"); aggiornaStato(); };
+$("#b-scarica-avvio").onclick = () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([AVVIA_BAT.replace(/\r?\n/g, "\r\n")], {type:"application/octet-stream"}));
+  a.download = "AVVIA_PANNELLO.bat"; a.click();
+};
+
+aggiornaStato();
+setInterval(() => { if (!document.hidden) aggiornaStato(); }, 6000);
+</script>
+</body>
+</html>

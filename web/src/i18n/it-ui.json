@@ -3257,36 +3257,11 @@
   "Step back": "Passo indietro",
   "Step forward": "Passo avanti",
   "Whose view": "Punto di vista",
-  "Play the computer": "Gioca contro il computer",
-  "Your side:": "La tua parte:",
-  "Set up a game against the computer": "Prepara una partita contro il computer",
-  "Saved in your account: carry on from any device. The computer plays the other side by the rules and sees only what a player would.": "Salvata nel tuo account: continua da qualsiasi dispositivo. Il computer gioca l'altra parte secondo le regole e vede solo ciò che vedrebbe un giocatore.",
-  "No account needed: the game is kept on this device. Sign in to keep it in your account and play it on any device. The computer plays the other side by the rules and sees only what a player would.": "Non serve un account: la partita resta su questo dispositivo. Accedi per salvarla nel tuo account e giocarla da qualsiasi dispositivo. Il computer gioca l'altra parte secondo le regole e vede solo ciò che vedrebbe un giocatore.",
-  "vs computer": "contro il computer",
   "You": "Tu",
-  "On this device only": "Solo su questo dispositivo",
-  "Save to my account": "Salva nel mio account",
-  "Saving…": "Salvataggio…",
-  "No games yet: tap New for an online table, or play the computer below.": "Nessuna partita: tocca Nuova per un tavolo online, oppure gioca contro il computer qui sotto.",
-  "Loading this game from your account…": "Carico questa partita dal tuo account…",
-  "This game is in an account: sign in on the home page to open it.": "Questa partita è in un account: accedi dalla pagina iniziale per aprirla.",
-  "Loading…": "Caricamento…",
-  "Checking your account for a newer copy…": "Cerco nel tuo account una copia più recente…",
-  "Played on another device too.": "Giocata anche su un altro dispositivo.",
   "Use the other device's": "Usa quella dell'altro dispositivo",
-  "Keep this one": "Tieni questa",
-  "This game is not in your account.": "Questa partita non è nel tuo account.",
-  "The computer:": "Il computer:",
-  "Easy": "Facile",
   "Normal": "Normale",
-  "Hard": "Difficile",
-  "Plays by the rules, makes mistakes, uses no assets": "Gioca secondo le regole, commette errori, non usa le risorse",
-  "Holds and takes objectives, attacks with the odds, uses its assets": "Tiene e prende gli obiettivi, attacca con le probabilità a favore, usa le risorse",
-  "Fights each attack out many times before making it; weighs every loss, retreat and abort": "Simula ogni attacco molte volte prima di lanciarlo; soppesa ogni perdita, ritirata e rinuncia",
-  "Slow": "Lento",
   "Normal pace": "Ritmo normale",
   "Fast": "Veloce",
-  "How fast the computer makes its moves": "Quanto in fretta il computer fa le sue mosse",
   "Restart now": "Ricomincia ora",
   "Keep playing": "Continua a giocare",
   "Pick one in the tray, then a lit area, or use the panel on the map.": "Scegline uno nel vassoio, poi un'area illuminata, oppure usa il pannello sulla mappa.",
@@ -3432,7 +3407,6 @@
   "the Germans": "i Tedeschi",
   "Dice roll by themselves": "Dadi automatici",
   "decisions still wait for you": "le decisioni aspettano sempre te",
-  "Computer's pace": "Ritmo del computer",
   "Full explanations": "Spiegazioni complete",
   "every option and rule": "ogni opzione e regola",
   "My-move notices": "Avvisi del mio turno",
@@ -3450,7 +3424,18 @@
   "No areas held · no big units destroyed.": "Nessuna area tenuta · nessuna grande unità distrutta.",
   "tap a chit to read it": "tocca una pedina per leggerla",
   "click a chit to read it": "clicca una pedina per leggerla",
-  "No chits here.": "Nessuna pedina qui."
+  "No chits here.": "Nessuna pedina qui.",
+  "Units": "Unità",
+  "on either map": "su entrambe le mappe",
+  "Figures": "Figure",
+  "The wooden blocks": "I blocchi di legno",
+  "Soldiers and tanks, one per step": "Soldati e carri, uno per passo",
+  "Figure size": "Dimensione figure",
+  "Small": "Piccole",
+  "Medium": "Medie",
+  "Large": "Grandi",
+  "Huge": "Enormi",
+  "Soldiers and tanks, one per unit": "Soldati e carri, uno per unità"
  },
  "patterns": [
   [
@@ -3460,18 +3445,6 @@
   [
    "(.*), attacked (.*)",
    "$1, ha attaccato $2"
-  ],
-  [
-   "(.+) \\(computer\\): played (\\d+) cards?\\.",
-   "$1 (computer): ha giocato $2 carte."
-  ],
-  [
-   "(.+) \\(computer\\): attacked (.*)",
-   "$1 (computer): ha attaccato $2"
-  ],
-  [
-   "(.+) \\(computer\\): moved (\\d+) blocks?(.*)",
-   "$1 (computer): ha mosso $2 blocchi$3"
   ],
   [
    "(.+) · your games",
@@ -3484,10 +3457,6 @@
   [
    "Resume turn (\\d+) · (.+)",
    "Riprendi turno $1 · $2"
-  ],
-  [
-   "(.+) \\(computer\\) is playing…",
-   "Il computer ($1) sta giocando…"
   ],
   [
    "There: turn (\\d+), (.+)\\. Here: turn (\\d+), (.+)\\.",
@@ -3504,14 +3473,6 @@
   [
    "1 game saved to your account\\.",
    "1 partita salvata nel tuo account."
-  ],
-  [
-   "(\\d+) games against the computer on this device are not in your account yet\\.",
-   "$1 partite contro il computer su questo dispositivo non sono ancora nel tuo account."
-  ],
-  [
-   "(\\d+) game against the computer on this device is not in your account yet\\.",
-   "$1 partita contro il computer su questo dispositivo non è ancora nel tuo account."
   ],
   [
    "Turn (\\d+), not finished",
@@ -9124,10 +9085,6 @@
   [
    "(\\d+) rolled: the first is already taken",
    "$1 tirati: il primo è già assegnato"
-  ],
-  [
-   "You play (.+); the computer plays (.+)\\.",
-   "Giochi con $1; il computer gioca con $2."
   ],
   [
    "(.+) · now",

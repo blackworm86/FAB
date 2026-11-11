@@ -6,18 +6,16 @@ The owner runs several Claude Code sessions at once. Each session reads this fil
 
 | Project | Owns | Touches carefully, in small commits |
 |---|---|---|
-| 1. Computer opponent | `engine/src/ai.ts`, `engine/test/arena.test.ts`, `engine/test/ai-*.ts`, `web/src/cpu-worker.ts` | `engine/src/vol/*` (only if a rule is missing for the AI) |
+| 1. Computer opponent (rebuilt from scratch) | `bot/` (the experimental area, `docs/COMPUTER-PLAYER-PLAN.md`) | the engine's public functions only; a small switch in `web/` for the experimental mode |
 | 2. Rules review | `engine/src/vol/*`, `engine/src/*.ts` rules code, `engine/test/*` rule tests, the review artifact | `web/src/*-ui.ts`, `web/src/sandbox*.ts` |
 
-Merge `origin/main` at the start of every work block. When project 2 changes how a rule works, it says so in the commit message ("Rule fix: …"), so project 1 can re-run the arena.
+Merge `origin/main` at the start of every work block. When project 2 changes how a rule works, it says so in the commit message ("Rule fix: …"), so project 1 can re-run its measurements.
 
 ---
 
-## 1. Computer opponent (already running in another session)
+## 1. Computer opponent
 
-Goal: the computer can play every part of the turn in all three volumes, start to finish, at Easy, Normal and Hard, and Hard is hard to beat. The open list is `docs/HANDOVER.md` §4: re-measure Hard on the masked view, the chits it never plays, Special Actions in battle, then a difficulty that adapts. Progress page (private artifact): https://claude.ai/artifact/TdGcLVt1eKZtidUtHoJTfK. Its rows live in the artifact's database (collections `phases`, `items`, `arena`, `log`): after every piece of work, update the item's `status`/`note`/`updated` with ArtifactData, add arena results as `arena` rows and one `log` row. Never republish the page just to change data.
-
-Status (Nov 2026): the Bulge's missing actions are in (bridges, Greif, Bodenplatte, von der Heydte, staff reserve, paid Breakthrough, reaction reserves) but did not change strength; next is a German plan for the Bulge (the areas to take by turn 4 and the routes to them), then the same for the other volumes. Done means: a fuzzer-style test where the computer plays both seats of every scenario of every volume to the end without getting stuck, and arena numbers per level in the docs.
+The first computer opponent was removed on 10 November 2026 at the owner's request; it is being rebuilt from scratch, step by step, in its own experimental area. Plan and stages: `docs/COMPUTER-PLAYER-PLAN.md`.
 
 ## 2. Rules review, with a test page for the owner
 

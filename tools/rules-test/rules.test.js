@@ -106,34 +106,6 @@ describe('the game and its secrets', () => {
   it('nobody can make themself an admin', async () => { await assertFails(set(ref(user('bob'), 'admins/bob'), true)); });
 });
 
-describe('games against the computer in the account (4.4)', () => {
-  const sm = (id, rev = 1) => ({ id, game: 'golan73', cpu: 'syrian', title: 'Golan', scenario: 'badr', created: 1, updated: 2, rev, turn: 1, step: 'deploy' });
-  const tree = { f: { turn: '1', phase: '"deploy"' }, units: { '0000': '{"id":"S01"}' }, chits: { '0000': '{"id":"C1"}' } };
-  it('a player saves, reads, updates and deletes their own (as soloSave and soloDelete write them)', async () => {
-    const d = user('bob');
-    await assertSucceeds(set(ref(d, 'users/bob/soloIndex/s1'), sm('s1')));
-    await assertSucceeds(set(ref(d, 'users/bob/solo/s1'), tree));
-    await assertSucceeds(update(ref(d, 'users/bob/solo/s1'), { 'f/turn': '2', 'units/0001': '{"id":"S02"}', 'chits/0000': null, rev: 2 }));
-    await assertFails(update(ref(d, 'users/bob/solo/s1'), { rev: 'two' }));
-    await assertSucceeds(get(ref(d, 'users/bob/soloIndex'))); await assertSucceeds(get(ref(d, 'users/bob/solo/s1')));
-    await assertSucceeds(update(ref(d, 'users/bob'), { 'soloIndex/s1': null, 'solo/s1': null }));
-  });
-  it('nobody else reads or writes them, and a guest keeps nothing in an account', async () => {
-    await admin((d) => update(ref(d, 'users/bob'), { 'soloIndex/s1': sm('s1'), 'solo/s1': tree }));
-    await assertFails(get(ref(user('mallory'), 'users/bob/soloIndex'))); await assertFails(get(ref(user('mallory'), 'users/bob/solo/s1')));
-    await assertFails(set(ref(user('mallory'), 'users/bob/soloIndex/s1'), sm('s1', 9))); await assertFails(set(ref(user('mallory'), 'users/bob/solo/s1'), tree));
-    await assertFails(set(ref(guest('bob'), 'users/bob/soloIndex/s2'), sm('s2')));
-  });
-  it('the list entry must name its own game and have its fields; the game holds only its three parts', async () => {
-    const d = user('bob');
-    await assertFails(set(ref(d, 'users/bob/soloIndex/s1'), sm('other')));
-    await assertFails(set(ref(d, 'users/bob/soloIndex/s1'), { id: 's1', title: 'x' }));
-    await assertFails(set(ref(d, 'users/bob/soloIndex/s1'), { ...sm('s1'), title: 'x'.repeat(81) }));
-    await assertFails(set(ref(d, 'users/bob/solo/s1'), { ...tree, extra: { a: '1' } }));
-    await assertFails(set(ref(d, 'users/bob/solo/s1'), { f: { turn: 1 } }));
-  });
-});
-
 describe('the app\'s own flows (as web/src/store-rtdb.ts writes them)', () => {
   it('createMatch: one combined update for meta, seat, membership and game list, then name, private records, state', async () => {
     const db = user('carol'), id = 'made';
