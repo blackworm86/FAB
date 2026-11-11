@@ -44,7 +44,7 @@ GEMINI_BASE = os.environ.get("BRIANBORU_GEMINI_BASE", "https://generativelanguag
 
 # cartelle in cui il pannello può scrivere o cancellare
 SCRIVIBILI = ["concept/esplorazione", "concept/scelti", "concept/viste_3d",
-              "modelli/ai_grezzi", "modelli/definitivi", "modelli/props"]
+              "modelli/ai_grezzi", "modelli/definitivi", "modelli/props", "modelli/divisioni"]
 
 CONFIG_PREDEFINITA = {
     "chiave_gemini": "",
@@ -216,6 +216,41 @@ def op_pulisci(log, dati):
     return {"uscita": uscita.relative_to(RADICE).as_posix()}
 
 
+def _tipo(dati):
+    t = str(dati.get("id", ""))
+    if not t.replace("_", "").isalnum() or not (RADICE / "modelli" / "definitivi" / f"{t}.glb").exists():
+        raise RuntimeError(f"modello finito non trovato: {t}")
+    return t
+
+
+def op_dividi_proposta(log, dati):
+    """La divisione salvata del tipo, oppure (nuova=True o nessun salvataggio) la proposta automatica con k figure."""
+    t = _tipo(dati)
+    salvata = RADICE / "modelli" / "divisioni" / f"{t}.json"
+    if salvata.exists() and not dati.get("nuova"):
+        log(f"divisione salvata: {salvata.name}")
+        return {"divisione": json.loads(salvata.read_text(encoding="utf-8")), "salvata": True}
+    cmd = script("separa_figure.py") + ["--proposta", t] + (["-k", str(int(dati["k"]))] if dati.get("k") else [])
+    log("proposta automatica…")
+    out = subprocess.run(cmd, cwd=QUI, env=env_python(), capture_output=True, text=True, encoding="utf-8")
+    if out.returncode != 0:
+        raise RuntimeError(out.stderr[-600:])
+    return {"divisione": json.loads(out.stdout), "salvata": False}
+
+
+def op_dividi_salva(log, dati):
+    """Salva la divisione fatta nel pannello e rigenera le figure del volume."""
+    t = _tipo(dati)
+    k, gradi, alto, et = int(dati["k"]), float(dati["gradi"]), float(dati["altezza"]), dati["etichette"]
+    if not 1 <= k <= 8 or not 0.3 <= alto <= 15 or not isinstance(et, list) or any(not isinstance(e, int) or e < -1 or e >= k for e in et):
+        raise RuntimeError("divisione non valida")
+    cartella = RADICE / "modelli" / "divisioni"; cartella.mkdir(parents=True, exist_ok=True)
+    (cartella / f"{t}.json").write_text(json.dumps({"k": k, "gradi": gradi, "altezza": alto, "etichette": et}), encoding="utf-8")
+    log(f"salvata la divisione di {t}: {k} figure, {sum(1 for e in et if e < 0)} triangoli scartati")
+    esegui_processo(log, script("separa_figure.py") + ["--volume", t.split("_")[0]], cwd=QUI)
+    return {}
+
+
 def op_test_sagome(log):
     esegui_processo(log, script("test_sagome.py") + [str(RADICE / "concept" / "scelti")], cwd=QUI)
     return {"foglio": "concept/scelti/_test_sagome.png"}
@@ -363,6 +398,7 @@ def stato_file():
         "grezzi": elenco("modelli/ai_grezzi", "*.glb"),
         "definitivi": elenco("modelli/definitivi", "*.glb"),
         "props": elenco("modelli/props", "*.glb"),
+        "divisioni": elenco("modelli/divisioni", "*.json"),
         "report": (RADICE / "modelli" / "report.txt").read_text(encoding="utf-8")
         if (RADICE / "modelli" / "report.txt").exists() else "",
     }
@@ -517,6 +553,10 @@ class Gestore(BaseHTTPRequestHandler):
             return {"lavoro": nuovo_lavoro("Rigenero i pezzi", op_genera)}
         if percorso == "/api/pulisci":
             return {"lavoro": nuovo_lavoro("Pulizia " + dati["nome"], op_pulisci, dati)}
+        if percorso == "/api/dividi/proposta":
+            return {"lavoro": nuovo_lavoro("Divisione " + str(dati.get("id")), op_dividi_proposta, dati)}
+        if percorso == "/api/dividi/salva":
+            return {"lavoro": nuovo_lavoro("Figure " + str(dati.get("id")), op_dividi_salva, dati)}
         if percorso == "/api/test_sagome":
             return {"lavoro": nuovo_lavoro("Test sagome", op_test_sagome)}
         if percorso == "/api/gemini":

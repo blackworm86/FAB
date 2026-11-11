@@ -43,7 +43,7 @@ Licence: TRELLIS code is MIT but some modules it uses are research-only; check b
 Mockup approved by the owner: https://claude.ai/artifact/SpjUQ4nNP3885wy4kxiTop. Code: `web/src/troops.ts` (loading, placement, look), wired in `drawPieces()` in `web/src/main.ts`; tests `web/test/troops.test.ts`. Switch: the View window, Board > **Units: Blocks / Figures**, separate from Map 2D / 3D, so any combination works (Figures by default; blocks in the tutorials, whose texts talk about blocks). Any unit without figures, and every unit while the figures load, is the usual block.
 
 - **One figure per unit** (owner, 11 November 2026, after trying one per step: crowded areas made them too small). A unit shows one of its type's figures, fixed per unit (`variant()`), so neighbouring units of one type differ. Strength is the pips.
-- **One scale over the whole map**: `SCALE` in `troops.ts` (1.5× the figures' 0.18 units per metre: a Sherman 1.6 long, about a block, a soldier 0.48 tall). No resizing by area.
+- **One scale over the whole map**: `SCALE` in `troops.ts` (1.5× the figures' 0.18 units per metre: a Sherman 1.6 long, about a block). Infantry is drawn 3× larger (`INFANTRY`, owner's choice: a lone soldier at true scale is a speck), so a soldier stands about as tall as a tank. No resizing by area.
 - **Facing**: Germans west, Allies east, everywhere.
 - **Placement**: the game's own block layout (`drawPieces`), given each figure's real footprint (`radius()`), so a Panther gets more room than a soldier; crowded contested rows space by the widest figure.
 - **Side colour**: a rounded ring round the unit's figures in its block wood colour, with a faint fill (the owner's pick of four options). Selected or battle point unit: the ring is brass.
@@ -51,7 +51,7 @@ Mockup approved by the owner: https://claude.ai/artifact/SpjUQ4nNP3885wy4kxiTop.
 - **Hidden units** (an enemy block face down): the plain wooden block, as before. No tarpaulin piece (dropped by the owner).
 - Taps: a tap on a figure, or inside its ring, picks the unit. The block "turns to its new strength" animation does not run for figures.
 - Measured: a full Bulge start is about 61,000 triangles, 267 draw calls. Figures: about 1,200–2,600 triangles each, 256 px textures, 4.2 MB for the 27 Bulge figures.
-- Known limits: two US infantrymen lost most of their rifle when the group models were cut (Meshy fused it to the next soldier) and a few soldiers keep a tiny rifle tip; regenerating those as single figures fixes it. Golan and Sicily have no figures yet.
+- **Dividing a group model into figures**: the kit panel, Pezzi > a type > **5 · Dividi in figure** (opens on the automatic proposal; each figure a colour, dark grey = discarded): click a whole part (rifle, turret, body) to give it to the chosen figure, or paint triangles with the brush; Save writes `tools/pezzi3d/modelli/divisioni/<type>.json` and recreates the volume's figures (`separa_figure.py`). The Bulge figures in the game still come from the automatic proposal until the owner saves a hand-made division.
 
 ## 5. Phases
 

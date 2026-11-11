@@ -5,10 +5,12 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 export type Troop = { figs: THREE.Object3D[]; size: THREE.Vector3 };
-type Index = { tipi: Record<string, { figure: string[] }>; blocchi: Record<string, string> };
+type Index = { tipi: Record<string, { figure: string[]; veicolo: boolean }>; blocchi: Record<string, string> };
 
-/** One scale for every figure on the map (figures are at 0.18 board units per metre): a Sherman is 1.6 long, about one block wide, a soldier 0.48 tall. */
+/** One scale for every figure on the map (figures are at 0.18 board units per metre): a Sherman is 1.6 long, about one block wide. */
 export const SCALE = 1.5;
+/** Soldiers are drawn 3× larger than true scale (owner, 11 November 2026): a lone soldier at true scale is a speck; at 3× he stands about as tall as a tank. */
+export const INFANTRY = 3;
 let byUnit: Record<string, string> = {};
 const troops = new Map<string, Troop>();
 
@@ -20,7 +22,7 @@ export async function loadTroops(vol: string, base = './'): Promise<boolean> {
   await Promise.all(Object.entries(idx.tipi).map(async ([tipo, t]) => {
     const figs = await Promise.all(t.figure.map((f) => loader.loadAsync(`${base}pezzi/${f}`).then((gl) => {
       gl.scene.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.userData.shared = true; } });   // shared by every copy: never disposed with the board
-      gl.scene.scale.setScalar(SCALE);
+      gl.scene.scale.setScalar(SCALE * (t.veicolo ? 1 : INFANTRY));
       return gl.scene;
     })));
     troops.set(tipo, { figs, size: new THREE.Box3().setFromObject(figs[0]).getSize(new THREE.Vector3()) });

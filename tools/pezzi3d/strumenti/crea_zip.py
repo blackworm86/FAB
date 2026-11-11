@@ -9,7 +9,7 @@ from pathlib import Path
 import catalogo
 
 KIT = Path(__file__).resolve().parent.parent
-FUORI = {".venv", "concept", "__pycache__", "ai_grezzi", "master", "colorati"}
+FUORI = {".venv", "concept", "__pycache__", "ai_grezzi", "master", "colorati", "figure"}
 FILE_FUORI = {"impostazioni.json", "visualizzatore.html", "report.txt"}
 
 catalogo.main()                                   # catalogo aggiornato ai dati del gioco
