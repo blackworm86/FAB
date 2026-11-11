@@ -1714,7 +1714,7 @@ function rulesInUse(o: Partial<E.Opts>, extra = true): string {
 }
 /** A slim bar over the table when you are not seated, or while you wait for an opponent. */
 function seatBar() {
-  if (LAB_SIDE) return `<div class="seatbar"><span>${ico('info')} Experimental: the computer plays ${nm(LAB_SIDE)}${lab.thinking ? ' · thinking…' : ''}${lab.reason ? ` — <small>${esc(lab.reason)}</small>` : ''}</span></div>`;
+  if (LAB_SIDE) return `<div class="seatbar" title="${esc(lab.reason)}"><span>${ico('info')} Computer: ${nm(LAB_SIDE)}${lab.thinking ? ' · thinking…' : ''}${lab.reason ? ` · <small>${esc(lab.reason.split(' (')[0].split(': judged')[0])}</small>` : ''}</span></div>`;      // the full reason on hover: a phone keeps the map
   if (online.mode !== 'remote' || !online.hasAccounts) return '';
   if (online.error) return `<div class="seatbar err"><span>${esc(online.error)}</span>${ubtn('OK', () => { online.error = ''; })}</div>`;
   const a = online.account, me = online.mySide(), s = online.seats, title = matches.find((m) => m.id === TABLE)?.title ?? 'a game of FAB';
@@ -1809,7 +1809,7 @@ function modalHtml() {
   }
   return '';
 }
-const inGame = () => HAS_TABLE || DEV_FAKE || SANDBOX || TUTORIAL || online.mode === 'local';
+const inGame = () => HAS_TABLE || DEV_FAKE || SANDBOX || TUTORIAL || !!LAB_SIDE || online.mode === 'local';
 /** Draw the interface; if something in it throws, say so on screen instead of leaving a stale picture. */
 /* A tap must land on the button it started on: while a finger or mouse is down on the interface, redraws wait (playtest: Ready/Roll/Done taps were lost). */
 let pressing = false, renderWaiting = false;

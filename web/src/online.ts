@@ -45,6 +45,8 @@ export const TABLE = params.get('table') || 'main';
 export const HAS_TABLE = params.has('table'), DEV_FAKE = DEV && params.has('fake');
 /** The admin sandbox (`?sandbox`): a private test table in this browser; the account is only read to check that it is an admin. */
 export const SANDBOX = params.has('sandbox');
+/** The experimental computer opponent (`?lab=german|allied`, lab.ts): a local game like the sandbox. */
+export const LAB = params.has('lab') && !SANDBOX && !params.has('table');
 /** The tutorial: a local game in this browser, nothing written online. */
 export const TUTORIAL = params.has('tutorial') && !SANDBOX && !params.has('table');
 /** The seat a side sits in: the database keeps the keys german (First Player) and allied (Second Player) for every game. */
@@ -97,7 +99,7 @@ export async function startOnline(remote: (g: Game) => void, changed: () => void
     if (store && (fake === 'german' || fake === 'allied')) online.devSeat = seatSide(fake);                  // a stand-in store plays one seat per tab
   } catch (e) { online.error = String(e); store = null; }
   if (!store) { if (DEV) online.mode = 'local'; online.ready = true; changed(); return; }
-  if (SANDBOX) {                                                                                   // only the account: the game stays in this browser
+  if (SANDBOX || LAB) {                                                                            // only the account: the game stays in this browser
     const sync = (a: Account) => { online.account = a; online.uid = a.uid; online.admin = a.admin; onChange(); }; sync(store.account()); store.onAccount(sync);
     online.mode = 'local'; online.ready = true; online.hasAccounts = true; changed(); return;
   }
