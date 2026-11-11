@@ -7,5 +7,5 @@ const player = commanderPlayer(Date.now() % 1e9, 3000);
 self.onmessage = (e: MessageEvent<{ id: number; view: Game; side: Side }>) => {
   const { id, view, side } = e.data, n = player.reasons.length;
   const action = player(view, side);
-  self.postMessage({ id, action, reason: player.reasons.length > n ? player.reasons.at(-1) : null });
+  self.postMessage({ id, action, reason: player.reasons.length > n ? player.reasons.slice(n).join(' Then: ') : null });      // a plan and a battle choice can come in one step
 };

@@ -3435,7 +3435,48 @@
   "Medium": "Medie",
   "Large": "Grandi",
   "Huge": "Enormi",
-  "Soldiers and tanks, one per unit": "Soldati e carri, uno per unità"
+  "Soldiers and tanks, one per unit": "Soldati e carri, uno per unità",
+  "Keep this game": "Tieni questa partita",
+  "Hot seat": "Stesso schermo",
+  "two players on this screen, a cover between turns": "due giocatori su questo schermo, una copertura tra i turni",
+  "Skip empty phases": "Salta le fasi vuote",
+  "like a real game": "come in una partita vera",
+  "Next dice": "Prossimi dadi",
+  "none queued: rolls come from the seed": "nessuno in coda: i tiri vengono dal seme",
+  "every block off the map": "tutti i blocchi fuori mappa",
+  "Optional rules for the next Reset": "Regole opzionali per il prossimo Reset",
+  "Exploiting": "In sfruttamento",
+  "Move freely": "Sposta liberamente",
+  "Chits": "Pedine",
+  "Go": "Vai",
+  "Labels": "Etichette",
+  "See-through": "Trasparenti",
+  "On": "Attive",
+  "Off": "Spente",
+  "Roll the dice": "Tira i dadi",
+  "Dim": "Tenui",
+  "Search a name, unit or kind": "Cerca un nome, unità o tipo",
+  "The log fills in as the turn goes on.": "Il registro si riempie man mano che il turno procede.",
+  "Markers on the pieces": "Indicatori sui pezzi",
+  "Pips: one per step; red ones are steps already lost": "Pallini: uno per step; quelli rossi sono step già persi",
+  "Can still move this step (grey dash: cannot)": "Può ancora muovere in questo passo (trattino grigio: no)",
+  "Gold dot: can build field works · blue dot: can go into reserve": "Punto oro: può costruire opere campali · punto blu: può andare in riserva",
+  "Point unit of the battle": "Unità di punta della battaglia",
+  "Disordered · REC: recovering": "In disordine · REC: in recupero",
+  "In reserve": "In riserva",
+  "Exploiting (Breakthrough)": "In sfruttamento (Sfondamento)",
+  "Interdicted from the air": "Interdetto dal cielo",
+  "disordered (DIS)": "in disordine (DIS)",
+  "recovering (REC)": "in recupero (REC)",
+  "out of supply (OOS)": "senza rifornimento (OOS)",
+  "exploiting (E)": "in sfruttamento (E)",
+  "interdicted (GI)": "interdetto (GI)",
+  "Markers?": "Indicatori?",
+  "What the markers on the pieces mean": "Cosa significano gli indicatori sui pezzi",
+  "Skip": "Salta",
+  "Skipped · undo": "Saltata · annulla",
+  "Nothing to do for this unit in this step: no halo, left out of Can move": "Niente da fare per questa unità in questo passo: senza alone, esclusa da Può muovere",
+  "Lime halo: can still act this step (move, field works or reserve); Skip in its card sets it aside": "Alone lime: può ancora agire in questo passo (muovere, opere campali o riserva); Salta nella sua scheda la mette da parte"
  },
  "patterns": [
   [
@@ -9113,6 +9154,78 @@
   [
    "sudden death this turn at (.+) · areas count only when in supply \\(19\\.3\\)\\.(.*)",
    "vittoria immediata in questo turno a $1 · le aree contano solo se rifornite (19.3).$2"
+  ],
+  [
+   "Tap an area on the map to (move|place) it",
+   "Tocca un'area sulla mappa per piazzarlo"
+  ],
+  [
+   "Start (.+) again from its first turn\\? This sandbox game is lost\\.",
+   "Ricominciare $1 dal primo turno? Questa partita sandbox va persa."
+  ],
+  [
+   "Reserve (\\d+)",
+   "Riserva $1"
+  ],
+  [
+   "queued: (.+)",
+   "in coda: $1"
+  ],
+  [
+   "Area labels: (.+) \\(tap for (.+)\\)",
+   "Etichette delle aree: $1 (tocca per $2)"
+  ],
+  [
+   "Area labels: (.+)",
+   "Etichette delle aree: $1"
+  ],
+  [
+   "first of (\\d+) hits already taken",
+   "primo dei $1 colpi già assegnato"
+  ],
+  [
+   "Lesson (\\d+) of (\\d+)",
+   "Lezione $1 di $2"
+  ],
+  [
+   "(\\d+) hits rolled, 1 already taken: (\\d+) left",
+   "$1 colpi tirati, 1 già assegnato: ne restano $2"
+  ],
+  [
+   "Close it: (\\d+) battles? left\\.",
+   "Chiudila: restano $1 battaglie."
+  ],
+  [
+   "Close it\\.",
+   "Chiudila."
+  ],
+  [
+   "Battle over\\.",
+   "Battaglia finita."
+  ],
+  [
+   "Filled: (.+) share of the expected hits · empty: (.+)",
+   "Pieno: quota di $1 dei colpi attesi · vuoto: $2"
+  ],
+  [
+   "Map: (.+)",
+   "Mappa: $1"
+  ],
+  [
+   "Map layers, legend and rotate: (.+)",
+   "Livelli della mappa, legenda e rotazione: $1"
+  ],
+  [
+   "ARMY ZONE (\\d+)",
+   "ZONA ARMATA $1"
+  ],
+  [
+   "(\\d+)th Panzer Army",
+   "$1ª Armata Panzer"
+  ],
+  [
+   "(\\d+)th Army",
+   "$1ª Armata"
   ]
  ],
  "html": {}

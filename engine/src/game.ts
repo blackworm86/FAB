@@ -511,6 +511,7 @@ export function resolveBlow(g: Game, attempt: boolean) {
   g.blowTried.push(to);
   if (!attempt) { finishMove(g, u, { ...opt, cost: p.path.length }, false); return 'crossed'; }
   const r = roll(g), need = g.greif[keyOf(prev, to)] ? 1 : 5;                       // 17.12: a Greif team holding the bridge makes it a 1
+  (g.checks ??= []).push({ who: `Bridge ${areas.get(prev)!.name}–${areas.get(to)!.name}`, why: 'Blow the bridge (5.35d)', sn: need, die: r, ok: r <= need, area: prev }); if (g.checks.length > 30) g.checks.splice(0, g.checks.length - 30);   // shown on the table like a morale check
   if (r > need) { say(g, `bridge blow attempt failed (rolled ${r})`); finishMove(g, u, { ...opt, cost: p.path.length }, false); return 'failed'; }
   g.blown.push(keyOf(prev, to)); say(g, `bridge ${areas.get(prev)!.name}–${areas.get(to)!.name} blown (rolled ${r})`); dropGreif(g, keyOf(prev, to));
   const exploitOnly = g.phase === 'btMove' && u.exploit && !u.reserve;

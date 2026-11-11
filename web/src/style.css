@@ -161,7 +161,7 @@ button.ico { min-width: 40px; min-height: 40px; display: inline-flex; align-item
 }
 
 .card2 { touch-action: pan-x; } .arr { touch-action: pan-x; } .c-hand { overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; } .arrtray { overscroll-behavior-x: contain; }
-button.ico.dev { border-color: var(--line); color: var(--ink); border-style: dashed; }
+button.ico.dev { border-color: var(--line); color: var(--ink); border-style: solid; }
 .authform { display: grid; gap: 6px; margin: 8px 0; } .authform input { font: inherit; color: inherit; background: #0b0d08; border: 1px solid var(--line); padding: 10px; min-height: 44px; } .bad { color: var(--bad); }
 .gamegrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; margin-bottom: 6px; }
 .gamecard { display: grid; gap: 2px; text-align: left; padding: 10px 12px; background: #11140c; border: 1px solid var(--line); color: inherit; }
@@ -533,7 +533,7 @@ body.guide-short .gx, body:not(.guide-short) .gs { display: none !important; }
   .c-bar.b .dchips { grid-area: c; flex: none; order: 0; flex-wrap: nowrap; overflow-x: auto; min-width: 0; }
   .c-bar.b .dundo { grid-area: u; order: 0; max-width: 34vw; flex: none; } .c-bar.b .go, .c-bar.b .gowait { grid-area: go; order: 0; margin-left: 0; max-width: 46vw; }
   body.guide-short .c-bar.b .dundo span { display: none; } body.guide-short .c-bar.b .dundo { padding: 0 10px; }
-  body.guide-short .c-bar.b .c-prompt { -webkit-line-clamp: 1; }
+  body.guide-short .c-bar.b .c-prompt { -webkit-line-clamp: 2; }
   .c-bar.b .dchip { min-height: 44px; padding: 2px 10px; }
 }
 /* side marks in lists: a coloured side tag, not a coloured edge */
@@ -556,7 +556,7 @@ body:has(.hotcover) #leaders, body:has(.hotcover) #fx, body:has(.hotcover) #mark
 @media (min-width: 701px) { .dundo.idle { display: none; } }
 @media (max-width: 700px) {
   .c-bar.b { grid-template-columns: minmax(0, 1fr) 44px 150px !important; grid-template-rows: minmax(22px, auto) 44px; grid-template-areas: "p p g" "c u go" !important; min-height: 98px; box-sizing: border-box; align-content: center; padding-block: 6px !important; }
-  .c-bar.b .c-prompt { grid-area: p; overflow: hidden; display: -webkit-box !important; -webkit-box-orient: vertical; -webkit-line-clamp: 2 !important; line-height: 18px !important; font-size: 12.5px !important; }      /* two lines, not one cut with … */
+  .c-bar.b .c-prompt { grid-area: p; overflow: hidden; display: -webkit-box !important; -webkit-box-orient: vertical; -webkit-line-clamp: 3 !important; line-height: 17px !important; font-size: 12.5px !important; }      /* up to three lines, not cut with … */
   .c-bar.b .guidebtn { grid-area: g; justify-self: end; width: 30px !important; min-width: 30px !important; min-height: 26px !important; height: 26px; padding: 0 !important; }
   .c-bar.b .dundo { grid-area: u; width: 44px; max-width: 44px !important; min-height: 44px; padding: 0 !important; justify-content: center; } .c-bar.b .dundo span { display: none; }
   .c-bar.b .go, .c-bar.b .gowait { grid-area: go; width: 150px; max-width: 150px !important; min-height: 44px; box-sizing: border-box; justify-content: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -676,7 +676,7 @@ body:has(.hotcover) #leaders, body:has(.hotcover) #fx, body:has(.hotcover) #mark
   .c-bar.b .dchips.more { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
   .c-bar.b .dundo { grid-column: 3 !important; grid-row: 1 !important; }
   .c-bar.b .guidebtn { grid-column: 4 !important; grid-row: 1 !important; align-self: center; justify-self: end; }
-  .c-bar.b .c-prompt { grid-column: 1 !important; grid-row: 2 !important; padding-right: 2px !important; white-space: normal !important; display: -webkit-box !important; -webkit-box-orient: vertical; -webkit-line-clamp: 2 !important; overflow: hidden; line-height: 1.25 !important; font-size: 12px !important; align-self: center; }
+  .c-bar.b .c-prompt { grid-column: 1 !important; grid-row: 2 !important; padding-right: 2px !important; white-space: normal !important; display: -webkit-box !important; -webkit-box-orient: vertical; -webkit-line-clamp: 3 !important; overflow: hidden; line-height: 1.25 !important; font-size: 12px !important; align-self: center; }
   .c-bar.b .go, .c-bar.b .gowait { grid-column: 2 / 5 !important; grid-row: 2 !important; width: 100% !important; max-width: none !important; }
 }
 
@@ -689,9 +689,9 @@ button.go:disabled { background: #2a2d22; color: #8d9065; box-shadow: none; opac
 .vcards b:has(.ge) { white-space: nowrap; font-size: clamp(16px, 5vw, 26px); }     /* "GE 0 · AL 0" stays on one line */
 
 /* words beside the icons (critique): modifier names, the expected-hits ratio, the view toggles */
-.m2 small { font: 500 10.5px var(--sf); opacity: .85; margin-left: 2px; } .m2[role=button] { cursor: pointer; }
-.c-vs .big .xs { font: 700 10px var(--sfd); letter-spacing: .08em; vertical-align: middle; margin: 0 4px; opacity: .85; } .c-vs .big .xs.al { color: var(--al); } .c-vs .big .xs.ge { color: var(--ge); }
-.c-vs .xcap { display: block; font: 500 10px var(--sf); color: #b3ad8b; text-align: center; margin-top: 1px; }
+.m2 small { font: 500 11px var(--sf); opacity: .85; margin-left: 2px; } .m2[role=button] { cursor: pointer; }
+.c-vs .big .xs { font: 700 11px var(--sfd); letter-spacing: .08em; vertical-align: middle; margin: 0 4px; opacity: .85; } .c-vs .big .xs.al { color: var(--al); } .c-vs .big .xs.ge { color: var(--ge); }
+.c-vs .xcap { display: block; font: 500 11px var(--sf); color: #b3ad8b; text-align: center; margin-top: 1px; }
 .vtb i { font-size: 12px !important; }
 .m2[role=button] { position: relative; min-height: 20px; } .m2[role=button]::after { content: ""; position: absolute; inset: -8px -2px; }     /* a finger-sized tap area around the small chip */
 .c-vs .big small.xs { display: inline !important; }
@@ -795,7 +795,7 @@ button.go:disabled { background: #2a2d22; color: #8d9065; box-shadow: none; opac
 .vlab.net.ge { color: var(--ge) !important; } .vlab.net.al { color: var(--al) !important; }
 
 
-.chp small { font: 500 10px var(--sf); opacity: .75; margin-left: 3px; }
+.chp small { font: 500 11px var(--sf); opacity: .75; margin-left: 3px; }
 .vtt[data-cap]::before { content: attr(data-cap); align-self: center; margin-right: 4px; font: 600 9px/1.2 var(--sfd); letter-spacing: .1em; color: #ff8a7acc; text-align: right; white-space: pre; }      /* a label in front of the turn boxes, inside the bar (it used to hang below it and get cut off) */
 .vtt { position: relative; }
 
@@ -808,7 +808,7 @@ button.go:disabled { background: #2a2d22; color: #8d9065; box-shadow: none; opac
 
 /* the step bar follows the printed sequence of play: 8 phases, smaller type so they fit */
 .c-crumbs span { font-size: 12.5px; letter-spacing: .1em; padding-inline: 9px; } .c-crumbs span.on { padding-inline: 16px; }
-.c-stat .ph small { font: 600 10px var(--sf); opacity: .7; letter-spacing: 0; }
+.c-stat .ph small { font: 600 11px var(--sf); opacity: .7; letter-spacing: 0; }
 @media (max-width: 1280px) and (min-width: 701px) { .c-crumbs span:not(.on) { font-size: 11px; padding-inline: 6px; letter-spacing: .06em; } }
 @media (max-width: 1100px) and (min-width: 701px) { .c-crumbs span:not(.on):not(.done) { display: none; } .c-crumbs span.done { display: none; } .c-crumbs span.done:nth-last-child(1) { display: inline; } }
 
@@ -1115,7 +1115,6 @@ body:has(#ui .modal) #leaders, body:has(#ui .modal) #fx, body:has(#rules) #leade
 #ui .modal .pcgrid { gap: 8px !important; } #ui .modal .pcgrid .pc { width: 72px !important; height: 72px !important; }
 .log .ll, .feed .fl2 { display: flex; align-items: baseline; gap: 2px; } .stag { flex: none; } .lt { display: block; min-width: 0; } .lt::first-letter { text-transform: uppercase; }      /* log lines start with a capital (engine lines are written lower-case) */
 .maplegend .ar { font: 600 15px var(--sf); letter-spacing: -2px; }
-@media (max-width: 700px) { .sbx { top: 112px; max-height: calc(100% - 120px); } }      /* phones: the sandbox panel opens under the Layer bar and map tools, not over them */
 /* the Game menu (10 Nov mockup): as tall as its content, each setting one row (name left, control right), two columns on desktop */
 .sheet.menu { height: auto !important; }
 @media (min-width: 701px) { .modal:has(> .sheet.menu) { place-items: start center; padding-top: 8vh; } .sheet.menu { width: min(640px, 94vw); max-height: 84vh; } }      /* anchored at the top: tabs and close stay put while the height changes */
@@ -1158,3 +1157,94 @@ body:has(#ui .modal) #leaders, body:has(#ui .modal) #fx, body:has(#rules) #leade
 .pstrip b { display: block; font: 700 20px var(--sfd); } .pstrip small { font: 600 11px var(--sfd); letter-spacing: .1em; color: #9a9c7c; text-transform: uppercase; } .pstrip button.on { background: #e7b04a1f; } .pstrip button.on b { color: var(--gold); }
 .pcst { position: relative; display: inline-block; } .pcst .cnt { position: absolute; right: -4px; top: -6px; min-width: 24px; padding: 1px 5px; border-radius: 10px; background: var(--gold); color: #0b0d08; font: 700 12px var(--sfd); text-align: center; pointer-events: none; }
 .sheet.pieces h4 { display: flex; justify-content: space-between; align-items: baseline; }
+/* sandbox panel (11 Nov mockup): on the right of the map (a bottom sheet on phones), header with game, scenario, Reset and close; tabs like the Game menu */
+.sbx { left: auto !important; right: 8px; top: 8px !important; width: min(400px, calc(100vw - 16px)) !important; max-height: calc(100% - 16px) !important; display: flex; flex-direction: column; overflow: hidden !important; padding: 0 !important; }
+.sbx .sbhead { display: flex; align-items: center; gap: 6px; padding: 8px 10px; margin: 0; border-bottom: 1px solid #8d906555; }
+.sbx .sbhead > b { font: 700 16px var(--sfd); letter-spacing: .08em; color: var(--gold); text-transform: uppercase; flex: none; }
+.sbx .sbhead select { flex: 1; min-width: 0; } .sbx .sbhead .sbreset { display: inline-flex; align-items: center; gap: 5px; flex: none; }
+.sbx .sbask { margin: 8px 10px 0; }
+.sbx .tabs { display: flex; gap: 0; margin: 0; padding: 0 10px; border-bottom: 1px solid #8d906555; }
+.sbx .tabs button { flex: 1; background: none !important; color: #9a9c7c !important; border: 0; border-bottom: 2px solid transparent; padding: 8px 0; font: 600 13px var(--sfd); letter-spacing: .1em; text-transform: uppercase; }
+.sbx .tabs button.on { color: var(--gold) !important; border-bottom-color: var(--gold); }
+.sbx .sbbody { flex: 1; min-height: 0; overflow: auto; padding: 8px 10px 10px; overscroll-behavior: contain; }
+.sbx h4 { margin: 10px 0 2px; font: 700 11px var(--sfd); letter-spacing: .14em; color: #9a9c7c; }
+.sbjump { display: flex; gap: 6px; align-items: center; } .sbjump select { flex: 1; min-width: 0; }
+.sbdice { width: 84px; flex: none; }
+/* the picked piece: picture, name, what the next map tap does, steps; its states as on/off tags */
+.sbx .lbd { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid #8d906566; } .sbx .lbd.armed { border-color: var(--gold); background: #e7b04a14; }
+.sbx .lbd > .t { flex: 1; min-width: 0; } .sbx .lbd > .t b { display: block; font: 600 15px var(--sfd); } .sbx .lbd > .t small { color: #9a9c7c; font-size: 11.5px; }
+.sbx .sbgo { display: flex; align-items: center; gap: 4px; margin-top: 3px; color: var(--gold); font: 600 12px var(--sfd); letter-spacing: .06em; text-transform: uppercase; } .sbx .sbgo .ic { width: 14px; height: 14px; }
+.sbx .sbarm { display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; min-height: 30px; padding: 0 8px; }
+.sbx .step { display: flex; align-items: center; gap: 4px; flex: none; } .sbx .step b { font: 700 15px var(--sfd); min-width: 30px; text-align: center; }
+.lbtags { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 2px; }
+.lbtags button { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 0 8px; font: 600 11.5px var(--sfd); letter-spacing: .06em; text-transform: uppercase; color: #9a9c7c; border: 1px solid #8d906588; background: none; }
+.lbtags button.on { color: var(--gold); border-color: var(--gold); background: #e7b04a14; } .lbtags .ic { width: 13px; height: 13px; }
+.sbx .lbf { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 6px 0; } .sbx .lbf select { flex: 1; min-width: 110px; }
+.sbx .seg button { border: 0 !important; border-radius: 0 !important; margin: 0 !important; min-height: 32px; padding: 0 9px; font: 600 12px var(--sfd); letter-spacing: .06em; text-transform: uppercase; background: none; color: var(--ink); }
+.sbx .seg button.on { background: var(--gold); color: #0b0d08; }
+@media (max-width: 700px) {
+  .sbx { left: 0 !important; right: 0 !important; top: auto !important; bottom: 0; width: 100% !important; max-height: 58% !important; border-radius: 14px 14px 0 0; }      /* phones: a bottom sheet, the map stays in view above it */
+  .sbx .sbhead .sbreset span { display: none; } .sbx .sbhead button { min-height: 44px; min-width: 44px; }
+  .sbx .seg button, .lbtags button, .sbx .sbarm { min-height: 44px; } .sbx .tabs button { min-height: 44px; }
+}
+.sbx .lbd > .b3 { --s: 46px; margin: 4px 10px 4px 2px; flex: none; } .sbx .lbd > img.cb { width: 56px; height: 56px; }
+.sbx .lbd > .step { flex: none !important; } .sbx .lbd > .t { flex: 1 1 140px !important; } .sbx .lbd > .t small { margin: 0; }
+.sbx .sbhead { flex-wrap: wrap; } .sbx .sbhead > b { flex: 1; } .sbx .sbhead select { order: 5; flex: 1 1 40%; }      /* game and scenario on a second row, wide enough to read */
+.sbx .sbhead::after { content: ""; order: 4; flex-basis: 100%; }
+.sbx .lbd { flex-wrap: wrap; } .sbx .lbd > .t { flex: 1 1 200px !important; } .sbx .lbd > .step { margin-left: auto; }
+.sbx .sbgo { display: block; } .sbx .sbgo .ic { vertical-align: -2px; margin-right: 4px; }
+/* area tags (owner's drawing, 11 Nov): TDN shape with the area number, TDN badge, name, VP marks; one size on screen; Labels on the Layer bar sets on / see-through / off */
+#tags { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+.atag { position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px 0 2px; border-radius: 12px; background: rgba(14, 15, 10, .66); border: 1px solid rgba(231, 176, 74, .35); color: #f3ecd0; font: 600 13px var(--sfd); letter-spacing: .03em; white-space: nowrap; box-shadow: 0 1px 4px #0006; will-change: transform; }
+.atag .sw { position: relative; display: inline-block; width: 21px; height: 21px; flex: none; }
+.atag svg { width: 21px; height: 21px; display: block; overflow: visible; }
+.atag svg circle, .atag svg rect, .atag svg polygon { stroke: #1b1c14; stroke-width: 1.4; }
+.atag.t0 svg circle { fill: #efe4b8; } .atag.t1 svg rect { fill: #e2b44c; } .atag.t2 svg polygon { fill: #a4a59a; } .atag.t3 svg polygon { fill: #3d4a2c; }
+.atag svg text { font: 700 11px var(--sfd); text-anchor: middle; dominant-baseline: central; fill: #1b1c14; } .atag svg text.n3 { font-size: 8px; } .atag svg text.n2 { font-size: 10px; } .atag.t3 svg text { fill: #f3ecd0; }
+.atag .sw b { position: absolute; right: -8px; top: -7px; min-width: 16px; height: 16px; border-radius: 50%; background: #1b1c14; border: 1px solid #efe4b8; color: #efe4b8; font: 700 11px/14px var(--sfd); text-align: center; }
+.atag .nm { margin-left: 4px; } .atag img { width: 13px; height: 13px; object-fit: contain; filter: drop-shadow(0 0 1px #fffa); }
+#tags .atag { opacity: .78; background: rgba(14, 15, 10, .5); border-color: rgba(231, 176, 74, .22); box-shadow: none; transition: opacity .12s; }
+#tags.solid .atag { opacity: 1; background: rgba(14, 15, 10, .66); border-color: rgba(231, 176, 74, .35); box-shadow: 0 1px 4px #0006; }
+#tags .atag.hov { opacity: 1; background: rgba(14, 15, 10, .9); border-color: var(--gold); box-shadow: 0 0 0 2px #e7b04a55, 0 2px 8px #000a; z-index: 1; }
+.labsw { margin-left: 6px; } .labsw button { gap: 6px; } .labsw button b { color: #b3ad8b; font: 600 12px var(--sfd); letter-spacing: .12em; }
+.labsw button[aria-pressed="true"] b { color: #1a1608; }
+@media (max-width: 700px) { .labsw { margin-left: 4px; flex: none; } .labsw button b, .labsw button .ic { display: none; }  .atag { height: 22px; font-size: 12px; } }
+/* zoomed far out: a VP area shows only its VP marks; the area under the mouse (or selected) keeps its whole tag */
+#tags.far .atag:not(.hov) { background: none; border-color: transparent; box-shadow: none; opacity: .9; padding: 0; gap: 1px; }
+#tags.far .atag:not(.hov) .sw, #tags.far .atag:not(.hov) .nm { display: none; }
+.sheet.menu > h3, .sheet.menu > .tabs { flex: none; }      /* a long tab (the log) scrolls inside; the title and tabs never shrink away */
+/* the Labels control is a view setting, not a layer: no selected-layer brass fill; the eye and the state word say what it does */
+.labsw button, .labsw button[aria-pressed="true"] { background: transparent; color: var(--gold); }
+.labsw button[aria-pressed="false"] { color: #9a9c7c; } .labsw button[aria-pressed="true"] b, .labsw button b { color: #b3ad8b; }
+.labsw button:hover { background: #ffffff10; }
+@media (max-width: 700px) { .labsw button .ic { display: inline-block !important; width: 16px; height: 16px; } .labsw button { gap: 4px; padding: 0 8px; } }
+/* red is for battles: a step loss pops up in the miss salmon, and End move steps back to an outline while a block is half-way through its move */
+.fx.loss { border-color: #ff9c8a; background: #1c1410f2; } .fx.loss b { color: #ff9c8a; }
+button.go.quiet { background: transparent !important; color: #ff9c8a !important; border: 1px solid #d1432f88 !important; box-shadow: none !important; }
+.mapbubble:not([style*="transform"]) { visibility: hidden; }      /* not placed yet: never flash in the corner */
+.linkbtn { display: inline; min-height: 0 !important; padding: 0 2px !important; border: 0 !important; background: none !important; color: var(--gold) !important; font: inherit !important; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.maplegend { max-height: calc(100vh - 230px); overflow-y: auto; overscroll-behavior: contain; }      /* the key grew a section: it scrolls inside the map, never past the bottom bar */
+/* the score inside the top bar (one bar instead of two): the current turn and the next two with their sudden-death numbers, a short gauge, the net; the full track is in the score window */
+.c-bar.t .vps { flex: none; width: auto !important; min-width: 0; height: 40px !important; min-height: 0 !important; padding: 2px 8px !important; gap: 6px; border: 1px solid #8d906566 !important; background: transparent !important; margin: 0 3px; }
+.c-bar.t .vps > .vlab:first-child, .c-bar.t .vps .vtt::before { display: none; }
+.c-bar.t .vps .vtb.past, .c-bar.t .vps .vtb.now + .vtb + .vtb ~ .vtb { display: none; }
+.c-bar.t .vps .vtb { width: 34px; height: 30px; }
+.c-bar.t .vps .gauge { width: 90px; flex: none; }
+@media (max-width: 1500px) { .c-bar.t .vps .gauge, .c-bar.t .vps > .vlab.al:not(.net), .c-bar.t .vps > .vlab.ge:not(.net) { display: none; } }
+@media (max-width: 700px) { .c-bar.t .vps { padding: 0 8px !important; height: 34px !important; margin: 0 2px; } .c-bar.t .vps > :not(.nets) { display: none !important; } .c-bar.t .vps .nets { display: inline !important; font-size: 13px; } }
+
+.vps .nets { display: none; }
+@media (max-width: 1500px) { .c-bar.t .vps .vtb.now + .vtb ~ .vtb { display: none; } }      /* narrower desktops: this turn and the next */
+/* phones: one Map button folds the layers, the legend chip and Rotate; the Labels control stays beside it (owner-approved mockup, 11 Nov) */
+.mapmenu-btn { display: none; }
+@media (max-width: 700px) {
+  .mapmenu-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; background: #0b0d08e6; border: 1px solid var(--line); color: var(--gold); font: 600 13px var(--sfd); letter-spacing: .08em; text-transform: uppercase; }
+  .mapmenu-btn .ic { width: 16px; height: 16px; }
+  .mapdock:not(.menuopen) .dockrow > .mlchip, .mapdock:not(.menuopen) .dockrow > .laysw:not(.labsw), .mapdock:not(.menuopen) .maptools button[title="Rotate the map"] { display: none !important; }
+  .mapdock.menuopen .dockrow { flex-wrap: wrap; }
+  .mapdock.menuopen .dockrow > .laysw:not(.labsw) { order: 5; flex-basis: 100%; flex-direction: column; overflow: visible; }
+  .mapdock.menuopen .dockrow > .laysw:not(.labsw) b { display: none; }
+  .mapdock.menuopen .dockrow > .laysw:not(.labsw) button { justify-content: flex-start; border-left: 0; border-top: 1px solid #8d906555; min-height: 44px; padding: 0 14px; }
+  .mapdock.menuopen .dockrow > .laysw:not(.labsw) button .ic, .mapdock.menuopen .dockrow > .laysw:not(.labsw) button .l { display: inline !important; } .mapdock.menuopen .dockrow > .laysw:not(.labsw) button .s { display: none !important; }
+  .mapdock.menuopen .dockrow > .mlchip { order: 6; }
+}
