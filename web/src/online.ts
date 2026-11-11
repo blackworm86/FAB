@@ -67,7 +67,7 @@ export const online = {
     return this.seats.german === this.uid && this.uid ? seatSide('german') : this.seats.allied === this.uid && this.uid ? seatSide('allied') : null;
   },
   /** True when this client may act for whoever's turn it is (the development "both" seat). */
-  both() { return (this.mode === 'off' || (this.devSwitch() && this.devSeat === 'both')); },
+  both() { return (this.mode === 'off' || LAB || (this.devSwitch() && this.devSeat === 'both')); },      // the computer game (lab.ts) is a shared screen: lab.ts says which side is the computer's
   /** The seat switch exists only where no real opponent can be harmed: the sandbox, the two-tab fake store, a local development table. Never on a shared table, whatever the address says. */
   devSwitch() { return (SANDBOX || DEV_FAKE || (DEV && this.mode === 'local')); },
   get active() { return this.mode !== 'off'; },
