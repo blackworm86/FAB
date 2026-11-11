@@ -3454,7 +3454,9 @@
   "On": "Attive",
   "Off": "Spente",
   "Roll the dice": "Tira i dadi",
-  "Dim": "Tenui"
+  "Dim": "Tenui",
+  "Search a name, unit or kind": "Cerca un nome, unità o tipo",
+  "The log fills in as the turn goes on.": "Il registro si riempie man mano che il turno procede."
  },
  "patterns": [
   [
@@ -9160,6 +9162,10 @@
   [
    "first of (\\d+) hits already taken",
    "primo dei $1 colpi già assegnato"
+  ],
+  [
+   "Lesson (\\d+) of (\\d+)",
+   "Lezione $1 di $2"
   ]
  ],
  "html": {}
