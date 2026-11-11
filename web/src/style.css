@@ -1201,9 +1201,9 @@ body:has(#ui .modal) #leaders, body:has(#ui .modal) #fx, body:has(#rules) #leade
 .atag svg circle, .atag svg rect, .atag svg polygon { stroke: #1b1c14; stroke-width: 1.4; }
 .atag.t0 svg circle { fill: #efe4b8; } .atag.t1 svg rect { fill: #e2b44c; } .atag.t2 svg polygon { fill: #a4a59a; } .atag.t3 svg polygon { fill: #3d4a2c; }
 .atag svg text { font: 700 11px var(--sfd); text-anchor: middle; dominant-baseline: central; fill: #1b1c14; } .atag svg text.n3 { font-size: 8px; } .atag svg text.n2 { font-size: 10px; } .atag.t3 svg text { fill: #f3ecd0; }
-.atag .sw b { position: absolute; right: -7px; top: -6px; min-width: 14px; height: 14px; border-radius: 50%; background: #1b1c14; border: 1px solid #efe4b8; color: #efe4b8; font: 700 9px/12px var(--sfd); text-align: center; }
+.atag .sw b { position: absolute; right: -8px; top: -7px; min-width: 16px; height: 16px; border-radius: 50%; background: #1b1c14; border: 1px solid #efe4b8; color: #efe4b8; font: 700 11px/14px var(--sfd); text-align: center; }
 .atag .nm { margin-left: 4px; } .atag img { width: 13px; height: 13px; object-fit: contain; filter: drop-shadow(0 0 1px #fffa); }
-#tags .atag { opacity: .45; background: rgba(14, 15, 10, .35); border-color: rgba(231, 176, 74, .18); box-shadow: none; transition: opacity .12s; }
+#tags .atag { opacity: .78; background: rgba(14, 15, 10, .5); border-color: rgba(231, 176, 74, .22); box-shadow: none; transition: opacity .12s; }
 #tags.solid .atag { opacity: 1; background: rgba(14, 15, 10, .66); border-color: rgba(231, 176, 74, .35); box-shadow: 0 1px 4px #0006; }
 #tags .atag.hov { opacity: 1; background: rgba(14, 15, 10, .9); border-color: var(--gold); box-shadow: 0 0 0 2px #e7b04a55, 0 2px 8px #000a; z-index: 1; }
 .labsw { margin-left: 6px; } .labsw button { gap: 6px; } .labsw button b { color: #b3ad8b; font: 600 12px var(--sfd); letter-spacing: .12em; }

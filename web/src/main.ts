@@ -1034,7 +1034,7 @@ function syncBadges() {
 const TDN_SHAPE = ['<circle cx="12" cy="12" r="10.5"/>', '<rect x="1.5" y="1.5" width="21" height="21" rx="2"/>', '<polygon points="6,1.5 18,1.5 23.5,12 18,22.5 6,22.5 0.5,12"/>', '<polygon points="0.8,2 23.2,2 12,23"/>'];
 const tagEls = new Map<number, HTMLElement>(); let tagKey = '', tagPpu = 0;
 /** Zoom, as screen pixels per map unit: below FAR only VP areas (and the one under the mouse) keep a tag; above NEAR the tags turn solid (Labels: On). */
-const TAG_FAR = 25, TAG_NEAR = 50;      // the desktop opening view (about 35) is see-through; a phone opens about 20, far
+const TAG_FAR = innerWidth < 700 ? 16 : 25, TAG_NEAR = 50;      // a phone opens about 20: names in see-through, not just the VP marks      // the desktop opening view (about 35) is see-through; a phone opens about 20, far
 function syncAreaTags() {
   const key = `${labelMode}|${g.inPlay?.join() ?? ''}`; if (key === tagKey) return; tagKey = key;
   const layer = $('#tags'); layer.innerHTML = ''; tagEls.clear(); layer.className = labelMode;
@@ -1054,12 +1054,14 @@ function placeAreaTags() {
   const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(), under = new Map<number, number>();
   { const a = target.clone().project(cam), b = target.clone().add(new THREE.Vector3(1, 0, 0)).project(cam); tagPpu = Math.hypot((b.x - a.x) * r.width, (b.y - a.y) * r.height) / 2; }
   const far = tagPpu < TAG_FAR; layer.classList.toggle('solid', labelMode === 'on' && tagPpu >= TAG_NEAR); layer.classList.toggle('far', far);      // far: VP marks only
+  let inView: number | null = null; if (tagPpu >= TAG_NEAR) { ray.setFromCamera(new THREE.Vector2(0, 0), cam); inView = areaAt(ray); }      // close up: the area in the middle of the screen keeps its tag on screen
   for (const u of g.units) if (u.area != null && tagEls.has(u.area)) { const p = pieceScreen(u.id); if (p) under.set(u.area, Math.max(under.get(u.area) ?? -1e9, p.y - r.top + p.rad * 0.8)); }
   for (const [id, d] of tagEls) {
     const c = center(id); v.set(c.x, show3d() ? REL!.h(c.x, c.z) : 0, c.z).project(cam);
     const sx = (v.x * 0.5 + 0.5) * r.width, by = under.get(id), sy = by != null ? by + 15 : (-v.y * 0.5 + 0.5) * r.height;      // a busy area: just under its lowest piece
     const hov = id === tagHover || id === selArea;
-    d.style.display = v.z < 1 && (!far || hov || d.classList.contains('vp')) ? '' : 'none'; d.style.transform = `translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px) translate(-50%, -50%)`;
+    const pin = id === inView, px = pin ? Math.min(r.width - 90, Math.max(90, sx)) : sx, py = pin ? Math.min(r.height - 30, Math.max(30, sy)) : sy;
+    d.style.display = (v.z < 1 || pin) && (!far || hov || d.classList.contains('vp')) ? '' : 'none'; d.style.transform = `translate(${px.toFixed(1)}px, ${py.toFixed(1)}px) translate(-50%, -50%)`;
     d.classList.toggle('hov', hov);
   }
 }
