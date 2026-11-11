@@ -99,7 +99,7 @@ iframe.visore{width:100%;height:70vh;border:1px solid var(--linea);background:#0
 </head>
 <body>
 <header>
-  <h1>FAB <span>3D</span> · officina dei pezzi <small class="nota" style="font-family:inherit;font-size:12px">v2026.11.10-fab3</small></h1>
+  <h1>FAB <span>3D</span> · officina dei pezzi <small class="nota" style="font-family:inherit;font-size:12px">v2026.11.11-fab4</small></h1>
   <div class="stati">
     <span class="chip" id="c-server"><i></i>Pannello</span>
     <span class="chip" id="c-gpu"><i></i>GPU</span>
@@ -274,11 +274,11 @@ iframe.visore{width:100%;height:70vh;border:1px solid var(--linea);background:#0
 // =====================================================================
 const STILE = `Low poly 3D game miniature for a historical board wargame: faceted geometric shapes with clearly visible flat polygons, flat shading, solid flat colors with no textures and no gradients, chunky toy-like proportions, realistic period-accurate uniforms, vehicles and colors, muted natural palette (no neon, no glow).`;
 const STILE_RIF = `Use the attached image ONLY as the style reference: same low poly rendering, same faceted flat-shaded look, same chunky proportions, same lighting, same light grey background, same framing. Do not copy the subject.`;
-const INQUADRA = `Framing: the whole group seen together, arranged compactly side by side along the long axis, no base, no ground, no cast shadow, slight three-quarter front view from slightly above, centered with margin around, flat light grey background (#D9D9D9), soft even studio lighting, no text, no logo, no watermark.`;
+const INQUADRA = `Framing: the single figure whole and alone, no other soldiers or vehicles, no base, no ground, no cast shadow, slight three-quarter front view from slightly above, centered with margin around, flat light grey background (#D9D9D9), soft even studio lighting, no text, no logo, no watermark.`;
 // un pezzo per tipo del catalogo (strumenti/catalogo.py): il primo è quello dello stile
 const PEZZI = CATALOGO.map(t => ({...t, tipo:"pedina", gruppo:t.volume_nome, chiave:t.gruppo, stile:t.id === "bulge_us_inf",
   prompt:`Create an image.${t.id === "bulge_us_inf" ? " " + STILE : " " + STILE_RIF}
-Subject: ${t.gruppo} of ${t.soggetto}. Together they are ONE game piece that stands for a military unit. Make the most recognisable feature of the unit big and simple.
+Subject: ${t.gruppo} of ${t.soggetto}. The game repeats this figure once per step of strength, so draw exactly one. Make its most recognisable feature big and simple.
 ${INQUADRA}`}));
 const TUTTI = PEZZI;
 
@@ -296,7 +296,7 @@ const CORREZIONI = [
 ];
 const PULISCI_PEDINA = {texture:true, base:true, senza_giocatore:true, colori:6, ruota:0, asse_z_su:false, dettaglio:2};
 const opzioniDi = pz => ({...PULISCI_PEDINA, altezza:pz.altezza, triangoli:pz.triangoli, ...(pz.tinta ? {tinta:pz.tinta, senza_giocatore:false} : {})});
-const VERSIONE_PANNELLO = "2026.11.10-fab3";
+const VERSIONE_PANNELLO = "2026.11.11-fab4";
 const AVVIA_BAT = "@echo off\nrem ==========================================================================\nrem  FAB · pezzi 3D - avvio del pannello\nrem  Doppio clic su questo file:\nrem   - chiude un eventuale pannello gia' aperto (anche di una versione vecchia)\nrem   - la prima volta installa Python (se manca) e le librerie del kit\nrem   - avvia il pannello e lo apre nel browser\nrem  Lascia aperta questa finestra mentre lavori. Per chiudere: chiudi la\nrem  finestra, oppure FERMA_PANNELLO.bat, oppure il pulsante nel pannello.\nrem ==========================================================================\nsetlocal\ncd /d \"%~dp0\"\ntitle FAB · pezzi 3D - Pannello\n\necho Chiudo un eventuale pannello gia' aperto...\ncall \"%~dp0strumenti\\ferma_porta.bat\" 8078\n\nset \"VENV_PY=%~dp0.venv\\Scripts\\python.exe\"\nif exist \"%VENV_PY%\" goto librerie\n\necho.\necho Prima configurazione: cerco Python...\nset \"PYBASE=\"\npy -3 -c \"import sys; assert sys.version_info >= (3, 10)\" >nul 2>nul && set \"PYBASE=py -3\"\nif defined PYBASE goto crea_venv\npython -c \"import sys; assert sys.version_info >= (3, 10)\" >nul 2>nul && set \"PYBASE=python\"\nif defined PYBASE goto crea_venv\n\necho Python non trovato: lo installo con winget (Python 3.12, solo per il tuo utente)...\nwinget install -e --id Python.Python.3.12 --scope user --silent --accept-package-agreements --accept-source-agreements\nset \"PYBASE=%LOCALAPPDATA%\\Programs\\Python\\Python312\\python.exe\"\nif exist \"%PYBASE%\" goto crea_venv\necho.\necho Non sono riuscito a installare Python automaticamente.\necho Installalo da https://www.python.org/downloads/ (spunta \"Add python.exe to PATH\")\necho e poi fai di nuovo doppio clic su questo file.\npause\nexit /b 1\n\n:crea_venv\necho Creo l'ambiente Python del kit nella cartella .venv ...\n%PYBASE% -m venv \"%~dp0.venv\"\nif not exist \"%VENV_PY%\" \"%PYBASE%\" -m venv \"%~dp0.venv\"\nif not exist \"%VENV_PY%\" (\n    echo Creazione dell'ambiente non riuscita.\n    pause\n    exit /b 1\n)\n\n:librerie\necho Controllo le librerie del kit...\n\"%VENV_PY%\" -m pip install --disable-pip-version-check -q --upgrade pip\n\"%VENV_PY%\" -m pip install --disable-pip-version-check -q -r \"%~dp0strumenti\\requisiti.txt\"\nif errorlevel 1 (\n    echo Installazione delle librerie non riuscita: controlla la connessione e riprova.\n    pause\n    exit /b 1\n)\n\nset \"APRI=--apri\"\n:avvio\necho.\necho Avvio il pannello. Lascia aperta questa finestra.\n\"%VENV_PY%\" \"%~dp0strumenti\\server_pannello.py\" %APRI%\nrem codice 3 = riavvio chiesto dal pannello: ricarica il codice aggiornato\nif errorlevel 3 if not errorlevel 4 (\n    set \"APRI=\"\n    echo Riavvio in corso...\n    \"%VENV_PY%\" -m pip install --disable-pip-version-check -q -r \"%~dp0strumenti\\requisiti.txt\"\n    goto avvio\n)\necho.\necho Il pannello e' stato chiuso.\npause\n";
 
 // =====================================================================
@@ -492,11 +492,12 @@ function disegnaDettaglio(){
     </div>
     <p class="nota">I colori finali vengono dal concept scelto (non dalla texture del modello, che ha ombre e sbavature). Se la figura guarda di lato o di spalle, usa «Ruota» e ripeti. Se manca un colore importante alza «Colori piatti»; se ci sono macchie abbassalo.</p>
     ${x.pulito ? `<div class="anteprima3d" id="a-pulito"><span class="etichetta">pezzo finale (la base prende il legno della fazione)</span></div>` : ""}
-  </div></section>`;
+  </div></section>
+  ${sezioneDividi(pz, x)}`;
 
   collegaDettaglio(pz, x);
   if (x.grezzo) anteprima("#a-grezzo", x.grezzo);
-  if (x.pulito) anteprima("#a-pulito", x.pulito);
+  if (x.pulito) { anteprima("#a-pulito", x.pulito); divisore(pz, x); }
   aggiornaServeServer();
 }
 function aggiornaServeServer(){ document.querySelectorAll(".serve-server").forEach(b => { if(!ONLINE) b.disabled = true; }); }
@@ -661,6 +662,99 @@ function anteprima(selettore, file){
   }, undefined, () => { box.querySelector(".etichetta").textContent += " · impossibile leggere il file"; });
   const giro = () => { if (!a.attivo) return;
     const w = box.clientWidth, h = box.clientHeight; if (renderer.domElement.width !== w * devicePixelRatio){ renderer.setPixelRatio(devicePixelRatio); renderer.setSize(w, h, false); cam.aspect = w/h; cam.updateProjectionMatrix(); }
+    ctrl.update(); renderer.render(scena, cam); requestAnimationFrame(giro); };
+  giro();
+}
+
+// =====================================================================
+// Dividi in figure: ogni triangolo del modello va a una figura o è scartato
+// =====================================================================
+const COLORI_FIG = ["#FF9A3C", "#3CC8FF", "#E05CFF", "#FFE14A", "#7CFF6B", "#FF5C7A"], SCARTO = "#3A3A3A";
+function sezioneDividi(pz, x){
+  if (!x.pulito) return "";
+  const salvata = (F().divisioni || []).some(p => stem(p) === pz.id);
+  return `<section class="passo"><header><span class="num">5</span><h3>Dividi in figure</h3>${salvata ? '<span class="fatto">salvata ✓</span>' : ""}</header><div class="corpo">
+    <p class="nota">Il gioco usa UNA figura per unità. Se il modello ne contiene più di una, dividile qui: ogni colore è una figura, il <b>grigio scuro</b> è scartato (briciole, pezzi del vicino). <b>Parte intera</b>: un clic dà tutta la parte toccata (un fucile, una torretta, un corpo) alla figura scelta. <b>Pennello</b>: trascina col tasto sinistro per dipingere i triangoli; col pennello la vista si gira col tasto destro.</p>
+    <div class="riga">
+      <label class="campo">Figure nel modello<select id="d-k">${[1,2,3,4,5,6].map(n => `<option>${n}</option>`).join("")}</select></label>
+      <button class="btn serve-server" id="d-proposta">Proposta automatica</button>
+      <label class="campo">Strumento<select id="d-strumento"><option value="parte">Parte intera</option><option value="pennello">Pennello</option></select></label>
+      <label class="campo">Pennello<input type="range" id="d-raggio" min="1" max="20" value="5" style="width:110px"></label>
+      <button class="btn" id="d-annulla">Annulla</button>
+    </div>
+    <div class="riga" id="d-figure"></div>
+    <div class="riga">
+      <label class="campo">Gira per guardare avanti (gradi)<input type="number" id="d-gradi" step="90" style="width:80px"></label>
+      <label class="campo">Altezza reale (m)<input type="number" id="d-altezza" step="0.1" style="width:80px"></label>
+      <button class="btn primario serve-server" id="d-salva">Salva e crea le figure</button>
+    </div>
+    <div class="anteprima3d" id="a-dividi" style="height:480px"><span class="etichetta">caricamento…</span></div>
+  </div></section>`;
+}
+function divisore(pz, x){
+  const box = $("#a-dividi"); if (!box || !window.THREE) return;
+  const D = {k:1, lab:null, attiva:0, storia:[], comp:null, geo:null, centri:null};
+  const renderer = new THREE.WebGLRenderer({antialias:true}); renderer.outputEncoding = THREE.sRGBEncoding; box.appendChild(renderer.domElement);
+  const scena = new THREE.Scene(); scena.background = new THREE.Color("#2B2E33").convertSRGBToLinear();
+  scena.add(new THREE.HemisphereLight("#d8deea", "#2a2622", 1.0)); const sole = new THREE.DirectionalLight("#fff", 0.7); sole.position.set(-3, 6, 5); scena.add(sole);
+  const cam = new THREE.PerspectiveCamera(35, 1, 0.001, 100), ctrl = new THREE.OrbitControls(cam, renderer.domElement); ctrl.enableDamping = true;
+  const a = {renderer, attivo:true}; ANTEPRIME.push(a);
+  let mesh = null;
+  const colora = () => { const c = D.geo.attributes.color, col = new THREE.Color();
+    for (let f = 0; f < D.lab.length; f++){ col.set(D.lab[f] < 0 ? SCARTO : COLORI_FIG[D.lab[f] % COLORI_FIG.length]).convertSRGBToLinear(); for (let v = 0; v < 3; v++) c.setXYZ(3 * f + v, col.r, col.g, col.b); }
+    c.needsUpdate = true; contatori(); };
+  const contatori = () => { const n = new Array(D.k).fill(0); let s = 0; for (const l of D.lab) l < 0 ? s++ : n[l]++;
+    $("#d-figure").innerHTML = n.map((q, j) => `<button class="btn piccolo" data-fig="${j}" aria-pressed="${D.attiva === j}" style="border-color:${COLORI_FIG[j]};${D.attiva === j ? `background:${COLORI_FIG[j]};color:#111` : ""}">Figura ${j + 1} · ${q}</button>`).join("")
+      + `<button class="btn piccolo" data-fig="-1" aria-pressed="${D.attiva === -1}" style="${D.attiva === -1 ? "background:#888;color:#111" : ""}">Scarta · ${s}</button>`;
+    document.querySelectorAll("[data-fig]").forEach(b => b.onclick = () => { D.attiva = +b.dataset.fig; contatori(); }); };
+  const usa = d => { D.k = d.k; D.lab = Int16Array.from(d.etichette); D.storia = []; D.attiva = 0; $("#d-k").value = d.k; $("#d-gradi").value = d.gradi; $("#d-altezza").value = d.altezza; colora(); };
+  const proponi = async nuova => { const r = await lancia("/api/dividi/proposta", {id: pz.id, k: nuova ? +$("#d-k").value : null, nuova}, "Divisione · " + pz.nome);
+    if (r && r.stato === "fatto" && D.geo) { if (r.risultato.divisione.etichette.length !== D.lab.length) return toast("La divisione salvata non corrisponde più al modello: premi «Proposta automatica»", 7000); usa(r.risultato.divisione); } };
+  new THREE.GLTFLoader().load(url(x.pulito), g => {
+    g.scene.updateMatrixWorld(true);
+    g.scene.traverse(o => { if (o.isMesh && (o.name === "figura" || o.material.name === "figura") && !mesh) mesh = o; });
+    if (!mesh) { box.querySelector(".etichetta").textContent = "nel modello non c'è la parte «figura»"; return; }
+    D.geo = mesh.geometry.toNonIndexed(); D.geo.applyMatrix4(mesh.matrixWorld);   // triangoli nello stesso ordine del file: è quello che legge separa_figure.py
+    const nf = D.geo.attributes.position.count / 3; D.lab = new Int16Array(nf);
+    D.geo.setAttribute("color", new THREE.BufferAttribute(new Float32Array(nf * 9), 3));
+    const mat = mesh.material.clone(); mat.vertexColors = true; const vista = new THREE.Mesh(D.geo, mat); scena.add(vista);
+    // parti intere: triangoli che condividono un vertice (stessa posizione, anche sulle cuciture della texture)
+    const P = D.geo.attributes.position, padre = new Int32Array(nf).map((_, i) => i), trova = i => { while (padre[i] !== i) i = padre[i] = padre[padre[i]]; return i; }, chi = new Map();
+    D.centri = new Float32Array(nf * 3);
+    for (let f = 0; f < nf; f++) for (let v = 0; v < 3; v++) { const i = 3 * f + v, key = `${P.getX(i).toFixed(5)},${P.getY(i).toFixed(5)},${P.getZ(i).toFixed(5)}`;
+      D.centri[3 * f] += P.getX(i) / 3; D.centri[3 * f + 1] += P.getY(i) / 3; D.centri[3 * f + 2] += P.getZ(i) / 3;
+      if (chi.has(key)) { const a2 = trova(f), b2 = trova(chi.get(key)); if (a2 !== b2) padre[a2] = b2; } else chi.set(key, f); }
+    D.comp = Int32Array.from({length: nf}, (_, f) => trova(f));
+    const b = new THREE.Box3().setFromBufferAttribute(P), c = b.getCenter(new THREE.Vector3()); D.r = b.getSize(new THREE.Vector3()).length();
+    ctrl.target.copy(c); cam.position.copy(c).add(new THREE.Vector3(0, D.r * 0.6, D.r * 1.4)); cam.near = D.r / 200; cam.far = D.r * 20; cam.updateProjectionMatrix();
+    box.querySelector(".etichetta").textContent = `${nf} triangoli · ${new Set(D.comp).size} parti`;
+    usa({k: 1, gradi: 0, altezza: 1.8, etichette: new Array(nf).fill(0)}); proponi(false);
+  }, undefined, () => { box.querySelector(".etichetta").textContent = "impossibile leggere il modello"; });
+  // clic e pennello
+  const ray = new THREE.Raycaster(), tocca = e => { const r = renderer.domElement.getBoundingClientRect();
+    ray.setFromCamera({x: (e.clientX - r.left) / r.width * 2 - 1, y: -(e.clientY - r.top) / r.height * 2 + 1}, cam); return ray.intersectObject(scena.children.find(o => o.isMesh && o.geometry === D.geo) || scena, false)[0]; };
+  let giu = null, pittura = false;
+  const pennello = h => { const rr = D.r * +$("#d-raggio").value / 200, p = h.point; let cambiato = false;
+    for (let f = 0; f < D.lab.length; f++) { const dx = D.centri[3 * f] - p.x, dy = D.centri[3 * f + 1] - p.y, dz = D.centri[3 * f + 2] - p.z; if (dx * dx + dy * dy + dz * dz <= rr * rr && D.lab[f] !== D.attiva) { D.lab[f] = D.attiva; cambiato = true; } }
+    if (cambiato) colora(); };
+  const el = renderer.domElement;
+  el.addEventListener("pointerdown", e => { if (!D.lab || e.button !== 0) return; giu = [e.clientX, e.clientY];
+    if ($("#d-strumento").value === "pennello") { D.storia.push(D.lab.slice()); pittura = true; const h = tocca(e); if (h) pennello(h); } });
+  el.addEventListener("pointermove", e => { if (pittura) { const h = tocca(e); if (h) pennello(h); } });
+  el.addEventListener("pointerup", e => { if (pittura) { pittura = false; return; }
+    if (!giu || Math.hypot(e.clientX - giu[0], e.clientY - giu[1]) > 5 || $("#d-strumento").value !== "parte") return;
+    const h = tocca(e); if (!h) return; const c = D.comp[h.faceIndex]; D.storia.push(D.lab.slice());
+    for (let f = 0; f < D.lab.length; f++) if (D.comp[f] === c) D.lab[f] = D.attiva; colora(); });
+  $("#d-strumento").onchange = () => { const p = $("#d-strumento").value === "pennello"; ctrl.mouseButtons = {LEFT: p ? null : THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: p ? THREE.MOUSE.ROTATE : THREE.MOUSE.PAN}; };
+  $("#d-annulla").onclick = () => { if (D.storia.length) { D.lab = D.storia.pop(); colora(); } };
+  $("#d-k").onchange = () => { D.k = +$("#d-k").value; for (let f = 0; f < D.lab.length; f++) if (D.lab[f] >= D.k) D.lab[f] = D.k - 1; if (D.attiva >= D.k) D.attiva = 0; colora(); };
+  $("#d-proposta").onclick = () => proponi(true);
+  $("#d-salva").onclick = async () => {
+    const r = await lancia("/api/dividi/salva", {id: pz.id, k: D.k, gradi: +$("#d-gradi").value || 0, altezza: +$("#d-altezza").value || 1.8, etichette: Array.from(D.lab)}, "Figure · " + pz.nome);
+    if (r && r.stato === "fatto") toast("Figure create: " + D.k);
+  };
+  const giro = () => { if (!a.attivo) return;
+    const w = box.clientWidth, h = box.clientHeight; if (renderer.domElement.width !== Math.floor(w * devicePixelRatio)){ renderer.setPixelRatio(devicePixelRatio); renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
     ctrl.update(); renderer.render(scena, cam); requestAnimationFrame(giro); };
   giro();
 }

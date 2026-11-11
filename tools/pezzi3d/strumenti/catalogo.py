@@ -36,10 +36,9 @@ NOME_CLASSE = {"inf": "infantry", "armor": "armour", "mech": "mechanised", "airb
                "recon": "recon", "garrison": "garrison", "ghost": "decoy", "motorized_inf": "motorised infantry", "mountain_inf": "Alpini"}
 
 # classe del blocco -> nome corto e composizione (quanti pezzi stanno sulla base)
-GRUPPO = {"inf": "a squad of three", "armor": "two tanks, one behind the other", "mech": "one armoured half-track with two infantrymen walking beside it",
-          "airborne": "a squad of three", "cavalry": "two light vehicles, one behind the other", "mountain": "a squad of three",
-          "recon": "two armoured cars, one behind the other", "garrison": "a squad of three", "ghost": "one dummy tank",
-          "motorized_inf": "one truck with two infantrymen beside it", "mountain_inf": "a squad of three"}
+GRUPPO = {c: ("one single vehicle" if c in ("armor", "cavalry", "recon", "ghost") else "one single vehicle (no soldiers)" if c in ("mech", "motorized_inf") else "one single soldier")
+          for c in ("inf", "armor", "mech", "airborne", "cavalry", "mountain", "recon", "garrison", "ghost", "motorized_inf", "mountain_inf")}
+# il gioco mostra una figura per passo di forza e le schiera da solo: a Meshy si chiede UNA figura (i gruppi di The Bulge sono stati tagliati con separa_figure.py)
 
 # (volume, fazione, classe) -> soggetto del prompt: equipaggiamento reale dell'epoca
 S = {
@@ -82,15 +81,7 @@ ALTEZZA = {"armor": 0.55, "mech": 0.6, "cavalry": 0.45, "recon": 0.45, "motorize
 ALTEZZA_FANTE = 0.8
 TRIANGOLI = 5000           # con la texture: Meshy a ~4000 poligoni tiene bene tre soldati (480 era troppo poco)
 
-# il pezzo "nascosto": sostituisce ogni blocco che il giocatore non può vedere (il retro del blocco).
-# Uno solo per tutti: il telo è in verde acqua segnaposto e diventa colore_fazione, così il gioco lo tinge
-# col legno della fazione (grigio tedesco, verde US, arancio italiano...).
-TINTA = "#16A6A0"
-NASCOSTO = {"id": "hidden", "volume": "tutti", "volume_nome": "Tutti i volumi", "fazione": "tutte", "classe": "hidden",
-            "legno": "#8e9296", "nome": "Hidden unit", "gruppo": "one anonymous covered load",
-            "soggetto": "a military canvas tarpaulin draped over an unidentifiable low pile of crates and equipment, tied down with ropes, "
-                        "nothing recognisable underneath, no weapons showing. The tarpaulin is solid teal (#16A6A0), the ropes dark brown",
-            "altezza": 0.6, "triangoli": 2000, "tinta": TINTA, "blocchi": []}
+# le unità che il giocatore non vede restano blocchi di legno (scelta del proprietario, 11/11/2026): nessun pezzo "nascosto"
 
 
 def tipo_di(vol, u):
@@ -119,7 +110,7 @@ def costruisci():
                 "gruppo": GRUPPO[classe], "soggetto": S[chiave], "altezza": ALTEZZA.get(classe, ALTEZZA_FANTE),
                 "triangoli": TRIANGOLI, "blocchi": []})
             t["blocchi"].append(u["id"])
-    return list(tipi.values()) + [NASCOSTO], saltati
+    return list(tipi.values()), saltati
 
 
 def main():

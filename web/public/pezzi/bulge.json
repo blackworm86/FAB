@@ -1,0 +1,161 @@
+{
+ "tipi": {
+  "bulge_german_armor": {
+   "figure": [
+    "bulge_german_armor_0.glb",
+    "bulge_german_armor_1.glb"
+   ],
+   "veicolo": true
+  },
+  "bulge_german_mech": {
+   "figure": [
+    "bulge_german_mech_0.glb"
+   ],
+   "veicolo": true
+  },
+  "bulge_german_inf": {
+   "figure": [
+    "bulge_german_inf_0.glb",
+    "bulge_german_inf_1.glb",
+    "bulge_german_inf_2.glb"
+   ],
+   "veicolo": false
+  },
+  "bulge_german_airborne": {
+   "figure": [
+    "bulge_german_airborne_0.glb",
+    "bulge_german_airborne_1.glb",
+    "bulge_german_airborne_2.glb"
+   ],
+   "veicolo": false
+  },
+  "bulge_german_mountain": {
+   "figure": [
+    "bulge_german_mountain_0.glb",
+    "bulge_german_mountain_1.glb",
+    "bulge_german_mountain_2.glb"
+   ],
+   "veicolo": false
+  },
+  "bulge_us_inf": {
+   "figure": [
+    "bulge_us_inf_0.glb",
+    "bulge_us_inf_1.glb",
+    "bulge_us_inf_2.glb"
+   ],
+   "veicolo": false
+  },
+  "bulge_us_cavalry": {
+   "figure": [
+    "bulge_us_cavalry_0.glb",
+    "bulge_us_cavalry_1.glb"
+   ],
+   "veicolo": true
+  },
+  "bulge_us_armor": {
+   "figure": [
+    "bulge_us_armor_0.glb",
+    "bulge_us_armor_1.glb"
+   ],
+   "veicolo": true
+  },
+  "bulge_us_airborne": {
+   "figure": [
+    "bulge_us_airborne_0.glb",
+    "bulge_us_airborne_1.glb",
+    "bulge_us_airborne_2.glb"
+   ],
+   "veicolo": false
+  },
+  "bulge_british_inf": {
+   "figure": [
+    "bulge_british_inf_0.glb",
+    "bulge_british_inf_1.glb",
+    "bulge_british_inf_2.glb"
+   ],
+   "veicolo": false
+  },
+  "bulge_british_armor": {
+   "figure": [
+    "bulge_british_armor_0.glb",
+    "bulge_british_armor_1.glb"
+   ],
+   "veicolo": true
+  }
+ },
+ "blocchi": {
+  "B01": "bulge_german_armor",
+  "B02": "bulge_german_armor",
+  "B03": "bulge_german_armor",
+  "B08": "bulge_german_armor",
+  "B09": "bulge_german_armor",
+  "B15": "bulge_german_armor",
+  "B16": "bulge_german_armor",
+  "B17": "bulge_german_armor",
+  "B18": "bulge_german_armor",
+  "B23": "bulge_german_armor",
+  "B31": "bulge_german_armor",
+  "B32": "bulge_german_armor",
+  "B04": "bulge_german_mech",
+  "B11": "bulge_german_mech",
+  "B13": "bulge_german_mech",
+  "B30": "bulge_german_mech",
+  "B33": "bulge_german_mech",
+  "B05": "bulge_german_inf",
+  "B06": "bulge_german_inf",
+  "B10": "bulge_german_inf",
+  "B12": "bulge_german_inf",
+  "B14": "bulge_german_inf",
+  "B19": "bulge_german_inf",
+  "B20": "bulge_german_inf",
+  "B21": "bulge_german_inf",
+  "B22": "bulge_german_inf",
+  "B24": "bulge_german_inf",
+  "B25": "bulge_german_inf",
+  "B26": "bulge_german_inf",
+  "B27": "bulge_german_inf",
+  "B29": "bulge_german_inf",
+  "B07": "bulge_german_airborne",
+  "B28": "bulge_german_airborne",
+  "B34": "bulge_german_mountain",
+  "B35": "bulge_us_inf",
+  "B36": "bulge_us_inf",
+  "B37": "bulge_us_inf",
+  "B38": "bulge_us_inf",
+  "B39": "bulge_us_inf",
+  "B40": "bulge_us_inf",
+  "B41": "bulge_us_inf",
+  "B48": "bulge_us_inf",
+  "B49": "bulge_us_inf",
+  "B50": "bulge_us_inf",
+  "B55": "bulge_us_inf",
+  "B56": "bulge_us_inf",
+  "B61": "bulge_us_inf",
+  "B62": "bulge_us_inf",
+  "B65": "bulge_us_inf",
+  "B70": "bulge_us_inf",
+  "B71": "bulge_us_inf",
+  "B42": "bulge_us_cavalry",
+  "B43": "bulge_us_cavalry",
+  "B57": "bulge_us_cavalry",
+  "B64": "bulge_us_cavalry",
+  "B44": "bulge_us_armor",
+  "B45": "bulge_us_armor",
+  "B46": "bulge_us_armor",
+  "B47": "bulge_us_armor",
+  "B53": "bulge_us_armor",
+  "B58": "bulge_us_armor",
+  "B59": "bulge_us_armor",
+  "B60": "bulge_us_armor",
+  "B63": "bulge_us_armor",
+  "B66": "bulge_us_armor",
+  "B69": "bulge_us_armor",
+  "B51": "bulge_us_airborne",
+  "B52": "bulge_us_airborne",
+  "B54": "bulge_us_airborne",
+  "B67": "bulge_british_inf",
+  "B68": "bulge_british_inf",
+  "B73": "bulge_british_inf",
+  "B72": "bulge_british_armor"
+ }
+}
