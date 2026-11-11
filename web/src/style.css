@@ -1212,3 +1212,4 @@ body:has(#ui .modal) #leaders, body:has(#ui .modal) #fx, body:has(#rules) #leade
 /* zoomed far out: a VP area shows only its VP marks; the area under the mouse (or selected) keeps its whole tag */
 #tags.far .atag:not(.hov) { background: none; border-color: transparent; box-shadow: none; opacity: .9; padding: 0; gap: 1px; }
 #tags.far .atag:not(.hov) .sw, #tags.far .atag:not(.hov) .nm { display: none; }
+.sheet.menu > h3, .sheet.menu > .tabs { flex: none; }      /* a long tab (the log) scrolls inside; the title and tabs never shrink away */

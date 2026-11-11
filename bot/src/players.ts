@@ -9,6 +9,7 @@ const noisy = (base: Player, eps: number, seed: number): Player => { const r = r
 export const PLAYERS: Record<string, (seed: number) => Player> = {
   random: (seed) => randomPlayer(seed),
   doctrine: () => doctrinePlayer(),
+  'doctrine-v2': () => doctrinePlayer({ ...DEFAULT_STYLE, abortV1: true }),      // before the abort fix (12 November 2026)
   'doctrine-v1': () => doctrinePlayer({ ...DEFAULT_STYLE, v1: true }),      // before the attack orders (11 November 2026)
   commander: (seed) => commanderPlayer(seed, 2000),
   'commander-6s': (seed) => commanderPlayer(seed, 6000),     // three times the thinking time: does more thinking help? (levels, stage 6)
