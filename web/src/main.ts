@@ -1206,7 +1206,7 @@ function rollStage(b: E.Battle) {
   const next = structuredClone(g), before = snap(g); E.roll_step(next, next.battle!); rollFx = []; noteFx(before, next, true); rollNoted = true;
   try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* storage off */ } void push(next);          // the result is stored at once; the board shows it when the dice land
   const fresh = next.battle!.rolls.slice(n0); heldNext = next;
-  rollView = { morale: stage === 'exploit', title: `${nm(side)} ${STAGE_NAME[stage]}`, pos: null, groups: fresh.map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : first(side) ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: fl.find((f) => f.who === r.who)?.parts ?? [] })) };
+  rollView = { remote: labActing, morale: stage === 'exploit', title: `${nm(side)} ${STAGE_NAME[stage]}`, pos: null, groups: fresh.map((r) => ({ label: r.who, col: r.kind === 'arty' ? 's' : first(side) ? 'k' : 'w', sn: r.sn, dice: r.dice, hits: r.hits, parts: fl.find((f) => f.who === r.who)?.parts ?? [] })) };
   if (!rollView.groups.length) { rollView = null; commitRoll(); return; }
   refresh();
   const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block';
