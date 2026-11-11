@@ -1115,7 +1115,6 @@ body:has(#ui .modal) #leaders, body:has(#ui .modal) #fx, body:has(#rules) #leade
 #ui .modal .pcgrid { gap: 8px !important; } #ui .modal .pcgrid .pc { width: 72px !important; height: 72px !important; }
 .log .ll, .feed .fl2 { display: flex; align-items: baseline; gap: 2px; } .stag { flex: none; } .lt { display: block; min-width: 0; } .lt::first-letter { text-transform: uppercase; }      /* log lines start with a capital (engine lines are written lower-case) */
 .maplegend .ar { font: 600 15px var(--sf); letter-spacing: -2px; }
-@media (max-width: 700px) { .sbx { top: 112px; max-height: calc(100% - 120px); } }      /* phones: the sandbox panel opens under the Layer bar and map tools, not over them */
 /* the Game menu (10 Nov mockup): as tall as its content, each setting one row (name left, control right), two columns on desktop */
 .sheet.menu { height: auto !important; }
 @media (min-width: 701px) { .modal:has(> .sheet.menu) { place-items: start center; padding-top: 8vh; } .sheet.menu { width: min(640px, 94vw); max-height: 84vh; } }      /* anchored at the top: tabs and close stay put while the height changes */
@@ -1158,3 +1157,39 @@ body:has(#ui .modal) #leaders, body:has(#ui .modal) #fx, body:has(#rules) #leade
 .pstrip b { display: block; font: 700 20px var(--sfd); } .pstrip small { font: 600 11px var(--sfd); letter-spacing: .1em; color: #9a9c7c; text-transform: uppercase; } .pstrip button.on { background: #e7b04a1f; } .pstrip button.on b { color: var(--gold); }
 .pcst { position: relative; display: inline-block; } .pcst .cnt { position: absolute; right: -4px; top: -6px; min-width: 24px; padding: 1px 5px; border-radius: 10px; background: var(--gold); color: #0b0d08; font: 700 12px var(--sfd); text-align: center; pointer-events: none; }
 .sheet.pieces h4 { display: flex; justify-content: space-between; align-items: baseline; }
+/* sandbox panel (11 Nov mockup): on the right of the map (a bottom sheet on phones), header with game, scenario, Reset and close; tabs like the Game menu */
+.sbx { left: auto !important; right: 8px; top: 8px !important; width: min(400px, calc(100vw - 16px)) !important; max-height: calc(100% - 16px) !important; display: flex; flex-direction: column; overflow: hidden !important; padding: 0 !important; }
+.sbx .sbhead { display: flex; align-items: center; gap: 6px; padding: 8px 10px; margin: 0; border-bottom: 1px solid #8d906555; }
+.sbx .sbhead > b { font: 700 16px var(--sfd); letter-spacing: .08em; color: var(--gold); text-transform: uppercase; flex: none; }
+.sbx .sbhead select { flex: 1; min-width: 0; } .sbx .sbhead .sbreset { display: inline-flex; align-items: center; gap: 5px; flex: none; }
+.sbx .sbask { margin: 8px 10px 0; }
+.sbx .tabs { display: flex; gap: 0; margin: 0; padding: 0 10px; border-bottom: 1px solid #8d906555; }
+.sbx .tabs button { flex: 1; background: none !important; color: #9a9c7c !important; border: 0; border-bottom: 2px solid transparent; padding: 8px 0; font: 600 13px var(--sfd); letter-spacing: .1em; text-transform: uppercase; }
+.sbx .tabs button.on { color: var(--gold) !important; border-bottom-color: var(--gold); }
+.sbx .sbbody { flex: 1; min-height: 0; overflow: auto; padding: 8px 10px 10px; overscroll-behavior: contain; }
+.sbx h4 { margin: 10px 0 2px; font: 700 11px var(--sfd); letter-spacing: .14em; color: #9a9c7c; }
+.sbjump { display: flex; gap: 6px; align-items: center; } .sbjump select { flex: 1; min-width: 0; }
+.sbdice { width: 84px; flex: none; }
+/* the picked piece: picture, name, what the next map tap does, steps; its states as on/off tags */
+.sbx .lbd { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid #8d906566; } .sbx .lbd.armed { border-color: var(--gold); background: #e7b04a14; }
+.sbx .lbd > .t { flex: 1; min-width: 0; } .sbx .lbd > .t b { display: block; font: 600 15px var(--sfd); } .sbx .lbd > .t small { color: #9a9c7c; font-size: 11.5px; }
+.sbx .sbgo { display: flex; align-items: center; gap: 4px; margin-top: 3px; color: var(--gold); font: 600 12px var(--sfd); letter-spacing: .06em; text-transform: uppercase; } .sbx .sbgo .ic { width: 14px; height: 14px; }
+.sbx .sbarm { display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; min-height: 30px; padding: 0 8px; }
+.sbx .step { display: flex; align-items: center; gap: 4px; flex: none; } .sbx .step b { font: 700 15px var(--sfd); min-width: 30px; text-align: center; }
+.lbtags { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 2px; }
+.lbtags button { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 0 8px; font: 600 11.5px var(--sfd); letter-spacing: .06em; text-transform: uppercase; color: #9a9c7c; border: 1px solid #8d906588; background: none; }
+.lbtags button.on { color: var(--gold); border-color: var(--gold); background: #e7b04a14; } .lbtags .ic { width: 13px; height: 13px; }
+.sbx .lbf { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 6px 0; } .sbx .lbf select { flex: 1; min-width: 110px; }
+.sbx .seg button { border: 0 !important; border-radius: 0 !important; margin: 0 !important; min-height: 32px; padding: 0 9px; font: 600 12px var(--sfd); letter-spacing: .06em; text-transform: uppercase; background: none; color: var(--ink); }
+.sbx .seg button.on { background: var(--gold); color: #0b0d08; }
+@media (max-width: 700px) {
+  .sbx { left: 0 !important; right: 0 !important; top: auto !important; bottom: 0; width: 100% !important; max-height: 58% !important; border-radius: 14px 14px 0 0; }      /* phones: a bottom sheet, the map stays in view above it */
+  .sbx .sbhead .sbreset span { display: none; } .sbx .sbhead button { min-height: 44px; min-width: 44px; }
+  .sbx .seg button, .lbtags button, .sbx .sbarm { min-height: 44px; } .sbx .tabs button { min-height: 44px; }
+}
+.sbx .lbd > .b3 { --s: 46px; margin: 4px 10px 4px 2px; flex: none; } .sbx .lbd > img.cb { width: 56px; height: 56px; }
+.sbx .lbd > .step { flex: none !important; } .sbx .lbd > .t { flex: 1 1 140px !important; } .sbx .lbd > .t small { margin: 0; }
+.sbx .sbhead { flex-wrap: wrap; } .sbx .sbhead > b { flex: 1; } .sbx .sbhead select { order: 5; flex: 1 1 40%; }      /* game and scenario on a second row, wide enough to read */
+.sbx .sbhead::after { content: ""; order: 4; flex-basis: 100%; }
+.sbx .lbd { flex-wrap: wrap; } .sbx .lbd > .t { flex: 1 1 200px !important; } .sbx .lbd > .step { margin-left: auto; }
+.sbx .sbgo { display: block; } .sbx .sbgo .ic { vertical-align: -2px; margin-right: 4px; }
