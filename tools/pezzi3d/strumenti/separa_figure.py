@@ -38,8 +38,15 @@ TIPI = {
     "bulge_german_mountain": (3, 0, 0, 1.8, "tutte"), "bulge_us_airborne": (3, 0, 0, 1.8, "tutte"),
     "bulge_us_armor": (2, 0, 0, 2.97, "tutte"), "bulge_us_cavalry": (2, 0, 0, 2.3, "tutte"),
     "bulge_us_inf": (3, 0, 0, 1.8, "tutte"),
+    # Golan '73: una figura per file; i veicoli arrivano col muso verso -X (90 gradi li girano verso +Z); altezze reali
+    "golan73_israeli_inf": (1, 0, 0, 1.8, "tutte"), "golan73_israeli_airborne": (1, 0, 0, 1.8, "tutte"),
+    "golan73_israeli_armor": (1, 0, 90, 3.0, "tutte"), "golan73_israeli_mech": (1, 0, 90, 2.26, "tutte"),    # Centurion, M3 semicingolato
+    "golan73_israeli_ghost": (1, 0, 90, 3.0, "tutte"),                                                        # Centurion finto
+    "golan73_syrian_inf": (1, 0, 0, 1.8, "tutte"), "golan73_syrian_airborne": (1, 0, 0, 1.8, "tutte"),
+    "golan73_syrian_armor": (1, 0, 90, 2.35, "tutte"), "golan73_syrian_mech": (1, 0, 90, 2.07, "tutte"),     # T-55, BMP-1
+    "golan73_syrian_recon": (1, 0, 90, 2.3, "tutte"),                                                         # BRDM-2
 }
-VEICOLI = ("armor", "cavalry", "mech", "recon", "motorized")
+VEICOLI = ("armor", "cavalry", "mech", "recon", "motorized", "ghost")
 veicolo = lambda tipo: any(v in tipo for v in VEICOLI)
 
 

@@ -38,13 +38,14 @@ Each type has a prompt subject with period equipment (Panther, Sherman, Centurio
 
 Licence: TRELLIS code is MIT but some modules it uses are research-only; check before any commercial use (the original kit notes this).
 
-## 4. In the game (The Bulge: built 11 November 2026)
+## 4. In the game (The Bulge, 11 November 2026; Golan '73, 11 November 2026)
 
 Mockup approved by the owner: https://claude.ai/artifact/SpjUQ4nNP3885wy4kxiTop. Code: `web/src/troops.ts` (loading, placement, look), wired in `drawPieces()` in `web/src/main.ts`; tests `web/test/troops.test.ts`. Switch: the View window, Board > **Units: Blocks / Figures**, separate from Map 2D / 3D, so any combination works (Figures by default; blocks in the tutorials, whose texts talk about blocks). Any unit without figures, and every unit while the figures load, is the usual block.
 
 - **One figure per unit** (owner, 11 November 2026, after trying one per step: crowded areas made them too small). A unit shows one of its type's figures, fixed per unit (`variant()`), so neighbouring units of one type differ. Strength is the pips.
 - **One scale over the whole map**: `SCALE` in `troops.ts` (1.5× the figures' 0.18 units per metre: a Sherman 1.6 long, about a block). Infantry is drawn 3× larger (`INFANTRY`, owner's choice: a lone soldier at true scale is a speck), so a soldier stands about as tall as a tank. No resizing by area. The player picks the overall figure size in the View window (Figure size: Small 1×, Medium 1.5× (default), Large 2×, Huge 2.5×; `setZoom` in `troops.ts`); the layout makes room for it.
-- **Facing**: Germans west, Allies east; in a battle or contested area the two sides' rows face each other (owner, 11 November 2026).
+- **Facing**: each side faces the enemy's map edge (`FACING` in `troops.ts`): The Bulge, Germans west and Allies east; Golan '73 (Syria at the top of the map), Syrians down the map and Israelis up it. In a battle or contested area the two sides' rows face each other.
+- **Golan '73** (owner's figures, one per type): turned to face +z and set to real heights by the `TIPI` rows in `separa_figure.py` (Centurion 3.0 m, T-55 2.35, BMP-1 2.07, BRDM-2 2.3, M3 half-track 2.26, soldiers 1.8); the ghost (a dummy Centurion) counts as a vehicle. Volumes with figures: `FIG_VOLS` in `main.ts`.
 - **Placement**: the game's own block layout (`drawPieces`), given each figure's real footprint (`radius()`), so a Panther gets more room than a soldier; crowded contested rows space by the widest figure.
 - **Side colour**: a rounded ring round the unit's figures in its block wood colour, with a faint fill (the owner's pick of four options). Selected or battle point unit: the ring is brass.
 - **Strength**: the pips float above the unit as one strip that always faces the camera, coloured by quality at the current strength (red elite with a white ring, black veteran with a white ring, white green with a black ring).

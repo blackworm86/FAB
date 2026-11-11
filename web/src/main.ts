@@ -269,8 +269,10 @@ const woodOf = (u: E.Unit) => VOL.wood[VOL.cssSide(u)] ?? (VOL.cssSide(u) === 'b
 /** 3D figures in place of the blocks (The Bulge; Settings > Screen). Until the figures have loaded, and for any unit without figures, the block is drawn. */
 let troopsOn = (() => { try { return localStorage.getItem('fab-troops') !== '0'; } catch { return true; } })(), troopsReady = false, troopsAsked = false;
 let troopSize = (() => { try { return +(localStorage.getItem('fab-troop-size') ?? '') || 1.5; } catch { return 1.5; } })(); setZoom(troopSize);
+/** Volumes with figures in web/public/pezzi (<volume>.json). */
+const FIG_VOLS = ['bulge', 'golan73'];
 function wantTroops() {
-  if (!troopsOn || TUTORIAL || VOL.id !== 'bulge') return false;
+  if (!troopsOn || TUTORIAL || !FIG_VOLS.includes(VOL.id)) return false;
   if (!troopsAsked) { troopsAsked = true; void loadTroops(VOL.id).then((ok) => { troopsReady = ok; if (ok) refresh(); }).catch(() => { /* no figures: blocks stay */ }); }
   return troopsReady;
 }
@@ -1773,9 +1775,9 @@ function layersHtml() {
   const lay = (k: 'numbers' | 'tdn' | 'vp' | 'names', title: string, sub: string) => srow(title, sub, swtch(layers[k], () => { layers[k] = !layers[k]; relayer(); }, title));
   const map = VOL.art.relief ? srow('Map', VOL.art.reliefName, `<span class="seg">${chip('2D', !map3d, () => setMap3d(false), 'The printed board, flat')}${chip('3D', map3d, () => setMap3d(true), VOL.art.reliefName)}</span>`) : '';
   const setTroops = (on: boolean) => { troopsOn = on; try { localStorage.setItem('fab-troops', on ? '1' : '0'); } catch { /* private mode */ } refresh(); };
-  const units = VOL.id === 'bulge' ? srow('Units', 'on either map', `<span class="seg">${chip('Blocks', !troopsOn, () => setTroops(false), 'The wooden blocks')}${chip('Figures', troopsOn, () => setTroops(true), 'Soldiers and tanks, one per unit')}</span>`) : '';
+  const units = FIG_VOLS.includes(VOL.id) ? srow('Units', 'on either map', `<span class="seg">${chip('Blocks', !troopsOn, () => setTroops(false), 'The wooden blocks')}${chip('Figures', troopsOn, () => setTroops(true), 'Soldiers and tanks, one per unit')}</span>`) : '';
   const setSize = (z: number) => { troopSize = z; setZoom(z); try { localStorage.setItem('fab-troop-size', String(z)); } catch { /* private mode */ } refresh(); };
-  const size = VOL.id === 'bulge' && troopsOn ? srow('Figure size', '', `<span class="seg">${([[1, 'Small'], [1.5, 'Medium'], [2, 'Large'], [2.5, 'Huge']] as const).map(([z, w]) => chip(w, troopSize === z, () => setSize(z), `Figures ${z}×`)).join('')}</span>`) : '';
+  const size = FIG_VOLS.includes(VOL.id) && troopsOn ? srow('Figure size', '', `<span class="seg">${([[1, 'Small'], [1.5, 'Medium'], [2, 'Large'], [2.5, 'Huge']] as const).map(([z, w]) => chip(w, troopSize === z, () => setSize(z), `Figures ${z}×`)).join('')}</span>`) : '';
   return `<div class="modal"><div class="sheet menu view"><h3><span class="grow">${ico('eye')} View</span><button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
     <div class="mbody"><div class="sgrid"><div><h4>Printed on the map</h4>${lay('numbers', 'Area numbers', 'and entry letters')}${lay('tdn', 'TDN', 'terrain defence')}</div><div><h4 class="ghost" aria-hidden="true">&nbsp;</h4>${lay('vp', 'Victory points', '')}${lay('names', 'Place names', '')}</div></div>
     <h4>Board</h4><div class="sgrid"><div>${map || srow('Camera', '', resetBtn())}${units}${size}</div><div>${map ? srow('Camera', '', resetBtn()) : ''}</div></div></div></div></div>`;

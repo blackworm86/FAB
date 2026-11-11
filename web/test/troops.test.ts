@@ -9,9 +9,10 @@ describe('troops', () => {
     expect(seen.size).toBeGreaterThan(1);
     for (const id of ['B01', 'B44', 'X']) { expect(variant(id, 2)).toBeGreaterThanOrEqual(0); expect(variant(id, 2)).toBeLessThan(2); }
   });
-  it('Germans face west, the Allies east', () => {
+  it('each side faces the enemy edge: Germans west, Allies east; Syrians down the map, Israelis up', () => {
     const dir = (side: string) => new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yawOf(side));
     expect(dir('german').x).toBeCloseTo(-1); expect(dir('allied').x).toBeCloseTo(1);
+    expect(dir('syrian').z).toBeCloseTo(1); expect(dir('israeli').z).toBeCloseTo(-1);              // Golan: Syria at the top of the map, Israel at the bottom
   });
   it('the layout makes room for the whole figure', () => {
     expect(radius({ size: new THREE.Vector3(0.8, 0.8, 2.25) })).toBeGreaterThan(1.125);       // a Panther

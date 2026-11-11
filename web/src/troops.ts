@@ -37,8 +37,10 @@ export const troopOf = (unitId: string) => troops.get(byUnit[unitId]) ?? null;
 
 /** Which of its type's figures a unit shows: fixed per unit, so neighbouring units of one type look different. */
 export const variant = (unitId: string, count: number) => [...unitId].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % count;
-/** Germans face west, everyone else east (yaw about Y; a figure is modelled facing +z). */
-export const yawOf = (side: string) => (side === 'german' ? -Math.PI / 2 : Math.PI / 2);
+/** Each side faces the enemy's edge of the map (yaw about Y; a figure is modelled facing +z). The Bulge: Germans west, Allies east;
+ * Golan '73 (Syria at the top of the map, Israel at the bottom): Syrians down the map, Israelis up it. */
+const FACING: Record<string, number> = { german: -Math.PI / 2, allied: Math.PI / 2, syrian: 0, israeli: Math.PI };
+export const yawOf = (side: string) => FACING[side] ?? 0;
 /** Footprint radius of a unit's figure, for the block layout (never less than a small disc, so pips and ring stay clear of the next unit). */
 export const radius = (t: Pick<Troop, 'size'>) => Math.max(0.55, Math.max(t.size.x, t.size.z) * zoom / 2 + 0.12);
 
