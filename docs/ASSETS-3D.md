@@ -44,7 +44,7 @@ Mockup approved by the owner: https://claude.ai/artifact/SpjUQ4nNP3885wy4kxiTop.
 
 - **One figure per unit** (owner, 11 November 2026, after trying one per step: crowded areas made them too small). A unit shows one of its type's figures, fixed per unit (`variant()`), so neighbouring units of one type differ. Strength is the pips.
 - **One scale over the whole map**: `SCALE` in `troops.ts` (1.5× the figures' 0.18 units per metre: a Sherman 1.6 long, about a block). Infantry is drawn 3× larger (`INFANTRY`, owner's choice: a lone soldier at true scale is a speck), so a soldier stands about as tall as a tank. No resizing by area. The player picks the overall figure size in the View window (Figure size: Small 1×, Medium 1.5× (default), Large 2×, Huge 2.5×; `setZoom` in `troops.ts`); the layout makes room for it.
-- **Facing**: Germans west, Allies east, everywhere.
+- **Facing**: Germans west, Allies east; in a battle or contested area the two sides' rows face each other (owner, 11 November 2026).
 - **Placement**: the game's own block layout (`drawPieces`), given each figure's real footprint (`radius()`), so a Panther gets more room than a soldier; crowded contested rows space by the widest figure.
 - **Side colour**: a rounded ring round the unit's figures in its block wood colour, with a faint fill (the owner's pick of four options). Selected or battle point unit: the ring is brass.
 - **Strength**: the pips float above the unit as one strip that always faces the camera, coloured by quality at the current strength (red elite with a white ring, black veteran with a white ring, white green with a black ring).

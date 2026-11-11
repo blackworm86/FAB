@@ -434,7 +434,8 @@ function drawPieces() {
     if (lab.some((l) => lay.spots.some((p) => Math.hypot(p.x - l.x, p.z - l.z) < l.r + 0.7))) coveredLabels.add(a.id);          // no room: the area's number and name ride on a tag above
     order.forEach((u, n) => {
       const hid = faceDown(u), t = troops && !hid ? troopOf(u.id) : null, sel = u.id === selUnit || (!!g.battle && !hid && (u.id === g.battle.attPoint || u.id === g.battle.defPoint));
-      const m = t ? troopGroup(t, u.id, u.side, woodOf(u), u.str, u.q[u.str - 1] ?? 'veteran', sel): block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
+      // in a battle or contested area the two rows face each other (the near side's row is toward +z); elsewhere Germans face west, the Allies east
+      const m = t ? troopGroup(t, u.id, u.side, woodOf(u), u.str, u.q[u.str - 1] ?? 'veteran', sel, cont || g.battle?.area === a.id ? (near(u.side) ? Math.PI : 0) : undefined) : block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
       const flat = !t && cont && !hid && !u.garrison && u.up === a.id;                                                     // revealed blocks lie flat, label up, while the area is contested
       m.position.x = p.x; m.position.z = p.z;
       if (flat) { m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, viewRot(), 0); m.position.y = 0.4; }

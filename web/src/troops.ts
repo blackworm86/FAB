@@ -69,8 +69,9 @@ function ring(w: number, d: number, color: THREE.ColorRepresentation, selected: 
   return g;
 }
 /** A unit drawn as its figure, centred on the group's origin (the spot the block would take). */
-export function troopGroup(t: Troop, unitId: string, side: string, color: THREE.ColorRepresentation, n: number, quality: string, selected: boolean) {
-  const g = new THREE.Group(), f = t.figs[variant(unitId, t.figs.length)].clone(true), yaw = yawOf(side);
+/** yaw: overrides the side's usual facing (in battle the two sides face each other). */
+export function troopGroup(t: Troop, unitId: string, side: string, color: THREE.ColorRepresentation, n: number, quality: string, selected: boolean, yaw = yawOf(side)) {
+  const g = new THREE.Group(), f = t.figs[variant(unitId, t.figs.length)].clone(true);
   f.rotation.y = yaw; f.scale.multiplyScalar(zoom); g.add(f);
   const across = Math.abs(Math.sin(yaw)) > 0.5, sz = t.size.clone().multiplyScalar(zoom);   // facing east or west: the figure's length lies along x
   g.add(ring((across ? sz.z : sz.x) + 0.3, (across ? sz.x : sz.z) + 0.3, color, selected));
