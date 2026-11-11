@@ -78,16 +78,16 @@ function pips(n: number, q: string) {
   }
   const s = new THREE.Sprite(m); s.scale.set(0.3 * n, 0.3, 1); s.renderOrder = 3; return s;
 }
-/** A rounded rectangle round the figure's footprint (w along x, d along z), with a faint fill, in the side's colour. */
+/** A rounded rectangle round the figure's footprint (w along x, d along z), filled with the side's colour; the edge turns brass when selected. */
 function ring(w: number, d: number, color: THREE.ColorRepresentation, selected: boolean) {
   const rr = Math.min(w, d) / 2, rect = (W: number, D: number, R: number) => { const s = new THREE.Shape(), x = W / 2, z = D / 2;
     s.moveTo(-x + R, -z); s.lineTo(x - R, -z); s.quadraticCurveTo(x, -z, x, -z + R); s.lineTo(x, z - R); s.quadraticCurveTo(x, z, x - R, z);
     s.lineTo(-x + R, z); s.quadraticCurveTo(-x, z, -x, z - R); s.lineTo(-x, -z + R); s.quadraticCurveTo(-x, -z, -x + R, -z); return s; };
-  const k = selected ? 0.13 : 0.07, outer = rect(w, d, rr), inner = rect(w - 2 * k, d - 2 * k, Math.max(0.01, rr - k));
+  const k = selected ? 0.14 : 0.1, outer = rect(w, d, rr), inner = rect(w - 2 * k, d - 2 * k, Math.max(0.01, rr - k));
   outer.holes.push(new THREE.Path(inner.getPoints()));
   const g = new THREE.Group(), col = selected ? 0xe7b04a : color;
   const edge = new THREE.Mesh(new THREE.ShapeGeometry(outer), new THREE.MeshBasicMaterial({ color: col }));
-  const fill = new THREE.Mesh(new THREE.ShapeGeometry(rect(w, d, rr)), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: selected ? 0.3 : 0.18, depthWrite: false }));
+  const fill = new THREE.Mesh(new THREE.ShapeGeometry(rect(w, d, rr)), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, depthWrite: false }));      // a solid base in the side's colour: the side reads at a glance (the figures' own colours are close)
   for (const m of [edge, fill]) { m.rotation.x = -Math.PI / 2; m.position.y = 0.03; g.add(m); }
   return g;
 }

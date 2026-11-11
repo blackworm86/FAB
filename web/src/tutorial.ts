@@ -45,7 +45,7 @@ export function initTutorial(h: TutHost, course: Course) {
     return null;
   }
   const label = (t: Target | undefined) => !t ? '' : 'el' in t ? t.label : 'unit' in t ? (t.label ?? `${t.unit} block`) : (t.label ?? 'area');
-  const hint = (s: Step) => s.target ? `${matchMedia('(pointer: coarse)').matches ? 'Tap' : 'Click'} the glowing ${label(s.target)}` : 'Tap Next to go on';
+  const tapWord = matchMedia('(pointer: coarse)').matches ? 'Tap' : 'Click', hint = (s: Step) => s.target ? `${tapWord} the glowing ${label(s.target)}` : `${tapWord} Next to go on`;
 
   function start(l: number, upTo = 0) {
     const fresh = l !== li || upTo === 0;
@@ -116,7 +116,7 @@ export function initTutorial(h: TutHost, course: Course) {
       : `<div class="row">${btn('menu', 'Lessons', '', 'All the lessons')}${li || si ? btn('back', 'Back') : ''}<span class="grow"></span>${wait ? `<span class="tut-hint">${hint(s)}</span>${kind === 'try' && s.act ? btn('skip', 'Do it for me') : ''}` : btn('next', goLabel, 'tut-go')}</div>`;
     const stepsLeft = L.steps.length - si - 1;
     return `<div class="bar" title="${stepsLeft} steps to go"><i style="width:${Math.round(((si + 1) / L.steps.length) * 100)}%"></i></div>
-      <div class="k"><span>${esc(L.chapter)} · ${li + 1}/${LESSONS.length}</span><i>${esc(L.topic)}</i></div>
+      <div class="k"><span>${esc(L.chapter)} · Lesson ${li + 1} of ${LESSONS.length}</span>${L.topic.toLowerCase() === s.title.toLowerCase() ? '' : `<i>${esc(L.topic)}</i>`}</div>
       <div class="tut-body ${kind}"><h4>${trHtml(s.title)}</h4>${meta}${figure}<div class="tut-text">${trHtml(s.text)}</div>${why}</div>${buttons}`;
   }
   function draw() {

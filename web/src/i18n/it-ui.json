@@ -3452,7 +3452,27 @@
   "Labels": "Etichette",
   "See-through": "Trasparenti",
   "On": "Attive",
-  "Off": "Spente"
+  "Off": "Spente",
+  "Roll the dice": "Tira i dadi",
+  "Dim": "Tenui",
+  "Search a name, unit or kind": "Cerca un nome, unità o tipo",
+  "The log fills in as the turn goes on.": "Il registro si riempie man mano che il turno procede.",
+  "Markers on the pieces": "Indicatori sui pezzi",
+  "Pips: one per step; red ones are steps already lost": "Pallini: uno per step; quelli rossi sono step già persi",
+  "Can still move this step (grey dash: cannot)": "Può ancora muovere in questo passo (trattino grigio: no)",
+  "Gold dot: can build field works · blue dot: can go into reserve": "Punto oro: può costruire opere campali · punto blu: può andare in riserva",
+  "Point unit of the battle": "Unità di punta della battaglia",
+  "Disordered · REC: recovering": "In disordine · REC: in recupero",
+  "In reserve": "In riserva",
+  "Exploiting (Breakthrough)": "In sfruttamento (Sfondamento)",
+  "Interdicted from the air": "Interdetto dal cielo",
+  "disordered (DIS)": "in disordine (DIS)",
+  "recovering (REC)": "in recupero (REC)",
+  "out of supply (OOS)": "senza rifornimento (OOS)",
+  "exploiting (E)": "in sfruttamento (E)",
+  "interdicted (GI)": "interdetto (GI)",
+  "Markers?": "Indicatori?",
+  "What the markers on the pieces mean": "Cosa significano gli indicatori sui pezzi"
  },
  "patterns": [
   [
@@ -9154,6 +9174,42 @@
   [
    "Area labels: (.+)",
    "Etichette delle aree: $1"
+  ],
+  [
+   "first of (\\d+) hits already taken",
+   "primo dei $1 colpi già assegnato"
+  ],
+  [
+   "Lesson (\\d+) of (\\d+)",
+   "Lezione $1 di $2"
+  ],
+  [
+   "(\\d+) hits rolled, 1 already taken: (\\d+) left",
+   "$1 colpi tirati, 1 già assegnato: ne restano $2"
+  ],
+  [
+   "Close it: (\\d+) battles? left\\.",
+   "Chiudila: restano $1 battaglie."
+  ],
+  [
+   "Close it\\.",
+   "Chiudila."
+  ],
+  [
+   "Battle over\\.",
+   "Battaglia finita."
+  ],
+  [
+   "Filled: (.+) share of the expected hits · empty: (.+)",
+   "Pieno: quota di $1 dei colpi attesi · vuoto: $2"
+  ],
+  [
+   "Map: (.+)",
+   "Mappa: $1"
+  ],
+  [
+   "Map layers, legend and rotate: (.+)",
+   "Livelli della mappa, legenda e rotazione: $1"
   ]
  ],
  "html": {}

@@ -54,6 +54,7 @@ function sbResetNow(opts: Partial<E.Opts>) {
 const resetAskHtml = () => { const o = st.resetAsk; if (!o) return ''; const sc = M.scenarios.find((x) => x.id === o.scenario)?.name ?? 'this scenario';
   return `<div class="askrow sbask"><p>Start ${esc(sc)} again from its first turn? This sandbox game is lost.</p><div class="row">${ubtn(`${ico('undo')} Reset`, () => sbResetNow(o), 'danger')}${ubtn('Keep this game', () => { st.resetAsk = null; })}</div></div>`; };
 const openSb = (v: boolean) => { st.sbOpen = v; try { localStorage.setItem('fab-sb-open', v ? '1' : '0'); } catch { /* private mode */ } };
+export const closeSb = () => openSb(false);
 /** The sandbox's only control on the playing screen: a small floating button at the left edge, clear of the bars and the map's middle. */
 export function sandboxFab() {
   return `<button class="sbfab" data-ui="${reg(() => openSb(true))}" title="Sandbox tools (admin testing)" aria-label="Open the sandbox tools">${ico('wand')}<span>Sandbox</span></button>`;
@@ -94,7 +95,7 @@ function sbLibrary() {
   const tiles = [...us.sort((a, b) => a.name.localeCompare(b.name)).map((u) => tile(`${u.name} ${u.code ?? ''} ${u.id} ${u.side} ${u.cls} block unit ${u.q.join(' ')}`, unitFace(u), u.name, u.area != null ? areaName(u.area) : whereOfU(u) === 'eliminated' ? 'eliminated' : u.arrival ? `turn ${u.arrival}` : 'off map', M.selUnit === u.id, () => { M.selUnit = u.id; M.selChit = null; M.selArea = u.area ?? M.selArea; st.sbPlace = u.id; refresh(); }, u.side, !u.garrison)),
     ...cs.map((c) => tile(`${c.name} ${c.kind} ${c.id} ${c.side} ${ABBR[c.kind] ?? ''} chit`, chitImg(c), c.name, `${c.box}${c.turn != null && c.box === 'future' ? ' t' + c.turn : ''}`, M.selChit === c.id, () => { M.selChit = c.id; M.selUnit = null; refresh(); }, c.side, c.kind === 'sa_block'))];
   const where = `<select aria-label="Where" data-sel="${regv((v) => { lbWhere = v; render(); })}">${WHERE.map(([k, l]) => `<option value="${k}" ${lbWhere === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
-  return `<div class="authform lbsearch"><input id="lb-q" class="grow" placeholder="Search: name, unit, kind (e.g. Peiper, artillery, 116)" value="${esc(st.sbFilter)}" aria-label="Search pieces"></div>
+  return `<div class="authform lbsearch"><input id="lb-q" class="grow" placeholder="Search a name, unit or kind" value="${esc(st.sbFilter)}" aria-label="Search pieces"></div>
     <div class="lbf"><span class="seg">${(['all', ...E.VOLUME.sides] as const).map((x) => fchip(x === 'all' ? 'Both' : E.VOLUME.tag[x], lbSide === x, () => { lbSide = x; })).join('')}</span><span class="seg">${[['all', 'All'], ['blocks', 'Blocks'], ['chits', 'Chits']].map(([k, l]) => fchip(l, lbType === k, () => { lbType = k; })).join('')}</span>${where}</div>
     <div class="lbgrid">${tiles.join('') || '<p class="hint">Nothing matches.</p>'}</div>`;
 }
