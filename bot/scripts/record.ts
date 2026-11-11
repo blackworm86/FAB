@@ -8,7 +8,7 @@ import { rng } from '../src/random';
 import { onAllCores } from './pool';
 
 // Each seat its own mix, so that both sides win often enough to learn from (random Germans almost never win, doctrine Allies almost always do).
-const MIX = { german: ['doctrine', 'doctrine-10', 'doctrine-30'], allied: ['random', 'random', 'doctrine-60', 'doctrine-30', 'doctrine'] };
+const MIX = { german: ['commander', 'doctrine', 'doctrine-10', 'doctrine-30'], allied: ['commander', 'random', 'random', 'doctrine-60', 'doctrine-30', 'doctrine'] };   // round 2: the commander's own games too
 type Game = { seed: number; german: string; allied: string; winner: string | null; rows: { turn: number; seat: string; x: number[] }[] };   // x: the values of features(), in its order
 
 const args = process.argv.slice(2).filter((a) => a !== '--');
