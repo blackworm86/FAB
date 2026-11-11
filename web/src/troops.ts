@@ -78,17 +78,12 @@ function pips(n: number, q: string) {
   }
   const s = new THREE.Sprite(m); s.scale.set(0.3 * n, 0.3, 1); s.renderOrder = 3; return s;
 }
-/** A rounded rectangle round the figure's footprint (w along x, d along z), an outline in the side's colour, brass when selected. */
+/** A thin circle round the figure's footprint (w along x, d along z), in the side's colour, brass when selected. */
 function ring(w: number, d: number, color: THREE.ColorRepresentation, selected: boolean) {
-  const rr = Math.min(w, d) / 2, rect = (W: number, D: number, R: number) => { const s = new THREE.Shape(), x = W / 2, z = D / 2;
-    s.moveTo(-x + R, -z); s.lineTo(x - R, -z); s.quadraticCurveTo(x, -z, x, -z + R); s.lineTo(x, z - R); s.quadraticCurveTo(x, z, x - R, z);
-    s.lineTo(-x + R, z); s.quadraticCurveTo(-x, z, -x, z - R); s.lineTo(-x, -z + R); s.quadraticCurveTo(-x, -z, -x + R, -z); return s; };
-  const k = selected ? 0.14 : 0.1, outer = rect(w, d, rr), inner = rect(w - 2 * k, d - 2 * k, Math.max(0.01, rr - k));
-  outer.holes.push(new THREE.Path(inner.getPoints()));
-  const g = new THREE.Group(), col = selected ? 0xe7b04a : color;
-  const edge = new THREE.Mesh(new THREE.ShapeGeometry(outer), new THREE.MeshBasicMaterial({ color: col }));
-  for (const m of [edge]) {      /* owner, 11 Nov: no coloured fill under the figures, only the thin outline */ m.rotation.x = -Math.PI / 2; m.position.y = 0.03; g.add(m); }
-  g.userData.base = true;      // main.ts sizes the act-now halo on it
+  const r = Math.hypot(w, d) / 2 * 0.82, k = selected ? 0.12 : 0.07;      // owner, 11 Nov: a thin circle round every figure, not its footprint's outline
+  const g = new THREE.Group(), m = new THREE.Mesh(new THREE.RingGeometry(r - k, r, 56), new THREE.MeshBasicMaterial({ color: selected ? 0xe7b04a : color }));
+  m.rotation.x = -Math.PI / 2; m.position.y = 0.03; g.add(m);
+  g.userData.base = true; g.userData.r = r;      // main.ts sizes the act-now halo on it
   return g;
 }
 /** A unit drawn as its figure, centred on the group's origin (the spot the block would take). */

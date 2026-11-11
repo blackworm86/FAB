@@ -1202,6 +1202,8 @@ function syncMoveMarks() {
     o.updateMatrixWorld(true); let base: THREE.Object3D = o; o.traverse((x) => { if (x.userData.base) base = x; });      // a figure: its base, not its gun or floating pips
     box.setFromObject(base).getSize(size); box.getCenter(c); const y = box.min.y + 0.04;
     const rect = (w: number, d: number) => { const r = Math.min(w, d) / 2, x = w / 2, z = d / 2, sh = new THREE.Shape(); sh.moveTo(-x + r, -z); sh.lineTo(x - r, -z); sh.quadraticCurveTo(x, -z, x, -z + r); sh.lineTo(x, z - r); sh.quadraticCurveTo(x, z, x - r, z); sh.lineTo(-x + r, z); sh.quadraticCurveTo(-x, z, -x, z - r); sh.lineTo(-x, -z + r); sh.quadraticCurveTo(-x, -z, -x + r, -z); return sh; };
+    const circ = (base as THREE.Object3D).userData.r as number | undefined;      // a figure: a round halo matching its circle
+    if (circ) { ([[0.06, 0.24, 0], [0.24, 0.55, 1]] as const).forEach(([a, b, k]) => { const m = new THREE.Mesh(new THREE.RingGeometry(circ + a, circ + b, 56), haloMat[k]); m.rotation.x = -Math.PI / 2; m.position.set(c.x, y, c.z); m.renderOrder = 1; halos.add(m); }); continue; }
     ([[0.1, 0.3, 0], [0.3, 0.62, 1]] as const).forEach(([a, b, k]) => { const sh = rect(size.x + 2 * b, size.z + 2 * b); sh.holes.push(new THREE.Path(rect(size.x + 2 * a, size.z + 2 * a).getPoints())); const m = new THREE.Mesh(new THREE.ShapeGeometry(sh, 6), haloMat[k]); m.rotation.x = -Math.PI / 2; m.position.set(c.x, y, c.z); m.renderOrder = 1; halos.add(m); });
   }
 }
