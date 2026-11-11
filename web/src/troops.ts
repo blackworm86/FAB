@@ -11,6 +11,9 @@ type Index = { tipi: Record<string, { figure: string[]; veicolo: boolean }>; blo
 export const SCALE = 1.5;
 /** Soldiers are drawn 3× larger than true scale (owner, 11 November 2026): a lone soldier at true scale is a speck; at 3× he stands about as tall as a tank. */
 export const INFANTRY = 3;
+/** The player's figure size (View window): every figure, ring and footprint grows by the same factor, so proportions stay. */
+let zoom = 1.5;
+export const setZoom = (z: number) => { zoom = z; };
 let byUnit: Record<string, string> = {};
 const troops = new Map<string, Troop>();
 
@@ -37,7 +40,7 @@ export const variant = (unitId: string, count: number) => [...unitId].reduce((h,
 /** Germans face west, everyone else east (yaw about Y; a figure is modelled facing +z). */
 export const yawOf = (side: string) => (side === 'german' ? -Math.PI / 2 : Math.PI / 2);
 /** Footprint radius of a unit's figure, for the block layout (never less than a small disc, so pips and ring stay clear of the next unit). */
-export const radius = (t: Pick<Troop, 'size'>) => Math.max(0.55, Math.max(t.size.x, t.size.z) / 2 + 0.12);
+export const radius = (t: Pick<Troop, 'size'>) => Math.max(0.55, Math.max(t.size.x, t.size.z) * zoom / 2 + 0.12);
 
 const PIP: Record<string, [string, string]> = { elite: ['#e3222b', '#ffffff'], veteran: ['#141414', '#ffffff'], green: ['#ffffff', '#141414'] };
 const pipMats = new Map<string, THREE.SpriteMaterial>();
@@ -68,10 +71,10 @@ function ring(w: number, d: number, color: THREE.ColorRepresentation, selected: 
 /** A unit drawn as its figure, centred on the group's origin (the spot the block would take). */
 export function troopGroup(t: Troop, unitId: string, side: string, color: THREE.ColorRepresentation, n: number, quality: string, selected: boolean) {
   const g = new THREE.Group(), f = t.figs[variant(unitId, t.figs.length)].clone(true), yaw = yawOf(side);
-  f.rotation.y = yaw; g.add(f);
-  const across = Math.abs(Math.sin(yaw)) > 0.5;   // facing east or west: the figure's length lies along x
-  g.add(ring((across ? t.size.z : t.size.x) + 0.3, (across ? t.size.x : t.size.z) + 0.3, color, selected));
-  const s = pips(n, quality); s.position.y = t.size.y + 0.35; g.add(s);
-  g.userData.troop = true; g.userData.top = t.size.y;
+  f.rotation.y = yaw; f.scale.multiplyScalar(zoom); g.add(f);
+  const across = Math.abs(Math.sin(yaw)) > 0.5, sz = t.size.clone().multiplyScalar(zoom);   // facing east or west: the figure's length lies along x
+  g.add(ring((across ? sz.z : sz.x) + 0.3, (across ? sz.x : sz.z) + 0.3, color, selected));
+  const s = pips(n, quality); s.position.y = sz.y + 0.35; g.add(s);
+  g.userData.troop = true; g.userData.top = sz.y;
   return g;
 }

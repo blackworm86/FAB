@@ -3429,7 +3429,13 @@
   "on either map": "su entrambe le mappe",
   "Figures": "Figure",
   "The wooden blocks": "I blocchi di legno",
-  "Soldiers and tanks, one per step": "Soldati e carri, uno per passo"
+  "Soldiers and tanks, one per step": "Soldati e carri, uno per passo",
+  "Figure size": "Dimensione figure",
+  "Small": "Piccole",
+  "Medium": "Medie",
+  "Large": "Grandi",
+  "Huge": "Enormi",
+  "Soldiers and tanks, one per unit": "Soldati e carri, uno per unità"
  },
  "patterns": [
   [
