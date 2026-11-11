@@ -22,7 +22,7 @@ export function initSandboxUi(ctx: SbCtx) { M = ctx; ({ unitPic, chitPic, ABBR, 
 const other = E.other;
 const $ = (q: string) => document.querySelector(q) as HTMLElement;
 /* admin sandbox (?sandbox=1): free edits, seat switch, notes and the test report ---------- */
-export const st = { sbHot: (() => { try { return localStorage.getItem('fab-hotseat') === '1'; } catch { return false; } })(), hotCover: null as E.Side | null, sbOpen: (() => { try { return localStorage.getItem('fab-sb-open') === '1'; } catch { return false; } })(), sbPlace: null as string | null, resetAsk: null as Partial<E.Opts> | null, sbAuto: false, sbFilter: '', sbDraft: '', rules: {} as Partial<E.Opts> };
+export const st = { sbHot: (() => { try { return localStorage.getItem('fab-hotseat') === '1'; } catch { return false; } })(), hotCover: null as E.Side | null, sbOpen: (() => { try { return localStorage.getItem('fab-sb-open') === '1'; } catch { return false; } })(), sbPlace: null as string | null, sbOpenedAt: 0, resetAsk: null as Partial<E.Opts> | null, sbAuto: false, sbFilter: '', sbDraft: '', rules: {} as Partial<E.Opts> };
 let sbTab = 'Pieces';
 let sbJump: { turn: number; side: E.Side; phase: E.Phase };
 let sbNotes = SB.loadNotes();
@@ -53,7 +53,7 @@ function sbResetNow(opts: Partial<E.Opts>) {
 }
 const resetAskHtml = () => { const o = st.resetAsk; if (!o) return ''; const sc = M.scenarios.find((x) => x.id === o.scenario)?.name ?? 'this scenario';
   return `<div class="askrow sbask"><p>Start ${esc(sc)} again from its first turn? This sandbox game is lost.</p><div class="row">${ubtn(`${ico('undo')} Reset`, () => sbResetNow(o), 'danger')}${ubtn('Keep this game', () => { st.resetAsk = null; })}</div></div>`; };
-const openSb = (v: boolean) => { st.sbOpen = v; try { localStorage.setItem('fab-sb-open', v ? '1' : '0'); } catch { /* private mode */ } };
+const openSb = (v: boolean) => { st.sbOpen = v; if (v) st.sbOpenedAt = performance.now(); try { localStorage.setItem('fab-sb-open', v ? '1' : '0'); } catch { /* private mode */ } };
 export const closeSb = () => openSb(false);
 /** The sandbox's only control on the playing screen: a small floating button at the left edge, clear of the bars and the map's middle. */
 export function sandboxFab() {
