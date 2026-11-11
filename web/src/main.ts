@@ -1932,7 +1932,7 @@ function modalHtml() {
       : CPU_SIDE ? `<h4>Players</h4><p class="hint">You play ${nm(other(CPU_SIDE))}; the computer plays ${nm(CPU_SIDE)}.</p>`
       : `<h4>Players</h4><p class="hint">Developer table. The Seat button in the top bar switches between ${nm(P1)}, ${nm(P2)}, both and watching; turn rules are enforced for the seat you hold.</p>`;
     const newGame = `${online.active && !online.admin && !online.both() && !CPU_SIDE ? '<p class="hint">Restarting a shared game is limited to its admin.</p>' : `<h4>Restart this game</h4><div class="row"><select data-sel="${regv((x) => { newOpts.scenario = x as E.Opts['scenario']; })}">${VOL.scenarios.filter((sc) => SANDBOX || !sc.testing).map((sc) => `<option value="${sc.id}" ${newOpts.scenario === sc.id ? 'selected' : ''}>${esc(sc.name)} (${esc(sc.sub)})</option>`).join('')}</select>
-        </div>${VOL.features.fuel ? `${srow('German fuel rule', '', swtch(!!newOpts.fuel, () => { newOpts.fuel = !newOpts.fuel; }, 'German fuel rule'))}` : ''}${VOL.features.optional ? optChooser(newOpts, VOL.id) : ''}${restartAsk ? `<div class="askrow" data-reveal="restart"><p>Restart and lose the current game?</p><div class="row">${ubtn('Restart now', () => { restartAsk = false; g = E.newGame(undefined, newOpts); selArea = selUnit = selChit = null; modal = null; inBattle = false; hist.clear(); note = ''; selArr = null; save(); refresh(); }, 'danger')}${ubtn('Keep playing', () => { restartAsk = false; })}</div></div>` : `<div class="row">${ubtn('Restart', () => { restartAsk = true; }, 'danger')}</div>`}`}`;
+        </div>${VOL.features.fuel ? `${srow('German fuel rule', '', swtch(!!newOpts.fuel, () => { newOpts.fuel = !newOpts.fuel; }, 'German fuel rule'))}` : ''}${VOL.features.optional ? optChooser(newOpts, VOL.id) : ''}${restartAsk ? `<div class="askrow" data-reveal="restart"><p>Restart and lose the current game?</p><div class="row">${ubtn('Restart now', () => startOver(E.newGame(undefined, newOpts)), 'danger')}${ubtn('Keep playing', () => { restartAsk = false; })}</div></div>` : `<div class="row">${ubtn('Restart', () => { restartAsk = true; }, 'danger')}</div>`}`}`;
     const all = menuTab === 'Game' ? `${body}${newGame}` : body;
     return `<div class="modal"><div class="sheet menu"><h3><span class="grow">Game</span>${ubtn(`${ico('back')}<span>Leave game</span>`, () => { location.href = homeUrl(); }, 'leave', false, 'Back to the home page (the game is saved)')}<button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
       <div class="tabs">${tabs.map((t) => `<button class="${t === menuTab ? 'on' : ''}" data-ui="${reg(() => { menuTab = t; })}" title="${t}" aria-label="${t}">${ico(({ Game: 'users', Log: 'list', Settings: 'sliders', Admin: 'lock' } as Record<string, string>)[t] ?? 'info')}<span>${t}</span></button>`).join('')}</div><div class="mbody">${all}</div></div></div>`;
@@ -2082,19 +2082,21 @@ function frame() {
     const ids = g.phase === 'combat' || g.phase === 'btCombat' ? E.mustFight(g).slice(0, 1) : ['movement', 'btMove'].includes(g.phase) ? [...new Set(g.units.filter((u) => u.side === g.phasing && u.area != null && optsFor(u.id).length).map((u) => u.area!))] : [];
     if (ids.length && !ids.some(onScreen)) { showAreas(ids); if (openFrame && goal) { target.copy(goal.t); dist = goal.dist; pitch = goal.pitch; goal = null; } } } openFrame = false; }
 }
+/** A new or loaded game replaces the table: nothing of the old one stays on screen (dice, pop-ups, selection, windows, undo). */
+function startOver(x: E.Game) { if (heldNext) commitRoll(); rollView = null; hideDice(); g = x; hist.clear(); selUnit = selChit = selArr = null; selArea = previewArea = hoverArea = null; modal = null; scoreOpen = false; reinforcing = false; battleFx = []; rollFx = []; tgtKey = ''; inBattle = false; note = ''; areaPick = null; restartAsk = false; fxLayer.clear(); save(); refresh(); }
 SBU.initSandboxUi({
   get g() { return g; }, set g(v) { g = v; }, get selUnit() { return selUnit; }, set selUnit(v) { selUnit = v; }, get selChit() { return selChit; }, set selChit(v) { selChit = v; },
   get selArr() { return selArr; }, set selArr(v) { selArr = v; }, get selArea() { return selArea; }, set selArea(v) { selArea = v; }, get previewArea() { return previewArea; }, set previewArea(v) { previewArea = v; },
   get rollView() { return rollView; }, set rollView(v) { rollView = v as RollView | null; },
   ABBR, actorNow, areaName, b3, chitImg, unitFace, unitPic, chitPic, hist, refresh, render, save, say, reg, regv, ubtn, optChooser: (o: Partial<E.Opts>) => optChooser(o, VOL.id),
-  scenarios: VOL.scenarios, defaultOpts: VOL.defaultOpts, optional: VOL.features.optional,
+  scenarios: VOL.scenarios, defaultOpts: VOL.defaultOpts, optional: VOL.features.optional, startOver,
 });
 initTouch(document.body);
 initChat(say, render);
 const toScreen = (p: THREE.Vector3) => { const r = canvas.getBoundingClientRect(), v = p.clone().project(cam); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; };
 tut = TUT ? initTutorial({
   game: () => g, act,
-  load: (x) => { if (heldNext) commitRoll(); rollView = null; hideDice(); g = x; hist.clear(); selUnit = selChit = selArr = null; selArea = previewArea = hoverArea = null; modal = null; scoreOpen = false; reinforcing = false; battleFx = []; rollFx = []; tgtKey = ''; save(); refresh(); },
+  load: startOver,
   unitScreen: (id) => pieceScreen(id), areaScreen: (a) => { const c = center(a); return toScreen(new THREE.Vector3(c.x, 0, c.z)); },
   lookAt: (a) => { const p = center(a); goal = { t: new THREE.Vector3(p.x, 0, p.z), dist: Math.min(dist, innerWidth < 700 ? 34 : 30), pitch }; },
   select: (id) => { if (g.pendingArrivals.includes(id)) selArr = id; else { selUnit = id; selArea = g.units.find((u) => u.id === id)?.area ?? null; } refresh(); },

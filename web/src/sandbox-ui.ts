@@ -13,7 +13,7 @@ export interface SbCtx {
   g: E.Game; selUnit: string | null; selChit: string | null; selArr: string | null; selArea: number | null; previewArea: number | null; rollView: unknown;
   ABBR: Record<string, string>; actorNow: () => E.Side | 'both'; areaName: (a: number) => string; b3: (face: string, side: E.Side | 'british', chit?: boolean) => string;
   chitImg: (c: E.Chit) => string; unitFace: (u: E.Unit) => string; unitPic: (u: E.Unit) => string; chitPic: (c: E.Chit) => string; hist: History<E.Game>; optChooser: (o: Partial<E.Opts>) => string; refresh: () => void; render: () => void; save: () => void; say: (t: string) => void;
-  scenarios: { id: string; name: string }[]; defaultOpts: Partial<E.Opts>; optional: boolean;
+  scenarios: { id: string; name: string }[]; defaultOpts: Partial<E.Opts>; optional: boolean; startOver: (g: E.Game) => void;
   reg: (f: () => void) => string; regv: (f: (v: string) => void) => string; ubtn: (label: string, f: () => void, cls?: string, dis?: boolean, title?: string) => string;
 }
 let M: SbCtx; let unitPic: SbCtx['unitPic'], chitPic: SbCtx['chitPic'], ABBR: SbCtx['ABBR'], actorNow: SbCtx['actorNow'], areaName: SbCtx['areaName'], b3: SbCtx['b3'], chitImg: SbCtx['chitImg'], unitFace: SbCtx['unitFace'], hist: SbCtx['hist'], refresh: SbCtx['refresh'], render: SbCtx['render'], save: SbCtx['save'], say: SbCtx['say'], reg: SbCtx['reg'], regv: SbCtx['regv'], ubtn: SbCtx['ubtn'];
@@ -21,7 +21,7 @@ export function initSandboxUi(ctx: SbCtx) { M = ctx; ({ unitPic, chitPic, ABBR, 
 const other = E.other;
 const $ = (q: string) => document.querySelector(q) as HTMLElement;
 /* admin sandbox (?sandbox=1): free edits, seat switch, notes and the test report ---------- */
-export const st = { sbHot: (() => { try { return localStorage.getItem('fab-hotseat') === '1'; } catch { return false; } })(), hotCover: null as E.Side | null, sbOpen: (() => { try { return localStorage.getItem('fab-sb-open') === '1'; } catch { return false; } })(), sbPlace: null as string | null, sbAuto: false, sbFilter: '', sbDraft: '', rules: {} as Partial<E.Opts> };
+export const st = { sbHot: (() => { try { return localStorage.getItem('fab-hotseat') === '1'; } catch { return false; } })(), hotCover: null as E.Side | null, sbOpen: (() => { try { return localStorage.getItem('fab-sb-open') === '1'; } catch { return false; } })(), sbPlace: null as string | null, resetAsk: null as Partial<E.Opts> | null, sbAuto: false, sbFilter: '', sbDraft: '', rules: {} as Partial<E.Opts> };
 let sbTab = 'Pieces';
 let sbJump: { turn: number; side: E.Side; phase: E.Phase };
 let sbNotes = SB.loadNotes();
@@ -44,12 +44,15 @@ export function hotCoverHtml() {
   if (!st.hotCover) return '';
   return `<div class="hotcover"><div><small>Hotseat</small><h2 class="${st.hotCover}">${nm(st.hotCover)} player</h2><p>Pass the device. The other side's hidden blocks are covered until you tap.</p><button class="primary" data-ui="${reg(() => { setDevSeat(st.hotCover!); st.hotCover = null; refresh(); })}">${ico('next')} I am the ${nm(st.hotCover)} player</button></div></div>`;
 }
-export function sbReset(opts: Partial<E.Opts>) {
-  if (!confirm('Reset the sandbox and start a new game from the first turn?')) return;
-  M.g = E.newGame(undefined, { ...M.defaultOpts, ...st.rules, ...opts }); hist.clear(); st.sbPlace = null; M.selUnit = M.selChit = M.selArr = null; M.selArea = null; M.previewArea = null; M.rollView = null;
-  if (st.sbHot) { setDevSeat(M.g.phasing); st.hotCover = M.g.phasing; }
-  save(); refresh();
+/** Reset asks first, inside the panel (a browser confirm() can be silenced, and then Reset silently did nothing). */
+export function sbReset(opts: Partial<E.Opts>) { st.resetAsk = opts; openSb(true); render(); }
+function sbResetNow(opts: Partial<E.Opts>) {
+  st.resetAsk = null; st.sbPlace = null; M.startOver(E.newGame(undefined, { ...M.defaultOpts, ...st.rules, ...opts }));
+  sbJump = { turn: M.g.turn, side: M.g.phasing, phase: M.g.phase };
+  if (st.sbHot) { setDevSeat(M.g.phasing); st.hotCover = M.g.phasing; render(); }
 }
+const resetAskHtml = () => { const o = st.resetAsk; if (!o) return ''; const sc = M.scenarios.find((x) => x.id === o.scenario)?.name ?? 'this scenario';
+  return `<div class="askrow sbask"><p>Start <b>${esc(sc)}</b> again from its first turn? This sandbox game is lost.</p><div class="row">${ubtn(`${ico('undo')} Reset`, () => sbResetNow(o), 'danger')}${ubtn('Keep this game', () => { st.resetAsk = null; })}</div></div>`; };
 const openSb = (v: boolean) => { st.sbOpen = v; try { localStorage.setItem('fab-sb-open', v ? '1' : '0'); } catch { /* private mode */ } };
 /** The sandbox's only control on the playing screen: a small floating button at the left edge, clear of the bars and the map's middle. */
 export function sandboxFab() {
@@ -60,7 +63,7 @@ function sbHead() {
   const gameSel = sbSel(GAMES.filter((x) => x.ready).map((x): [string, string] => [x.id, x.name]), E.VOLUME.id, (v) => { if (v === E.VOLUME.id) return; const q = new URLSearchParams(location.search); q.set('game', v); location.search = q.toString(); });
   const cur = M.g.opts.scenario ?? M.defaultOpts.scenario ?? '';
   const scenSel = sbSel(M.scenarios.map((sc): [string, string] => [sc.id, `${sc.name}${(sc as { testing?: boolean }).testing ? ' (in testing)' : ''}`]), String(cur), (v) => { if (v !== cur) sbReset({ scenario: v as E.Opts['scenario'] }); });
-  return `<div class="sbhead"><b>${ico('wand')} Sandbox</b><div class="row">${gameSel}${scenSel}${ubtn(`${ico('undo')} Reset`, () => sbReset({ scenario: M.g.opts.scenario }), '', false, 'A new game of this scenario from its first turn')}</div></div>`;
+  return `<div class="sbhead"><b>${ico('wand')} Sandbox</b><div class="row">${gameSel}${scenSel}${ubtn(`${ico('undo')} Reset`, () => sbReset({ scenario: M.g.opts.scenario }), '', false, 'A new game of this scenario from its first turn')}</div>${resetAskHtml()}</div>`;
 }
 function sbTarget(): SB.Target {
   const u = M.selUnit ? M.g.units.find((x) => x.id === M.selUnit) : null; if (u) return { kind: 'unit', id: u.id, label: `${u.name} (${u.side}, ${u.id})` };
