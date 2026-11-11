@@ -134,7 +134,7 @@ const L_ADMIN: Lesson = { id: 'admin', topic: 'Prepare: drawing and playing chit
     const dr = g.chits.find((c) => c.side === 'allied' && /Delayed/.test(c.name) && c.box === 'available'); if (dr) dr.box = 'eliminated';
     E.blowBridges(g, 'L63.0', 25, [23, 33]); E.blowBridges(g, 'L88.0', 24, [33, 35]);
   } },
-  { title: 'End the step', text: 'Both players act in Prepare. Online, the other player taps <b>Done</b> first, then you end the step. <b>Tap End prepare.</b>', target: GO, done: (g) => g.phase !== 'admin', act: (g) => E.endPhase(g) },
+  { title: 'End the step', text: 'Both players act in the Admin phase. Online, the other player taps <b>Done</b> first, then you end the step. <b>Tap End admin.</b>', target: GO, done: (g) => g.phase !== 'admin', act: (g) => E.endPhase(g) },
   recap(['Prepare: draw the turn track\'s number of chits, then play what helps you now.', 'Greif teams make bridges almost impossible to blow; replacements restore a step.', 'Engineers can blow bridges in their own Prepare step.', 'The red button ends a step; online, both players must be done.']),
 ] };
 
@@ -237,7 +237,7 @@ const L_BREAK: Lesson = { id: 'breakthrough', topic: 'Reaction and Breakthrough'
   tapUnit('150 Pz', 'Special Action', 'Third, a <b>Special Action</b> lets an armour block that did neither advance one area: <b>tap the 150th Panzer Brigade.</b>'),
   { title: 'Activate', text: '<b>Tap Activate (SA).</b> The Special Action is spent.', rule: '8.21 Breakthrough activation', target: { el: '.c-dispatch button', text: 'Activate', label: 'Activate (SA)' }, done: (g) => !!U(g, '150 Pz').exploit || area('150 Pz', g) === 22 || g.chits.find((c) => c.id === 'SA-german')?.box !== 'available', act: (g) => E.activateBreakthrough(g, U(g, '150 Pz').id, 'SA-german') },
   { title: 'Into Weiswampach', text: '<b>Tap Weiswampach</b>: one area forward.', target: { area: 22 }, look: 22, done: (g) => area('150 Pz', g) === 22, act: (g) => { E.move(g, U(g, '150 Pz').id, 22); } },
-  { title: 'Breakthrough combat', text: '<b>Tap End breakthrough.</b> Areas contested by these moves must be fought now. An area that was already contested can be fought again only with a Special Action.', rule: '7.4 Breakthrough combat', target: GO, done: (g) => g.phase === 'btCombat', act: (g) => E.endPhase(g) },
+  { title: 'Breakthrough combat', text: '<b>Tap End breakthrough moves.</b> Areas contested by these moves must be fought now. An area that was already contested can be fought again only with a Special Action.', rule: '7.4 Breakthrough combat', target: GO, done: (g) => g.phase === 'btCombat', act: (g) => E.endPhase(g) },
   { title: 'Houffalize', text: '<b>Tap Houffalize</b>, then Fight.', target: { area: 36 }, look: 36, tap: true, done: (g) => !!g.battle },
   { title: 'Fight', text: '<b>Tap Fight Houffalize</b>.', target: GO, done: (g) => !!g.battle && g.battle.stage !== 'setup', act: (g) => { fightAt(36)(g); begin(g); } },
   { title: 'Begin', text: '<b>Tap Begin combat.</b>', target: GO, skip: (g) => g.battle?.stage !== 'setup', done: stage('setup'), act: begin },

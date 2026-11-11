@@ -168,7 +168,7 @@ const boardFile = (src: string) => { let p = boardText.get(src); if (!p) { p = f
 const svgUrl = (t: string) => URL.createObjectURL(new Blob([t], { type: 'image/svg+xml' }));
 const baseImg = new Image(), linesImg = new Image(); baseImg.onload = linesImg.onload = () => paintBoard();
 const flipped = new Map<HTMLImageElement, HTMLImageElement>();
-for (const [im, src] of [[baseImg, VOL.art.base], [linesImg, VOL.art.lines]] as const) boardFile(src).then((t) => { im.src = svgUrl(t); if (t.includes('data-flip=')) flipped.set(im, loadImg(svgUrl(flipSvg(t)))); }).catch(() => { im.src = src; });
+for (const [im, src] of [[baseImg, VOL.art.base], [linesImg, VOL.art.lines]] as const) boardFile(src).then((t0) => { const t = t0.replace(/>([^<>]*(?:ARMY ZONE|Army)[^<>]*)</g, (_, x: string) => `>${esc(tr(x))}<`);      /* the printed army lettering follows the language */ im.src = svgUrl(t); if (t.includes('data-flip=')) flipped.set(im, loadImg(svgUrl(flipSvg(t)))); }).catch(() => { im.src = src; });
 const facing = (im: HTMLImageElement) => { const f = camFar ? flipped.get(im) : undefined; return f && f.naturalWidth ? f : im; };
 /** The map drawings are turned into pixels once and reused: redrawing the detailed SVG on every colour change is what made phones stall. */
 const flat = new Map<HTMLImageElement, HTMLCanvasElement>();
@@ -347,6 +347,8 @@ function discSprite(kind: 'x' | 'point', size: number) { disc(kind, size); const
  *  formation may reach past the area border. */
 /** How far the battle formation reaches from the area's pole (cm), on the deeper side. */
 function formationReach(b: E.Battle) {
+  const fr = battleFrame(b);
+  if (fr) return Math.max(...VOL.sides.map((sd) => { const u = Math.max(1, Math.ceil(E.unitsIn(g, b.area, sd).length / 5)), n = b.assets[sd].length + E.airOf(b, sd).length, a = Math.ceil(n / 5); return fr.rd / 2 + 0.3 + u * fr.rd + (a ? 0.5 + a * 1.7 : 0); }), 2.5 * fr.gx);
   return Math.max(...VOL.sides.map((sd) => { const u = Math.max(1, Math.ceil(E.unitsIn(g, b.area, sd).length / 5)), n = b.assets[sd].length + E.airOf(b, sd).length, a = Math.ceil(n / 5); return 1.35 + u * 1.9 + (a ? 0.5 + a * 1.7 : 0); }), 5 * 1.95 / 2 + 1);
 }
 /** Panels over the battle (header at the top, report and hand at the bottom): the view is shifted so the battle sits in the clear band between them. */
@@ -361,9 +363,34 @@ function fitBattleView() {
   if (shift !== viewShift) { viewShift = shift; if (shift) cam.setViewOffset(r.width, r.height, 0, shift, r.width, r.height); else cam.clearViewOffset(); }
   return clear / r.height;
 }
+// ---- where figures face and stand (docs/ASSETS-3D.md): the way they last moved, toward the attacker, toward the nearest enemy ----
+const CTR = new Map<number, THREE.Vector3>(), ctr = (id: number) => CTR.get(id) ?? (CTR.set(id, toWorld(...pole(MAP.areas.find((x) => x.id === id)!.polygon))), CTR.get(id)!);
+const yawTo = (dx: number, dz: number) => Math.atan2(dx, dz);                                       // a figure is modelled facing +z
+/** A contested area: the attacking side (the battle's, else the side that moved in, the phasing side first) and the way it came from. */
+const frontOf = (id: number, us: E.Unit[]): { att: E.Side; v: [number, number] } => {
+  const came = (sd: E.Side) => us.filter((u) => u.side === sd && u.from != null && u.from !== id && MAP.areas.some((x) => x.id === u.from));
+  const sides = [...new Set(us.map((u) => u.side))];
+  const att = g.battle?.area === id ? g.battle.attacker : came(g.phasing).length ? g.phasing : sides.find((sd) => came(sd).length) ?? (sides.includes(g.phasing) ? g.phasing : sides[0]);
+  const c0 = ctr(id); let vx = 0, vz = 0; for (const u of came(att)) { const q = ctr(u.from!); vx += q.x - c0.x; vz += q.z - c0.z; }
+  if (Math.hypot(vx, vz) < 1e-6) { const y = sideYaw(att); vx = -Math.sin(y); vz = -Math.cos(y); }      // no move recorded: from the attackers' own side of the front
+  const l = Math.hypot(vx, vz); return { att, v: l > 1e-6 ? [vx / l, vz / l] : [0, near(att) ? 1 : -1] };
+};
+/** A side's usual facing: The Bulge, Germans west and Allies east; the other volumes, toward the other side's edge of the map. */
+const sideYaw = (sd: E.Side) => (VOL.id === 'bulge' ? yawOf(sd) : near(sd) ? Math.PI : 0);
+/** The battle formation when figures are drawn: along the attack (the attackers on the side they came from, `v`), each row as wide
+ * as the widest figure and as deep as the deepest, so nothing overlaps. null with blocks (the block formation keeps its rows). */
+function battleFrame(b: E.Battle) {
+  if (!wantTroops()) return null;
+  const us = E.unitsIn(g, b.area), f = frontOf(b.area, us), feet = us.map((u) => { const t = seen(u) ? troopOf(u.id) : null; return t ? foot(t, 0) : [1.75, 0.95]; });
+  return { ...f, p: [-f.v[1], f.v[0]] as [number, number], gx: Math.max(1.95, ...feet.map((q) => q[0] + 0.2)), rd: Math.max(1.9, ...feet.map((q) => q[1] + 0.3)) };
+}
 function battleSpot(b: E.Battle, sd: E.Side, kind: 'unit' | 'asset', i: number, n: number) {
   const base = toWorld(...POLE.get(b.area)!), dir = near(sd) ? 1 : -1, per = 5, row = Math.floor(i / per), inRow = Math.min(per, n - row * per), col = i % per;
-  const units = E.unitsIn(g, b.area, sd).length, unitRows = Math.max(1, Math.ceil(units / per));
+  const units = E.unitsIn(g, b.area, sd).length, unitRows = Math.max(1, Math.ceil(units / per)), fr = battleFrame(b);
+  if (fr) {                                                                                              // figures: along the attack, spaced by their footprints
+    const lat = (col - (inRow - 1) / 2) * (kind === 'unit' ? fr.gx : 1.75), d = (sd === fr.att ? 1 : -1) * (kind === 'unit' ? fr.rd / 2 + 0.3 + row * fr.rd : fr.rd / 2 + 0.3 + unitRows * fr.rd + 0.5 + row * 1.7);
+    return { x: base.x + lat * fr.p[0] + d * fr.v[0], z: base.z + lat * fr.p[1] + d * fr.v[1] };
+  }
   const depth = kind === 'unit' ? 1.35 + row * 1.9 : 1.35 + unitRows * 1.9 + 0.5 + row * 1.7;
   return { x: base.x + (col - (inRow - 1) / 2) * (kind === 'unit' ? 1.95 : 1.75), z: base.z + dir * depth };
 }
@@ -387,22 +414,32 @@ function drawPointMarks(b: E.Battle) {
     const d = discSprite('point', 0.26), c = farSide() ? -1 : 1; d.position.set(o.position.x + 0.58 * c, o.position.y > 0.6 ? 1.95 : 0.9, o.position.z - 0.58 * c); d.userData.anchor = uid; markers.add(d);                 // a back corner of the block, clear of its pips and symbol d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
   }
 }
-/** Where a unit's figure faces: The Bulge outside battle, by side (Germans west, Allies east: yawOf); elsewhere, and in any battle or
- * contested area, toward the other side's edge of the map (the near side's edge is at +z, so it faces -z). */
-const faceYaw = (u: E.Unit, cont: boolean, battle: boolean) => (VOL.id === 'bulge' && !cont && !battle ? undefined : near(u.side) ? Math.PI : 0);
 function drawPieces() {
   disposeAll(pieces); disposeAll(markers);
   const troops = wantTroops();
+  const fronts = new Map<number, { att: E.Side; v: [number, number] }>();
+  /** A unit's facing. Battle close-up: its row faces the other. Contested: the attackers face in from where they came, the defenders face them.
+   * Elsewhere: the way it last moved; a unit that has not moved faces the way of the front (sideYaw). */
+  const heading = (u: E.Unit, id: number, cont: boolean, battle: boolean) => {
+    if (battle) { const fr = g.battle && battleFrame(g.battle); return fr ? (u.side === fr.att ? yawTo(-fr.v[0], -fr.v[1]) : yawTo(fr.v[0], fr.v[1])) : near(u.side) ? Math.PI : 0; }
+    const f = cont ? fronts.get(id) : undefined;
+    if (f) return u.side === f.att ? yawTo(-f.v[0], -f.v[1]) : yawTo(f.v[0], f.v[1]);
+    const here = ctr(id);
+    if (u.from != null && u.from !== id && MAP.areas.some((x) => x.id === u.from)) { const q = ctr(u.from); return yawTo(here.x - q.x, here.z - q.z); }
+    return sideYaw(u.side);                                                                           // not moved yet: the direction of the front
+  };
   /** Figures: the area's units in an ordered grid centred in the area (each side a block of rows in a contested area, the far side toward -z),
    * every unit its own footprint, so nothing overlaps; the widest layout that keeps every unit inside the area. */
   const gridLay = (id: number, order: E.Unit[], cont: boolean) => {
     const saved = [...(taken.get(id) ?? [])], poly = areaWorld(id), c = toWorld(...pole(MAP.areas.find((x) => x.id === id)!.polygon));
-    const fp = (u: E.Unit): [number, number] => { const t = !faceDown(u) ? troopOf(u.id) : null; return t ? foot(t, faceYaw(u, cont, false) ?? yawOf(u.side)) : u.garrison ? [1.5, 1.5] : [1.75, 0.95]; };
-    const groups = cont ? [order.filter((u) => !near(u.side)), order.filter((u) => near(u.side))] : [order], feet = groups.map((gr) => gr.map(fp));
-    let best: { x: number; z: number; w: number; d: number }[][] = [], fit = -1;
+    const f = cont ? fronts.get(id)! : null, v = f?.v ?? [0, -1], px = [-v[1], v[0]];                 // local frame: x across, -z toward v (the attackers' side)
+    const fp = (u: E.Unit): [number, number] => { const t = !faceDown(u) ? troopOf(u.id) : null; return t ? foot(t, f ? 0 : heading(u, id, false, false)) : u.garrison ? [1.5, 1.5] : [1.75, 0.95]; };
+    const groups = f ? [order.filter((u) => u.side === f.att), order.filter((u) => u.side !== f.att)] : [order], feet = groups.map((gr) => gr.map(fp));
+    const world = (lx: number, lz: number) => (f ? { x: c.x + lx * px[0] - lz * v[0], z: c.z + lx * px[1] - lz * v[1] } : { x: c.x + lx, z: c.z + lz });
+    let best: { x: number; z: number; lx: number; lz: number; w: number; d: number }[][] = [], fit = -1;
     for (let cols = Math.max(...groups.map((x) => x.length)); cols >= 1; cols--) {
-      const at = grid(feet, cols).map((gr, i) => gr.map(([x, z], j) => ({ x: c.x + x, z: c.z + z, w: feet[i][j][0], d: feet[i][j][1] })));
-      const n = at.flat().filter((q) => [[-1, -1], [1, -1], [1, 1], [-1, 1]].every(([sx, sz]) => inPoly(q.x + sx * q.w / 2, q.z + sz * q.d / 2, poly))).length;
+      const at = grid(feet, cols).map((gr, i) => gr.map(([x, z], j) => ({ ...world(x, z), lx: x, lz: z, w: feet[i][j][0], d: feet[i][j][1] })));
+      const n = at.flat().filter((q) => [[-1, -1], [1, -1], [1, 1], [-1, 1]].every(([sx, sz]) => { const w = world(q.lx + sx * q.w / 2, q.lz + sz * q.d / 2); return inPoly(w.x, w.z, poly); })).length;
       if (n > fit) { fit = n; best = at; } if (n === order.length) break;
     }
     taken.set(id, [...saved, ...best.flat().map((q) => ({ x: q.x, z: q.z, r: Math.max(q.w, q.d) / 2 }))]);       // markers placed later keep clear of every unit
@@ -441,6 +478,7 @@ function drawPieces() {
         const r = rOf(u), p = column ? inArea(a.id, base.x, base.z + idx * 1.8, r) : inArea(a.id, base.x + idx * 1.75, base.z + (cont ? row : 0.4), r); if ((p as { tight?: boolean }).tight) tight = true; return p; });
       return { spots, tight, saved };
     };
+    if (troops && cont && g.battle?.area !== a.id) fronts.set(a.id, frontOf(a.id, order));
     let lay = troops && g.battle?.area !== a.id && order.length ? gridLay(a.id, order, cont) : place(false);
     if (lay.tight && order.length > 1) { taken.set(a.id, lay.saved); const col = place(true); if (!col.tight) lay = col; else { taken.set(a.id, lay.saved); lay = place(false); } }
     if (cont && lay.tight && g.battle?.area !== a.id) {                                             // a crowded contested area: the two sides in facing rows (German row, Allied row), never mixed or stacked
@@ -453,8 +491,8 @@ function drawPieces() {
     if (lab.some((l) => lay.spots.some((p) => Math.hypot(p.x - l.x, p.z - l.z) < l.r + 0.7))) coveredLabels.add(a.id);          // no room: the area's number and name ride on a tag above
     order.forEach((u, n) => {
       const hid = faceDown(u), t = troops && !hid ? troopOf(u.id) : null, sel = u.id === selUnit || (!!g.battle && !hid && (u.id === g.battle.attPoint || u.id === g.battle.defPoint));
-      // facing: faceYaw (The Bulge: Germans west, Allies east; battles, contested areas and the other volumes: toward the other side's edge)
-      const m = t ? troopGroup(t, u.id, u.side, woodOf(u), u.str, u.q[u.str - 1] ?? 'veteran', sel, faceYaw(u, cont, g.battle?.area === a.id)) : block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
+      // facing: heading() (the way it last moved; in a contested area toward the other side; in a battle close-up row against row)
+      const m = t ? troopGroup(t, u.id, u.side, woodOf(u), u.str, u.q[u.str - 1] ?? 'veteran', sel, heading(u, a.id, cont, g.battle?.area === a.id)) : block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
       const flat = !t && cont && !hid && !u.garrison && u.up === a.id;                                                     // revealed blocks lie flat, label up, while the area is contested
       m.position.x = p.x; m.position.z = p.z;
       if (flat) { m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, viewRot(), 0); m.position.y = 0.4; }
@@ -708,7 +746,7 @@ const STEPS = ['Prepare', 'Move', 'Fight', 'Breakthrough', 'Supply'], STEP_OF: R
 /** The red button that ends the step. */
 /** Sicily 14.27a: airborne units still to drop at the start of the Allied Combat Phase (they come before any battle). */
 const dropsLeft = () => (VOL.id === 'sicily' && g.phase === 'combat' && !g.battle && (g.vol as { dropPending?: boolean } | undefined)?.dropPending ? g.units.filter((u) => u.box === 'airborne_assault' && u.side === g.phasing).length : 0);
-const endLabel = () => (dropsLeft() ? 'Drop the airborne first' : g.phase === 'reinforcement' ? 'End reinforcement' : g.phase === 'deploy' ? ((left) => { const n = left.filter((u) => u.side === g.phasing).length; return n ? `Place ${n} more first` : left.length ? 'Finish the panel first' : 'End set-up'; })(VOL.pendingPlace(g).map((id) => g.units.find((x) => x.id === id)!).filter((u) => mine(u.side))) : g.phase === 'reaction' ? 'End reaction' : `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`);
+const endLabel = () => (dropsLeft() ? 'Drop the airborne first' : g.phase === 'reinforcement' ? 'End reinforcement' : g.phase === 'deploy' ? ((left) => { const n = left.filter((u) => u.side === g.phasing).length; return n ? `Place ${n} more first` : left.length ? 'Finish the panel first' : 'End set-up'; })(VOL.pendingPlace(g).map((id) => g.units.find((x) => x.id === id)!).filter((u) => mine(u.side))) : ({ admin: 'End admin', movement: 'End movement', strategic: 'End strategic', combat: 'End combat', reaction: 'End reaction', btMove: 'End breakthrough moves', btCombat: 'End breakthrough battles', supply: 'End supply' } as Record<string, string>)[g.phase] ?? `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`);      // the same name as the phase tab
 const other = E.other;
 /** The printed sequence of play (the step bar): Breakthrough covers its movement and its combat. */
 const PHASES = ['Reinforcement', 'Admin', 'Movement', 'Strategic', 'Combat', 'Reaction', 'Breakthrough', 'Supply'], PHASE_OF: Record<E.Phase, number> = { deploy: 2, reinforcement: 0, admin: 1, movement: 2, strategic: 3, combat: 4, reaction: 5, btMove: 6, btCombat: 6, supply: 7 };
@@ -811,7 +849,7 @@ let followFoe = (() => { try { return localStorage.getItem('fab-follow') !== '0'
 let feed: { t: number; text: string; side: string }[] = [], feedLen = -1;
 function feedHtml(): string {
   const n = g.log.length; if (feedLen < 0 || n < feedLen) feedLen = n;                       // a new or rewound game shows nothing old
-  for (const l of g.log.slice(feedLen)) { if (/\[sandbox\]|: phase start$/.test(l)) continue; const text = l.replace(/^T\d+ /, '').replace(new RegExp(`^(${TAGRE}) (\\w+): \\2 phase$`), `$1 Turn ${g.turn}: $2`).replace(new RegExp(`^(${TAGRE}) [a-zA-Z]+: `), '$1 ');   /* the step is in the top bar; the feed keeps only the news */ feed.push({ t: Date.now(), text, side: sideByTag(text.split(/\s/)[0]) }); }
+  for (const l of g.log.slice(feedLen)) { if (/\[sandbox\]|: phase start$|Victory check: /.test(l)) continue;      /* the score is in the top bar; the check stays in the Log */ const text = l.replace(/^T\d+ /, '').replace(new RegExp(`^(${TAGRE}) (\\w+): \\2 phase$`), `$1 Turn ${g.turn}: $2`).replace(new RegExp(`^(${TAGRE}) [a-zA-Z]+: `), '$1 ');   /* the step is in the top bar; the feed keeps only the news */ feed.push({ t: Date.now(), text, side: sideByTag(text.split(/\s/)[0]) }); }
   feedLen = n; const now = Date.now(); feed = feed.filter((f) => now - f.t < 9000).slice(-3); if (g.battle) return '';         // the battle has its own report
   if (feed.length) setTimeout(() => { if (feed.some((f) => Date.now() - f.t >= 9000)) render(); }, 9100);
   return feed.length ? `<div class="feed ${g.phase === 'admin' || g.phase === 'reinforcement' ? 'top' : ''}" aria-live="polite">${feed.map((f) => `<div class="fl2 ${f.side}" style="animation-delay:${-(now - f.t) / 1000}s">${sideTag(f.text)}</div>`).join('')}</div>` : '';
@@ -1153,13 +1191,32 @@ let moveMarks: { el: HTMLElement; unit: string }[] = [];
 /** Other things a block can do this step: build field works (4.33-style fortify) or take a reserve marker. */
 const fwOk = (u: E.Unit) => ['movement', 'reaction', 'btMove'].includes(g.phase) && !u.garrison && !u.moved && u.area != null && !u.unsupplied && !u.disorder && !E.contested(g, u.area) && !g.fieldWorks.includes(u.area) && ((g.phase === 'movement' && u.side === g.phasing) || (g.phase === 'reaction' && u.side !== g.phasing && !!u.reserve) || (g.phase === 'btMove' && u.side === g.phasing && (!!u.reserve || !!u.exploit)));
 const rsOk = (u: E.Unit) => g.phase === 'movement' && u.side === g.phasing && E.canReserve(g, u);
+/** Units the player set aside this step ("Skip"): no halo, out of "Can move"; a new step clears the list. */
+let skipped = new Set<string>(), skipKey = '';
+const skipNow = () => { const k = `${g.turn}|${g.phasing}|${g.phase}`; if (k !== skipKey) { skipKey = k; skipped = new Set(); } return skipped; };
+/** Can this unit still do something this step (move, build field works, take a reserve marker)? */
+function canAct(u: E.Unit) {
+  if (skipNow().has(u.id)) return false;
+  let can = false; if (!u.moved) { try { can = (g.phase === 'strategic' ? (u.reserve ? E.stratOptions(g, u.id).length : 0) : E.moveOptions(g, u.id).length) > 0; } catch { can = false; } }
+  return can || fwOk(u) || rsOk(u);
+}
+/** Units that can still act wear a lime halo on the ground (owner, 11 Nov: no marks floating over the pips). */
+const halos = new THREE.Group(); scene.add(halos);
+const haloMat = [new THREE.MeshBasicMaterial({ color: 0xc8e86a, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide }), new THREE.MeshBasicMaterial({ color: 0xc8e86a, transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide })];
 function syncMoveMarks() {
-  const layer = document.getElementById('marks')!; layer.innerHTML = ''; moveMarks = [];
+  document.getElementById('marks')!.querySelectorAll('.mm').forEach((e) => e.remove()); moveMarks = [];
+  halos.children.forEach((o) => (o as THREE.Mesh).geometry.dispose()); halos.clear();
   const actor = g.phase === 'reaction' ? other(g.phasing) : g.phasing;
   if (g.over || g.battle || g.pendingBlow || selUnit || !['movement', 'strategic', 'reaction', 'btMove'].includes(g.phase) || !allowed() || !mine(actor)) return;
-  for (const u of g.units.filter((x) => x.side === actor && x.area != null && !x.garrison && seen(x))) {
-    let can = false; if (!u.moved) { try { can = (g.phase === 'strategic' ? (u.reserve ? E.stratOptions(g, u.id).length : 0) : E.moveOptions(g, u.id).length) > 0; } catch { can = false; } }
-    const fw = fwOk(u), rs = rsOk(u), el = document.createElement('div'); el.className = 'mm ' + (can ? 'go' : 'no'); el.innerHTML = ico(can ? 'back' : 'minus') + (fw ? '<i class="mmx fw" title="Can fortify"></i>' : '') + (rs ? '<i class="mmx rs" title="Can go in reserve"></i>' : ''); el.title = can ? `${u.name} can move` : `${u.name} cannot move`; layer.appendChild(el); moveMarks.push({ el, unit: u.id });
+  const box = new THREE.Box3(), size = new THREE.Vector3(), c = new THREE.Vector3();
+  for (const u of g.units.filter((x) => x.side === actor && x.area != null && !x.garrison && seen(x) && canAct(x))) {
+    const o = pieces.children.find((x) => x.userData.unit === u.id); if (!o) continue;
+    o.updateMatrixWorld(true); let base: THREE.Object3D = o; o.traverse((x) => { if (x.userData.base) base = x; });      // a figure: its base, not its gun or floating pips
+    box.setFromObject(base).getSize(size); box.getCenter(c); const y = box.min.y + 0.04;
+    const rect = (w: number, d: number) => { const r = Math.min(w, d) / 2, x = w / 2, z = d / 2, sh = new THREE.Shape(); sh.moveTo(-x + r, -z); sh.lineTo(x - r, -z); sh.quadraticCurveTo(x, -z, x, -z + r); sh.lineTo(x, z - r); sh.quadraticCurveTo(x, z, x - r, z); sh.lineTo(-x + r, z); sh.quadraticCurveTo(-x, z, -x, z - r); sh.lineTo(-x, -z + r); sh.quadraticCurveTo(-x, -z, -x + r, -z); return sh; };
+    const circ = (base as THREE.Object3D).userData.r as number | undefined;      // a figure: a round halo matching its circle
+    if (circ) { ([[0.06, 0.24, 0], [0.24, 0.55, 1]] as const).forEach(([a, b, k]) => { const m = new THREE.Mesh(new THREE.RingGeometry(circ + a, circ + b, 56), haloMat[k]); m.rotation.x = -Math.PI / 2; m.position.set(c.x, y, c.z); m.renderOrder = 1; halos.add(m); }); continue; }
+    ([[0.1, 0.3, 0], [0.3, 0.62, 1]] as const).forEach(([a, b, k]) => { const sh = rect(size.x + 2 * b, size.z + 2 * b); sh.holes.push(new THREE.Path(rect(size.x + 2 * a, size.z + 2 * a).getPoints())); const m = new THREE.Mesh(new THREE.ShapeGeometry(sh, 6), haloMat[k]); m.rotation.x = -Math.PI / 2; m.position.set(c.x, y, c.z); m.renderOrder = 1; halos.add(m); });
   }
 }
 /* ---------- option tags on the map: what a Special Action buys, which battles are free (docs/playtest3 mockups) ---------- */
@@ -1369,7 +1426,7 @@ function topBar(vp = '') {
   const tr = (g.track ?? E.VOLUME.track)[g.turn - 1], i = first(g.phasing) ? 0 : 1, pAt = PHASE_OF[g.phase], phaseLabel = g.phase === 'deploy' ? 'Set-up' : PHASES[pAt];
   const who = g.phase === 'deploy' && !placing(g.phasing) && placing(other(g.phasing)) ? other(g.phasing) : g.phasing;      // set-up: the side placing its pieces now (Sicily: the Allied landing plan after the Axis garrisons)
   return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game" aria-label="Menu, log and new game">${ico('menu')}</button><div class="c-crumbs">${g.phase === 'deploy' ? '<span class="on">Set-up</span>' : ''}${PHASES.map((s, k) => `<span class="${g.phase === 'deploy' ? '' : k === pAt ? 'on' : k < pAt ? 'done' : ''}" title="${k + 1}. ${s}">${s}</span>`).join('')}</div>
-    ${vp}<div class="c-stat"><span class="tp" title="Turn ${g.turn}, ${nm(who)} player turn">T${g.turn} · <b class="${who}">${nm(who).toUpperCase()}</b><i class="ph"> · ${phaseLabel.toUpperCase()}${g.phase === 'deploy' ? '' : ` <small>${pAt + 1}/8</small>`}</i></span>${online.active && online.mode === 'remote' ? `<span class="syncdot ${/NOT SAVED/.test(online.sync) ? 'bad' : /saving|connecting/.test(online.sync) ? 'wait' : 'ok'}" title="${esc(online.sync)}" aria-label="${esc(online.sync)}"></span>` : ''}${online.active && !(!online.both() && online.mySide() === g.phasing) ? `<span>YOU<b class="${online.mySide() ?? ''}">${online.both() ? 'BOTH' : (online.mySide() ?? 'WATCHING').toUpperCase()}</b></span>` : ''}${online.devSwitch() ? `<button class="ico dev" data-seat title="Developer: switch seat (${nm(P1)}, ${nm(P2)}, both, watching)" aria-label="Switch seat">${ico('swap')}<span class="bl">Seat</span></button>` : ''}${g.phase === 'admin' || g.phase === 'reinforcement' ? `<span title="Chits drawn this turn (${nm(P1)} / ${nm(P2)})">DRAW<b>${tr.ge[i]}/${tr.al[i]}</b></span>` : ''}${chatBtn()}<button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="View: map layers, colours, reset the camera" aria-label="View">${ico('eye')}<span class="bl">View</span></button><button class="ico" data-modal="boxes" title="Pieces: boxes, arrivals" aria-label="Pieces">${ico('boxes')}<span class="bl">Pieces</span></button></div></div>`;
+    ${vp}<div class="c-stat"><span class="tp" title="Turn ${g.turn}, ${nm(who)} player turn">T${g.turn} · <b class="${who}">${nm(who).toUpperCase()}</b><i class="ph"> · ${phaseLabel.toUpperCase()}${g.phase === 'deploy' ? '' : ` <small>${pAt + 1}/8</small>`}</i></span>${online.active && online.mode === 'remote' ? `<span class="syncdot ${/NOT SAVED/.test(online.sync) ? 'bad' : /saving|connecting/.test(online.sync) ? 'wait' : 'ok'}" title="${esc(online.sync)}" aria-label="${esc(online.sync)}"></span>` : ''}${online.active && !(!online.both() && online.mySide() === g.phasing) ? `<span>YOU<b class="${online.mySide() ?? ''}">${online.both() ? 'BOTH' : (online.mySide() ?? 'WATCHING').toUpperCase()}</b></span>` : ''}${online.devSwitch() ? `<button class="ico dev" data-seat title="Developer: switch seat (${nm(P1)}, ${nm(P2)}, both, watching)" aria-label="Switch seat">${ico('swap')}<span class="bl">Seat</span></button>` : ''}${(g.phase === 'admin' || g.phase === 'reinforcement') && (tr.ge[i] || tr.al[i]) ? `<span title="Chits each side draws this turn (${nm(P1)} / ${nm(P2)})">CHITS<b>${tr.ge[i]}/${tr.al[i]}</b></span>` : ''}${chatBtn()}<button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="View: 2D or 3D, blocks or figures, reset the camera" aria-label="View">${ico('eye')}<span class="bl">View</span></button><button class="ico" data-modal="boxes" title="Pieces: boxes, arrivals" aria-label="Pieces">${ico('boxes')}<span class="bl">Pieces</span></button></div></div>`;
 }
 const COARSE = matchMedia('(pointer: coarse)').matches;
 /** The verb matches the device: tap on touch screens, click with a mouse. */
@@ -1388,6 +1445,7 @@ const gx = (long: string, short = '') => `${short ? `<span class="gs">${short}</
 function stakes(b: E.Battle) {
   const sd = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker), fl = E.fireList(g, b, sd, b.stage.endsWith('Arty') ? 'arty' : 'ground');
   if (!fl.length) return 'Nothing can fire.';
+  if (guide !== 'full' && ledger()) return `<b>${nm(sd)} fire.</b>`;      // the dice panel already shows the dice and numbers
   const dice = fl.reduce((a, f) => a + f.dice, 0), sns = [...new Set(fl.map((f) => f.sn))].sort((x, y) => x - y);
   return `<b>${nm(sd)} ${esc(STAGE_NAME[b.stage].toLowerCase())}:</b> ${dice} ${dice === 1 ? 'die' : 'dice'} · hit on ${sns.length === 1 ? `${sns[0]} or less` : `${sns[0]}–${sns.at(-1)} or less`}${gx(` · at ${E.unitsIn(g, b.area, other(sd)).length} ${nm(other(sd))} block${E.unitsIn(g, b.area, other(sd)).length === 1 ? '' : 's'}`)}`;
 }
@@ -1402,10 +1460,10 @@ function promptText() {
   if (g.pendingBlow) return `<b>${nm(other(g.units.find((x) => x.id === g.pendingBlow!.unit)!.side))}</b>: attempt to blow the bridge?`;
   if (b?.stage === 'retreat') return '<b>Choose the retreat area.</b>';
   if (b && b.stage === 'setup' && b.attPointDone) return '<b>Point units designated.</b> Blocks are revealed…';
-  if (b) return b.stage === 'setup' ? setupPrompt(b) : b.stage === 'done' ? (() => { const left = fightable().filter((x) => x !== b.area).length; const res = (b.result ?? '').trim(); return `<b>Battle over.</b> ${res ? esc(/[.!]$/.test(res) ? res : res + '.') : ''} Close it${left ? `: ${left} battle${left > 1 ? 's' : ''} left` : ''}.`; })() : rollView ? '' : b.stage.endsWith('Choice') ? 'Choose how to take the hits.' : STAGE_NAME[b.stage] ? stakes(b) : '';
+  if (b) return b.stage === 'setup' ? setupPrompt(b) : b.stage === 'done' ? (() => { const left = fightable().filter((x) => x !== b.area).length; const res = (b.result ?? '').trim(); return gx(`<b>Battle over.</b> ${res ? esc(/[.!]$/.test(res) ? res : res + '.') : ''} Close it${left ? `: ${left} battle${left > 1 ? 's' : ''} left` : ''}.`, `<b>Close the battle</b>${left ? ` · ${left} left` : ''}.`); })() : rollView ? '' : b.stage.endsWith('Choice') ? 'Choose how to take the hits.' : STAGE_NAME[b.stage] ? stakes(b) : '';
   const m = E.mustFight(g).length;
   switch (g.phase) {
-    case 'deploy': { const n = VOL.pendingPlace(g).filter((id) => { const u = g.units.find((x) => x.id === id)!; return mine(u.side) && u.side === g.phasing; }).length; return n ? `<b>Set-up: ${n} block${n > 1 ? 's' : ''} to place.</b> Tap one in the tray, or use the panel.` : '<b>Set-up:</b> finish the steps in the panel on the map, then end the set-up.'; }
+    case 'deploy': { const n = VOL.pendingPlace(g).filter((id) => { const u = g.units.find((x) => x.id === id)!; return mine(u.side) && u.side === g.phasing; }).length; return n ? `<b>Set-up:</b> drag a block from the tray to a lit area, or use the panel.`      /* the count is on the main button */ : '<b>Set-up:</b> finish the steps in the panel on the map, then end the set-up.'; }
     case 'reinforcement': return '<b>Pick a new block</b>, then a lit entry area.';
     case 'admin': return selChit && tgt?.hint ? `<b>${esc(tgt.hint)}</b>${tgt.areas.size + tgt.units.size > 0 ? ` · ${tgt.areas.size + tgt.units.size} lit` : ''}` : `<b>Tap a card</b>${gx(' to play it, or end the step.')}`;
     case 'movement': if (selUnit && g.moving?.id === selUnit) return `<b>${E.allowance(g, g.units.find((x) => x.id === selUnit)!) - (g.units.find((x) => x.id === selUnit)!.spent ?? 0)} MP left.</b>${gx(' Tap a green area to go on, or <b>Stop here</b>. Choosing another block ends this one\'s move.', ' Go on, or Stop here.')}`;
@@ -1468,8 +1526,8 @@ const lookAt = (a: number) => { const p = center(a); goal = { t: new THREE.Vecto
 let canMoveKey = '', canMoveIds: string[] = [];
 /** My blocks that can still move in this step (cached until the game changes). */
 function canMove(): string[] {
-  const k = `${g.turn}${g.phase}${g.phasing}${g.log.length}${hist.length}${online.devSeat}`; if (k === canMoveKey) return canMoveIds; canMoveKey = k;
-  canMoveIds = ['movement', 'reaction', 'btMove'].includes(g.phase) ? g.units.filter((u) => u.area != null && !u.moved && !u.garrison && mine(u.side) && E.moveOptions(g, u.id).length).map((u) => u.id) : [];
+  const k = `${g.turn}${g.phase}${g.phasing}${g.log.length}${hist.length}${online.devSeat}${skipNow().size}`; if (k === canMoveKey) return canMoveIds; canMoveKey = k;
+  canMoveIds = ['movement', 'reaction', 'btMove'].includes(g.phase) ? g.units.filter((u) => u.area != null && !u.moved && !u.garrison && mine(u.side) && !skipNow().has(u.id) && E.moveOptions(g, u.id).length).map((u) => u.id) : [];
   return canMoveIds;
 }
 /** The next item after the current one, round and round. */
@@ -1507,7 +1565,7 @@ function dockChips(): string {
   const out: string[] = [], c = (label: string, n: number | null, hot: boolean, fn: (() => void) | null, title = '') => out.push(`<button class="dchip ${hot ? 'hot' : ''}" ${fn ? `data-ui="${reg(fn)}"` : 'disabled'} title="${esc(title || label)}">${esc(label)}${n != null ? `<b>${n}</b>` : ''}</button>`);
   if (g.battle) return '';
   if (g.phase === 'admin' || g.phase === 'reinforcement') {
-    const live = g.chits.filter((x) => x.box === 'available' && mine(x.side) && usableNow(x));
+    const own = online.active && !online.both() ? online.mySide() : null, hs = handSide ?? own ?? g.phasing, live = g.chits.filter((x) => x.box === 'available' && x.side === hs && mine(x.side) && usableNow(x));      // the side whose hand is shown, so the count matches the hand
     if (live.length) c('Playable chits', live.length, true, () => { selChit = nextOf(live.map((x) => x.id), selChit); }, 'Tap to pick the next chit that can be played now');
     if (g.recover.length) c('Recover an asset', null, true, null, 'Choose the asset to bring back (shown above)');
     if (g.artyPick) c('Artillery attrition', 1, true, null, 'Choose the used artillery asset to eliminate (16.12)');
@@ -1533,7 +1591,7 @@ function undoBtn(): string {
   if (!allowed() || g.over) return '';
   const can = hist.length > 0, txt = can ? `Undo: ${hist.label || 'last action'}` : '';
   if (!can && hist.lock) return `<button class="dundo idle locked" disabled title="${esc(`Undo not possible: ${hist.lock}`)}" aria-label="${esc(`Undo not possible: ${hist.lock}`)}">${ico('undo')}<span></span></button>`;      // nothing to undo: a quiet greyed button, the reason in its tooltip, no "Locked" label in the bar
-  if (!txt) return `<button class="dundo idle" disabled aria-hidden="true" tabindex="-1">${ico('undo')}<span></span></button>`;      // always in place, so nothing shifts
+  if (!txt) return `<button class="dundo idle" disabled aria-label="Nothing to undo" title="Nothing to undo" tabindex="-1">${ico('undo')}<span></span></button>`;      // always in place, so nothing shifts
   return `<button class="dundo" ${can ? `data-undo` : 'disabled'} title="${esc(can ? txt + ' (Ctrl+Z)' : 'Undo is locked once dice are rolled or something hidden is shown')}">${ico(can ? 'undo' : 'lock')}<span>${esc(txt)}</span></button>`;
 }
 const recoverSel: Record<string, string | null> = {};
@@ -1574,7 +1632,7 @@ function piecesHtml() {
     const pick = inspectId ? g.chits.find((c) => c.id === inspectId && c.side === sd) : null;
     body = `${g.opts.randomReinf ? '<p class="warnbox"><span><b>Random reinforcements (18.9):</b> units are drawn from those due this turn and next, so the actual turn may differ.</span></p>' : ''}${pick ? `<div class="inspect" data-reveal="${pick.id}">${ruleCard(pick)}</div>` : ''}${rows.join('') || '<p class="hint">No more arrivals.</p>'}`;
   }
-  return `<div class="modal"><div class="sheet wide pieces"><h3><span class="grow">${seatedView() ? (sd === viewSide() ? 'My pieces' : 'Opponent\'s pieces') : nm(sd) + ' pieces'}</span>${tabs}${sideSw}<button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>${body}</div></div>`;
+  return `<div class="modal"><div class="sheet wide pieces"><h3><span class="grow">${seatedView() ? (sd === viewSide() ? 'My pieces' : 'Opponent\'s pieces') : 'Pieces'}</span>${tabs}${sideSw}<button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>${body}</div></div>`;
 }
 /** What the volume's own prompts may use: buttons, who is mine, an area pick on the map. */
 const panelCtx = (): PanelCtx => ({ get: () => g, btn, ubtn, mine, face: (u) => unitPic(u), areaName, ico, pickArea: (label, areas, run) => { areaPick = { label, areas: new Set(areas), run }; selUnit = selChit = selArr = null; refresh(); } });
@@ -1616,8 +1674,8 @@ function dispatch() {
     const noFuel = VOL.features.fuel && first(u.side) && g.opts.fuel && ['movement', 'strategic', 'btMove', 'reaction'].includes(g.phase) && mine(u.side) && !u.garrison && !E.boxOf(g, P1, 'available').some((x) => x.kind === 'fuel');
     const warns = (noFuel ? `<div class="warnbox">${ico('fuel')}<span><b>No fuel left</b>${gx('. German blocks may move at most 3 MP this turn and cannot use strategic movement (16.13).', ': 3 MP max, no strategic move.')}</span></div>` : '')
       + (u.interdict && mine(u.side) && ['movement', 'reaction', 'btMove', 'admin'].includes(g.phase) ? `<div class="warnbox bad">${ico('warn')}<span><b>Greif Interdict</b>${gx(' on this block. Moving it, building field works or taking a reserve marker triggers a morale check (+2). Fail: it may only stay or move one area (17.11).', ': moving triggers a morale check (+2).')}</span></div>` : '');
-    return `<div class="c-dispatch ${o ? 'previewing' : ''}">${warns}<h3 class="${u.side}">${esc(u.name)}</h3><div class="pipsrow">${pips(u)} <small>${u.garrison ? 'asset' : u.cls} · ${mv ? 'moving · ' : ''}${tags.join(' · ') || 'in order'}${hasLegend(VOL.id) ? ` <button class="linkbtn" data-ui="${reg(() => { legendOpen = true; })}" title="What the markers on the pieces mean">Markers?</button>` : ''}</small></div>${moving}${seen(u) ? supLine : ''}${route}
-      <div class="row">${mv && mine(u.side) ? btn('Stop here', () => { E.endMove(g); selUnit = null; }, 'primary', false, 'This block\'s move ends here') : ''}${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve', () => E.setReserve(g, u.id, false)) : btn('Reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u))) : ''}${fw ? btn('Fortify', () => VOL.fieldWorks(g, u.id)) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn('Activate (SA)', () => pickSA(u.side, u.ech, (sa) => E.activateBreakthrough(g, u.id, sa)), '', !E.saAvailable(g, u.side, u.ech).length) : ''}${E.peiperCan(g, u) ? btn(`${u.peiperFull ? ico('check') : ''}KG Peiper: full move (18.3)`, () => E.setPeiperFull(g, u.id, !u.peiperFull), u.peiperFull ? 'primary' : '', false, 'Once per game, up to turn 3: this exploitation move uses Peiper\'s full movement allowance instead of one area') : ''}</div></div>`;
+    return `<div class="c-dispatch ${o ? 'previewing' : ''}">${warns}<h3 class="${u.side}">${esc(u.name)}</h3><div class="pipsrow">${pips(u)} <small>${u.garrison ? 'asset' : u.cls} · ${mv ? 'moving · ' : ''}${tags.join(' · ') || 'in order'}${hasLegend(VOL.id) ? ` <button class="linkbtn" data-ui="${reg(() => { legendOpen = true; legendShownAt = performance.now(); })}" title="What the markers on the pieces mean">Markers?</button>` : ''}</small></div>${moving}${seen(u) ? supLine : ''}${route}
+      <div class="row">${mv && mine(u.side) ? btn('Stop here', () => { E.endMove(g); selUnit = null; }, 'primary', false, 'This block\'s move ends here') : ''}${!mv && mine(u.side) && ['movement', 'strategic', 'reaction', 'btMove'].includes(g.phase) && (skipNow().has(u.id) || canAct(u)) ? ubtn(skipNow().has(u.id) ? 'Skipped · undo' : 'Skip', () => { if (skipped.has(u.id)) skipped.delete(u.id); else { skipped.add(u.id); selUnit = null; } refresh(); }, '', false, 'Nothing to do for this unit in this step: no halo, left out of Can move') : ''}${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve', () => E.setReserve(g, u.id, false)) : btn('Reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u))) : ''}${fw ? btn('Fortify', () => VOL.fieldWorks(g, u.id)) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn('Activate (SA)', () => pickSA(u.side, u.ech, (sa) => E.activateBreakthrough(g, u.id, sa)), '', !E.saAvailable(g, u.side, u.ech).length) : ''}${E.peiperCan(g, u) ? btn(`${u.peiperFull ? ico('check') : ''}KG Peiper: full move (18.3)`, () => E.setPeiperFull(g, u.id, !u.peiperFull), u.peiperFull ? 'primary' : '', false, 'Once per game, up to turn 3: this exploitation move uses Peiper\'s full movement allowance instead of one area') : ''}</div></div>`;
   }
   return '';
 }
@@ -1649,12 +1707,12 @@ const unitFace = (u: E.Unit) => svgUri(VOL.unitSvg(u, g));
 const b3 = (face: string, side: E.Side | 'british', chit = false) => `<span class="b3 ${side} ${chit ? 'flat' : ''}" aria-hidden="true"><i class="f"><img alt="" draggable="false" src="${face}"></i><i class="r"></i><i class="t"></i></span>`;
 const sideOfUnit = (u: E.Unit) => VOL.cssSide(u);
 /** The printed map's legend, redrawn (map-legend.ts): a chip at the map's top-left corner opens it. */
-let legendOpen = false;
+let legendOpen = false, legendShownAt = 0;
 function mapLegend() {
   if (!hasLegend(VOL.id)) return '';
   const close = `<button class="ico" aria-label="Close the legend" data-ui="${reg(() => { legendOpen = false; })}">${ico('close')}</button>`;
   if (g.battle) return '';                                                                              // the battle bar takes the top of the map
-  return legendOpen ? legendCard(VOL.id, close) : `<button class="mlchip" aria-expanded="false" aria-label="Map legend" data-ui="${reg(() => { legendOpen = true; })}">${ico('info')}<span>Legend</span></button>`;
+  return legendOpen ? legendCard(VOL.id, close) : `<button class="mlchip" aria-expanded="false" aria-label="Map legend" data-ui="${reg(() => { legendOpen = true; legendShownAt = performance.now(); })}">${ico('info')}<span>Legend</span></button>`;
 }
 /** The map's own corner: the printed-map legend, the colour layer switch (one tap, no window) and the active layer's key right under it. */
 /** A quarter turn of the board, eased (phones have no right-drag to turn it). */
@@ -1662,11 +1720,12 @@ function rotateQuarter() { const y0 = yaw; goal = null; anims.push({ t0: perform
 /** One button for the area tags: on → see-through → off, kept on this device. */
 const LABEL_NEXT = { on: 'tr', tr: 'off', off: 'on' } as const, LABEL_NAME = { on: 'On', tr: 'See-through', off: 'Off' };
 function labelsBtn() {
-  return `<div class="laysw labsw"><button aria-pressed="${labelMode !== 'off'}" title="Area labels: ${LABEL_NAME[labelMode]} (tap for ${LABEL_NAME[LABEL_NEXT[labelMode]]})" aria-label="Area labels: ${LABEL_NAME[labelMode]}" data-ui="${reg(() => { labelMode = LABEL_NEXT[labelMode]; try { localStorage.setItem('fab-labels', labelMode); } catch { /* private mode */ } syncAreaTags(); })}"><b>Labels</b>${ico('eye')}<span class="l">${LABEL_NAME[labelMode]}</span><span class="s">${({ on: 'On', tr: 'Dim', off: 'Off' })[labelMode]}</span></button></div>`;
+  return `<div class="laysw labsw"><button aria-pressed="${labelMode !== 'off'}" title="Area labels: ${LABEL_NAME[labelMode]} (tap for ${LABEL_NAME[LABEL_NEXT[labelMode]]})" aria-label="Area labels: ${LABEL_NAME[labelMode]}" data-ui="${reg(() => { labelMode = LABEL_NEXT[labelMode]; try { localStorage.setItem('fab-labels', labelMode); } catch { /* private mode */ } syncAreaTags(); })}"><b>Labels</b>${ico('tag')}<span class="l">${LABEL_NAME[labelMode]}</span><span class="s">${({ on: 'On', tr: 'Dim', off: 'Off' })[labelMode]}</span></button></div>`;
 }
 let mapMenu = false;      // phones: the layers, legend and rotate fold into one Map button
 function mapDock() {
   if (g.battle) return '';                                                                              // the battle bar takes the top of the map
+  if (legendOpen && SANDBOX && SBU.st.sbOpen && innerWidth < 700) { if (legendShownAt < SBU.st.sbOpenedAt) legendOpen = false; else SBU.closeSb(); }      // phones: the legend and the sandbox sheet never stack; the newer one wins
   if (legendOpen && hasLegend(VOL.id)) return mapLegend();
   type Opt = [typeof tint, string, string, string, string];      // layer, label, short label (phone), icon, what it shows
   const opts: Opt[] = [['off', 'None', 'None', 'close', 'No colour on the map'], ['tdn', 'TDN', 'TDN', 'tree', 'Terrain defence'], ...(VOL.features.zones ? [['zones', 'Zones', 'Zones', 'layers', 'Army zones'] as Opt] : []), ['control', 'Control', 'Ctrl', 'flag', 'Who holds each area'], ['supply', 'Supply', 'Supply', 'fuel', 'Supply: which areas trace supply']];
@@ -1692,7 +1751,7 @@ function tray() {
   const pool = g.phase === 'deploy' ? us.filter((u) => u.untried) : [], open = us.filter((u) => !pool.includes(u));
   const back = svgUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160"><rect width="160" height="160" fill="${hex6(VOL.wood[pool[0]?.nation ?? pool[0]?.side ?? ''] ?? 0x9a8a6a)}"/></svg>`);      // the plain wood of a block lying face down
   const stack = pool.length ? `<button class="arr ${selArr === POOL ? 'sel' : ''}" data-arr="${POOL}" title="Coastal garrisons, face down: the one placed is drawn at random">${b3(back, sideOfUnit(pool[0]))}<small>Coastal garrison ×${pool.length}</small></button>` : '';
-  return `<div class="arrtray" role="group" aria-label="${g.phase === 'deploy' ? 'Blocks to place' : 'Arriving reinforcements'}"><span class="why">${g.phase === 'deploy' ? 'Drag a block to a highlighted set-up area, or click it to see them.' : 'Drag a block to a highlighted entry area, or click it to see them.'}</span>${stack}${open.map((u) => `<button class="arr ${u.id === selArr ? 'sel' : ''}" data-arr="${u.id}" title="${esc(u.name)}">${b3(unitFace(u), sideOfUnit(u), !!u.garrison)}<small>${esc(u.name)}</small></button>`).join('')}${tf.map((c) => `<button class="arr ${c.id === selArr ? 'sel' : ''}" data-arr="${c.id}" title="Task Force">${b3(svgUri(garrisonChit('Task Force', `${c.turn}-*`, false)), 'allied', true)}<small>Task Force</small></button>`).join('')}</div>`;
+  return `<div class="arrtray" role="group" aria-label="${g.phase === 'deploy' ? 'Blocks to place' : 'Arriving reinforcements'}">${stack}${open.map((u) => `<button class="arr ${u.id === selArr ? 'sel' : ''}" data-arr="${u.id}" title="${esc(u.name)}">${b3(unitFace(u), sideOfUnit(u), !!u.garrison)}<small>${esc(u.name)}</small></button>`).join('')}${tf.map((c) => `<button class="arr ${c.id === selArr ? 'sel' : ''}" data-arr="${c.id}" title="Task Force">${b3(svgUri(garrisonChit('Task Force', `${c.turn}-*`, false)), 'allied', true)}<small>Task Force</small></button>`).join('')}</div>`;
 }
 /** One slim line above the hand: what the chosen card does and whether it can join, without covering the map. */
 function cardTip() {
@@ -1709,13 +1768,14 @@ function handCards() {
     if (b.stage !== 'setup') return '';
     const cs = ([b.attacker, other(b.attacker)] as E.Side[]).filter((sd) => mine(sd) && !b.ready?.includes(sd)).sort()      /* a side that confirmed its set-up no longer sees its cards */.flatMap((s) => E.boxOf(g, s, 'available').filter((c) => VOL.battleCard(c)));
     const ok = cs.filter((c) => !VOL.battleUse(g, b, c));
-    const bad = cs.filter((c) => VOL.battleUse(g, b, c));
-    return `<div class="handtab">${mine(b.attacker) ? btn(`${ico('close')}<span class="bl">Cancel</span>`, () => { E.cancelBattle(g); }, 'ico danger', !!b.locked, b.locked ? 'A Special Action was spent, so the battle must be fought' : 'Withdraw the attack and return every assigned asset') : ''}${ok.length && bad.length ? `<button data-ui="${reg(() => { handAll = !handAll; })}" aria-pressed="${handAll}">${handAll ? `Playable only (${ok.length})` : `Show all ${ok.length + bad.length}`}</button>` : ''}<button class="ico ${handInfo ? 'on' : ''}" data-ui="${reg(() => { handInfo = !handInfo; if (!handInfo) handInspect = null; })}" aria-pressed="${handInfo}" title="Rules: tap a card to read what it does instead of adding it" aria-label="Rules">${ico('info')}</button>${ok.length ? btn(`${ico('wand')}<span class="bl">Auto-fill</span>`, () => autoFill(g.battle!), 'ico', false, 'Auto-fill: place every asset that can legally join, artillery first') : ''}</div>${handInfo ? cardTip() : ''}<div class="c-hand" ${handStyle(handAll || !ok.length ? ok.length + bad.length : ok.length)}>${fan([...ok.map((c) => card(c)), ...(handAll || !ok.length ? bad.map((c) => card(c, 0, VOL.battleUse(g, b, c))) : [])])}</div>`;
+    const bad = cs.filter((c) => VOL.battleUse(g, b, c)), canCancel = mine(b.attacker) && E.setupSide(g, b) === b.attacker;
+    if (!cs.length && !canCancel) return '';      // the defender with no card: no empty tray
+    return `<div class="handtab">${canCancel ? btn(`${ico('close')}<span class="bl">Cancel</span>`, () => { E.cancelBattle(g); }, 'ico danger', !!b.locked, b.locked ? 'A Special Action was spent, so the battle must be fought' : 'Withdraw the attack and return every assigned asset') : ''}${ok.length && bad.length ? `<button data-ui="${reg(() => { handAll = !handAll; })}" aria-pressed="${handAll}">${handAll ? `Playable only (${ok.length})` : `Show all`}</button>` : ''}<button class="ico ${handInfo ? 'on' : ''}" data-ui="${reg(() => { handInfo = !handInfo; if (!handInfo) handInspect = null; })}" aria-pressed="${handInfo}" title="Rules: tap a card to read what it does instead of adding it" aria-label="Rules">${ico('book')}<span class="bl">Rules</span></button>${ok.length ? btn(`${ico('wand')}<span class="bl">Auto-fill</span>`, () => autoFill(g.battle!), 'ico', false, 'Auto-fill: place every asset that can legally join, artillery first') : ''}</div>${handInfo ? cardTip() : ''}<div class="c-hand" ${handStyle(handAll || !ok.length ? ok.length + bad.length : ok.length)}>${fan([...ok.map((c) => card(c)), ...(handAll || !ok.length ? bad.map((c) => card(c, 0, VOL.battleUse(g, b, c))) : [])])}</div>`;
   }
   if (g.phase !== 'admin') return '';
   const own = online.active && !online.both() ? online.mySide() : null, s = handSide ?? own ?? (g.battle && !mine(g.phasing) ? other(g.phasing) : g.phasing), cs = [...E.boxOf(g, s, 'available')].sort((x, y) => x.kind.localeCompare(y.kind) || x.name.localeCompare(y.name));
   const live = cs.filter((c) => usableNow(c)), rest = cs.filter((c) => !usableNow(c)), shown = handAll || !live.length ? [...live, ...rest] : live;      // the cards you can play now first; the rest on request
-  const more = live.length && rest.length ? `<button data-ui="${reg(() => { handAll = !handAll; })}" aria-pressed="${handAll}">${handAll ? `Playable only (${live.length})` : `Show all ${cs.length}`}</button>` : '';
+  const more = live.length && rest.length ? `<button data-ui="${reg(() => { handAll = !handAll; })}" aria-pressed="${handAll}">${handAll ? `Playable only (${live.length})` : `Show all`}</button>` : '';
   return `<div class="handtab"><button data-ui="${reg(() => { handSide = other(s); })}" class="${s}">${nm(s)} hand · ${cs.length} ${ico('swap')}</button>${more}</div><div class="c-hand" ${handStyle(shown.length)}>${fan(shown.map((c) => card(c)))}</div>`;
 }
 function stats(b: E.Battle, s: E.Side) {
@@ -1728,14 +1788,14 @@ function battleTable() {
   const side = (s: E.Side) => {
     const us = E.unitsIn(g, b.area, s), lim = VOL.limits(g, b, s), ids = b.assets[s].map((id) => E.chit(g, id)), airs = E.airOf(b, s);
     const arty = ids.filter((c) => E.isArty(c)).length + airs.filter((a) => a.mode === 'arty').length, rest = ids.length - ids.filter((c) => E.isArty(c)).length;
-    return `<div class="bside ${s} ${mine(s) ? 'mine' : 'theirs'}"><h4 title="${nm(s)} ${s === att ? 'attacking' : 'defending'}"><span class="tag">${VOL.tag[s]}</span>${ico(s === att ? 'next' : 'shield')}<small class="role">${s === att ? 'attacks' : 'defends'}</small>${online.active && !online.both() ? `<small>${mine(s) ? 'you' : 'foe'}</small>` : ''}</h4>
-      <span class="chp" title="Artillery assigned">${ico('artillery')}${arty}/${lim.arty}<small>arty</small></span>${rest || setup ? `<span class="chp" title="Battle assets and events">${ico('armor_asset')}${rest}<small>assets</small></span>` : ''}
+    return `<div class="bside ${s} ${mine(s) ? 'mine' : 'theirs'}"><h4 title="${nm(s)} ${s === att ? 'attacking' : 'defending'}"><span class="tag">${VOL.tag[s]}</span><small class="role">${s === att ? 'attacks' : 'defends'}</small>${online.active && !online.both() ? `<small>${mine(s) ? 'you' : 'foe'}</small>` : ''}</h4>
+      ${arty || setup ? `<span class="chp" title="Artillery assigned">${ico('artillery')}${arty}/${lim.arty}<small>arty</small></span>` : ''}${rest || setup ? `<span class="chp" title="Battle assets and events">${ico('armor_asset')}${rest}<small>assets</small></span>` : ''}
       </div>`;
   };
   const saRow = (() => { const s = other(att), us = E.unitsIn(g, b.area, s); if (!setup || !b.defSA) return ''; return `<div class="bsarow ${saOpen || reinforcing ? 'open' : ''}"><small class="gx">${nm(s)} Special Action</small>${ubtn(`${ico('plus')}<span>Special Action…</span>`, () => { saOpen = !saOpen; }, `satog ${saOpen ? 'on' : ''}`, !mine(s), 'Retreat before combat or bring in a neighbouring block (uses a Special Action)')}<span class="sabtns">${btn(`${ico('back')}<span class="bsa">Retreat (SA)</span>`, () => pickSA(s, us[0]?.ech, (sa) => E.defenderRetreatSA(g, g.battle!, sa)), 'ico', !mine(s) || !us.some((u) => !u.garrison), 'Retreat before combat (8.24): uses a Special Action; your units leave without disorder, garrisons stay; the attacker gets an exploitation chance')}${ubtn(`${ico('plus')}<span class="bsa">Reinforce (SA)</span>`, () => { reinforcing = !reinforcing; refresh(); }, `ico ${reinforcing ? 'on' : ''}`, !mine(s), 'Bring in a neighbouring block (uses a Special Action)')}</span></div>`; })();
   const covered = E.unitsIn(g, b.area).some((u) => !seen(u)), al = stats(b, P2), ge = stats(b, P1), tot = al.mean + ge.mean || 1;
   return `<div class="c-table slim ${rollView ? 'rolling' : ''}">${side(P2)}<div class="bmid"><div class="c-title">${g.fought.length + fightable().length > 1 ? `<small class="cnt" title="Battle ${g.fought.includes(b.area) ? g.fought.indexOf(b.area) + 1 : g.fought.length + 1} of ${g.fought.length + fightable().length}">Battle ${g.fought.includes(b.area) ? g.fought.indexOf(b.area) + 1 : Math.min(g.fought.length + 1, g.fought.length + fightable().length)}/${g.fought.length + fightable().length}</small>` : ''}${b.bt ? '<small class="cnt" title="Breakthrough combat">BT</small>' : ''}<b>${esc(L.name)}</b><span class="chp" title="Terrain defence number ${L.tdn}: attackers −${L.tdn} to hit">${ico('tree')}${L.tdn}</span>${g.fieldWorks.includes(b.area) ? `<span class="chp" title="Field works">${ico('gear')}</span>` : ''}${b.riverAssault ? `<span class="chp" title="River assault">${ico('wave')}</span>` : ''}</div>
-    <div class="c-vs">${covered ? '<div class="big">?<span>:</span>?</div>' : `<small class="vlbl">expected hits</small><div class="big" title="Expected hits per combat round: ${nm(P2)} : ${nm(P1)}"><small class="xs al">${VOL.tag[P2]}</small>${al.mean.toFixed(1)}<span>:</span>${ge.mean.toFixed(1)}<small class="xs ge">${VOL.tag[P1]}</small></div>${gx('<small class="xcap">expected hits per round</small>')}<div class="gauge" title="${esc(`Filled: ${nm(P2)} share of the expected hits · empty: ${nm(P1)}`)}"><i style="width:${(al.mean / tot) * 100}%"></i></div>`}</div></div>${side(P1)}${saRow}${setup ? engChoice(b) : ''}${setup && refusal ? `<div class="refuse">${ico('xbold')}<span><b>Not allowed:</b> ${esc(refusal)}</span></div>` : ''}</div>`;
+    <div class="c-vs">${b.stage === 'done' ? '' : covered ? '<div class="big">?<span>:</span>?</div>' : `<small class="vlbl">expected hits</small><div class="big" title="Expected hits per combat round: ${nm(P2)} : ${nm(P1)}"><small class="xs al">${VOL.tag[P2]}</small>${al.mean.toFixed(1)}<span>:</span>${ge.mean.toFixed(1)}<small class="xs ge">${VOL.tag[P1]}</small></div>${gx('<small class="xcap">expected hits per round</small>')}<div class="gauge" title="${esc(`Filled: ${nm(P2)} share of the expected hits · empty: ${nm(P1)}`)}"><i style="width:${(al.mean / tot) * 100}%"></i></div>`}</div></div>${side(P1)}${saRow}${setup ? engChoice(b) : ''}${setup && refusal ? `<div class="refuse">${ico('xbold')}<span><b>Not allowed:</b> ${esc(refusal)}</span></div>` : ''}</div>`;
 }
 /** 6.33: an attacking engineer in a battle with enemy field works either fires or removes them; two plain buttons, chosen at set-up (or before offensive fire). */
 function engChoice(b: E.Battle): string {
@@ -1822,12 +1882,20 @@ function frameSide(sd: E.Side) { const ids = MAP.areas.filter((a) => g.control[a
   const x0 = Math.min(...ids.map((p) => p.x)), x1 = Math.max(...ids.map((p) => p.x)), z0 = Math.min(...ids.map((p) => p.z)), z1 = Math.max(...ids.map((p) => p.z));
   goal = { t: new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), dist: clampDist(Math.max(x1 - x0, (z1 - z0) * 1.3) * 0.95 + 8), pitch }; }
 /** True when the area's centre is inside the visible part of the screen (clear of the bars at top and bottom). */
-const onScreen = (a: number) => { const v = center(a).clone().project(cam); return Math.abs(v.x) < 0.85 && v.y > -0.6 && v.y < 0.75 && v.z < 1; };
+/** The part of the canvas no panel covers, in normalised screen units (-1..1): the sandbox panel on the right, the block card or battle report at the bottom right. */
+function freeView() {
+  const r = canvas.getBoundingClientRect(); let x1 = 0.85, y0 = -0.6;
+  for (const q of ['.sbx', '.c-dispatch', '.c-ledger']) { const e = document.querySelector<HTMLElement>(`#ui ${q}`); if (!e || !e.offsetParent) continue; const b = e.getBoundingClientRect(); if (b.width > r.width * 0.6) { y0 = Math.max(y0, 1 - ((b.top - r.top) / r.height) * 2 + 0.05); continue; } x1 = Math.min(x1, ((b.left - r.left) / r.width) * 2 - 1 - 0.05); }
+  return { x0: -0.85, x1: Math.max(-0.3, x1), y0: Math.min(0.3, y0), y1: 0.75 };
+}
+const onScreen = (a: number) => { const v = center(a).clone().project(cam), f = freeView(); return v.x > f.x0 && v.x < f.x1 && v.y > f.y0 && v.y < f.y1 && v.z < 1; };
 /** Bring areas into view when any of them is off screen: the camera frames them all, no closer than now. */
 function showAreas(ids: number[]) {
   if (!ids.length || ids.every(onScreen)) return;
   const ps = ids.map(center), x0 = Math.min(...ps.map((p) => p.x)), x1 = Math.max(...ps.map((p) => p.x)), z0 = Math.min(...ps.map((p) => p.z)), z1 = Math.max(...ps.map((p) => p.z));
-  goal = { t: new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), dist: clampDist(Math.max(dist, Math.max(x1 - x0, (z1 - z0) * 1.3) * 1.1 + 10)), pitch };
+  const f = freeView(), d = clampDist(Math.max(dist, Math.max(x1 - x0, (z1 - z0) * 1.3) * 1.1 + 10)), t = new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2);
+  const shift = -((f.x0 + f.x1) / 2) * d * 0.45 * (innerWidth / innerHeight) * 0.5;      // a panel on the right: aim to the right so the areas land in the free part (approximate, camera faces the map)
+  goal = { t: t.add(new THREE.Vector3(Math.cos(yaw) * shift, 0, -Math.sin(yaw) * shift)), dist: d, pitch };
 }
 const cutOffCount = (sd: E.Side) => MAP.areas.filter((a) => g.control[a.id] === sd && !supOk(sd, a.id)).length;
 const resetBtn = () => ubtn(`${ico('home')}<span>Reset view</span>`, () => { goal = homeGoal(); yaw = viewRot(); });
@@ -1900,7 +1968,7 @@ document.addEventListener('pointerup', release, true); document.addEventListener
 /** Keyboard focus survives a redraw: the same control (by its role and text) gets it back, or the new main button. */
 let kbUser = false; window.addEventListener('keydown', (e) => { if (e.key === 'Tab' || e.key === 'Enter' || e.key === ' ') kbUser = true; }, true); window.addEventListener('pointerdown', () => { kbUser = false; }, true);
 function focusKey(el: Element | null) { if (!el || !(el as HTMLElement).closest?.('#ui') || !el.matches('button,[role=button],input,select,[tabindex]')) return null; return { tag: el.tagName, cls: Array.from(el.classList).filter((c) => !['on', 'hot'].includes(c)).sort().join('.'), text: (el.textContent ?? '').trim().slice(0, 40), label: el.getAttribute('aria-label') ?? '' }; }
-function render() { if (pressing) { renderWaiting = true; return; } renderWaiting = false; syncView(); const fk = kbUser ? focusKey(document.activeElement) : null; try { renderInner(); translateDom($('#ui')); linkRules($('#ui')); } catch (e) { console.error(e); $('#ui').innerHTML = `<div class="seatbar err"><span>Display problem: ${esc(String((e as Error)?.message ?? e))}</span>${ubtn('Reload', () => location.reload(), 'primary')}${SANDBOX ? ubtn('Undo last edit', () => { const p = hist.undo(g).game; if (p) { g = p; save(); refresh(); } }) + ubtn('New sandbox game', () => { g = E.newGame(); hist.clear(); save(); refresh(); }) : ''}</div>`; bind($('#ui')); }   if (fk && !document.activeElement?.closest?.('#ui')) { const all = Array.from(document.querySelectorAll<HTMLElement>('#ui button, #ui [role=button], #ui input, #ui select, #ui [tabindex]'));
+function render() { if (pressing) { renderWaiting = true; return; } renderWaiting = false; document.body.classList.toggle('setup', g.phase === 'deploy'); syncView(); const fk = kbUser ? focusKey(document.activeElement) : null; try { renderInner(); translateDom($('#ui')); linkRules($('#ui')); } catch (e) { console.error(e); $('#ui').innerHTML = `<div class="seatbar err"><span>Display problem: ${esc(String((e as Error)?.message ?? e))}</span>${ubtn('Reload', () => location.reload(), 'primary')}${SANDBOX ? ubtn('Undo last edit', () => { const p = hist.undo(g).game; if (p) { g = p; save(); refresh(); } }) + ubtn('New sandbox game', () => { g = E.newGame(); hist.clear(); save(); refresh(); }) : ''}</div>`; bind($('#ui')); }   if (fk && !document.activeElement?.closest?.('#ui')) { const all = Array.from(document.querySelectorAll<HTMLElement>('#ui button, #ui [role=button], #ui input, #ui select, #ui [tabindex]'));
     const back = all.find((e) => { const k = focusKey(e); return k && k.tag === fk.tag && k.cls === fk.cls && (k.text === fk.text || (k.label && k.label === fk.label)); }) ?? document.querySelector<HTMLElement>('#ui .go:not(:disabled)'); back?.focus({ preventScroll: true }); if (back?.closest('.modal') && !revealing) back.scrollIntoView({ block: 'nearest' }); }      // focus restored inside a menu stays in sight (not while a sub-menu glides in)
   const sheet = document.querySelector<HTMLElement>('#ui .modal > .sheet');
   if (sheet) { const h = sheet.querySelector('h3'); sheet.setAttribute('role', 'dialog'); sheet.setAttribute('aria-modal', 'true'); if (h) { h.id = 'sheet-title'; sheet.setAttribute('aria-labelledby', h.id); }
@@ -1919,7 +1987,7 @@ function renderInner() {
   const sheetKey = `${modal}:${menuTab}:${piecesTab}:${piecesSide}`, keepS = sheetKey === lastSheet ? (document.querySelector<HTMLElement>(SHEET_SCROLL)?.scrollTop ?? 0) : 0;   // a menu keeps its place on every click; another menu or tab starts at the top
   const shown = new Set(Array.from(document.querySelectorAll<HTMLElement>('#ui [data-reveal]')).map((e) => e.dataset.reveal));
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = `<a class="skipmap" href="#" data-ui="${reg(() => { (document.getElementById('gl') as HTMLElement).focus(); })}">Skip to the map</a><div class="tops">${topBar(vpStrip(g, reg(() => { scoreOpen = true; })))}</div>` + `<div class="stage">${SANDBOX ? (SBU.st.sbOpen ? SBU.sandboxPanel() : SBU.sandboxFab()) : ''}${seatBar()}${heldBad ? heldBadBar() : ''}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${volPanel()}${mapDock()}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${SBU.hotCoverHtml()}${saPickHtml()}${altPickHtml()}${airPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} Map`, () => { endHidden = true; }) + ubtn(`${ico('dice')} Replay`, () => { void showReplay(); }, '', false, 'Watch the whole game again, step by step') + ubtn(`${ico('plus')} New game`, () => { if (SANDBOX) { SBU.sbReset({ ...g.opts }); endHidden = false; } else location.href = homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}</button>${undoBtn()}${!p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go ${g.moving && p.label.startsWith('End') ? 'quiet' : ''}" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
+  $('#ui').innerHTML = `<a class="skipmap" href="#" data-ui="${reg(() => { (document.getElementById('gl') as HTMLElement).focus(); })}">Skip to the map</a><div class="tops">${topBar(vpStrip(g, reg(() => { scoreOpen = true; })))}</div>` + `<div class="stage">${SANDBOX ? (SBU.st.sbOpen ? SBU.sandboxPanel() : SBU.sandboxFab()) : ''}${seatBar()}${heldBad ? heldBadBar() : ''}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${volPanel()}${mapDock()}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${SBU.hotCoverHtml()}${saPickHtml()}${altPickHtml()}${airPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} Map`, () => { endHidden = true; }) + ubtn(`${ico('dice')} Replay`, () => { void showReplay(); }, '', false, 'Watch the whole game again, step by step') + ubtn(`${ico('plus')} New game`, () => { if (SANDBOX) { SBU.sbReset({ ...g.opts }); endHidden = false; } else location.href = homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('text')}</button>${undoBtn()}${!p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go ${g.moving && p.label.startsWith('End') ? 'quiet' : ''}" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
   const ui = $('#ui');
   { const d = ui.querySelector<HTMLElement>('.c-dispatch'); if (d) d.scrollTop = keepD; }
   { const s = ui.querySelector<HTMLElement>(SHEET_SCROLL); if (s) s.scrollTop = keepS; lastSheet = s ? sheetKey : '';
@@ -1936,7 +2004,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
   });
   { const h = ui.querySelector<HTMLElement>('.c-hand'), a = ui.querySelector<HTMLElement>('.arrtray'); if (h) h.scrollLeft = keepH; if (a) a.scrollLeft = keepA; }
   ui.querySelectorAll<HTMLElement>('[data-ui]').forEach((e) => (e.onclick = () => { acts[e.dataset.ui!]?.(); render(); }));            // view-only choices: allowed for everyone, never touch the game
-  ui.querySelectorAll<HTMLElement>('[data-do]').forEach((e) => (e.onclick = () => { if (inGame()) act(acts[e.dataset.do!]); else { acts[e.dataset.do!]?.(); render(); } }));        // on the home page nothing is a game move
+  ui.querySelectorAll<HTMLElement>('[data-do]').forEach((e) => (e.onclick = () => { if (inGame()) act(acts[e.dataset.do!], g.battle ? ((e.querySelector('span')?.firstChild ?? e).textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 40) : '');      /* the button's own words, not its subtitle */ else { acts[e.dataset.do!]?.(); render(); } }));        // on the home page nothing is a game move
   ui.querySelectorAll<HTMLElement>('[data-modal]').forEach((e) => (e.onclick = () => { inspectId = null; modal = (e.dataset.modal || null) as typeof modal; render(); }));                          // a window opens with nothing selected
   ui.querySelectorAll<HTMLElement>('[data-sel]').forEach((e) => (e.onchange = () => { const f = actv[e.dataset.sel!]; if (f) { f(e instanceof HTMLInputElement && e.type === 'checkbox' ? (e.checked ? 'on' : 'off') : (e as HTMLSelectElement).value); save(); } }));
   ui.querySelectorAll<HTMLInputElement>('#lb-q').forEach((e) => { const run = () => { SBU.st.sbFilter = e.value; const w = SBU.st.sbFilter.toLowerCase().split(/\s+/).filter(Boolean); ui.querySelectorAll<HTMLElement>('.lbgrid .lbt').forEach((t) => { t.style.display = w.every((x) => t.dataset.k!.includes(x)) ? '' : 'none'; }); }; e.oninput = run; run(); });

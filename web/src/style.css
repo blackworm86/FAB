@@ -161,7 +161,7 @@ button.ico { min-width: 40px; min-height: 40px; display: inline-flex; align-item
 }
 
 .card2 { touch-action: pan-x; } .arr { touch-action: pan-x; } .c-hand { overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; } .arrtray { overscroll-behavior-x: contain; }
-button.ico.dev { border-color: var(--line); color: var(--ink); border-style: dashed; }
+button.ico.dev { border-color: var(--line); color: var(--ink); border-style: solid; }
 .authform { display: grid; gap: 6px; margin: 8px 0; } .authform input { font: inherit; color: inherit; background: #0b0d08; border: 1px solid var(--line); padding: 10px; min-height: 44px; } .bad { color: var(--bad); }
 .gamegrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; margin-bottom: 6px; }
 .gamecard { display: grid; gap: 2px; text-align: left; padding: 10px 12px; background: #11140c; border: 1px solid var(--line); color: inherit; }
@@ -1248,3 +1248,8 @@ button.go.quiet { background: transparent !important; color: #ff9c8a !important;
   .mapdock.menuopen .dockrow > .laysw:not(.labsw) button .ic, .mapdock.menuopen .dockrow > .laysw:not(.labsw) button .l { display: inline !important; } .mapdock.menuopen .dockrow > .laysw:not(.labsw) button .s { display: none !important; }
   .mapdock.menuopen .dockrow > .mlchip { order: 6; }
 }
+/* lean top bar where it does nothing (11 Nov critique): during a battle the phase tabs, score, View and Pieces step back (menu, the turn and the step stay); before the first turn there is no score; the sandbox button waits outside battles */
+body:has(#ui .c-table) .c-bar.t .c-crumbs, body:has(#ui .c-table) .c-bar.t .vps, body:has(#ui .c-table) .c-bar.t [data-modal="boxes"], body:has(#ui .c-table) .c-bar.t [data-tint] { display: none !important; }
+body:has(#ui .c-table) .c-bar.t .c-stat .ph { display: inline !important; }
+body:has(#ui .c-table) .sbfab { display: none !important; }
+body.setup .c-bar.t .vps, body.setup .c-bar.t .c-crumbs span:not(.on) { display: none !important; }

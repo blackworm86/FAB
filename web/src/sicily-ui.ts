@@ -78,7 +78,7 @@ export function sicilyPanel(g: Game, ctx: PanelCtx): string {
     const garr = g.units.filter((u) => u.untried && u.box === 'deploy').length;
     if (ctx.mine('axis') && garr) out.push(`<div class="volpanel"><b>${ctx.ico('lock')} Italian garrisons (22.24)</b><span>${garr} untried garrisons to place face down, one per area, never with two tried units: drag them from the tray, or place them all at random.</span><div class="row">${ctx.btn('Place the rest for me', () => S.autoGarrisons(live()), 'primary')}</div></div>`);
     if (ctx.mine('allied') && !V.plan && !S.isSunrise(g)) {
-      if (garr) out.push(`<div class="volpanel"><b>${ctx.ico('next')} Landing plan</b><span>The Axis places its garrisons first; then you choose the landing plan after seeing its set-up (22.24).</span></div>`);
+      if (garr && !ctx.mine('axis')) out.push(`<div class="volpanel"><b>${ctx.ico('next')} Landing plan</b><span>The Axis places its garrisons first; then you choose the landing plan after seeing its set-up (22.24).</span></div>`);
       else {
         const o = S.planOptions(g, planPick.plan), chips = (list: string[], cur: string, set: (v: string) => void) => list.map((v) => ctx.ubtn(v, () => set(v), v === cur ? 'on' : '')).join('');
         const pick = (p: E.sicily.Plan) => { planPick = { ...planPick, plan: p, br: S.planOptions(g, p).british[0], us: S.planOptions(g, p).us[0] ?? '' }; };

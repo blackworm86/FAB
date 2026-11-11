@@ -42,8 +42,8 @@ export const variant = (unitId: string, count: number) => [...unitId].reduce((h,
 export const yawOf = (side: string) => (side === 'german' ? -Math.PI / 2 : Math.PI / 2);
 /** A unit's footprint on the map for a facing: [width along x, depth along z], with room for its ring. */
 export function foot(t: Pick<Troop, 'size'>, yaw: number): [number, number] {
-  const across = Math.abs(Math.sin(yaw)) > 0.5, x = t.size.x * zoom + 0.3, z = t.size.z * zoom + 0.3;
-  return across ? [z, x] : [x, z];
+  const x = t.size.x * zoom + 0.3, z = t.size.z * zoom + 0.3, c = Math.abs(Math.cos(yaw)), sn = Math.abs(Math.sin(yaw));   // the box round the turned figure
+  return [x * c + z * sn, x * sn + z * c];
 }
 /** An ordered layout: each group (a side) in rows of at most cols units, the groups one under the other (the first toward -z),
  * all centred on (0, 0). Returns each unit's centre, group by group. Nothing overlaps: every unit gets its full footprint plus gap. */
@@ -78,17 +78,12 @@ function pips(n: number, q: string) {
   }
   const s = new THREE.Sprite(m); s.scale.set(0.3 * n, 0.3, 1); s.renderOrder = 3; return s;
 }
-/** A rounded rectangle round the figure's footprint (w along x, d along z), filled with the side's colour; the edge turns brass when selected. */
+/** A thin circle round the figure's footprint (w along x, d along z), in the side's colour, brass when selected. */
 function ring(w: number, d: number, color: THREE.ColorRepresentation, selected: boolean) {
-  const rr = Math.min(w, d) / 2, rect = (W: number, D: number, R: number) => { const s = new THREE.Shape(), x = W / 2, z = D / 2;
-    s.moveTo(-x + R, -z); s.lineTo(x - R, -z); s.quadraticCurveTo(x, -z, x, -z + R); s.lineTo(x, z - R); s.quadraticCurveTo(x, z, x - R, z);
-    s.lineTo(-x + R, z); s.quadraticCurveTo(-x, z, -x, z - R); s.lineTo(-x, -z + R); s.quadraticCurveTo(-x, -z, -x + R, -z); return s; };
-  const k = selected ? 0.14 : 0.1, outer = rect(w, d, rr), inner = rect(w - 2 * k, d - 2 * k, Math.max(0.01, rr - k));
-  outer.holes.push(new THREE.Path(inner.getPoints()));
-  const g = new THREE.Group(), col = selected ? 0xe7b04a : color;
-  const edge = new THREE.Mesh(new THREE.ShapeGeometry(outer), new THREE.MeshBasicMaterial({ color: col }));
-  const fill = new THREE.Mesh(new THREE.ShapeGeometry(rect(w, d, rr)), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, depthWrite: false }));      // a solid base in the side's colour: the side reads at a glance (the figures' own colours are close)
-  for (const m of [edge, fill]) { m.rotation.x = -Math.PI / 2; m.position.y = 0.03; g.add(m); }
+  const r = Math.hypot(w, d) / 2 * 0.82, k = selected ? 0.12 : 0.07;      // owner, 11 Nov: a thin circle round every figure, not its footprint's outline
+  const g = new THREE.Group(), m = new THREE.Mesh(new THREE.RingGeometry(r - k, r, 56), new THREE.MeshBasicMaterial({ color: selected ? 0xe7b04a : color }));
+  m.rotation.x = -Math.PI / 2; m.position.y = 0.03; g.add(m);
+  g.userData.base = true; g.userData.r = r;      // main.ts sizes the act-now halo on it
   return g;
 }
 /** A unit drawn as its figure, centred on the group's origin (the spot the block would take). */
