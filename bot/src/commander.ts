@@ -80,6 +80,7 @@ export interface Commander extends Player { reasons: string[] }
 export function commanderPlayer(seed: number, budgetMs = 4000): Commander {
   const r = rng(seed), reasons: string[] = [];
   let planned = '', style = DEFAULT_STYLE;
+  const players = new Map<Style, Player>(), playerFor = (st: Style) => players.get(st) ?? players.set(st, doctrinePlayer(st)).get(st)!;   // one doctrine per plan: its orders last the phase
   const choose = (view: Game, side: Side) => {
     const t0 = performance.now(), runs: number[][] = PLANS.map(() => []);
     for (let round = 0; round === 0 || performance.now() - t0 < budgetMs; round++) {
@@ -97,7 +98,7 @@ export function commanderPlayer(seed: number, budgetMs = 4000): Commander {
   const player = ((view, side) => {
     const key = `${view.turn} ${view.phasing} ${view.phase}`;
     if (key !== planned && !view.battle && ['movement', 'combat', 'btCombat'].includes(view.phase) && view.phasing === side) { planned = key; style = choose(view, side); }
-    const base = doctrinePlayer(style)(view, side);
+    const base = playerFor(style)(view, side);
     if (!base || !lookable(view, base)) return base;
     const { a, why } = lookAhead(view, side, style, base, r, budgetMs / 4); if (why) reasons.push(why);
     return a;

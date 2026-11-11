@@ -5,10 +5,11 @@ import * as E from '../../engine/src';
 import type { Game, Side, Unit } from '../../engine/src';
 import { candidates, isLegal, type Action } from './actions';
 import type { Player } from './random';
+import { ASSET_STEPS, assetsInHand, makeOrders, type Orders } from './orders';
 
 const HIDDEN_STEPS = 2.5;          // a hidden enemy block, on average
 /** The doctrine's settings; a commander plan is one set of them. */
-export interface Style { attackOdds: number; assets: number; reserves: number; hold: boolean; /** army zone of the main effort (5 centre, 6 north, 7 south): deep objectives elsewhere are ignored */ focus?: number }
+export interface Style { attackOdds: number; assets: number; reserves: number; hold: boolean; /** army zone of the main effort (5 centre, 6 north, 7 south): deep objectives elsewhere are ignored */ focus?: number; /** the first doctrine, kept for measuring: no orders */ v1?: boolean }
 export const DEFAULT_STYLE: Style = { attackOdds: 1.3, assets: 2, reserves: 2, hold: true };   // attackOdds: our steps against theirs, terrain included, to start or join a fight
 
 const steps = (us: Unit[]) => us.reduce((t, u) => t + (u.garrison ? 1 : E.isPlaceholder(u) ? HIDDEN_STEPS : u.str), 0);
@@ -18,6 +19,9 @@ const odds = (g: Game, a: number, s: Side, extra = 0) => {
   const ours = steps(fighting(g, a, s)) + extra, theirs = steps(fighting(g, a, E.other(s)));
   return theirs ? ours / (theirs * (1 + 0.25 * E.areas.get(a)!.tdn)) : Infinity;
 };
+/** The attacker (the first player: the Germans in The Bulge) gives orders and counts its assets; the defender keeps the cautious rules (measured: bolder Allies lose points). */
+const attacker = (g: Game, s: Side, st: Style) => !st.v1 && s === E.sidesOf(g)[0];
+const backing = (g: Game, s: Side, st: Style) => (attacker(g, s, st) ? Math.min(st.assets, assetsInHand(g, s)) * ASSET_STEPS : 0);
 const enemyNear = (g: Game, a: number, s: Side) => E.neighbors(a).some((n) => fighting(g, n, E.other(s)).length > 0);
 const worth = (a: number, s: Side) => { const v = E.areas.get(a)!.vp; return (v.mutual ? 1 : 0) + (s === 'german' ? v.german : v.allied); };
 
@@ -37,7 +41,7 @@ function distances(g: Game, from: number[]): Map<number, number> {
 }
 
 /** How good one action is for the doctrine; null: never do it. Higher is better; ending the phase scores 0. */
-function score(g: Game, s: Side, a: Action, dist: Map<number, number>, st: Style): number | null {
+export function score(g: Game, s: Side, a: Action, dist: Map<number, number>, st: Style, orders: Orders = new Map()): number | null {
   const unit = (id: unknown) => g.units.find((u) => u.id === id)!, b = g.battle;
   switch (a.fn) {
     case 'endPhase': case 'setDone': case 'endMove': return 0;
@@ -58,7 +62,7 @@ function score(g: Game, s: Side, a: Action, dist: Map<number, number>, st: Style
       const area = a.args[0] as number;
       if (E.mustFight(g).includes(area)) return 5;
       if (a.args[1] && g.phase === 'btCombat' && !E.newlyContested(g).includes(area)) return null;      // no Special Action spent on it
-      return odds(g, area, s) >= st.attackOdds ? 3 : null;
+      return odds(g, area, s, backing(g, s, st)) >= st.attackOdds ? 3 : null;
     }
     // supply, reinforcements, admin
     case 'playAirSupply': case 'playReplacement': return 2;
@@ -72,7 +76,8 @@ function score(g: Game, s: Side, a: Action, dist: Map<number, number>, st: Style
       return g.units.filter((x) => x.side === s && x.reserve).length < st.reserves && !enemyNear(g, u.area, s) && !E.contested(g, u.area) && (dist.get(u.area) ?? 99) > 2 ? 4 : null;
     }
     case 'move': case 'stratMove': {
-      const u = unit(a.args[0]), to = a.args[1] as number, from = u.area!;
+      const u = unit(a.args[0]), to = a.args[1] as number, from = u.area!, order = orders.get(u.id);
+      if (order != null) return order === to ? 6 + u.str / 10 : null;                                  // an ordered block goes to its objective, nowhere else
       if (E.contested(g, from) && odds(g, from, s) < st.attackOdds) return null;                         // do not leave a fight we may lose
       if (st.hold && worth(from, s) > 0 && g.control[from] === s && enemyNear(g, from, s) && fighting(g, from, s).length <= 1) return null;   // hold the objective
       if (fighting(g, to, E.other(s)).length && odds(g, to, s, u.str) < st.attackOdds) return null;        // no attack against bad odds
@@ -84,10 +89,14 @@ function score(g: Game, s: Side, a: Action, dist: Map<number, number>, st: Style
 }
 
 export function doctrinePlayer(st: Style = DEFAULT_STYLE): Player {
+  let ordersKey = '', orders: Orders = new Map();
   return (view, side) => {
     if (view.moving && view.moving.id) { const u = view.units.find((x) => x.id === view.moving!.id); if (u?.side === side) return { side, fn: 'endMove', args: [] }; }   // a move goes straight to its goal
     const dist = distances(view, targets(view, side, st));
-    const ranked = candidates(view, side).map((a) => ({ a, v: score(view, side, a, dist, st) })).filter((x) => x.v != null).sort((x, y) => y.v! - x.v!);
+    const cands = candidates(view, side), key = `${view.turn} ${view.phasing} ${view.phase}`;
+    if (key !== ordersKey && ['movement', 'btMove'].includes(view.phase) && view.phasing === side && attacker(view, side, st)) { ordersKey = key; orders = makeOrders(view, side, cands, st.assets, st.attackOdds); }   // once per phase, so the groups stay together
+    if (key !== ordersKey) orders = new Map();
+    const ranked = cands.map((a) => ({ a, v: score(view, side, a, dist, st, orders) })).filter((x) => x.v != null).sort((x, y) => y.v! - x.v!);
     for (const { a } of ranked) if (isLegal(view, a)) return a;
     return null;
   };
