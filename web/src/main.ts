@@ -1443,7 +1443,7 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
     if (b.stage === 'done') return { label: 'Close battle', fn: () => { act(() => { lastFight = b.area; E.closeBattle(g); selArea = null; selUnit = null; });      /* the battle's block card goes with it */ const m = E.mustFight(g); if (m.length && mine(g.phasing)) { const at = center(b.area); showAreas([[...m].sort((x, y) => center(x).distanceTo(at) - center(y).distanceTo(at))[0]]); } } };
     if (b.stage.endsWith('Choice') || b.stage === 'retreat' || b.stage === 'attFirst' || b.stage === 'loss') return null;
     if (autoRolls(b)) return { label: 'Rolling…', fn: () => {}, dis: true };      // the game rolls this one by itself (Settings > Dice)
-    return { label: `Roll ${STAGE_NAME[b.stage].toLowerCase()}`, fn: () => rollStage(g.battle!) };
+    return { label: innerWidth < 700 && !TUTORIAL ? 'Roll the dice' : `Roll ${STAGE_NAME[b.stage].toLowerCase()}`, fn: () => rollStage(g.battle!) };      // phones: the header already names the fire; the button stays one line
   }
   const must = E.mustFight(g);
   if (g.phase === 'combat' || g.phase === 'btCombat') {                                              // the player picks the battle and starts it; nothing opens by itself

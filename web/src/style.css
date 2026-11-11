@@ -533,7 +533,7 @@ body.guide-short .gx, body:not(.guide-short) .gs { display: none !important; }
   .c-bar.b .dchips { grid-area: c; flex: none; order: 0; flex-wrap: nowrap; overflow-x: auto; min-width: 0; }
   .c-bar.b .dundo { grid-area: u; order: 0; max-width: 34vw; flex: none; } .c-bar.b .go, .c-bar.b .gowait { grid-area: go; order: 0; margin-left: 0; max-width: 46vw; }
   body.guide-short .c-bar.b .dundo span { display: none; } body.guide-short .c-bar.b .dundo { padding: 0 10px; }
-  body.guide-short .c-bar.b .c-prompt { -webkit-line-clamp: 1; }
+  body.guide-short .c-bar.b .c-prompt { -webkit-line-clamp: 2; }
   .c-bar.b .dchip { min-height: 44px; padding: 2px 10px; }
 }
 /* side marks in lists: a coloured side tag, not a coloured edge */
@@ -556,7 +556,7 @@ body:has(.hotcover) #leaders, body:has(.hotcover) #fx, body:has(.hotcover) #mark
 @media (min-width: 701px) { .dundo.idle { display: none; } }
 @media (max-width: 700px) {
   .c-bar.b { grid-template-columns: minmax(0, 1fr) 44px 150px !important; grid-template-rows: minmax(22px, auto) 44px; grid-template-areas: "p p g" "c u go" !important; min-height: 98px; box-sizing: border-box; align-content: center; padding-block: 6px !important; }
-  .c-bar.b .c-prompt { grid-area: p; overflow: hidden; display: -webkit-box !important; -webkit-box-orient: vertical; -webkit-line-clamp: 2 !important; line-height: 18px !important; font-size: 12.5px !important; }      /* two lines, not one cut with … */
+  .c-bar.b .c-prompt { grid-area: p; overflow: hidden; display: -webkit-box !important; -webkit-box-orient: vertical; -webkit-line-clamp: 3 !important; line-height: 17px !important; font-size: 12.5px !important; }      /* up to three lines, not cut with … */
   .c-bar.b .guidebtn { grid-area: g; justify-self: end; width: 30px !important; min-width: 30px !important; min-height: 26px !important; height: 26px; padding: 0 !important; }
   .c-bar.b .dundo { grid-area: u; width: 44px; max-width: 44px !important; min-height: 44px; padding: 0 !important; justify-content: center; } .c-bar.b .dundo span { display: none; }
   .c-bar.b .go, .c-bar.b .gowait { grid-area: go; width: 150px; max-width: 150px !important; min-height: 44px; box-sizing: border-box; justify-content: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -676,7 +676,7 @@ body:has(.hotcover) #leaders, body:has(.hotcover) #fx, body:has(.hotcover) #mark
   .c-bar.b .dchips.more { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
   .c-bar.b .dundo { grid-column: 3 !important; grid-row: 1 !important; }
   .c-bar.b .guidebtn { grid-column: 4 !important; grid-row: 1 !important; align-self: center; justify-self: end; }
-  .c-bar.b .c-prompt { grid-column: 1 !important; grid-row: 2 !important; padding-right: 2px !important; white-space: normal !important; display: -webkit-box !important; -webkit-box-orient: vertical; -webkit-line-clamp: 2 !important; overflow: hidden; line-height: 1.25 !important; font-size: 12px !important; align-self: center; }
+  .c-bar.b .c-prompt { grid-column: 1 !important; grid-row: 2 !important; padding-right: 2px !important; white-space: normal !important; display: -webkit-box !important; -webkit-box-orient: vertical; -webkit-line-clamp: 3 !important; overflow: hidden; line-height: 1.25 !important; font-size: 12px !important; align-self: center; }
   .c-bar.b .go, .c-bar.b .gowait { grid-column: 2 / 5 !important; grid-row: 2 !important; width: 100% !important; max-width: none !important; }
 }
 
