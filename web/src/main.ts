@@ -21,7 +21,7 @@ import { sheets } from './sheets';
 import { pips, ABBR, chitLabel, BTN_ICON, iconify, STAGE_NAME, ok10, faces, modIcon, modWord } from './table-text';
 import { initChat, chatBtn, chatHtml, bindChat } from './chat';
 import { acts, actv, resetActs, reg, regv, ubtn, btn, chip, srow, swtch } from './ui-kit';
-import { loadTroops, troopOf, deploy, fitAt, roomOf, troopGroup, type Place } from './troops';
+import { loadTroops, troopOf, troopGroup, radius as troopR } from './troops';
 import { optChooser, optOn } from './opt-rules';
 import { Recorder, unitsOf, localJournal, buildSteps } from './journal';
 import { openReplay } from './replay';
@@ -384,16 +384,9 @@ function drawPointMarks(b: E.Battle) {
     const d = discSprite('point', 0.26), c = farSide() ? -1 : 1; d.position.set(o.position.x + 0.58 * c, o.position.y > 0.6 ? 1.95 : 0.9, o.position.z - 0.58 * c); d.userData.anchor = uid; markers.add(d);                 // a back corner of the block, clear of its pips and symbol d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
   }
 }
-/** The direction a side's units face in an area: toward the nearest area holding the other side's units (straight ahead when none). */
-function faceTo(id: number, side: E.Side): [number, number] {
-  const me = toWorld(...POLE.get(id)!); let best: [number, number] = [0, near(side) ? -1 : 1], d = 1e9;
-  for (const a of MAP.areas) if (a.id !== id && E.unitsIn(g, a.id).some((u) => u.side !== side)) { const p = toWorld(...POLE.get(a.id)!), dd = Math.hypot(p.x - me.x, p.z - me.z); if (dd < d) { d = dd; best = [(p.x - me.x) / dd, (p.z - me.z) / dd]; } }
-  return best;
-}
-const facingOf = (cont: boolean, battle: boolean, id: number, u: E.Unit): [number, number] => (cont || battle ? [0, near(u.side) ? -1 : 1] : faceTo(id, u.side));
 function drawPieces() {
   disposeAll(pieces); disposeAll(markers);
-  const troops = wantTroops();
+  const troops = wantTroops(), rOf = (u: E.Unit) => { const t = troops && !faceDown(u) ? troopOf(u.id) : null; return t ? troopR(t) : u.garrison ? 0.75 : 0.95; };      // a figure takes its own footprint
   coveredLabels.clear();
   /** The printed number plate and name (drawn upright for the viewer) are kept clear: blocks go around them when the area has room. */
   const labelSpots = (id: number) => { const L = LAB[id]; if (!L) return []; const r = L.h / 2, out: { x: number; z: number; r: number }[] = [];
@@ -425,43 +418,24 @@ function drawPieces() {
     const place = (column: boolean) => {                                                           // a row of blocks, or a column when the area is too narrow for a row
       const t = taken.get(a.id) ?? [], saved = [...t]; let tight = false;
       const spots = order.map((u) => { const same = us.filter((x) => x.side === u.side), idx = column ? order.indexOf(u) - (order.length - 1) / 2 : same.indexOf(u) - (same.length - 1) / 2, row = near(u.side) ? 1.1 : -1.1;
-        const p = column ? inArea(a.id, base.x, base.z + idx * 1.8, u.garrison ? 0.75 : 0.95) : inArea(a.id, base.x + idx * 1.75, base.z + (cont ? row : 0.4), u.garrison ? 0.75 : 0.95); if ((p as { tight?: boolean }).tight) tight = true; return p; });
+        const r = rOf(u), p = column ? inArea(a.id, base.x, base.z + idx * 1.8, r) : inArea(a.id, base.x + idx * 1.75, base.z + (cont ? row : 0.4), r); if ((p as { tight?: boolean }).tight) tight = true; return p; });
       return { spots, tight, saved };
     };
     let lay = place(false);
     if (lay.tight && order.length > 1) { taken.set(a.id, lay.saved); const col = place(true); if (!col.tight) lay = col; else { taken.set(a.id, lay.saved); lay = place(false); } }
     if (cont && lay.tight && g.battle?.area !== a.id) {                                             // a crowded contested area: the two sides in facing rows (German row, Allied row), never mixed or stacked
       taken.set(a.id, lay.saved); const pl = toWorld(...POLE.get(a.id)!);
+      const sp = Math.max(1.75, 2 * Math.max(...order.map(rOf)));                                     // wide figures (a Panther) need more than a block's width
       lay.spots = order.map((u) => { const same = order.filter((x) => x.side === u.side), i = same.indexOf(u), per = 4, rw = Math.floor(i / per), inRow = Math.min(per, same.length - rw * per), dir = near(u.side) ? 1 : -1;
-        return { x: pl.x + (i % per - (inRow - 1) / 2) * 1.75, z: pl.z + dir * (1.3 + rw * 1.75) }; });
+        return { x: pl.x + (i % per - (inRow - 1) / 2) * sp, z: pl.z + dir * (1.3 + rw * sp) }; });
     }
     if (g.battle?.area === a.id) { const b = g.battle; lay.spots = order.map((u) => { const same = order.filter((x) => x.side === u.side); return battleSpot(b, u.side, 'unit', same.indexOf(u), same.length); }); }
     if (lab.some((l) => lay.spots.some((p) => Math.hypot(p.x - l.x, p.z - l.z) < l.r + 0.7))) coveredLabels.add(a.id);          // no room: the area's number and name ride on a tag above
-    const places: (Place | null)[] = order.map(() => null);
-    if (troops && order.some((u) => !faceDown(u) && troopOf(u.id))) {
-      const calm = !cont && g.battle?.area !== a.id, face = (u: E.Unit) => facingOf(cont, !calm && !cont, a.id, u);
-      const room = roomOf(areaWorld(a.id)), spread = 2.4 * Math.sqrt(cellsOf(a.id).length * 0.0616 / Math.PI), want = (us: E.Unit[]) => us.map((u) => ({ t: faceDown(u) ? null : troopOf(u.id), n: u.str }));
-      let dep: Place[] | null = null;
-      if (calm) dep = deploy(want(order), room, base, spread, face(order[0]), lay.saved, a.id);
-      else if (g.battle?.area !== a.id) {                                                                      // contested: each side in its own half (the near side toward +z), facing the other
-        const sides = [...new Set(order.map((u) => u.side))], got = new Map<string, Place>(); let obst = [...lay.saved], ok = true;
-        for (const sd of sides) { const us = order.filter((u) => u.side === sd), half: typeof room = (x, z, r) => room(x, z, r) && (near(sd) ? z > base.z + 0.3 : z < base.z - 0.3);
-          const d = deploy(want(us), half, base, spread, face(us[0]), obst, a.id + sides.indexOf(sd)); if (!d) { ok = false; break; }
-          us.forEach((u, i) => got.set(u.id, d[i])); obst = [...obst, ...d.flatMap((p) => p.fig.map(([x, z]) => ({ x, z, r: p.r })))]; }
-        if (ok) dep = order.map((u) => got.get(u.id)!);
-      }
-      if (dep) { order.forEach((u, n) => { places[n] = dep[n]; }); lay.spots = dep.map((d) => ({ x: d.fig.reduce((s, f) => s + f[0], 0) / d.fig.length, z: d.fig.reduce((s, f) => s + f[1], 0) / d.fig.length }));
-        taken.set(a.id, [...lay.saved, ...dep.flatMap((d) => d.fig.map(([x, z]) => ({ x, z, r: d.r })))]); }          // markers placed later keep clear of every figure
-      else { const room = roomOf(areaWorld(a.id));                                                           // contested or battle: the game's own spots, each as wide as its neighbours and the border allow
-        order.forEach((u, n) => { const t = troopOf(u.id), q = lay.spots[n]; if (!t || faceDown(u)) return;
-          let R = Math.min(1.8, ...lay.spots.filter((_, i) => i !== n).map((o) => Math.hypot(o.x - q.x, o.z - q.z) / 2 - 0.05)); while (R > 0.9 && g.battle?.area !== a.id && !room(q.x, q.z, R)) R -= 0.1;
-          places[n] = fitAt(t, u.str, Math.max(0.9, R), q.x, q.z, face(u), a.id * 31 + n); }); }
-    }
     order.forEach((u, n) => {
-      const hid = faceDown(u), t = places[n] && !hid ? troopOf(u.id) : null, sel = u.id === selUnit || (!!g.battle && !hid && (u.id === g.battle.attPoint || u.id === g.battle.defPoint));
-      const m = t ? troopGroup(t, places[n]!, Math.atan2(...facingOf(cont, g.battle?.area === a.id, a.id, u)), woodOf(u), u.str, u.q[u.str - 1] ?? 'veteran', sel) : block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
+      const hid = faceDown(u), t = troops && !hid ? troopOf(u.id) : null, sel = u.id === selUnit || (!!g.battle && !hid && (u.id === g.battle.attPoint || u.id === g.battle.defPoint));
+      const m = t ? troopGroup(t, u.id, u.side, woodOf(u), u.str, u.q[u.str - 1] ?? 'veteran', sel): block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
       const flat = !t && cont && !hid && !u.garrison && u.up === a.id;                                                     // revealed blocks lie flat, label up, while the area is contested
-      if (!t) { m.position.x = p.x; m.position.z = p.z; }
+      m.position.x = p.x; m.position.z = p.z;
       if (flat) { m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, viewRot(), 0); m.position.y = 0.4; }
       if (tgt?.units.has(u.id)) { const ring = new THREE.Mesh(new THREE.RingGeometry(1.15, 1.45, 40), new THREE.MeshBasicMaterial({ color: MAPC.ring, transparent: true, opacity: 0.95, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(p.x, 0.09, p.z); markers.add(ring); const glow = new THREE.Mesh(new THREE.CircleGeometry(1.15, 40), new THREE.MeshBasicMaterial({ color: MAPC.ring, transparent: true, opacity: 0.28 })); glow.rotation.x = -Math.PI / 2; glow.position.set(p.x, 0.085, p.z); markers.add(glow); }
       m.userData.unit = u.id; if (sel && !t) { const o = new THREE.LineSegments(new THREE.EdgesGeometry((m as THREE.Mesh).geometry), new THREE.LineBasicMaterial({ color: 0xe7b04a })); m.add(o); }
