@@ -1,0 +1,192 @@
+{
+ "bulge_german_armor": {
+  "scelta": 0,
+  "figure": {
+   "bulge_german_armor_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   },
+   "bulge_german_armor_1.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "bulge_german_mech": {
+  "scelta": null,
+  "figure": {
+   "bulge_german_mech_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "bulge_german_inf": {
+  "scelta": 0,
+  "figure": {
+   "bulge_german_inf_0.glb": {
+    "gradi": 20.0,
+    "dx": 0.0,
+    "dz": 0.0
+   },
+   "bulge_german_inf_1.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   },
+   "bulge_german_inf_2.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "bulge_german_airborne": {
+  "scelta": 0,
+  "figure": {
+   "bulge_german_airborne_0.glb": {
+    "gradi": 5.0,
+    "dx": 0.0,
+    "dz": 0.0
+   },
+   "bulge_german_airborne_1.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   },
+   "bulge_german_airborne_2.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "bulge_german_mountain": {
+  "scelta": 0,
+  "figure": {
+   "bulge_german_mountain_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   },
+   "bulge_german_mountain_1.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   },
+   "bulge_german_mountain_2.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "bulge_us_inf": {
+  "scelta": 0,
+  "figure": {
+   "bulge_us_inf_0.glb": {
+    "gradi": 20.0,
+    "dx": 0.0,
+    "dz": 0.0
+   },
+   "bulge_us_inf_1.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   },
+   "bulge_us_inf_2.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "bulge_us_cavalry": {
+  "scelta": 0,
+  "figure": {
+   "bulge_us_cavalry_0.glb": {
+    "gradi": 0.0,
+    "dx": -0.02,
+    "dz": 0.0
+   },
+   "bulge_us_cavalry_1.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "bulge_us_armor": {
+  "scelta": 0,
+  "figure": {
+   "bulge_us_armor_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   },
+   "bulge_us_armor_1.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "bulge_us_airborne": {
+  "scelta": 1,
+  "figure": {
+   "bulge_us_airborne_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   },
+   "bulge_us_airborne_1.glb": {
+    "gradi": 5.0,
+    "dx": 0.0,
+    "dz": 0.0
+   },
+   "bulge_us_airborne_2.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "bulge_british_inf": {
+  "scelta": 0,
+  "figure": {
+   "bulge_british_inf_0.glb": {
+    "gradi": 5.0,
+    "dx": 0.0,
+    "dz": 0.0
+   },
+   "bulge_british_inf_1.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   },
+   "bulge_british_inf_2.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "bulge_british_armor": {
+  "scelta": 0,
+  "figure": {
+   "bulge_british_armor_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   },
+   "bulge_british_armor_1.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ }
+}

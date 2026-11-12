@@ -1,0 +1,102 @@
+{
+ "golan73_israeli_inf": {
+  "scelta": null,
+  "figure": {
+   "golan73_israeli_inf_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "golan73_israeli_armor": {
+  "scelta": null,
+  "figure": {
+   "golan73_israeli_armor_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "golan73_israeli_mech": {
+  "scelta": null,
+  "figure": {
+   "golan73_israeli_mech_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "golan73_israeli_airborne": {
+  "scelta": null,
+  "figure": {
+   "golan73_israeli_airborne_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "golan73_israeli_ghost": {
+  "scelta": null,
+  "figure": {
+   "golan73_israeli_ghost_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "golan73_syrian_inf": {
+  "scelta": null,
+  "figure": {
+   "golan73_syrian_inf_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "golan73_syrian_recon": {
+  "scelta": null,
+  "figure": {
+   "golan73_syrian_recon_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "golan73_syrian_armor": {
+  "scelta": null,
+  "figure": {
+   "golan73_syrian_armor_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "golan73_syrian_mech": {
+  "scelta": null,
+  "figure": {
+   "golan73_syrian_mech_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "golan73_syrian_airborne": {
+  "scelta": null,
+  "figure": {
+   "golan73_syrian_airborne_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ }
+}
