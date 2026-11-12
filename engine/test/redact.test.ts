@@ -17,3 +17,20 @@ describe('hidden block ids', () => {
     expect(Object.keys(toTree(JSON.parse(sa.pub)).units).length).toBe(a.units.length); void sb;
   });
 });
+
+describe('the first player to sit changes the salt', () => {
+  it('the creator, who made the salts, cannot decode the new ids; the joiner\'s game is unchanged', async () => {
+    const { rotateSalt, compose, aliasOf } = await import('../src');
+    useGame('bulge'); const g = newGame(2), sp = initSplit(g, 'creator-salt-allied'.padEnd(24, 'a'), 'creator-salt-german'.padEnd(24, 'b'));
+    const before = compose(JSON.parse(sp.allied.fresh ? sp.pub : sp.pub), sp.allied, {}).game;
+    const r = rotateSalt(sp.pub, sp.allied, {}, 'joiner-secret'.padEnd(24, 'z'))!;
+    expect(r.priv.salt).not.toBe(sp.allied.salt); expect(r.priv.fresh).toBeUndefined();
+    const after = compose(JSON.parse(r.pub), r.priv, {}).game;
+    expect(JSON.stringify(after.units.map((u) => [u.id, u.area, u.name]))).toBe(JSON.stringify(before.units.map((u) => [u.id, u.area, u.name])));   // same game for the joiner
+    const old = compose(JSON.parse(r.pub), sp.allied, {}).game;                                           // the creator's old salt finds none of the joiner's blocks
+    const mine = Object.keys(sp.allied.secrets), hiddenNow = new Set((JSON.parse(r.pub) as typeof g).units.filter((u) => u.name === 'Hidden block').map((u) => u.id));
+    expect(hiddenNow.size).toBeGreaterThan(10); expect(old.units.filter((u) => u.name !== 'Hidden block' && [...hiddenNow].some((h) => h === u.id)).length).toBe(0);
+    expect(r.pub).not.toContain(aliasOf(sp.allied, mine[0]));
+    expect(rotateSalt(r.pub, r.priv, {}, 'again')).toBeNull();                                              // only the first time
+  });
+});

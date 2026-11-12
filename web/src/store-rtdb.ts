@@ -1,6 +1,6 @@
 import type { ChatMsg, Seats, Store, StateDoc, Account, Match } from './online';
 import { gameInfo } from './games';
-import { initSplit, toTree, fromTree, diffTree, type Game, type Priv, type Reveals, type Side, type Tree } from '../../engine/src';
+import { initSplit, rotateSalt, toTree, fromTree, diffTree, type Game, type Priv, type Reveals, type Side, type Tree } from '../../engine/src';
 const msg = (e: unknown) => { const c = (e as { code?: string })?.code ?? ''; const m = String((e as { message?: string })?.message ?? e); return c.includes('invalid-credential') || c.includes('wrong-password') || c.includes('user-not-found') ? 'Wrong email or password' : c.includes('email-already') ? 'That email already has an account, sign in instead' : c.includes('weak-password') ? 'The password needs at least 6 characters' : c.includes('popup-closed') ? 'Sign-in was cancelled' : c.includes('unauthorized-domain') ? 'This site is not in the Firebase authorized domains' : m; };
 
 /** Firebase Realtime Database + Auth. Everything of one game is under `games/{id}`: meta, seats, the shared game (as many small values), each seat's private block details, the reveals.
@@ -29,6 +29,17 @@ export async function rtdbStore(table: string): Promise<Store | null> {
   const seatName = () => (account.name || account.email || 'Player') + (account.admin ? ' (admin)' : '');
   /** Database keys may not contain . # $ / [ ] (a Task Force id has a dot), so keys are percent-encoded on the way in and decoded on the way out. */
   const ek = (k: string) => encodeURIComponent(k).replace(/\./g, '%2E'), dk = (k: string) => decodeURIComponent(k);
+  /** The first to sit at a fresh seat changes its salt and writes the shared copy again with the new opaque ids, in one update (rotateSalt in the engine). */
+  async function changeSalt(side: Side) {
+    const p = (await rt.get(G(`priv/${side}`))).val() as { salt: string; secrets?: Record<string, string>; fresh?: boolean } | null;
+    if (!p?.fresh) return;
+    const [st, rv] = await Promise.all([rt.get(G('state')), rt.get(G('reveals'))]), t = st.val() as (Partial<Tree> & { rev?: number }) | null; if (!t?.f) return;
+    const salt = Array.from(crypto.getRandomValues(new Uint8Array(24)), (b) => (b % 36).toString(36)).join('');
+    const r = rotateSalt(JSON.stringify(fromTree(t)), { salt: p.salt, secrets: dec(p.secrets), fresh: true }, dec(rv.val()), salt); if (!r) return;
+    const diff = diffTree(t as Tree, toTree(JSON.parse(r.pub) as Game)); delete diff['f/log'];
+    await rt.update(R('/'), { ...Object.fromEntries(Object.entries(diff).map(([k, v]) => [`games/${table}/state/${k}`, v])), [`games/${table}/state/rev`]: rt.increment(1), [`games/${table}/state/by`]: account.uid, [`games/${table}/priv/${side}`]: { salt, secrets: enc(r.priv.secrets) } });
+  }
+  let stopMatches = () => undefined as void;
   const enc = <T,>(o: Record<string, T>) => Object.fromEntries(Object.entries(o).map(([k, v]) => [ek(k), JSON.stringify(v)]));
   const dec = <T,>(o: Record<string, string> | null | undefined) => Object.fromEntries(Object.entries(o ?? {}).map(([k, v]) => [dk(k), JSON.parse(v) as T]));
   const seatOf = (s: Seats): Side | '' => (account.uid && s.german === account.uid ? 'german' : account.uid && s.allied === account.uid ? 'allied' : '');
@@ -75,6 +86,7 @@ export async function rtdbStore(table: string): Promise<Store | null> {
     async addJournal(part, d) { await rt.push(G(`journal/${part}`), { at: rt.serverTimestamp(), d }); },
     async readJournal() { const s = await rt.get(G('journal')); return (s.val() ?? {}) as Record<string, Record<string, { at: number; d: string }>>; },
     async sendChat(side: Side, text: string) { try { await rt.push(G('chat'), { uid: account.uid, side, name: seatName().slice(0, 60), text, t: Date.now() }); return ''; } catch (e) { return msg(e); } },
+    /** The table's creator made both salts and could decode this seat's opaque ids: the first to sit here makes a new one and writes the shared copy again with the new ids (rotateSalt). */
     async sit(side: Side | null) {
       if (account.guest) return 'Sign in to take a seat';
       const uid = account.uid;
@@ -91,6 +103,7 @@ export async function rtdbStore(table: string): Promise<Store | null> {
         if (side) {
           const meta = (await rt.get(G('meta'))).val() as { title?: string; game?: string; created?: number } | null;
           await rt.update(R('/'), { [`games/${table}/seatNames/${side}`]: seatName(), [`games/${table}/members/${uid}`]: true, [`users/${uid}/games/${table}`]: { title: meta?.title ?? table, game: meta?.game ?? 'bulge', created: meta?.created ?? Date.now() } });
+          await changeSalt(side);
         }
         return '';
       } catch (e) { return msg(e); }
@@ -103,7 +116,7 @@ export async function rtdbStore(table: string): Promise<Store | null> {
         const sp = initSplit(JSON.parse(stateJson) as Game, rnd(24), rnd(24));                    // the salts hide the block ids: secure random, not Math.random     // hidden blocks: each seat keeps its own details
         await rt.update(R('/'), { [P('meta')]: { title: m.title, game: m.game, opts: m.opts, owner: uid, created, split: true }, [P(`members/${uid}`)]: true, ...(side ? { [P(`seats/${side}`)]: uid } : {}), [`users/${uid}/games/${id}`]: { title: m.title, game: m.game, created } });
         if (side) await rt.set(R(P(`seatNames/${side}`)), name);                                         // the seat has to exist before its name may be written
-        await rt.set(R(P('priv/german')), { salt: sp.german.salt, secrets: enc(sp.german.secrets) }); await rt.set(R(P('priv/allied')), { salt: sp.allied.salt, secrets: enc(sp.allied.secrets) });
+        await rt.set(R(P('priv/german')), { salt: sp.german.salt, secrets: enc(sp.german.secrets), fresh: true }); await rt.set(R(P('priv/allied')), { salt: sp.allied.salt, secrets: enc(sp.allied.secrets), fresh: true });
         const tree = toTree(JSON.parse(sp.pub) as Game); await rt.set(R(P('state')), { ...tree, rev: 1, by: uid });
         return id;
       } catch (e) { return '!' + msg(e); }
@@ -112,6 +125,7 @@ export async function rtdbStore(table: string): Promise<Store | null> {
     async leaveMatch(id) { try { await rt.remove(R(`users/${account.uid}/games/${id}`)); await rt.remove(R(`games/${id}/members/${account.uid}`)); return ''; } catch (e) { return msg(e); } },
     /** The games on my list, each joined with its meta and seat names; a game that no longer exists drops off. */
     watchMyMatches: (next, err) => {
+      stopMatches(); stopMatches = () => undefined;                                                     // the list of the account before (sign-out, another account) is no longer watched
       if (account.guest) { next([]); return; }
       type Row = { meta?: Record<string, unknown>; names?: Record<string, string>; seats?: Record<string, string>; f?: Record<string, string>; stop: () => void };
       const rows = new Map<string, Row>();
@@ -123,7 +137,7 @@ export async function rtdbStore(table: string): Promise<Store | null> {
         const mySides = (['german', 'allied'] as Side[]).filter((x) => r.seats?.[x] === account.uid), other = r.seats && Object.keys(r.seats).length === 2;
         return { myMove: !!other && mySides.length > 0 && (actor === 'both' || mySides.includes(actor as Side)), turn: Number(P('turn') ?? 0) || undefined, step: phase ?? undefined }; };
       const emit = () => next([...rows.entries()].filter(([, r]) => r.meta).map(([id, r]) => ({ id, game: String(r.meta!.game ?? 'bulge'), title: String(r.meta!.title ?? id), opts: (r.meta!.opts ?? { scenario: 'tournament', fuel: true }) as Match['opts'], owner: String(r.meta!.owner ?? ''), members: [], germanName: r.names?.german, alliedName: r.names?.allied, created: Number(r.meta!.created ?? 0), ...move(r) })).sort((a, b) => b.created - a.created));
-      rt.onValue(R(`users/${account.uid}/games`), (s) => {
+      const stopList = rt.onValue(R(`users/${account.uid}/games`), (s) => {
         const ids = new Set(Object.keys(s.val() ?? {}));
         for (const [id, r] of rows) if (!ids.has(id)) { r.stop(); rows.delete(id); }
         for (const id of ids) if (!rows.has(id)) {
@@ -136,6 +150,7 @@ export async function rtdbStore(table: string): Promise<Store | null> {
         }
         emit();
       }, (e) => err(msg(e)));
+      stopMatches = () => { stopList(); for (const r of rows.values()) r.stop(); rows.clear(); };
     },
     async google() { try { await A.signInWithPopup(auth, new A.GoogleAuthProvider()); return ''; } catch (e) { return msg(e); } },
     async emailSignIn(email, password) { try { await A.signInWithEmailAndPassword(auth, email, password); return ''; } catch (e) { return msg(e); } },
