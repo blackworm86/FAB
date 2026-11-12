@@ -148,7 +148,6 @@ export const setRandom = (f: (() => number) | null) => { secure = f; };
 /** The secure source when one is set (online), for choices that must not be reproducible from the shared seed. */
 export const secureRandom = () => secure?.() ?? null;
 /** The random source in use (null: the game's seed), so a simulation can run on the seed and put it back. */
-export const randomSource = () => secure;
 const roll = (g: Game) => (secure ? (g.rolls++, 1 + Math.floor(secure() * 10)) : g.force?.length ? (g.rolls++, g.force.shift()!) : d10(rng(g.seed * 7919 + g.rolls++)));   // online the queue is ignored: a client must not write its own dice
 /** A log line, labelled with the side that acted (in Prepare and Reinforcement both sides act). */
 export const say = (g: Game, s: string, side: Side = g.phasing) => { g.log.push(`T${g.turn} ${CUR.tag[side] ?? side} ${g.phase}: ${s}`); if (g.log.length > 400) g.log.splice(0, g.log.length - 300); };   // the log only has to be read, so it stays short
@@ -490,7 +489,7 @@ function finishMove(g: Game, u: Unit, opt: Opt, bridgeBlown: boolean, step?: { l
 export function endMove(g: Game) { const m = g.moving; if (!m) return; const u = g.units.find((x) => x.id === m.id); if (u) { u.moved = true; u.spent = 0; if (u.peiperFull) { u.peiperFull = undefined; u.exploit = false; } } g.moving = null; }
 /** The movement allowance of a block (MP), for showing how many points a moving block has left. */
 export const allowance = (g: Game, u: Unit) => CUR.allowance?.(g, u) ?? (u.cls === 'armor' ? 6 : 3);
-/** Move a block. `step`: the table's one-area-at-a-time move, after which the block may go on with the points it has left (the AI and the tests move in one go). */
+/** Move a block. `step`: the table's one-area-at-a-time move, after which the block may go on with the points it has left (the tests move in one go). */
 export function move(g: Game, id: string, to: number, step = false) {
   if (g.moving && g.moving.id !== id) endMove(g);                                                 // another block: the one moving before is done for good
   if (g.pendingBlow) throw new Error('resolve the bridge-blowing attempt first');
@@ -1354,7 +1353,6 @@ function finalResult(g: Game, net: number) {
   if (g.opts.scenario === 'campaign') return net >= 4 ? 'German Operational Victory' : net >= 1 ? 'German Marginal Victory' : net === 0 ? 'Draw' : net >= -3 ? 'Allied Marginal Victory' : 'Allied Operational Victory';
   return net >= 4 ? 'German Operational Victory' : net >= 2 ? 'German Marginal Victory' : net >= 0 ? 'Allied Marginal Victory' : 'Allied Operational Victory';
 }
-export const unitsFor = (g: Game, side: Side) => g.units.filter((u) => u.side === side && u.area != null);
 
 /* ================= M3: roadblocks, staff functions, air missions, reroute ================= */
 const vacantSupplied = (g: Game, side: Side, a: number) => (!g.inPlay || g.inPlay.includes(a)) && supplied(g, side, a) && !unitsIn(g, a).length && areas.get(a)!.tdn >= 1;

@@ -19,4 +19,8 @@ with zipfile.ZipFile(uscita, "w", zipfile.ZIP_DEFLATED) as z:
         rel = f.relative_to(KIT)
         if f.is_file() and not FUORI & set(rel.parts) and f.name not in FILE_FUORI:
             z.write(f, Path("fab-pezzi3d") / rel)
+    web = KIT.parents[1] / "web" / "public" / "pezzi"          # le figure del gioco: la scheda Orientamento le legge da modelli/figure
+    for f in sorted(web.glob("*")) if web.is_dir() else []:
+        if f.suffix in (".glb", ".json"):
+            z.write(f, Path("fab-pezzi3d") / "modelli" / "figure" / f.name)
 print(f"scritto {uscita}")

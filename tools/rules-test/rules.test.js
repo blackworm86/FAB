@@ -180,4 +180,12 @@ describe('the replay journal (4.1): each seat records its own blocks; readable o
     await assertSucceeds(get(ref(user('bob'), `games/${G}/journal`)));
     await assertFails(get(ref(user('mallory'), `games/${G}/journal`)));
   });
+  it('a player cannot hide "over" again after reading the journal (peek, then delete); an admin restarting the table can', async () => {
+    await admin((d) => set(ref(d, `games/${G}/state/f/over`), '"German victory"'));
+    await assertFails(remove(ref(user('alice'), `games/${G}/state/f/over`)));
+    await assertFails(update(ref(user('bob'), `games/${G}/state`), { 'f/over': null, rev: 2, by: 'bob' }));
+    await admin((d) => set(ref(d, 'admins/root'), true));
+    await assertSucceeds(update(ref(user('root'), `games/${G}/state`), { 'f/over': null, rev: 2, by: 'root' }));
+    await assertSucceeds(update(ref(user('alice'), `games/${G}/state`), { 'f/turn': '"2"', rev: 3, by: 'alice' }));      // everyday moves are unaffected
+  });
 });

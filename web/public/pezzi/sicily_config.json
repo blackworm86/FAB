@@ -1,0 +1,72 @@
+{
+ "sicily_us_armor": {
+  "scelta": null,
+  "figure": {
+   "sicily_us_armor_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "sicily_us_inf": {
+  "scelta": null,
+  "figure": {
+   "sicily_us_inf_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "sicily_us_airborne": {
+  "scelta": null,
+  "figure": {
+   "sicily_us_airborne_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "sicily_british_inf": {
+  "scelta": null,
+  "figure": {
+   "sicily_british_inf_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "sicily_british_airborne": {
+  "scelta": null,
+  "figure": {
+   "sicily_british_airborne_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "sicily_british_armor": {
+  "scelta": null,
+  "figure": {
+   "sicily_british_armor_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "sicily_italian_motorized_inf": {
+  "scelta": null,
+  "figure": {
+   "sicily_italian_motorized_inf_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ }
+}

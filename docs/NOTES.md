@@ -33,8 +33,7 @@ Source review of `docs/` (series rules, play book, map, counters, sticker sheet,
 ## Map digitisation status (v1, auto-generated – needs human review)
 
 Files in `data/bulge/`: `areas.json` (98 areas: name, TDN, VP, army zone), `edges.json` (235 adjacencies: road/field, river, restricted, army boundary),
-`entry_areas.json` (A–Q Allied, X–Z German), plus the tool inputs (`area_seeds.json`, `outside_seeds.json`, `edge_overrides.json`).
-Regenerate with `tools/segment.py` → `tools/edges.py` → `tools/build_map_data.py`; draw the review overlay with `tools/review_overlay.py`.
+`entry_areas.json` (A–Q Allied, X–Z German), `map.json` is edited directly. The scripts that first built it from the map scan (segment, edges, build_map_data, the two review passes and the map checker) were removed on 12 Nov 2026: they would have undone later rule fixes (the Ourthe river, the redrawn shapes); they are in Git history.
 Overlay for checking: `docs/maps/review/graph_overlay_v1.png` (black = road, grey = field, blue dot = river, magenta ring = army boundary, brown = restricted, area colour = zone).
 
 How it was made: area numbers/positions were read by hand; areas were segmented with a seeded watershed on the white boundary lines + rivers; adjacency from touching region cores;
@@ -67,7 +66,7 @@ With a 12 px gap tolerance your shapes agree with the connection list almost eve
 All 98 areas were marked checked. Applied with `tools/apply_pass2.py`: Monschau TDN 3, 17 connection type changes, 5 river flags, 2 new connections (61–76, 95–97). The shapes were not changed.
 Final graph: 98 areas, 240 connections (incl. 54–59 and 91–95 added in a short pass 3), planar and connected. All play-book example checks pass (roads 3–4, 12–23, 4–5, 5–10, 10–11, 11–23, 21–22, 22–24, 22–23, 3–12; fields 12–13, 13–21, 11–12; rivers 15/16, 15/18, 13/20, 13/21; restricted 4–11; zones of 5, 6, 10, 11, 23, 34).
 Victory symbols: 19 Allied VP (black crosses), 14 German VP (blue stars), 6 mutual yellow-star areas.
-The engine loads `data/bulge/map.json` (built by `tools/build_map_json.py`); the map checker stays available for later corrections.
+The engine loads `data/bulge/map.json` (built by `tools/build_map_json.py`).
 
 ## Counters: duplicates collapsed, backs catalogued
 

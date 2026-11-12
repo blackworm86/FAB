@@ -36,7 +36,7 @@ export const localJournal = {
   read(key: string): { at: number; pub: JPub; units: JUnits }[] { try { return JSON.parse(localStorage.getItem(`fab-journal:${key}`) ?? '[]'); } catch { return []; } },
   add(key: string, pub: JPub, units: JUnits) {
     const j = this.read(key); if (pub.t === 1 && j.length && j.at(-1)!.pub.t > 1) j.length = 0;        // a new game on the same table starts a new journal
-    j.push({ at: Date.now(), pub, units }); try { localStorage.setItem(`fab-journal:${key}`, JSON.stringify(j.slice(-4000))); } catch { /* full: the replay keeps what it has */ }
+    j.push({ at: Date.now(), pub, units }); try { localStorage.setItem(`fab-journal:${key}`, JSON.stringify(j.slice(-1500))); } catch { /* full: the replay keeps what it has */ }
   },
 };
 

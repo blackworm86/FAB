@@ -29,7 +29,7 @@ export function legalActions(g: Game, side: Side): Action[] { return candidates(
 /** Which sides may act now. In the Admin and Reinforcement Phases both work: the other side says it is done, then the Phasing Player ends the phase. */
 export function actors(g: Game): Side[] {
   if (g.over) return [];
-  if (!g.battle && !g.pendingBlow && (g.recover.length || g.artyPick)) return g.recover.length ? [...g.recover] : ['german'];   // 4.1a, 16.12: answered first
+  if (!g.battle && !g.pendingBlow && (g.recover.length || g.artyPick)) return [...new Set([...g.recover, ...(g.artyPick ? ['german' as Side] : [])])];   // 4.1a, 16.12: answered first, by each side that owes one, in any order
   const w = E.actorOf(g); if (w !== 'both') return [w];
   const o = E.other(g.phasing);
   return g.done?.includes(o) ? [g.phasing] : [o, g.phasing];
