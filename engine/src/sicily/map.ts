@@ -40,7 +40,6 @@ export const MUTUAL = RAW.areas.filter((a) => a.vp.mutual).map((a) => a.id);
 /** 14.21: the coastal areas a landing box points at. */
 export const INVASION_CAPABLE = new Set(landingBoxes.map((b) => b.area));
 export const zonesOf = (a: number): string[] => areas.get(a)?.zone ?? [];
-export const ZONES: Record<string, number[]> = RAW.zones;
 
 /** The engine's view of the map: the areas, the boxes as areas, the links between areas and each box's arrow to its coastal area. */
 export function engineMap(): MapData {
