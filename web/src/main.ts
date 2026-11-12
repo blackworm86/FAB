@@ -1934,9 +1934,9 @@ const resetBtn = () => ubtn(`${ico('home')}<span>Reset view</span>`, () => { goa
 function layersHtml() {
   const map = VOL.art.relief ? srow('Map', VOL.art.reliefName, `<span class="seg">${chip('2D', !map3d, () => setMap3d(false), 'The printed board, flat')}${chip('3D', map3d, () => setMap3d(true), VOL.art.reliefName)}</span>`) : '';
   const setTroops = (on: boolean) => { troopsOn = on; try { localStorage.setItem('fab-troops', on ? '1' : '0'); } catch { /* private mode */ } refresh(); };
-  const units = FIG_VOLS.includes(VOL.id) ? srow('Units', 'on either map', `<span class="seg">${chip('Blocks', !troopsOn, () => setTroops(false), 'The wooden blocks')}${chip('Figures', troopsOn, () => setTroops(true), 'Soldiers and tanks, one per unit')}</span>`) : '';
+  const units = FIG_VOLS.includes(VOL.id) && !TUTORIAL ? srow('Units', 'on either map', `<span class="seg">${chip('Blocks', !troopsOn, () => setTroops(false), 'The wooden blocks')}${chip('Figures', troopsOn, () => setTroops(true), 'Soldiers and tanks, one per unit')}</span>`) : '';
   const setSize = (z: number) => { troopSize = z; setZoom(z); try { localStorage.setItem('fab-troop-size', String(z)); } catch { /* private mode */ } refresh(); };
-  const size = FIG_VOLS.includes(VOL.id) && troopsOn ? srow('Figure size', '', `<span class="seg">${([[1, 'Small'], [1.5, 'Medium'], [2, 'Large'], [2.5, 'Huge']] as const).map(([z, w]) => chip(w, troopSize === z, () => setSize(z), `Figures ${z}×`)).join('')}</span>`) : '';
+  const size = FIG_VOLS.includes(VOL.id) && !TUTORIAL && troopsOn ? srow('Figure size', '', `<span class="seg">${([[1, 'Small'], [1.5, 'Medium'], [2, 'Large'], [2.5, 'Huge']] as const).map(([z, w]) => chip(w, troopSize === z, () => setSize(z), `Figures ${z}×`)).join('')}</span>`) : '';
   return `<div class="modal"><div class="sheet menu view"><h3><span class="grow">${ico('eye')} View</span><button class="ico" data-modal="" aria-label="Close">${ico('close')}</button></h3>
     <div class="mbody"><h4>Board</h4><div class="sgrid"><div>${map || srow('Camera', '', resetBtn())}${units}${size}</div><div>${map ? srow('Camera', '', resetBtn()) : ''}</div></div></div></div></div>`;
 }
