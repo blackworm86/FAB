@@ -25,13 +25,30 @@ export async function loadTroops(vol: string, base = './'): Promise<boolean> {
   await Promise.all(Object.entries(idx.tipi).map(async ([tipo, t]) => {
     const figs = await Promise.all(t.figure.map((f) => loader.loadAsync(`${base}pezzi/${f}`).then((gl) => {
       gl.scene.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.userData.shared = true; } });   // shared by every copy: never disposed with the board
-      gl.scene.scale.setScalar(SCALE * (t.veicolo ? 1 : INFANTRY));
-      return gl.scene;
+      const k = SCALE * (t.veicolo ? 1 : INFANTRY), c = bodyCentre(gl.scene), root = new THREE.Group();
+      gl.scene.scale.setScalar(k); gl.scene.position.set(-c.x * k, 0, -c.z * k); root.add(gl.scene);         // the body (not a gun barrel or a rifle) sits on the origin
+      return root;
     })));
-    troops.set(tipo, { figs, size: new THREE.Box3().setFromObject(figs[0]).getSize(new THREE.Vector3()) });
+    const b = new THREE.Box3().setFromObject(figs[0]);
+    troops.set(tipo, { figs, size: new THREE.Vector3(2 * Math.max(-b.min.x, b.max.x), b.max.y, 2 * Math.max(-b.min.z, b.max.z)) });   // footprint symmetric round the origin
   }));
   byUnit = idx.blocchi;
   return troops.size > 0;
+}
+/** Centre of a figure's body on the ground: the surface-area centre, so a long gun barrel or a rifle does not pull it off. */
+function bodyCentre(o: THREE.Object3D) {
+  o.updateMatrixWorld(true);
+  const c = new THREE.Vector3(), a = new THREE.Vector3(), b = new THREE.Vector3(), d = new THREE.Vector3(), t = new THREE.Vector3(); let sum = 0;
+  o.traverse((m) => {
+    const g = (m as THREE.Mesh).geometry as THREE.BufferGeometry | undefined; if (!g || !(m as THREE.Mesh).isMesh) return;
+    const p = g.getAttribute('position'), ix = g.index, n = ix ? ix.count : p.count;
+    for (let i = 0; i < n; i += 3) {
+      const at = (j: number) => ix ? ix.getX(i + j) : i + j;
+      a.fromBufferAttribute(p, at(0)).applyMatrix4(m.matrixWorld); b.fromBufferAttribute(p, at(1)).applyMatrix4(m.matrixWorld); d.fromBufferAttribute(p, at(2)).applyMatrix4(m.matrixWorld);
+      const w = t.crossVectors(b.clone().sub(a), d.clone().sub(a)).length(); c.addScaledVector(a.add(b).add(d), w / 3); sum += w;
+    }
+  });
+  return sum ? c.divideScalar(sum) : c;
 }
 export const troopOf = (unitId: string) => troops.get(byUnit[unitId]) ?? null;
 
