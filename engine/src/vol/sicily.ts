@@ -655,7 +655,6 @@ const onReserve = (g: Game, u: Unit) => { if (u.untried && g.phase === 'movement
 /** 5.23 with 15.3a: an untried garrison digging in is the one untried unit acting this phase. */
 export function unitFieldWorks(g: Game, unitId: string) { const u = unit(g, unitId); need(untriedFree(g, u), 'only one untried unit may act in a Movement Phase (15.3a)'); need(!isBox(u.area!), 'not in a box'); buildFieldWorks(g, unitId); if (u.untried) state(g).untriedActed = u.id; }
 export const specialActions = (g: Game, side: Side) => saAvailable(g, side);
-export const scenarioOf = (g: Game) => SCEN(g);
 /** The beachheads still in play, by landing box code. */
 export const beachheads = (g: Game) => Object.entries(state(g).beachheads).map(([b, n]) => ({ box: BOX.get(+b)!.box, id: +b, nation: n, area: BOX.get(+b)!.area }));
 

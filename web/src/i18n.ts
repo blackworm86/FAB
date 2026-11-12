@@ -22,9 +22,14 @@ export async function loadLang() {
   PATS = D.patterns.map(([re, out]) => [new RegExp(`^${re}$`), out]);
 }
 /** A string in the chosen language (or itself when there is no translation yet). */
+const MEMO = new Map<string, string>();      // a text no dictionary entry covers tried every pattern on each redraw: once per text now (the language changes by reloading the page)
 export function tr(s: string): string {
   if (LANG === 'en' || !s) return s;
   const t = D.text[s]; if (t != null) return t;
+  const m0 = MEMO.get(s); if (m0 != null) return m0;
+  const r = trPattern(s); if (MEMO.size > 5000) MEMO.clear(); MEMO.set(s, r); return r;
+}
+function trPattern(s: string): string {
   for (const [re, out] of PATS) { const m = re.exec(s); if (m) return out.replace(/\$(\d)/g, (_, i: string) => { const v = m[+i] ?? ''; return v && v !== s ? tr(v) : v; }).replace(/\b1 colpi\b/g, '1 colpo'); }      // one pattern serves 1 and many hits      // the pattern's variable parts are translated too when the dictionary knows them (a side, "last action")
   if (COLLECT) missing.add(s);
   return s;

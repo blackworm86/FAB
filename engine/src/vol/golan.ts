@@ -1050,12 +1050,6 @@ function afterDeploy(g: Game) {
   if (state(g).startAt !== 'combat') return false;
   g.phase = 'combat'; g.phasing = 'syrian'; g.units.forEach((u) => { u.moved = false; u.spent = 0; }); return true;
 }
-/** The Israeli player places strongpoints and ghosts at will, one per Purple Line area (15.7): swap two of them while setting up. */
-export function swapStrongpoints(g: Game, a: string, b: string) {
-  need(g.turn === 1 && (g.phase === 'deploy' || (g.phase === 'combat' && g.fought.length === 0 && !g.battle)), 'only while setting up');
-  const x = unit(g, a), y = unit(g, b); need((x.fort || x.ghost) && (y.fort || y.ghost) && x.area != null && y.area != null, 'two placed strongpoints or ghosts');
-  [x.area, y.area] = [y.area, x.area];
-}
 /** The Special Actions a side could spend now (the reusable block first). */
 export const specialActions = (g: Game, side: Side) => saAvailable(g, side);
 
