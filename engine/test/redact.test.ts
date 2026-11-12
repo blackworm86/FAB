@@ -34,3 +34,17 @@ describe('the first player to sit changes the salt', () => {
     expect(rotateSalt(r.pub, r.priv, {}, 'again')).toBeNull();                                              // only the first time
   });
 });
+
+describe('playing on after the salt changed', () => {
+  it('both seats open the rewritten shared copy, move, and see each other\'s moves', async () => {
+    const { rotateSalt, SplitSeat, endPhase } = await import('../src');
+    useGame('bulge'); const sp = initSplit(newGame(3), 'g'.repeat(24), 'a'.repeat(24));
+    const r = rotateSalt(sp.pub, sp.allied, {}, 'n'.repeat(24))!, ger = new SplitSeat('german'), all = new SplitSeat('allied');
+    ger.priv = sp.german; all.priv = r.priv;
+    const gg = ger.open(JSON.parse(r.pub)), ga = all.open(JSON.parse(r.pub));
+    expect(ga.units.filter((u) => u.name === 'Hidden block' && u.side === 'allied').length).toBe(0);      // the joiner sees all own blocks
+    expect(gg.units.filter((u) => u.side === 'allied' && u.area != null && !u.garrison && u.name !== 'Hidden block').length).toBe(0);   // the other side sees them hidden
+    ga.log.push('T1 test'); const out = all.save(ga); expect(out.pub).toBeTruthy(); void endPhase;
+    const again = ger.open(JSON.parse(out.pub)); expect(again.units.length).toBe(gg.units.length);
+  });
+});
