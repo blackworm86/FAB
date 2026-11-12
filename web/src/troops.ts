@@ -22,16 +22,38 @@ export async function loadTroops(vol: string, base = './'): Promise<boolean> {
   const r = await fetch(`${base}pezzi/${vol}.json`).catch(() => null);
   if (!r?.ok) return false;
   const idx = (await r.json()) as Index, loader = new GLTFLoader();
+  /** The owner's choices from the kit's Orientamento tab: which figure of a type to use, and each figure's turn and origin nudge. */
+  const cfg = (await fetch(`${base}pezzi/${vol}_config.json`).then((c) => (c.ok ? c.json() : {})).catch(() => ({}))) as Record<string, { scelta?: number | null; figure?: Record<string, { gradi?: number; dx?: number; dz?: number }> }>;
   await Promise.all(Object.entries(idx.tipi).map(async ([tipo, t]) => {
-    const figs = await Promise.all(t.figure.map((f) => loader.loadAsync(`${base}pezzi/${f}`).then((gl) => {
+    const own = cfg[tipo], files = own?.scelta != null && t.figure[own.scelta] ? [t.figure[own.scelta]] : t.figure;
+    const figs = await Promise.all(files.map((f) => loader.loadAsync(`${base}pezzi/${f}`).then((gl) => {
       gl.scene.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.userData.shared = true; } });   // shared by every copy: never disposed with the board
-      gl.scene.scale.setScalar(SCALE * (t.veicolo ? 1 : INFANTRY));
-      return gl.scene;
+      const k = SCALE * (t.veicolo ? 1 : INFANTRY), c = bodyCentre(gl.scene), root = new THREE.Group();
+      const o = own?.figure?.[f] ?? {}, turn = new THREE.Group();
+      gl.scene.scale.setScalar(k); gl.scene.position.set(-c.x * k, 0, -c.z * k); turn.add(gl.scene);         // the body (not a gun barrel or a rifle) sits on the origin
+      turn.rotation.y = THREE.MathUtils.degToRad(o.gradi ?? 0); turn.position.set((o.dx ?? 0) * k, 0, (o.dz ?? 0) * k); root.add(turn);   // then the owner's turn and nudge
+      return root;
     })));
-    troops.set(tipo, { figs, size: new THREE.Box3().setFromObject(figs[0]).getSize(new THREE.Vector3()) });
+    const bs = figs.map((f) => new THREE.Box3().setFromObject(f));
+    troops.set(tipo, { figs, size: new THREE.Vector3(2 * Math.max(...bs.map((b) => Math.max(-b.min.x, b.max.x))), Math.max(...bs.map((b) => b.max.y)), 2 * Math.max(...bs.map((b) => Math.max(-b.min.z, b.max.z)))) });   // footprint symmetric round the origin
   }));
   byUnit = idx.blocchi;
   return troops.size > 0;
+}
+/** Centre of a figure's body on the ground: the surface-area centre, so a long gun barrel or a rifle does not pull it off. */
+function bodyCentre(o: THREE.Object3D) {
+  o.updateMatrixWorld(true);
+  const c = new THREE.Vector3(), a = new THREE.Vector3(), b = new THREE.Vector3(), d = new THREE.Vector3(), t = new THREE.Vector3(); let sum = 0;
+  o.traverse((m) => {
+    const g = (m as THREE.Mesh).geometry as THREE.BufferGeometry | undefined; if (!g || !(m as THREE.Mesh).isMesh) return;
+    const p = g.getAttribute('position'), ix = g.index, n = ix ? ix.count : p.count;
+    for (let i = 0; i < n; i += 3) {
+      const at = (j: number) => ix ? ix.getX(i + j) : i + j;
+      a.fromBufferAttribute(p, at(0)).applyMatrix4(m.matrixWorld); b.fromBufferAttribute(p, at(1)).applyMatrix4(m.matrixWorld); d.fromBufferAttribute(p, at(2)).applyMatrix4(m.matrixWorld);
+      const w = t.crossVectors(b.clone().sub(a), d.clone().sub(a)).length(); c.addScaledVector(a.add(b).add(d), w / 3); sum += w;
+    }
+  });
+  return sum ? c.divideScalar(sum) : c;
 }
 export const troopOf = (unitId: string) => troops.get(byUnit[unitId]) ?? null;
 
@@ -44,6 +66,51 @@ export const yawOf = (side: string) => (side === 'german' ? -Math.PI / 2 : Math.
 export function foot(t: Pick<Troop, 'size'>, yaw: number): [number, number] {
   const x = t.size.x * zoom + 0.3, z = t.size.z * zoom + 0.3, c = Math.abs(Math.cos(yaw)), sn = Math.abs(Math.sin(yaw));   // the box round the turned figure
   return [x * c + z * sn, x * sn + z * c];
+}
+export type Cell = { x: number; z: number; d: number };      // a free spot of an area: world x, z and its distance from the area's border
+export type Disc = { x: number; z: number; r: number };
+/** Places units inside an area so that they use all its room and never overlap. cells: the area's interior grid (d = distance from the border);
+ * units: footprint radius r and group (0 = the attackers, who stand toward +v, 1 = the defenders; a single group takes the whole area);
+ * obstacles: what must stay clear (the printed name plate). Each group gets its half of the area (split along v by unit count), each unit the centre
+ * of its own k-means cluster of that half (so the units spread over all the free space), the biggest units the roomiest spots; then a relaxation pushes
+ * overlapping units apart, off the obstacles and back inside the border. Deterministic. */
+export function arrange(cells: Cell[], units: { r: number; group: number }[], v: [number, number], obstacles: Disc[], gap = 0.15): { x: number; z: number }[] {
+  const n = units.length; if (!n) return [];
+  if (!cells.length) return units.map(() => ({ x: 0, z: 0 }));
+  const cx = cells.reduce((a, c) => a + c.x, 0) / cells.length, cz = cells.reduce((a, c) => a + c.z, 0) / cells.length;
+  const clear = (c: Cell, r: number) => c.d >= r && obstacles.every((o) => Math.hypot(c.x - o.x, c.z - o.z) >= o.r + r);
+  const usable = (r: number) => { for (const f of [1, 0.75, 0.5, 0]) { const u = cells.filter((c) => clear(c, r * f)); if (u.length) return u; } return cells; };
+  const rmin = Math.min(...units.map((u) => u.r)), base = usable(rmin);
+  const two = units.some((u) => u.group === 1) && units.some((u) => u.group === 0), out: { x: number; z: number }[] = units.map(() => ({ x: cx, z: cz }));
+  const sorted = [...base].sort((a, b) => ((b.x - cx) * v[0] + (b.z - cz) * v[1]) - ((a.x - cx) * v[0] + (a.z - cz) * v[1]));    // the attackers' end first
+  const nA = units.filter((u) => u.group === 0).length, cut = two ? Math.max(1, Math.min(sorted.length - 1, Math.round((sorted.length * nA) / n))) : sorted.length;
+  for (const gr of two ? [0, 1] : [0]) {
+    const idx = units.map((u, i) => i).filter((i) => (two ? units[i].group === gr : true)); if (!idx.length) continue;
+    const region = two ? (gr === 0 ? sorted.slice(0, cut) : sorted.slice(cut)) : base, pool = region.length ? region : base, k = Math.min(idx.length, pool.length);
+    let cen: { x: number; z: number }[] = [{ x: pool.reduce((a, c) => (c.d > a.d ? c : a)).x, z: 0 }]; cen[0].z = pool.reduce((a, c) => (c.d > a.d ? c : a)).z;
+    while (cen.length < k) { let far = pool[0], fd = -1; for (const c of pool) { const m = Math.min(...cen.map((q) => Math.hypot(c.x - q.x, c.z - q.z))); if (m > fd) { fd = m; far = c; } } cen.push({ x: far.x, z: far.z }); }
+    for (let it = 0; it < 12; it++) {
+      const sum = cen.map(() => ({ x: 0, z: 0, n: 0 }));
+      for (const c of pool) { let b = 0, bd = 1e9; cen.forEach((q, j) => { const d = (c.x - q.x) ** 2 + (c.z - q.z) ** 2; if (d < bd) { bd = d; b = j; } }); sum[b].x += c.x; sum[b].z += c.z; sum[b].n++; }
+      cen = cen.map((q, j) => (sum[j].n ? { x: sum[j].x / sum[j].n, z: sum[j].z / sum[j].n } : q));
+    }
+    const room = (q: { x: number; z: number }) => pool.reduce((a, c) => (Math.hypot(c.x - q.x, c.z - q.z) < Math.hypot(a.x - q.x, a.z - q.z) ? c : a)).d;
+    const spots = [...cen].sort((a, b) => room(b) - room(a)), bigFirst = [...idx].sort((a, b) => units[b].r - units[a].r);
+    bigFirst.forEach((i, j) => { const q = spots[Math.min(j, spots.length - 1)]; out[i] = { x: q.x, z: q.z }; });
+  }
+  const valid = units.map((u) => { for (const f of [1, 0.75, 0.5, 0]) { const c = cells.filter((q) => q.d >= u.r * f * 0.9); if (c.length) return c; } return cells; });
+  for (let it = 0; it < 80; it++) {
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+      const dx = out[j].x - out[i].x, dz = out[j].z - out[i].z, d = Math.hypot(dx, dz), over = units[i].r + units[j].r + gap - d; if (over <= 0) continue;
+      const ux = d > 1e-6 ? dx / d : 1, uz = d > 1e-6 ? dz / d : 0; out[i].x -= ux * over / 2; out[i].z -= uz * over / 2; out[j].x += ux * over / 2; out[j].z += uz * over / 2;
+    }
+    for (let i = 0; i < n; i++) {
+      for (const o of obstacles) { const d = Math.hypot(out[i].x - o.x, out[i].z - o.z), over = o.r + units[i].r - d; if (over > 0) { const ux = d > 1e-6 ? (out[i].x - o.x) / d : 1, uz = d > 1e-6 ? (out[i].z - o.z) / d : 0; out[i].x += ux * over; out[i].z += uz * over; } }
+      let near = valid[i][0], nd = 1e9; for (const c of valid[i]) { const d = (c.x - out[i].x) ** 2 + (c.z - out[i].z) ** 2; if (d < nd) { nd = d; near = c; } }
+      if (nd > 0.04) { out[i].x += (near.x - out[i].x) * 0.6; out[i].z += (near.z - out[i].z) * 0.6; }                  // back inside the border
+    }
+  }
+  return out;
 }
 /** An ordered layout: each group (a side) in rows of at most cols units, the groups one under the other (the first toward -z),
  * all centred on (0, 0). Returns each unit's centre, group by group. Nothing overlaps: every unit gets its full footprint plus gap. */

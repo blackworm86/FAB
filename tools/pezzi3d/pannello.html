@@ -36,7 +36,7 @@ main{min-height:0;overflow:hidden;display:flex;flex-direction:column}
 .banner{margin:16px 20px 0;padding:12px 16px;border-left:4px solid var(--giallo);background:var(--pannello)}
 .banner code{background:#000;padding:1px 6px}
 /* pezzi */
-#v-pezzi.attiva{display:grid;grid-template-columns:250px 1fr}
+#v-pezzi.attiva,#v-orienta.attiva{display:grid;grid-template-columns:250px 1fr}
 .elenco{border-right:1px solid var(--linea);overflow:auto;padding:12px 0;background:var(--pannello)}
 .elenco h3{font-size:11px;color:var(--tenue);margin:14px 16px 6px}
 .elenco button{display:flex;justify-content:space-between;align-items:center;width:100%;padding:8px 16px;border:0;background:none;cursor:pointer;text-align:left}
@@ -64,6 +64,10 @@ input[type=text],input[type=number],input[type=password],select{background:#0E0E
 label.campo{display:flex;flex-direction:column;gap:3px;font-size:14px;color:var(--tenue)}
 label.spunta{display:flex;gap:6px;align-items:center;font-size:15px}
 .flusso li{margin:10px 0}.tab-serie{border-collapse:collapse;margin-top:16px;width:100%}.tab-serie td,.tab-serie th{padding:6px 10px;border-bottom:1px solid var(--linea);text-align:left}.tab-serie button{background:none;border:0;color:inherit;font:inherit;cursor:pointer;text-decoration:underline}.galleria-pezzo{margin-top:14px}.galleria-pezzo img{width:140px;cursor:pointer;border:2px solid transparent}.galleria-pezzo img:hover{border-color:var(--rosso)}
+.o-schede{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px}
+.o-scheda{background:var(--pannello);border:2px solid var(--linea);padding:10px}.o-scheda.usa{border-color:#2fbf71}
+.o-scheda .anteprima3d{height:300px}.o-scheda .riga{margin:8px 0}.o-scheda .btn{font-size:16px;padding:8px 12px;min-width:46px}
+.o-scheda h4{margin:0 0 6px;font-size:15px}.o-usa{width:100%;font-size:17px!important}
 .griglia{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}
 .miniatura{background:#0E0E13;border:1px solid var(--linea);display:flex;flex-direction:column}
 .miniatura img{width:100%;aspect-ratio:1;object-fit:contain;background:#D9D9D9}
@@ -99,7 +103,7 @@ iframe.visore{width:100%;height:70vh;border:1px solid var(--linea);background:#0
 </head>
 <body>
 <header>
-  <h1>FAB <span>3D</span> · officina dei pezzi <small class="nota" style="font-family:inherit;font-size:12px">v2026.11.11-fab4</small></h1>
+  <h1>FAB <span>3D</span> · officina dei pezzi <small class="nota" style="font-family:inherit;font-size:12px">v2026.11.12-fab5</small></h1>
   <div class="stati">
     <span class="chip" id="c-server"><i></i>Pannello</span>
     <span class="chip" id="c-gpu"><i></i>GPU</span>
@@ -111,6 +115,7 @@ iframe.visore{width:100%;height:70vh;border:1px solid var(--linea);background:#0
   <button role="tab" data-vista="serie" aria-selected="true">Produzione</button>
   <button role="tab" data-vista="pezzi" aria-selected="false">Pezzi</button>
   <button role="tab" data-vista="sagome" aria-selected="false">Test sagome</button>
+  <button role="tab" data-vista="orienta" aria-selected="false">Orientamento</button>
   <button role="tab" data-vista="anteprima" aria-selected="false">Anteprima e gioco</button>
   <button role="tab" data-vista="installa" aria-selected="false">Installazione</button>
   <button role="tab" data-vista="guida" aria-selected="false">Guida</button>
@@ -160,6 +165,11 @@ iframe.visore{width:100%;height:70vh;border:1px solid var(--linea);background:#0
         <div id="foglio"></div>
       </div></div>
     </div>
+  </section>
+
+  <section class="vista" id="v-orienta">
+    <aside class="elenco" id="o-elenco"></aside>
+    <div class="dettaglio" id="o-dettaglio"></div>
   </section>
 
   <section class="vista" id="v-anteprima">
@@ -296,7 +306,7 @@ const CORREZIONI = [
 ];
 const PULISCI_PEDINA = {texture:true, base:true, senza_giocatore:true, colori:6, ruota:0, asse_z_su:false, dettaglio:2};
 const opzioniDi = pz => ({...PULISCI_PEDINA, altezza:pz.altezza, triangoli:pz.triangoli, ...(pz.tinta ? {tinta:pz.tinta, senza_giocatore:false} : {})});
-const VERSIONE_PANNELLO = "2026.11.11-fab4";
+const VERSIONE_PANNELLO = "2026.11.12-fab5";
 const AVVIA_BAT = "@echo off\nrem ==========================================================================\nrem  FAB · pezzi 3D - avvio del pannello\nrem  Doppio clic su questo file:\nrem   - chiude un eventuale pannello gia' aperto (anche di una versione vecchia)\nrem   - la prima volta installa Python (se manca) e le librerie del kit\nrem   - avvia il pannello e lo apre nel browser\nrem  Lascia aperta questa finestra mentre lavori. Per chiudere: chiudi la\nrem  finestra, oppure FERMA_PANNELLO.bat, oppure il pulsante nel pannello.\nrem ==========================================================================\nsetlocal\ncd /d \"%~dp0\"\ntitle FAB · pezzi 3D - Pannello\n\necho Chiudo un eventuale pannello gia' aperto...\ncall \"%~dp0strumenti\\ferma_porta.bat\" 8078\n\nset \"VENV_PY=%~dp0.venv\\Scripts\\python.exe\"\nif exist \"%VENV_PY%\" goto librerie\n\necho.\necho Prima configurazione: cerco Python...\nset \"PYBASE=\"\npy -3 -c \"import sys; assert sys.version_info >= (3, 10)\" >nul 2>nul && set \"PYBASE=py -3\"\nif defined PYBASE goto crea_venv\npython -c \"import sys; assert sys.version_info >= (3, 10)\" >nul 2>nul && set \"PYBASE=python\"\nif defined PYBASE goto crea_venv\n\necho Python non trovato: lo installo con winget (Python 3.12, solo per il tuo utente)...\nwinget install -e --id Python.Python.3.12 --scope user --silent --accept-package-agreements --accept-source-agreements\nset \"PYBASE=%LOCALAPPDATA%\\Programs\\Python\\Python312\\python.exe\"\nif exist \"%PYBASE%\" goto crea_venv\necho.\necho Non sono riuscito a installare Python automaticamente.\necho Installalo da https://www.python.org/downloads/ (spunta \"Add python.exe to PATH\")\necho e poi fai di nuovo doppio clic su questo file.\npause\nexit /b 1\n\n:crea_venv\necho Creo l'ambiente Python del kit nella cartella .venv ...\n%PYBASE% -m venv \"%~dp0.venv\"\nif not exist \"%VENV_PY%\" \"%PYBASE%\" -m venv \"%~dp0.venv\"\nif not exist \"%VENV_PY%\" (\n    echo Creazione dell'ambiente non riuscita.\n    pause\n    exit /b 1\n)\n\n:librerie\necho Controllo le librerie del kit...\n\"%VENV_PY%\" -m pip install --disable-pip-version-check -q --upgrade pip\n\"%VENV_PY%\" -m pip install --disable-pip-version-check -q -r \"%~dp0strumenti\\requisiti.txt\"\nif errorlevel 1 (\n    echo Installazione delle librerie non riuscita: controlla la connessione e riprova.\n    pause\n    exit /b 1\n)\n\nset \"APRI=--apri\"\n:avvio\necho.\necho Avvio il pannello. Lascia aperta questa finestra.\n\"%VENV_PY%\" \"%~dp0strumenti\\server_pannello.py\" %APRI%\nrem codice 3 = riavvio chiesto dal pannello: ricarica il codice aggiornato\nif errorlevel 3 if not errorlevel 4 (\n    set \"APRI=\"\n    echo Riavvio in corso...\n    \"%VENV_PY%\" -m pip install --disable-pip-version-check -q -r \"%~dp0strumenti\\requisiti.txt\"\n    goto avvio\n)\necho.\necho Il pannello e' stato chiuso.\npause\n";
 
 // =====================================================================
@@ -760,6 +770,78 @@ function divisore(pz, x){
 }
 
 // =====================================================================
+// Orientamento: quale figura usare, dove guarda, dov'è la sua origine
+// =====================================================================
+let FIG = {}, O_TIPO = null;     // volume -> {tipi:{tipo:[file]}, config}
+async function caricaFigure(){ try { FIG = await api("/api/figure"); } catch(e){ FIG = {}; } }
+function disegnaOrienta(){
+  const el = $("#o-elenco"), vols = Object.keys(FIG);
+  if (!vols.length){ el.innerHTML = ""; $("#o-dettaglio").innerHTML = `<p class="nota">Nessuna figura trovata. Le figure del gioco stanno in <b>web/public/pezzi</b> (o in <b>modelli/figure</b> se il kit è fuori dal repository): mettici i file .glb e il file del volume (es. bulge.json), poi riapri questa scheda.</p>`; return; }
+  if (!O_TIPO) O_TIPO = [vols[0], Object.keys(FIG[vols[0]].tipi)[0]];
+  el.innerHTML = vols.map(v => `<h3>${esc(v)}</h3>` + Object.keys(FIG[v].tipi).map(t => { const c = FIG[v].config[t];
+    return `<button data-v="${v}" data-t="${t}" aria-current="${O_TIPO[0]===v && O_TIPO[1]===t}"><span>${esc(t.replace(v + "_", "").replaceAll("_", " "))}</span><span class="punti"><b class="${c ? "si" : ""}"></b></span></button>`; }).join("")).join("");
+  el.querySelectorAll("button").forEach(b => b.onclick = () => { O_TIPO = [b.dataset.v, b.dataset.t]; disegnaOrienta(); });
+  schedeTipo(O_TIPO[0], O_TIPO[1]);
+}
+function baricentro(o){      // centro del corpo (area delle superfici): lo stesso calcolo del gioco, così la croce coincide con quello che si vedrà
+  o.updateMatrixWorld(true); const c = new THREE.Vector3(), a = new THREE.Vector3(), b = new THREE.Vector3(), d = new THREE.Vector3(); let sum = 0;
+  o.traverse(m => { if (!m.isMesh) return; const g = m.geometry, p = g.attributes.position, ix = g.index, n = ix ? ix.count : p.count;
+    for (let i = 0; i < n; i += 3){ const at = j => ix ? ix.getX(i + j) : i + j;
+      a.fromBufferAttribute(p, at(0)).applyMatrix4(m.matrixWorld); b.fromBufferAttribute(p, at(1)).applyMatrix4(m.matrixWorld); d.fromBufferAttribute(p, at(2)).applyMatrix4(m.matrixWorld);
+      const w = new THREE.Vector3().crossVectors(b.clone().sub(a), d.clone().sub(a)).length(); c.addScaledVector(a.add(b).add(d), w / 3); sum += w; } });
+  return sum ? c.divideScalar(sum) : c;
+}
+function schedeTipo(vol, tipo){
+  liberaAnteprime();
+  const files = FIG[vol].tipi[tipo], cfg = FIG[vol].config[tipo] || {scelta: null, figure: {}};
+  const st = Object.fromEntries(files.map(f => [f, {gradi:0, dx:0, dz:0, ...(cfg.figure || {})[f]}]));
+  let scelta = cfg.scelta, vista = "alto", salvaT = null;
+  const salva = () => { clearTimeout(salvaT); salvaT = setTimeout(async () => { try { await api("/api/figure/config", {vol, tipo, scelta, figure: st}); FIG[vol].config[tipo] = {scelta, figure: JSON.parse(JSON.stringify(st))}; $("#o-salvato").textContent = "salvato ✓"; disegnaOrienta_punto(); } catch(e){ toast("Errore: " + e.message, 6000); } }, 350); };
+  const disegnaOrienta_punto = () => { const b = $(`#o-elenco [data-v="${vol}"][data-t="${tipo}"] b`); if (b) b.className = "si"; };
+  $("#o-dettaglio").innerHTML = `<h2>${esc(tipo.replace(vol + "_", "").replaceAll("_", " "))} <small class="nota" id="o-salvato"></small></h2>
+    <p class="nota"><b>1.</b> Il tipo è <b>${files.length === 1 ? "uno solo" : "in " + files.length + " varianti"}</b>${files.length > 1 ? ": premi «Usa questa» su quella che vuoi nel gioco" : ""}. <b>2.</b> La <b style="color:#ffd23f">freccia gialla</b> è l'AVANTI del gioco (in alto sullo schermo): ruota la figura finché guarda lungo la freccia (il carro col cannone sulla freccia, il soldato con la faccia sulla freccia). <b>3.</b> La <b style="color:#ff4040">croce rossa</b> è il punto d'appoggio: sposta la figura finché il suo corpo è sulla croce. Si salva da solo.</p>
+    <div class="riga"><label class="campo">Vista<select id="o-vista"><option value="alto">dall'alto (consigliata)</option><option value="obliqua">obliqua</option></select></label></div>
+    <div class="o-schede">${files.map((f, i) => `<div class="o-scheda" id="os-${i}"><h4>Variante ${i + 1}</h4>
+      <div class="anteprima3d" id="ov-${i}"><span class="etichetta"></span></div>
+      <div class="riga"><button class="btn" data-r="90" title="ruota a sinistra di 90°">↺ 90°</button><button class="btn" data-r="-90" title="ruota a destra di 90°">↻ 90°</button><button class="btn" data-r="180">180°</button><button class="btn" data-r="5" title="un po' a sinistra">↺ 5°</button><button class="btn" data-r="-5" title="un po' a destra">↻ 5°</button><span class="nota" id="og-${i}"></span></div>
+      <div class="riga"><button class="btn" data-m="1,0" title="sposta a sinistra">←</button><button class="btn" data-m="-1,0">→</button><button class="btn" data-m="0,-1" title="sposta indietro">↓</button><button class="btn" data-m="0,1" title="sposta avanti">↑</button><button class="btn" data-m="0,0">Centra</button></div>
+      ${files.length > 1 ? `<button class="btn primario o-usa" data-usa="${i}"></button>` : ""}</div>`).join("")}</div>`;
+  const viste = [];
+  files.forEach((f, i) => {
+    const box = $(`#ov-${i}`), renderer = new THREE.WebGLRenderer({antialias:true}); renderer.outputEncoding = THREE.sRGBEncoding; box.appendChild(renderer.domElement);
+    const scena = new THREE.Scene(); scena.background = new THREE.Color("#2B2E33").convertSRGBToLinear();
+    scena.add(new THREE.HemisphereLight("#d8deea", "#2a2622", 1.0)); const sole = new THREE.DirectionalLight("#fff", 0.7); sole.position.set(-3, 6, 5); scena.add(sole);
+    const cam = new THREE.PerspectiveCamera(35, 1, 0.01, 100), ctrl = new THREE.OrbitControls(cam, renderer.domElement); ctrl.enableDamping = true;
+    const a = {renderer, attivo:true}; ANTEPRIME.push(a);
+    const griglia = new THREE.GridHelper(3, 30, 0x66707a, 0x3c434b); scena.add(griglia);
+    const croce = new THREE.Group(), mr = new THREE.MeshBasicMaterial({color:0xff4040, depthTest:false}); croce.renderOrder = 9;
+    for (const [w, d] of [[0.5, 0.025], [0.025, 0.5]]){ const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.01, d), mr); m.renderOrder = 9; croce.add(m); } croce.position.y = 0.006; scena.add(croce);
+    const freccia = new THREE.Group(), my = new THREE.MeshBasicMaterial({color:0xffd23f, depthTest:false});
+    const asta = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.01, 0.45), my), punta = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.3, 4), my);
+    asta.position.z = 0.78; punta.rotation.x = Math.PI / 2; punta.position.z = 1.15; for (const m of [asta, punta]){ m.renderOrder = 8; m.position.y = 0.012; freccia.add(m); } scena.add(freccia);
+    const girare = new THREE.Group(), pos = new THREE.Group(); girare.add(pos); scena.add(girare);
+    let ok = false, h = 0.5, f0 = 1;   // f0: the view, the arrow and the cross are scaled to the figure (a soldier is much smaller than a tank)
+    const metti = () => { const o = st[f]; girare.rotation.y = THREE.MathUtils.degToRad(o.gradi); girare.position.set(o.dx, 0, o.dz);
+      $(`#og-${i}`).textContent = `${Math.round(o.gradi)}°`; $(`#os-${i}`).classList.toggle("usa", files.length === 1 || scelta === i);
+      const u = $(`#os-${i} [data-usa]`); if (u) u.textContent = scelta === i ? "✓ USATA NEL GIOCO" : "Usa questa"; };
+    new THREE.GLTFLoader().load("/figure/" + f + "?v=" + Date.now(), g => {
+      const c = baricentro(g.scene); g.scene.position.set(-c.x, 0, -c.z); pos.add(g.scene);
+      const b = new THREE.Box3().setFromObject(g.scene), ext = Math.max(b.max.x - b.min.x, b.max.z - b.min.z); h = b.max.y; f0 = Math.max(0.3, Math.min(1, ext / 1.4)); for (const o of [griglia, croce, freccia]) o.scale.setScalar(f0); box.querySelector(".etichetta").textContent = f.replace(".glb", ""); ok = true; metti(); vista_(); });
+    const vista_ = () => { cam.up.set(0, 1, 0); ctrl.target.set(0, 0, 0.3 * f0);
+      if (vista === "alto") { cam.up.set(0, 0, 1); cam.position.set(0, 3.6 * f0, 0.3 * f0); } else cam.position.set(2.0 * f0, 2.2 * f0, 3.0 * f0); cam.updateProjectionMatrix(); ctrl.update(); };
+    viste.push(vista_);
+    $(`#os-${i}`).querySelectorAll("[data-r]").forEach(b => b.onclick = () => { st[f].gradi = ((st[f].gradi + +b.dataset.r) % 360 + 360) % 360; metti(); salva(); });
+    $(`#os-${i}`).querySelectorAll("[data-m]").forEach(b => b.onclick = () => { const [x, z] = b.dataset.m.split(",").map(Number); if (!x && !z){ st[f].dx = 0; st[f].dz = 0; } else { st[f].dx += x * 0.02; st[f].dz += z * 0.02; } metti(); salva(); });
+    const u = $(`#os-${i} [data-usa]`); if (u) u.onclick = () => { scelta = i; files.forEach((_, j) => { const bj = $(`#os-${j} [data-usa]`); $(`#os-${j}`).classList.toggle("usa", j === i); if (bj) bj.textContent = j === i ? "✓ USATA NEL GIOCO" : "Usa questa"; }); salva(); };
+    metti();
+    const giro = () => { if (!a.attivo) return; const w = box.clientWidth, hh = box.clientHeight; if (renderer.domElement.width !== Math.floor(w * devicePixelRatio)){ renderer.setPixelRatio(devicePixelRatio); renderer.setSize(w, hh, false); cam.aspect = w / hh; cam.updateProjectionMatrix(); }
+      ctrl.update(); renderer.render(scena, cam); requestAnimationFrame(giro); };
+    giro();
+  });
+  $("#o-vista").onchange = () => { vista = $("#o-vista").value; viste.forEach(v => v()); };
+}
+
+// =====================================================================
 // Produzione in serie
 // =====================================================================
 let FERMA = false, IN_SERIE = false;
@@ -837,6 +919,7 @@ document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
   if (b.dataset.vista === "anteprima") apriAnteprima();
   if (b.dataset.vista === "sagome") mostraFoglio();
   if (b.dataset.vista === "serie") disegnaSerie();
+  if (b.dataset.vista === "orienta") caricaFigure().then(disegnaOrienta);
 });
 function apriAnteprima(){
   if (!ONLINE) return;

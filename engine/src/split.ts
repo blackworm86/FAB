@@ -6,7 +6,7 @@ import { visibleTo, other, sidesOf, type Game, type Side, type Unit } from './ga
 import { alias } from './redact';
 
 export type UnitSecret = Pick<Unit, 'name' | 'cls' | 'q' | 'max' | 'str' | 'code' | 'symbol' | 'ech' | 'entry' | 'arrival' | 'chitId' | 'from' | 'ghost' | 'fort' | 'kind' | 'division' | 'brigade' | 'symbol2' | 'peiperFull' | 'heydte' | 'motorized'>;
-export interface Priv { salt: string; secrets: Record<string, UnitSecret>; epoch?: Record<string, number> }
+export interface Priv { salt: string; secrets: Record<string, UnitSecret>; epoch?: Record<string, number>; fresh?: true }   // fresh: the salt was made by whoever created the table, who may keep it: the first to sit here changes it (rotateSalt)
 /** A block's opaque id for this seat. It changes (new epoch) each time a revealed block is hidden again, so the other side cannot link it to what it saw. */
 export const aliasOf = (priv: Pick<Priv, 'salt' | 'epoch'>, id: string) => { const e = priv.epoch?.[id]; return alias(priv.salt, e ? `${id}#${e}` : id); };
 export type Reveal = UnitSecret & { id: string };
@@ -64,13 +64,26 @@ export function freshReveals(published: Reveals, wanted: Reveals): Reveals {
   return Object.fromEntries(Object.entries(wanted).filter(([k, v]) => JSON.stringify(published[k]) !== JSON.stringify(v)));
 }
 
+/** A secure random integer below n (rejection sampling, no modulo bias). */
+const secureInt = (n: number) => { const lim = 2 ** 32 - (2 ** 32 % n), x = new Uint32Array(1); do crypto.getRandomValues(x); while (x[0] >= lim); return x[0] % n; };
 /** A new split table: the shared copy and one private document per seat, made from a fresh full game. Only used once, when the table is created. */
 export function initSplit(full: Game, saltGerman: string, saltAllied: string): { pub: string; german: Priv; allied: Priv } {
   full.deferBegin = true;
+  for (let i = full.units.length - 1; i > 0; i--) { const j = secureInt(i + 1); [full.units[i], full.units[j]] = [full.units[j], full.units[i]]; }   // the shared copy stores blocks by position: a scenario's fixed order would name every hidden block
   const [p1, p2] = sidesOf(full);                                                                   // the seats keep their database keys: german = First Player, allied = Second
-  const german: Priv = { salt: saltGerman, secrets: secretsOf(full, p1) }, allied: Priv = { salt: saltAllied, secrets: secretsOf(full, p2) };
+  const german: Priv = { salt: saltGerman, secrets: secretsOf(full, p1), fresh: true }, allied: Priv = { salt: saltAllied, secrets: secretsOf(full, p2), fresh: true };
   const step1 = toPublic(full, p1, saltGerman, new Map());
   return { pub: toPublic(JSON.parse(step1) as Game, p2, saltAllied, new Map()), german, allied };
+}
+
+/** The first player to sit at a seat changes its salt: the table's creator made it and could decode every opaque id of that seat's blocks from then on.
+ *  Returns the seat's new private document and the shared copy written again with the new ids; null when it is not fresh or an older id is already out (a reveal). */
+export function rotateSalt(pub: string, priv: Priv, reveals: Reveals, salt: string): { pub: string; priv: Priv } | null {
+  if (!priv.fresh || Object.keys(reveals).length) return null;
+  const game = compose(JSON.parse(pub) as Game, priv, reveals).game, side = game.units.find((u) => priv.secrets[u.id])?.side;
+  if (!side) return null;
+  const next: Priv = { salt, secrets: secretsOf(game, side) };
+  return { pub: toPublic(game, side, next, new Map()), priv: next };
 }
 
 /** One seat's side of the split protocol: everything online.ts needs, with no network in it, so two seats can be played against each other in a test. */

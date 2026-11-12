@@ -75,6 +75,8 @@ export const online = {
 
 let store: Store | null = null, seat: SplitSeat | null = null, pubDoc: StateDoc | null = null, lastJson = '';
 let writing = false, queued: Game | null = null, rebuildLater = false, had = false;
+/** Closing the page while a move is still on its way (or did not go) would lose it: the browser asks first. */
+if (typeof window !== 'undefined') window.addEventListener('beforeunload', (e) => { if (online.mode === 'remote' && (writing || queued || online.sync.startsWith('NOT SAVED'))) { e.preventDefault(); e.returnValue = ''; } });
 let onChat: (m: ChatMsg[]) => void = () => {};
 let onChange: () => void = () => {}, onRemote: (g: Game) => void = () => {}, notify: (m: string) => void = () => {}, onGone: () => void = () => {};
 const fail = (e: string) => { online.error = e; onChange(); };
