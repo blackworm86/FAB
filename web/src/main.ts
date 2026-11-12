@@ -1204,6 +1204,13 @@ function canAct(u: E.Unit) {
 /** Units that can still act wear a lime halo on the ground (owner, 11 Nov: no marks floating over the pips). */
 const halos = new THREE.Group(); scene.add(halos);
 const haloMat = [new THREE.MeshBasicMaterial({ color: 0xc8e86a, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide }), new THREE.MeshBasicMaterial({ color: 0xc8e86a, transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide })];
+/** A flat halo shape laid on the ground round (c): on the 3D relief every vertex sits just above the terrain under it, so hills and woods never hide it. */
+function drapeHalo(geo: THREE.BufferGeometry, c: THREE.Vector3, y: number, mat: THREE.Material) {
+  const pos = geo.getAttribute('position') as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) { const x = c.x + pos.getX(i), z = c.z - pos.getY(i); pos.setXYZ(i, x, show3d() ? Math.max(y, REL!.h(x, z) + 0.12) : y, z); }
+  pos.needsUpdate = true; geo.computeBoundingSphere();
+  const m = new THREE.Mesh(geo, mat); m.renderOrder = 3; return m;
+}
 function syncMoveMarks() {
   document.getElementById('marks')!.querySelectorAll('.mm').forEach((e) => e.remove()); moveMarks = [];
   halos.children.forEach((o) => (o as THREE.Mesh).geometry.dispose()); halos.clear();
@@ -1216,8 +1223,8 @@ function syncMoveMarks() {
     box.setFromObject(base).getSize(size); box.getCenter(c); const y = box.min.y + 0.04;
     const rect = (w: number, d: number) => { const r = Math.min(w, d) / 2, x = w / 2, z = d / 2, sh = new THREE.Shape(); sh.moveTo(-x + r, -z); sh.lineTo(x - r, -z); sh.quadraticCurveTo(x, -z, x, -z + r); sh.lineTo(x, z - r); sh.quadraticCurveTo(x, z, x - r, z); sh.lineTo(-x + r, z); sh.quadraticCurveTo(-x, z, -x, z - r); sh.lineTo(-x, -z + r); sh.quadraticCurveTo(-x, -z, -x + r, -z); return sh; };
     const circ = (base as THREE.Object3D).userData.r as number | undefined;      // a figure: a round halo matching its circle
-    if (circ) { ([[0.06, 0.24, 0], [0.24, 0.55, 1]] as const).forEach(([a, b, k]) => { const m = new THREE.Mesh(new THREE.RingGeometry(circ + a, circ + b, 56), haloMat[k]); m.rotation.x = -Math.PI / 2; m.position.set(c.x, y, c.z); m.renderOrder = 1; halos.add(m); }); continue; }
-    ([[0.1, 0.3, 0], [0.3, 0.62, 1]] as const).forEach(([a, b, k]) => { const sh = rect(size.x + 2 * b, size.z + 2 * b); sh.holes.push(new THREE.Path(rect(size.x + 2 * a, size.z + 2 * a).getPoints())); const m = new THREE.Mesh(new THREE.ShapeGeometry(sh, 6), haloMat[k]); m.rotation.x = -Math.PI / 2; m.position.set(c.x, y, c.z); m.renderOrder = 1; halos.add(m); });
+    if (circ) { ([[0.06, 0.24, 0], [0.24, 0.55, 1]] as const).forEach(([a, b, k]) => { halos.add(drapeHalo(new THREE.RingGeometry(circ + a, circ + b, 56), c, y, haloMat[k])); }); continue; }
+    ([[0.1, 0.3, 0], [0.3, 0.62, 1]] as const).forEach(([a, b, k]) => { const sh = rect(size.x + 2 * b, size.z + 2 * b); sh.holes.push(new THREE.Path(rect(size.x + 2 * a, size.z + 2 * a).getPoints())); halos.add(drapeHalo(new THREE.ShapeGeometry(sh, 6), c, y, haloMat[k])); });
   }
 }
 /* ---------- option tags on the map: what a Special Action buys, which battles are free (docs/playtest3 mockups) ---------- */
