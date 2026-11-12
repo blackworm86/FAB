@@ -157,7 +157,8 @@ const scene = new THREE.Scene(); scene.background = new THREE.Color(0x101314);
 const cam = new THREE.PerspectiveCamera(38, 1, 0.5, 600);
 scene.add(new THREE.HemisphereLight(0xeef3ff, 0x2a2622, 1.0));
 const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(-20, 50, 32); sun.castShadow = true;
-{ const r = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 820 ? 1024 : 4096; sun.shadow.mapSize.set(r, r); }      // a phone: 16 times less graphics memory Object.assign(sun.shadow.camera, { left: -35, right: 35, top: 35, bottom: -35, far: 200 }); scene.add(sun);
+{ const r = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 820 ? 1024 : 4096; sun.shadow.mapSize.set(r, r); }      // a phone: 16 times less graphics memory
+Object.assign(sun.shadow.camera, { left: -58, right: 58, top: 58, bottom: -58, far: 220 }); scene.add(sun);       // the shadow box covers the whole table (it was lost inside the comment above, so the sun never lit the scene)
 
 const board: THREE.Mesh<THREE.BufferGeometry, THREE.Material> = new THREE.Mesh(new THREE.PlaneGeometry(MW / S, MH / S), new THREE.MeshStandardMaterial({ map: null, roughness: 0.9 }));
 board.rotation.x = -Math.PI / 2; board.receiveShadow = true; scene.add(board);
