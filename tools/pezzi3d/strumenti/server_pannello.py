@@ -251,6 +251,50 @@ def op_dividi_salva(log, dati):
     return {}
 
 
+def cartella_figure():
+    """Dove stanno le figure del gioco: web/public/pezzi del repository, o modelli/figure se il kit è scaricato da solo."""
+    web = RADICE.parents[1] / "web" / "public" / "pezzi"
+    c = web if web.is_dir() else RADICE / "modelli" / "figure"
+    c.mkdir(parents=True, exist_ok=True)
+    return c
+
+
+def elenco_figure():
+    """Per ogni volume con figure: i tipi, i file di ogni tipo e le scelte già fatte (orientamento, origine, variante)."""
+    c, out = cartella_figure(), {}
+    for f in sorted(c.glob("*.json")):
+        if f.stem.endswith("_config"):
+            continue
+        try:
+            idx = json.loads(f.read_text(encoding="utf-8"))
+            cfg = c / f"{f.stem}_config.json"
+            out[f.stem] = {"tipi": {t: v["figure"] for t, v in idx["tipi"].items()},
+                           "config": json.loads(cfg.read_text(encoding="utf-8")) if cfg.exists() else {}}
+        except (ValueError, KeyError):
+            continue
+    return out
+
+
+def salva_config_figura(dati):
+    """Scrive la scelta di un tipo in <volume>_config.json: {tipo: {scelta, figure: {file: {gradi, dx, dz}}}}."""
+    vol, tipo = str(dati.get("vol", "")), str(dati.get("tipo", ""))
+    elenco = elenco_figure()
+    if vol not in elenco or tipo not in elenco[vol]["tipi"]:
+        raise ValueError("tipo sconosciuto")
+    files = elenco[vol]["tipi"][tipo]
+    scelta = dati.get("scelta")
+    if scelta is not None and not (isinstance(scelta, int) and 0 <= scelta < len(files)):
+        raise ValueError("variante non valida")
+    figure = {}
+    for f, v in (dati.get("figure") or {}).items():
+        if f in files:
+            figure[f] = {"gradi": float(v.get("gradi", 0)) % 360, "dx": max(-2, min(2, float(v.get("dx", 0)))), "dz": max(-2, min(2, float(v.get("dz", 0))))}
+    cfg = cartella_figure() / f"{vol}_config.json"
+    tutto = json.loads(cfg.read_text(encoding="utf-8")) if cfg.exists() else {}
+    tutto[tipo] = {"scelta": scelta, "figure": figure}
+    cfg.write_text(json.dumps(tutto, indent=1), encoding="utf-8")
+
+
 def op_test_sagome(log):
     esegui_processo(log, script("test_sagome.py") + [str(RADICE / "concept" / "scelti")], cwd=QUI)
     return {"foglio": "concept/scelti/_test_sagome.png"}
@@ -495,6 +539,15 @@ class Gestore(BaseHTTPRequestHandler):
                 cfg = leggi_config()
                 cfg["chiave_gemini"] = "••••" + cfg["chiave_gemini"][-4:] if cfg["chiave_gemini"] else ""
                 return self._json(cfg)
+            if url.path == "/api/figure":
+                return self._json(elenco_figure())
+            if url.path.startswith("/figure/"):
+                f = cartella_figure() / Path(urllib.parse.unquote(url.path[8:])).name
+                if f.suffix not in (".glb", ".json") or not f.is_file():
+                    self.send_error(404); return
+                corpo = f.read_bytes()
+                self.send_response(200); self.send_header("Content-Type", TIPI[f.suffix]); self.send_header("Cache-Control", "no-store")
+                self.send_header("Content-Length", str(len(corpo))); self.end_headers(); self.wfile.write(corpo); return
             rel = urllib.parse.unquote(url.path.lstrip("/")) or "pannello.html"
             p = percorso_sicuro(rel)
             if not p.is_file():
@@ -553,6 +606,9 @@ class Gestore(BaseHTTPRequestHandler):
             return {"lavoro": nuovo_lavoro("Rigenero i pezzi", op_genera)}
         if percorso == "/api/pulisci":
             return {"lavoro": nuovo_lavoro("Pulizia " + dati["nome"], op_pulisci, dati)}
+        if percorso == "/api/figure/config":
+            salva_config_figura(dati)
+            return {"ok": True}
         if percorso == "/api/dividi/proposta":
             return {"lavoro": nuovo_lavoro("Divisione " + str(dati.get("id")), op_dividi_proposta, dati)}
         if percorso == "/api/dividi/salva":

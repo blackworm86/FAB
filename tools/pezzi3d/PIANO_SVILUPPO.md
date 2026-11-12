@@ -17,6 +17,8 @@ Kit adattato da quello di Briano Borromeo 2077: stesso pannello nel browser (pro
 
 Il catalogo dei pezzi si rigenera da `data/*/units.json` a ogni avvio (`strumenti/catalogo.py`). I testi dei prompt (equipaggiamento reale di ogni tipo) si cambiano lì.
 
+**Orientamento (scheda «Orientamento»).** Per ogni tipo del gioco mostra le sue figure dall'alto con una **freccia gialla** (l'AVANTI del gioco) e una **croce rossa** (il punto d'appoggio). Per ogni figura: ↺ ↻ ruotano (90°, 180°, 5°), le frecce ← → ↑ ↓ spostano, «Centra» azzera lo spostamento; «Usa questa» sceglie quale variante usare nel gioco (le altre non vengono caricate). Si salva da solo in `<volume>_config.json` accanto alle figure (`web/public/pezzi` nel repository, `modelli/figure` fuori); il gioco lo legge subito, senza rigenerare niente. Il quadratino verde nell'elenco = tipo già controllato. Per mandarmi le scelte: il file `<volume>_config.json`.
+
 **Dal modello al gioco.** Il gioco usa UNA figura per unità. Se un modello ne contiene più di una (i gruppi di The Bulge), nella scheda Pezzi apri il tipo e usa **5 · Dividi in figure**: parte da una proposta automatica, ogni figura ha un colore e il grigio scuro è scartato. «Parte intera» dà con un clic tutta la parte toccata (fucile, torretta, corpo) alla figura scelta; «Pennello» dipinge i triangoli (col pennello la vista si gira col tasto destro); «Annulla» torna indietro. Imposta i gradi per far guardare la figura in avanti e l'altezza reale, poi «Salva e crea le figure»: la divisione resta in `modelli/divisioni/` e le figure vanno in `web/public/pezzi/` del repository (fuori dal repository in `modelli/figure/`, da mandare).
 
 ## 2. Cartelle

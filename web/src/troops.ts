@@ -22,15 +22,20 @@ export async function loadTroops(vol: string, base = './'): Promise<boolean> {
   const r = await fetch(`${base}pezzi/${vol}.json`).catch(() => null);
   if (!r?.ok) return false;
   const idx = (await r.json()) as Index, loader = new GLTFLoader();
+  /** The owner's choices from the kit's Orientamento tab: which figure of a type to use, and each figure's turn and origin nudge. */
+  const cfg = (await fetch(`${base}pezzi/${vol}_config.json`).then((c) => (c.ok ? c.json() : {})).catch(() => ({}))) as Record<string, { scelta?: number | null; figure?: Record<string, { gradi?: number; dx?: number; dz?: number }> }>;
   await Promise.all(Object.entries(idx.tipi).map(async ([tipo, t]) => {
-    const figs = await Promise.all(t.figure.map((f) => loader.loadAsync(`${base}pezzi/${f}`).then((gl) => {
+    const own = cfg[tipo], files = own?.scelta != null && t.figure[own.scelta] ? [t.figure[own.scelta]] : t.figure;
+    const figs = await Promise.all(files.map((f) => loader.loadAsync(`${base}pezzi/${f}`).then((gl) => {
       gl.scene.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.userData.shared = true; } });   // shared by every copy: never disposed with the board
       const k = SCALE * (t.veicolo ? 1 : INFANTRY), c = bodyCentre(gl.scene), root = new THREE.Group();
-      gl.scene.scale.setScalar(k); gl.scene.position.set(-c.x * k, 0, -c.z * k); root.add(gl.scene);         // the body (not a gun barrel or a rifle) sits on the origin
+      const o = own?.figure?.[f] ?? {}, turn = new THREE.Group();
+      gl.scene.scale.setScalar(k); gl.scene.position.set(-c.x * k, 0, -c.z * k); turn.add(gl.scene);         // the body (not a gun barrel or a rifle) sits on the origin
+      turn.rotation.y = THREE.MathUtils.degToRad(o.gradi ?? 0); turn.position.set((o.dx ?? 0) * k, 0, (o.dz ?? 0) * k); root.add(turn);   // then the owner's turn and nudge
       return root;
     })));
-    const b = new THREE.Box3().setFromObject(figs[0]);
-    troops.set(tipo, { figs, size: new THREE.Vector3(2 * Math.max(-b.min.x, b.max.x), b.max.y, 2 * Math.max(-b.min.z, b.max.z)) });   // footprint symmetric round the origin
+    const bs = figs.map((f) => new THREE.Box3().setFromObject(f));
+    troops.set(tipo, { figs, size: new THREE.Vector3(2 * Math.max(...bs.map((b) => Math.max(-b.min.x, b.max.x))), Math.max(...bs.map((b) => b.max.y)), 2 * Math.max(...bs.map((b) => Math.max(-b.min.z, b.max.z)))) });   // footprint symmetric round the origin
   }));
   byUnit = idx.blocchi;
   return troops.size > 0;
