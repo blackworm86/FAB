@@ -31,7 +31,7 @@ export function labDownload(g: E.Game) {
 }
 
 /** The computer's turn to act now (in the Admin and Reinforcement Phases it waits until the other side is done). */
-export const labTurn = (g: E.Game) => !!LAB_SIDE && !g.over && actors(g)[0] === LAB_SIDE;
+export const labTurn = (g: E.Game) => { if (!LAB_SIDE || g.over) return false; const a = actors(g); return a[0] === LAB_SIDE || ((g.recover.length > 0 || g.artyPick) && a.includes(LAB_SIDE)); };   // a recovery and the artillery attrition do not wait for each other
 
 /** If it is the computer's turn, think and then carry out its action through `act`; its battle rolls go through `roll`, the table's dice,
  *  and it waits while dice are on screen (`waiting`). */
