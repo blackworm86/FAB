@@ -103,7 +103,7 @@ iframe.visore{width:100%;height:70vh;border:1px solid var(--linea);background:#0
 </head>
 <body>
 <header>
-  <h1>FAB <span>3D</span> · officina dei pezzi <small class="nota" style="font-family:inherit;font-size:12px">v2026.11.12-fab5</small></h1>
+  <h1>FAB <span>3D</span> · officina dei pezzi <small class="nota" style="font-family:inherit;font-size:12px">v2026.11.12-fab6</small></h1>
   <div class="stati">
     <span class="chip" id="c-server"><i></i>Pannello</span>
     <span class="chip" id="c-gpu"><i></i>GPU</span>
@@ -306,7 +306,7 @@ const CORREZIONI = [
 ];
 const PULISCI_PEDINA = {texture:true, base:true, senza_giocatore:true, colori:6, ruota:0, asse_z_su:false, dettaglio:2};
 const opzioniDi = pz => ({...PULISCI_PEDINA, altezza:pz.altezza, triangoli:pz.triangoli, ...(pz.tinta ? {tinta:pz.tinta, senza_giocatore:false} : {})});
-const VERSIONE_PANNELLO = "2026.11.12-fab5";
+const VERSIONE_PANNELLO = "2026.11.12-fab6";
 const AVVIA_BAT = "@echo off\nrem ==========================================================================\nrem  FAB · pezzi 3D - avvio del pannello\nrem  Doppio clic su questo file:\nrem   - chiude un eventuale pannello gia' aperto (anche di una versione vecchia)\nrem   - la prima volta installa Python (se manca) e le librerie del kit\nrem   - avvia il pannello e lo apre nel browser\nrem  Lascia aperta questa finestra mentre lavori. Per chiudere: chiudi la\nrem  finestra, oppure FERMA_PANNELLO.bat, oppure il pulsante nel pannello.\nrem ==========================================================================\nsetlocal\ncd /d \"%~dp0\"\ntitle FAB · pezzi 3D - Pannello\n\necho Chiudo un eventuale pannello gia' aperto...\ncall \"%~dp0strumenti\\ferma_porta.bat\" 8078\n\nset \"VENV_PY=%~dp0.venv\\Scripts\\python.exe\"\nif exist \"%VENV_PY%\" goto librerie\n\necho.\necho Prima configurazione: cerco Python...\nset \"PYBASE=\"\npy -3 -c \"import sys; assert sys.version_info >= (3, 10)\" >nul 2>nul && set \"PYBASE=py -3\"\nif defined PYBASE goto crea_venv\npython -c \"import sys; assert sys.version_info >= (3, 10)\" >nul 2>nul && set \"PYBASE=python\"\nif defined PYBASE goto crea_venv\n\necho Python non trovato: lo installo con winget (Python 3.12, solo per il tuo utente)...\nwinget install -e --id Python.Python.3.12 --scope user --silent --accept-package-agreements --accept-source-agreements\nset \"PYBASE=%LOCALAPPDATA%\\Programs\\Python\\Python312\\python.exe\"\nif exist \"%PYBASE%\" goto crea_venv\necho.\necho Non sono riuscito a installare Python automaticamente.\necho Installalo da https://www.python.org/downloads/ (spunta \"Add python.exe to PATH\")\necho e poi fai di nuovo doppio clic su questo file.\npause\nexit /b 1\n\n:crea_venv\necho Creo l'ambiente Python del kit nella cartella .venv ...\n%PYBASE% -m venv \"%~dp0.venv\"\nif not exist \"%VENV_PY%\" \"%PYBASE%\" -m venv \"%~dp0.venv\"\nif not exist \"%VENV_PY%\" (\n    echo Creazione dell'ambiente non riuscita.\n    pause\n    exit /b 1\n)\n\n:librerie\necho Controllo le librerie del kit...\n\"%VENV_PY%\" -m pip install --disable-pip-version-check -q --upgrade pip\n\"%VENV_PY%\" -m pip install --disable-pip-version-check -q -r \"%~dp0strumenti\\requisiti.txt\"\nif errorlevel 1 (\n    echo Installazione delle librerie non riuscita: controlla la connessione e riprova.\n    pause\n    exit /b 1\n)\n\nset \"APRI=--apri\"\n:avvio\necho.\necho Avvio il pannello. Lascia aperta questa finestra.\n\"%VENV_PY%\" \"%~dp0strumenti\\server_pannello.py\" %APRI%\nrem codice 3 = riavvio chiesto dal pannello: ricarica il codice aggiornato\nif errorlevel 3 if not errorlevel 4 (\n    set \"APRI=\"\n    echo Riavvio in corso...\n    \"%VENV_PY%\" -m pip install --disable-pip-version-check -q -r \"%~dp0strumenti\\requisiti.txt\"\n    goto avvio\n)\necho.\necho Il pannello e' stato chiuso.\npause\n";
 
 // =====================================================================
@@ -791,6 +791,15 @@ function baricentro(o){      // centro del corpo (area delle superfici): lo stes
       const w = new THREE.Vector3().crossVectors(b.clone().sub(a), d.clone().sub(a)).length(); c.addScaledVector(a.add(b).add(d), w / 3); sum += w; } });
   return sum ? c.divideScalar(sum) : c;
 }
+function segnaBuchi(scena){      // linee rosse sui bordi aperti (un bordo che nessun altro triangolo ricambia); restituisce quanti sono
+  let tot = 0; const rosso = new THREE.LineBasicMaterial({color:0xff2020, depthTest:false});
+  scena.traverse(m => { if (!m.isMesh) return; const g = m.geometry, p = g.attributes.position, ix = g.index, key = i => `${Math.round(p.getX(i)*1e4)},${Math.round(p.getY(i)*1e4)},${Math.round(p.getZ(i)*1e4)}`;
+    const dir = new Map(), n = ix ? ix.count : p.count, at = j => ix ? ix.getX(j) : j;
+    for (let t = 0; t < n; t += 3) for (let k = 0; k < 3; k++){ const a = at(t + k), b = at(t + (k + 1) % 3); dir.set(key(a) + ">" + key(b), [a, b]); }
+    const pts = []; for (const [id, [a, b]] of dir){ const [ka, kb] = id.split(">"); if (!dir.has(kb + ">" + ka)){ tot++; pts.push(p.getX(a), p.getY(a), p.getZ(a), p.getX(b), p.getY(b), p.getZ(b)); } }
+    if (pts.length){ const gl = new THREE.BufferGeometry(); gl.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3)); const l = new THREE.LineSegments(gl, rosso); l.renderOrder = 10; m.add(l); } });
+  return tot;
+}
 function schedeTipo(vol, tipo){
   liberaAnteprime();
   const files = FIG[vol].tipi[tipo], cfg = FIG[vol].config[tipo] || {scelta: null, figure: {}};
@@ -800,9 +809,11 @@ function schedeTipo(vol, tipo){
   const disegnaOrienta_punto = () => { const b = $(`#o-elenco [data-v="${vol}"][data-t="${tipo}"] b`); if (b) b.className = "si"; };
   $("#o-dettaglio").innerHTML = `<h2>${esc(tipo.replace(vol + "_", "").replaceAll("_", " "))} <small class="nota" id="o-salvato"></small></h2>
     <p class="nota"><b>1.</b> Il tipo è <b>${files.length === 1 ? "uno solo" : "in " + files.length + " varianti"}</b>${files.length > 1 ? ": premi «Usa questa» su quella che vuoi nel gioco" : ""}. <b>2.</b> La <b style="color:#ffd23f">freccia gialla</b> è l'AVANTI del gioco (in alto sullo schermo): ruota la figura finché guarda lungo la freccia (il carro col cannone sulla freccia, il soldato con la faccia sulla freccia). <b>3.</b> La <b style="color:#ff4040">croce rossa</b> è il punto d'appoggio: sposta la figura finché il suo corpo è sulla croce. Si salva da solo.</p>
+    <div class="riga"><button class="btn serve-server" id="o-ripara-tipo" title="chiude i buchi di tutte le varianti di questo tipo">Chiudi i buchi di questo tipo</button><button class="btn serve-server" id="o-ripara-tutti" title="chiude i buchi di tutte le figure del volume">Chiudi i buchi di tutto il volume</button><span class="nota">I buchi si vedono come linee <b style="color:#ff4040">rosse</b> sulla figura: sono il motivo per cui nel gioco si vede attraverso il corpo. L'originale resta in modelli/figure_originali.</span></div>
     <div class="riga"><label class="campo">Vista<select id="o-vista"><option value="alto">dall'alto (consigliata)</option><option value="obliqua">obliqua</option></select></label></div>
     <div class="o-schede">${files.map((f, i) => `<div class="o-scheda" id="os-${i}"><h4>Variante ${i + 1}</h4>
       <div class="anteprima3d" id="ov-${i}"><span class="etichetta"></span></div>
+      <div class="riga"><span class="nota" id="ob-${i}">controllo i buchi…</span></div>
       <div class="riga"><button class="btn" data-r="90" title="ruota a sinistra di 90°">↺ 90°</button><button class="btn" data-r="-90" title="ruota a destra di 90°">↻ 90°</button><button class="btn" data-r="180">180°</button><button class="btn" data-r="5" title="un po' a sinistra">↺ 5°</button><button class="btn" data-r="-5" title="un po' a destra">↻ 5°</button><span class="nota" id="og-${i}"></span></div>
       <div class="riga"><button class="btn" data-m="1,0" title="sposta a sinistra">←</button><button class="btn" data-m="-1,0">→</button><button class="btn" data-m="0,-1" title="sposta indietro">↓</button><button class="btn" data-m="0,1" title="sposta avanti">↑</button><button class="btn" data-m="0,0">Centra</button></div>
       ${files.length > 1 ? `<button class="btn primario o-usa" data-usa="${i}"></button>` : ""}</div>`).join("")}</div>`;
@@ -826,6 +837,7 @@ function schedeTipo(vol, tipo){
       const u = $(`#os-${i} [data-usa]`); if (u) u.textContent = scelta === i ? "✓ USATA NEL GIOCO" : "Usa questa"; };
     new THREE.GLTFLoader().load("/figure/" + f + "?v=" + Date.now(), g => {
       const c = baricentro(g.scene); g.scene.position.set(-c.x, 0, -c.z); pos.add(g.scene);
+      const n = segnaBuchi(g.scene); $(`#ob-${i}`).innerHTML = n ? `<b style="color:#ff4040">● ${n} bordi aperti (buchi)</b>` : `<b style="color:#2fbf71">✓ chiusa</b>`;
       const b = new THREE.Box3().setFromObject(g.scene), ext = Math.max(b.max.x - b.min.x, b.max.z - b.min.z); h = b.max.y; f0 = Math.max(0.3, Math.min(1, ext / 1.4)); for (const o of [griglia, croce, freccia]) o.scale.setScalar(f0); box.querySelector(".etichetta").textContent = f.replace(".glb", ""); ok = true; metti(); vista_(); });
     const vista_ = () => { cam.up.set(0, 1, 0); ctrl.target.set(0, 0, 0.3 * f0);
       if (vista === "alto") { cam.up.set(0, 0, 1); cam.position.set(0, 3.6 * f0, 0.3 * f0); } else cam.position.set(2.0 * f0, 2.2 * f0, 3.0 * f0); cam.updateProjectionMatrix(); ctrl.update(); };
@@ -838,6 +850,8 @@ function schedeTipo(vol, tipo){
       ctrl.update(); renderer.render(scena, cam); requestAnimationFrame(giro); };
     giro();
   });
+  const ripara = async (tipoSolo) => { await lancia("/api/figure/ripara", {vol, tipo: tipoSolo ? tipo : null}, "Chiudo i buchi"); await caricaFigure(); schedeTipo(vol, tipo); };
+  $("#o-ripara-tipo").onclick = () => ripara(true); $("#o-ripara-tutti").onclick = () => { if (confirm("Chiudere i buchi di tutte le figure di " + vol + "?")) ripara(false); };
   $("#o-vista").onchange = () => { vista = $("#o-vista").value; viste.forEach(v => v()); };
 }
 

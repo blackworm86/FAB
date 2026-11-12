@@ -295,6 +295,19 @@ def salva_config_figura(dati):
     cfg.write_text(json.dumps(tutto, indent=1), encoding="utf-8")
 
 
+def op_ripara_figure(log, dati):
+    """Chiude i buchi delle figure di un tipo (o di tutto un volume): ripara_figura.py, che tiene l'originale in modelli/figure_originali."""
+    elenco = elenco_figure(); vol = str(dati.get("vol", ""))
+    if vol not in elenco:
+        raise RuntimeError("volume sconosciuto")
+    tipi = [dati["tipo"]] if dati.get("tipo") else list(elenco[vol]["tipi"])
+    files = [str(cartella_figure() / f) for t in tipi if t in elenco[vol]["tipi"] for f in elenco[vol]["tipi"][t]]
+    if not files:
+        raise RuntimeError("nessuna figura")
+    esegui_processo(log, script("ripara_figura.py") + files, cwd=QUI)
+    return {}
+
+
 def op_test_sagome(log):
     esegui_processo(log, script("test_sagome.py") + [str(RADICE / "concept" / "scelti")], cwd=QUI)
     return {"foglio": "concept/scelti/_test_sagome.png"}
@@ -606,6 +619,8 @@ class Gestore(BaseHTTPRequestHandler):
             return {"lavoro": nuovo_lavoro("Rigenero i pezzi", op_genera)}
         if percorso == "/api/pulisci":
             return {"lavoro": nuovo_lavoro("Pulizia " + dati["nome"], op_pulisci, dati)}
+        if percorso == "/api/figure/ripara":
+            return {"lavoro": nuovo_lavoro("Chiudo i buchi", op_ripara_figure, dati)}
         if percorso == "/api/figure/config":
             salva_config_figura(dati)
             return {"ok": True}

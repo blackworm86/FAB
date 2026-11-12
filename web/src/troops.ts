@@ -27,7 +27,7 @@ export async function loadTroops(vol: string, base = './'): Promise<boolean> {
   await Promise.all(Object.entries(idx.tipi).map(async ([tipo, t]) => {
     const own = cfg[tipo], files = own?.scelta != null && t.figure[own.scelta] ? [t.figure[own.scelta]] : t.figure;
     const figs = await Promise.all(files.map((f) => loader.loadAsync(`${base}pezzi/${f}`).then((gl) => {
-      gl.scene.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.userData.shared = true; } });   // shared by every copy: never disposed with the board
+      gl.scene.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { o.castShadow = true; o.userData.shared = true; for (const mt of ([] as THREE.Material[]).concat(m.material)) mt.side = THREE.DoubleSide; } });   // double-sided: a hole left in a model shows its back, not the ground   // shared by every copy: never disposed with the board
       const k = SCALE * (t.veicolo ? 1 : INFANTRY), c = bodyCentre(gl.scene), root = new THREE.Group();
       const o = own?.figure?.[f] ?? {}, turn = new THREE.Group();
       gl.scene.scale.setScalar(k); gl.scene.position.set(-c.x * k, 0, -c.z * k); turn.add(gl.scene);         // the body (not a gun barrel or a rifle) sits on the origin
