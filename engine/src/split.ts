@@ -64,9 +64,12 @@ export function freshReveals(published: Reveals, wanted: Reveals): Reveals {
   return Object.fromEntries(Object.entries(wanted).filter(([k, v]) => JSON.stringify(published[k]) !== JSON.stringify(v)));
 }
 
+/** A secure random integer below n (rejection sampling, no modulo bias). */
+const secureInt = (n: number) => { const lim = 2 ** 32 - (2 ** 32 % n), x = new Uint32Array(1); do crypto.getRandomValues(x); while (x[0] >= lim); return x[0] % n; };
 /** A new split table: the shared copy and one private document per seat, made from a fresh full game. Only used once, when the table is created. */
 export function initSplit(full: Game, saltGerman: string, saltAllied: string): { pub: string; german: Priv; allied: Priv } {
   full.deferBegin = true;
+  for (let i = full.units.length - 1; i > 0; i--) { const j = secureInt(i + 1); [full.units[i], full.units[j]] = [full.units[j], full.units[i]]; }   // the shared copy stores blocks by position: a scenario's fixed order would name every hidden block
   const [p1, p2] = sidesOf(full);                                                                   // the seats keep their database keys: german = First Player, allied = Second
   const german: Priv = { salt: saltGerman, secrets: secretsOf(full, p1) }, allied: Priv = { salt: saltAllied, secrets: secretsOf(full, p2) };
   const step1 = toPublic(full, p1, saltGerman, new Map());
