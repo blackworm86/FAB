@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { translateDom, tr, LANG, LANGS, setLang } from './i18n';
-import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import * as E from '../../engine/src';
 import { loadChitArt, garrisonChit } from './chits';
 import { loadGolanChitArt } from './golan-art';
@@ -38,7 +37,7 @@ import { sheets } from './sheets';
 import { pips, ABBR, chitLabel, iconify, STAGE_NAME, faces, modIcon, modWord } from './table-text';
 import { initChat, chatBtn, chatHtml, bindChat } from './chat';
 import { acts, actv, resetActs, reg, regv, ubtn, btn, chip, srow, swtch } from './ui-kit';
-import { loadTroops, troopOf, troopGroup, radius as troopR, setZoom, arrange, yawOf } from './troops';
+import { troopOf, troopGroup, radius as troopR, setZoom, arrange, yawOf } from './troops';
 import { optChooser, optOn } from './opt-rules';
 import { moveNotice, handedOver, turnOf, noticesOn, noticesBlocked, noticesSupported, setNotices } from './notices';
 import { STEP_NAME, homeUrl, tutUrl, share, dropMatch, rulesHtml, bindAuth } from './home';
@@ -123,391 +122,35 @@ import {
   vpIcons,
 } from './scene';
 export * from './scene';
-import {
-  diorama,
-  focusOn,
-  map3d,
-  REL,
-  relPixels,
-  setFocusOn,
-  setMap3d,
-  setMap3dValue,
-  settle,
-  show3d,
-  tintData,
-  tintTex,
-  WOOD_BASE,
-} from './map3d';
+import { diorama, map3d, REL, relPixels, setFocusOn, setMap3d, setMap3dValue, settle, show3d, tintData, tintTex, WOOD_BASE } from './map3d';
 export * from './map3d';
-export const table = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({ color: 0x3b2a1d, roughness: 1 }));
-table.rotation.x = -Math.PI / 2;
-table.position.y = -0.02;
-scene.add(table);
-
-// area overlays (highlights)
-const overlays = new Map<number, THREE.Mesh>();
-for (const a of MAP.areas) {
-  const shape = new THREE.Shape(a.polygon.map(([x, y]) => new THREE.Vector2(x / S - MW / (2 * S), -(y / S - MH / (2 * S)))));
-  const m = new THREE.Mesh(
-    new THREE.ShapeGeometry(shape),
-    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false }),
-  );
-  m.rotation.x = -Math.PI / 2;
-  m.position.y = 0.004;
-  scene.add(m);
-  overlays.set(a.id, m);
-}
-export const pieces = new THREE.Group();
-scene.add(pieces);
-const labelTex = new Map<string, THREE.Texture>();
-/** Piece pictures are decoded a few per frame, so the first load does not freeze the phone; a texture shows as soon as its picture is ready. */
-const texQueue: [THREE.Texture, string][] = [];
-function pumpTextures() {
-  for (let n = 0; n < 6 && texQueue.length; n++) {
-    const [t, src] = texQueue.shift()!;
-    const im = new Image();
-    im.onload = () => {
-      t.image = im;
-      t.needsUpdate = true;
-      for (const m of texWait.get(t) ?? []) {
-        m.map = t;
-        m.color.set(0xffffff);
-        m.needsUpdate = true;
-      }
-      texWait.delete(t);
-      lastInput = performance.now();
-    };
-    im.src = src;
-  }
-}
-/** A face whose picture is still loading shows the plain colour under it (wood, or the chit's ivory), not black; the picture goes on when it arrives. */
-const texWait = new Map<THREE.Texture, THREE.MeshStandardMaterial[]>();
-function faceMat(t: THREE.Texture, color: THREE.ColorRepresentation, roughness: number) {
-  if (t.image) return new THREE.MeshStandardMaterial({ map: t, roughness });
-  const m = new THREE.MeshStandardMaterial({ color, roughness });
-  texWait.set(t, [...(texWait.get(t) ?? []), m]);
-  return m;
-}
-const svgTex = (key: string, svg: string) => {
-  if (!labelTex.has(key)) {
-    const t = new THREE.Texture();
-    t.colorSpace = THREE.SRGBColorSpace;
-    t.anisotropy = 8;
-    texQueue.push([t, 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)]);
-    labelTex.set(key, t);
-  }
-  return labelTex.get(key)!;
-};
-
-const woodOf = (u: E.Unit) => VOL.wood[VOL.cssSide(u)] ?? (VOL.cssSide(u) === 'british' ? 0x3f6fb8 : VOL.wood[u.side]);
-/** 3D figures in place of the blocks (The Bulge; Settings > Screen). Until the figures have loaded, and for any unit without figures, the block is drawn. */
-let troopsOn = (() => {
-    try {
-      return localStorage.getItem('fab-troops') === '1';
-    } catch {
-      return false;
-    }
-  })(),
-  troopsReady = false,
-  troopsAsked = false;
-let troopSize = (() => {
-  try {
-    return +(localStorage.getItem('fab-troop-size') ?? '') || 1.5;
-  } catch {
-    return 1.5;
-  }
-})();
-setZoom(troopSize);
-/** Volumes with figures in web/public/pezzi (<volume>.json). */
-const FIG_VOLS = ['bulge', 'golan73', 'sicily'];
-function wantTroops() {
-  if (!troopsOn || TUTORIAL || !FIG_VOLS.includes(VOL.id)) return false;
-  if (!troopsAsked) {
-    troopsAsked = true;
-    void loadTroops(VOL.id)
-      .then((ok) => {
-        troopsReady = ok;
-        if (ok) refresh();
-      })
-      .catch(() => {
-        /* no figures: blocks stay */
-      });
-  }
-  return troopsReady;
-}
-function block(u: E.Unit, hidden = false) {
-  const flat = hidden && !!u.untried; // Sicily 15.3: an untried garrison lies face down on the table, its label against the map
-  const w = 1.6,
-    h = 1.6,
-    d = 0.8; // 16 x 16 x 8 mm block
-  const wood = new THREE.MeshStandardMaterial({ color: woodOf(u), roughness: 0.75 }); // the wood by the block's class (Sicily: its nationality), else by its side
-  if (u.garrison) {
-    const chit = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }),
-      m = new THREE.Mesh(new RoundedBoxGeometry(1.43, 0.12, 1.43, 2, 0.1), [
-        chit,
-        chit,
-        faceMat(svgTex(u.id, VOL.unitSvg(u, g)), 0xd9d4c4, 0.7),
-        chit,
-        chit,
-        chit,
-      ]); // a counter, like the other chits // 9/16 in chit
-    m.position.y = 0.06;
-    m.castShadow = true;
-    m.rotation.y = viewRot();
-    return m;
-  }
-  const face = hidden ? wood : faceMat(svgTex(`${u.id}-${u.str}`, VOL.unitSvg(u, g)), wood.color, 0.6); // upright blocks show their blank back to the enemy
-  const m = new THREE.Mesh(flat ? new THREE.BoxGeometry(w, d, h) : new THREE.BoxGeometry(w, h, d), [wood, wood, wood, wood, face, wood]);
-  m.rotation.y = viewRot();
-  m.position.y = (flat ? d : h) / 2;
-  m.castShadow = true;
-  return m;
-}
-export const markers = new THREE.Group();
-scene.add(markers);
-/** Remove a group's children and free their geometry and materials; the cached textures are shared and stay. */
-function disposeAll(group: THREE.Group) {
-  group.traverse((o) => {
-    const m = o as THREE.Mesh;
-    if ((!m.isMesh && !(o as THREE.LineSegments).isLineSegments) || o.userData.shared) return;
-    m.geometry?.dispose();
-    for (const mat of ([] as THREE.Material[]).concat(m.material)) mat.dispose();
-  });
-  group.clear();
-}
-const tagTex = new Map<string, THREE.CanvasTexture>();
-function tag(text: string, bg: string, size = 1.1) {
-  const art = text.startsWith('chit:') ? VOL.chitSvg(E.chit(g, text.slice(5))) : VOL.markSvg(text); // chit:<id>: the very chit placed (an air mission), in its game's own art
-  if (art) {
-    // printed marker art, drawn as a vector chit
-    const key = 'art:' + text;
-    let at = tagTex.get(key);
-    if (!at) {
-      at = new THREE.CanvasTexture(document.createElement('canvas'));
-      const im = new Image();
-      im.onload = () => {
-        const c = document.createElement('canvas');
-        c.width = c.height = 256;
-        c.getContext('2d')!.drawImage(im, 0, 0, 256, 256);
-        at!.image = c;
-        at!.colorSpace = THREE.SRGBColorSpace;
-        at!.anisotropy = 8;
-        at!.needsUpdate = true;
-      };
-      im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(art);
-      tagTex.set(key, at);
-    }
-    const edge = new THREE.MeshStandardMaterial({ color: 0x2a2a28 }),
-      m = new THREE.Mesh(new RoundedBoxGeometry(size, 0.12, size, 2, 0.1), [
-        edge,
-        edge,
-        new THREE.MeshStandardMaterial({ map: at }),
-        edge,
-        edge,
-        edge,
-      ]);
-    m.castShadow = true;
-    m.rotation.y = viewRot();
-    return m;
-  }
-  let t = tagTex.get(text + bg);
-  if (!t) {
-    const c = document.createElement('canvas');
-    c.width = c.height = 128;
-    const x = c.getContext('2d')!;
-    x.fillStyle = bg;
-    x.fillRect(0, 0, 128, 128);
-    x.strokeStyle = '#fff';
-    x.lineWidth = 8;
-    x.strokeRect(4, 4, 120, 120);
-    x.fillStyle = '#fff';
-    x.font = `bold ${text.length > 2 ? 46 : 60}px Arial Narrow, Arial, sans-serif`;
-    x.textAlign = 'center';
-    x.textBaseline = 'middle';
-    x.fillText(text, 64, 68);
-    t = new THREE.CanvasTexture(c);
-    t.colorSpace = THREE.SRGBColorSpace;
-    tagTex.set(text + bg, t);
-  }
-  const side = new THREE.MeshStandardMaterial({ color: bg }),
-    m = new THREE.Mesh(new RoundedBoxGeometry(size, 0.12, size, 2, 0.1), [
-      side,
-      side,
-      new THREE.MeshStandardMaterial({ map: t }),
-      side,
-      side,
-      side,
-    ]);
-  m.castShadow = true;
-  m.rotation.y = viewRot();
-  return m;
-}
-/** Every counter is a 9/16 inch square (1.43 cm) with slightly rounded corners. */
-const CHIT = 1.43;
-/** A cardboard counter lying on the board: the chit's own printed art on a thin rounded square. */
-function chit3d(c: E.Chit) {
-  const edge = new THREE.MeshStandardMaterial({ color: 0xd9d4c4 }),
-    m = new THREE.Mesh(new RoundedBoxGeometry(CHIT, 0.12, CHIT, 2, 0.1), [
-      edge,
-      edge,
-      faceMat(svgTex('chit:' + c.id, VOL.chitSvg(c)), 0xd9d4c4, 0.7),
-      edge,
-      edge,
-      edge,
-    ]);
-  m.castShadow = true;
-  m.position.y = 0.06;
-  m.rotation.y = viewRot();
-  return m;
-}
-/** The outline of an area pushed outwards by `d` (cm), as a flat ribbon of width `w` lying on the board. */
-function outlineRibbon(id: number, d: number, w: number, color: number) {
-  const raw = areaWorld(id).map((q) => new THREE.Vector2(q.x, q.z)),
-    pts: THREE.Vector2[] = [];
-  raw.forEach((q, i) => {
-    const nx = raw[(i + 1) % raw.length],
-      k = Math.max(1, Math.ceil(q.distanceTo(nx) / 0.35));
-    for (let j = 0; j < k; j++) pts.push(q.clone().lerp(nx, j / k));
-  }); // short pieces, so on the 3D relief every piece sits on the ground
-  const n = pts.length;
-  const area2 = pts.reduce((a, q, i) => a + (q.x * pts[(i + 1) % n].y - pts[(i + 1) % n].x * q.y), 0),
-    sgn = area2 > 0 ? 1 : -1;
-  const norm = (i: number) => {
-    const a = pts[(i + n - 1) % n],
-      b = pts[i],
-      c = pts[(i + 1) % n],
-      e1 = b.clone().sub(a).normalize(),
-      e2 = c.clone().sub(b).normalize();
-    const n1 = new THREE.Vector2(e1.y, -e1.x).multiplyScalar(sgn),
-      n2 = new THREE.Vector2(e2.y, -e2.x).multiplyScalar(sgn),
-      m = n1.add(n2);
-    return m.lengthSq() < 1e-6 ? n1 : m.normalize().multiplyScalar(1 / Math.max(0.5, m.dot(n2) || 1));
-  };
-  const pos: number[] = [],
-    idx: number[] = [];
-  pts.forEach((q, i) => {
-    const nn = norm(i),
-      a = q.clone().addScaledVector(nn, d),
-      b = q.clone().addScaledVector(nn, d + w);
-    pos.push(a.x, 0.09, a.y, b.x, 0.09, b.y);
-  });
-  for (let i = 0; i < n; i++) {
-    const a = i * 2,
-      b = ((i + 1) % n) * 2;
-    idx.push(a, a + 1, b, b, a + 1, b + 1);
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  geo.setIndex(idx);
-  return new THREE.Mesh(
-    geo,
-    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.92, side: THREE.DoubleSide, depthWrite: false }),
-  );
-}
-const dotTex = new Map<string, THREE.CanvasTexture>();
-/** A small round marker lying on the table: a red cross to take an asset back, a gold target for the point unit. */
-function disc(kind: 'x' | 'point', size: number) {
-  let t = dotTex.get(kind);
-  if (!t) {
-    const c = document.createElement('canvas');
-    c.width = c.height = 128;
-    const x = c.getContext('2d')!;
-    x.fillStyle = kind === 'x' ? '#3a3d2c' : '#e7b04a';
-    /* take-back is a quiet olive disc: red stays for the one main action */ x.beginPath();
-    x.arc(64, 64, 60, 0, 7);
-    x.fill();
-    x.lineWidth = 8;
-    x.strokeStyle = '#fff';
-    x.stroke();
-    x.strokeStyle = kind === 'x' ? '#ddd7b5' : '#1a1608';
-    x.lineWidth = 14;
-    x.lineCap = 'round';
-    x.beginPath();
-    if (kind === 'x') {
-      x.moveTo(40, 40);
-      x.lineTo(88, 88);
-      x.moveTo(88, 40);
-      x.lineTo(40, 88);
-    } else {
-      x.arc(64, 64, 26, 0, 7);
-      x.moveTo(64, 22);
-      x.lineTo(64, 40);
-      x.moveTo(64, 88);
-      x.lineTo(64, 106);
-      x.moveTo(22, 64);
-      x.lineTo(40, 64);
-      x.moveTo(88, 64);
-      x.lineTo(106, 64);
-    }
-    x.stroke();
-    t = new THREE.CanvasTexture(c);
-    t.colorSpace = THREE.SRGBColorSpace;
-    dotTex.set(kind, t);
-  }
-  const m = new THREE.Mesh(
-    new THREE.CircleGeometry(size, 28),
-    new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false }),
-  );
-  m.rotation.x = -Math.PI / 2;
-  return m;
-}
-/** The same marker as a sprite: it always faces the camera, so the player can read it from any angle. */
-function discSprite(kind: 'x' | 'point', size: number) {
-  disc(kind, size);
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTex.get(kind)!, transparent: true, depthTest: false }));
-  sp.scale.set(size * 2, size * 2, 1);
-  sp.renderOrder = 6;
-  return sp;
-}
-/** Battle formation (docs/design): the battle area is shown as an ordered table, not squeezed into the polygon. Each side faces the other across the
- *  middle line: its blocks in the front row, its assets in the row behind; rows wrap at 5 and stay centred. The rest of the map is blurred, so the
- *  formation may reach past the area border. */
-/** How far the battle formation reaches from the area's pole (cm), on the deeper side. */
-function formationReach(b: E.Battle) {
-  const bf = battleFig(b);
-  if (bf)
-    return Math.max(
-      3,
-      ...bf.spots.map((q, i) => Math.hypot(q.x - bf.c0.x, q.z - bf.c0.z) + unitR(bf.order[i])),
-      ...VOL.sides.map((sd) => {
-        const n = b.assets[sd].length + E.airOf(b, sd).length;
-        return n ? bf.side[sd].D + Math.ceil(n / 5) * 1.7 : 0;
-      }),
-    );
-  return Math.max(
-    ...VOL.sides.map((sd) => {
-      const u = Math.max(1, Math.ceil(E.unitsIn(g, b.area, sd).length / 5)),
-        n = b.assets[sd].length + E.airOf(b, sd).length,
-        a = Math.ceil(n / 5);
-      return 1.35 + u * 1.9 + (a ? 0.5 + a * 1.7 : 0);
-    }),
-    (5 * 1.95) / 2 + 1,
-  );
-}
-/** Panels over the battle (header at the top, report and hand at the bottom): the view is shifted so the battle sits in the clear band between them. */
-let viewShift = 0,
-  clearRatio = 1;
-function fitBattleView() {
-  const r = canvas.getBoundingClientRect();
-  let shift = 0,
-    clear = r.height;
-  if (g.battle) {
-    const top = document.querySelector('#ui .c-table')?.getBoundingClientRect(),
-      low = Array.from(document.querySelectorAll('#ui .dock > .c-ledger, #ui .dock .c-hand, #ui .dock .handtab, #ui .c-bar.b'))
-        .map((e) => e.getBoundingClientRect())
-        .filter((q) => q.height && q.left < r.left + r.width / 2 && q.right > r.left + r.width / 2);
-    const tc = top ? Math.max(0, top.bottom - r.top) : 0,
-      bc = low.length ? Math.max(0, r.bottom - Math.min(...low.map((q) => q.top))) : 0;
-    shift = Math.round((bc - tc) / 2);
-    clear = Math.max(120, r.height - tc - bc);
-  }
-  if (shift !== viewShift) {
-    viewShift = shift;
-    if (shift) cam.setViewOffset(r.width, r.height, 0, shift, r.width, r.height);
-    else cam.clearViewOffset();
-  }
-  return clear / r.height;
-}
+import {
+  block,
+  CHIT,
+  chit3d,
+  clearRatio,
+  disc,
+  discSprite,
+  disposeAll,
+  FIG_VOLS,
+  fitBattleView,
+  formationReach,
+  markers,
+  outlineRibbon,
+  overlays,
+  pieces,
+  pumpTextures,
+  setClearRatio,
+  setTroopSize,
+  setTroopsOn,
+  table,
+  tag,
+  troopSize,
+  troopsOn,
+  wantTroops,
+  woodOf,
+} from './piece-kit';
+export * from './piece-kit';
 // ---- where figures face and stand (docs/ASSETS-3D.md): the way they last moved, toward the attacker, toward the nearest enemy ----
 const CTR = new Map<number, THREE.Vector3>(),
   ctr = (id: number) => CTR.get(id) ?? (CTR.set(id, toWorld(...pole(MAP.areas.find((x) => x.id === id)!.polygon))), CTR.get(id)!);
@@ -543,7 +186,7 @@ const sideYaw = (sd: E.Side) => (VOL.id === 'bulge' ? yawOf(sd) : near(sd) ? Mat
 /** The order a unit group is laid out in (the first player's units first, strongpoints and garrisons last). */
 const orderOf = (us: E.Unit[]) => [...us].sort((p, q) => +(p.side !== P1) - +(q.side !== P1) || +!!p.garrison - +!!q.garrison);
 /** Footprint radius of what a unit shows on the table: its figure, or the block while it is hidden. */
-const unitR = (u: E.Unit) => {
+export const unitR = (u: E.Unit) => {
   const t = wantTroops() && !faceDown(u) ? troopOf(u.id) : null;
   return t ? troopR(t) : u.garrison ? 0.75 : 0.95;
 };
@@ -566,7 +209,7 @@ function figSpots(
 /** The battle on the table when figures are drawn: the units' spots, and for each side where its cardboard counters go (a row behind its units,
  * along the attack). null with blocks (the block formation keeps its rows). Memoised: the camera and every counter ask for it. */
 let battleCache: { key: string; val: ReturnType<typeof battleFigure> } | null = null;
-function battleFig(b: E.Battle) {
+export function battleFig(b: E.Battle) {
   if (!wantTroops()) return null;
   const order = orderOf(E.unitsIn(g, b.area)),
     key = JSON.stringify([b.area, b.attacker, troopSize, order.map((u) => [u.id, u.str, faceDown(u), u.from])]);
@@ -1009,7 +652,7 @@ const fogSide = (): E.Side | 'spectator' | null =>
 const seen = (u: E.Unit) => E.visibleTo(g, u, fogSide());
 /** Sicily's untried garrisons (15.3) stand face down for both players, the owner too, until a battle reveals them. */
 const faceDown = (u: E.Unit) => !seen(u) || (!!u.untried && u.up !== u.area);
-const viewRot = () => (farSide() ? Math.PI : 0);
+export const viewRot = () => (farSide() ? Math.PI : 0);
 /** Printed words (area labels, board text, entry letters) face the way the camera looks, whatever the seat: hotseat, the sandbox's Both seat, or a board turned by hand. */
 export let camFar = false;
 const textRot = () => (camFar ? Math.PI : 0);
@@ -2176,7 +1819,7 @@ let frameKey = '';
 let lock: { c: THREE.Vector3; d: number } | null = null;
 const clampDist = (d: number) =>
   lock ? Math.min(lock.d * 1.7, Math.max(lock.d * 0.45, d)) : Math.min(innerWidth < 700 ? 64 : 72, Math.max(7, d)); // desktop: no further out than the map filling most of the screen (it shrank into a corner)      // phones: never so far out that the map leaves a black band
-function areaWorld(id: number) {
+export function areaWorld(id: number) {
   return MAP.areas.find((a) => a.id === id)!.polygon.map(([x, y]) => toWorld(x, y));
 }
 function syncBattleCam() {
@@ -5306,7 +4949,7 @@ function layersHtml() {
       )
     : '';
   const setTroops = (on: boolean) => {
-    troopsOn = on;
+    setTroopsOn(on);
     try {
       localStorage.setItem('fab-troops', on ? '1' : '0');
     } catch {
@@ -5323,7 +4966,7 @@ function layersHtml() {
         )
       : '';
   const setSize = (z: number) => {
-    troopSize = z;
+    setTroopSize(z);
     setZoom(z);
     try {
       localStorage.setItem('fab-troop-size', String(z));
@@ -6199,12 +5842,13 @@ export function refresh() {
 }
 const CALM = matchMedia('(prefers-reduced-motion: reduce)').matches; // no floating motion for players who asked for less motion
 let lastPhase = '';
-let lastInput = performance.now(),
+export let lastInput = performance.now(),
   tick = 0,
   fxBattle: number | null = null,
   frameAt = 0,
   openFrame = false,
   camTouched = false;
+export const setLastInput = <T extends typeof lastInput>(v: T): T => ((lastInput = v), v);
 /** ?fps=1: a small corner counter (frames per second, slowest frame) for measuring on a real phone. */
 const fpsEl = new URLSearchParams(location.search).has('fps')
   ? Object.assign(document.body.appendChild(document.createElement('div')), { id: 'fps' })
@@ -6264,7 +5908,7 @@ function frame() {
   } // a slow 4 s bob and 7 s sway, each marker out of step
   {
     const old = Math.round(clearRatio * 5);
-    clearRatio = fitBattleView();
+    setClearRatio(fitBattleView());
     if (g.battle && Math.round(clearRatio * 5) !== old) syncBattleCam();
   }
   if (REL) {
