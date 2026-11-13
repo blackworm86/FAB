@@ -259,7 +259,9 @@ export function play(cfg: Cfg): Result {
       const a = { t: prev.turn, s: prev.phasing, p: prev.phase },
         b = { t: g.turn, s: g.phasing, p: g.phase };
       let ok = false;
-      if (a.p === 'deploy') ok = b.t === 1 && (b.p === 'movement' || b.p === 'combat');
+      if (a.p === 'admin' && b.p === 'admin')
+        ok = b.t === a.t && !prev.done?.includes(a.s) && !!g.done?.includes(a.s); // 4.2b: the phasing player hands the Admin Phase over
+      else if (a.p === 'deploy') ok = b.t === 1 && (b.p === 'movement' || b.p === 'combat');
       else if (a.p === 'supply')
         ok =
           (a.s === P1 && b.t === a.t && b.s === P2 && b.p === 'admin') ||
@@ -943,6 +945,15 @@ export function play(cfg: Cfg): Result {
     }
     phase();
     if (stop) break;
+    for (let k = 0; g.game === 'golan73' && G.state(g).release && k < 10; k++) {
+      // 15.2: Syria chooses and places the units the Purple Line released
+      const ch = G.releaseChoices(g).map((u) => u.id);
+      if (G.state(g).release!.pick) act('syrian', 'pickRelease', () => G.pickRelease(g, ch.slice(0, 2)));
+      else {
+        const id = G.state(g).release!.place[0];
+        act('syrian', 'placeReleased', () => G.placeReleased(g, id, G.releaseTargets(g, id)[0]));
+      }
+    }
     const who = E.actorOf(g) === 'both' ? g.phasing : (E.actorOf(g) as Side);
     if (!act(who, 'endPhase', () => E.endPhase(g))) {
       fail('stuck: the phase cannot end after the policy did everything it must');

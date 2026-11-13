@@ -602,7 +602,7 @@ export const zoneOk = (g: Game, u: Unit, a: number) => {
 };
 /** 14.61: release a division (and, for the British, one independent brigade with it) by a Special Action of its own army. */
 export function releaseDivision(g: Game, division: string, chitId?: string, brigade?: string) {
-  needAdmin(g);
+  needAdmin(g, 'allied');
   need(
     !['br_1st_cdn_arm', 'br_4th_arm', 'br_231st'].includes(division),
     'a brigade is released only together with a British division (14.61)',
@@ -630,7 +630,7 @@ export function releaseDivision(g: Game, division: string, chitId?: string, brig
 }
 /** 17.23 US 7th Army Release: every American division is released. */
 export function playArmyRelease(g: Game, chitId: string) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['event_army_release']);
   gone(c);
   state(g).usReleased = true;
@@ -1423,7 +1423,7 @@ const gone = (c: Chit) => {
 };
 /* ---------- air support in the Admin and Supply Phases (16.33, 16.34, 16.31) ---------- */
 export function airInterdiction(g: Game, chitId: string, a: number) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['air_mission']);
   need(!isBox(a) && !g.interdicted[a], 'a land area not already interdicted');
   need(!state(g).airCancelled?.includes(a), 'the dogfight cancelled the interdiction here: no replacement (16.31)');
@@ -1434,7 +1434,7 @@ export function airInterdiction(g: Game, chitId: string, a: number) {
   say(g, `Air interdiction over ${nameOf(a)} (16.33)`, c.side);
 }
 export function dogfightInterdiction(g: Game, chitId: string, a: number) {
-  needAdmin(g);
+  needAdmin(g); // 16.31: an answer to the enemy mission, whichever part of the Admin Phase it is
   const c = avail(g, chitId, ['air_mission']),
     id = g.interdicted[a];
   need(id && chit(g, id).side !== c.side, 'no enemy interdiction there');
@@ -1488,7 +1488,7 @@ export function dogfightAirSupply(g: Game, chitId: string) {
 }
 /* ---------- ports (14.51) ---------- */
 export function portWork(g: Game, chitId: string, port: string) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['engineer']),
     V = state(g),
     p = boxByCode(port);
@@ -1512,7 +1512,7 @@ export function portWork(g: Game, chitId: string, port: string) {
 }
 /* ---------- 14.63 the Axis staff asset recovers an Italian infantry asset ---------- */
 export function axisStaffRecover(g: Game, chitId: string, assetId: string) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['command_staff']);
   need(c.side === 'axis', 'the Axis staff asset');
   const a = chit(g, assetId);
@@ -1526,14 +1526,14 @@ export function axisStaffRecover(g: Game, chitId: string, assetId: string) {
 }
 /* ---------- events (17.x) ---------- */
 export function playPatton(g: Game, chitId: string) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['event_patton_slap']);
   gone(c);
   state(g).patton = true;
   say(g, 'Patton Soldier Slap: US single-use Special Actions now cost two events each (17.11)', 'axis');
 }
 export function playTacticalExtract(g: Game, chitId: string) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['event_tactical_extract']);
   gone(c);
   state(g).extract = true;
@@ -1541,7 +1541,7 @@ export function playTacticalExtract(g: Game, chitId: string) {
 }
 /** 17.21b-c: Italian morale fades one level; the Axis, then the Allies, pick the Italian assets eliminated from the Available Box. */
 export function playFadingMorale(g: Game, chitId: string) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const V = state(g);
   need(
     !V.moralePick || !Object.values(V.moralePick).some((n) => n > 0),
@@ -1715,6 +1715,14 @@ export const beachheads = (g: Game) =>
   Object.entries(state(g).beachheads).map(([b, n]) => ({ box: BOX.get(+b)!.box, id: +b, nation: n, area: BOX.get(+b)!.area }));
 
 registerHooks('sicily', {
+  adminBoth: (g) =>
+    Object.values(g.interdicted).some((id) =>
+      g.chits.some((c) => c.kind === 'air_mission' && c.box === 'available' && c.side !== chit(g, id).side),
+    ), // 16.31: the other side may answer an interdiction with a dogfight at once
+  pendingSide: (g) => {
+    const p = state(g).moralePick;
+    return p?.axis ? 'axis' : p?.allied ? 'allied' : undefined;
+  }, // 17.21c: the Axis, then the Allies, pick the Italian assets lost
   newGame: newSicilyGame as Volume['newGame'],
   markerKey,
   reach: sicilyReach,

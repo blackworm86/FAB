@@ -15,6 +15,10 @@ import {
   playReplacement,
   regimentAreas,
   endPhase,
+  actorOf,
+  setDone,
+  roadblock,
+  playGreifBridge,
   bridgeTargets,
   startBattle,
   canAssign,
@@ -190,5 +194,19 @@ describe('Bulge asset and event sweep', () => {
     setReady(g, b, b.attacker);
     chit(g, 'R41.0').box = 'available';
     expect(canAssign(g, b, 'allied', chit(g, 'R41.0'))).toMatch(/alone/);
+  });
+  it('4.2b/c: the phasing player acts first in the Admin Phase, the other player once he is done', () => {
+    const g = fresh(12);
+    g.phase = 'admin';
+    g.phasing = 'german';
+    g.done = [];
+    chit(g, 'L63.0').box = 'available'; // Allied engineer
+    chit(g, 'R15.0').box = 'available'; // Greif Team Bridge
+    expect(actorOf(g)).toBe('german');
+    expect(() => roadblock(g, 'L63.0', 60, false)).toThrow(/4\.2c/);
+    setDone(g, 'german');
+    expect(actorOf(g)).toBe('allied');
+    expect(() => playGreifBridge(g, 'R15.0', 14, 15)).toThrow(/4\.2b/);
+    expect(() => roadblock(g, 'L63.0', 60, false)).not.toThrow(/4\.2/);
   });
 });

@@ -217,7 +217,7 @@ export const ARMY_ECH: Record<number, string> = { 5: 'de_5pz', 6: 'de_6pz', 7: '
 
 /* ================= Bulge events (17.11, 17.12, 17.14, 16.11) and unit field works (5.23) ================= */
 export function playGreifBridge(g: Game, id: string, a: number, b: number) {
-  needAdmin(g);
+  needAdmin(g, chit(g, id).side);
   const c = chit(g, id),
     k = keyOf(a, b),
     cn = connection(a, b);
@@ -228,7 +228,7 @@ export function playGreifBridge(g: Game, id: string, a: number, b: number) {
   say(g, `Greif Team Bridge placed on ${areas.get(a)!.name}–${areas.get(b)!.name}`, 'german');
 }
 export function playInterdict(g: Game, id: string, unitId: string) {
-  needAdmin(g);
+  needAdmin(g, chit(g, id).side);
   const c = chit(g, id),
     u = g.units.find((x) => x.id === unitId)!;
   if (
@@ -259,7 +259,7 @@ export function interdictCheck(g: Game, u: Unit) {
   return ok;
 }
 export function playBodenplatte(g: Game, id: string) {
-  needAdmin(g);
+  needAdmin(g, chit(g, id).side);
   const c = chit(g, id);
   if (c.kind !== 'event_bodenplatte' || c.box !== 'available') throw new Error('not available');
   for (const m of boxOf(g, 'allied', 'available').filter((x) => x.kind === 'air_mission')) {
@@ -280,7 +280,7 @@ export const heydteWindow = (g: Game, c: Chit) =>
   (c.firstDrawn ?? c.drawn) === g.turn * 10 + (g.phasing === 'german' ? 1 : 2) &&
   !g.units.some((u) => u.heydte);
 export function heydteDrop(g: Game, id: string, area: 31 | 52) {
-  needAdmin(g);
+  needAdmin(g, chit(g, id).side);
   const c = chit(g, id);
   if (!heydteWindow(g, c) || unitsIn(g, area).length || g.control[area] !== 'allied')
     throw new Error('the drop zone must be vacant and Allied-controlled, in the Admin Phase the asset was drawn');

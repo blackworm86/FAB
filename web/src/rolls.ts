@@ -12,7 +12,20 @@ import { scene } from './scene';
 import { markers, pieces } from './piece-kit';
 import { viewRot } from './map-paint';
 import { dist, pitch } from './camera';
-import { allowed, labActing, noteFx, notYou, other, pendingFx, say, setPendingFx, setRollFx, setRollNoted, showFx } from './flow';
+import {
+  allowed,
+  labActing,
+  setOwnRollShown,
+  noteFx,
+  notYou,
+  other,
+  pendingFx,
+  say,
+  setPendingFx,
+  setRollFx,
+  setRollNoted,
+  showFx,
+} from './flow';
 import { center, setGoal } from './map-input';
 import { refresh, render } from './main';
 
@@ -29,6 +42,7 @@ export let menuTab = 'Settings',
   restartAsk = false;
 export const setRestartAsk = <T extends typeof restartAsk>(v: T): T => ((restartAsk = v), v);
 export const setMenuTab = <T extends typeof menuTab>(v: T): T => ((menuTab = v), v);
+setOwnRollShown(() => !!rollView && !rollView.remote); // against the computer your roll's Continue button never waits for your turn
 export let rollView: RollView | null = null,
   modal: 'menu' | 'boxes' | 'rules' | 'layers' | null = null,
   handSide: E.Side | null = null;

@@ -257,10 +257,13 @@ export const placing = (s: E.Side) =>
   (g.game === 'sicily' && s === 'allied' && !E.sicily.state(g).plan);
 export let labActing = false; // the experimental computer's own action (lab.ts)
 export const setLabActing = <T extends typeof labActing>(v: T): T => ((labActing = v), v);
+/** Your own roll is on the table (rolls.ts tells): against the computer you may always clear it, even when the next step is the computer's. */
+let ownRollShown = () => false;
+export const setOwnRollShown = (f: () => boolean) => (ownRollShown = f);
 export const allowed = () =>
   labActing ||
   (LAB_SIDE
-    ? !heldBad && (actorNow() === 'both' || actorNow() === labHuman())
+    ? !heldBad && (actorNow() === 'both' || actorNow() === labHuman() || ownRollShown())
     : !heldBad &&
       (!online.active || online.both() || (online.mySide() != null && (actorNow() === 'both' || actorNow() === online.mySide())))); // a held-back change waits for a decision first
 /** In a shared-screen game every side is yours; online only your own seat's pieces. */

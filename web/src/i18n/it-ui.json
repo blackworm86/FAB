@@ -3496,9 +3496,22 @@
   "<b>Rolling the dice…</b>": "<b>Lancio dei dadi…</b>",
   "Rolling the dice…": "Lancio dei dadi…",
   "brass = needs SA": "ottone = serve un'AS",
-  "Map:": "Mappa:"
+  "Map:": "Mappa:",
+  "to play it, then end the step.": "per giocarla, poi termina il passo."
  },
  "patterns": [
+  [
+   "(.+): tap a card",
+   "$1: tocca una carta"
+  ],
+  [
+   "Done · (.+) acts",
+   "Fatto · tocca a $1"
+  ],
+  [
+   "to play it, then Done: the (.+) player acts next \\(4\\.2\\)\\.",
+   "per giocarla, poi Fatto: tocca al giocatore $1 (4.2)."
+  ],
   [
    "Turn (\\d+), (.+) player turn: (.+)",
    "Turno $1, turno del giocatore $2: $3"

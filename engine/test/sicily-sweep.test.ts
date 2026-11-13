@@ -80,7 +80,9 @@ describe('Sicily asset and event sweep', () => {
     g.phase = 'admin';
     g.phasing = 'allied';
     S.airInterdiction(g, air(g, 'allied'), 21);
+    g.done = ['allied']; // 4.2c: the Axis answers in its part of the Admin Phase
     S.dogfightInterdiction(g, air(g, 'axis'), 21);
+    g.done = [];
     expect(() => S.airInterdiction(g, air(g, 'allied', 1), 21)).toThrow(/16\.31/);
   });
   it("17.21c: a second Fading Italian Morale waits for the first one's picks", () => {
