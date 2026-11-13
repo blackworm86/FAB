@@ -50,7 +50,7 @@ import { initTutorial } from './tutorial';
 import { showRules, linkRules, RULES_GAMES } from './rules-link';
 import { coursesOf } from './tutorial-script';
 import { LAB_SIDE, lab, labClear, labDownload, labStep, recordKey } from './lab';
-import { $, areaName, first, KEY, LAB, MAP, MH, MW, P1, P2, PARAMS, POLE, S, toWorld, TUT, VOL } from './page';
+import { $, areaName, first, KEY, LAB, MAP, MH, MW, P1, P2, PARAMS, S, toWorld, TUT, VOL } from './page';
 export * from './page';
 import {
   addressOpts,
@@ -89,7 +89,6 @@ import {
   disposeAll,
   FIG_VOLS,
   fitBattleView,
-  formationReach,
   markers,
   overlays,
   pieces,
@@ -212,257 +211,26 @@ import {
   setScoreOpen,
 } from './choices';
 export * from './choices';
-
-/* ---------- camera focus ---------- */
-type Goal = { t: THREE.Vector3; dist: number; pitch: number; fast?: boolean } | null;
-export let goal: Goal = null,
-  saved: Goal = null,
-  inBattle = false;
-export const setGoal = <T extends typeof goal>(v: T): T => ((goal = v), v);
-/** Reinforcing a battle by Special Action (the defender): neighbouring blocks that may join light up and a tap moves one in. */
-let reinforcing = false;
-function reinforceTargets(): Tgt | null {
-  const b = g.battle;
-  if (!reinforcing || !b || b.stage !== 'setup') return null;
-  const t: Tgt = {
-      units: new Map(),
-      areas: new Map(),
-      pick: new Map(),
-      color: new Map(),
-      chips: [],
-      buttons: [],
-      modes: [],
-      any: null,
-      hint: 'Tap a glowing neighbouring block to bring it in',
-    },
-    def = other(b.attacker);
-  for (const u of g.units.filter((x) => x.side === def && x.area != null && x.area !== b.area)) {
-    try {
-      const c = structuredClone(g);
-      E.defenderReinforceSA(c, c.battle!, u.id);
-      t.units.set(u.id, () => {
-        reinforcing = false;
-        pickSA(def, u.ech, (sa) => E.defenderReinforceSA(g, g.battle!, u.id, sa));
-      });
-    } catch {
-      /* not a legal reinforcement */
-    }
-  }
-  return t;
-}
-let frameKey = '';
-/** The battle camera: held on the contested area (fitted to it), where the player can still zoom and orbit but not pan away. */
-export let lock: { c: THREE.Vector3; d: number } | null = null;
-export const clampDist = (d: number) =>
-  lock ? Math.min(lock.d * 1.7, Math.max(lock.d * 0.45, d)) : Math.min(innerWidth < 700 ? 64 : 72, Math.max(7, d)); // desktop: no further out than the map filling most of the screen (it shrank into a corner)      // phones: never so far out that the map leaves a black band
-export function areaWorld(id: number) {
-  return MAP.areas.find((a) => a.id === id)!.polygon.map(([x, y]) => toWorld(x, y));
-}
-function syncBattleCam() {
-  const b = g.battle;
-  let key = b ? `${b.area}:${b.stage === 'setup' ? 's' : 'f'}` : '';
-  const wide = reinforcing || b?.stage === 'retreat';
-  if (b && wide) key += 'r';
-  if (b && !wide) key += ':' + Math.round(clearRatio * 5); // refit when the panels around the battle grow or shrink
-  if (b && key !== frameKey) {
-    if (!inBattle) saved = { t: target.clone(), dist, pitch };
-    const pts = areaWorld(b.area),
-      xs = pts.map((q) => q.x),
-      zs = pts.map((q) => q.z),
-      w = Math.max(...xs) - Math.min(...xs),
-      h = Math.max(...zs) - Math.min(...zs);
-    const c = new THREE.Vector3((Math.max(...xs) + Math.min(...xs)) / 2, 0, (Math.max(...zs) + Math.min(...zs)) / 2),
-      r = Math.max(Math.max(w, h) / 2 + 3, formationReach(b) + 2.5);
-    let fit = Math.max(16, r * (innerWidth < innerHeight ? 3.0 : 2.6));
-
-    if (!wide) {
-      const pl = toWorld(...POLE.get(b.area)!);
-      c.set(pl.x, 0, pl.z);
-    } // the battle formation is centred on the area's pole
-    if (!wide) fit = fit / Math.max(0.55, Math.min(1, clearRatio * 1.25)); // only the band between the panels shows the battle
-    lock = wide ? null : { c, d: fit };
-    goal = { t: c, dist: wide ? fit * 1.8 : fit, pitch: 1.15, fast: true };
-    setYaw(viewRot());
-  }
-  if (!b) {
-    reinforcing = false;
-    lock = null;
-    if (inBattle && saved) goal = saved;
-  }
-  frameKey = key;
-  inBattle = !!b;
-}
-
-/* ---------- map interaction ---------- */
-export const optsFor = (id: string): E.Opt[] =>
-  g.phase === 'strategic'
-    ? E.stratOptions(g, id).map((a) => ({
-        area: a,
-        cost: 0,
-        fuel: VOL.features.fuel && first(g.units.find((x) => x.id === id)!.side),
-        mustStop: false,
-        path: [],
-      }))
-    : E.moveOptions(g, id);
-const fuelLeft = () => E.boxOf(g, P1, 'available').filter((c) => c.kind === 'fuel').length;
-const center = (a: number) => toWorld(...POLE.get(a)!);
-function confirmMove() {
-  const id = selUnit!,
-    to = previewArea!,
-    u = g.units.find((x) => x.id === id)!,
-    from = u.area!;
-  setSelUnit(null);
-  setPreviewArea(null);
-  setSelArea(to);
-  act(
-    () => {
-      if (g.phase === 'strategic') E.stratMove(g, id, to);
-      else E.move(g, id, to, true);
-    },
-    `${u.name}: ${areaName(from)} → ${areaName(to)}`,
-  );
-  if (g.moving?.id === id) {
-    setSelUnit(id);
-    refresh();
-  } // one area at a time: it stays picked while it has points left
-}
-export function click(e: PointerEvent) {
-  let { unit, area } = pick(e);
-  if (tut) {
-    const t = tut.gate(unit, area);
-    if (t === false) return;
-    if (t.unit) unit = t.unit;
-    if (t.area != null) area = t.area;
-  }
-  if (SANDBOX && SBU.st.sbPlace) {
-    const id = SBU.st.sbPlace;
-    if (area == null) return;
-    SBU.st.sbPlace = null;
-    return SBU.sbx(() => SB.place(g, id, area));
-  }
-  if (areaPick) {
-    const ap = areaPick;
-    setAreaPick(null);
-    if (area != null && ap.areas.has(area)) return act(() => ap.run(area));
-    say(`${ap.label}: cancelled.`);
-    return refresh();
-  }
-  if (reinforcing && g.battle) {
-    const fn = unit ? tgt?.units.get(unit) : undefined;
-    if (fn) return act(fn);
-    reinforcing = false;
-    if (unit)
-      say(
-        'That block cannot reinforce this battle (8.23: good order, an adjacent uncontested area, and a Special Action for its Higher Echelon).',
-      );
-    return refresh();
-  }
-  {
-    const c0 = selChit ? g.chits.find((x) => x.id === selChit) : null,
-      tg = c0 && g.phase === 'admin' ? tgt : null;
-    if (tg) {
-      const fnU = unit ? tg.units.get(unit) : undefined,
-        fnA = area != null ? (tg.areas.get(area) ?? tg.any?.(area) ?? undefined) : undefined;
-      if (fnU || fnA) {
-        return act((fnU ?? fnA)!);
-      }
-      const pk = area != null ? tg.pick.get(area) : undefined;
-      if (pk) {
-        pk();
-        return refresh();
-      }
-      if (area != null && (tg.areas.size || tg.units.size || tg.any)) {
-        say(tg.hint || 'That is not a target for this chit: tap a glowing area or block.');
-        return;
-      } // a tap that does nothing says why
-    }
-  }
-  const rb = g.battle;
-  if (rb?.stage === 'retreat' && area != null && E.retreatOptions(g, rb).includes(area)) return act(() => E.chooseRetreat(g, rb, area));
-  if (g.battle && !g.pendingBlow) {
-    // a battle is on the table: tapping a block makes it that side's point unit
-    const b = g.battle,
-      u = unit ? g.units.find((x) => x.id === unit) : null,
-      { chit: tapped } = pick(e);
-    {
-      const fn = tgt?.units.get(tapped ?? unit ?? '');
-      if (fn && (b.stage === 'attFirst' || b.stage === 'loss')) return act(fn);
-    }
-    if (b.stage === 'setup' && airPick?.step === 'unit') {
-      const p = airPick;
-      if (u && u.side === p.side && u.area === b.area && (!u.garrison || u.id.startsWith('F-'))) {
-        // Sicily Example 15C: the flanking asset may get the +2
-        setAirPick(null);
-        return act(() => E.assign(g, b, p.id, 'support', u.id));
-      }
-      setAirPick(null);
-      say('Tap one of your own blocks in this battle for the +2. Cancelled.');
-      return refresh();
-    }
-    if (b.stage === 'setup' && tapped) {
-      const c = E.chit(g, tapped);
-      if (mine(c.side)) act(() => E.unassign(g, b, tapped));
-      else say("Those are the other player's assets.");
-      return;
-    }
-    if (b.stage === 'setup' && u && seen(u) && mine(u.side) && !u.garrison && !(u.side === b.attacker && u.disorder))
-      act(() => E.setPoint(g, b, u.side, u.id));
-    return;
-  }
-  if (g.pendingBlow) return;
-  if (selArr && area != null && arrOpts().some((o) => o.area === area)) {
-    const id = selArr;
-    setSelArr(null);
-    return act(() => arrive(id, area));
-  }
-  if (selUnit && area != null && optsFor(selUnit).some((o) => o.area === area)) {
-    setPreviewArea(area);
-    return confirmMove();
-  } // two taps: block, then where it goes (Undo takes it back)
-  if (selUnit && area != null && !unit && ['movement', 'strategic', 'reaction', 'btMove'].includes(g.phase)) {
-    const u = g.units.find((x) => x.id === selUnit);
-    if (u && u.area !== area && mine(u.side)) {
-      say(
-        `${areaName(area)}: ${u.name} cannot go there${u.moved ? ' (it has already moved)' : !optsFor(u.id).length ? ' (it has no move left)' : ' this move. The lit areas are where it can go'}.`,
-        true,
-      );
-      return;
-    }
-  } // a tap that does nothing says why
-  if ((g.phase === 'combat' || g.phase === 'btCombat') && area != null && fightable().includes(area)) {
-    setSelArea(area);
-    setSelUnit(null);
-    setPreviewArea(null);
-    const p = allowed() ? primary() : null;
-    if (p && !p.dis && p.label.startsWith('Fight ')) return act(p.fn);
-    return refresh();
-  } // one tap on a battle area opens the battle
-  const uu = unit ? g.units.find((x) => x.id === unit) : null;
-  if (uu && g.moving && g.moving.id !== uu.id && mine(uu.side)) act(() => E.endMove(g)); // another block: the one moving before is done for good
-  if (uu && seen(uu) && (mine(uu.side) || !['movement', 'strategic', 'reaction', 'btMove'].includes(g.phase))) {
-    setSelUnit(unit!);
-    setSelArea(uu.area);
-    if (uu.area != null) showAreas([uu.area, ...optsFor(uu.id).map((o) => o.area)]);
-  } /* the block and its destinations in view */ else {
-    setSelArea(area);
-    setSelUnit(null);
-  }
-  setPreviewArea(null);
-  setHoverArea(null);
-  refresh();
-}
-canvas.addEventListener('pointermove', (e) => {
-  if (e.buttons || !selUnit || g.battle) return;
-  const a = pick(e).area,
-    h = a != null && optsFor(selUnit).some((o) => o.area === a) ? a : null;
-  if (h !== hoverArea) {
-    setHoverArea(h);
-    if (previewArea == null) refresh();
-  }
-});
-
-export const route = new THREE.Group();
-scene.add(route);
+import {
+  areaWorld,
+  center,
+  clampDist,
+  click,
+  confirmMove,
+  fuelLeft,
+  goal,
+  inBattle,
+  lock,
+  optsFor,
+  reinforceTargets,
+  reinforcing,
+  route,
+  setGoal,
+  setInBattle,
+  setReinforcing,
+  syncBattleCam,
+} from './map-input';
+export * from './map-input';
 /* ---------- routes on the map: movement arrows by kind of move, the supply lifeline (docs/design/route-style-v2.png) ---------- */
 function pathPts(path: number[]) {
   const raw = path.map((a) => {
@@ -735,7 +503,7 @@ function drawRoute() {
       z1 = Math.max(...pts.map((p) => p.z));
     const span = Math.max(x1 - x0, (z1 - z0) * 1.3, 8),
       c = viewRot() ? -1 : 1;
-    goal = { t: new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2 + c * span * 0.34), dist: clampDist(span * 2.5 + 10), pitch };
+    setGoal({ t: new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2 + c * span * 0.34), dist: clampDist(span * 2.5 + 10), pitch });
   }
 }
 let framedRoute = '';
@@ -1541,7 +1309,7 @@ export function showChecks(cs: E.Check[]) {
   const a = cs.find((c) => c.area != null)?.area;
   if (a != null) {
     const p = center(a);
-    goal = { t: new THREE.Vector3(p.x, 0, p.z), dist: Math.min(dist, 30), pitch };
+    setGoal({ t: new THREE.Vector3(p.x, 0, p.z), dist: Math.min(dist, 30), pitch });
   }
   rollView = {
     check: true,
@@ -2052,7 +1820,7 @@ function setupPrompt(b: E.Battle): string {
     ? `<b>${nm(who)} attacks: tap a card to add it.</b>${gx(' The defender answers after you (6.22); you pick your point unit last.')}`
     : `<b>${nm(who)} defends: tap a card to add it</b>${gx(", and a block to make it the point unit. The attacker's assets are on the table (6.23).", ' and pick your point unit.')}`;
 }
-function primary(): { label: string; fn: () => void; dis?: boolean } | null {
+export function primary(): { label: string; fn: () => void; dis?: boolean } | null {
   const b = g.battle;
   if (rollView?.pos && !rollView.remote) return { label: 'Continue', fn: () => endRoll() }; // the dice have landed: one clear step on, the report stays readable until then
   if (g.over || g.pendingBlow || rollView) return null;
@@ -2185,7 +1953,7 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
 /* ---------- the actions dock: shortcuts with counts, labelled undo ---------- */
 export const lookAt = (a: number) => {
   const p = center(a);
-  goal = { t: new THREE.Vector3(p.x, 0, p.z), dist: Math.min(dist, 30), pitch };
+  setGoal({ t: new THREE.Vector3(p.x, 0, p.z), dist: Math.min(dist, 30), pitch });
 };
 let canMoveKey = '',
   canMoveIds: string[] = [];
@@ -2600,7 +2368,7 @@ function dispatch() {
           `<button class="supl" data-ui="${reg(() => {
             if (x.area != null) {
               const c2 = center(x.area);
-              goal = { t: new THREE.Vector3(c2.x, 0, c2.z), dist: Math.min(dist, 30), pitch, fast: true };
+              setGoal({ t: new THREE.Vector3(c2.x, 0, c2.z), dist: Math.min(dist, 30), pitch, fast: true });
             }
           })}" title="Show on the map">${unitPic(x)}<span><b>${esc(x.name)}</b><small>${esc(areaName(x.area!))} · ${E.quality(x)}${x.disorder ? ' · disordered' : ''}${rounds > 1 ? ' · two checks (14.93)' : ''}</small></span><b class="sn">needs ${sn} or less</b></button>`,
       )
@@ -2763,7 +2531,7 @@ function frameArrival() {
       cx = pts.reduce((a, p) => a + p.x, 0) / pts.length,
       cz = pts.reduce((a, p) => a + p.z, 0) / pts.length,
       r = Math.max(...pts.map((p) => Math.hypot(p.x - cx, p.z - cz)));
-    goal = { t: new THREE.Vector3(cx, 0, cz), dist: Math.min(innerWidth < 700 ? 52 : 70, Math.max(24, r * 2.3 + 10)), pitch: 1.15 };
+    setGoal({ t: new THREE.Vector3(cx, 0, cz), dist: Math.min(innerWidth < 700 ? 52 : 70, Math.max(24, r * 2.3 + 10)), pitch: 1.15 });
   }
 }
 /** Drag an arriving block from the tray onto an entry area of the map. A click without moving still just selects it. */
@@ -2898,7 +2666,7 @@ function pieceKey(): [string, string][] {
 /** A quarter turn of the board, eased (phones have no right-drag to turn it). */
 function rotateQuarter() {
   const y0 = yaw;
-  goal = null;
+  setGoal(null);
   anims.push({
     t0: performance.now(),
     dur: 450,
@@ -3107,7 +2875,7 @@ function battleTable() {
     )}<span class="sabtns">${btn(`${ico('back')}<span class="bsa">Retreat (SA)</span>`, () => pickSA(s, us[0]?.ech, (sa) => E.defenderRetreatSA(g, g.battle!, sa)), 'ico', !mine(s) || !us.some((u) => !u.garrison), 'Retreat before combat (8.24): uses a Special Action; your units leave without disorder, garrisons stay; the attacker gets an exploitation chance')}${ubtn(
       `${ico('plus')}<span class="bsa">Reinforce (SA)</span>`,
       () => {
-        reinforcing = !reinforcing;
+        setReinforcing(!reinforcing);
         refresh();
       },
       `ico ${reinforcing ? 'on' : ''}`,
@@ -3334,7 +3102,7 @@ function frameSide(sd: E.Side) {
     x1 = Math.max(...ids.map((p) => p.x)),
     z0 = Math.min(...ids.map((p) => p.z)),
     z1 = Math.max(...ids.map((p) => p.z));
-  goal = { t: new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), dist: clampDist(Math.max(x1 - x0, (z1 - z0) * 1.3) * 0.95 + 8), pitch };
+  setGoal({ t: new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), dist: clampDist(Math.max(x1 - x0, (z1 - z0) * 1.3) * 0.95 + 8), pitch });
 }
 /** True when the area's centre is inside the visible part of the screen (clear of the bars at top and bottom). */
 /** The part of the canvas no panel covers, in normalised screen units (-1..1): the sandbox panel on the right, the block card or battle report at the bottom right. */
@@ -3360,7 +3128,7 @@ const onScreen = (a: number) => {
   return v.x > f.x0 && v.x < f.x1 && v.y > f.y0 && v.y < f.y1 && v.z < 1;
 };
 /** Bring areas into view when any of them is off screen: the camera frames them all, no closer than now. */
-function showAreas(ids: number[]) {
+export function showAreas(ids: number[]) {
   if (!ids.length || ids.every(onScreen)) return;
   const ps = ids.map(center),
     x0 = Math.min(...ps.map((p) => p.x)),
@@ -3371,12 +3139,12 @@ function showAreas(ids: number[]) {
     d = clampDist(Math.max(dist, Math.max(x1 - x0, (z1 - z0) * 1.3) * 1.1 + 10)),
     t = new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2);
   const shift = -((f.x0 + f.x1) / 2) * d * 0.45 * (innerWidth / innerHeight) * 0.5; // a panel on the right: aim to the right so the areas land in the free part (approximate, camera faces the map)
-  goal = { t: t.add(new THREE.Vector3(Math.cos(yaw) * shift, 0, -Math.sin(yaw) * shift)), dist: d, pitch };
+  setGoal({ t: t.add(new THREE.Vector3(Math.cos(yaw) * shift, 0, -Math.sin(yaw) * shift)), dist: d, pitch });
 }
 const cutOffCount = (sd: E.Side) => MAP.areas.filter((a) => g.control[a.id] === sd && !supOk(sd, a.id)).length;
 const resetBtn = () =>
   ubtn(`${ico('home')}<span>Reset view</span>`, () => {
-    goal = homeGoal();
+    setGoal(homeGoal());
     setYaw(viewRot());
   });
 function layersHtml() {
@@ -3699,7 +3467,7 @@ function modalHtml() {
                   setG(E.newGame(undefined, newOpts));
                   setSelArea(setSelUnit(setSelChit(null)));
                   modal = null;
-                  inBattle = false;
+                  setInBattle(false);
                   hist.clear();
                   setNote('');
                   setSelArr(null);
@@ -4067,7 +3835,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
   ui.querySelectorAll<HTMLElement>('[data-home]').forEach(
     (e) =>
       (e.onclick = () => {
-        goal = homeGoal();
+        setGoal(homeGoal());
         setYaw(viewRot());
       }),
   );
@@ -4148,7 +3916,7 @@ function syncView() {
   const fresh = lastView === null;
   lastView = v;
   setYaw(v !== VOL.bottom ? Math.PI : 0);
-  if (!fresh) goal = g.inPlay ? homeGoal() : { t: openingTarget(), dist, pitch };
+  if (!fresh) setGoal(g.inPlay ? homeGoal() : { t: openingTarget(), dist, pitch });
   paintBoard();
 }
 /** Split tables: publish the blocks the other side may now see, and (attacker's seat) start combat once both point units are designated (6.24) and the blocks are known. */
@@ -4201,7 +3969,7 @@ export function refresh() {
       const first = playKey === null;
       playKey = k;
       if (!first) paintBoard();
-      if (g.inPlay || !first) goal = homeGoal();
+      if (g.inPlay || !first) setGoal(homeGoal());
     }
   }
   SBU.hotseatSync();
@@ -4335,7 +4103,7 @@ function frame() {
     target.lerp(goal.t, k);
     setDist(dist + (goal.dist - dist) * k);
     setPitch(pitch + (goal.pitch - pitch) * k);
-    if (target.distanceTo(goal.t) < 0.05 && Math.abs(dist - goal.dist) < 0.1) goal = null;
+    if (target.distanceTo(goal.t) < 0.05 && Math.abs(dist - goal.dist) < 0.1) setGoal(null);
   }
   if (lock && !goal) target.copy(lock.c);
   if (!CALM) {
@@ -4408,7 +4176,7 @@ function frame() {
           target.copy(goal.t);
           setDist(goal.dist);
           setPitch(goal.pitch);
-          goal = null;
+          setGoal(null);
         }
       }
     }
@@ -4426,11 +4194,11 @@ function startOver(x: E.Game) {
   setSelArea(setPreviewArea(setHoverArea(null)));
   modal = null;
   setScoreOpen(false);
-  reinforcing = false;
+  setReinforcing(false);
   setBattleFx([]);
   setRollFx([]);
   tgtKey = '';
-  inBattle = false;
+  setInBattle(false);
   setNote('');
   setAreaPick(null);
   restartAsk = false;
@@ -4524,7 +4292,7 @@ setTut(
           },
           lookAt: (a) => {
             const p = center(a);
-            goal = { t: new THREE.Vector3(p.x, 0, p.z), dist: Math.min(dist, innerWidth < 700 ? 34 : 30), pitch };
+            setGoal({ t: new THREE.Vector3(p.x, 0, p.z), dist: Math.min(dist, innerWidth < 700 ? 34 : 30), pitch });
           },
           select: (id) => {
             if (g.pendingArrivals.includes(id)) setSelArr(id);
@@ -4536,7 +4304,7 @@ setTut(
           },
           moving: () => ptrs.size > 0,
           pan: (dx, dy) => {
-            goal = null;
+            setGoal(null);
             const k = dist * 0.0018,
               c = Math.cos(yaw),
               sn = Math.sin(yaw);
@@ -4783,7 +4551,7 @@ if (import.meta.env.DEV || DEV_FAKE || SANDBOX || TUTORIAL)
       },
       viewMap: (mx: number, my: number, d: number, pt: number, yw: number) => {
         const p = toWorld(mx, my);
-        goal = { t: new THREE.Vector3(p.x, show3d() ? REL!.h(p.x, p.z) : 0, p.z), dist: d, pitch: pt, fast: true };
+        setGoal({ t: new THREE.Vector3(p.x, show3d() ? REL!.h(p.x, p.z) : 0, p.z), dist: d, pitch: pt, fast: true });
         setYaw(yw);
       },
       tut: () => tut,
@@ -4836,7 +4604,7 @@ if (import.meta.env.DEV || DEV_FAKE || SANDBOX || TUTORIAL)
       }),
       board: () => boardCv.toDataURL('image/png'),
       view: (x: number, z: number, d: number, pt: number, yw: number) => {
-        goal = { t: new THREE.Vector3(x, 0, z), dist: d, pitch: pt, fast: true };
+        setGoal({ t: new THREE.Vector3(x, 0, z), dist: d, pitch: pt, fast: true });
         setYaw(yw);
       },
       layout: () => ({
