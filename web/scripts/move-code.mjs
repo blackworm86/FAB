@@ -14,7 +14,7 @@
 // Then run Prettier, the type check and the tests.
 import ts from 'typescript';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { resolve, dirname, basename } from 'node:path';
+import { resolve, dirname, basename, relative } from 'node:path';
 
 const args = process.argv.slice(2),
   dry = args[0] === '--dry' ? !!args.shift() : false;
@@ -37,7 +37,11 @@ const program = ts.createProgram(cfg.fileNames, cfg.options),
   sf = program.getSourceFile(from);
 const text = sf.text,
   lineOf = (p) => sf.getLineAndCharacterOfPosition(p).line + 1;
-const modName = (f) => './' + basename(f).replace(/\.ts$/, '');
+/** How file `at` names file `f` in an import. */
+const modName = (f, at) => {
+  const r = relative(dirname(at), f).replace(/\\/g, '/').replace(/\.ts$/, '');
+  return r.startsWith('.') ? r : './' + r;
+};
 
 /* ---- the top-level statements and what each declares ---- */
 const bindNames = (n, out = []) => {
@@ -71,6 +75,10 @@ const stmts = sf.statements.map((st) => {
     s.names.push(st.name.text);
   return s;
 });
+for (const [i, s] of stmts.entries()) {
+  s.hi = ts.getTrailingCommentRanges(text, s.st.end)?.at(-1)?.end ?? s.st.end;
+  s.lo = i ? stmts[i - 1].hi : s.st.getFullStart();
+} // a comment at the end of a statement's line is part of it
 const byName = new Map();
 for (const s of stmts) for (const n of s.names) byName.set(n, s);
 // A variable's setter is `setName`; when that name is already something else (a real function, an import), `setNameValue`.
@@ -175,7 +183,13 @@ const uses = []; // { id, user, decl, name, write, load }
   if (ts.isIdentifier(n)) {
     const p = n.parent;
     let sym =
-      ts.isShorthandPropertyAssignment(p) && p.name === n ? checker.getShorthandAssignmentValueSymbol(p) : checker.getSymbolAtLocation(n);
+      ts.isShorthandPropertyAssignment(p) && p.name === n
+        ? checker.getShorthandAssignmentValueSymbol(p)
+        : ts.isExportSpecifier(p) && !p.parent.parent.moduleSpecifier
+          ? (p.propertyName ?? p.name) === n
+            ? checker.getExportSpecifierLocalTargetSymbol(p)
+            : undefined // `export { a as b }`: a is the local name
+          : checker.getSymbolAtLocation(n);
     const decl = sym && declStmt(sym),
       user = stmtOf.get(topOf(n));
     if (decl && user && decl !== user) {
@@ -267,12 +281,8 @@ for (const [name, s] of setters) {
       edits.push({ at: byName.get(set), pos: byName.get(set).st.getStart(), end: byName.get(set).st.getStart(), text: 'export ' });
     continue;
   }
-  // after the variable's line; a comment at the end of that line stays on it (it is the next statement's leading text)
   const code = `export const ${set} = <T extends typeof ${name}>(v: T): T => ((${name} = v), v);`; // generic: `a = b = null` keeps its types
-  const tail = ts.getTrailingCommentRanges(text, s.st.end)?.at(-1),
-    next = stmts[stmts.indexOf(s) + 1];
-  if (tail && next && moved.has(next) === moved.has(s)) edits.push({ at: next, pos: tail.end, end: tail.end, text: `\n${code}` });
-  else edits.push({ at: s, pos: s.st.end, end: s.st.end, text: `\n${code}` });
+  edits.push({ at: s, pos: s.hi, end: s.hi, text: `\n${code}` });
 }
 for (const s of moved)
   if (
@@ -287,9 +297,9 @@ for (const s of moved)
 
 /* ---- the two texts ---- */
 const piece = (s) => {
-  let out = text.slice(s.st.getFullStart(), s.st.end);
+  let out = text.slice(s.lo, s.hi);
   for (const e of edits.filter((e) => e.at === s).sort((a, b) => b.pos - a.pos || b.end - a.end))
-    out = out.slice(0, e.pos - s.st.getFullStart()) + e.text + out.slice(e.end - s.st.getFullStart());
+    out = out.slice(0, e.pos - s.lo) + e.text + out.slice(e.end - s.lo);
   return out;
 };
 const names = (map) =>
@@ -298,8 +308,13 @@ const names = (map) =>
     .map(([n, t]) => (t ? 'type ' : '') + n)
     .join(', ');
 /** An import of the old file, cut down to the names in `keep` (name → typeOnly), or '' when none is left. */
-function importText(decl, keep) {
-  const c = decl.importClause;
+function importText(decl, keep, forFile = from) {
+  const c = decl.importClause,
+    spec = decl.moduleSpecifier.text,
+    q =
+      spec.startsWith('.') && forFile !== from
+        ? `'${modName(resolve(dirname(from), spec), forFile)}${/\.ts$/.test(spec) ? '.ts' : ''}'`
+        : decl.moduleSpecifier.getText(); // a relative path, as seen from the new file
   if (!c) return decl.getText(); // a side-effect import stays whole
   const parts = [],
     nb = c.namedBindings;
@@ -316,7 +331,7 @@ function importText(decl, keep) {
       );
     if (el.length) parts.push(`{ ${el.join(', ')} }`);
   }
-  return parts.length ? `import ${c.isTypeOnly ? 'type ' : ''}${parts.join(', ')} from ${decl.moduleSpecifier.getText()};` : '';
+  return parts.length ? `import ${c.isTypeOnly ? 'type ' : ''}${parts.join(', ')} from ${q};` : '';
 }
 const usedBySrc = new Map(); // import statement → names the old file still uses
 for (const u of uses)
@@ -325,14 +340,14 @@ for (const u of uses)
     usedBySrc.get(u.decl).set(u.name, false);
   }
 let dst = `// ${header}\n`;
-for (const s of stmts) if (s.isImport && needImports.has(s)) dst += importText(s.st, needImports.get(s)) + '\n';
-if (needFromSrc.size) dst += `import { ${names(needFromSrc)} } from '${modName(from)}';\n`;
+for (const s of stmts) if (s.isImport && needImports.has(s)) dst += importText(s.st, needImports.get(s), to) + '\n';
+if (needFromSrc.size) dst += `import { ${names(needFromSrc)} } from '${modName(from, to)}';\n`;
 let src = '',
   importsDone = false;
 for (const s of stmts) {
   if (s.isImport) {
     const t = importText(s.st, usedBySrc.get(s) ?? new Map());
-    if (t) src += text.slice(s.st.getFullStart(), s.st.getStart()) + t;
+    if (t) src += text.slice(s.lo, s.st.getStart()) + t + text.slice(s.st.end, s.hi);
     else notes.push(`import no longer used by ${basename(from)}: ${s.st.moduleSpecifier.getText()}`);
     continue;
   }
@@ -342,15 +357,15 @@ for (const s of stmts) {
   }
   if (!importsDone) {
     importsDone = true;
-    src += `\n${needFromDst.size ? `import { ${names(needFromDst)} } from '${modName(to)}';\n` : ''}export * from '${modName(to)}';`;
+    src += `\n${needFromDst.size ? `import { ${names(needFromDst)} } from '${modName(to, from)}';\n` : ''}export * from '${modName(to, from)}';`;
   }
   if (moved.has(s)) dst += piece(s);
   else src += piece(s);
 }
-src += text.slice(sf.statements[sf.statements.length - 1].end);
+src += text.slice(stmts[stmts.length - 1].hi);
 
 /* ---- report and write ---- */
-const lines = [...moved].reduce((n, s) => n + lineOf(s.st.end) - lineOf(s.st.getFullStart()) + 1, 0);
+const lines = [...moved].reduce((n, s) => n + lineOf(s.hi) - lineOf(s.lo) + 1, 0);
 console.log(`${moved.size} statements (about ${lines} lines) → ${toArg}`);
 console.log(`  the new file takes from ${basename(from)}: ${needFromSrc.size ? names(needFromSrc) : 'nothing'}`);
 console.log(`  ${basename(from)} takes from the new file: ${needFromDst.size} names; setters: ${[...setters.keys()].join(', ') || 'none'}`);
