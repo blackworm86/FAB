@@ -33,7 +33,7 @@ import {
 } from './online';
 import { ICONS, ico } from './icons';
 import { PIP } from './block-kit';
-import { esc, nm, flipSvg } from './util';
+import { esc, nm } from './util';
 import { sheets } from './sheets';
 import { pips, ABBR, chitLabel, iconify, STAGE_NAME, faces, modIcon, modWord } from './table-text';
 import { initChat, chatBtn, chatHtml, bindChat } from './chat';
@@ -80,12 +80,10 @@ import {
 export * from './page';
 import {
   addressOpts,
-  applyingRemote,
   areaPick,
   g,
   hoverArea,
   newOpts,
-  oppTurn,
   previewArea,
   record,
   replayShown,
@@ -108,120 +106,26 @@ import {
   tut,
 } from './game-state';
 export * from './game-state';
-
-/* ---------- three.js scene ---------- */
-const canvas = $('#gl') as HTMLCanvasElement;
-canvas.tabIndex = 0;
-canvas.setAttribute('role', 'application');
-canvas.setAttribute(
-  'aria-label',
-  'Map. Arrow keys move between areas, Enter selects or moves there, N picks the next block that can move, Escape clears.',
-);
-canvas.addEventListener('blur', () => {
-  kbArea = null;
-  paintAreas();
-});
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(2, devicePixelRatio));
-renderer.shadowMap.enabled = true;
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x101314);
-const cam = new THREE.PerspectiveCamera(38, 1, 0.5, 600);
-scene.add(new THREE.HemisphereLight(0xeef3ff, 0x2a2622, 1.0));
-const sun = new THREE.DirectionalLight(0xffffff, 1.4);
-sun.position.set(-20, 50, 32);
-sun.castShadow = true;
-{
-  const r = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 820 ? 1024 : 4096;
-  sun.shadow.mapSize.set(r, r);
-} // a phone: 16 times less graphics memory
-Object.assign(sun.shadow.camera, { left: -58, right: 58, top: 58, bottom: -58, far: 220 });
-sun.shadow.normalBias = 0.06;
-sun.shadow.bias = -0.0004;
-scene.add(sun); // the shadow box covers the whole table; the bias stops a surface from shadowing itself (stripes across the figures)
-
-const board: THREE.Mesh<THREE.BufferGeometry, THREE.Material> = new THREE.Mesh(
-  new THREE.PlaneGeometry(MW / S, MH / S),
-  new THREE.MeshStandardMaterial({ map: null, roughness: 0.9 }),
-);
-board.rotation.x = -Math.PI / 2;
-board.receiveShadow = true;
-scene.add(board);
-/* The board texture is composed in layers: ground and forest, then the area tint (so roads and rivers stay visible), then the line work, then the printed items (numbers, TDN, VP, names), turned to face the player. */
-const PHONE = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 820;
-/** Board pixels per map pixel. Every board layer is kept as a canvas of this size; at 2x Sicily's and Golan's are 67 MB each, and a phone over its
- *  canvas-memory budget hands out blank canvases, so the line work (drawn after the ground) went missing. Phones: 1x, in every game. */
-const BOARD_K = PHONE ? 1 : 2;
-export const boardCv = document.createElement('canvas');
-boardCv.width = MW * BOARD_K;
-boardCv.height = MH * BOARD_K;
-const boardTex = new THREE.CanvasTexture(boardCv);
-boardTex.colorSpace = THREE.SRGBColorSpace;
-boardTex.anisotropy = 8;
-const loadImg = (src: string) => {
-  const i = new Image();
-  i.onload = () => paintBoard();
-  i.src = src;
-  return i;
-};
-const vpIcons: Record<string, HTMLImageElement> = Object.fromEntries(Object.entries(VOL.art.vpIcons).map(([k, src]) => [k, loadImg(src)]));
-/** Each board file is downloaded once: its text gives both the picture and, when it has printed words, the copy turned for the far side. */
-const boardText = new Map<string, Promise<string>>();
-const boardFile = (src: string) => {
-  let p = boardText.get(src);
-  if (!p) {
-    p = fetch(src).then((r) => r.text());
-    boardText.set(src, p);
-  }
-  return p;
-};
-const svgUrl = (t: string) => URL.createObjectURL(new Blob([t], { type: 'image/svg+xml' }));
-const baseImg = new Image(),
-  linesImg = new Image();
-baseImg.onload = linesImg.onload = () => paintBoard();
-const flipped = new Map<HTMLImageElement, HTMLImageElement>();
-for (const [im, src] of [
-  [baseImg, VOL.art.base],
-  [linesImg, VOL.art.lines],
-] as const)
-  boardFile(src)
-    .then((t0) => {
-      const t = t0.replace(/>([^<>]*(?:ARMY ZONE|Army)[^<>]*)</g, (_, x: string) => `>${esc(tr(x))}<`);
-      /* the printed army lettering follows the language */ im.src = svgUrl(t);
-      if (t.includes('data-flip=')) flipped.set(im, loadImg(svgUrl(flipSvg(t))));
-    })
-    .catch(() => {
-      im.src = src;
-    });
-const facing = (im: HTMLImageElement) => {
-  const f = camFar ? flipped.get(im) : undefined;
-  return f && f.naturalWidth ? f : im;
-};
-/** The map drawings are turned into pixels once and reused: redrawing the detailed SVG on every colour change is what made phones stall. */
-const flat = new Map<HTMLImageElement, HTMLCanvasElement>();
-function pixels(im: HTMLImageElement): CanvasImageSource {
-  const have = flat.get(im);
-  if (have) return have;
-  const c = document.createElement('canvas');
-  c.width = boardCv.width;
-  c.height = boardCv.height;
-  const x = c.getContext('2d')!;
-  x.drawImage(im, 0, 0, c.width, c.height);
-  const lines = im === linesImg || im === flipped.get(linesImg);
-  if (lines ? keepIfInked(im, c) : x.getImageData(c.width >> 1, c.height >> 1, 1, 1).data[3]) {
-    flat.set(im, c);
-    return c;
-  }
-  if (lines) return c; // a large SVG can come out blank the first time: keep the copy only once it shows
-  setTimeout(paintBoard, 120);
-  return im;
-}
-function applyArt() {
-  const mat = board.material as THREE.MeshStandardMaterial;
-  mat.map = boardTex;
-  mat.needsUpdate = true;
-  paintBoard();
-}
+import {
+  applyArt,
+  baseImg,
+  board,
+  BOARD_K,
+  boardCv,
+  boardFile,
+  boardTex,
+  cam,
+  canvas,
+  facing,
+  linesImg,
+  PHONE,
+  pixels,
+  renderer,
+  scene,
+  sun,
+  vpIcons,
+} from './scene';
+export * from './scene';
 /* ---------- 3D map (View › Map): the snowy relief with contour lines, 3D woods and towns; the 2D board stays the default ---------- */
 let map3d = (() => {
   try {
@@ -252,7 +156,7 @@ const relArt = new Map<HTMLImageElement, HTMLCanvasElement>();
 /** A large drawing can come out blank on a phone the first time it is turned into pixels (seen on Android with Sicily's line work): keep the copy
  *  only once it has ink; until then draw again shortly (a few tries, then keep what there is). */
 const inkTries = new Map<HTMLImageElement, number>();
-function keepIfInked(im: HTMLImageElement, c: HTMLCanvasElement) {
+export function keepIfInked(im: HTMLImageElement, c: HTMLCanvasElement) {
   if (!im.complete || !im.naturalWidth) {
     setTimeout(paintBoard, 200);
     return false;
@@ -1309,7 +1213,7 @@ const seen = (u: E.Unit) => E.visibleTo(g, u, fogSide());
 const faceDown = (u: E.Unit) => !seen(u) || (!!u.untried && u.up !== u.area);
 const viewRot = () => (farSide() ? Math.PI : 0);
 /** Printed words (area labels, board text, entry letters) face the way the camera looks, whatever the seat: hotseat, the sandbox's Both seat, or a board turned by hand. */
-let camFar = false;
+export let camFar = false;
 const textRot = () => (camFar ? Math.PI : 0);
 /** Restricted boundaries (14.1) and the border two areas share, as a polyline (vertices of one area lying on the other's outline). */
 const RESTRICTED: [number, number][] = [...E.areas.keys()].flatMap((a) =>
@@ -1346,7 +1250,7 @@ function sharedBorder(a: number, b: number): [number, number][] {
 /** Areas drawn and clickable now: a scenario sheet's own boxes only while it is played; outside a play area, nothing is clickable. */
 const SHEET_ONLY = new Set((VOL.art.sheetBoxes ?? []).map((b) => b.id));
 const shownArea = (id: number) => !SHEET_ONLY.has(id) || !!g.inPlay?.includes(id);
-function paintBoard() {
+export function paintBoard() {
   if (!baseImg.naturalWidth || !linesImg.naturalWidth) return;
   const far = camFar;
   const c = boardCv.getContext('2d')!,
@@ -1616,7 +1520,7 @@ function syncNoSup() {
       : new Set();
   }
 }
-function paintAreas() {
+export function paintAreas() {
   syncNoSup();
   const strat = g.phase === 'strategic' && selUnit,
     opts = selUnit ? (strat ? E.stratOptions(g, selUnit).map((a) => ({ area: a, mustStop: false })) : E.moveOptions(g, selUnit)) : [];
@@ -4456,7 +4360,8 @@ function guardEnd0(p: { label: string; fn: () => void }) {
   };
 }
 /* ---------- the map from the keyboard: Tab onto the map, arrows between neighbouring areas, Enter selects or moves, N the next block that can move ---------- */
-let kbArea: number | null = null;
+export let kbArea: number | null = null;
+export const setKbArea = <T extends typeof kbArea>(v: T): T => ((kbArea = v), v);
 const NEXT = new Map<number, number[]>();
 for (const c of MAP.connections) {
   NEXT.set(c.a, [...(NEXT.get(c.a) ?? []), c.b]);
