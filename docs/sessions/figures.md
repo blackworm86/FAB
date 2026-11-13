@@ -1,0 +1,7 @@
+# figures · 13 Nov 2026
+Doing: waiting for the owner's raw Meshy models, to restore full-resolution textures on all 48 figures (Bulge 27, Golan 10, Sicily 11).
+Next: per type, check the raw file against the figure in web/public/pezzi (triangle count, UVs match), put its 2048 px texture on the figure (reduced and padded: 1024 px for Bulge infantry and tanks, 512 px for the rest; JPEG inside the .glb to keep the download small); report any type that does not match; update the kit (tools/pezzi3d) and send the owner the new zip.
+Waiting for the owner: the three archives bulge_raw.zip, golan73_raw.zip, sicily_raw.zip (modelli/ai_grezzi files named exactly like the type, no __meshy_/__trellis_ suffix); a first upload did not arrive.
+Last checked: web tests (134) and browser smoke test passed for all three volumes, 13 Nov 2026; merged origin/main (main.ts split) with no conflicts.
+Files in hand: none.
+Notes: figures are single-sided models cleaned by tools/pezzi3d/strumenti/ripara_figura.py (holes closed, textures padded to 512 px, originals in tools/pezzi3d/modelli/figure_originali, not committed). Smooth shading and the shadow bias are in web/src/troops.ts and the renderer setup; desktops render at 1.5x or more. Blocks are the default look; Figures is one tap away in View > Units. The owner's choices (variant, turn, nudge) are web/public/pezzi/<volume>_config.json. Details: docs/ASSETS-3D.md.
