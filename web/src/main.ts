@@ -11,7 +11,6 @@ import * as SBU from './sandbox-ui';
 import {
   online,
   startOnline,
-  push,
   sit,
   setDevSeat,
   auth,
@@ -43,12 +42,12 @@ import { hasLegend, legendCard } from './map-legend';
 import { snap, fxRow, FX_SAMPLES } from './fx';
 import { RULE, ruleHtml } from './rules-text';
 import { initTouch } from './touch';
-import { throwDice, clearDice, type DiceGroup } from './dice3d';
+import { throwDice, clearDice } from './dice3d';
 import { initTutorial } from './tutorial';
 import { showRules, linkRules, RULES_GAMES } from './rules-link';
 import { coursesOf } from './tutorial-script';
 import { LAB_SIDE, lab, labClear, labDownload, labStep, recordKey } from './lab';
-import { $, areaName, first, KEY, LAB, MAP, MH, MW, P1, P2, PARAMS, S, toWorld, TUT, VOL } from './page';
+import { $, areaName, first, LAB, MAP, MH, MW, P1, P2, PARAMS, S, toWorld, TUT, VOL } from './page';
 export * from './page';
 import {
   addressOpts,
@@ -144,13 +143,11 @@ import {
   fxLayer,
   hist,
   infoOpen,
-  labActing,
   lockOf,
   mine,
   noteFx,
   notYou,
   other,
-  pendingFx,
   PHASE_OF,
   PHASES,
   placing,
@@ -163,15 +160,12 @@ import {
   setInfoOpen,
   setLabActing,
   setNote,
-  setPendingFx,
   setRollFx,
-  setRollNoted,
   setSelArr,
   setTgt,
   setTgtMode,
   setToast,
   setToastInfo,
-  showFx,
   tgt,
   tgtMode,
   toast,
@@ -240,220 +234,30 @@ import {
   tagPpu,
 } from './map-marks';
 export * from './map-marks';
-
-/* ---------- battle state shared with the view ---------- */
-interface RollView {
-  remote?: boolean;
-  morale?: boolean;
-  check?: boolean;
-  title: string;
-  groups: (DiceGroup & { parts: [string, number][]; hits: number })[];
-  pos: { x: number; y: number; group: number; v: number }[] | null;
-}
-let menuTab = 'Settings',
-  restartAsk = false;
-export let rollView: RollView | null = null,
-  modal: 'menu' | 'boxes' | 'rules' | 'layers' | null = null,
-  handSide: E.Side | null = null;
-export const setModal = <T extends typeof modal>(v: T): T => ((modal = v), v);
-function rollStage(b: E.Battle) {
-  if (!allowed()) return say(notYou());
-  const side = b.stage === 'attArty' || b.stage === 'offFire' || b.stage === 'exploit' ? b.attacker : other(b.attacker),
-    kind = b.stage.endsWith('Arty') ? 'arty' : 'ground',
-    fl = b.stage === 'exploit' ? [] : E.fireList(g, b, side, kind),
-    n0 = b.rolls.length,
-    stage = b.stage;
-  const next = structuredClone(g),
-    before = snap(g);
-  E.roll_step(next, next.battle!);
-  setRollFx([]);
-  noteFx(before, next, true);
-  setRollNoted(true);
-  try {
-    localStorage.setItem(KEY, JSON.stringify(next));
-  } catch {
-    /* storage off */
-  }
-  void push(next); // the result is stored at once; the board shows it when the dice land
-  const fresh = next.battle!.rolls.slice(n0);
-  heldNext = next;
-  rollView = {
-    remote: labActing,
-    morale: stage === 'exploit',
-    title: `${nm(side)} ${STAGE_NAME[stage]}`,
-    pos: null,
-    groups: fresh.map((r) => ({
-      label: r.who,
-      col: r.kind === 'arty' ? 's' : first(side) ? 'k' : 'w',
-      sn: r.sn,
-      dice: r.dice,
-      hits: r.hits,
-      parts: fl.find((f) => f.who === r.who)?.parts ?? [],
-    })),
-  };
-  if (!rollView.groups.length) {
-    rollView = null;
-    commitRoll();
-    return;
-  }
-  refresh();
-  const cv = $('#dice') as HTMLCanvasElement;
-  cv.style.display = 'block';
-  throwDice(cv, rollView.groups, (p) => {
-    if (rollView) {
-      const rv = rollView;
-      rv.pos = p;
-      render();
-      afterDice(rv);
-    }
-  }); // the result clears by itself; a tap on it skips the wait
-}
-/** A roll is shown on the board as it was; when the dice land the result is applied: blocks that lose a step turn, what is removed fades. */
-export let heldNext: E.Game | null = null;
-const anims: { t0: number; dur: number; fn: (k: number) => void; end?: () => void }[] = [];
-export const fades = new THREE.Group();
-scene.add(fades);
-export function commitRoll() {
-  const next = heldNext;
-  if (!next) return;
-  heldNext = null;
-  const prev = g,
-    gone = new Set<string>();
-  for (const u of prev.units) {
-    const n = next.units.find((x) => x.id === u.id);
-    if (u.area != null && n && n.area == null) gone.add('u:' + u.id);
-  }
-  for (const c of prev.chits) {
-    const n = next.chits.find((x) => x.id === c.id);
-    if (c.box === 'map' && n && n.box !== 'map') gone.add('c:' + c.id);
-  }
-  for (const a of prev.fieldWorks) if (!next.fieldWorks.includes(a)) gone.add('m:FW:' + a);
-  const keyOf = (o: THREE.Object3D) =>
-    o.userData.unit ? 'u:' + o.userData.unit : o.userData.chit ? 'c:' + o.userData.chit : o.userData.mark ? 'm:' + o.userData.mark : '';
-  for (const o of [...pieces.children, ...markers.children])
-    if (gone.has(keyOf(o))) {
-      // a copy of what goes away, faded out over the new board
-      const cl = o.clone(true);
-      cl.traverse((x) => {
-        const m = x as THREE.Mesh;
-        if (!m.material) return;
-        m.material = ([] as THREE.Material[]).concat(m.material).map((mt) => {
-          const c = mt.clone();
-          c.transparent = true;
-          return c;
-        }) as never;
-      });
-      fades.add(cl);
-      const mats: THREE.Material[] = [];
-      cl.traverse((x) => {
-        const m = x as THREE.Mesh;
-        if (m.material) mats.push(...([] as THREE.Material[]).concat(m.material));
-      });
-      anims.push({
-        t0: performance.now(),
-        dur: 900,
-        fn: (k) => {
-          mats.forEach((mt) => {
-            mt.opacity = 1 - k;
-          });
-          cl.position.y += 0.004;
-        },
-        end: () => {
-          fades.remove(cl);
-          mats.forEach((mt) => mt.dispose());
-        },
-      });
-    }
-  const turned = next.units
-    .filter((u) => {
-      const o = prev.units.find((x) => x.id === u.id);
-      return o && u.area != null && u.str < o.str;
-    })
-    .map((u) => u.id);
-  setG(next);
-  save();
-  refresh();
-  for (const id of turned)
-    anims.push({
-      t0: performance.now(),
-      dur: 700,
-      fn: (k) => {
-        const m = pieces.children.find((o) => o.userData.unit === id);
-        if (m && !m.userData.troop) m.rotation.y = viewRot() + ((1 - (1 - (1 - k) ** 3)) * Math.PI) / 2;
-      },
-    }); // the block turns to its new strength
-}
-function runAnims() {
-  const now = performance.now();
-  for (let i = anims.length - 1; i >= 0; i--) {
-    const a = anims[i],
-      k = Math.min(1, (now - a.t0) / a.dur);
-    a.fn(k);
-    if (k >= 1) {
-      a.end?.();
-      anims.splice(i, 1);
-    }
-  }
-}
-/** Morale checks outside a battle (supply, Greif interdict): the camera goes to the unit and the dice are thrown on screen with PASS or FAIL. */
-export function showChecks(cs: E.Check[]) {
-  if (!cs.length || rollView) return;
-  const a = cs.find((c) => c.area != null)?.area;
-  if (a != null) {
-    const p = center(a);
-    setGoal({ t: new THREE.Vector3(p.x, 0, p.z), dist: Math.min(dist, 30), pitch });
-  }
-  rollView = {
-    check: true,
-    morale: true,
-    title: cs[0].why.replace(/ \(.*\)$/, ''),
-    pos: null,
-    groups: cs.map((c) => ({ label: c.who, col: 'w', sn: c.sn, dice: [c.die], hits: c.ok ? 1 : 0, parts: [] })),
-  };
-  refresh();
-  const cv = $('#dice') as HTMLCanvasElement;
-  cv.style.display = 'block';
-  throwDice(cv, rollView.groups, (p) => {
-    if (rollView) {
-      const rv = rollView;
-      rv.pos = p;
-      render();
-      setTimeout(() => {
-        if (rollView === rv) {
-          hideDice();
-          render();
-        }
-      }, 1300);
-    }
-  }); /* a check roll waits for Continue too */
-}
-/** After the dice settle: a moment to read them, then they leave and the results play on the board (turning blocks, fading pieces, pop-ups). */
-function afterDice(rv: RollView) {
-  setTimeout(() => {
-    if (rollView !== rv) return;
-    hideDice();
-    commitRoll();
-    showFx(pendingFx);
-    setPendingFx([]);
-    render();
-    if (rv.remote)
-      setTimeout(() => {
-        if (rollView === rv) endRoll();
-      }, 3200); /* owner, 13 Nov: your own rolls wait for Continue */ // results move on by themselves (a hit choice or retreat then waits on the table); with auto off, your roll waits for Continue
-  }, 1100);
-}
-function hideDice() {
-  clearDice();
-  const cv = $('#dice') as HTMLElement | null;
-  if (cv) cv.style.display = 'none';
-}
-function endRoll() {
-  commitRoll();
-  rollView = null;
-  clearDice();
-  ($('#dice') as HTMLElement).style.display = 'none';
-  refresh();
-}
+import {
+  afterDice,
+  anims,
+  commitRoll,
+  endRoll,
+  handSide,
+  heldNext,
+  hideDice,
+  menuTab,
+  modal,
+  restartAsk,
+  rollStage,
+  rollView,
+  type RollView,
+  runAnims,
+  setHandSide,
+  setHeldNext,
+  setMenuTab,
+  setModal,
+  setRestartAsk,
+  setRollView,
+  showChecks,
+} from './rolls';
+export * from './rolls';
 
 /* ---------- cards and drag and drop ---------- */
 
@@ -1927,7 +1731,7 @@ function handCards() {
         })}" aria-pressed="${handAll}">${handAll ? `Playable only (${live.length})` : `Show all`}</button>`
       : '';
   return `<div class="handtab"><button data-ui="${reg(() => {
-    handSide = other(s);
+    setHandSide(other(s));
   })}" class="${s}">${nm(s)} hand · ${cs.length} ${ico('swap')}</button>${more}</div><div class="c-hand" ${handStyle(shown.length)}>${fan(shown.map((c) => card(c)))}</div>`;
 }
 function stats(b: E.Battle, s: E.Side) {
@@ -2365,8 +2169,8 @@ function modalHtml() {
   if (modal === 'boxes') return piecesHtml();
   if (modal === 'menu') {
     const tabs = ['Settings', 'Log', 'Help', 'Table', ...(online.admin ? ['Admin'] : [])];
-    if (!tabs.includes(menuTab)) menuTab = 'Settings';
-    if (menuTab !== 'Table') restartAsk = false; // the restart question never waits on another tab
+    if (!tabs.includes(menuTab)) setMenuTab('Settings');
+    if (menuTab !== 'Table') setRestartAsk(false); // the restart question never waits on another tab
     const body =
       menuTab === 'Log'
         ? logHtml()
@@ -2437,7 +2241,7 @@ function modalHtml() {
               ? `<div class="row">${ubtn(`${ico('wand')} Sandbox`, () => {
                   location.href = `${homeUrl()}?sandbox=1`;
                 })}${ubtn('Update rules', () => {
-                  modal = 'rules';
+                  setModal('rules');
                 })}${VOL.sides
                   .map((sd) =>
                     ubtn(`Free ${nm(sd)} seat`, () => {
@@ -2555,10 +2359,10 @@ function modalHtml() {
             ? `<div class="askrow" data-reveal="restart"><p>Restart and lose the current game?</p><div class="row">${ubtn(
                 'Restart now',
                 () => {
-                  restartAsk = false;
+                  setRestartAsk(false);
                   setG(E.newGame(undefined, newOpts));
                   setSelArea(setSelUnit(setSelChit(null)));
-                  modal = null;
+                  setModal(null);
                   setInBattle(false);
                   hist.clear();
                   setNote('');
@@ -2571,12 +2375,12 @@ function modalHtml() {
                 },
                 'danger',
               )}${ubtn('Keep playing', () => {
-                restartAsk = false;
+                setRestartAsk(false);
               })}</div></div>`
             : `<div class="row">${ubtn(
                 'Restart',
                 () => {
-                  restartAsk = true;
+                  setRestartAsk(true);
                 },
                 'danger',
               )}</div>`
@@ -2596,7 +2400,7 @@ function modalHtml() {
         .map(
           (t) =>
             `<button class="${t === menuTab ? 'on' : ''}" data-ui="${reg(() => {
-              menuTab = t;
+              setMenuTab(t);
             })}" title="${t}" aria-label="${t}">${ico(({ Table: 'users', Log: 'list', Settings: 'sliders', Admin: 'lock' } as Record<string, string>)[t] ?? 'info')}<span>${t}</span></button>`,
         )
         .join('')}</div><div class="mbody">${all}</div></div></div>`;
@@ -2872,7 +2676,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
     (e) =>
       (e.onclick = () => {
         inspectId = null;
-        modal = (e.dataset.modal || null) as typeof modal;
+        setModal((e.dataset.modal || null) as typeof modal);
         render();
       }),
   ); // a window opens with nothing selected
@@ -2934,7 +2738,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
   ui.querySelectorAll<HTMLElement>('[data-tint]').forEach(
     (e) =>
       (e.onclick = () => {
-        modal = 'layers';
+        setModal('layers');
         render();
       }),
   );
@@ -3278,13 +3082,13 @@ function frame() {
 /** A new or loaded game replaces the table: nothing of the old one stays on screen (dice, pop-ups, selection, windows, undo). */
 function startOver(x: E.Game) {
   if (heldNext) commitRoll();
-  rollView = null;
+  setRollView(null);
   hideDice();
   setG(x);
   hist.clear();
   setSelUnit(setSelChit(setSelArr(null)));
   setSelArea(setPreviewArea(setHoverArea(null)));
-  modal = null;
+  setModal(null);
   setScoreOpen(false);
   setReinforcing(false);
   setBattleFx([]);
@@ -3293,7 +3097,7 @@ function startOver(x: E.Game) {
   setInBattle(false);
   setNote('');
   setAreaPick(null);
-  restartAsk = false;
+  setRestartAsk(false);
   fxLayer.clear();
   save();
   refresh();
@@ -3339,7 +3143,7 @@ SBU.initSandboxUi({
     return rollView;
   },
   set rollView(v) {
-    rollView = v as RollView | null;
+    setRollView(v as RollView | null);
   },
   ABBR,
   actorNow,
@@ -3544,7 +3348,7 @@ void startOnline(
     if (was && nb && nb.area === was.area && nb.rolls.length > n0 && st0 && STAGE_NAME[st0]) {
       // the other player rolled: show their dice here too
       const side = st0 === 'attArty' || st0 === 'offFire' || st0 === 'exploit' ? nb.attacker : other(nb.attacker);
-      rollView = {
+      setRollView({
         remote: true,
         morale: st0 === 'exploit',
         title: `${nm(side)} ${STAGE_NAME[st0]}`,
@@ -3557,9 +3361,9 @@ void startOnline(
           hits: r.hits,
           parts: [],
         })),
-      };
+      });
       if (rollView.groups.length) {
-        heldNext = g;
+        setHeldNext(g);
         setG(prevG);
       } // the board keeps the old state until the dice land
       if (rollView.groups.length) {
@@ -3573,7 +3377,7 @@ void startOnline(
             afterDice(rv);
           }
         });
-      } else rollView = null; // the other player's dice clear themselves
+      } else setRollView(null); // the other player's dice clear themselves
     }
     {
       const same = prevG.turn === g.turn && prevG.phase === g.phase && prevG.phasing === g.phasing && !!prevG.battle === !!g.battle;
@@ -3685,7 +3489,7 @@ if (import.meta.env.DEV || DEV_FAKE || SANDBOX || TUTORIAL)
         ).join(''),
       sheets: () => sheets(VOL),
       setModal: (m: typeof modal) => {
-        modal = m;
+        setModal(m);
         render();
       },
       info: () => renderer.info.memory,
