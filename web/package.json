@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit -p .",
     "e2e": "node e2e/smoke.mjs",
     "i18n": "node e2e/i18n.mjs",
+    "load": "node e2e/load.mjs",
     "shots": "node e2e/shots.mjs",
     "shots:compare": "COMPARE=1 node e2e/shots.mjs"
   },

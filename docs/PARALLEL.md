@@ -12,9 +12,32 @@ Since 13 November 2026 the big files are split (see `docs/HANDOVER.md` section 3
 | 2. Rules review | `engine/src/vol/*` (The Bulge, Golan, Sicily), the series rules in `engine/src/` (`game.ts`, `reinforce`, `admin`, `moves`, `battle-setup`, `fire`, `battle-end`, `supply`, `turn`, `combat`, `movement`, `chits`, `split`), `engine/test/*`, the review artifact | `web/src/golan-ui.ts`, `web/src/sicily-ui.ts`, `web/src/sandbox*.ts`, `web/src/rules-text.ts` |
 | UI and interface (the UI/UX sessions, `docs/HANDOVER.md`) | the table: `web/src/main.ts` and its modules (`page`, `game-state`, `scene`, `map3d`, `piece-kit`, `pieces`, `map-*`, `camera`, `flow`, `choices`, `routes`, `rolls`, `cards`, `prompt`, `dock`, `pieces-window`, `unit-card`, `battle-view`, `menus`, `render`), `web/src/css/`, `web/src/i18n*`, `web/e2e/`, lessons (`web/src/tutorial*`) | `web/src/online.ts` and `store-*.ts` (online play), `database.rules.json` (publishing it is the owner's action) |
 | 3D figures (kept, to be polished) | `web/src/troops.ts`, `web/src/figures.ts`, `web/public/pezzi/`, `tools/pezzi3d/`, `docs/ASSETS-3D.md` | `web/src/pieces.ts` (where the figures are placed) |
-| 4. Project management and control | `docs/STATUS.md` (and the streamlining plan in it), `docs/ROADMAP.md` (the plan of action) | nothing else without the owner's go-ahead: it reads the code, docs and git history |
+| 4. Project management and control | `docs/STATUS.md` (and the streamlining plan in it), `docs/ROADMAP.md` (the plan of action), `scripts/`, the `fab-*` helpers in `.claude/agents/` and `.claude/skills/fab-playtest/`, `docs/sessions/README.md` | nothing else without the owner's go-ahead: it reads the code, docs and git history |
 
 Merge `origin/main` at the start of every work block, then run `npm run format` at the repository root on your own unpushed changes before pushing (CI fails an unformatted push). When project 2 changes how a rule works, it says so in the commit message ("Rule fix: …"), so project 1 can re-run its measurements. Before a change that must not alter the look, take `npm run shots` first and `npm run shots:compare` after (`docs/HANDOVER.md` section 6).
+
+## Helpers, gates and session notes (since 13 November 2026)
+
+The way of working, adapted from the Claude Code Game Studios template (its ideas, not its 49 roles): the owner decides, each session is a department with its own files, and a session calls a helper for a job that is independent of its own thinking.
+
+**The helpers** (`.claude/agents/`, the same for every session):
+
+| Helper | Call it | It returns |
+|---|---|---|
+| `fab-verifier` (the mid model) | before pushing a large change, or to run the checks without filling your context | the `npm run verify` table and the failing lines |
+| `fab-rules-referee` (your model, high effort; read-only) | before pushing a "Rule fix:", or on a rule the owner doubts | each clause quoted, with "matches / differs / not covered / cannot tell" and file:line |
+| `fab-playtester` (the mid model) | through the `fab-playtest` skill: one per volume and screen | where play got stuck or looked wrong, each with a picture |
+
+Brief a helper like a colleague who knows nothing: the goal, the files, what changed. Do not tell it what you expect it to find. A finding counts only with its evidence (a picture, a quoted rule, a failing line). At most three browser helpers at once; a helper never approves, pushes or decides.
+
+**The gates** (a change does not go to `main` without them):
+
+1. **Push gate, every session**: `npm run verify` passes (`-- --browser` when `web/` changed, `-- --quick` only when nothing in `engine/` or `bot/` changed).
+2. **Rule gate, the rules session**: a "Rule fix:" has a test, a referee verdict without "differs", and, when The Bulge's seeded games change, an updated `bot/fingerprint.txt` in the same commit (`cd bot && npm run fingerprint -- --update`).
+3. **Look gate, any change that must not alter the look**: `npm run shots` before, `npm run shots:compare` after.
+4. **Owner gate**: a mockup before a big interface change; a ruling before a rule the text leaves open. One question at a time.
+
+**Session notes** (`docs/sessions/<session>.md`, format in `docs/sessions/README.md`): each session keeps its own short note, overwritten, never appended: doing, next, waiting for the owner, last checked. The file is the memory; the project-management session reads the notes to keep `docs/STATUS.md` and its "waiting for you" list.
 
 ---
 
@@ -48,6 +71,6 @@ Kick-off prompt for the session:
 > Read `docs/PARALLEL.md` §4, `CLAUDE.md`, `docs/HANDOVER.md`, `docs/PLAN.md`, `docs/COMPUTER-PLAYER-PLAN.md` and the recent git log on `main`. You are the project-management and project-control session for FAB. Keep one document, `docs/STATUS.md`: for each parallel session (and the UI work in `docs/HANDOVER.md`) what is done, in progress, blocked and next; conflicts or overlapping work between sessions; open problems; decisions waiting for the owner; proposed priorities. Update it after each review and write a short weekly summary in plain language. Ask the owner one question at a time.
 
 Notes for that session:
-- It follows the other sessions through `main`, `docs/HANDOVER.md`, the commit messages and this file; it does not talk to them directly.
+- It follows the other sessions through `main`, `docs/HANDOVER.md`, the commit messages, the session notes and this file. Since 13 November 2026, with the owner's yes, it may also send a session a short note (a hand-over after a change, an owner's answer): information for that session, never an order.
 - It owns only `docs/STATUS.md`; anything else it would change goes to the owner as a proposal.
 - A regular report (for example every Monday) can be set up as a scheduled task on the owner's request.

@@ -6,6 +6,8 @@ Kept by the project-management session (`docs/PARALLEL.md` §4). It reads `main`
 
 **The plan of action** (aim, open items, order, agents, coordination): `docs/ROADMAP.md`, written 13 November, waiting for the owner's go-ahead.
 
+**Put in place for the plan, 13 November evening**: `npm run verify` (eleven checks, one table; all passing), the rules fingerprint in `bot/fingerprint.txt` (also in CI), the load check, three helpers (`fab-verifier`, `fab-rules-referee`, `fab-playtester`) and the `fab-playtest` procedure, the session notes in `docs/sessions/`, the four gates in `docs/PARALLEL.md`. The helpers have not been used yet: the first playtest is their trial.
+
 **Where the sessions stood on the evening of 13 November** (from the session list): Rules check, waiting for the owner's answer on the Admin Phase order; 3D assets, waiting for the owner to upload the three model archives again; Computer opponents, idle since 12 November, waiting for the playtest; Interface, idle. None has merged the new file layout yet.
 
 ## Weekly summary (9–13 November)

@@ -19,6 +19,8 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      - if: matrix.pkg == 'bot'
+        run: npm run fingerprint
   format:
     runs-on: ubuntu-latest
     steps:

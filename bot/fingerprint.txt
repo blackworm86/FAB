@@ -1,0 +1,12 @@
+1 campaign 171123b18b1e796f Sudden death victory: Allied (net 8) · 4 turns · 388 actions
+2 intro 303243997209c725 Allied Decisive Victory (uncontested Bastogne) · 3 turns · 149 actions
+3 cold a02cfa6455afc36f German Victory (14 Zone 6 areas German) · 9 turns · 560 actions
+4 tournament f94056000326e8c2 Sudden death victory: Allied (net 6) · 4 turns · 473 actions
+5 campaign ef14b090d0e13a5a Sudden death victory: Allied (net 6) · 4 turns · 396 actions
+6 tournament 4464ad8df7a23964 Sudden death victory: Allied (net 5) · 4 turns · 496 actions
+7 campaign f57f26a706b36bd5 Sudden death victory: Allied (net 6) · 4 turns · 509 actions
+8 intro 2a0b9d817766264c Allied Decisive Victory (uncontested Bastogne) · 3 turns · 196 actions
+9 cold 9a7d6ab4e5c03077 German Victory (13 Zone 6 areas German) · 9 turns · 569 actions
+10 tournament 70354f3ad8161da7 Allied Operational Victory · 5 turns · 549 actions
+11 campaign 81de54a6da648c90 Sudden death victory: Allied (net 6) · 4 turns · 383 actions
+12 tournament f239eaa07a011d7d Sudden death victory: Allied (net 6) · 4 turns · 406 actions

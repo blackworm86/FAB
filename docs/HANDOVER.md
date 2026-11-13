@@ -27,6 +27,7 @@ Three big files were split by moving code, not rewriting it; checked by tests, a
   - **The load-order rule** (also written at the top of `main.ts`): the modules load in the order `main.ts` lists them, as the one file ran top to bottom. A module may use while loading only what a module above it declares; it reaches the later ones through `./main`, inside functions. A variable another module must change has a setter (`setSelUnit(...)`). Imports go through `./main`.
 - **`engine/src/game.ts`** keeps the types, small helpers, a new game, control and victory points, and registers The Bulge's rules. The rest: `vol/bulge-setup`, `vol/bulge` (The Bulge's own rules, like `vol/golan` and `vol/sicily`), then by phase `reinforce`, `admin`, `moves`, `battle-setup`, `fire`, `battle-end`, `supply`, `turn`. Everything is still imported from `./game` or `index.ts`; same load-order idea (rule at the top of `game.ts`).
 - **`web/src/style.css`** only lists the 28 files of `web/src/css/` with `@import`. **The order is the cascade**: later rules override earlier ones; new rules go at the end of the file for their screen. A screen can appear in several files (from different rounds).
+- **Helpers, gates and session notes**: `docs/PARALLEL.md`; the helpers are in `.claude/agents/fab-*.md`. Keep your note in `docs/sessions/`.
 - **To move more code**: `cd web && node scripts/move-code.mjs` (its first lines say how): it moves whole top-level blocks with the TypeScript compiler and fixes the imports, exports and setters.
 - **Formatting**: Prettier, width 140, `npm run format` at the repository root; CI fails an unformatted push. Merge `origin/main`, then format your own unpushed changes before pushing.
 
@@ -49,12 +50,15 @@ Three big files were split by moving code, not rewriting it; checked by tests, a
 ```bash
 npm ci                                                      # at the repository root: the formatter
 npm run format:check                                        # and `npm run format` to fix
+npm run verify                                              # every check below in one table (about four minutes); -- --browser adds the load check
 cd engine && npm ci && npm run typecheck && npm test        # a few minutes with the fuzzer
 cd web && npm ci && npm run typecheck && npm test && npm run build
 cd bot && npm ci && npm test                                # the computer opponent (its tools: bot/README.md)
 cd tools/rules-test && npm ci && npm test                   # needs Java (Firebase emulator)
 cd web && npm run dev                                       # the table, on the Vite address
+cd bot && npm run fingerprint                               # twelve seeded games of The Bulge must end as in bot/fingerprint.txt
 cd web && npm run e2e                                       # browser smoke test, dev server up
+cd web && npm run load                                      # each game and a lesson open without an error (a minute), dev server up
 cd web && npm run shots                                     # pictures of every phase, battle and window, per game and screen;
 cd web && npm run shots:compare                             # after a change that must not alter the look (about 8 minutes a game)
 ```

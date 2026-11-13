@@ -99,6 +99,25 @@ A faithful online version of GMT's **Fast Action Battles**: the full rules enfor
 
 **The costs, plainly.** Each helper spends tokens of its own; six play-throughs at once is a burst. A helper's report can be wrong in the same confident tone as when it is right, so a finding counts only with its picture or its quoted rule. That is why the plan starts with one trial and a measure.
 
+**What was taken from the Claude Code Game Studios template** (the owner's pointer, 13 November), and what was left:
+
+| Its idea | Here |
+|---|---|
+| The user decides; question, options, decision, draft, approval | already the owner's rules: one question at a time, a mockup first |
+| Roles own directories; no change outside them without being asked | the ownership table in `docs/PARALLEL.md`, now by module |
+| "The file is the memory": a short checkpoint a cold reader can resume from | `docs/sessions/<session>.md`, overwritten, at most 25 lines |
+| Review gates run by a fresh helper that has not seen the author's reasoning | the four gates in `docs/PARALLEL.md`; the rules referee |
+| A change a player can see is run and looked at, and the picture is kept | the playtester: no finding without its picture; `npm run shots` |
+| The same seeded run is played again after every change | `bot/fingerprint.txt`: twelve seeded games of The Bulge, checked by `npm run verify` and by CI |
+| Scripts report observations, the judge decides | `verify` prints what ran and what failed; the session decides |
+| A model per role, pinned in the helper's file | the verifier and the playtester on the mid model, the referee on the session's |
+| Independent helpers are sent together; a blocked one is reported, not skipped | the `fab-playtest` skill |
+| Several sessions only for work in different files | the parallel sessions, as today |
+
+Left out on purpose: its 49 roles and 78 commands (directors, sprints, epics, stories, design documents), which suit a studio starting a game, not a finished engine with one owner; its own hooks (this project has the `ponytail` and `impeccable` ones). Nothing of its text was copied.
+
+**Put in place on 13 November**: `npm run verify`, `bot/fingerprint.txt`, `web/e2e/load.mjs`; the helpers `fab-verifier`, `fab-rules-referee`, `fab-playtester`; the skill `fab-playtest`; the session notes; the gates in `docs/PARALLEL.md`. **Not yet run**: the first playtest (step 4 below), which is the trial that says whether the helpers earn their cost.
+
 **How to put them in place**
 
 1. Step A2 first: helpers are only as good as the commands they run.
