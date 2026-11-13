@@ -75,10 +75,10 @@ function sbTarget(): SB.Target {
 }
 function sbTurn() {
   const turns = Array.from({ length: M.g.lastTurn }, (_, i) => [String(i + 1), `Turn ${i + 1}`] as [string, string]);
-  const hot = () => { st.sbHot = !st.sbHot; try { localStorage.setItem('fab-hotseat', st.sbHot ? '1' : '0'); } catch { /* private mode */ } if (st.sbHot) { st.sbAuto = true; st.hotCover = hotWant() ?? M.g.phasing; } render(); };
+  const hot = () => { st.sbHot = !st.sbHot; try { localStorage.setItem('fab-hotseat', st.sbHot ? '1' : '0'); } catch { /* private mode */ } if (st.sbHot) { st.hotCover = hotWant() ?? M.g.phasing; } render(); };
   const queue = () => { const v = (($('#sb-dice') as HTMLInputElement)?.value ?? '').split(/[^0-9]+/).filter(Boolean).map(Number).map((x) => (x === 0 ? 10 : x)).filter((x) => x >= 1 && x <= 10); M.g.force = [...(M.g.force ?? []), ...v]; };
   return `<h4>Jump to</h4><div class="sbjump">${sbSel(turns, String(sbJump.turn), (v) => { sbJump.turn = +v; })}${sbSel(E.VOLUME.sides.map((x): [string, string] => [x, nm(x)]), sbJump.side, (v) => { sbJump.side = v as E.Side; })}${sbSel(SB.PHASES, sbJump.phase, (v) => { sbJump.phase = v as E.Phase; })}${sbtn('Go', () => SB.jump(M.g, sbJump.turn, sbJump.side, sbJump.phase), 'primary', 'Start of that phase: battles, moves and per-phase marks cleared')}</div>
-    <h4>Play</h4>${srow('Hot seat', 'two players on this screen, a cover between turns', swtch(st.sbHot, hot, 'Hot seat'))}${srow('Skip empty phases', 'like a real game', swtch(st.sbAuto, () => { st.sbAuto = !st.sbAuto; render(); }, 'Skip empty phases'))}
+    <h4>Play</h4>${srow('Hot seat', 'two players on this screen, a cover between turns', swtch(st.sbHot, hot, 'Hot seat'))}
     ${srow('Next dice', M.g.force?.length ? `queued: ${M.g.force.join(' ')}` : 'none queued: rolls come from the seed', `<input id="sb-dice" class="sbdice" placeholder="1 1 9" aria-label="Next die results">${sbtn('Queue', queue)}${M.g.force?.length ? sbtn(ico('close'), () => { M.g.force = []; }, 'ico', 'Clear the queued dice') : ''}`)}
     ${srow('Map', 'every block off the map', sbtn(`${ico('trash')}<span>Clear map</span>`, () => SB.clearMap(M.g)))}${M.optional ? `<h4>Optional rules for the next Reset</h4>${M.optChooser(st.rules)}` : ''}`;
 }

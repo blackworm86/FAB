@@ -204,14 +204,14 @@
   "Breakthrough combat.": "Combattimento di sfondamento.",
   "Newly contested areas are free; areas already contested before movement need a Special Action (brass tags).": "Le aree appena contese sono libere; quelle già contese prima del movimento richiedono un'Azione Speciale (etichette ottone).",
   "Breakthrough combat:": "Combattimento di sfondamento:",
-  "orange = needs SA": "arancione = serve AS",
+  "orange = needs SA": "ottone = serve un'AS",
   "Tap a red area.": "Tocca un'area rossa.",
   "Click a red area.": "Clicca un'area rossa.",
   "Tap a contested area": "Tocca un'area contesa",
   "Click a contested area": "Clicca un'area contesa",
   "to fight, or end the step.": "per combattere, o termina il passo.",
   "No battles left.": "Nessuna battaglia rimasta.",
-  "may react: select a reserve block.": "può reagire: scegli un blocco di riserva.",
+  "may react: select a reserve block.": "possono reagire: scegli un blocco di riserva.",
   "Breakthrough movement.": "Movimento di sfondamento.",
   "Reserve and exploiting blocks may move; armor that has not moved can move one area for a Special Action (brass tags).": "I blocchi di riserva e in sfruttamento possono muovere; i corazzati che non hanno mosso possono muovere di un'area con un'Azione Speciale (etichette ottone).",
   "Breakthrough:": "Sfondamento:",
@@ -3385,9 +3385,9 @@
   "German, Allied, both, watching": "Tedeschi, Alleati, entrambi, spettatore",
   "Syrian, Israeli, both, watching": "Siriani, Israeliani, entrambi, spettatore",
   "Allied, Axis, both, watching": "Alleati, Asse, entrambi, spettatore",
-  "TDN on the Layer bar": "TDN sulla barra Livello",
-  "Zones on the Layer bar": "Zone sulla barra Livello",
-  "Supply on the Layer bar": "Rifornimenti sulla barra Livello",
+  "TDN in the Map list": "TDN nell'elenco Mappa",
+  "Zones in the Map list": "Zone nell'elenco Mappa",
+  "Supply in the Map list": "Rifornimenti nell'elenco Mappa",
   "ELIMINATED": "ELIMINATA",
   "RETREATS": "SI RITIRA",
   "REINFORCES": "RINFORZA",
@@ -3491,9 +3491,42 @@
   "Recovering from disorder": "In recupero dal disordine",
   "Exploitation (may move in Breakthrough)": "Sfruttamento (può muovere nello Sfondamento)",
   "Greif team interdiction": "Interdizione della squadra Greif",
-  "Boundary crossing (left its army zone)": "Attraversamento del confine (uscita dalla zona d'armata)"
+  "Boundary crossing (left its army zone)": "Attraversamento del confine (uscita dalla zona d'armata)",
+  "Show all": "Mostra tutte",
+  "<b>Rolling the dice…</b>": "<b>Lancio dei dadi…</b>",
+  "Rolling the dice…": "Lancio dei dadi…",
+  "brass = needs SA": "ottone = serve un'AS",
+  "Map:": "Mappa:"
  },
  "patterns": [
+  [
+   "Turn (\\d+), (.+) player turn: (.+)",
+   "Turno $1, turno del giocatore $2: $3"
+  ],
+  [
+   "Turn (\\d+), (.+) player turn: (.+) \\(step (\\d) of 8\\)",
+   "Turno $1, turno del giocatore $2: $3 (passo $4 di 8)"
+  ],
+  [
+   "Turn (\\d+) · (.+) player turn",
+   "Turno $1 · turno del giocatore $2"
+  ],
+  [
+   "End anyway\\? (.+) can move",
+   "Terminare comunque? $1 può muovere"
+  ],
+  [
+   " ?(.+?)\\.? Close it\\.",
+   " $1. Chiudila."
+  ],
+  [
+   " ?(.+?)\\.? Close it: (\\d+) battles left\\.",
+   " $1. Chiudila: restano $2 battaglie."
+  ],
+  [
+   " ?(.+?)\\.? Close it: 1 battle left\\.",
+   " $1. Chiudila: resta 1 battaglia."
+  ],
   [
    "(.*), played (\\d+) cards?\\.",
    "$1, ha giocato $2 carte."
@@ -4021,10 +4054,6 @@
   [
    "(.+) tries to cross into (.+)\\. Attempt to blow the bridge\\? It works on a roll of 1–5\\.",
    "$1 tenta di attraversare verso $2. Tentare di distruggere il ponte? Riesce con un tiro di 1–5."
-  ],
-  [
-   "End anyway\\? (.+) can move",
-   "Terminare comunque? $1 può muovere"
   ],
   [
    "(\\d+) fps · slowest (\\d+) ms(.*)",
