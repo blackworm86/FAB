@@ -3362,14 +3362,14 @@ void startOnline(
           parts: [],
         })),
       });
-      if (rollView.groups.length) {
+      if (rollView!.groups.length) {
         setHeldNext(g);
         setG(prevG);
       } // the board keeps the old state until the dice land
-      if (rollView.groups.length) {
+      if (rollView!.groups.length) {
         const cv = $('#dice') as HTMLCanvasElement;
         cv.style.display = 'block';
-        throwDice(cv, rollView.groups, (p) => {
+        throwDice(cv, rollView!.groups, (p) => {
           if (rollView) {
             const rv = rollView;
             rv.pos = p;
