@@ -3385,9 +3385,9 @@
   "German, Allied, both, watching": "Tedeschi, Alleati, entrambi, spettatore",
   "Syrian, Israeli, both, watching": "Siriani, Israeliani, entrambi, spettatore",
   "Allied, Axis, both, watching": "Alleati, Asse, entrambi, spettatore",
-  "TDN on the Layer bar": "TDN sulla barra Livello",
-  "Zones on the Layer bar": "Zone sulla barra Livello",
-  "Supply on the Layer bar": "Rifornimenti sulla barra Livello",
+  "TDN in the Map list": "TDN nell'elenco Mappa",
+  "Zones in the Map list": "Zone nell'elenco Mappa",
+  "Supply in the Map list": "Rifornimenti nell'elenco Mappa",
   "ELIMINATED": "ELIMINATA",
   "RETREATS": "SI RITIRA",
   "REINFORCES": "RINFORZA",
@@ -3495,9 +3495,22 @@
   "Show all": "Mostra tutte",
   "<b>Rolling the dice…</b>": "<b>Lancio dei dadi…</b>",
   "Rolling the dice…": "Lancio dei dadi…",
-  "brass = needs SA": "ottone = serve un'AS"
+  "brass = needs SA": "ottone = serve un'AS",
+  "Map:": "Mappa:"
  },
  "patterns": [
+  [
+   "Turn (\\d+), (.+) player turn: (.+)",
+   "Turno $1, turno del giocatore $2: $3"
+  ],
+  [
+   "Turn (\\d+), (.+) player turn: (.+) \\(step (\\d) of 8\\)",
+   "Turno $1, turno del giocatore $2: $3 (passo $4 di 8)"
+  ],
+  [
+   "Turn (\\d+) · (.+) player turn",
+   "Turno $1 · turno del giocatore $2"
+  ],
   [
    "End anyway\\? (.+) can move",
    "Terminare comunque? $1 può muovere"

@@ -701,7 +701,7 @@ function placeCam() { const hx = MW / (2 * S), hz = MH / (2 * S); target.x = Mat
   cam.position.set(target.x + dist * Math.sin(yaw) * Math.cos(pitch), dist * Math.sin(pitch), target.z + dist * Math.cos(yaw) * Math.cos(pitch)); cam.lookAt(target); }
 const ptrs = new Map<number, [number, number]>(); let moved = 0, pinch = 0;
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-canvas.addEventListener('pointerdown', (e) => { goal = null; camTouched = true; canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; pinch = 0; });
+canvas.addEventListener('pointerdown', (e) => { goal = null; camTouched = true; if (phaseOpen || mapMenu) { phaseOpen = false; mapMenu = false; render(); } canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; pinch = 0; });
 canvas.addEventListener('pointermove', (e) => {
   const p = ptrs.get(e.pointerId); if (!p) return; ptrs.set(e.pointerId, [e.clientX, e.clientY]);
   if (ptrs.size === 2) { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch) dist = clampDist(dist * pinch / d); pinch = d; moved = 99; return; }
@@ -821,7 +821,7 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Tab') { const sheet = document.querySelector<HTMLElement>('#ui .modal > .sheet');      // Tab cycles inside an open menu instead of wandering onto the map behind it
     if (sheet) { const f = Array.from(sheet.querySelectorAll<HTMLElement>('button:not(:disabled), select, input, a[href], [tabindex="0"]')).filter((x) => x.offsetParent), a = document.activeElement;
       if (f.length && (e.shiftKey ? a === f[0] || a === sheet : a === f[f.length - 1] || !sheet.contains(a))) { e.preventDefault(); (e.shiftKey ? f[f.length - 1] : f[0]).focus(); } } }
-  if (e.key === 'Escape') { const b = g.battle; if (modal || scoreOpen) { modal = null; scoreOpen = false; render(); } else if (SANDBOX && SBU.st.sbOpen && !(e.target as HTMLElement | null)?.closest?.('input,textarea,select')) { SBU.closeSb(); render(); } else if (b?.stage === 'setup' && !b.locked && mine(b.attacker) && allowed() && !b.assets[b.attacker].length && !b.ready?.length) act(() => E.cancelBattle(g));      /* Esc backs out of a battle just opened (nothing placed yet), like its Cancel button */
+  if (e.key === 'Escape') { const b = g.battle; if (phaseOpen || mapMenu) { phaseOpen = false; mapMenu = false; render(); } else if (modal || scoreOpen) { modal = null; scoreOpen = false; render(); } else if (SANDBOX && SBU.st.sbOpen && !(e.target as HTMLElement | null)?.closest?.('input,textarea,select')) { SBU.closeSb(); render(); } else if (b?.stage === 'setup' && !b.locked && mine(b.attacker) && allowed() && !b.assets[b.attacker].length && !b.ready?.length) act(() => E.cancelBattle(g));      /* Esc backs out of a battle just opened (nothing placed yet), like its Cancel button */
     else if (selUnit || selArr || selChit || selArea != null) { selUnit = selArr = selChit = null; selArea = null; previewArea = null; refresh(); } return; }
   if (t === canvas && !modal) {
     const dir: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
@@ -1433,12 +1433,19 @@ function drag(ev: PointerEvent, el: HTMLElement) {
 }
 
 /* ---------- views ---------- */
+let phaseOpen = false;
+/** The turn, side and step as one pill with a dot per step (owner, 13 Nov); a tap lists the whole sequence of the player turn. */
+function phasePill(who: E.Side, pAt: number, label: string) {
+  const setup = g.phase === 'deploy', dots = setup ? '' : `<span class="pdots" aria-hidden="true">${PHASES.map((_, k) => `<i class="${k === pAt ? 'on' : k < pAt ? 'done' : ''}"></i>`).join('')}</span>`;
+  const list = phaseOpen ? `<div class="phlist" role="list"><small>Turn ${g.turn} · ${nm(who)} player turn</small>${setup ? '<div class="on" role="listitem"><i>·</i>Set-up</div>' : PHASES.map((s2, k) => `<div class="${k === pAt ? 'on' : k < pAt ? 'done' : ''}" role="listitem"><i>${k < pAt ? '✓' : k + 1}</i>${s2}</div>`).join('')}</div>` : '';
+  return `<div class="phwrap"><button class="phpill" aria-expanded="${phaseOpen}" title="Turn ${g.turn}, ${nm(who)} player turn: ${label}${setup ? '' : ` (step ${pAt + 1} of 8)`}" data-ui="${reg(() => { phaseOpen = !phaseOpen; })}"><span class="tt">T${g.turn} · <b class="${who}">${nm(who).toUpperCase()}</b> · <b class="stp">${label.toUpperCase()}</b></span>${dots}<span class="car" aria-hidden="true">▾</span></button>${list}</div>`;
+}
 /** The top bar; `vp` is the score strip, which sits inside it (one bar instead of two). */
 function topBar(vp = '') {
   const tr = (g.track ?? E.VOLUME.track)[g.turn - 1], i = first(g.phasing) ? 0 : 1, pAt = PHASE_OF[g.phase], phaseLabel = g.phase === 'deploy' ? 'Set-up' : PHASES[pAt];
   const who = g.phase === 'deploy' && !placing(g.phasing) && placing(other(g.phasing)) ? other(g.phasing) : g.phasing;      // set-up: the side placing its pieces now (Sicily: the Allied landing plan after the Axis garrisons)
-  return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game" aria-label="Menu, log and new game">${ico('menu')}</button><div class="c-crumbs">${g.phase === 'deploy' ? '<span class="on">Set-up</span>' : ''}${PHASES.map((s, k) => `<span class="${g.phase === 'deploy' ? '' : k === pAt ? 'on' : k < pAt ? 'done' : ''}" title="${k + 1}. ${s}">${s}</span>`).join('')}</div>
-    ${vp}<div class="c-stat"><span class="tp" title="Turn ${g.turn}, ${nm(who)} player turn">T${g.turn} · <b class="${who}">${nm(who).toUpperCase()}</b><i class="ph"> · ${phaseLabel.toUpperCase()}${g.phase === 'deploy' ? '' : ` <small>${pAt + 1}/8</small>`}</i></span>${online.active && online.mode === 'remote' ? `<span class="syncdot ${/NOT SAVED/.test(online.sync) ? 'bad' : /saving|connecting/.test(online.sync) ? 'wait' : 'ok'}" title="${esc(online.sync)}" aria-label="${esc(online.sync)}"></span>` : ''}${online.active && !(!online.both() && online.mySide() === g.phasing) ? `<span>YOU<b class="${online.mySide() ?? ''}">${online.both() ? 'BOTH' : (online.mySide() ?? 'WATCHING').toUpperCase()}</b></span>` : ''}${online.devSwitch() ? `<button class="ico dev" data-seat title="Developer: switch seat (${nm(P1)}, ${nm(P2)}, both, watching)" aria-label="Switch seat">${ico('swap')}<span class="bl">Seat</span></button>` : ''}${(g.phase === 'admin' || g.phase === 'reinforcement') && (tr.ge[i] || tr.al[i]) ? `<span title="Chits each side draws this turn (${nm(P1)} / ${nm(P2)})">CHITS<b>${tr.ge[i]}/${tr.al[i]}</b></span>` : ''}${chatBtn()}<button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="View: 2D or 3D, blocks or figures, reset the camera" aria-label="View">${ico('eye')}<span class="bl">View</span></button><button class="ico" data-modal="boxes" title="Pieces: boxes, arrivals" aria-label="Pieces">${ico('boxes')}<span class="bl">Pieces</span></button></div></div>`;
+  return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game" aria-label="Menu, log and new game">${ico('menu')}</button>${phasePill(who, pAt, phaseLabel)}
+    ${vp}<div class="c-stat">${online.active && online.mode === 'remote' ? `<span class="syncdot ${/NOT SAVED/.test(online.sync) ? 'bad' : /saving|connecting/.test(online.sync) ? 'wait' : 'ok'}" title="${esc(online.sync)}" aria-label="${esc(online.sync)}"></span>` : ''}${online.active && !(!online.both() && online.mySide() === g.phasing) ? `<span>YOU<b class="${online.mySide() ?? ''}">${online.both() ? 'BOTH' : (online.mySide() ?? 'WATCHING').toUpperCase()}</b></span>` : ''}${online.devSwitch() ? `<button class="ico dev" data-seat title="Developer: switch seat (${nm(P1)}, ${nm(P2)}, both, watching)" aria-label="Switch seat">${ico('swap')}<span class="bl">Seat</span></button>` : ''}${(g.phase === 'admin' || g.phase === 'reinforcement') && (tr.ge[i] || tr.al[i]) ? `<span title="Chits each side draws this turn (${nm(P1)} / ${nm(P2)})">CHITS<b>${tr.ge[i]}/${tr.al[i]}</b></span>` : ''}${chatBtn()}<button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="View: 2D or 3D, blocks or figures, reset the camera" aria-label="View">${ico('eye')}<span class="bl">View</span></button><button class="ico" data-modal="boxes" title="Pieces: boxes, arrivals" aria-label="Pieces">${ico('boxes')}<span class="bl">Pieces</span></button></div></div>`;
 }
 const COARSE = matchMedia('(pointer: coarse)').matches;
 /** The verb matches the device: tap on touch screens, click with a mouse. */
@@ -1743,9 +1750,10 @@ function pieceKey(): [string, string][] {
 /** A quarter turn of the board, eased (phones have no right-drag to turn it). */
 function rotateQuarter() { const y0 = yaw; goal = null; anims.push({ t0: performance.now(), dur: 450, fn: (k) => { yaw = y0 + (Math.PI / 2) * (1 - (1 - k) * (1 - k)); lastInput = performance.now(); } }); }
 /** One button for the area tags: on → see-through → off, kept on this device. */
-const LABEL_NEXT = { on: 'tr', tr: 'off', off: 'on' } as const, LABEL_NAME = { on: 'On', tr: 'See-through', off: 'Off' };
-function labelsBtn() {
-  return `<div class="laysw labsw"><button aria-pressed="${labelMode !== 'off'}" title="Area labels: ${LABEL_NAME[labelMode]} (tap for ${LABEL_NAME[LABEL_NEXT[labelMode]]})" aria-label="Area labels: ${LABEL_NAME[labelMode]}" data-ui="${reg(() => { labelMode = LABEL_NEXT[labelMode]; try { localStorage.setItem('fab-labels', labelMode); } catch { /* private mode */ } syncAreaTags(); })}"><b>Labels</b>${ico('tag')}<span class="l">${LABEL_NAME[labelMode]}</span><span class="s">${({ on: 'On', tr: 'Dim', off: 'Off' })[labelMode]}</span></button></div>`;
+const LABEL_NAME = { on: 'On', tr: 'See-through', off: 'Off' };
+function labelsBtn() {      // inside the Map list: the three settings side by side
+  const set = (m: typeof labelMode) => { labelMode = m; try { localStorage.setItem('fab-labels', m); } catch { /* private mode */ } syncAreaTags(); };
+  return `<div class="laysw labsw" role="group" aria-label="Area labels"><b>Labels</b>${(['on', 'tr', 'off'] as const).map((m) => `<button aria-pressed="${labelMode === m}" title="Area labels: ${LABEL_NAME[m]}" data-ui="${reg(() => set(m))}">${ico('tag')}<span class="l">${LABEL_NAME[m]}</span><span class="s">${({ on: 'On', tr: 'Dim', off: 'Off' })[m]}</span></button>`).join('')}</div>`;
 }
 let mapMenu = false;      // phones: the layers, legend and rotate fold into one Map button
 function mapDock() {
@@ -1758,7 +1766,7 @@ function mapDock() {
   const sel = selUnit || selArr || selChit || selArea != null;
   const tools = `<div class="maptools"><button aria-label="Rotate the map a quarter turn" title="Rotate the map" data-ui="${reg(rotateQuarter)}">${ico('rotate')}</button>${sel ? `<button aria-label="Deselect" title="Deselect" data-ui="${reg(() => { selUnit = selArr = selChit = null; selArea = null; previewArea = null; hoverArea = null; refresh(); })}">${ico('deselect')}<span>Deselect</span></button>` : ''}</div>`;
   const cur = opts.find(([v]) => v === tint)?.[1] ?? 'None';
-  return `<div class="mapdock ${mapMenu ? 'menuopen' : ''}"><div class="dockrow"><button class="mapmenu-btn" aria-expanded="${mapMenu}" aria-label="Map layers, legend and rotate: ${cur}" data-ui="${reg(() => { mapMenu = !mapMenu; })}">${ico('layers')}<span>Map: ${cur}</span><span aria-hidden="true">▾</span></button>${mapLegend()}<div class="laysw" role="group" aria-label="Map colour layer"><b>Layer</b>${sw}</div>${labelsBtn()}</div>${legend()}${tools}</div>`;
+  return `<div class="mapdock ${mapMenu ? 'menuopen' : ''}"><div class="dockrow"><button class="mapmenu-btn" aria-expanded="${mapMenu}" aria-label="Map layers, legend and rotate: ${cur}" data-ui="${reg(() => { mapMenu = !mapMenu; })}">${ico('layers')}<span>Map: <b>${cur}</b><i class="msep">·</i>Labels <b>${LABEL_NAME[labelMode]}</b></span><span aria-hidden="true">▾</span></button>${mapLegend()}<div class="laysw" role="group" aria-label="Map colour layer"><b>Layer</b>${sw}</div>${labelsBtn()}</div>${legend()}${tools}</div>`;
 }
 /** The volume's prompts (set-up, drops, evacuation…). On a phone they fold down to a handle so the map can have the screen; they open again on a tap. */
 let volFolded = innerWidth <= 700, volFoldKey = '';
