@@ -32,7 +32,7 @@ import { PIP } from './block-kit';
 import { esc, nm } from './util';
 import { sheets } from './sheets';
 import { pips, ABBR, chitLabel, STAGE_NAME, faces, modIcon, modWord } from './table-text';
-import { initChat, chatBtn, chatHtml, bindChat } from './chat';
+import { initChat, chatHtml, bindChat } from './chat';
 import { acts, actv, resetActs, reg, regv, ubtn, btn, chip, srow, swtch } from './ui-kit';
 import { setZoom } from './troops';
 import { optChooser, optOn } from './opt-rules';
@@ -51,7 +51,6 @@ import { $, areaName, first, LAB, MAP, MH, MW, P1, P2, PARAMS, S, toWorld, TUT, 
 export * from './page';
 import {
   addressOpts,
-  areaPick,
   g,
   hoverArea,
   newOpts,
@@ -136,8 +135,6 @@ import {
   arrive,
   battleFx,
   chitBar,
-  dropsLeft,
-  endLabel,
   fightable,
   fxLayer,
   hist,
@@ -147,9 +144,6 @@ import {
   noteFx,
   notYou,
   other,
-  PHASE_OF,
-  PHASES,
-  placing,
   POOL,
   rollFx,
   say,
@@ -164,7 +158,6 @@ import {
   setTgtMode,
   setToast,
   setToastInfo,
-  tgt,
   tgtMode,
   toast,
   toastInfo,
@@ -172,7 +165,6 @@ import {
 } from './flow';
 export * from './flow';
 import {
-  airPick,
   airPickHtml,
   altPickHtml,
   arrOpts,
@@ -273,363 +265,8 @@ import {
   usableNow,
 } from './cards';
 export * from './cards';
-
-/* ---------- views ---------- */
-export let phaseOpen = false;
-export const setPhaseOpen = <T extends typeof phaseOpen>(v: T): T => ((phaseOpen = v), v);
-/** The turn, side and step as one pill with a dot per step (owner, 13 Nov); a tap lists the whole sequence of the player turn. */
-function phasePill(who: E.Side, pAt: number, label: string) {
-  const setup = g.phase === 'deploy',
-    dots = setup
-      ? ''
-      : `<span class="pdots" aria-hidden="true">${PHASES.map((_, k) => `<i class="${k === pAt ? 'on' : k < pAt ? 'done' : ''}"></i>`).join('')}</span>`;
-  const list = phaseOpen
-    ? `<div class="phlist" role="list"><small>Turn ${g.turn} · ${nm(who)} player turn</small>${setup ? '<div class="on" role="listitem"><i>·</i>Set-up</div>' : PHASES.map((s2, k) => `<div class="${k === pAt ? 'on' : k < pAt ? 'done' : ''}" role="listitem"><i>${k < pAt ? '✓' : k + 1}</i>${s2}</div>`).join('')}</div>`
-    : '';
-  return `<div class="phwrap"><button class="phpill" aria-expanded="${phaseOpen}" title="Turn ${g.turn}, ${nm(who)} player turn: ${label}${setup ? '' : ` (step ${pAt + 1} of 8)`}" data-ui="${reg(
-    () => {
-      phaseOpen = !phaseOpen;
-    },
-  )}"><span class="tt">T${g.turn} · <b class="${who}">${nm(who).toUpperCase()}</b> · <b class="stp">${label.toUpperCase()}</b></span>${dots}<span class="car" aria-hidden="true">▾</span></button>${list}</div>`;
-}
-/** The top bar; `vp` is the score strip, which sits inside it (one bar instead of two). */
-function topBar(vp = '') {
-  const tr = (g.track ?? E.VOLUME.track)[g.turn - 1],
-    i = first(g.phasing) ? 0 : 1,
-    pAt = PHASE_OF[g.phase],
-    phaseLabel = g.phase === 'deploy' ? 'Set-up' : PHASES[pAt];
-  const who = g.phase === 'deploy' && !placing(g.phasing) && placing(other(g.phasing)) ? other(g.phasing) : g.phasing; // set-up: the side placing its pieces now (Sicily: the Allied landing plan after the Axis garrisons)
-  return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game" aria-label="Menu, log and new game">${ico('menu')}</button>${phasePill(who, pAt, phaseLabel)}
-    ${vp}<div class="c-stat">${online.active && online.mode === 'remote' ? `<span class="syncdot ${/NOT SAVED/.test(online.sync) ? 'bad' : /saving|connecting/.test(online.sync) ? 'wait' : 'ok'}" title="${esc(online.sync)}" aria-label="${esc(online.sync)}"></span>` : ''}${online.active && !(!online.both() && online.mySide() === g.phasing) ? `<span>YOU<b class="${online.mySide() ?? ''}">${online.both() ? 'BOTH' : (online.mySide() ?? 'WATCHING').toUpperCase()}</b></span>` : ''}${online.devSwitch() ? `<button class="ico dev" data-seat title="Developer: switch seat (${nm(P1)}, ${nm(P2)}, both, watching)" aria-label="Switch seat">${ico('swap')}<span class="bl">Seat</span></button>` : ''}${(g.phase === 'admin' || g.phase === 'reinforcement') && (tr.ge[i] || tr.al[i]) ? `<span title="Chits each side draws this turn (${nm(P1)} / ${nm(P2)})">CHITS<b>${tr.ge[i]}/${tr.al[i]}</b></span>` : ''}${chatBtn()}<button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="View: 2D or 3D, blocks or figures, reset the camera" aria-label="View">${ico('eye')}<span class="bl">View</span></button><button class="ico" data-modal="boxes" title="Pieces: boxes, arrivals" aria-label="Pieces">${ico('boxes')}<span class="bl">Pieces</span></button></div></div>`;
-}
-const COARSE = matchMedia('(pointer: coarse)').matches;
-/** The verb matches the device: tap on touch screens, click with a mouse. */
-const verb = (h: string) => (COARSE ? h : h.replace(/\bTap\b/g, 'Click').replace(/\btap\b/g, 'click'));
-function prompt() {
-  if (heldBad)
-    return `<span class="turnchip tc-go">Rules check</span> <b>Decide above:</b> restore the last legal position for both players, or accept the other player's change.`;
-  const chip =
-    online.active && !online.both() && online.mySide() && !g.over
-      ? `<span class="turnchip ${allowed() ? 'tc-go' : 'tc-wait'}" title="You play the ${nm(online.mySide()!)}">${allowed() ? 'your move' : 'waiting'}</span> ` /* the sides are named in the top bar; the chip says only whether you act now */
-      : '';
-  return chip + verb(promptText());
-}
-/** Explanations: full for learning, short for experienced players (Menu > Settings, or the guide button in the bottom bar). `gx` = explanation only, `gs` = short form only. */
-export let guide: 'full' | 'short' = (() => {
-  try {
-    return localStorage.getItem('fab-guide') === 'full' ? 'full' : 'short';
-  } catch {
-    return 'short';
-  }
-})();
-const setGuide = (v: 'full' | 'short') => {
-  guide = v;
-  try {
-    localStorage.setItem('fab-guide', v);
-  } catch {
-    /* private mode */
-  }
-  document.body.classList.toggle('guide-short', v === 'short');
-};
-document.body.classList.toggle('guide-short', guide === 'short');
-export const gx = (long: string, short = '') => `${short ? `<span class="gs">${short}</span>` : ''}<span class="gx">${long}</span>`;
-/** Before a roll: who fires, how many dice, what they need, at whom. */
-function stakes(b: E.Battle) {
-  const sd = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker),
-    fl = E.fireList(g, b, sd, b.stage.endsWith('Arty') ? 'arty' : 'ground');
-  if (!fl.length) return 'Nothing can fire.';
-  const dice = fl.reduce((a, f) => a + f.dice, 0),
-    sns = [...new Set(fl.map((f) => f.sn))].sort((x, y) => x - y);
-  return `<b>${nm(sd)} ${esc(STAGE_NAME[b.stage].toLowerCase())}:</b> ${dice} ${dice === 1 ? 'die' : 'dice'} · hit on ${sns.length === 1 ? `${sns[0]} or less` : `${sns[0]}–${sns.at(-1)} or less`}${gx(` · at ${E.unitsIn(g, b.area, other(sd)).length} ${nm(other(sd))} block${E.unitsIn(g, b.area, other(sd)).length === 1 ? '' : 's'}`)}`;
-}
-function promptText() {
-  const b = g.battle;
-  if (rollView?.pos) return gx('<b>Read the dice:</b> green hits, salmon misses. Then continue.', '<b>Read the dice,</b> then continue.');
-  if (areaPick) return `<b>${esc(areaPick.label)}</b>, or tap elsewhere to cancel.`;
-  if (reinforcing && b) return '<b>Tap a glowing neighbouring block</b> to bring it in, or tap the map to cancel.';
-  if (airPick?.step === 'unit' && b) return '<b>Air Mission +2:</b> tap one of your blocks in the battle.';
-  if (online.active && !allowed() && !g.over)
-    return online.mySide() == null
-      ? '<b>Watching.</b> Take a seat in the menu.'
-      : `<b>Waiting for the ${nm(actorNow() as E.Side)} player…</b>`;
-  if (g.over)
-    return `<b>${esc(g.over)}</b> <button data-ui="${reg(() => {
-      setEndHidden(false);
-    })}">Result</button>`;
-  if (g.pendingBlow) return `<b>${nm(other(g.units.find((x) => x.id === g.pendingBlow!.unit)!.side))}</b>: attempt to blow the bridge?`;
-  if (b?.stage === 'retreat') return '<b>Choose the retreat area.</b>';
-  if (b && b.stage === 'setup' && b.attPointDone) return '<b>Point units designated.</b> Blocks are revealed…';
-  if (b)
-    return b.stage === 'setup'
-      ? setupPrompt(b)
-      : b.stage === 'done'
-        ? (() => {
-            const left = fightable().filter((x) => x !== b.area).length;
-            const res = (b.result ?? '').trim();
-            return `<b>Battle over.</b> ${res ? esc(/[.!]$/.test(res) ? res : res + '.') : ''} Close it${left ? `: ${left} battle${left > 1 ? 's' : ''} left` : ''}.`;
-          })()
-        : rollView
-          ? '<b>Rolling the dice…</b>'
-          : b.stage.endsWith('Choice')
-            ? 'Choose how to take the hits.'
-            : STAGE_NAME[b.stage]
-              ? stakes(b)
-              : '';
-  const m = E.mustFight(g).length;
-  switch (g.phase) {
-    case 'deploy': {
-      const n = VOL.pendingPlace(g).filter((id) => {
-        const u = g.units.find((x) => x.id === id)!;
-        return mine(u.side) && u.side === g.phasing;
-      }).length;
-      return n
-        ? `<b>Set-up:</b> drag a block from the tray to a lit area, or use the panel.` /* the count is on the main button */
-        : '<b>Set-up:</b> finish the steps in the panel on the map, then end the set-up.';
-    }
-    case 'reinforcement':
-      return '<b>Pick a new block</b>, then a lit entry area.';
-    case 'admin':
-      return selChit && tgt?.hint
-        ? `<b>${esc(tgt.hint)}</b>${tgt.areas.size + tgt.units.size > 0 ? ` · ${tgt.areas.size + tgt.units.size} lit` : ''}`
-        : `<b>Tap a card</b>${gx(' to play it, or end the step.')}`;
-    case 'movement':
-      if (selUnit && g.moving?.id === selUnit)
-        return `<b>${E.allowance(g, g.units.find((x) => x.id === selUnit)!) - (g.units.find((x) => x.id === selUnit)!.spent ?? 0)} MP left.</b>${gx(" Tap a green area to go on, or <b>Stop here</b>. Choosing another block ends this one's move.", ' Go on, or Stop here.')}`;
-      return selUnit
-        ? `Tap a <b>green</b> area${gx(' to move there. <b>Brass</b>: must stop there. Wrong move? <b>Undo</b>.', ' · <b>brass</b> = stop')}`
-        : `<b>Tap one of your blocks</b>${gx(' to move it, or <b>Can move</b> to go through them.', ' to move it.')}`;
-    case 'strategic':
-      return '<b>Tap a reserve block</b>, then a green area.';
-    case 'combat':
-    case 'btCombat':
-      if (g.phase === 'btCombat' && !m && E.contestedAreas(g).some((a) => !g.fought.includes(a) && !E.newlyContested(g).includes(a)))
-        return gx(
-          '<b>Breakthrough combat.</b> Newly contested areas are free; areas already contested before movement need a Special Action (brass tags).',
-          '<b>Breakthrough combat:</b> brass = needs SA',
-        );
-      if (dropsLeft())
-        return `<b>Drop your airborne unit${dropsLeft() > 1 ? 's' : ''} first:</b> choose the drop zone in the panel on the map (14.27a).`;
-      return m
-        ? '<b>Tap a red area.</b>'
-        : fightable().length
-          ? '<b>Tap a contested area</b> to fight, or end the step.'
-          : 'No battles left.';
-    case 'reaction':
-      return `<b>${nm(other(g.phasing))} reserves</b> may react: select a reserve block.`;
-    case 'btMove':
-      return btArmor().length
-        ? gx(
-            '<b>Breakthrough movement.</b> Reserve and exploiting blocks may move; armor that has not moved can move one area for a Special Action (brass tags).',
-            '<b>Breakthrough:</b> brass tags = SA move',
-          )
-        : `<b>Reserve and exploitation blocks</b> may move.${gx(' Select one.')}`;
-    default:
-      return g.phase === 'supply' && g.supplyPending
-        ? `<b>Supply check</b>${gx(': roll for the units that are cut off.')}`
-        : 'Supply checked. End the phase.';
-  }
-}
-/** 6.21-6.23: the battle set-up goes step by step: the Defender's Special Action decision, the Attacker's assets, then the Defender's. */
-function setupPrompt(b: E.Battle): string {
-  const who = E.setupSide(g, b),
-    att = who === b.attacker,
-    last = att && b.ready?.length === 2;
-  if (online.active && !online.both() && who !== online.mySide())
-    return `<b>${nm(who)}</b> ${b.defSA ? 'decides on a Special Action…' : last ? 'designates the point unit…' : 'assigns assets…'}`;
-  if (b.defSA)
-    return `<b>${nm(who)}: Special Action?</b>${gx(' Reinforce or retreat before the attacker commits his assets (6.21), or go on without.')}`;
-  if (last)
-    return `<b>${nm(who)}: tap a block to make it your point unit</b>, then Begin combat.${gx(' The defender has designated his (6.24).')}`;
-  return att
-    ? `<b>${nm(who)} attacks: tap a card to add it.</b>${gx(' The defender answers after you (6.22); you pick your point unit last.')}`
-    : `<b>${nm(who)} defends: tap a card to add it</b>${gx(", and a block to make it the point unit. The attacker's assets are on the table (6.23).", ' and pick your point unit.')}`;
-}
-export function primary(): { label: string; fn: () => void; dis?: boolean } | null {
-  const b = g.battle;
-  if (rollView?.pos && !rollView.remote) return { label: 'Continue', fn: () => endRoll() }; // the dice have landed: one clear step on, the report stays readable until then
-  if (g.over || g.pendingBlow || rollView) return null;
-  if (g.phase === 'supply' && g.supplyPending && !b && mine(g.phasing)) {
-    const n = E.supplyChecks(g).length;
-    return { label: n ? `Roll ${n} supply check${n > 1 ? 's' : ''}` : 'Continue', fn: () => act(() => E.rollSupply(g)) };
-  } // the one red button is the next thing to do
-  if (b) {
-    if (b.stage === 'setup') {
-      const who = E.setupSide(g, b),
-        local = !online.active || online.both(),
-        why = VOL.blocksBegin(g);
-      if (
-        (!local && who !== online.mySide()) ||
-        b.attPointDone ||
-        (b.ready?.includes(who) && !(who === b.attacker && b.ready.length === 2))
-      )
-        return null; // the other side's step
-      const go = (f: (x: E.Battle) => void) => () =>
-        act(() => {
-          if (g.battle) f(g.battle);
-        }); // the live battle: a remote write may have replaced the one this button was drawn for
-      if (b.defSA) return { label: 'No Special Action', fn: go((x) => E.passSA(g, x)) };
-      const first = who === b.attacker && !b.ready?.includes(b.attacker);
-      return {
-        label: first ? 'Assets done' : who === b.attacker ? 'Begin combat' : 'Done',
-        fn: why ? () => say(why) : go((x) => E.setReady(g, x, who)),
-        dis: !!why,
-      };
-    }
-    if (b.stage === 'done')
-      return {
-        label: 'Close battle',
-        fn: () => {
-          act(() => {
-            lastFight = b.area;
-            E.closeBattle(g);
-            setSelArea(null);
-            setSelUnit(null);
-          });
-          /* the battle's block card goes with it */ const m = E.mustFight(g);
-          if (m.length && mine(g.phasing)) {
-            const at = center(b.area);
-            showAreas([[...m].sort((x, y) => center(x).distanceTo(at) - center(y).distanceTo(at))[0]]);
-          }
-        },
-      };
-    if (b.stage.endsWith('Choice') || b.stage === 'retreat' || b.stage === 'attFirst' || b.stage === 'loss') return null;
-    return {
-      label: innerWidth < 700 && !TUTORIAL ? 'Roll the dice' : `Roll ${STAGE_NAME[b.stage].toLowerCase()}`,
-      fn: () => rollStage(g.battle!),
-    }; // phones: the header already names the fire; the button stays one line
-  }
-  const must = E.mustFight(g);
-  if (g.phase === 'combat' || g.phase === 'btCombat') {
-    // the player picks the battle and starts it; nothing opens by itself
-    const sel = selArea != null && fightable().includes(selArea) ? selArea : null;
-    const fight = (a: number) => () => {
-      setSelArea(a);
-      setSelUnit(null);
-      setBattleFx([]);
-      setRollFx([]);
-      if (g.phase === 'btCombat' && !E.newlyContested(g).includes(a) && !(VOL.id === 'golan73' && E.golan.freeRoundLeft(g)))
-        pickSA(g.phasing, undefined, (sa) => E.startBattle(g, a, true, sa));
-      else E.startBattle(g, a, g.phase === 'btCombat');
-    };
-    if (sel != null) return { label: `Fight ${areaName(sel)}`, fn: fight(sel) };
-    if (must.length && allowed() && mine(g.phasing)) {
-      const at = lastFight != null ? center(lastFight) : null,
-        next = at ? [...must].sort((x, y) => center(x).distanceTo(at) - center(y).distanceTo(at))[0] : must[0];
-      return { label: `Next battle: ${areaName(next)}`, fn: fight(next) };
-    } // after a battle the button names the nearest one still to fight
-  }
-  if (g.phase === 'admin' && VOL.id === 'sicily' && !g.battle && mine(g.phasing)) {
-    const fl = E.sicily.flankBattles(g);
-    if (fl.length)
-      return {
-        label: `Fight ${areaName(fl[0])}`,
-        fn: () => {
-          setSelArea(fl[0]);
-          setSelUnit(null);
-          setBattleFx([]);
-          setRollFx([]);
-          E.startBattle(g, fl[0]);
-        },
-      };
-  } // 17.22: the landing round, before the Admin Phase ends
-  if (online.active && !online.both() && (g.phase === 'admin' || g.phase === 'reinforcement')) {
-    // both sides work in these steps: the other side says it is done, the Phasing Player ends the step
-    const me = online.mySide();
-    if (!me) return null;
-    if (me !== g.phasing) {
-      const on = !!g.done?.includes(me);
-      return { label: on ? 'Done · tap to undo' : 'Done', fn: () => act(() => E.setDone(g, me, !on)) };
-    }
-    const wait = !g.done?.includes(other(me));
-    if (wait && SANDBOX && SBU.st.sbHot) return { label: `Pass to ${nm(other(me))}`, fn: () => SBU.hotPass(other(me)) };
-    return {
-      label: wait ? `Waiting for ${nm(other(me))}` : endLabel(),
-      fn: () =>
-        act(() => {
-          E.endPhase(g);
-          setSelUnit(null);
-          setPreviewArea(null);
-          setSelChit(null);
-          setSelArea(null);
-        }),
-      dis: wait || !!g.recover.length || !!g.artyPick,
-    };
-  }
-  return {
-    label: endLabel(),
-    fn: () =>
-      act(() => {
-        E.endPhase(g);
-        setSelUnit(null);
-        setPreviewArea(null);
-        setSelChit(null);
-        setSelArea(null);
-      }),
-    dis:
-      !!dropsLeft() ||
-      !!E.mustFight(g).length ||
-      !!g.recover.length ||
-      !!g.artyPick ||
-      (g.phase === 'supply' && !!g.supplyPending) ||
-      (g.phase === 'deploy' && VOL.pendingPlace(g).some((id) => mine(g.units.find((u) => u.id === id)!.side))),
-  };
-}
-/* ---------- the actions dock: shortcuts with counts, labelled undo ---------- */
-export const lookAt = (a: number) => {
-  const p = center(a);
-  setGoal({ t: new THREE.Vector3(p.x, 0, p.z), dist: Math.min(dist, 30), pitch });
-};
-let canMoveKey = '',
-  canMoveIds: string[] = [];
-/** My blocks that can still move in this step (cached until the game changes). */
-export function canMove(): string[] {
-  const k = `${g.turn}${g.phase}${g.phasing}${g.log.length}${hist.length}${online.devSeat}${skipNow().size}`;
-  if (k === canMoveKey) return canMoveIds;
-  canMoveKey = k;
-  canMoveIds = ['movement', 'reaction', 'btMove'].includes(g.phase)
-    ? g.units
-        .filter((u) => u.area != null && !u.moved && !u.garrison && mine(u.side) && !skipNow().has(u.id) && E.moveOptions(g, u.id).length)
-        .map((u) => u.id)
-    : [];
-  return canMoveIds;
-}
-/** The next item after the current one, round and round. */
-export const nextOf = <T>(list: T[], cur: T | null) => list[(list.indexOf(cur as T) + 1) % list.length];
-/** Ending a step while blocks can still move takes a second press: the button first says how many are left (a stray tap or Enter never ends a phase). */
-let endArmed = false,
-  endArmT = 0;
-let goLabel = '',
-  goSince = 0;
-function guardEnd(p: { label: string; fn: () => void }) {
-  if (p.label !== goLabel) {
-    goLabel = p.label;
-    goSince = performance.now();
-  }
-  if (performance.now() - goSince < 600) {
-    const f = guardEnd0(p);
-    return () => {
-      if (performance.now() - goSince >= 600) f();
-    };
-  } // a click meant for "Continue" never lands on the "Close battle" that just took its place
-  return guardEnd0(p);
-}
-function guardEnd0(p: { label: string; fn: () => void }) {
-  if (!p.label.startsWith('End') || !canMove().length || endArmed)
-    return () => {
-      endArmed = false;
-      clearTimeout(endArmT);
-      p.fn();
-    };
-  return () => {
-    endArmed = true;
-    render();
-    clearTimeout(endArmT);
-    endArmT = window.setTimeout(() => {
-      endArmed = false;
-      render();
-    }, 4000);
-  };
-}
+import { canMove, COARSE, endArmed, guardEnd, guide, gx, lookAt, nextOf, primary, prompt, setGuide, topBar, verb } from './prompt';
+export * from './prompt';
 /* ---------- the map from the keyboard: Tab onto the map, arrows between neighbouring areas, Enter selects or moves, N the next block that can move ---------- */
 export let kbArea: number | null = null;
 export const setKbArea = <T extends typeof kbArea>(v: T): T => ((kbArea = v), v);
@@ -2564,7 +2201,8 @@ function driveSplit() {
 let ctlKey = '',
   tgtKey = '';
 let playKey: string | null = null;
-let lastFight: number | null = null;
+export let lastFight: number | null = null;
+export const setLastFight = <T extends typeof lastFight>(v: T): T => ((lastFight = v), v);
 export function refresh() {
   {
     const ph = `${g.turn}${g.phasing}${g.phase}`;
