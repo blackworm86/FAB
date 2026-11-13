@@ -4,6 +4,10 @@ Kept by the project-management session (`docs/PARALLEL.md` §4). It reads `main`
 
 **Last review: Friday 13 November 2026, 10:00 UTC** (`main` at `bed5cca`).
 
+**The plan of action** (aim, open items, order, agents, coordination): `docs/ROADMAP.md`, written 13 November, waiting for the owner's go-ahead.
+
+**Where the sessions stood on the evening of 13 November** (from the session list): Rules check, waiting for the owner's answer on the Admin Phase order; 3D assets, waiting for the owner to upload the three model archives again; Computer opponents, idle since 12 November, waiting for the playtest; Interface, idle. None has merged the new file layout yet.
+
 ## Weekly summary (9–13 November)
 
 A very busy week: about 160 changes reached `main` from four sessions working at once.
