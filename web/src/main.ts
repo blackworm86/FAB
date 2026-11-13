@@ -770,19 +770,7 @@ const PHASES = ['Reinforcement', 'Admin', 'Movement', 'Strategic', 'Combat', 'Re
 /** Areas a battle can start in now. Breakthrough Combat (8.22): areas contested before movement only with a Special Action available. */
 const fightable = () => { const nw = g.phase === 'btCombat' ? new Set(E.newlyContested(g)) : null, sa = nw && (E.saAvailable(g, g.phasing).length > 0 || (VOL.id === 'golan73' && E.golan.freeRoundLeft(g))), first = E.firstBattle(g);
   return E.contestedAreas(g).filter((a) => !g.fought.includes(a) && (!nw || nw.has(a) || sa) && (first == null || a === first) && E.fighters(g, a, g.phasing, true).some((u) => !u.garrison)); };   // an attacker in good order (strongpoints and assets never attack)
-function idle(): boolean {                                                // phases with nothing to do are skipped for the player
-  const p = g.phasing, o = other(p), us = (s: E.Side) => g.units.filter((u) => u.side === s && u.area != null && !u.garrison);
-  switch (g.phase) {
-    case 'reinforcement': return !g.tfNew.length && !g.pendingArrivals.length && !g.recover.length && !g.artyPick;
-    case 'strategic': return !us(p).some((u) => u.reserve);
-    case 'combat': case 'btCombat': return !fightable().length;
-    case 'reaction': return !us(o).some((u) => u.reserve);
-    case 'btMove': return !us(p).some((u) => (u.reserve || u.exploit) && !u.moved) && !(us(p).some((u) => u.cls === 'armor' && !u.moved) && E.saAvailable(g, p).length);
-    case 'supply': return !g.supplyPending;
-    default: return false;
-  }
-}
-function auto() { if (SANDBOX && !SBU.st.sbAuto && !SBU.st.sbHot) return; for (let i = 0; i < 12 && !g.over && !g.battle && !g.pendingBlow && idle(); i++) { try { E.endPhase(g); } catch { break; } } }
+/* Owner, 13 Nov: no phase is ever skipped for the player; every step of the turn waits for its own End button. */
 let toast = '', toastT = 0, toastInfo = false;
 let sayDraw = 0;
 const say = (t: string, info = false) => { toast = t; toastInfo = info; clearTimeout(toastT); toastT = window.setTimeout(() => { toast = ''; render(); }, 3200); if (!sayDraw) sayDraw = window.setTimeout(() => { sayDraw = 0; render(); }, 0); };      // a refusal shows at once, even when the caller does not redraw
@@ -810,7 +798,7 @@ function act(f: () => void, after = '') {
   if (online.mode === 'remote' && !online.rev) return say('The game is still loading…');
   if (heldNext) commitRoll();
   const before = g.battle ? snap(g) : null, ck0 = g.checks?.length ?? 0;
-  const r = hist.run(g, () => { f(); auto(); }, (a, b) => after || (b.log.slice(a.log.length).at(-1) ?? '').replace(new RegExp(`^T\\d+ (\\[\\w+\\] )?((${TAGRE}) \\w+: )?`), '').slice(0, 60), lockOf);
+  const r = hist.run(g, () => { f(); }, (a, b) => after || (b.log.slice(a.log.length).at(-1) ?? '').replace(new RegExp(`^T\\d+ (\\[\\w+\\] )?((${TAGRE}) \\w+: )?`), '').slice(0, 60), lockOf);
   g = r.game; if (r.error) say(/pending|already/.test(r.error.message) ? `That choice is no longer open (the game is at ${g.battle?.stage ?? 'no battle'}). Refreshed.` : r.error.message); else { note = after; if (before && !rollNoted) noteFx(before, g); }       // a roll already noted its own effects, to show them once the dice have settled
   rollNoted = false;
   save(); refresh();
@@ -1326,14 +1314,14 @@ function showChecks(cs: E.Check[]) {
   const a = cs.find((c) => c.area != null)?.area; if (a != null) { const p = center(a); goal = { t: new THREE.Vector3(p.x, 0, p.z), dist: Math.min(dist, 30), pitch }; }
   rollView = { check: true, morale: true, title: cs[0].why.replace(/ \(.*\)$/, ''), pos: null, groups: cs.map((c) => ({ label: c.who, col: 'w', sn: c.sn, dice: [c.die], hits: c.ok ? 1 : 0, parts: [] })) };
   refresh(); const cv = $('#dice') as HTMLCanvasElement; cv.style.display = 'block';
-  throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; render(); setTimeout(() => { if (rollView === rv) { hideDice(); render(); setTimeout(() => { if (rollView === rv) endRoll(); }, 2600); } }, 1300); } });
+  throwDice(cv, rollView.groups, (p) => { if (rollView) { const rv = rollView; rv.pos = p; render(); setTimeout(() => { if (rollView === rv) { hideDice(); render(); } }, 1300); } });      /* a check roll waits for Continue too */
 }
 /** After the dice settle: a moment to read them, then they leave and the results play on the board (turning blocks, fading pieces, pop-ups). */
 function afterDice(rv: RollView) {
   setTimeout(() => {
     if (rollView !== rv) return;
     hideDice(); commitRoll(); showFx(pendingFx); pendingFx = []; render();
-    if (rv.remote || (autoRoll && !rv.check)) setTimeout(() => { if (rollView === rv) endRoll(); }, rv.remote ? 3200 : 2600);           // results move on by themselves (a hit choice or retreat then waits on the table); with auto off, your roll waits for Continue
+    if (rv.remote) setTimeout(() => { if (rollView === rv) endRoll(); }, 3200);      /* owner, 13 Nov: your own rolls wait for Continue */           // results move on by themselves (a hit choice or retreat then waits on the table); with auto off, your roll waits for Continue
   }, 1100);
 }
 function hideDice() { clearDice(); const cv = $('#dice') as HTMLElement | null; if (cv) cv.style.display = 'none'; }
@@ -1469,13 +1457,12 @@ const gx = (long: string, short = '') => `${short ? `<span class="gs">${short}</
 function stakes(b: E.Battle) {
   const sd = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker), fl = E.fireList(g, b, sd, b.stage.endsWith('Arty') ? 'arty' : 'ground');
   if (!fl.length) return 'Nothing can fire.';
-  if (guide !== 'full' && ledger()) return `<b>${nm(sd)} fire.</b>`;      // the dice panel already shows the dice and numbers
   const dice = fl.reduce((a, f) => a + f.dice, 0), sns = [...new Set(fl.map((f) => f.sn))].sort((x, y) => x - y);
   return `<b>${nm(sd)} ${esc(STAGE_NAME[b.stage].toLowerCase())}:</b> ${dice} ${dice === 1 ? 'die' : 'dice'} · hit on ${sns.length === 1 ? `${sns[0]} or less` : `${sns[0]}–${sns.at(-1)} or less`}${gx(` · at ${E.unitsIn(g, b.area, other(sd)).length} ${nm(other(sd))} block${E.unitsIn(g, b.area, other(sd)).length === 1 ? '' : 's'}`)}`;
 }
 function promptText() {
   const b = g.battle;
-  if (rollView?.pos) return autoRoll && !TUTORIAL ? gx('<b>Read the dice:</b> green hits, salmon misses. The battle goes on in a moment, or tap Continue.', '<b>Read the dice:</b> the battle goes on in a moment.') : gx('<b>Read the dice:</b> green hits, salmon misses. Then continue.', '<b>Read the dice,</b> then continue.');
+  if (rollView?.pos) return gx('<b>Read the dice:</b> green hits, salmon misses. Then continue.', '<b>Read the dice,</b> then continue.');
   if (areaPick) return `<b>${esc(areaPick.label)}</b>, or tap elsewhere to cancel.`;
   if (reinforcing && b) return '<b>Tap a glowing neighbouring block</b> to bring it in, or tap the map to cancel.';
   if (airPick?.step === 'unit' && b) return '<b>Air Mission +2:</b> tap one of your blocks in the battle.';
@@ -1484,7 +1471,7 @@ function promptText() {
   if (g.pendingBlow) return `<b>${nm(other(g.units.find((x) => x.id === g.pendingBlow!.unit)!.side))}</b>: attempt to blow the bridge?`;
   if (b?.stage === 'retreat') return '<b>Choose the retreat area.</b>';
   if (b && b.stage === 'setup' && b.attPointDone) return '<b>Point units designated.</b> Blocks are revealed…';
-  if (b) return b.stage === 'setup' ? setupPrompt(b) : b.stage === 'done' ? (() => { const left = fightable().filter((x) => x !== b.area).length; const res = (b.result ?? '').trim(); return gx(`<b>Battle over.</b> ${res ? esc(/[.!]$/.test(res) ? res : res + '.') : ''} Close it${left ? `: ${left} battle${left > 1 ? 's' : ''} left` : ''}.`, `<b>Close the battle</b>${left ? ` · ${left} left` : ''}.`); })() : rollView ? '' : b.stage.endsWith('Choice') ? 'Choose how to take the hits.' : STAGE_NAME[b.stage] ? stakes(b) : '';
+  if (b) return b.stage === 'setup' ? setupPrompt(b) : b.stage === 'done' ? (() => { const left = fightable().filter((x) => x !== b.area).length; const res = (b.result ?? '').trim(); return `<b>Battle over.</b> ${res ? esc(/[.!]$/.test(res) ? res : res + '.') : ''} Close it${left ? `: ${left} battle${left > 1 ? 's' : ''} left` : ''}.`; })() : rollView ? '<b>Rolling the dice…</b>' : b.stage.endsWith('Choice') ? 'Choose how to take the hits.' : STAGE_NAME[b.stage] ? stakes(b) : '';
   const m = E.mustFight(g).length;
   switch (g.phase) {
     case 'deploy': { const n = VOL.pendingPlace(g).filter((id) => { const u = g.units.find((x) => x.id === id)!; return mine(u.side) && u.side === g.phasing; }).length; return n ? `<b>Set-up:</b> drag a block from the tray to a lit area, or use the panel.`      /* the count is on the main button */ : '<b>Set-up:</b> finish the steps in the panel on the map, then end the set-up.'; }
@@ -1493,7 +1480,7 @@ function promptText() {
     case 'movement': if (selUnit && g.moving?.id === selUnit) return `<b>${E.allowance(g, g.units.find((x) => x.id === selUnit)!) - (g.units.find((x) => x.id === selUnit)!.spent ?? 0)} MP left.</b>${gx(' Tap a green area to go on, or <b>Stop here</b>. Choosing another block ends this one\'s move.', ' Go on, or Stop here.')}`;
       return selUnit ? `Tap a <b>green</b> area${gx(' to move there. <b>Brass</b>: must stop there. Wrong move? <b>Undo</b>.', ' · <b>brass</b> = stop')}` : `<b>Tap one of your blocks</b>${gx(' to move it, or <b>Can move</b> to go through them.', ' to move it.')}`;
     case 'strategic': return '<b>Tap a reserve block</b>, then a green area.';
-    case 'combat': case 'btCombat': if (g.phase === 'btCombat' && !m && E.contestedAreas(g).some((a) => !g.fought.includes(a) && !E.newlyContested(g).includes(a))) return gx('<b>Breakthrough combat.</b> Newly contested areas are free; areas already contested before movement need a Special Action (brass tags).', '<b>Breakthrough combat:</b> orange = needs SA');
+    case 'combat': case 'btCombat': if (g.phase === 'btCombat' && !m && E.contestedAreas(g).some((a) => !g.fought.includes(a) && !E.newlyContested(g).includes(a))) return gx('<b>Breakthrough combat.</b> Newly contested areas are free; areas already contested before movement need a Special Action (brass tags).', '<b>Breakthrough combat:</b> brass = needs SA');
       if (dropsLeft()) return `<b>Drop your airborne unit${dropsLeft() > 1 ? 's' : ''} first:</b> choose the drop zone in the panel on the map (14.27a).`;
       return m ? '<b>Tap a red area.</b>' : fightable().length ? '<b>Tap a contested area</b> to fight, or end the step.' : 'No battles left.';
     case 'reaction': return `<b>${nm(other(g.phasing))} reserves</b> may react: select a reserve block.`;
@@ -1526,7 +1513,6 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
     }
     if (b.stage === 'done') return { label: 'Close battle', fn: () => { act(() => { lastFight = b.area; E.closeBattle(g); selArea = null; selUnit = null; });      /* the battle's block card goes with it */ const m = E.mustFight(g); if (m.length && mine(g.phasing)) { const at = center(b.area); showAreas([[...m].sort((x, y) => center(x).distanceTo(at) - center(y).distanceTo(at))[0]]); } } };
     if (b.stage.endsWith('Choice') || b.stage === 'retreat' || b.stage === 'attFirst' || b.stage === 'loss') return null;
-    if (autoRolls(b)) return { label: 'Rolling…', fn: () => {}, dis: true };      // the game rolls this one by itself (Settings > Dice)
     return { label: innerWidth < 700 && !TUTORIAL ? 'Roll the dice' : `Roll ${STAGE_NAME[b.stage].toLowerCase()}`, fn: () => rollStage(g.battle!) };      // phones: the header already names the fire; the button stays one line
   }
   const must = E.mustFight(g);
@@ -1557,7 +1543,7 @@ function canMove(): string[] {
 /** The next item after the current one, round and round. */
 const nextOf = <T,>(list: T[], cur: T | null) => list[(list.indexOf(cur as T) + 1) % list.length];
 /** Ending a step while blocks can still move takes a second press: the button first says how many are left (a stray tap or Enter never ends a phase). */
-let endArmed = false, endArmT = 0, autoRoll = (() => { try { return localStorage.getItem('fab-autoroll') !== '0'; } catch { return true; } })();
+let endArmed = false, endArmT = 0;
 let goLabel = '', goSince = 0;
 function guardEnd(p: { label: string; fn: () => void }) {
   if (p.label !== goLabel) { goLabel = p.label; goSince = performance.now(); }
@@ -1807,7 +1793,7 @@ function handCards() {
     if (b.stage !== 'setup') return '';
     const cs = ([b.attacker, other(b.attacker)] as E.Side[]).filter((sd) => mine(sd) && !b.ready?.includes(sd)).sort()      /* a side that confirmed its set-up no longer sees its cards */.flatMap((s) => E.boxOf(g, s, 'available').filter((c) => VOL.battleCard(c)));
     const ok = cs.filter((c) => !VOL.battleUse(g, b, c));
-    const bad = cs.filter((c) => VOL.battleUse(g, b, c)), canCancel = mine(b.attacker) && E.setupSide(g, b) === b.attacker;
+    const bad = cs.filter((c) => VOL.battleUse(g, b, c)), canCancel = mine(b.attacker);      /* the attacker may call the battle off until combat begins (unless a Special Action locked it) */
     if (!cs.length && !canCancel) return '';      // the defender with no card: no empty tray
     return `<div class="handtab">${canCancel ? btn(`${ico('close')}<span class="bl">Cancel</span>`, () => { E.cancelBattle(g); }, 'ico danger', !!b.locked, b.locked ? 'A Special Action was spent, so the battle must be fought' : 'Withdraw the attack and return every assigned asset') : ''}${ok.length && bad.length ? `<button data-ui="${reg(() => { handAll = !handAll; })}" aria-pressed="${handAll}">${handAll ? `Playable only (${ok.length})` : `Show all`}</button>` : ''}<button class="ico ${handInfo ? 'on' : ''}" data-ui="${reg(() => { handInfo = !handInfo; if (!handInfo) handInspect = null; })}" aria-pressed="${handInfo}" title="Rules: tap a card to read what it does instead of adding it" aria-label="Rules">${ico('book')}<span class="bl">Rules</span></button>${ok.length ? btn(`${ico('wand')}<span class="bl">Auto-fill</span>`, () => autoFill(g.battle!), 'ico', false, 'Auto-fill: place every asset that can legally join, artillery first') : ''}</div>${handInfo ? cardTip() : ''}<div class="c-hand" ${handStyle(handAll || !ok.length ? ok.length + bad.length : ok.length)}>${fan([...ok.map((c) => card(c)), ...(handAll || !ok.length ? bad.map((c) => card(c, 0, VOL.battleUse(g, b, c))) : [])])}</div>`;
   }
@@ -1975,7 +1961,7 @@ function modalHtml() {
     if (menuTab !== 'Table') restartAsk = false;                                                   // the restart question never waits on another tab
     const body = menuTab === 'Log' ? logHtml()
       : menuTab === 'Help' ? `${coursesOf(VOL.id).length || RULES_GAMES.includes(VOL.id) ? `<h4>Learn</h4><div class="row">${RULES_GAMES.includes(VOL.id) ? ubtn(`${ico('info')} Rules reference`, () => { void showRules(); }, '', false, 'The full rulebooks, searchable (shortcut: ?)') : ''}${coursesOf(VOL.id).map((c) => ubtn(`${ico('info')} ${esc(c.title)}`, () => { location.href = tutUrl(c.id); })).join('')}</div>` : ''}${COARSE ? '' : `<h4>Keyboard</h4><dl class="keys"><dt>Tab</dt><dd>to the map (or “Skip to the map” first)</dd><dt>← ↑ → ↓</dt><dd>move between neighbouring areas</dd><dt>Enter</dt><dd>select or move there; on a button, press it</dd><dt>N</dt><dd>next block that can move</dd><dt>Esc</dt><dd>clear the selection, close a window</dd><dt>Ctrl+Z</dt><dd>undo</dd></dl>`}`
-      : menuTab === 'Settings' ? `<div class="sgrid"><div><h4>Play</h4>${srow('Dice roll by themselves', 'decisions still wait for you', swtch(autoRoll, () => { autoRoll = !autoRoll; try { localStorage.setItem('fab-autoroll', autoRoll ? '1' : '0'); } catch { /* private mode */ } }, 'Dice roll by themselves'))}${srow('Full explanations', 'every option and rule', swtch(guide === 'full', () => setGuide(guide === 'full' ? 'short' : 'full'), 'Full explanations'))}${noticesSupported() ? srow('My-move notices', noticesBlocked() ? 'blocked in this browser: allow notices for this site' : 'when the game is out of sight', swtch(noticesOn(), () => { void setNotices(!noticesOn(), auth.token).then((m) => { say(m); render(); }); }, 'My-move notices')) : ''}</div>
+      : menuTab === 'Settings' ? `<div class="sgrid"><div><h4>Play</h4>${srow('Full explanations', 'every option and rule', swtch(guide === 'full', () => setGuide(guide === 'full' ? 'short' : 'full'), 'Full explanations'))}${noticesSupported() ? srow('My-move notices', noticesBlocked() ? 'blocked in this browser: allow notices for this site' : 'when the game is out of sight', swtch(noticesOn(), () => { void setNotices(!noticesOn(), auth.token).then((m) => { say(m); render(); }); }, 'My-move notices')) : ''}</div>
         <div><h4>Screen</h4>${srow('Follow the other side', 'the camera goes to their moves', swtch(followFoe, () => { followFoe = !followFoe; try { localStorage.setItem('fab-follow', followFoe ? '1' : '0'); } catch { /* private mode */ } }, 'Follow the other side'))}${srow('Language', '', `<span class="seg notr">${LANGS.map(([l]) => chip(l.toUpperCase(), LANG === l, () => setLang(l), l === 'it' ? 'Interfaccia in italiano (i regolamenti restano in inglese)' : 'Interface in English')).join('')}</span>`)}${srow('Rules in use', rulesInUse(g.opts), '')}</div></div>`
       : menuTab === 'Admin' ? `<div class="row">${ubtn(`${ico('wand')} Sandbox`, () => { location.href = `${homeUrl()}?sandbox=1`; })}${ubtn('Update rules', () => { modal = 'rules'; })}${VOL.sides.map((sd) => ubtn(`Free ${nm(sd)} seat`, () => { void auth.freeSeat(sd); })).join('')}</div><h4>Computer opponent (experimental, The Bulge)</h4><p class="hint">A local game against the computer, saved in this browser apart from your other games.</p>${(['german', 'allied'] as const).map((cpu) => { const you = cpu === 'german' ? 'Allies' : 'Germans', go = () => { location.href = `${homeUrl()}?game=bulge&lab=${cpu}`; }, saved = (() => { try { return !!localStorage.getItem(`fab-lab-${cpu}`); } catch { return false; } })();
         return `<div class="row"><span class="grow">You play the ${you}</span>${saved ? ubtn('Continue', go, LAB_SIDE === cpu ? 'primary' : '') : ''}${ubtn('New game', () => { try { localStorage.removeItem(`fab-lab-${cpu}`); localStorage.removeItem(recordKey(cpu)); } catch { /* storage off */ } if (LAB_SIDE === cpu) location.reload(); else go(); }, saved ? '' : 'primary')}</div>`; }).join('')}${LAB_SIDE ? `<div class="row">${ubtn(`${ico('share')} Download game record`, () => labDownload(g), '', false, 'A file with this whole game and every move the computer made with its reason: send it to have the game checked')}</div>` : ''}`
@@ -2026,7 +2012,7 @@ function renderInner() {
   const sheetKey = `${modal}:${menuTab}:${piecesTab}:${piecesSide}`, keepS = sheetKey === lastSheet ? (document.querySelector<HTMLElement>(SHEET_SCROLL)?.scrollTop ?? 0) : 0;   // a menu keeps its place on every click; another menu or tab starts at the top
   const shown = new Set(Array.from(document.querySelectorAll<HTMLElement>('#ui [data-reveal]')).map((e) => e.dataset.reveal));
   const keepH = document.querySelector<HTMLElement>('#ui .c-hand')?.scrollLeft ?? 0, keepA = document.querySelector<HTMLElement>('#ui .arrtray')?.scrollLeft ?? 0;
-  $('#ui').innerHTML = `<a class="skipmap" href="#" data-ui="${reg(() => { (document.getElementById('gl') as HTMLElement).focus(); })}">Skip to the map</a><div class="tops">${topBar(vpStrip(g, reg(() => { scoreOpen = true; })))}</div>` + `<div class="stage">${SANDBOX ? (SBU.st.sbOpen ? SBU.sandboxPanel() : SBU.sandboxFab()) : ''}${seatBar()}${heldBad ? heldBadBar() : ''}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${volPanel()}${mapDock()}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${SBU.hotCoverHtml()}${saPickHtml()}${altPickHtml()}${airPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} Map`, () => { endHidden = true; }) + ubtn(`${ico('dice')} Replay`, () => { void showReplay(); }, '', false, 'Watch the whole game again, step by step') + ubtn(`${ico('plus')} New game`, () => { if (SANDBOX) { SBU.sbReset({ ...g.opts }); endHidden = false; } else location.href = homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('text')}</button>${undoBtn()}${!p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go ${g.moving && p.label.startsWith('End') ? 'quiet' : ''}" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
+  $('#ui').innerHTML = `<a class="skipmap" href="#" data-ui="${reg(() => { (document.getElementById('gl') as HTMLElement).focus(); })}">Skip to the map</a><div class="tops">${topBar(vpStrip(g, reg(() => { scoreOpen = true; })))}</div>` + `<div class="stage">${SANDBOX ? (SBU.st.sbOpen ? SBU.sandboxPanel() : SBU.sandboxFab()) : ''}${seatBar()}${heldBad ? heldBadBar() : ''}${auditWarn.length ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn('OK', () => { auditWarn = []; })}</div>` : ''}${volPanel()}${mapDock()}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${SBU.hotCoverHtml()}${saPickHtml()}${altPickHtml()}${airPickHtml()}${chatHtml()}${scoreOpen ? vpSheet(g, unitPic, reg(() => { scoreOpen = false; }), ico('close')) : ''}${g.over && !endHidden ? endPanel(g, unitPic, ubtn(`${ico('layers')} Map`, () => { endHidden = true; }) + ubtn(`${ico('dice')} Replay`, () => { void showReplay(); }, '', false, 'Watch the whole game again, step by step') + ubtn(`${ico('plus')} New game`, () => { if (SANDBOX) { SBU.sbReset({ ...g.opts }); endHidden = false; } else location.href = homeUrl(); }, 'primary') + ubtn(`${ico('home')} Home`, () => { location.href = homeUrl(); })) : ''}${toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}</button>${undoBtn()}${!p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go ${g.moving && p.label.startsWith('End') ? 'quiet' : ''}" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` + modalHtml();
   const ui = $('#ui');
   { const d = ui.querySelector<HTMLElement>('.c-dispatch'); if (d) d.scrollTop = keepD; }
   { const s = ui.querySelector<HTMLElement>(SHEET_SCROLL); if (s) s.scrollTop = keepS; lastSheet = s ? sheetKey : '';
@@ -2076,35 +2062,13 @@ function driveSplit() {
 }
 let ctlKey = '', tgtKey = '';
 let playKey: string | null = null;
-/** Faster battles: a set-up step where the side has no card it could play and none on the table, a roll with no choice before it, and the close of a finished battle happen by themselves.
- *  Real decisions (cards to add or take back, a point unit to pick, hits, retreat) still wait for the player's own confirmation; Settings > Dice OFF keeps every roll on a click. */
-let autoT = 0, autoKey = '', lastFight: number | null = null;
-const hotseat = () => !online.active || online.both();      // worked out when asked: the table connects after the page loads
-/** A fire roll the game makes by itself: dice on (Settings), not in a lesson, your own side's roll; in hot seat only the Phasing Player's. */
-function autoRolls(b: E.Battle) {
-  if (TUTORIAL || !autoRoll || !['attArty', 'defArty', 'defFire', 'offFire'].includes(b.stage) || !allowed()) return false;
-  const sd = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker);
-  return mine(sd) && (!hotseat() || sd === g.phasing);
-}
-function autoBattle() {
-  const b = g.battle; if (TUTORIAL || !autoRoll || !b || rollView || g.over || !allowed()) return;      // the tutorials coach every step by hand
-  const p = primary(); if (!p || (p.dis && !autoRolls(b))) return;
-  const nothingToAdd = (sd: E.Side) => !g.chits.some((c) => c.side === sd && c.box === 'available' && (E.isArty(c) || E.isBattleAsset(c)) && !E.canAssign(g, b, sd, c));
-  const blocks = (sd: E.Side) => E.unitsIn(g, b.area, sd).filter((u) => !u.garrison).length;
-  let go = false;
-  if (['attArty', 'defArty', 'defFire', 'offFire'].includes(b.stage)) go = autoRolls(b);      // a finished battle waits for Close battle: the player reads the result first
-  else if (b.stage === 'setup' && !b.defSA && !airPick) { const who = E.setupSide(g, b); go = mine(who) && nothingToAdd(who) && !b.assets[who].length && !b.air[who] && !b.air2?.[who] && (p.label === 'Assets done' || blocks(who) <= 1); }      // only when the side had nothing at all to decide: once it has put a card on the table, it confirms itself (it may still take cards back)
-  const k = `${b.area}|${b.stage}|${b.ready?.join()}|${b.rolls.length}`;
-  if (!go || k === autoKey) return;
-  autoKey = k; clearTimeout(autoT);
-  autoT = window.setTimeout(() => { const q = primary(); if (!g.battle || `${g.battle.area}|${g.battle.stage}|${g.battle.ready?.join()}|${g.battle.rolls.length}` !== k || rollView) return; if (autoRolls(g.battle)) rollStage(g.battle); else if (q && !q.dis) act(q.fn); }, 700);
-}
+let lastFight: number | null = null;
 function refresh() {
   { const ph = `${g.turn}${g.phasing}${g.phase}`; if (ph !== lastPhase) { const was = lastPhase; lastPhase = ph; fxLayer.clear(); frameAt = performance.now() + 50; openFrame = !was || !camTouched; } }      // until the player first moves the map (the game may arrive after the page opens), the view jumps there instead of sliding
   { const ba = g.battle?.area ?? null; if (ba !== fxBattle) { if (ba != null) fxLayer.clear(); else setTimeout(() => { if (!g.battle) fxLayer.clear(); }, 2500); fxBattle = ba; } }      // a new battle clears the last one's messages; a closed battle's go after a moment to read them      // a new battle clears the last one's messages
   E.setPlayArea(g.inPlay);
   { const k = (g.inPlay ?? []).join(); if (k !== playKey) { const first = playKey === null; playKey = k; if (!first) paintBoard(); if (g.inPlay || !first) goal = homeGoal(); } }
-  SBU.hotseatSync(); setTimeout(autoBattle, 0);
+  SBU.hotseatSync();
   if (LAB_SIDE) { const as = (f: () => void) => { labActing = true; try { f(); } finally { labActing = false; } }; setTimeout(() => labStep(() => g, (f) => as(() => act(f)), render, () => as(() => { if (g.battle) rollStage(g.battle); }), () => !!rollView || !!heldNext), 0); }      // the computer's dice are thrown on the table like a player's
   if (online.mode === 'remote') setTimeout(driveSplit, 0);
   { const key = `${online.devSeat}|${online.mySide()}|${g.battle?.attPoint}|${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`;                    // the dry runs behind the highlights are costly: redo them only when something they depend on changed
@@ -2168,7 +2132,7 @@ tut = TUT ? initTutorial({
   home: (to) => { try { if (to) sessionStorage.setItem('fab-new', `${to.game}:${to.scenario}`); } catch { /* private mode */ } location.href = homeUrl(); },
 }, TUT) : null;
 frame();
-Promise.all([loadChitArt(), VOL.id === 'golan73' ? loadGolanChitArt() : null, VOL.id === 'sicily' ? loadSicilyChitArt() : null]).catch((e) => console.error(e)).finally(() => { auto(); refresh(); });
+Promise.all([loadChitArt(), VOL.id === 'golan73' ? loadGolanChitArt() : null, VOL.id === 'sicily' ? loadSicilyChitArt() : null]).catch((e) => console.error(e)).finally(() => { refresh(); });
 let lobbyUid = '';
 const onNet = (): void => {
   if (online.mode !== 'remote' || !online.hasAccounts) return;
