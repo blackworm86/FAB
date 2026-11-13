@@ -143,7 +143,6 @@ import {
   act,
   actorNow,
   allowed,
-  ARMY_NAME,
   arrive,
   battleFx,
   chitBar,
@@ -157,7 +156,6 @@ import {
   labActing,
   lockOf,
   mine,
-  note,
   noteFx,
   notYou,
   other,
@@ -166,9 +164,7 @@ import {
   PHASES,
   placing,
   POOL,
-  realArr,
   rollFx,
-  rollNoted,
   say,
   selArr,
   setBattleFx,
@@ -185,7 +181,6 @@ import {
   setToast,
   setToastInfo,
   showFx,
-  tfAreas,
   tgt,
   tgtMode,
   toast,
@@ -193,202 +188,30 @@ import {
   undo,
 } from './flow';
 export * from './flow';
-/* ---------- chat between the two players; watchers read it ---------- */
-/* ---------- the action feed: the newest log lines, fading, above the dock ---------- */
-let followFoe = (() => {
-  try {
-    return localStorage.getItem('fab-follow') !== '0';
-  } catch {
-    return true;
-  }
-})();
-let feed: { t: number; text: string; side: string }[] = [],
-  feedLen = -1;
-function feedHtml(): string {
-  const n = g.log.length;
-  if (feedLen < 0 || n < feedLen) feedLen = n; // a new or rewound game shows nothing old
-  for (const l of g.log.slice(feedLen)) {
-    if (/\[sandbox\]|: phase start$|Victory check: /.test(l)) continue;
-    /* the score is in the top bar; the check stays in the Log */ const text = l
-      .replace(/^T\d+ /, '')
-      .replace(new RegExp(`^(${TAGRE}) (\\w+): \\2 phase$`), `$1 Turn ${g.turn}: $2`)
-      .replace(new RegExp(`^(${TAGRE}) [a-zA-Z]+: `), '$1 ');
-    /* the step is in the top bar; the feed keeps only the news */ feed.push({ t: Date.now(), text, side: sideByTag(text.split(/\s/)[0]) });
-  }
-  feedLen = n;
-  const now = Date.now();
-  feed = feed.filter((f) => now - f.t < 9000).slice(-3);
-  if (g.battle) return ''; // the battle has its own report
-  if (feed.length)
-    setTimeout(() => {
-      if (feed.some((f) => Date.now() - f.t >= 9000)) render();
-    }, 9100);
-  return feed.length
-    ? `<div class="feed ${g.phase === 'admin' || g.phase === 'reinforcement' ? 'top' : ''}" aria-live="polite">${feed.map((f) => `<div class="fl2 ${f.side}" style="animation-delay:${-(now - f.t) / 1000}s">${sideTag(f.text)}</div>`).join('')}</div>`
-    : '';
-}
-export let scoreOpen = false,
-  endHidden = false; // VP breakdown sheet; the end panel can be put aside to look at the final map
-export const setScoreOpen = <T extends typeof scoreOpen>(v: T): T => ((scoreOpen = v), v);
-/** A change by the other player that failed the rules check: it is held back, and the board keeps the last legal position until this player decides. */
-export let heldBad: { game: E.Game; why: string[] } | null = null,
-  gotRemote = false;
-function heldBadBar() {
-  const why = heldBad!.why;
-  return `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> the other player's last change was held back. ${why.map(esc).join(' ')} The board shows the last legal position.</span>${ubtn('Restore it for both', () => restoreLegal(), 'primary', !allowedSeat(), 'Write the last legal position back to the shared game')}${ubtn(
-    'Accept their change',
-    () => {
-      const x = heldBad!.game;
-      heldBad = null;
-      setApplyingRemote(true);
-      setG(x);
-      save();
-      setApplyingRemote(false);
-      refresh();
-    },
-    '',
-    false,
-    'Show their change and play on from it',
-  )}</div>`;
-}
-const allowedSeat = () => !online.active || online.mySide() != null;
-/** Put the last legal position back for both players, marked as a restore so the other browser does not take it for going back in time. */
-function restoreLegal() {
-  if (!heldBad) return;
-  const why = heldBad.why;
-  heldBad = null;
-  setG({ ...structuredClone(g), restored: { t: Date.now(), why } });
-  hist.clear('position restored');
-  save();
-  refresh();
-}
-let auditWarn: string[] = []; // problems found in moves written by the other browser
-let saPick: { side: E.Side; run: (id: string) => void; cands: E.Chit[] } | null = null;
-export function pickSA(side: E.Side, ech: string | undefined, run: (id?: string) => void) {
-  const seen = new Set<string>(),
-    cands = E.saAvailable(g, side, ech).filter((c) => {
-      const k = c.kind + c.ech;
-      if (seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    }); // one choice per kind of counter
-  if (cands.length <= 1) return run(cands[0]?.id);
-  saPick = { side, run, cands };
-}
-/** An Air Mission played in a battle (17.21): extra artillery, or +2 to one of your units there (then tap it). */
-let airPick: { id: string; side: E.Side; step: 'choose' | 'unit' } | null = null;
-function airPickHtml() {
-  if (!airPick || airPick.step !== 'choose' || !g.battle) return '';
-  const p = airPick;
-  return `<div class="modal"><div class="sheet slim"><h3>${ico('air_mission')} Air Mission <button class="ico" data-ui="${reg(() => {
-    airPick = null;
-  })}" aria-label="Cancel">${ico('close')}</button></h3>
-    <p class="hint gx">${VOL.id === 'golan73' ? 'Close air support (16.31a): one per side (Israel may add a second, 16.22); it never takes a step loss and goes to the Used Box.' : VOL.id === 'sicily' ? 'Ground support (16.32): one per side, outside the artillery and battle-asset limits; it never takes a step loss and goes to the Used Box.' : "Combat support (17.21): it is this battle's one event, and it can never take a step loss."}</p>
-    <div class="row">${btn(
-      `${ico('artillery')} Extra artillery`,
-      () => {
-        airPick = null;
-        E.assign(g, g.battle!, p.id, 'arty');
-      },
-      'primary',
-      false,
-      'Fires like an artillery asset, outside the artillery limit',
-    )}${((n) =>
-      ubtn(
-        `${ico('plus')} +${n} to one unit`,
-        () => {
-          airPick = { ...p, step: 'unit' };
-        },
-        '',
-        false,
-        `Then tap one of your blocks in this battle: +${n} to its Success Number`,
-      ))(VOL.id === 'golan73' && p.side === 'syrian' ? 1 : 2)}</div></div></div>`;
-}
-/** 4.21: the chooser of the two eliminated assets an event brings back (the same sheet as the Special Action chooser). */
-export let altPick: { chit: string; sel: string[] } | null = null;
-export const setAltPick = <T extends typeof altPick>(v: T): T => ((altPick = v), v);
-export const altOk = (c: E.Chit) =>
-  g.phase === 'admin' &&
-  c.box === 'available' &&
-  mine(c.side) &&
-  VOL.altBack(g, c).length > 0 &&
-  (() => {
-    try {
-      const x = structuredClone(g);
-      VOL.altUse(
-        x,
-        c.id,
-        VOL.altBack(x, c)
-          .slice(0, 2)
-          .map((y) => y.id),
-      );
-      return true;
-    } catch {
-      return false;
-    }
-  })();
-function altPickHtml() {
-  const p = altPick,
-    c = p && g.chits.find((x) => x.id === p.chit);
-  if (!p || !c || c.box !== 'available') return '';
-  const cands = VOL.altBack(g, c),
-    need = Math.min(2, cands.length),
-    close = () => {
-      altPick = null;
-    };
-  const tog = (id: string) => () => {
-    p.sel = p.sel.includes(id) ? p.sel.filter((x) => x !== id) : [...p.sel, id].slice(-need);
-  };
-  return `<div class="modal"><div class="sheet sapick"><h3>Alternate use: ${esc(c.name)} <button class="ico" data-ui="${reg(close)}" aria-label="Cancel">${ico('close')}</button></h3>
-    <p class="hint">Pick ${need === 2 ? 'two' : 'the'} eliminated asset${need === 2 ? 's' : ''} to put back in the cup (4.21). The event is spent.</p>
-    <div class="pcgrid">${cands.map((x) => `<div class="sapc"><button class="pc ${x.side} ${p.sel.includes(x.id) ? 'on' : ''}" aria-pressed="${p.sel.includes(x.id)}" data-ui="${reg(tog(x.id))}" title="${esc(x.name)}">${chitPic(x)}</button><small>${esc(x.name)}</small></div>`).join('')}</div>
-    <div class="row">${btn(
-      `Bring back ${need}`,
-      () => {
-        const ids = p.sel;
-        altPick = null;
-        setSelChit(null);
-        VOL.altUse(g, c.id, ids);
-      },
-      'primary',
-      p.sel.length !== need,
-    )}${ubtn('Cancel', close)}</div></div></div>`;
-}
-function saPickHtml() {
-  if (!saPick) return '';
-  const p = saPick;
-  return `<div class="modal"><div class="sheet sapick"><h3>Which Special Action? <button class="ico" data-ui="${reg(() => {
-    saPick = null;
-  })}" aria-label="Cancel">${ico('close')}</button></h3>
-    <p class="hint gx">A single-use event only helps its own Higher Echelon and is eliminated; the reusable block goes to the Used Box and comes back next turn.</p>
-    <div class="pcgrid">${p.cands
-      .map(
-        (c) =>
-          `<div class="sapc"><button class="pc ${c.side}" data-ui="${reg(() => {
-            saPick = null;
-            act(() => p.run(c.id));
-          })}" title="${esc(c.name)}">${chitPic(c)}</button><small>${esc(c.kind === 'sa_block' ? 'Reusable block' : `Event${ARMY_NAME[c.ech] ? ' · ' + ARMY_NAME[c.ech] : ''}`)}</small></div>`,
-      )
-      .join('')}</div></div></div>`;
-}
-export function arrOpts(): { area: number; sa: boolean }[] {
-  if (!selArr || (g.phase !== 'reinforcement' && g.phase !== 'deploy')) return [];
-  {
-    const au = g.units.find((x) => x.id === selArr);
-    if (au && !mine(au.side)) return [];
-    const ac = g.chits.find((x) => x.id === selArr);
-    if (ac && !mine(ac.side)) return [];
-  }
-  if (g.phase === 'deploy') {
-    const id = realArr(selArr);
-    return id ? VOL.placeOptions(g, id).map((area) => ({ area, sa: false })) : [];
-  }
-  return g.pendingArrivals.includes(selArr)
-    ? E.arrivalOptions(g, selArr)
-    : g.tfNew.includes(selArr)
-      ? tfAreas().map((area) => ({ area, sa: false }))
-      : [];
-}
+import {
+  airPick,
+  airPickHtml,
+  altPickHtml,
+  arrOpts,
+  auditWarn,
+  endHidden,
+  feedHtml,
+  followFoe,
+  gotRemote,
+  heldBad,
+  heldBadBar,
+  pickSA,
+  saPickHtml,
+  scoreOpen,
+  setAirPick,
+  setAuditWarn,
+  setEndHidden,
+  setFollowFoe,
+  setGotRemote,
+  setHeldBad,
+  setScoreOpen,
+} from './choices';
+export * from './choices';
 
 /* ---------- camera focus ---------- */
 type Goal = { t: THREE.Vector3; dist: number; pitch: number; fast?: boolean } | null;
@@ -569,10 +392,10 @@ export function click(e: PointerEvent) {
       const p = airPick;
       if (u && u.side === p.side && u.area === b.area && (!u.garrison || u.id.startsWith('F-'))) {
         // Sicily Example 15C: the flanking asset may get the +2
-        airPick = null;
+        setAirPick(null);
         return act(() => E.assign(g, b, p.id, 'support', u.id));
       }
-      airPick = null;
+      setAirPick(null);
       say('Tap one of your own blocks in this battle for the +2. Cancelled.');
       return refresh();
     }
@@ -1873,7 +1696,7 @@ function tapCard(id: string) {
         VOL.playInBattle(g, b, c);
       }); // a combat event of the volume
     if (c.kind === 'air_mission') {
-      airPick = { id, side: c.side, step: 'choose' };
+      setAirPick({ id, side: c.side, step: 'choose' });
       return render();
     }
     return act(() => E.assign(g, b, id));
@@ -2020,7 +1843,7 @@ function drag(ev: PointerEvent, el: HTMLElement) {
       if (!mine(s)) return say("Those are the other player's assets.");
       const why0 = VOL.battleUse(g, b, c);
       if (why0) return say(why0);
-      airPick = { id, side: s, step: 'choose' };
+      setAirPick({ id, side: s, step: 'choose' });
       return render();
     } // a tap asks which use
     if (!ghost) zone = E.isArty(c) ? 'arty' : 'asset'; // a plain click files the card where it belongs
@@ -2139,7 +1962,7 @@ function promptText() {
       : `<b>Waiting for the ${nm(actorNow() as E.Side)} player…</b>`;
   if (g.over)
     return `<b>${esc(g.over)}</b> <button data-ui="${reg(() => {
-      endHidden = false;
+      setEndHidden(false);
     })}">Result</button>`;
   if (g.pendingBlow) return `<b>${nm(other(g.units.find((x) => x.id === g.pendingBlow!.unit)!.side))}</b>: attempt to blow the bridge?`;
   if (b?.stage === 'retreat') return '<b>Choose the retreat area.</b>';
@@ -3620,7 +3443,7 @@ const tidyLog = (x: string) =>
   x
     .replace(new RegExp(`: (${VOL.sides.join('|')}) `, 'g'), (_, sd: string) => `: ${nm(sd)} `)
     .replace(/(\d+) hit\(s\)/g, (_, n: string) => `${n} hit${n === '1' ? '' : 's'}`);
-const sideTag = (x0: string) => {
+export const sideTag = (x0: string) => {
   const x = tidyLog(x0);
   const m = new RegExp(`^(${TAGRE})\\b ?`).exec(x);
   return m
@@ -3740,7 +3563,7 @@ function modalHtml() {
           swtch(
             followFoe,
             () => {
-              followFoe = !followFoe;
+              setFollowFoe(!followFoe);
               try {
                 localStorage.setItem('fab-follow', followFoe ? '1' : '0');
               } catch {
@@ -4074,7 +3897,7 @@ function renderInner() {
       vpStrip(
         g,
         reg(() => {
-          scoreOpen = true;
+          setScoreOpen(true);
         }),
       ),
     )}</div>` +
@@ -4083,7 +3906,7 @@ function renderInner() {
         ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn(
             'OK',
             () => {
-              auditWarn = [];
+              setAuditWarn([]);
             },
           )}</div>`
         : ''
@@ -4093,7 +3916,7 @@ function renderInner() {
             g,
             unitPic,
             reg(() => {
-              scoreOpen = false;
+              setScoreOpen(false);
             }),
             ico('close'),
           )
@@ -4104,7 +3927,7 @@ function renderInner() {
             g,
             unitPic,
             ubtn(`${ico('layers')} Map`, () => {
-              endHidden = true;
+              setEndHidden(true);
             }) +
               ubtn(
                 `${ico('dice')} Replay`,
@@ -4120,7 +3943,7 @@ function renderInner() {
                 () => {
                   if (SANDBOX) {
                     SBU.sbReset({ ...g.opts });
-                    endHidden = false;
+                    setEndHidden(false);
                   } else location.href = homeUrl();
                 },
                 'primary',
@@ -4602,7 +4425,7 @@ function startOver(x: E.Game) {
   setSelUnit(setSelChit(setSelArr(null)));
   setSelArea(setPreviewArea(setHoverArea(null)));
   modal = null;
-  scoreOpen = false;
+  setScoreOpen(false);
   reinforcing = false;
   setBattleFx([]);
   setRollFx([]);
@@ -4801,23 +4624,25 @@ void startOnline(
       const by = online.lastBy,
         w: E.Side | null = online.seats.german === by ? P1 : online.seats.allied === by ? P2 : null; // referee-lite: check what the other browser wrote
       if (by && by !== online.uid && E.isRestore(prevG, rg)) {
-        heldBad = null;
-        auditWarn = [
-          ...auditWarn,
-          `The other player's rules check put the game back to the last legal position: ${rg.restored!.why.join(' ')}`,
-        ].slice(-6);
+        setHeldBad(null);
+        setAuditWarn(
+          [
+            ...auditWarn,
+            `The other player's rules check put the game back to the last legal position: ${rg.restored!.why.join(' ')}`,
+          ].slice(-6),
+        );
       } else if (by && by !== online.uid && gotRemote) {
         const p = E.auditChange(prevG, rg, w);
         if (p.length) {
           console.warn('rules check', p);
-          heldBad = { game: rg, why: p };
+          setHeldBad({ game: rg, why: p });
           setApplyingRemote(false);
           render();
           return;
         }
       }
-      gotRemote = true;
-      heldBad = null;
+      setGotRemote(true);
+      setHeldBad(null);
       record(false, rg);
       if (PARAMS.get('replay') && rg.over && !replayShown) {
         setReplayShown(true);
