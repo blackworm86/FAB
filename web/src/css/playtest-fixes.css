@@ -96,3 +96,41 @@
     display: none;
   }
 }
+/* A3: desktop top bar, long VP tracks (Golan has 9 turns): the turn boxes shrink, nothing paints over its neighbour; narrower screens keep icons only on the right */
+@media (min-width: 701px) {
+  .c-bar.t .vps {
+    overflow: hidden;
+  }
+  .c-bar.t .vps .vtt {
+    flex: 0 1 auto;
+  }
+  .c-bar.t .vps .vtb {
+    flex: 0 1 46px;
+    width: auto;
+    min-width: 28px;
+  }
+}
+@media (max-width: 1300px) and (min-width: 701px) {
+  .c-bar.t .c-stat button.ico .bl {
+    display: none;
+  }
+  .c-bar.t .vps .gauge {
+    min-width: 48px;
+  }
+  .c-bar.t .vps > .vlab:first-child {
+    display: none;
+  }
+}
+@media (max-width: 1100px) and (min-width: 701px) {
+  .c-bar.t .vps .vlab.al:not(.net),
+  .c-bar.t .vps .vlab.ge:not(.net) {
+    display: none;
+  }
+  .c-bar.t .vps .vtb {
+    min-width: 26px;
+  }
+  .c-bar.t .vps {
+    padding: 0 8px !important;
+    gap: 6px;
+  }
+}
