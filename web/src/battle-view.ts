@@ -107,7 +107,7 @@ export function handCards() {
   }
   if (g.phase !== 'admin') return '';
   const own = online.active && !online.both() ? online.mySide() : null,
-    s = handSide ?? own ?? (g.battle && !mine(g.phasing) ? other(g.phasing) : g.phasing),
+    s = handSide ?? own ?? (g.battle && !mine(g.phasing) ? other(g.phasing) : g.phase === 'admin' ? E.adminActor(g) : g.phasing), // 4.2c: the hand of the side acting now
     cs = [...E.boxOf(g, s, 'available')].sort((x, y) => x.kind.localeCompare(y.kind) || x.name.localeCompare(y.name));
   const live = cs.filter((c) => usableNow(c)),
     rest = cs.filter((c) => !usableNow(c)),

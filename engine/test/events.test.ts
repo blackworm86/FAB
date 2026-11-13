@@ -187,7 +187,8 @@ describe('Bulge events', () => {
   });
   it('units can build field works (5.23) once, in an uncontested area', () => {
     const g = toAdmin(9, 2);
-    endPhase(g);
+    endPhase(g); // 4.2b: hand over
+    endPhase(g); // 4.2c: end the Admin Phase
     const u = g.units.find(
       (x) =>
         x.side === 'german' &&

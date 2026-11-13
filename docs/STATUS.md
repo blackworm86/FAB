@@ -4,9 +4,13 @@ Kept by the project-management session (`docs/PARALLEL.md` §4). It reads `main`
 
 **Last review: Friday 13 November 2026, 10:00 UTC** (`main` at `bed5cca`).
 
+**How to run the project** (who does what, what to type, which model for which work): `docs/MANUAL.md`.
+
 **The plan of action** (aim, open items, order, agents, coordination): `docs/ROADMAP.md`, written 13 November, waiting for the owner's go-ahead.
 
 **Put in place for the plan, 13 November evening**: `npm run verify` (eleven checks, one table; all passing), the rules fingerprint in `bot/fingerprint.txt` (also in CI), the load check, three helpers (`fab-verifier`, `fab-rules-referee`, `fab-playtester`) and the `fab-playtest` procedure, the session notes in `docs/sessions/`, the four gates in `docs/PARALLEL.md`. The helpers have not been used yet: the first playtest is their trial.
+
+**First use of a helper, 13 November evening**: the rules referee read Golan 17.33 (Electronic Warfare) against the printed rule. Main line: matches. For the rules session to check (the referee's reading, not yet confirmed by a test): (1) after the Defender passes and the Attacker jams, the engine still accepts the Defender's Special Action reinforcement or retreat (the table hides the button, so it shows only online or after an interface change); (2) the "all defending units disordered" test counts the disordered marker but not "recovering"; (3) an unsupplied force can play an event (jamming, Countermeasures, Counterbattery) although assets are refused to it; (4) the 13 November fix has no test of its own. Three new questions for the owner came out of it (all disordered or all failed the roll; Electronic Warfare with mixed Syrian divisions; a SAM answer left open when the jam is played): to be asked by the rules session, one at a time. The referee's notes on its own instructions were used to correct them.
 
 **Where the sessions stood on the evening of 13 November** (from the session list): Rules check, waiting for the owner's answer on the Admin Phase order; 3D assets, waiting for the owner to upload the three model archives again; Computer opponents, idle since 12 November, waiting for the playtest; Interface, idle. None has merged the new file layout yet.
 

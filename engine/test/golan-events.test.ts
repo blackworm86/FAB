@@ -90,6 +90,7 @@ describe('engineering (4.3, 14.5)', () => {
     expect(golan.state(g).minefields).not.toContain('63-64');
     const isr = g.chits.find((c) => c.kind === 'engineer' && c.side === 'israeli')!;
     isr.box = 'available';
+    g.done = [g.phasing]; // 4.2c: the Israeli part of the Admin Phase
     expect(() => golan.removeMinefield(g, isr.id, 29, 30)).toThrow(/Syrian/);
   });
   it('bridges can be blown only where a road crosses a river', () => {
@@ -176,6 +177,7 @@ describe('events (17.x, 4.21)', () => {
   it('17.21 arriving battalions: +2, +1/+1, or an eliminated block back at 2 steps in an Assembly area (and off the VP track)', () => {
     const g = newGolanGame(8);
     fresh(g);
+    g.phasing = 'israeli';
     for (const id of ['I09', 'I10']) Object.assign(unit(g, id), { area: ASSEMBLY.A, box: undefined });
     golan.playArrivingBattalion(g, give(g, 'IC18'), { split: ['I09', 'I10'] });
     expect([unit(g, 'I09').str, unit(g, 'I10').str]).toEqual([3, 3]);
@@ -352,6 +354,7 @@ describe('Special Actions and staff in the Admin Phase', () => {
     unit(g, 'I06').str = 1;
     unit(g, 'I07').str = 1;
     give(g, 'IC14');
+    g.phasing = 'israeli'; // 14.61a: in the Israeli Admin Phase
     golan.mergeUnits(g, 'I06', 'I07', 'IC14');
     expect(unit(g, 'I07').str).toBe(2);
     expect(unit(g, 'I06').area).toBeNull();

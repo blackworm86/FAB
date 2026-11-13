@@ -131,6 +131,7 @@ describe('Golan audit fixes', () => {
     give(g, 'IC16');
     golan.airInterdiction(g, 'IC03', 75);
     expect(S(g).samTarget).toBe('IC03');
+    g.done = ['israeli']; // 4.2c: the Syrian part; it cannot end with the answer pending
     expect(() => endPhase(g)).toThrow(/16\.12/);
     const sam = g.chits.find((x) => x.kind === 'sam' && x.box === 'available')!;
     g.force = [3];

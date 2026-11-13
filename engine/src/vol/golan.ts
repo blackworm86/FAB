@@ -529,7 +529,7 @@ export function releaseGolani(g: Game, chitId?: string) {
     u = unit(g, NAF.special_action_release.id),
     at = NAF.sheet.entry.A;
   need(isNafakh(g) && V.nafakh && u.box === 'sa_release', 'Golani is not waiting to be released');
-  needAdmin(g);
+  needAdmin(g, 'israeli');
   need(g.phasing === 'israeli' && NAF.special_action_release.turns.includes(g.turn), 'in the Israeli Admin Phase of turn 3 or 4');
   need(
     g.control[at] === 'israeli' && !unitsIn(g, at, 'syrian').length && blocks(g, at, 'israeli').length < 2,
@@ -1722,7 +1722,7 @@ const nameOf = (a: number) => areas.get(a)?.name ?? String(a);
 /* ---------- engineering (4.3, 14.5) ---------- */
 /** 4.31: up to two bridges (river boundaries a road crosses, 14.41) next to one supplied, friendly, uncontested area. */
 export function blowBridges(g: Game, chitId: string, from: number, to: number[]) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['engineer']);
   need(homeArea(g, c.side, from), 'the engineer works from a supplied, friendly-controlled, uncontested area');
   need(to.length >= 1 && to.length <= 2, 'one or two bridges');
@@ -1736,7 +1736,7 @@ export function blowBridges(g: Game, chitId: string, from: number, to: number[])
 }
 /** 4.32: repair a blown bridge from a supplied, friendly, uncontested area towards a friendly or contested one. */
 export function repairBridge(g: Game, chitId: string, from: number, to: number) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['engineer']),
     key = edgeKey(from, to);
   need(g.blown.includes(key), 'that bridge is not blown');
@@ -1750,7 +1750,7 @@ export function repairBridge(g: Game, chitId: string, from: number, to: number) 
 }
 /** 4.33: field works where a friendly unit stands (never with a strongpoint, 15.6). */
 export function engineerFieldWorks(g: Game, chitId: string, a: number) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['engineer']);
   need(homeArea(g, c.side, a) && blocks(g, a, c.side).some(regular), 'a supplied, friendly, uncontested area with a friendly unit');
   need(!g.fieldWorks.includes(a) && !unitsIn(g, a).some((u) => u.fort), 'no field works there (one per area, never with a strongpoint)');
@@ -1761,7 +1761,7 @@ export function engineerFieldWorks(g: Game, chitId: string, a: number) {
 }
 /** 14.51a: bridge an AT ditch boundary (up to eight markers) from a supplied, friendly, uncontested area towards a friendly one or a contested enemy one. */
 export function bridgeDitch(g: Game, chitId: string, from: number, to: number) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['engineer']),
     key = edgeKey(from, to),
     V = state(g);
@@ -1777,7 +1777,7 @@ export function bridgeDitch(g: Game, chitId: string, from: number, to: number) {
 }
 /** 14.52 (Syrian only): lift a minefield next to a supplied, friendly, uncontested area. */
 export function removeMinefield(g: Game, chitId: string, from: number, to: number) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['engineer']),
     key = edgeKey(from, to),
     V = state(g);
@@ -1816,7 +1816,7 @@ const airOk = (g: Game, a: number) => {
   need(!isAssembly(a), 'not over an Assembly area');
 };
 export function airInterdiction(g: Game, chitId: string, a: number) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['air_mission']);
   airOk(g, a);
   need(!g.interdicted[a], 'that area is already interdicted');
@@ -1831,7 +1831,7 @@ export function airInterdiction(g: Game, chitId: string, a: number) {
 /** 18.31 (optional) Artillery interdiction: once per Admin Phase per player, an available artillery asset goes into an area next to friendly units
  *  or a strongpoint; it works as an interdiction mission (16.31b: +1 MP in and out for the enemy, no strat-move) until the second Supply Phase. */
 export function artilleryInterdiction(g: Game, chitId: string, a: number) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   need(!!g.opts.artyInterdict, 'artillery interdiction is an optional rule (18.31)');
   const c = chit(g, chitId),
     V = state(g);
@@ -1851,7 +1851,7 @@ export function artilleryInterdiction(g: Game, chitId: string, a: number) {
   say(g, `${c.name} interdicts ${nameOf(a)} (18.31)`, c.side);
 }
 export function airRecon(g: Game, chitId: string, a: number) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['air_mission']);
   airOk(g, a);
   noSamReplay(g, a);
@@ -1878,7 +1878,7 @@ export function finishRecon(g: Game, c: Chit) {
 }
 /** 16.11a: a commando from the Available Box lands on a vacant Israeli-controlled area next to a Syrian-occupied one; it stands there like a defended roadblock. */
 export function placeRaid(g: Game, chitId: string, a: number) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['commando']);
   need(
     !isAssembly(a) && g.control[a] === 'israeli' && vacant(g, a) && neighbors(a).some((n) => blocks(g, n, 'syrian').some(regular)),
@@ -1936,7 +1936,7 @@ export function declineSam(g: Game) {
 const STRATEGIC: Record<string, string> = { Assad: 'S21', '141st': 'S22', '62nd': 'S23' };
 /** 17.11: the named Strategic Reserve unit is released and placed at once in a friendly-controlled Entry area (`at`, or the first open one). */
 export function playRelease(g: Game, chitId: string, at?: number) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['event_release']);
   const id = Object.entries(STRATEGIC).find(([k]) => c.name.startsWith(k))?.[1];
   need(id, 'unknown release');
@@ -1949,7 +1949,7 @@ export function playRelease(g: Game, chitId: string, at?: number) {
 }
 /** 17.12 SSM attack: each Israeli air asset in the Available Box goes back to the cup on 1–2. */
 export function playSSM(g: Game, chitId: string) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['event_ssm_strike']);
   gone(c);
   for (const air of g.chits.filter((x) => x.kind === 'air_mission' && x.side === 'israeli' && x.box === 'available')) {
@@ -1964,7 +1964,7 @@ export function playArrivingBattalion(
   chitId: string,
   choice: { add: string } | { split: [string, string] } | { rebuild: string; assembly: 'A' | 'B' },
 ) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['event_arriving_battalion']);
   const mine = (id: string) => {
     const u = unit(g, id);
@@ -1998,7 +1998,7 @@ export function playArrivingBattalion(
 }
 /** 17.23 Lt. Zvika Greengold: an elite armor defended roadblock in an unoccupied Israeli-controlled area, staying until destroyed. */
 export function playLtZvika(g: Game, chitId: string, a: number) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['event_lt_zvika']);
   need(
     !isAssembly(a) && g.control[a] === 'israeli' && vacant(g, a) && inSupply(g, 'israeli', a),
@@ -2012,7 +2012,7 @@ export function playLtZvika(g: Game, chitId: string, a: number) {
 }
 /** 17.24 King Hassan's Troublemakers: the Moroccans fire only in defence and never enter Israeli-controlled areas, for the rest of the game. */
 export function playKingHassan(g: Game, chitId: string) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['event_king_hassan']);
   gone(c);
   state(g).kingHassan = true;
@@ -2020,7 +2020,7 @@ export function playKingHassan(g: Game, chitId: string) {
 }
 /** 17.31/17.32 replacements: one step to a supplied reduced unit of the matching class, even in a contested area. */
 export function playReplacement(g: Game, chitId: string, unitId: string) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['replacement_arm', 'replacement_mech']),
     u = unit(g, unitId);
   need(!u.fort, 'strongpoints never receive replacement steps (15.6)');
@@ -2051,7 +2051,7 @@ export const alternateEventCandidates = (g: Game, side: Side) =>
       a.kind !== 'special_action_event',
   );
 export function alternateEventUse(g: Game, chitId: string, assetIds: string[]) {
-  needAdmin(g);
+  needAdmin(g, chit(g, chitId).side);
   const c = chit(g, chitId);
   need(
     c.box === 'available' && (c.kind.startsWith('event') || c.kind.startsWith('replacement_') || c.kind === 'special_action_event'),
@@ -2078,7 +2078,7 @@ export function alternateEventUse(g: Game, chitId: string, assetIds: string[]) {
 /* ---------- Special Action uses of this volume (14.61) ---------- */
 /** 14.61a (Israeli): fold one unit into another with the same symbol, same or adjacent uncontested friendly areas, both in good order. */
 export function mergeUnits(g: Game, fromId: string, intoId: string, chitId?: string) {
-  needAdmin(g);
+  needAdmin(g, 'israeli');
   const a = unit(g, fromId),
     b = unit(g, intoId);
   need(
@@ -2106,7 +2106,7 @@ export function mergeUnits(g: Game, fromId: string, intoId: string, chitId?: str
 }
 /** 14.61b (Syrian, from turn 3): release the next 3rd Tank Division unit (15th, 81st, 65th) into its friendly-controlled Entry area (`at`, or the first open one). */
 export function releaseOperationalReserve(g: Game, chitId?: string, at?: number) {
-  needAdmin(g);
+  needAdmin(g, 'syrian');
   need(g.turn >= 3, 'from turn 3');
   const next = ['S18', 'S19', 'S20'].map((id) => unit(g, id)).find((u) => u.box === 'operational_reserve');
   need(next, 'the Operational Reserve is empty');
@@ -2119,7 +2119,7 @@ export function releaseOperationalReserve(g: Game, chitId?: string, at?: number)
 }
 /** 14.61c / 14.61d: a SAM (Syria) or an air support asset (Israel) from the Eliminated Box back into the cup. */
 export function replaceAsset(g: Game, side: Side, assetId: string, chitId?: string) {
-  needAdmin(g);
+  needAdmin(g, side);
   const a = chit(g, assetId);
   need(
     a.side === side && a.box === 'eliminated' && a.kind === (side === 'syrian' ? 'sam' : 'air_mission'),
@@ -2431,7 +2431,7 @@ registerHooks('golan73', {
   stackLimit: (_g, a) => (isAssembly(a) ? 99 : 2),
   stackRoom: (g, u, a) => (g.opts.advGhosts && u.side === 'israeli' ? ghostRoom(g, u, a) : undefined),
   firstBattle: (g) => state(g).airAssaultArea,
-  pendingSide: (g) => (state(g).release ? 'syrian' : undefined),
+  pendingSide: (g) => (state(g).release || state(g).samTarget ? 'syrian' : undefined), // the Purple Line release, a SAM answer (16.12)
   allowance: (g, u) => (isNight(g) && u.side === 'syrian' ? (u.cls === 'armor' ? 4 : 1) : u.cls === 'armor' ? 6 : 3),
   appropriate: (g, u) =>
     isNafakh(g)

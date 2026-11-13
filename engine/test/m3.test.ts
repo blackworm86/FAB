@@ -173,6 +173,7 @@ describe('M3 rules', () => {
     const g = toAdmin(7),
       st = give(g, 'command_staff', 'allied'),
       area = [...areas.keys()].find((a) => unitsIn(g, a, 'allied').length)!;
+    g.phasing = 'allied';
     staffPool(g, st.id, area);
     expect(g.pooled).toBe(area);
     const st2 = give(g, 'command_staff', 'german');
@@ -181,7 +182,8 @@ describe('M3 rules', () => {
     const foe = g.units.find((u) => u.side === 'allied' && u.area != null && !u.garrison)!;
     staffIntel(g, st2.id, foe.id);
     expect(g.revealed).toBe(foe.id);
-    endPhase(g);
+    endPhase(g); // 4.2b: the German player hands over
+    endPhase(g); // 4.2c: the Allied player ends the Admin Phase
     expect(g.revealed).toBeNull();
     g.phase = 'btCombat';
     endPhase(g);
@@ -493,6 +495,7 @@ describe('second review fixes', () => {
     u.str = 0;
     g.elimLarge.push(u.id);
     expect(eligibleForStep(c, u)).toBe(true);
+    g.done = [g.phasing]; // 4.2c: the Allied part of the German Admin Phase
     playReplacement(g, c.id, u.id);
     expect(u.str).toBe(1);
     expect(u.area).not.toBeNull();

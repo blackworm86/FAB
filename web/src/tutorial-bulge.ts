@@ -510,13 +510,14 @@ const L_ADMIN: Lesson = {
       auto: (g) => {
         const dr = g.chits.find((c) => c.side === 'allied' && /Delayed/.test(c.name) && c.box === 'available');
         if (dr) dr.box = 'eliminated';
+        E.setDone(g, 'german'); // 4.2b/c: the German player is done; now the Allies act
         E.blowBridges(g, 'L63.0', 25, [23, 33]);
         E.blowBridges(g, 'L88.0', 24, [33, 35]);
       },
     },
     {
       title: 'End the step',
-      text: 'Both players act in the Admin phase. Online, the other player taps <b>Done</b> first, then you end the step. <b>Tap End admin.</b>',
+      text: 'In the Admin phase the phasing player acts first and taps <b>Done</b>; then the other player acts and ends the step. <b>Tap End admin.</b>',
       target: GO,
       done: (g) => g.phase !== 'admin',
       act: (g) => E.endPhase(g),

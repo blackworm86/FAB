@@ -454,6 +454,7 @@ const L_REINF: Lesson = {
       rule: '16.31b Interdiction',
       look: 73,
       auto: (g) => {
+        E.setDone(g, 'syrian'); // 4.2b/c: the Syrian player has finished; Israel acts now
         G.airInterdiction(g, 'IC03', 75);
       },
     },
@@ -1222,7 +1223,10 @@ const L_ADMIN: Lesson = {
     },
     {
       title: 'The Israeli side: Lt. Zvika',
-      text: 'Now <b>Israel</b>. The <b>Lt. Zvika</b> event is a lone tank commander: an elite armour roadblock placed in an empty Israeli area, which stays until destroyed and may be reinforced by Special Action. <b>Tap Lt. Zvika.</b>',
+      enter: (g) => {
+        if (!g.done?.includes('syrian')) E.setDone(g, 'syrian'); // 4.2b/c: Syria is done; now Israel acts
+      },
+      text: 'Syria has tapped <b>Done</b>; now <b>Israel</b> acts. The <b>Lt. Zvika</b> event is a lone tank commander: an elite armour roadblock placed in an empty Israeli area, which stays until destroyed and may be reinforced by Special Action. <b>Tap Lt. Zvika.</b>',
       rule: '17.23 Lt. Zvicka Greengold',
       target: { el: ['.card2[data-chit="IC04"]', '.handtab button'], label: 'Lt. Zvika card' },
       done: (g, q) => q('.chitbar', 'Zvika') || C(g, 'IC04').box === 'map',
