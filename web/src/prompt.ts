@@ -40,6 +40,19 @@ import { lastFight, render, setLastFight, showAreas } from './main';
 export let phaseOpen = false;
 export const setPhaseOpen = <T extends typeof phaseOpen>(v: T): T => ((phaseOpen = v), v);
 /** The turn, side and step as one pill with a dot per step (owner, 13 Nov); a tap lists the whole sequence of the player turn. */
+/** Why the side setting up a battle cannot confirm yet, in the engine's own words (a dry run on a copy), or null. */
+export function setupBlock(b: E.Battle, who: E.Side): string | null {
+  const own = VOL.blocksBegin(g);
+  if (own) return own;
+  try {
+    const c = structuredClone(g);
+    E.setReady(c, c.battle!, who);
+    return null;
+  } catch (e) {
+    const m = (e as Error).message;
+    return m ? m[0].toUpperCase() + m.slice(1) : null;
+  }
+}
 function phasePill(who: E.Side, pAt: number, label: string) {
   const setup = g.phase === 'deploy',
     dots = setup
@@ -123,7 +136,7 @@ function promptText() {
   if (b && b.stage === 'setup' && b.attPointDone) return '<b>Point units designated.</b> Blocks are revealed…';
   if (b)
     return b.stage === 'setup'
-      ? setupPrompt(b)
+      ? ((w) => (w ? `<b>Not yet:</b> ${esc(w)}.` : setupPrompt(b)))(setupBlock(b, E.setupSide(g, b)))
       : b.stage === 'done'
         ? (() => {
             const left = fightable().filter((x) => x !== b.area).length;
@@ -218,7 +231,7 @@ export function primary(): { label: string; fn: () => void; dis?: boolean } | nu
     if (b.stage === 'setup') {
       const who = E.setupSide(g, b),
         local = !online.active || online.both(),
-        why = VOL.blocksBegin(g);
+        why = setupBlock(b, who);
       if (
         (!local && who !== online.mySide()) ||
         b.attPointDone ||
@@ -273,10 +286,13 @@ export function primary(): { label: string; fn: () => void; dis?: boolean } | nu
         pickSA(g.phasing, undefined, (sa) => E.startBattle(g, a, true, sa));
       else E.startBattle(g, a, g.phase === 'btCombat');
     };
+    if (dropsLeft() && mine(g.phasing))
+      return { label: 'Drop the airborne first', fn: () => say('Choose the drop zone in the panel on the map first (14.27a)'), dis: true }; // Sicily 14.27a: no battle before the drop
     if (sel != null) return { label: `Fight ${areaName(sel)}`, fn: fight(sel) };
     if (must.length && allowed() && mine(g.phasing)) {
       const at = lastFight != null ? center(lastFight) : null,
-        next = at ? [...must].sort((x, y) => center(x).distanceTo(at) - center(y).distanceTo(at))[0] : must[0];
+        air = g.game === 'sicily' ? E.sicily.state(g).airborneAreas.filter((a) => must.includes(a)) : [],
+        next = air[0] ?? (at ? [...must].sort((x, y) => center(x).distanceTo(at) - center(y).distanceTo(at))[0] : must[0]); // Sicily 14.27a: the airborne assault is fought first
       return { label: `Next battle: ${areaName(next)}`, fn: fight(next) };
     } // after a battle the button names the nearest one still to fight
   }

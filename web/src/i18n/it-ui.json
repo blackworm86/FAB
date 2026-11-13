@@ -3497,9 +3497,22 @@
   "Rolling the dice…": "Lancio dei dadi…",
   "brass = needs SA": "ottone = serve un'AS",
   "Map:": "Mappa:",
-  "to play it, then end the step.": "per giocarla, poi termina il passo."
+  "to play it, then end the step.": "per giocarla, poi termina il passo.",
+  "Not yet:": "Non ancora:"
  },
  "patterns": [
+  [
+   "Place the airborne units first \\(14\\.27a\\)\\.",
+   "Prima piazza le unità aviotrasportate (14.27a)."
+  ],
+  [
+   "The airborne units must drop first \\(14\\.27a\\)\\.",
+   "Prima devono lanciarsi le unità aviotrasportate (14.27a)."
+  ],
+  [
+   "The airborne assault in (.+) is fought first \\(14\\.27a\\)\\.",
+   "L'assalto aviotrasportato a $1 si combatte per primo (14.27a)."
+  ],
   [
    "(.+): tap a card",
    "$1: tocca una carta"
