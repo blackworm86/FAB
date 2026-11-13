@@ -46,7 +46,8 @@ export interface VolView {
   /** CSS class of a block's wood: its side, or 'british' for The Bulge's British blocks. */
   cssSide: (u: E.Unit) => string;
   reserveTag: (u: E.Unit) => string;
-  ruleKey: (kind: string) => string;
+  /** The explanation shown for a chit: by kind, or the chit's own when its rules are its own (v.d. Heydte, a Task Force...). */
+  ruleKey: (kind: string, c?: E.Chit) => string;
   targetsFor: (G: () => E.Game, c: E.Chit | null, ctx: TgtCtx) => Tgt | null;
   battleCard: (c: E.Chit) => boolean;
   battleUse: (g: E.Game, b: E.Battle, c: E.Chit) => string | null;

@@ -736,13 +736,13 @@ let tgt: Tgt | null = null, infoOpen = false, infoFor = '', tgtMode = '';
 const abtn = (icon: string, label: string, fn: () => void, cls = '', dis = false, title = '') => btn(`${ico(icon)}<span>${esc(label)}</span>`, fn, 'ab ' + cls, dis, title || label);
 /** The selected chit: a slim bar with its picture, a one-line instruction, an info toggle and the actions as icon buttons. */
 function chitBar(c: E.Chit): string {
-  if (!mine(c.side)) return `<div class="c-dispatch chitbar ${infoOpen ? 'open' : ''}"><div class="cbhead"><span class="cbimg">${chitPic(c)}</span><div class="cbt"><b>${esc(c.name)}</b><small>The other side's piece: you can only look</small></div><button class="ico" data-ui="${reg(() => { selChit = null; })}" aria-label="Put away" title="Put away">${ico('close')}</button></div><div class="inspect slimcard">${ruleHtml(VOL.ruleKey(c.kind), E.isEvent(c))}</div></div>`;
-  const tg = tgt, body = chitPanel(c), [kind] = RULE[VOL.ruleKey(c.kind)] ?? [c.kind];
+  if (!mine(c.side)) return `<div class="c-dispatch chitbar ${infoOpen ? 'open' : ''}"><div class="cbhead"><span class="cbimg">${chitPic(c)}</span><div class="cbt"><b>${esc(c.name)}</b><small>The other side's piece: you can only look</small></div><button class="ico" data-ui="${reg(() => { selChit = null; })}" aria-label="Put away" title="Put away">${ico('close')}</button></div><div class="inspect slimcard">${ruleHtml(VOL.ruleKey(c.kind, c), E.isEvent(c))}</div></div>`;
+  const tg = tgt, body = chitPanel(c), [kind] = RULE[VOL.ruleKey(c.kind, c)] ?? [c.kind];
   const chips = tg?.chips.map((x) => `<button class="pc ${c.side}" data-do="${reg(x.fn)}" title="${esc(x.label)}">${x.img}<small>${esc(x.label)}</small></button>`).join('') ?? '';
   if (infoFor !== c.id) { infoFor = c.id; infoOpen = guide === 'full'; }      // each chit opens with its rules folded (short mode) or shown (full mode)
   return `<div class="c-dispatch chitbar ${infoOpen ? 'open' : ''}"><div class="cbhead"><span class="cbimg">${chitPic(c)}</span><div class="cbt"><b>${esc(c.name)}</b><small>${tg?.hint ? gx(esc(tg.hint), esc(kind)) : esc(kind)}</small></div>
     <button class="ico" data-ui="${reg(() => { infoOpen = !infoOpen; })}" aria-pressed="${infoOpen}" aria-label="What it does" title="What it does">${ico('info')}</button><button class="ico" data-ui="${reg(() => { selChit = null; })}" aria-label="Put away" title="Put away">${ico('close')}</button></div>
-    ${tg && tg.modes.length > 1 ? `<div class="modes" role="group" aria-label="What to do">${tg.modes.map((m) => `<button class="ico ${m.id === tgtMode ? 'on' : ''}" data-ui="${reg(() => { tgtMode = m.id; refresh(); })}" title="${esc(m.label)}" aria-label="${esc(m.label)}">${ico(m.icon)}<span>${esc(m.label)}</span></button>`).join('')}</div>` : ''}${infoOpen ? `<div class="inspect slimcard">${ruleHtml(VOL.ruleKey(c.kind), E.isEvent(c))}</div>` : ''}${chips ? `<div class="cbchips">${chips}</div>` : ''}${tg?.buttons.length || altOk(c) ? `<div class="row">${(tg?.buttons ?? []).map((b) => abtn(b.icon, b.label, b.fn, '', false, b.title)).join('')}${altOk(c) ? ubtn(`${ico('swap')}<span>Alternate use</span>`, () => { altPick = { chit: c.id, sel: [] }; }, 'ab', false, '4.21: spend the event to put two eliminated assets of your choice back in the cup') : ''}</div>` : ''}${iconify(body)}</div>`;
+    ${tg && tg.modes.length > 1 ? `<div class="modes" role="group" aria-label="What to do">${tg.modes.map((m) => `<button class="ico ${m.id === tgtMode ? 'on' : ''}" data-ui="${reg(() => { tgtMode = m.id; refresh(); })}" title="${esc(m.label)}" aria-label="${esc(m.label)}">${ico(m.icon)}<span>${esc(m.label)}</span></button>`).join('')}</div>` : ''}${infoOpen ? `<div class="inspect slimcard">${ruleHtml(VOL.ruleKey(c.kind, c), E.isEvent(c))}</div>` : ''}${chips ? `<div class="cbchips">${chips}</div>` : ''}${tg?.buttons.length || altOk(c) ? `<div class="row">${(tg?.buttons ?? []).map((b) => abtn(b.icon, b.label, b.fn, '', false, b.title)).join('')}${altOk(c) ? ubtn(`${ico('swap')}<span>Alternate use</span>`, () => { altPick = { chit: c.id, sel: [] }; }, 'ab', false, '4.21: spend the event to put two eliminated assets of your choice back in the cup') : ''}</div>` : ''}${iconify(body)}</div>`;
 }
 function chitPanel(c: E.Chit): string {
   const a = selArea, out: string[] = [];
@@ -1620,7 +1620,7 @@ let piecesBox: 'available' | 'cup' | 'used' | 'eliminated' = 'available', pieces
 const chitPic = (c: E.Chit) => (c.kind === 'sa_block' ? b3(chitImg(c), c.side) : `<img class="cb" alt="" draggable="false" src="${chitImg(c)}">`);
 const unitPic = (u: E.Unit) => (u.garrison ? `<img class="cb" alt="" draggable="false" src="${unitFace(u)}">` : b3(unitFace(u), sideOfUnit(u)));
 const pieceBtn = (c: E.Chit, f: () => void, on = false, dis = false) => `<button class="pc ${c.side} ${on ? 'on' : ''} ${c.box === 'available' && usableNow(c) ? 'live' : ''}" data-ui="${reg(f)}" ${dis ? 'disabled' : ''} title="${esc(c.name)}" aria-label="${esc(chitLabel(c))}">${chitPic(c)}</button>`;
-const ruleCard = (c: E.Chit) => { const [t] = RULE[VOL.ruleKey(c.kind)] ?? [c.kind, '']; return `<span class="big">${chitPic(c)}</span><div><h4>${esc(c.name)} <small>${esc(t)}</small></h4>${ruleHtml(VOL.ruleKey(c.kind), E.isEvent(c))}</div>`; };
+const ruleCard = (c: E.Chit) => { const [t] = RULE[VOL.ruleKey(c.kind, c)] ?? [c.kind, '']; return `<span class="big">${chitPic(c)}</span><div><h4>${esc(c.name)} <small>${esc(t)}</small></h4>${ruleHtml(VOL.ruleKey(c.kind, c), E.isEvent(c))}</div>`; };
 const seatedView = () => online.active && !online.both() && !!online.mySide();
 function piecesHtml() {
   const sd = piecesSide ?? viewSide(), seg = (h: string, cls = '') => `<span class="seg ${cls}">${h}</span>`;
@@ -1674,7 +1674,7 @@ function dispatch() {
     const cs = E.boxOf(g, sd, 'used').filter((c) => E.isAsset(c)), pick = recoverSel[sd] ? cs.find((c) => c.id === recoverSel[sd]) : null, own = mine(sd);
     return `<h4 class="${sd}">${nm(sd)}</h4><div class="pcgrid">${cs.map((c) => pieceBtn(c, () => { recoverSel[sd] = recoverSel[sd] === c.id ? null : c.id; }, recoverSel[sd] === c.id, !own)).join('') || '<small>Nothing in the Used Box</small>'}</div>
       <div class="row">${btn(pick ? `Bring back ${esc(pick.name)}` : 'Choose an asset', () => { E.recoverAsset(g, sd, pick!.id); recoverSel[sd] = null; }, 'primary', !pick || !own)}${btn('None', () => E.recoverAsset(g, sd, null), '', !own)}</div>
-      ${pick ? `<details class="rdet"><summary><b>${esc(pick.name)}</b> · ${esc((RULE[VOL.ruleKey(pick.kind)] ?? [pick.kind])[0])} <span>What it does</span></summary>${ruleHtml(VOL.ruleKey(pick.kind), E.isEvent(pick))}</details>` : ''}`;
+      ${pick ? `<details class="rdet"><summary><b>${esc(pick.name)}</b> · ${esc((RULE[VOL.ruleKey(pick.kind, pick)] ?? [pick.kind])[0])} <span>What it does</span></summary>${ruleHtml(VOL.ruleKey(pick.kind, pick), E.isEvent(pick))}</details>` : ''}`;
   }).join('')}</div>`;
   const u = selUnit ? g.units.find((x) => x.id === selUnit) : null;
   if (u) {
@@ -1790,7 +1790,7 @@ function tray() {
 function cardTip() {
   const c = handInspect ? g.chits.find((x) => x.id === handInspect) : null, b = g.battle;
   if (!c || !b) return '<div class="cardtip"><span>Tap a card to read its rule.</span></div>';
-  const [t, d] = RULE[VOL.ruleKey(c.kind)] ?? [c.kind, ''], why = VOL.battleUse(g, b, c);
+  const [t, d] = RULE[VOL.ruleKey(c.kind, c)] ?? [c.kind, ''], why = VOL.battleUse(g, b, c);
   return `<div class="cardtip">${chitPic(c)}<div><b>${esc(c.name)} <small>${esc(t)}</small></b><span>${esc(d.split("\n")[0])}</span>${why ? `<em>Cannot join: ${esc(why)}</em>` : '<em class="ok">Can join this battle</em>'}</div></div>`;
 }
 let handAll = false;
