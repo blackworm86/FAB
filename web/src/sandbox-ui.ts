@@ -4,6 +4,7 @@ import * as SB from './sandbox';
 import { ico } from './icons';
 import { esc, nm } from './util';
 import { RULE, ruleHtml } from './rules-text';
+import { chitRuleKey } from './vol';
 import { online, setDevSeat, SANDBOX } from './online';
 import type { History } from './history';
 import { GAMES } from './games';
@@ -112,9 +113,9 @@ function sbDetail() {
       <div class="lbtags">${tag('Disordered', u.disorder > 0, () => { u.disorder = u.disorder ? 0 : 1; })}${res.length ? tag(resName(u.reserve ?? res[0]), !!u.reserve, () => { const i = u.reserve ? res.indexOf(u.reserve) + 1 : 0; u.reserve = res[i] ?? null; }, res.length > 1 ? 'Tap again for the next reserve marker' : 'Reserve') : ''}${tag('Out of supply', u.unsupplied, () => { u.unsupplied = !u.unsupplied; })}${tag('Moved', u.moved, () => { u.moved = !u.moved; })}${tag('Exploiting', u.exploit, () => { u.exploit = !u.exploit; })}${u.area != null ? tag('Face-up', u.up === u.area, () => { u.up = u.up === u.area ? undefined : u.area!; }) : ''}${u.area != null ? sbtn(`${ico('close')}<span>Off the map</span>`, () => { SB.lift(M.g, u.id); st.sbPlace = null; }, 'tag', 'Take it off the map') : ''}</div>`;
   }
   if (c) {
-    const [t, d] = RULE[c.kind] ?? [c.kind, ''];
+    const [t, d] = RULE[chitRuleKey(c)] ?? [c.kind, ''];
     return `<div class="lbd">${chitPic(c)}<div><b>${esc(c.name)}</b><small>${nm(c.side)} · ${esc(t)} · now: ${c.box}</small>
-      <div class="chips">${SB.BOXES.filter((b) => b !== 'map' || c.box === 'map').map((b) => b === c.box ? `<button class="on" disabled>${b}</button>` : sbtn(b, () => { c.box = b; })).join('')}${ubtn(ico('close'), () => { M.selChit = null; refresh(); }, 'ico', false, 'Deselect')}</div></div></div>${d ? `<div class="hint">${ruleHtml(c.kind, E.isEvent(c))}</div>` : ''}`;
+      <div class="chips">${SB.BOXES.filter((b) => b !== 'map' || c.box === 'map').map((b) => b === c.box ? `<button class="on" disabled>${b}</button>` : sbtn(b, () => { c.box = b; })).join('')}${ubtn(ico('close'), () => { M.selChit = null; refresh(); }, 'ico', false, 'Deselect')}</div></div></div>${d ? `<div class="hint">${ruleHtml(chitRuleKey(c), E.isEvent(c))}</div>` : ''}`;
   }
   if (M.selArea != null) {
     const a = M.selArea;

@@ -23,6 +23,7 @@ import { sicilyTargets, sicilyPanel, sicilyBlocksBegin, sicilyBattleCard, SICILY
 import { targetsFor as bulgeTargets, type Tgt, type TgtCtx } from './chit-play';
 import { golanTargets, golanBattleUse, golanPlayInBattle, golanBattleCard, golanPanel, golanBlocksBegin, golanEdgeMarks, GOLAN_BOXES, type PanelCtx } from './golan-ui';
 import { GAMES, gameInfo, type GameInfo, type ScenarioInfo } from './games';
+import { RULE } from './rules-text';
 
 export type MapArea = { id: number; label: [number, number]; polygon: [number, number][] };
 export type MapEntry = { letter: string; x: number; y: number; side: E.Side };
@@ -48,6 +49,8 @@ export interface VolView {
   reserveTag: (u: E.Unit) => string;
   /** The explanation shown for a chit: by kind, or the chit's own when its rules are its own (v.d. Heydte, a Task Force...). */
   ruleKey: (kind: string, c?: E.Chit) => string;
+  /** The explanation for an asset standing on the map as a unit (garrison, Task Force, v.d. Heydte...), or null. */
+  unitRule: (u: E.Unit) => string | null;
   targetsFor: (G: () => E.Game, c: E.Chit | null, ctx: TgtCtx) => Tgt | null;
   battleCard: (c: E.Chit) => boolean;
   battleUse: (g: E.Game, b: E.Battle, c: E.Chit) => string | null;
@@ -90,7 +93,7 @@ function bulge(): VolView {
     cssSide: (u) => (u.side === 'german' ? 'german' : BRIT.has(u.name) ? 'british' : 'allied'),
     ruleArt: bulgeRuleArt,
     reserveTag: (u) => (u.side === 'german' ? ({ z5: 'R5', z6: 'R6', z7: 'R7' } as Record<string, string>)[u.reserve ?? ''] ?? 'R5' : u.reserve === 'z7' ? 'A7' : 'A56'),
-    ruleKey: (k) => k, targetsFor: bulgeTargets,
+    ruleKey: (k, c) => (c?.name === 'v.d. Heydte' ? 'heydte' : RULE[`bulge:${k}`] ? `bulge:${k}` : k), unitRule: (u) => (!u.garrison ? null : u.heydte ? 'heydte' : u.id.startsWith('TF-') ? 'bulge:task_force' : u.id.startsWith('DR-') ? 'bulge:engineer' : 'bulge:garrison'), targetsFor: bulgeTargets,
     battleCard: (c) => E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission', battleUse: (g, b, c) => E.canAssign(g, b, c.side, c), playInBattle: () => false,
     panel: () => '', blocksBegin: () => null, edgeMarks: () => [], markSvg: (code) => mapMarkerSvg(code), boxes: {},
     fieldWorks: (g, id) => E.buildFieldWorks(g, id),
@@ -127,7 +130,7 @@ function golan(): VolView {
     unitSvg: (u, g) => (u.garrison && u.chitId ? chitArt(E.chit(g, u.chitId)) : unitArt(u)), chitSvg: chitArt,
     cssSide: (u) => u.side,
     reserveTag: (u) => (u.side === 'syrian' ? 'R' : 'RI'),
-    ruleKey: (k) => (k === 'air_mission' || k === 'event_release' ? `golan:${k}` : k), targetsFor: golanTargets,
+    ruleKey: (k) => (k === 'air_mission' || k === 'event_release' ? `golan:${k}` : k), unitRule: (u) => (u.garrison ? 'garrison' : null), targetsFor: golanTargets,
     battleCard: golanBattleCard, battleUse: golanBattleUse, playInBattle: golanPlayInBattle,
     ruleArt: golanRuleArt,
     panel: golanPanel, blocksBegin: golanBlocksBegin, edgeMarks: golanEdgeMarks, markSvg: (code) => EDGE[code]?.() ?? mapMarkerSvg(code), boxes: GOLAN_BOXES,
@@ -169,7 +172,7 @@ function sicily(): VolView {
     unitSvg: (u, g) => (u.garrison && u.chitId ? chitArt(E.chit(g, u.chitId)) : unitArt(u)), chitSvg: chitArt,
     cssSide: (u) => u.nation ?? (u.side === 'axis' ? 'german' : 'us'),
     reserveTag: (u) => (u.side === 'axis' ? 'R' : u.nation === 'british' ? 'R8' : 'R7'),
-    ruleKey: (k) => (['air_mission', 'engineer', 'command_staff'].includes(k) ? `sicily:${k}` : k), targetsFor: sicilyTargets,
+    ruleKey: (k) => (['air_mission', 'engineer', 'command_staff'].includes(k) ? `sicily:${k}` : k), unitRule: () => null, targetsFor: sicilyTargets,
     battleCard: sicilyBattleCard, battleUse: (g, b, c) => E.canAssign(g, b, c.side, c), playInBattle: () => false,
     ruleArt: (key) => { const u = RAW_UNITS.get(key); if (u) return { svg: sicilyBlockSvg(u), wood: hexc(SICILY_WOOD[u.nation ?? 'us']), name: u.name }; const c = RAW_COUNTERS.get(key); return c ? { svg: sicilyChitSvg(c), name: c.name } : null; },
     panel: sicilyPanel, blocksBegin: sicilyBlocksBegin, edgeMarks: () => [], markSvg: (code) => (RESERVE[code] ? sicilyChitSvg(RAW_COUNTERS.get(RESERVE[code])!) : mapMarkerSvg(code)), boxes: SICILY_BOXES,
@@ -188,8 +191,11 @@ export function useVolume(id: string | null | undefined): VolView {
   document.documentElement.style.setProperty('--ge', v.ink[v.sides[0]]); document.documentElement.style.setProperty('--al', v.ink[v.sides[1]]);
   if (v.id !== 'bulge') aliasSideCss({ german: v.sides[0], allied: v.sides[1] });
   document.title = `FAB: ${v.name}`;
-  return v;
+  cur = v; return v;
 }
+let cur: VolView | null = null;
+/** The explanation key for a chit in the volume being played (for panels outside the table, such as the sandbox). */
+export const chitRuleKey = (c: E.Chit) => cur?.ruleKey(c.kind, c) ?? c.kind;
 /** The stylesheet names its side classes after The Bulge's sides (.german, .allied); another volume gets the same rules under its own side names. */
 function aliasSideCss(map: Record<string, string>) {
   const re = /\.(german|allied)\b/g, own = new Set<string>(), seen = (rules: CSSRuleList) => { for (const r of Array.from(rules)) { if (r instanceof CSSStyleRule) own.add(r.selectorText); else if (r instanceof CSSGroupingRule) seen(r.cssRules); } };

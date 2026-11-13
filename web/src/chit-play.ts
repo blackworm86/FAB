@@ -12,16 +12,22 @@ export function targetsFor(G: () => E.Game, c: E.Chit | null, ctx: TgtCtx): Tgt 
   const t: Tgt = { units: new Map(), areas: new Map(), pick: new Map(), color: new Map(), chips: [], buttons: [], modes: [], any: null, hint: '' }, a = ctx.area;
   const k = c.kind;
   if (k.startsWith('replacement') || k === 'event_arriving_regiment' || k.startsWith('rebuild')) {
-    for (const u of G().units.filter((x) => E.eligibleForStep(c, x))) {
-      if (u.area == null) t.chips.push({ label: u.name, img: ctx.face(u), fn: () => E.playReplacement(G(), c.id, u.id) });
+    for (const u of G().units.filter((x) => E.eligibleForStep(c, x, G()))) {
+      if (u.area == null) for (const ar of E.regimentAreas(G(), u.id)) { t.areas.set(ar, () => E.playReplacement(G(), c.id, u.id, ar)); t.color.set(ar, 0x5d8b3a); }   // 17.23: the player picks the entry area
       else t.units.set(u.id, () => E.playReplacement(G(), c.id, u.id));
     }
-    t.hint = t.units.size ? 'Tap a glowing block to add a step' : t.chips.length ? 'Tap a unit to bring back' : '';
+    if (k.startsWith('rebuild')) {                                                                // 17.22: or return an eliminated one-step unit to a friendly VP area
+      const g0 = G(), dead = g0.units.filter((x) => x.area == null && x.str === 0 && x.max === 1 && x.side === c.side && !x.garrison && x.q[0] !== 'elite');
+      const ok = (x: E.Unit, ar: number) => g0.control[ar] === c.side && works((tg) => E.playRebuild(tg, c.id, x.id, ar));
+      for (const ar of E.areas.keys()) { if (g0.control[ar] !== c.side) continue; const who = dead.filter((x) => ok(x, ar)); if (who.length === 1) t.areas.set(ar, () => E.playRebuild(G(), c.id, who[0].id, ar)); else if (who.length) t.pick.set(ar, () => ctx.setArea(ar)); }
+      if (a != null && t.pick.has(a)) { t.focus = true; t.color.set(a, 0xe7b04a); for (const x of dead.filter((y) => ok(y, a))) t.chips.push({ label: `${x.name} to ${ctx.areaName(a)}`, img: ctx.face(x), fn: () => E.playRebuild(G(), c.id, x.id, a) }); }
+    }
+    t.hint = t.chips.length ? 'Tap a unit to bring it back' : t.units.size && (t.areas.size || t.pick.size) ? 'Tap a glowing block to add a step, or a glowing area to bring a unit back' : t.units.size ? 'Tap a glowing block to add a step' : t.areas.size || t.pick.size ? 'Tap a glowing area to bring the unit back there' : '';
   } else if (k === 'special_action_event' || k === 'sa_block') {
-    const g0 = G(), fits = (u: E.Unit) => E.saAvailable(g0, c.side, u.ech).some((x) => x.id === c.id);         // this very counter: a single-use event only helps its own Higher Echelon (8.1)
-    for (const u of g0.units.filter((x) => x.side === c.side && x.area != null && !x.garrison && !x.unsupplied && x.str < x.max && fits(x))) t.units.set(u.id, () => E.qualityReplacement(G(), u.id, c.id));
-    const shaken = (ar: number) => [ar, ...E.neighbors(ar)].some((a2) => E.blocks(g0, a2, c.side).some((u) => u.disorder && !u.unsupplied && fits(u)));
-    for (const ar of E.areas.keys()) if (E.suppliedArea(g0, c.side, ar) && shaken(ar)) t.areas.set(ar, () => E.rally(G(), c.side, ar, c.id));
+    const g0 = G(), fits = (u: E.Unit, ar = u.area!) => E.saAvailable(g0, c.side, u.ech, ar).some((x) => x.id === c.id);   // this very counter: a single-use event only helps its own Higher Echelon (8.1), German ones in their army's zone (17.1)
+    for (const u of g0.units.filter((x) => x.side === c.side && x.area != null && !x.garrison && !x.unsupplied && x.str < x.max && fits(x))) if (works((tg) => E.qualityReplacement(tg, u.id, c.id))) t.units.set(u.id, () => E.qualityReplacement(G(), u.id, c.id));
+    const rallies = (ar: number) => [ar, ...E.neighbors(ar)].some((a2) => E.blocks(g0, a2, c.side).some((u) => u.disorder && !u.unsupplied)) && works((tg) => { const n = tg.units.filter((u) => u.disorder).length; E.rally(tg, c.side, ar, c.id); if (tg.units.filter((u) => u.disorder).length === n) throw new Error('nobody rallies'); });
+    for (const ar of E.areas.keys()) if (g0.control[ar] === c.side && E.inSupply(g0, c.side, ar) && rallies(ar)) t.areas.set(ar, () => E.rally(G(), c.side, ar, c.id));   // 8.25: any supplied area, contested or not
     t.hint = 'Tap a glowing block (quality replacement) or area (rally)';
   } else if (k === 'engineer') {
     const zone = (ar: number) => E.assetZoneOk(G(), c, ar), rbs = E.roadblockAreas(G(), c.side);
@@ -63,8 +69,11 @@ export function targetsFor(G: () => E.Game, c: E.Chit | null, ctx: TgtCtx): Tgt 
   } else if (k === 'event_release') {
     for (const ar of [4, 6] as const) if (works((tg) => E.releaseUnit(tg, c.id, ar))) t.areas.set(ar, () => E.releaseUnit(G(), c.id, ar));      // only entry areas that can take it
     t.hint = t.areas.size ? 'Tap the entry area' : 'Entry areas Y and Z are full: the division cannot enter now';
+  } else if (k === 'event_bodenplatte') {
+    t.buttons.push({ icon: 'air_mission', label: `Strike Allied air missions (${E.boxOf(G(), 'allied', 'available').filter((x) => x.kind === 'air_mission').length} available)`, fn: () => E.playBodenplatte(G(), c.id), title: '17.14: one die per Air Mission in the Allied Available Box' });
   } else if (c.name === 'v.d. Heydte' && E.heydteWindow(G(), c)) {
-    for (const ar of [31, 52] as const) if (works((tg) => E.heydteDrop(tg, c.id, ar))) t.areas.set(ar, () => E.heydteDrop(G(), c.id, ar)); t.hint = 'Tap a drop zone: Hohes Venn or Stoumont';
+    for (const ar of [31, 52] as const) if (works((tg) => E.heydteDrop(tg, c.id, ar))) t.areas.set(ar, () => E.heydteDrop(G(), c.id, ar));
+    t.hint = t.areas.size ? 'Tap a drop zone: Hohes Venn or Stoumont' : 'No drop zone is vacant and Allied-held: it stays as a battle asset (16.11)';
   } else return null;
   return t;
 }
