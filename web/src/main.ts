@@ -5,7 +5,6 @@ import * as E from '../../engine/src';
 import { loadChitArt, garrisonChit } from './chits';
 import { loadGolanChitArt } from './golan-art';
 import { loadSicilyChitArt } from './sicily-art';
-import { useVolume, figKit, type LabelBox } from './vol';
 import type { PanelCtx } from './golan-ui';
 import { History } from './history';
 import { noSupplyTargets, supplySources } from './supply-plan';
@@ -20,8 +19,6 @@ import {
   setDevSeat,
   auth,
   lobby,
-  journal,
-  seatKey,
   publishReveals,
   DEV,
   TABLE,
@@ -34,349 +31,83 @@ import {
   type DevSeat,
   type Match,
 } from './online';
-import { gameInfo, GAMES } from './games';
-import { BOXES, boxFront, boxSpine } from './covers';
 import { ICONS, ico } from './icons';
 import { PIP } from './block-kit';
 import { esc, nm, flipSvg } from './util';
 import { sheets } from './sheets';
-import { pips, ABBR, chitLabel, BTN_ICON, iconify, STAGE_NAME, ok10, faces, modIcon, modWord } from './table-text';
+import { pips, ABBR, chitLabel, iconify, STAGE_NAME, faces, modIcon, modWord } from './table-text';
 import { initChat, chatBtn, chatHtml, bindChat } from './chat';
 import { acts, actv, resetActs, reg, regv, ubtn, btn, chip, srow, swtch } from './ui-kit';
 import { loadTroops, troopOf, troopGroup, radius as troopR, setZoom, arrange, yawOf } from './troops';
 import { optChooser, optOn } from './opt-rules';
-import { Recorder, unitsOf, localJournal, buildSteps } from './journal';
-import { openReplay } from './replay';
-import { moveNotice, handedOver, turnOf, pushNotify, noticesOn, noticesBlocked, noticesSupported, setNotices } from './notices';
-import { STEP_NAME, homeUrl, tutUrl, share, dropMatch, rulesHtml, accountHtml, bindAuth } from './home';
-import { drawLabel, drawEntry, drawRestricted, setLabelFace } from './board-art';
+import { moveNotice, handedOver, turnOf, noticesOn, noticesBlocked, noticesSupported, setNotices } from './notices';
+import { STEP_NAME, homeUrl, tutUrl, share, dropMatch, rulesHtml, bindAuth } from './home';
+import { drawEntry, drawRestricted, setLabelFace } from './board-art';
 import { hasLegend, legendCard } from './map-legend';
-import { targetsFor, type Tgt } from './chit-play';
+import { type Tgt } from './chit-play';
 import { snap, diffFx, FxLayer, fxRow, FX_SAMPLES, type Fx } from './fx';
 import { RULE, ruleHtml } from './rules-text';
-import databaseRules from '../../database.rules.json?raw';
 import { initTouch } from './touch';
 import { throwDice, clearDice, type DiceGroup } from './dice3d';
 import { initTutorial } from './tutorial';
-import { setRulesContext, showRules, linkRules, RULES_GAMES } from './rules-link';
-import { courseFor, coursesOf } from './tutorial-script';
+import { showRules, linkRules, RULES_GAMES } from './rules-link';
+import { coursesOf } from './tutorial-script';
 import { loadRelief, type Relief } from './relief';
 import { LAB_SIDE, lab, labClear, labDownload, labHuman, labStep, recordKey } from './lab';
-
-/* ---------- which game this page shows ---------- */
-const PARAMS = new URLSearchParams(location.search),
-  GAME_PARAM = PARAMS.get('game');
-const TUT = TUTORIAL ? courseFor(PARAMS.get('tutorial')) : null; // the tutorial course this page runs (docs/TUTORIAL.md)
-const KEY0 = TUT
-    ? `fab-tutorial-${TUT.id}`
-    : LAB_SIDE
-      ? `fab-lab-${LAB_SIDE}`
-      : SANDBOX
-        ? 'fab-sandbox'
-        : TABLE === 'main'
-          ? 'fab-demo2'
-          : `fab-demo2-${TABLE}`,
-  KEY = GAME_PARAM && GAME_PARAM !== 'bulge' ? `${KEY0}-${GAME_PARAM}` : KEY0;
-function load(): E.Game | null {
-  try {
-    const s = localStorage.getItem(KEY);
-    if (!s) return null;
-    const x = JSON.parse(s);
-    return x.chits && x.markers && x.greif && x.roadblocks && x.pendingArrivals && x.fwOwner && Array.isArray(x.recover) ? x : null;
-  } catch {
-    return null;
-  }
-}
-/** The volume (docs/design/one-engine.md): the address says which game, else the game saved for this table, else The Bulge. A shared table of another game reloads the page with its game. */
-const VOL = useVolume(TUT ? TUT.game : (GAME_PARAM ?? load()?.game ?? 'bulge'));
-document.documentElement.style.setProperty('--gauge-l', VOL.ink[VOL.sides[1]]);
-document.documentElement.style.setProperty('--gauge-r', VOL.ink[VOL.sides[0]]); /* the VP gauge's ends in the sides' own colours */
-const [P1, P2] = VOL.sides,
-  first = (sd: string) => sd === P1,
-  near = (sd: string) => sd === VOL.bottom; // near: the side whose map edge is at the bottom, whose rows sit toward +z
-const MAP = VOL.map,
-  LAB: Record<string, LabelBox> = VOL.labels;
-// World unit = 1 cm. Every FAB map is the full 34 x 22 in sheet (86.36 x 55.88 cm); the drawing's width gives the pixels per cm.
-const [MW, MH] = MAP.size,
-  S = MW / 86.36; // map pixels per cm
-const toWorld = (x: number, y: number) => new THREE.Vector3(x / S - MW / (2 * S), 0, y / S - MH / (2 * S));
-/** Pole of inaccessibility: the point inside the polygon farthest from its edges, so pieces sit visually centred. */
-function pole(poly: [number, number][]): [number, number] {
-  const xs = poly.map((p) => p[0]),
-    ys = poly.map((p) => p[1]),
-    x0 = Math.min(...xs),
-    x1 = Math.max(...xs),
-    y0 = Math.min(...ys),
-    y1 = Math.max(...ys);
-  const inside = (x: number, y: number) => {
-    let c = false;
-    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-      const [xi, yi] = poly[i],
-        [xj, yj] = poly[j];
-      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c;
-    }
-    return c;
-  };
-  const edge = (x: number, y: number) => {
-    let d = 1e9;
-    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-      const [ax, ay] = poly[j],
-        [bx, by] = poly[i],
-        dx = bx - ax,
-        dy = by - ay,
-        t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy || 1)));
-      d = Math.min(d, Math.hypot(x - ax - t * dx, y - ay - t * dy));
-    }
-    return d;
-  };
-  let best: [number, number] = [(x0 + x1) / 2, (y0 + y1) / 2],
-    bd = -1;
-  for (let i = 0; i <= 40; i++)
-    for (let j = 0; j <= 40; j++) {
-      const x = x0 + ((x1 - x0) * i) / 40,
-        y = y0 + ((y1 - y0) * j) / 40;
-      if (!inside(x, y)) continue;
-      const d = edge(x, y);
-      if (d > bd) {
-        bd = d;
-        best = [x, y];
-      }
-    }
-  return best;
-}
-/** Candidate spots inside an area: grid points (world cm) with their clearance from the border, so pieces can be kept fully inside it. */
-const CELLS = new Map<number, { x: number; z: number; d: number }[]>();
-function cellsOf(id: number) {
-  let c = CELLS.get(id);
-  if (c) return c;
-  const poly = MAP.areas.find((a) => a.id === id)!.polygon,
-    xs = poly.map((p) => p[0]),
-    ys = poly.map((p) => p[1]);
-  c = [];
-  const inside = (x: number, y: number) => {
-    let k = false;
-    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-      const [xi, yi] = poly[i],
-        [xj, yj] = poly[j];
-      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) k = !k;
-    }
-    return k;
-  };
-  const edge = (x: number, y: number) => {
-    let d = 1e9;
-    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-      const [ax, ay] = poly[j],
-        [bx, by] = poly[i],
-        dx = bx - ax,
-        dy = by - ay,
-        t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy || 1)));
-      d = Math.min(d, Math.hypot(x - ax - t * dx, y - ay - t * dy));
-    }
-    return d;
-  };
-  for (let x = Math.min(...xs); x <= Math.max(...xs); x += 5)
-    for (let y = Math.min(...ys); y <= Math.max(...ys); y += 5)
-      if (inside(x, y)) {
-        const w = toWorld(x, y);
-        c.push({ x: w.x, z: w.z, d: edge(x, y) / S });
-      }
-  CELLS.set(id, c);
-  return c;
-}
-const POLE = new Map<number, [number, number]>(MAP.areas.map((a) => [a.id, LAB[a.id] ? [LAB[a.id].px, LAB[a.id].py] : pole(a.polygon)])); // where an area's pieces stand: its clear spot beside the label
-/** Marker spot on the shared border of two areas (the scan carries no marker positions for most connections). */
-function borderMid(a: number, b: number): [number, number] {
-  const A = MAP.areas.find((x) => x.id === a)!,
-    B = MAP.areas.find((x) => x.id === b)!,
-    near = A.polygon.filter((p) => B.polygon.some((q) => Math.hypot(p[0] - q[0], p[1] - q[1]) < 8));
-  if (near.length) {
-    const mx = near.reduce((s, p) => s + p[0], 0) / near.length,
-      my = near.reduce((s, p) => s + p[1], 0) / near.length;
-    return [mx, my];
-  }
-  const pa = POLE.get(a)!,
-    pb = POLE.get(b)!;
-  return [(pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2];
-}
-/** General direction of the border between two areas (the river runs along it), as an angle in map space. */
-function borderAngle(a: number, b: number): number {
-  const A = MAP.areas.find((x) => x.id === a)!,
-    B = MAP.areas.find((x) => x.id === b)!,
-    near = A.polygon.filter((p) => B.polygon.some((q) => Math.hypot(p[0] - q[0], p[1] - q[1]) < 8));
-  if (near.length >= 2) {
-    const mx = near.reduce((t, p) => t + p[0], 0) / near.length,
-      my = near.reduce((t, p) => t + p[1], 0) / near.length;
-    let sxx = 0,
-      syy = 0,
-      sxy = 0;
-    for (const p of near) {
-      sxx += (p[0] - mx) ** 2;
-      syy += (p[1] - my) ** 2;
-      sxy += (p[0] - mx) * (p[1] - my);
-    }
-    return 0.5 * Math.atan2(2 * sxy, sxx - syy);
-  }
-  const pa = POLE.get(a)!,
-    pb = POLE.get(b)!;
-  return Math.atan2(pb[1] - pa[1], pb[0] - pa[0]) + Math.PI / 2;
-}
-const $ = (s: string) => document.querySelector(s) as HTMLElement;
-const areaName = (a: number) => E.areas.get(a)!.name;
-
-/* ---------- state ---------- */
-let tut: ReturnType<typeof initTutorial> | null = null;
-/** The options of a new game from the address (scenario, fuel, optional rules): the sandbox's ready test situations. */
-const addressOpts = (): Partial<E.Opts> => {
-  const o: Record<string, unknown> = { ...VOL.defaultOpts };
-  const sc = PARAMS.get('scenario');
-  if (sc && VOL.scenarios.some((x) => x.id === sc)) o.scenario = sc;
-  if (PARAMS.has('fuel')) o.fuel = PARAMS.get('fuel') === '1';
-  for (const k of (PARAMS.get('rules') ?? '').split(',').filter(Boolean)) {
-    const [key, v] = k.split(':');
-    if (E.optionalRules().some((r) => r.key === key)) o[key] = key === 'bid' ? +(v ?? 0) : true;
-  }
-  return o as Partial<E.Opts>;
-};
-let g: E.Game = (() => {
-  const s = HAS_TABLE && !SANDBOX && !TUTORIAL ? null : load();
-  return s && (s.game ?? 'bulge') === VOL.id ? s : E.newGame(undefined, VOL.defaultOpts);
-})(); // a shared table starts from what the database sends, never from an old local copy
-setRulesContext({
-  game: VOL.id,
-  title: VOL.name,
-  art: (k) => VOL.ruleArt(k, g),
-  fig: () => {
-    const k = figKit(VOL, E.newGame(1, g.opts));
-    E.setPlayArea(g.inPlay);
-    return k;
-  },
-}); // a fresh game for every block's face (online the other side's are hidden); the play area stays this game's          // the rules reference shows this game's rulebooks and pieces
-let selArea: number | null = null,
-  selUnit: string | null = null,
-  selChit: string | null = null,
-  previewArea: number | null = null,
-  hoverArea: number | null = null,
-  newOpts: E.Opts = { scenario: VOL.defaultOpts.scenario ?? 'tournament', fuel: !!VOL.defaultOpts.fuel };
-/** A prompt of the volume asked for an area (an air assault landing): the legal ones light up, a tap runs it. */
-let areaPick: { label: string; areas: Set<number>; run: (a: number) => void } | null = null;
-let applyingRemote = false;
-let oppTurn: boolean | null = null; // 4.3: was it the opponent's move when last seen
-/** The game is kept in the browser's storage; when it is full, the replay journals of the other tables go first (they are only a replay), then it tries once more. */
-function storeGame(json: string): boolean {
-  try {
-    localStorage.setItem(KEY, json);
-    return true;
-  } catch {
-    /* full or off */
-  }
-  try {
-    for (const k of Object.keys(localStorage)) if (k.startsWith('fab-journal:') && k !== `fab-journal:${KEY}`) localStorage.removeItem(k);
-    localStorage.setItem(KEY, json);
-    return true;
-  } catch {
-    return false;
-  }
-}
-let storageTold = false;
-function storageWarn() {
-  if (storageTold) return;
-  storageTold = true;
-  setTimeout(
-    () =>
-      say(
-        'This device cannot store the game (storage is full or off): it will be lost when the page closes. Delete old games on the home page.',
-      ),
-    0,
-  );
-}
-const save = () => {
-  if (heldNext) return; // a roll is on screen: its result is already saved; the board shown is older and must not be written back
-  const json = JSON.stringify(g);
-  if (!storeGame(json)) storageWarn();
-  if (!applyingRemote) {
-    void push(g);
-    handOver();
-    record(true);
-  }
-};
-/* 4.1 the replay journal: each change is a step; online each seat writes only its own blocks (the database keeps the journal unread until the game is over) */
-const rec = new Recorder(VOL.sides);
-let recLast = '',
-  replayShown = false;
-function record(own: boolean, gm: E.Game = g) {
-  if (TUTORIAL || SANDBOX) return;
-  if (online.mode === 'remote') {
-    const me = online.mySide();
-    if (!me) return rec.seen(gm);
-    const u = JSON.stringify(unitsOf(gm, me)),
-      mine = () => {
-        if (u !== rec.units) {
-          rec.units = u;
-          void journal.add(seatKey(me), u);
-        }
-      }; // the step first, then the blocks: a step's blocks are those written after it
-    if (!own) {
-      rec.seen(gm);
-      return mine();
-    }
-    const p = rec.pub(gm),
-      k = JSON.stringify([p.t, p.ph, p.side, u]);
-    if (p.msg.length || p.dice || k !== recLast) {
-      recLast = k;
-      void journal.add('pub', JSON.stringify(p));
-    }
-    mine();
-  } else if (own) {
-    const p = rec.pub(gm),
-      u = unitsOf(gm, null),
-      k = JSON.stringify([p.t, p.ph, p.side, u]);
-    if (!p.msg.length && !p.dice && k === recLast) return;
-    recLast = k;
-    localJournal.add(KEY, p, u);
-  }
-}
-/** Open the replay of this game (4.1). */
-async function showReplay() {
-  let steps = online.mode === 'remote' ? null : localJournal.read(KEY).map((e) => ({ pub: e.pub, units: e.units }));
-  if (!steps) {
-    const j = await journal.read();
-    const part = (k: string) => Object.values(j?.[k] ?? {});
-    steps = j ? buildSteps(part('pub'), [part('german'), part('allied')]) : [];
-  }
-  if (!steps.length) return say('No replay for this game: only games played since the replay arrived are recorded.');
-  const ref = new Map<string, E.Unit>([...E.newGame(1, g.opts).units, ...g.units].map((u) => [u.id, u]));
-  const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`,
-    scen = VOL.scenarios.find((s) => s.id === g.opts.scenario)?.name ?? '';
-  const names = online.active ? [seatName(online.seats, P1), seatName(online.seats, P2)].filter(Boolean).join(' vs ') : '';
-  openReplay({
-    title: [VOL.name, scen, names].filter(Boolean).join(' · '),
-    result: g.over ?? `Turn ${g.turn}, not finished`,
-    steps,
-    sides: [P1, P2],
-    sideName: VOL.sideName,
-    tag: VOL.tag,
-    board: boardCv.toDataURL('image/jpeg', 0.86),
-    size: [MW, MH],
-    label: (a) => MAP.areas.find((x) => x.id === a)?.label ?? null,
-    areaName: (a) => E.areas.get(a)?.name ?? String(a),
-    face: (id, str) => {
-      const u = ref.get(id);
-      return u ? { svg: VOL.unitSvg({ ...u, str, area: u.area ?? 0 }, g), side: u.side, name: u.name } : null;
-    },
-    wood: Object.fromEntries(VOL.sides.map((sd) => [sd, hex(VOL.wood[sd] ?? 0x777777)])),
-    phaseName: (ph) => STEP_NAME[ph] ?? ph,
-    close: () => render(),
-    areaIds: MAP.areas.map((a) => a.id).filter((a) => E.areas.has(a) && (!g.inPlay || g.inPlay.includes(a))),
-  });
-}
-/** This player's move handed the move to the opponent: the push relay tells them, even with their app closed (4.3 step 2). */
-function handOver() {
-  const me = online.mySide();
-  if (online.mode !== 'remote' || !me) return;
-  const now = turnOf(g, other(me));
-  if (oppTurn === false && now) void pushNotify(TABLE, auth.token);
-  oppTurn = now;
-}
+import {
+  $,
+  areaName,
+  borderAngle,
+  borderMid,
+  cellsOf,
+  first,
+  KEY,
+  LAB,
+  MAP,
+  MH,
+  MW,
+  near,
+  P1,
+  P2,
+  PARAMS,
+  pole,
+  POLE,
+  S,
+  toWorld,
+  TUT,
+  VOL,
+} from './page';
+export * from './page';
+import {
+  addressOpts,
+  applyingRemote,
+  areaPick,
+  g,
+  hoverArea,
+  newOpts,
+  oppTurn,
+  previewArea,
+  record,
+  replayShown,
+  save,
+  selArea,
+  selChit,
+  selUnit,
+  setApplyingRemote,
+  setAreaPick,
+  setG,
+  setHoverArea,
+  setOppTurn,
+  setPreviewArea,
+  setReplayShown,
+  setSelArea,
+  setSelChit,
+  setSelUnit,
+  setTut,
+  showReplay,
+  tut,
+} from './game-state';
+export * from './game-state';
 
 /* ---------- three.js scene ---------- */
 const canvas = $('#gl') as HTMLCanvasElement;
@@ -421,7 +152,7 @@ const PHONE = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, 
 /** Board pixels per map pixel. Every board layer is kept as a canvas of this size; at 2x Sicily's and Golan's are 67 MB each, and a phone over its
  *  canvas-memory budget hands out blank canvases, so the line work (drawn after the ground) went missing. Phones: 1x, in every game. */
 const BOARD_K = PHONE ? 1 : 2;
-const boardCv = document.createElement('canvas');
+export const boardCv = document.createElement('canvas');
 boardCv.width = MW * BOARD_K;
 boardCv.height = MH * BOARD_K;
 const boardTex = new THREE.CanvasTexture(boardCv);
@@ -2123,7 +1854,7 @@ function chitBar(c: E.Chit): string {
   if (!mine(c.side))
     return `<div class="c-dispatch chitbar ${infoOpen ? 'open' : ''}"><div class="cbhead"><span class="cbimg">${chitPic(c)}</span><div class="cbt"><b>${esc(c.name)}</b><small>The other side's piece: you can only look</small></div><button class="ico" data-ui="${reg(
       () => {
-        selChit = null;
+        setSelChit(null);
       },
     )}" aria-label="Put away" title="Put away">${ico('close')}</button></div><div class="inspect slimcard">${ruleHtml(VOL.ruleKey(c.kind, c), E.isEvent(c))}</div></div>`;
   const tg = tgt,
@@ -2145,7 +1876,7 @@ function chitBar(c: E.Chit): string {
       infoOpen = !infoOpen;
     })}" aria-pressed="${infoOpen}" aria-label="What it does" title="What it does">${ico('info')}</button><button class="ico" data-ui="${reg(
       () => {
-        selChit = null;
+        setSelChit(null);
       },
     )}" aria-label="Put away" title="Put away">${ico('close')}</button></div>
     ${
@@ -2249,7 +1980,7 @@ const endLabel = () =>
               supply: 'End supply',
             } as Record<string, string>
           )[g.phase] ?? `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`); // the same name as the phase tab
-const other = E.other;
+export const other = E.other;
 /** The printed sequence of play (the step bar): Breakthrough covers its movement and its combat. */
 const PHASES = ['Reinforcement', 'Admin', 'Movement', 'Strategic', 'Combat', 'Reaction', 'Breakthrough', 'Supply'],
   PHASE_OF: Record<E.Phase, number> = {
@@ -2282,7 +2013,7 @@ let toast = '',
   toastT = 0,
   toastInfo = false;
 let sayDraw = 0;
-const say = (t: string, info = false) => {
+export const say = (t: string, info = false) => {
   toast = t;
   toastInfo = info;
   clearTimeout(toastT);
@@ -2353,7 +2084,7 @@ function act(f: () => void, after = '') {
       after || (b.log.slice(a.log.length).at(-1) ?? '').replace(new RegExp(`^T\\d+ (\\[\\w+\\] )?((${TAGRE}) \\w+: )?`), '').slice(0, 60),
     lockOf,
   );
-  g = r.game;
+  setG(r.game);
   if (r.error)
     say(
       /pending|already/.test(r.error.message)
@@ -2389,8 +2120,8 @@ function undo() {
   if (!r.game) return say(r.why ?? 'Nothing to undo');
   const p = r.game;
   p.log.push(`T${p.turn} ${nm(online.mySide() ?? p.phasing)} undid ${lbl ? '“' + lbl + '”' : 'an action'}`);
-  g = p;
-  selUnit = selChit = selArr = previewArea = hoverArea = null;
+  setG(p);
+  setSelUnit(setSelChit((selArr = setPreviewArea(setHoverArea(null)))));
   note = '';
   save();
   refresh();
@@ -2427,9 +2158,9 @@ window.addEventListener('keydown', (e) => {
     } else if (b?.stage === 'setup' && !b.locked && mine(b.attacker) && allowed() && !b.assets[b.attacker].length && !b.ready?.length)
       act(() => E.cancelBattle(g)); /* Esc backs out of a battle just opened (nothing placed yet), like its Cancel button */
     else if (selUnit || selArr || selChit || selArea != null) {
-      selUnit = selArr = selChit = null;
-      selArea = null;
-      previewArea = null;
+      setSelUnit((selArr = setSelChit(null)));
+      setSelArea(null);
+      setPreviewArea(null);
       refresh();
     }
     return;
@@ -2455,10 +2186,10 @@ window.addEventListener('keydown', (e) => {
   if ((e.key === 'n' || e.key === 'N') && !typing && !modal && !e.ctrlKey && !e.metaKey) {
     const mv = canMove();
     if (mv.length) {
-      selUnit = nextOf(mv, selUnit);
+      setSelUnit(nextOf(mv, selUnit));
       const u = g.units.find((x) => x.id === selUnit)!;
-      selArea = kbArea = u.area;
-      previewArea = null;
+      setSelArea((kbArea = u.area));
+      setPreviewArea(null);
       lookAt(u.area!);
       refresh();
     }
@@ -2553,10 +2284,10 @@ function heldBadBar() {
     () => {
       const x = heldBad!.game;
       heldBad = null;
-      applyingRemote = true;
-      g = x;
+      setApplyingRemote(true);
+      setG(x);
       save();
-      applyingRemote = false;
+      setApplyingRemote(false);
       refresh();
     },
     '',
@@ -2570,7 +2301,7 @@ function restoreLegal() {
   if (!heldBad) return;
   const why = heldBad.why;
   heldBad = null;
-  g = { ...structuredClone(g), restored: { t: Date.now(), why } };
+  setG({ ...structuredClone(g), restored: { t: Date.now(), why } });
   hist.clear('position restored');
   save();
   refresh();
@@ -2659,7 +2390,7 @@ function altPickHtml() {
       () => {
         const ids = p.sel;
         altPick = null;
-        selChit = null;
+        setSelChit(null);
         VOL.altUse(g, c.id, ids);
       },
       'primary',
@@ -2799,9 +2530,9 @@ function confirmMove() {
     to = previewArea!,
     u = g.units.find((x) => x.id === id)!,
     from = u.area!;
-  selUnit = null;
-  previewArea = null;
-  selArea = to;
+  setSelUnit(null);
+  setPreviewArea(null);
+  setSelArea(to);
   act(
     () => {
       if (g.phase === 'strategic') E.stratMove(g, id, to);
@@ -2810,7 +2541,7 @@ function confirmMove() {
     `${u.name}: ${areaName(from)} → ${areaName(to)}`,
   );
   if (g.moving?.id === id) {
-    selUnit = id;
+    setSelUnit(id);
     refresh();
   } // one area at a time: it stays picked while it has points left
 }
@@ -2830,7 +2561,7 @@ function click(e: PointerEvent) {
   }
   if (areaPick) {
     const ap = areaPick;
-    areaPick = null;
+    setAreaPick(null);
     if (area != null && ap.areas.has(area)) return act(() => ap.run(area));
     say(`${ap.label}: cancelled.`);
     return refresh();
@@ -2904,7 +2635,7 @@ function click(e: PointerEvent) {
     return act(() => arrive(id, area));
   }
   if (selUnit && area != null && optsFor(selUnit).some((o) => o.area === area)) {
-    previewArea = area;
+    setPreviewArea(area);
     return confirmMove();
   } // two taps: block, then where it goes (Undo takes it back)
   if (selUnit && area != null && !unit && ['movement', 'strategic', 'reaction', 'btMove'].includes(g.phase)) {
@@ -2918,9 +2649,9 @@ function click(e: PointerEvent) {
     }
   } // a tap that does nothing says why
   if ((g.phase === 'combat' || g.phase === 'btCombat') && area != null && fightable().includes(area)) {
-    selArea = area;
-    selUnit = null;
-    previewArea = null;
+    setSelArea(area);
+    setSelUnit(null);
+    setPreviewArea(null);
     const p = allowed() ? primary() : null;
     if (p && !p.dis && p.label.startsWith('Fight ')) return act(p.fn);
     return refresh();
@@ -2928,15 +2659,15 @@ function click(e: PointerEvent) {
   const uu = unit ? g.units.find((x) => x.id === unit) : null;
   if (uu && g.moving && g.moving.id !== uu.id && mine(uu.side)) act(() => E.endMove(g)); // another block: the one moving before is done for good
   if (uu && seen(uu) && (mine(uu.side) || !['movement', 'strategic', 'reaction', 'btMove'].includes(g.phase))) {
-    selUnit = unit!;
-    selArea = uu.area;
+    setSelUnit(unit!);
+    setSelArea(uu.area);
     if (uu.area != null) showAreas([uu.area, ...optsFor(uu.id).map((o) => o.area)]);
   } /* the block and its destinations in view */ else {
-    selArea = area;
-    selUnit = null;
+    setSelArea(area);
+    setSelUnit(null);
   }
-  previewArea = null;
-  hoverArea = null;
+  setPreviewArea(null);
+  setHoverArea(null);
   refresh();
 }
 canvas.addEventListener('pointermove', (e) => {
@@ -2944,7 +2675,7 @@ canvas.addEventListener('pointermove', (e) => {
   const a = pick(e).area,
     h = a != null && optsFor(selUnit).some((o) => o.area === a) ? a : null;
   if (h !== hoverArea) {
-    hoverArea = h;
+    setHoverArea(h);
     if (previewArea == null) refresh();
   }
 });
@@ -3936,7 +3667,7 @@ function rollStage(b: E.Battle) {
   }); // the result clears by itself; a tap on it skips the wait
 }
 /** A roll is shown on the board as it was; when the dice land the result is applied: blocks that lose a step turn, what is removed fades. */
-let heldNext: E.Game | null = null;
+export let heldNext: E.Game | null = null;
 const anims: { t0: number; dur: number; fn: (k: number) => void; end?: () => void }[] = [];
 const fades = new THREE.Group();
 scene.add(fades);
@@ -3997,7 +3728,7 @@ function commitRoll() {
       return o && u.area != null && u.str < o.str;
     })
     .map((u) => u.id);
-  g = next;
+  setG(next);
   save();
   refresh();
   for (const id of turned)
@@ -4188,13 +3919,13 @@ function tapCard(id: string) {
     }
     return act(() => E.assign(g, b, id));
   }
-  selChit = selChit === id ? null : id;
+  setSelChit(selChit === id ? null : id);
   refresh();
 }
 function playChitOn(c: E.Chit, area: number) {
-  selArea = area;
+  setSelArea(area);
   const panel = () => {
-    selChit = c.id;
+    setSelChit(c.id);
     refresh();
   };
   if (VOL.id !== 'bulge') {
@@ -4297,7 +4028,7 @@ function drag(ev: PointerEvent, el: HTMLElement) {
     }
     if (!b || b.stage !== 'setup') {
       if (!ghost) {
-        selChit = selChit === id ? null : id;
+        setSelChit(selChit === id ? null : id);
         refresh();
       }
       return;
@@ -4576,8 +4307,8 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
           act(() => {
             lastFight = b.area;
             E.closeBattle(g);
-            selArea = null;
-            selUnit = null;
+            setSelArea(null);
+            setSelUnit(null);
           });
           /* the battle's block card goes with it */ const m = E.mustFight(g);
           if (m.length && mine(g.phasing)) {
@@ -4597,8 +4328,8 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
     // the player picks the battle and starts it; nothing opens by itself
     const sel = selArea != null && fightable().includes(selArea) ? selArea : null;
     const fight = (a: number) => () => {
-      selArea = a;
-      selUnit = null;
+      setSelArea(a);
+      setSelUnit(null);
       battleFx = [];
       rollFx = [];
       if (g.phase === 'btCombat' && !E.newlyContested(g).includes(a) && !(VOL.id === 'golan73' && E.golan.freeRoundLeft(g)))
@@ -4618,8 +4349,8 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
       return {
         label: `Fight ${areaName(fl[0])}`,
         fn: () => {
-          selArea = fl[0];
-          selUnit = null;
+          setSelArea(fl[0]);
+          setSelUnit(null);
           battleFx = [];
           rollFx = [];
           E.startBattle(g, fl[0]);
@@ -4641,10 +4372,10 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
       fn: () =>
         act(() => {
           E.endPhase(g);
-          selUnit = null;
-          previewArea = null;
-          selChit = null;
-          selArea = null;
+          setSelUnit(null);
+          setPreviewArea(null);
+          setSelChit(null);
+          setSelArea(null);
         }),
       dis: wait || !!g.recover.length || !!g.artyPick,
     };
@@ -4654,10 +4385,10 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
     fn: () =>
       act(() => {
         E.endPhase(g);
-        selUnit = null;
-        previewArea = null;
-        selChit = null;
-        selArea = null;
+        setSelUnit(null);
+        setPreviewArea(null);
+        setSelChit(null);
+        setSelArea(null);
       }),
     dis:
       !!dropsLeft() ||
@@ -4768,7 +4499,7 @@ function kbStep(dx: number, dy: number) {
     if (pick2 == null) return;
     kbArea = pick2;
   }
-  hoverArea = selUnit && optsFor(selUnit).some((o) => o.area === kbArea) ? kbArea : null;
+  setHoverArea(selUnit && optsFor(selUnit).some((o) => o.area === kbArea) ? kbArea : null);
   const s = screenOf(kbArea!),
     r = canvas.getBoundingClientRect();
   if (s.x < r.left + 60 || s.x > r.right - 60 || s.y < r.top + 60 || s.y > r.bottom - 60) lookAt(kbArea!);
@@ -4801,9 +4532,11 @@ function dockChips(): string {
         live.length,
         true,
         () => {
-          selChit = nextOf(
-            live.map((x) => x.id),
-            selChit,
+          setSelChit(
+            nextOf(
+              live.map((x) => x.id),
+              selChit,
+            ),
           );
         },
         'Tap to pick the next chit that can be played now',
@@ -4823,10 +4556,10 @@ function dockChips(): string {
         bt.length,
         true,
         () => {
-          selUnit = nextOf(bt, selUnit);
+          setSelUnit(nextOf(bt, selUnit));
           const u = g.units.find((x) => x.id === selUnit)!;
-          selArea = u.area;
-          previewArea = null;
+          setSelArea(u.area);
+          setPreviewArea(null);
           lookAt(u.area!);
         },
         '8.21: armor that has not moved may move one area for a Special Action',
@@ -4839,10 +4572,10 @@ function dockChips(): string {
       mv.length,
       true,
       () => {
-        selUnit = nextOf(mv, selUnit);
+        setSelUnit(nextOf(mv, selUnit));
         const u = g.units.find((x) => x.id === selUnit)!;
-        selArea = u.area;
-        previewArea = null;
+        setSelArea(u.area);
+        setPreviewArea(null);
         lookAt(u.area!);
       },
       'Tap to select the next block that can still move',
@@ -4852,10 +4585,10 @@ function dockChips(): string {
       fw = mineU.filter(fwOk).map((u) => u.id),
       rs = mineU.filter(rsOk).map((u) => u.id);
     const pick = (ids: string[]) => () => {
-      selUnit = nextOf(ids, selUnit);
+      setSelUnit(nextOf(ids, selUnit));
       const u = g.units.find((x) => x.id === selUnit)!;
-      selArea = u.area;
-      previewArea = null;
+      setSelArea(u.area);
+      setPreviewArea(null);
       lookAt(u.area!);
     };
     if (fw.length) c('Fortify', fw.length, false, pick(fw), 'Blocks that can build field works (gold dot): tap to go through them');
@@ -4866,12 +4599,12 @@ function dockChips(): string {
       all = fightable();
     if (must.length)
       c('Must fight', must.length, true, () => {
-        selArea = nextOf(must, selArea);
+        setSelArea(nextOf(must, selArea));
         lookAt(selArea!);
       });
     else if (all.length)
       c('Battles', all.length, false, () => {
-        selArea = nextOf(all, selArea);
+        setSelArea(nextOf(all, selArea));
         lookAt(selArea!);
       });
   }
@@ -5058,8 +4791,8 @@ const panelCtx = (): PanelCtx => ({
   areaName,
   ico,
   pickArea: (label, areas, run) => {
-    areaPick = { label, areas: new Set(areas), run };
-    selUnit = selChit = selArr = null;
+    setAreaPick({ label, areas: new Set(areas), run });
+    setSelUnit(setSelChit((selArr = null)));
     refresh();
   },
 });
@@ -5156,7 +4889,7 @@ function dispatch() {
       route = `<div class="route"><p class="tline"><b>→ ${esc(areaName(o.area))}</b> · ${strat ? 'strategic' : `${o.cost} MP`}${VOL.features.fuel && first(u.side) && g.opts.fuel && o.fuel ? ' · <span class="bad">fuel −1</span>' : ''}${o.mustStop ? ' · <span class="bad">stops: battle</span>' : ''}</p><h4>→ ${esc(areaName(o.area))}</h4>${strat ? row('Strategic move', 'any distance') : row('Movement', `${o.cost} MP`)}${noSup.has(o.area) ? row('Supply', '<span class="bad">out of supply there</span>') : ''}${VOL.features.fuel && first(u.side) && g.opts.fuel ? row('Fuel', o.fuel ? `−1 &nbsp;(${n} → ${n - 1})` : 'not needed', o.fuel ? 'bad' : '') : ''}${o.mustStop ? row('Stops here', 'enemy present, battle follows', 'bad') : ''}${btn(
         'Move here',
         () => {
-          previewArea = o.area;
+          setPreviewArea(o.area);
           confirmMove();
         },
         'primary',
@@ -5208,7 +4941,7 @@ function dispatch() {
               'Stop here',
               () => {
                 E.endMove(g);
-                selUnit = null;
+                setSelUnit(null);
               },
               'primary',
               false,
@@ -5223,7 +4956,7 @@ function dispatch() {
                 if (skipped.has(u.id)) skipped.delete(u.id);
                 else {
                   skipped.add(u.id);
-                  selUnit = null;
+                  setSelUnit(null);
                 }
                 refresh();
               },
@@ -5437,10 +5170,10 @@ function mapDock() {
   const tools = `<div class="maptools"><button aria-label="Rotate the map a quarter turn" title="Rotate the map" data-ui="${reg(rotateQuarter)}">${ico('rotate')}</button>${
     sel
       ? `<button aria-label="Deselect" title="Deselect" data-ui="${reg(() => {
-          selUnit = selArr = selChit = null;
-          selArea = null;
-          previewArea = null;
-          hoverArea = null;
+          setSelUnit((selArr = setSelChit(null)));
+          setSelArea(null);
+          setPreviewArea(null);
+          setHoverArea(null);
           refresh();
         })}">${ico('deselect')}<span>Deselect</span></button>`
       : ''
@@ -6178,8 +5911,8 @@ function modalHtml() {
                 'Restart now',
                 () => {
                   restartAsk = false;
-                  g = E.newGame(undefined, newOpts);
-                  selArea = selUnit = selChit = null;
+                  setG(E.newGame(undefined, newOpts));
+                  setSelArea(setSelUnit(setSelChit(null)));
                   modal = null;
                   inBattle = false;
                   hist.clear();
@@ -6276,7 +6009,7 @@ function focusKey(el: Element | null) {
     label: el.getAttribute('aria-label') ?? '',
   };
 }
-function render() {
+export function render() {
   if (pressing) {
     renderWaiting = true;
     return;
@@ -6297,13 +6030,13 @@ function render() {
           ? ubtn('Undo last edit', () => {
               const p = hist.undo(g).game;
               if (p) {
-                g = p;
+                setG(p);
                 save();
                 refresh();
               }
             }) +
             ubtn('New sandbox game', () => {
-              g = E.newGame();
+              setG(E.newGame());
               hist.clear();
               save();
               refresh();
@@ -6541,8 +6274,8 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
       (e.onclick = () => {
         const order: DevSeat[] = ['both', ...VOL.sides, 'watch'];
         setDevSeat(order[(order.indexOf(online.devSeat) + 1) % order.length]);
-        selUnit = selChit = selArr = null;
-        previewArea = null;
+        setSelUnit(setSelChit((selArr = null)));
+        setPreviewArea(null);
         refresh();
       }),
   );
@@ -6564,9 +6297,9 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
   ui.querySelectorAll<HTMLElement>('[data-u]').forEach(
     (e) =>
       (e.onclick = () => {
-        selUnit = e.dataset.u!;
-        selArea = g.units.find((x) => x.id === selUnit)!.area ?? selArea;
-        previewArea = null;
+        setSelUnit(e.dataset.u!);
+        setSelArea(g.units.find((x) => x.id === selUnit)!.area ?? selArea);
+        setPreviewArea(null);
         refresh();
       }),
   );
@@ -6584,7 +6317,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
             if (why) say(why);
             else act(() => E.assign(g, b2, id, c.kind === 'air_mission' ? 'arty' : undefined));
           } else if (!b2) {
-            selChit = selChit === id ? null : id;
+            setSelChit(selChit === id ? null : id);
             refresh();
           }
         } else e.click();
@@ -6604,7 +6337,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
       (e.onclick = () => {
         if (lastPointer === 'touch') return tapCard(e.dataset.chit!);
         if (!g.battle) {
-          selChit = selChit === e.dataset.chit ? null : e.dataset.chit!;
+          setSelChit(selChit === e.dataset.chit ? null : e.dataset.chit!);
           refresh();
         }
       }),
@@ -6724,7 +6457,7 @@ function refresh() {
                 area: selArea,
                 mode: tgtMode,
                 setArea: (a) => {
-                  selArea = a;
+                  setSelArea(a);
                 },
                 setMode: (m) => {
                   tgtMode = m;
@@ -6898,10 +6631,10 @@ function startOver(x: E.Game) {
   if (heldNext) commitRoll();
   rollView = null;
   hideDice();
-  g = x;
+  setG(x);
   hist.clear();
-  selUnit = selChit = selArr = null;
-  selArea = previewArea = hoverArea = null;
+  setSelUnit(setSelChit((selArr = null)));
+  setSelArea(setPreviewArea(setHoverArea(null)));
   modal = null;
   scoreOpen = false;
   reinforcing = false;
@@ -6910,7 +6643,7 @@ function startOver(x: E.Game) {
   tgtKey = '';
   inBattle = false;
   note = '';
-  areaPick = null;
+  setAreaPick(null);
   restartAsk = false;
   fxLayer.clear();
   save();
@@ -6921,19 +6654,19 @@ SBU.initSandboxUi({
     return g;
   },
   set g(v) {
-    g = v;
+    setG(v);
   },
   get selUnit() {
     return selUnit;
   },
   set selUnit(v) {
-    selUnit = v;
+    setSelUnit(v);
   },
   get selChit() {
     return selChit;
   },
   set selChit(v) {
-    selChit = v;
+    setSelChit(v);
   },
   get selArr() {
     return selArr;
@@ -6945,13 +6678,13 @@ SBU.initSandboxUi({
     return selArea;
   },
   set selArea(v) {
-    selArea = v;
+    setSelArea(v);
   },
   get previewArea() {
     return previewArea;
   },
   set previewArea(v) {
-    previewArea = v;
+    setPreviewArea(v);
   },
   get rollView() {
     return rollView;
@@ -6988,69 +6721,71 @@ const toScreen = (p: THREE.Vector3) => {
     v = p.clone().project(cam);
   return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height };
 };
-tut = TUT
-  ? initTutorial(
-      {
-        game: () => g,
-        act,
-        load: startOver,
-        unitScreen: (id) => pieceScreen(id),
-        areaScreen: (a) => {
-          const c = center(a);
-          return toScreen(new THREE.Vector3(c.x, 0, c.z));
-        },
-        lookAt: (a) => {
-          const p = center(a);
-          goal = { t: new THREE.Vector3(p.x, 0, p.z), dist: Math.min(dist, innerWidth < 700 ? 34 : 30), pitch };
-        },
-        select: (id) => {
-          if (g.pendingArrivals.includes(id)) selArr = id;
-          else {
-            selUnit = id;
-            selArea = g.units.find((u) => u.id === id)?.area ?? null;
-          }
-          refresh();
-        },
-        moving: () => ptrs.size > 0,
-        pan: (dx, dy) => {
-          goal = null;
-          const k = dist * 0.0018,
-            c = Math.cos(yaw),
-            sn = Math.sin(yaw);
-          target.x -= (dx * c + dy * sn) * k;
-          target.z -= (-dx * sn + dy * c) * k;
-        },
-        fold: () => {
-          if (infoOpen) {
-            infoOpen = false;
-            render();
-          }
-        },
-        toast: (t) => say(t),
-        busy: () => !!rollView || !!heldNext,
-        guide: () => guide,
-        setGuide: (v) => {
-          setGuide(v);
-          render();
-        },
-        view: (sd) => {
-          if (VOL.sides.includes(sd)) {
-            tutView = sd as E.Side;
+setTut(
+  TUT
+    ? initTutorial(
+        {
+          game: () => g,
+          act,
+          load: startOver,
+          unitScreen: (id) => pieceScreen(id),
+          areaScreen: (a) => {
+            const c = center(a);
+            return toScreen(new THREE.Vector3(c.x, 0, c.z));
+          },
+          lookAt: (a) => {
+            const p = center(a);
+            goal = { t: new THREE.Vector3(p.x, 0, p.z), dist: Math.min(dist, innerWidth < 700 ? 34 : 30), pitch };
+          },
+          select: (id) => {
+            if (g.pendingArrivals.includes(id)) selArr = id;
+            else {
+              setSelUnit(id);
+              setSelArea(g.units.find((u) => u.id === id)?.area ?? null);
+            }
             refresh();
-          }
+          },
+          moving: () => ptrs.size > 0,
+          pan: (dx, dy) => {
+            goal = null;
+            const k = dist * 0.0018,
+              c = Math.cos(yaw),
+              sn = Math.sin(yaw);
+            target.x -= (dx * c + dy * sn) * k;
+            target.z -= (-dx * sn + dy * c) * k;
+          },
+          fold: () => {
+            if (infoOpen) {
+              infoOpen = false;
+              render();
+            }
+          },
+          toast: (t) => say(t),
+          busy: () => !!rollView || !!heldNext,
+          guide: () => guide,
+          setGuide: (v) => {
+            setGuide(v);
+            render();
+          },
+          view: (sd) => {
+            if (VOL.sides.includes(sd)) {
+              tutView = sd as E.Side;
+              refresh();
+            }
+          },
+          home: (to) => {
+            try {
+              if (to) sessionStorage.setItem('fab-new', `${to.game}:${to.scenario}`);
+            } catch {
+              /* private mode */
+            }
+            location.href = homeUrl();
+          },
         },
-        home: (to) => {
-          try {
-            if (to) sessionStorage.setItem('fab-new', `${to.game}:${to.scenario}`);
-          } catch {
-            /* private mode */
-          }
-          location.href = homeUrl();
-        },
-      },
-      TUT,
-    )
-  : null;
+        TUT,
+      )
+    : null,
+);
 frame();
 Promise.all([loadChitArt(), VOL.id === 'golan73' ? loadGolanChitArt() : null, VOL.id === 'sicily' ? loadSicilyChitArt() : null])
   .catch((e) => console.error(e))
@@ -7086,7 +6821,7 @@ const onNet = (): void => {
 document.addEventListener('fab-redraw', () => render());
 void startOnline(
   (rg) => {
-    applyingRemote = true;
+    setApplyingRemote(true);
     if (heldNext) commitRoll();
     const prevG = g,
       firstRemote = !gotRemote; // a roll still on screen is finished locally, never pushed back over what arrived
@@ -7110,7 +6845,7 @@ void startOnline(
         if (p.length) {
           console.warn('rules check', p);
           heldBad = { game: rg, why: p };
-          applyingRemote = false;
+          setApplyingRemote(false);
           render();
           return;
         }
@@ -7119,14 +6854,14 @@ void startOnline(
       heldBad = null;
       record(false, rg);
       if (PARAMS.get('replay') && rg.over && !replayShown) {
-        replayShown = true;
+        setReplayShown(true);
         setTimeout(() => {
           void showReplay();
         }, 400);
       } // opened from the home page list
       {
         const me = online.mySide();
-        if (me) oppTurn = turnOf(rg, other(me)); // 4.3: the other player's move made it ours
+        if (me) setOppTurn(turnOf(rg, other(me))); // 4.3: the other player's move made it ours
         if (me && by && by !== online.uid && !firstRemote && handedOver(prevG, rg, me))
           void moveNotice(
             `Your move · ${VOL.name}`,
@@ -7140,8 +6875,8 @@ void startOnline(
       n0 = was?.rolls.length ?? 0,
       st0 = was?.stage,
       pre = was ? snap(g) : null;
-    applyingRemote = true;
-    g = rg;
+    setApplyingRemote(true);
+    setG(rg);
     const nb = g.battle;
     if (nb && !was) {
       battleFx = [];
@@ -7174,7 +6909,7 @@ void startOnline(
       };
       if (rollView.groups.length) {
         heldNext = g;
-        g = prevG;
+        setG(prevG);
       } // the board keeps the old state until the dice land
       if (rollView.groups.length) {
         const cv = $('#dice') as HTMLCanvasElement;
@@ -7193,12 +6928,12 @@ void startOnline(
       const same = prevG.turn === g.turn && prevG.phase === g.phase && prevG.phasing === g.phasing && !!prevG.battle === !!g.battle;
       const keep = (prev: E.Game, id: string | null, f: (x: E.Game) => unknown) =>
         same && id && JSON.stringify(f(prev)) === JSON.stringify(f(g)) ? id : null; // the other player's write keeps what you picked, unless it changed that very piece
-      selUnit = keep(prevG, selUnit, (x) => x.units.find((u) => u.id === selUnit));
-      selChit = keep(prevG, selChit, (x) => x.chits.find((c) => c.id === selChit));
+      setSelUnit(keep(prevG, selUnit, (x) => x.units.find((u) => u.id === selUnit)));
+      setSelChit(keep(prevG, selChit, (x) => x.chits.find((c) => c.id === selChit)));
       selArr = keep(prevG, selArr, (x) => [x.pendingArrivals.includes(selArr!), x.units.find((u) => u.id === selArr)?.area]);
-      if (!same) selArea = null;
-      if (!selUnit) previewArea = null;
-      hoverArea = null;
+      if (!same) setSelArea(null);
+      if (!selUnit) setPreviewArea(null);
+      setHoverArea(null);
     }
     hist.remote(prevG, g, lockOf);
     if (rolled) hist.clear('dice rolled');
@@ -7212,7 +6947,7 @@ void startOnline(
     try {
       save();
     } finally {
-      applyingRemote = false;
+      setApplyingRemote(false);
     }
     refresh();
     {
@@ -7239,7 +6974,7 @@ void startOnline(
 ); // the table is gone: nobody stays inside it
 if (SANDBOX && SB.PRESET_KEYS.some((k) => PARAMS.has(k))) {
   // a rules-checklist link: a fresh table set up on the rule's situation, once (the address is cleaned so a reload keeps the edits)
-  g = SB.preset(E.newGame(undefined, addressOpts()), PARAMS);
+  setG(SB.preset(E.newGame(undefined, addressOpts()), PARAMS));
   hist.clear();
   save();
   const q = new URLSearchParams(location.search);
@@ -7271,7 +7006,7 @@ if (import.meta.env.DEV || DEV_FAKE || SANDBOX || TUTORIAL)
       },
       game: () => g,
       setGame: (x: E.Game) => {
-        g = x;
+        setG(x);
         hist.clear();
         save();
         refresh();
@@ -7324,14 +7059,14 @@ if (import.meta.env.DEV || DEV_FAKE || SANDBOX || TUTORIAL)
         return g;
       },
       set g(v: E.Game) {
-        g = v;
+        setG(v);
       },
       refresh,
       act,
       sel: (u: string, a?: number) => {
-        selUnit = u;
-        selArea = g.units.find((x) => x.id === u)!.area;
-        previewArea = a ?? null;
+        setSelUnit(u);
+        setSelArea(g.units.find((x) => x.id === u)!.area);
+        setPreviewArea(a ?? null);
         refresh();
       },
     },
