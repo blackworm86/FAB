@@ -66,13 +66,13 @@ def conta(percorso):
     return len(bordi_aperti(carica(percorso))[0])
 
 
-def ripara(percorso):
+def ripara(percorso, lato=512):
     """Chiude i buchi di percorso (sovrascrive, salvando l'originale una volta). Restituisce (bordi aperti prima, dopo, buchi chiusi)."""
     g = carica(percorso)
     aperti, rep, inv = bordi_aperti(g)
     if not aperti:                      # niente buchi: solo la texture
         mat = g.visual.material
-        mat.baseColorTexture = pulisci_texture(g)
+        mat.baseColorTexture = pulisci_texture(g, lato)
         ORIGINALI.mkdir(parents=True, exist_ok=True)
         if not (ORIGINALI / Path(percorso).name).exists():
             shutil.copy2(percorso, ORIGINALI / Path(percorso).name)
@@ -107,7 +107,7 @@ def ripara(percorso):
     if U is not None:
         m.visual = trimesh.visual.TextureVisuals(uv=np.array(U), material=mat)
         if mat is not None and getattr(mat, "baseColorTexture", None) is not None:
-            mat.baseColorTexture = pulisci_texture(m)
+            mat.baseColorTexture = pulisci_texture(m, lato)
     ORIGINALI.mkdir(parents=True, exist_ok=True)
     if not (ORIGINALI / Path(percorso).name).exists():
         shutil.copy2(percorso, ORIGINALI / Path(percorso).name)

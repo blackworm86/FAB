@@ -25,19 +25,22 @@ import numpy as np
 import trimesh
 from scipy.cluster.vq import kmeans2
 
+import ripara_figura
+
 QUI = Path(__file__).resolve().parent
 KIT = QUI.parent
 DIVISIONI = KIT / "modelli" / "divisioni"
 M = 0.18   # unità di tabellone (cm) per metro
-TEXTURE = 256
+TEXTURE = 1024   # lato massimo della texture nel gioco (Meshy dà 2048)
 # proposta automatica dei gruppi di The Bulge: (figure nel file, asse su cui stanno affiancate 0=X 1=Z, gradi per guardare +Z, altezza reale in m, "tutte" | "la_piu_grande")
 TIPI = {
-    "bulge_british_armor": (2, 1, 90, 2.97, "tutte"), "bulge_british_inf": (3, 0, 0, 1.8, "tutte"),
-    "bulge_german_airborne": (3, 0, 0, 1.8, "tutte"), "bulge_german_armor": (2, 1, 90, 2.99, "tutte"),
-    "bulge_german_inf": (3, 0, 0, 1.8, "tutte"), "bulge_german_mech": (2, 1, 90, 2.3, "la_piu_grande"),   # il semicingolato, senza i due fanti minuscoli
-    "bulge_german_mountain": (3, 0, 0, 1.8, "tutte"), "bulge_us_airborne": (3, 0, 0, 1.8, "tutte"),
-    "bulge_us_armor": (2, 0, 0, 2.97, "tutte"), "bulge_us_cavalry": (2, 0, 0, 2.3, "tutte"),
-    "bulge_us_inf": (3, 0, 0, 1.8, "tutte"),
+    # The Bulge, rifatto il 13/11/2026: una figura per file come Golan e Sicilia (l'orientamento si corregge nella scheda Orientamento)
+    "bulge_british_armor": (1, 0, 0, 2.97, "tutte"), "bulge_british_inf": (1, 0, 0, 1.8, "tutte"),
+    "bulge_german_airborne": (1, 0, 0, 1.8, "tutte"), "bulge_german_armor": (1, 0, 0, 2.99, "tutte"),
+    "bulge_german_inf": (1, 0, 0, 1.8, "tutte"), "bulge_german_mech": (1, 0, 0, 2.3, "tutte"),
+    "bulge_german_mountain": (1, 0, 0, 1.8, "tutte"), "bulge_us_airborne": (1, 0, 0, 1.8, "tutte"),
+    "bulge_us_armor": (1, 0, 0, 2.97, "tutte"), "bulge_us_cavalry": (1, 0, 0, 2.3, "tutte"),
+    "bulge_us_inf": (1, 0, 0, 1.8, "tutte"),
     # Golan '73: una figura per file; i veicoli arrivano col muso verso -X (90 gradi li girano verso +Z); altezze reali
     "golan73_israeli_inf": (1, 0, 0, 1.8, "tutte"), "golan73_israeli_airborne": (1, 0, 0, 1.8, "tutte"),
     "golan73_israeli_armor": (1, 0, 90, 3.0, "tutte"), "golan73_israeli_mech": (1, 0, 90, 2.26, "tutte"),    # Centurion, M3 semicingolato
@@ -56,9 +59,24 @@ VEICOLI = ("armor", "cavalry", "mech", "recon", "motorized", "ghost")
 veicolo = lambda tipo: any(v in tipo for v in VEICOLI)
 
 
+def sorgente(tipo):
+    """Il modello da cui nasce la figura: il più recente tra modelli/ai_grezzi/<tipo>.glb (scaricato da Meshy o TRELLIS, così com'è)
+    e modelli/definitivi/<tipo>.glb (pulito dal pannello). None se non c'è nessuno dei due."""
+    c = [p for p in (KIT / "modelli" / "ai_grezzi" / f"{tipo}.glb", KIT / "modelli" / "definitivi" / f"{tipo}.glb") if p.exists()]
+    return max(c, key=lambda p: p.stat().st_mtime) if c else None
+
+
 def modello(tipo):
-    """La mesh "figura" del modello finito, triangoli nello stesso ordine del file (come la vede il pannello)."""
-    return trimesh.load(KIT / "modelli" / "definitivi" / f"{tipo}.glb", force="scene", process=False).geometry["figura"]
+    """La mesh della figura, triangoli nello stesso ordine del file (come la vede il pannello): la parte "figura" o, in un file di Meshy, la mesh unica."""
+    s = trimesh.load(sorgente(tipo), force="scene", process=False)
+    if "figura" in s.geometry:
+        return s.geometry["figura"]
+    g = max(s.geometry.values(), key=lambda x: len(x.faces))
+    for nodo in s.graph.nodes_geometry:                             # la posa del nodo (Meshy a volte la usa)
+        t, nome = s.graph[nodo]
+        if s.geometry[nome] is g:
+            g = g.copy(); g.apply_transform(t); break
+    return g
 
 
 def componenti(m, facce=None):
@@ -146,12 +164,27 @@ def main():
     tipi = {t["id"]: t for t in json.loads((KIT / "catalogo.json").read_text(encoding="utf-8"))["tipi"]}
     indice = {"tipi": {}, "blocchi": {}}
     for tipo in tipi:
-        if not tipo.startswith(a.volume + "_") or not (KIT / "modelli" / "definitivi" / f"{tipo}.glb").exists():
+        if not tipo.startswith(a.volume + "_") or sorgente(tipo) is None:
             continue
+        esistenti = sorted(out.glob(f"{tipo}_*.glb"))
+        if sorgente(tipo).parent.name == "definitivi" and esistenti:      # niente modello nuovo da Meshy: le figure già nel gioco restano
+            indice["tipi"][tipo] = {"figure": [f.name for f in esistenti], "veicolo": veicolo(tipo)}
+            for b in tipi[tipo]["blocchi"]:
+                indice["blocchi"][b] = tipo
+            print(f"{tipo}: nessun modello nuovo in ai_grezzi, tengo le figure attuali"); continue
         g = modello(tipo)
         k, gradi, alto, lab = divisione(tipo)
-        if len(lab) != len(g.faces):
-            print(f"{tipo}: la divisione salvata non corrisponde più al modello ({len(lab)} triangoli invece di {len(g.faces)}): rifalla nel pannello"); continue
+        if len(lab) != len(g.faces):                                # modello nuovo: la divisione salvata era del vecchio
+            print(f"{tipo}: la divisione salvata era di un altro modello, uso la proposta automatica")
+            k0, asse, gradi, alto, tieni = TIPI.get(tipo, (1, 0, 0, 2.5 if veicolo(tipo) else 1.8, "tutte")); k = k0
+            lab = proposta(g, k, asse, tieni)
+        prima = out / f"{tipo}_0.glb"
+        if prima.exists() and sorgente(tipo).stat().st_mtime > prima.stat().st_mtime:   # modello nuovo: le scelte di Orientamento erano per il vecchio
+            cfg = out / f"{a.volume}_config.json"
+            if cfg.exists():
+                c = json.loads(cfg.read_text(encoding="utf-8"))
+                if c.pop(tipo, None) is not None:
+                    cfg.write_text(json.dumps(c, indent=1), encoding="utf-8"); print(f"{tipo}: modello nuovo, orientamento da rifare nella scheda Orientamento")
         for vecchio in out.glob(f"{tipo}_*.glb"):
             vecchio.unlink()
         files = []
@@ -161,6 +194,7 @@ def main():
                 continue
             m = figura(g, facce, gradi, alto)
             p = out / f"{tipo}_{len(files)}.glb"; p.write_bytes(trimesh.Scene(m).export(file_type="glb")); files.append(p.name)
+            ripara_figura.ripara(p, lato=min(TEXTURE, max(m.visual.material.baseColorTexture.size)) if getattr(m.visual.material, "baseColorTexture", None) else TEXTURE)   # buchi chiusi, texture senza righe scure
             print(f"{p.name:32} {len(m.faces):5} triangoli  {np.round(m.extents, 2).tolist()}")
         indice["tipi"][tipo] = {"figure": files, "veicolo": veicolo(tipo)}
         for b in tipi[tipo]["blocchi"]:
