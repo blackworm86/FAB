@@ -1,3 +1,11 @@
+// The table: this file starts it. The table's code lives in the modules listed below (page, game-state, scene … render), which
+// were one file until November 2026 and still share one set of names: each `export * from` line passes a module's names on, so
+// any of them can import what it needs `from './main'`.
+// THE ORDER OF THOSE LINES MATTERS: the modules load in that order, as the one file ran from top to bottom, and a module may use
+// while loading only what a module above it declares. A module imports from the ones above it directly, and through './main' from
+// the ones below it (a function to call later, never a value needed while loading). What is left here is the frame loop, starting
+// a new game, and the start-up: the network, the tutorial, the sandbox, the developer hooks.
+// To move more code out, or between modules: `node scripts/move-code.mjs` (see its first lines).
 import * as THREE from 'three';
 import * as E from '../../engine/src';
 import { loadChitArt } from './chits';
