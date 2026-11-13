@@ -271,8 +271,17 @@ for (const u of uses) {
     }
   }
 }
+// names the old file already exports in a list (`export { a, b }`): they need no `export` of their own while they stay
+const listed = new Set(
+  sf.statements
+    .filter((st) => ts.isExportDeclaration(st) && !st.moduleSpecifier && st.exportClause && ts.isNamedExports(st.exportClause))
+    .flatMap((st) => st.exportClause.elements.filter((e) => !e.propertyName).map((e) => e.name.text)),
+);
 for (const s of exportIn)
-  if (!s.st.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword))
+  if (
+    !s.st.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword) &&
+    !(!moved.has(s) && s.names.length && s.names.every((n) => listed.has(n)))
+  )
     edits.push({ at: s, pos: s.st.getStart(), end: s.st.getStart(), text: 'export ' });
 for (const [name, s] of setters) {
   const set = setterOf(name);
