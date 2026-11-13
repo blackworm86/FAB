@@ -12,7 +12,7 @@ GMT's block wargame series **Fast Action Battles** as a browser game: a rules en
 - **Playable**: The Bulge, Sicily and Golan '73, hot seat and online, on phone and desktop, with lessons (English and Italian), a sandbox for the owner's tests, a replay viewer and the rules reader. The interface went through six design critiques (25 → 29 out of 40, all findings fixed); the owner's rule since 13 November: **no automation**, every step and roll waits for the player's click.
 - **Rules**: audited against the rulebooks (`docs/AUDIT-2026-11.md`, with the questions still waiting for the owner); the engine tests and a random full-game fuzzer guard them.
 - **Maps**: 2D from the printed maps, 3D relief from satellite data, for all three volumes.
-- **3D figures**: in the game (View > Units: Blocks / Figures, kit in `tools/pezzi3d/`, notes in `docs/ASSETS-3D.md`); blocks are the default. `docs/PARALLEL.md` and an old note said the project was dropped; the owner has not yet said which is right (`docs/STATUS.md`, decision 1).
+- **3D figures**: in the game (View > Units: Blocks / Figures, kit in `tools/pezzi3d/`, notes in `docs/ASSETS-3D.md`); blocks are the default. The owner decided on 13 November 2026 to keep them and polish them after the streamlining work.
 - **Computer opponent**: rebuilt in `bot/`, plays The Bulge from either side, measurably (a little) better than the reference player; the owner's playtest is pending (`?lab=german`, `?lab=allied`). Stage 6, levels and phone speed, is next.
 - **Code layout**: split into themed modules on 13 November 2026 (section 3).
 - **Tests**: engine (417), table (134), computer opponent (11), database rules (needs Java and the Firebase emulator). CI (`.github/workflows`) runs them, the format check, the push relay test and a browser smoke test.
@@ -42,7 +42,7 @@ Three big files were split by moving code, not rewriting it; checked by tests, a
 2. **The rules review** (`docs/PARALLEL.md` section 2, `docs/AUDIT-2026-11.md`): the owner's marks on the checklist page and answers to the rule questions.
 3. **Tutorial**: the owner decided (13 November) to cancel the present lessons and rebuild them shorter and simpler. Until then they stay; `node web/e2e/tutorials.mjs` walks them.
 4. **Interface leftovers**, not yet decided by the owner: on the 3D relief cut-off areas show a plain grey tint (stripes on the 2D map only); battles in Sicily and Golan and online games were not re-tested after the battle-flow changes and 'no automation'.
-5. **The streamlining plan**: steps 1–6 done by 13 November (`docs/STATUS.md`); step 7, a CI check on file size, is left.
+5. **After the streamlining plan** (done 13 November, `docs/STATUS.md`): polish the 3D figures (owner's decision), rebuild the tutorial, then the items above. Keep source files under 1,000 lines (`npm run check:size`, a CI check).
 
 ## 6. How to run and measure
 

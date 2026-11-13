@@ -11,7 +11,7 @@ Since 13 November 2026 the big files are split (see `docs/HANDOVER.md` section 3
 | 1. Computer opponent (rebuilt from scratch) | `bot/` (`docs/COMPUTER-PLAYER-PLAN.md`), `web/src/lab.ts`, `web/src/lab-worker.ts` | the engine's public functions only (import from `engine/src` or `./game`, not from a phase file); the small switch in `web/` for the experimental mode |
 | 2. Rules review | `engine/src/vol/*` (The Bulge, Golan, Sicily), the series rules in `engine/src/` (`game.ts`, `reinforce`, `admin`, `moves`, `battle-setup`, `fire`, `battle-end`, `supply`, `turn`, `combat`, `movement`, `chits`, `split`), `engine/test/*`, the review artifact | `web/src/golan-ui.ts`, `web/src/sicily-ui.ts`, `web/src/sandbox*.ts`, `web/src/rules-text.ts` |
 | UI and interface (the UI/UX sessions, `docs/HANDOVER.md`) | the table: `web/src/main.ts` and its modules (`page`, `game-state`, `scene`, `map3d`, `piece-kit`, `pieces`, `map-*`, `camera`, `flow`, `choices`, `routes`, `rolls`, `cards`, `prompt`, `dock`, `pieces-window`, `unit-card`, `battle-view`, `menus`, `render`), `web/src/css/`, `web/src/i18n*`, `web/e2e/`, lessons (`web/src/tutorial*`) | `web/src/online.ts` and `store-*.ts` (online play), `database.rules.json` (publishing it is the owner's action) |
-| 3D figures (owner's decision pending, `docs/STATUS.md`) | `web/src/troops.ts`, `web/src/figures.ts`, `web/public/pezzi/`, `tools/pezzi3d/`, `docs/ASSETS-3D.md` | `web/src/pieces.ts` (where the figures are placed) |
+| 3D figures (kept, to be polished) | `web/src/troops.ts`, `web/src/figures.ts`, `web/public/pezzi/`, `tools/pezzi3d/`, `docs/ASSETS-3D.md` | `web/src/pieces.ts` (where the figures are placed) |
 | 4. Project management and control | `docs/STATUS.md` (and the streamlining plan in it) | nothing else without the owner's go-ahead: it reads the code, docs and git history |
 
 Merge `origin/main` at the start of every work block, then run `npm run format` at the repository root on your own unpushed changes before pushing (CI fails an unformatted push). When project 2 changes how a rule works, it says so in the commit message ("Rule fix: …"), so project 1 can re-run its measurements. Before a change that must not alter the look, take `npm run shots` first and `npm run shots:compare` after (`docs/HANDOVER.md` section 6).
@@ -35,9 +35,9 @@ Notes for that session:
 - Hidden blocks must stay hidden (`engine/src/split.ts`).
 - Order: Golan (the owner's worry) → Sicily → The Bulge (the most played, so the most tested already).
 
-## 3. 3D figures instead of blocks: waiting for the owner
+## 3. 3D figures instead of blocks: kept
 
-The owner dropped this project once (early November: "no 3D figure generation"), but the figures work went on and is in the game (View > Units: Blocks / Figures; blocks are the default since 12 November). Whether it continues or the code comes out has not been decided: `docs/STATUS.md`, decision 1. Until then: no new figure features, only fixes. Plan and kit: `docs/ASSETS-3D.md`, `tools/pezzi3d/`.
+The owner dropped this project once (early November), then decided on 13 November 2026 to **keep the figures** and polish them after the streamlining work. They are in the game (View > Units: Blocks / Figures; blocks are the default since 12 November). Plan and kit: `docs/ASSETS-3D.md`, `tools/pezzi3d/`.
 
 ## 4. Project management and control
 

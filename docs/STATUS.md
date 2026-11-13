@@ -25,7 +25,7 @@ A very busy week: about 160 changes reached `main` from four sessions working at
 
 ## Conflicts and overlapping work
 
-1. **Figures: the documents and the work disagree.** `docs/PARALLEL.md` §3 and `docs/HANDOVER.md` §2 say the figures project was dropped and its code removed. In fact the figures code (`web/src/troops.ts`, `web/public/pezzi/`, `tools/pezzi3d/`) is in the game and was changed four times today. `docs/ASSETS-3D.md` describes it as live. `docs/HANDOVER.md` §2 even says both "Figures by default" and "blocks are the default again" (blocks is right, per your 12 Nov choice).
+1. ~~Figures: the documents and the work disagree.~~ Settled 13 November: the owner keeps the figures; the documents now say so.
 2. **`web/src/main.ts` was edited by all four working sessions.** Since 13 November it is split into 22 modules (see the streamlining plan), so sessions now touch different files. `web/src/troops.ts` (UI and figures), `web/src/sandbox-ui.ts` (rules and UI) and `engine/src/game.ts` (computer opponent and rules) are also shared.
 3. **"No automation" vs the computer opponent.** Today's UI change removed automatic rolls and steps, except that an online opponent's dice still move on by themselves. The computer opponent relies on the same path (commit `9e80679`: without it the table froze). Not re-checked since the change: worth a quick test before your playtest.
 4. **Rule changes vs the computer's measurements.** The rules sweep changed timing and use of assets and events in The Bulge today (`c2d462d`). The computer opponent's measurements (stage 5) were made before it and should be re-run. The commit messages do not start with "Rule fix:" as `docs/PARALLEL.md` asks, so the computer session may not notice.
@@ -40,7 +40,7 @@ A very busy week: about 160 changes reached `main` from four sessions working at
 
 0. **Tutorial**: to be cancelled and rebuilt (your decision, 13 November). When, and whether the present lessons come off the site in the meantime, is still to be said.
 
-1. **Figures**: does the figures work continue (and the docs get corrected), or is it dropped (and the code removed)?
+1. ~~Figures~~ Answered 13 November: kept, to be polished after the streamlining work.
 2. **Playtest the computer opponent** (`?lab=german`, `?lab=allied`) and say whether it is good enough to move to levels.
 3. **Rule questions** from the asset and event sweep (`docs/AUDIT-2026-11.md` §5), and your marks on the checklist page.
 4. **Publish `database.rules.json`** on the site (Admin > Update rules): still pending since 10 November.
@@ -49,7 +49,7 @@ A very busy week: about 160 changes reached `main` from four sessions working at
 
 ## Proposed priorities
 
-1. Settle the figures question, so no session works on something that is meant to be gone.
+1. Polish the 3D figures (the owner's choice, 13 November).
 2. Re-test a full game in each volume, and an online game, after "no automation" (The Bulge must not break). Fix the two check scripts so they can do this by themselves.
 3. Your playtest of the computer opponent, after a quick check that it does not freeze with the new click-every-step flow; then re-run its measurements on the new rules.
 4. The rule questions, a few at a time.
@@ -67,7 +67,7 @@ Goal: keep the design, split the few oversized files by moving code, no rewrite 
 | 4. Split the engine | `engine/src/game.ts` went from 3,666 to about 500 lines: The Bulge's own rules in `vol/` like the other two volumes, the series rules by phase. | **Done 13 Nov** (details below) |
 | 5. Split `style.css` | The 10,578-line stylesheet became 28 files in `web/src/css/` (largest about 1,040 lines), listed in order in `web/src/style.css`. | **Done 13 Nov** (details below) |
 | 6. Docs and ownership | `HANDOVER.md` as current state (history moved to the new `docs/CHANGELOG.md`), `PLAN.md` corrected, ownership in `PARALLEL.md` by module. | **Done 13 Nov** (details below) |
-| 7. Guard | A CI check on file size. | — |
+| 7. Guard | A CI check on file size: `npm run check:size` (`scripts/check-size.mjs`). | **Done 13 Nov** |
 
 ### Step 1, what was done
 
@@ -107,7 +107,13 @@ Goal: keep the design, split the few oversized files by moving code, no rewrite 
 - **`docs/PLAN.md`**: the stack describes what was built (plain TypeScript and three.js, no React; online without a game server); a note says it is the starting plan.
 - **`docs/ARCHITECTURE.md`** and **`README.md`**: one line each updated for the split files.
 - **Not changed**: `engine/README.md` (it describes an early Golan layout, `battle.ts` / `events.ts`, that no longer matches the files; a rewrite of it is a separate small job).
-- The figures wording says "waiting for the owner", not a decision; it must be updated once decision 1 is made.
+- The figures wording was updated on the owner's answer the same day (kept).
+
+### Step 7, what was done
+
+- `npm run check:size` (at the repository root, also a CI check) fails when a source file (`.ts`, `.mjs`, `.css`) is over **1,000 lines**. Six files already over have a ceiling of their size, so they may not grow: `vol/golan.ts` (2,450), `vol/sicily.ts` (1,791), the sweep fuzz test, the Golan and Bulge lessons (to be rebuilt anyway), `css/battle-strip.css`. Tested: it passes now and fails on a 1,002-line file.
+- **The streamlining plan is finished.** Overall result: `main.ts` 7,338 → 711 lines in 22 modules, `game.ts` 3,666 → 503 in 10 modules, `style.css` 10,578 → 28 files, code formatted by Prettier, pictures, a rules fingerprint and a byte-identical stylesheet as proof nothing changed.
+- Still open from it, if wanted: split `vol/golan.ts` and `vol/sicily.ts` the same way (no seeded-game fingerprint exists for them, only tests and the fuzzer), and merge each screen's CSS into one place.
 
 ## Proposals for other files (for you to approve; this session does not change them)
 

@@ -11,6 +11,7 @@
 !bot/src/**
 !bot/test/**
 !bot/scripts/**
+!scripts/**
 !tools/push-worker/**
 **/node_modules
 **/*.json
