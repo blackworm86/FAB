@@ -32,13 +32,13 @@ A very busy week: about 160 changes reached `main` from four sessions working at
 
 ## Open problems
 
-- Phone check script `tools/mobile-sweep.cjs` stops at step 14 (it was written for the old automatic battles).
-- Lesson check `node web/e2e/tutorials.mjs` still stops inside battles.
 - Battles in Sicily and Golan, and online games, were not re-tested after the battle-flow changes (HANDOVER §4.4); now "no automation" changed the flow again.
 - On the 3D map, cut-off areas show a plain grey tint, no stripes.
 - `docs/HANDOVER.md` §4 is numbered 1, 4 (items 2 and 3 missing) and §2 mixes superseded notes ("faster battles") with current ones.
 
 ## Decisions waiting for you
+
+0. **Tutorial**: to be cancelled and rebuilt (your decision, 13 November). When, and whether the present lessons come off the site in the meantime, is still to be said.
 
 1. **Figures**: does the figures work continue (and the docs get corrected), or is it dropped (and the code removed)?
 2. **Playtest the computer opponent** (`?lab=german`, `?lab=allied`) and say whether it is good enough to move to levels.
@@ -54,6 +54,26 @@ A very busy week: about 160 changes reached `main` from four sessions working at
 3. Your playtest of the computer opponent, after a quick check that it does not freeze with the new click-every-step flow; then re-run its measurements on the new rules.
 4. The rule questions, a few at a time.
 5. Publish the database rules.
+
+## Streamlining plan (approved by the owner, 13 November)
+
+Goal: keep the design, split the few oversized files by moving code, no rewrite and no change in behaviour. One step at a time; after each step the session stops and reports.
+
+| Step | What | State |
+|---|---|---|
+| 1. Safety net | A picture check of every phase, a selected block, a battle and the main windows for each game on desktop and phone (`web/e2e/shots.mjs`). | **Done 13 Nov** (details below) |
+| 2. One formatting pass | An automatic formatter over all the code, with a CI check. Needs a short freeze of the other sessions. | Next |
+| 3. Split `web/src/main.ts` | Move code into modules, one small commit each. | — |
+| 4. Split the engine | The Bulge's own rules to `engine/src/vol/bulge.ts`; the rest of `game.ts` by phase. | — |
+| 5. Split `style.css` | One file per screen. | — |
+| 6. Docs and ownership | `HANDOVER.md` as current state plus changelog; ownership in `PARALLEL.md` by module. | — |
+| 7. Guard | A CI check on file size. | — |
+
+### Step 1, what was done
+
+- **Picture check** (dev server up; `cd web && npm run shots` before a change, `npm run shots:compare` after it): 21 pictures per game and screen size (start, the View, Pieces and Map windows, every phase, a battle pressed through, a selected block). The page's clock and the dice are fixed so the same code gives the same pictures. Measured on unchanged code: The Bulge desktop, Sicily desktop and phone match exactly; now and then one run opens with the camera a hair off, and every picture of that game and screen then shows about 1% spread thinly over the map (seen on The Bulge phone, and at about 0.5% on two Golan battle pictures). When that happens, run that game again (`GAMES=bulge`). One game takes about 8 minutes, all three about 25: a tool for the refactoring steps, not for CI.
+- **Lessons**: the owner decided on 13 November to cancel the present tutorial and rebuild it later (too long and complex), so the lesson check was not finished. Two real bugs found on the way are fixed in `web/src/tutorial.ts`, for as long as the present lessons stay: since "no automation" a dice result inside a lesson waited for a Continue the lesson lock blocked (the player was stuck); and in The Bulge lesson 7 a tap on the glowing area moved the wrong block. `web/e2e/tutorials.mjs` now plays more like a player (map taps, Continue) but was last run in full before the second fix.
+- `tools/mobile-sweep.cjs` no longer exists (removed in the 12 November clean-up), so that open problem is closed.
 
 ## Proposals for other files (for you to approve; this session does not change them)
 

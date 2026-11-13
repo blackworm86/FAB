@@ -9,7 +9,9 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p .",
     "e2e": "node e2e/smoke.mjs",
-    "i18n": "node e2e/i18n.mjs"
+    "i18n": "node e2e/i18n.mjs",
+    "shots": "node e2e/shots.mjs",
+    "shots:compare": "COMPARE=1 node e2e/shots.mjs"
   },
   "dependencies": {
     "firebase": "^13.1.0",

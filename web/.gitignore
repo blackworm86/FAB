@@ -3,3 +3,4 @@ public/map.jpg
 dist/
 .env
 .env.local
+e2e/shots/

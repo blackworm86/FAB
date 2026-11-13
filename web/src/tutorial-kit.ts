@@ -26,6 +26,8 @@ export interface Step {
   figure?: (g: G) => string;
   /** A situation card opens a lesson (no target, a Start button); a recap closes it (bullets); a try step is a small challenge (the hint under "why"). */
   kind?: 'situation' | 'recap' | 'try';
+  /** The block a move step moves: selected when the step opens, so a tap on the glowing area never moves another block left selected. */
+  mover?: string;
   target?: Target;
   /** Done when this holds. `q` asks the screen (a CSS selector is present, optionally with a text); missing = the Next button. */
   done?: (g: G, q: (sel: string, text?: string) => boolean) => boolean;
@@ -104,7 +106,7 @@ export function bookDiceSeq(g: G, side: string, kind: 'arty' | 'ground', book: {
 /* ---------- common steps ---------- */
 export const tapUnit = (key: string, title: string, text: string, o: { rule?: string; why?: string; label?: string } = {}): Step => ({ title, text, rule: o.rule, why: o.why, target: { unit: key, label: o.label }, tap: true });
 export const moveTo = (key: string, a: number, title: string, text: string, o: { rule?: string; why?: string; kind?: Step['kind'] } = {}): Step =>
-  ({ title, text, rule: o.rule, why: o.why, kind: o.kind, target: { area: a }, look: a, done: (g) => area(key, g) === a, act: (g) => { E.move(g, U(g, key).id, a); } });
+  ({ title, text, rule: o.rule, why: o.why, kind: o.kind, mover: key, target: { area: a }, look: a, done: (g) => area(key, g) === a, act: (g) => { E.move(g, U(g, key).id, a); } });
 export const closeStep = (sel: string, gone: string, title: string, text: string): Step => ({ title, text, target: { el: sel, label: 'close button' }, done: (_g, q) => !q(gone) });
 export const recap = (points: string[], text = ''): Step => ({ title: 'What to remember', kind: 'recap', text: `${text}<ul>${points.map((p) => `<li>${p}</li>`).join('')}</ul>` });
 export const situation = (title: string, text: string, o: { figure?: (g: G) => string; look?: number } = {}): Step => ({ title, text, kind: 'situation', figure: o.figure, look: o.look });

@@ -61,7 +61,7 @@ export function initTutorial(h: TutHost, course: Course) {
     s.enter?.(g);
     const t = s.target, prev = L.steps[si - 1]?.target;
     if (t && !('el' in t)) h.fold();                                                                  // the chit panel folds its rules so the map shows
-    if (t && 'area' in t && prev && 'unit' in prev) { try { h.select(U(g, prev.unit).id); } catch { /* */ } }   // a move: the block stays selected after Back
+    if (t && 'area' in t && (s.mover || (prev && 'unit' in prev))) { try { h.select(U(g, s.mover ?? (prev as { unit: string }).unit).id); } catch { /* */ } }   // a move: the block stays selected after Back
     const at = s.look ?? (t && 'unit' in t ? U(g, t.unit).area : t && 'area' in t ? t.area : null);
     if (at != null) { const p = t && 'unit' in t ? h.unitScreen(U(g, t.unit).id) : h.areaScreen(at); if (s.look != null || !p || p.x < 20 || p.x > innerWidth - 20 || p.y < 120 || p.y > innerHeight - 140) h.lookAt(at); }
     draw();
@@ -168,7 +168,7 @@ export function initTutorial(h: TutHost, course: Course) {
   }
 
   /* The lock: only the target (and the coach, and the dice report) take input. Pan and zoom stay free. */
-  const free = (el: Element) => !!el.closest('.tut-coach') || !el.closest('#ui') || !!el.closest('.c-ledger.tight') || !!el.closest('a.rlink');
+  const free = (el: Element) => !!el.closest('.tut-coach') || !el.closest('#ui') || !!el.closest('.c-ledger.tight') || !!el.closest('a.rlink') || (h.busy() && !!el.closest('.go'));   /* a dice result waits for the player's Continue */
   function guard(ev: Event) {
     const s = step(), el = ev.target as Element | null; if (!s || !el?.closest || free(el)) return;
     const te = menu ? null : targetEl(s.target);
@@ -208,7 +208,7 @@ export function initTutorial(h: TutHost, course: Course) {
     /** Dev and checks: play the current step the way the player would in engine terms (the coach's part, or the player's act) and go on. */
     advance() { const s = step(); if (!s || h.busy()) return; if (s.auto) return onNext(); if (s.act) { h.act(() => s.act!(h.game()), s.title); if (!s.done) next(); return; } next(); /* a map tap the next step plays */ },
     targetEl() { return targetEl(step()?.target); },
-    where() { const s = step(); const t = s?.target; return { lesson: li, step: si, title: s?.title, target: t ? label(t) : null, found: !t || !('el' in t) || !!targetEl(t), skipped: !!s?.skip?.(h.game()) }; },
+    where() { const s = step(); const t = s?.target; return { lesson: li, step: si, title: s?.title, target: t ? label(t) : null, found: !t || !('el' in t) || !!targetEl(t), tap: !t || 'el' in t ? null : 'unit' in t ? h.unitScreen(U(h.game(), t.unit).id) : h.areaScreen(t.area), skipped: !!s?.skip?.(h.game()) }; },
     /** A tap on the map: false = blocked; otherwise the block and area to use (a tap on a stack or on a block standing in the area counts). */
     gate(unit: string | undefined, area: number | null): { unit?: string; area?: number } | false {
       const s = step(); if (!s) return {};
