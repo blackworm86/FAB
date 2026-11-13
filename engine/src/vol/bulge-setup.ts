@@ -53,7 +53,7 @@ function introSetup(g: Game) {
   ];
   for (const u of g.units) {
     if (u.garrison) {
-      if (u.area !== 38 && u.area !== 47) ((u.area = null), (u.str = 0));
+      if (u.area !== 38 && u.area !== 47) (u.area = null), (u.str = 0);
       continue;
     }
     if (u.name === '10 Arm') {
@@ -214,7 +214,7 @@ function coldSetup(g: Game) {
   g.supplyOnly = [...areas.keys()].filter((a) => isZone(a, 5)); // P.3 / P.6
   for (const u of g.units) {
     if (u.garrison) {
-      if (u.area !== 32) ((u.area = null), (u.str = 0));
+      if (u.area !== 32) (u.area = null), (u.str = 0);
       continue;
     } // the garrison asset in Spa
     if (!(u.name in COLD_UNITS)) {
