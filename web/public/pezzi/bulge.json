@@ -2,8 +2,7 @@
  "tipi": {
   "bulge_german_armor": {
    "figure": [
-    "bulge_german_armor_0.glb",
-    "bulge_german_armor_1.glb"
+    "bulge_german_armor_0.glb"
    ],
    "veicolo": true
   },
@@ -15,72 +14,45 @@
   },
   "bulge_german_inf": {
    "figure": [
-    "bulge_german_inf_0.glb",
-    "bulge_german_inf_1.glb",
-    "bulge_german_inf_2.glb"
+    "bulge_german_inf_0.glb"
    ],
    "veicolo": false
   },
   "bulge_german_airborne": {
    "figure": [
-    "bulge_german_airborne_0.glb",
-    "bulge_german_airborne_1.glb",
-    "bulge_german_airborne_2.glb"
+    "bulge_german_airborne_0.glb"
    ],
    "veicolo": false
   },
   "bulge_german_mountain": {
    "figure": [
-    "bulge_german_mountain_0.glb",
-    "bulge_german_mountain_1.glb",
-    "bulge_german_mountain_2.glb"
+    "bulge_german_mountain_0.glb"
    ],
    "veicolo": false
   },
   "bulge_us_inf": {
    "figure": [
-    "bulge_us_inf_0.glb",
-    "bulge_us_inf_1.glb",
-    "bulge_us_inf_2.glb"
+    "bulge_us_inf_0.glb"
    ],
    "veicolo": false
   },
   "bulge_us_cavalry": {
    "figure": [
-    "bulge_us_cavalry_0.glb",
-    "bulge_us_cavalry_1.glb"
+    "bulge_us_cavalry_0.glb"
    ],
    "veicolo": true
   },
   "bulge_us_armor": {
    "figure": [
-    "bulge_us_armor_0.glb",
-    "bulge_us_armor_1.glb"
+    "bulge_us_armor_0.glb"
    ],
    "veicolo": true
   },
   "bulge_us_airborne": {
    "figure": [
-    "bulge_us_airborne_0.glb",
-    "bulge_us_airborne_1.glb",
-    "bulge_us_airborne_2.glb"
+    "bulge_us_airborne_0.glb"
    ],
    "veicolo": false
-  },
-  "bulge_british_inf": {
-   "figure": [
-    "bulge_british_inf_0.glb",
-    "bulge_british_inf_1.glb",
-    "bulge_british_inf_2.glb"
-   ],
-   "veicolo": false
-  },
-  "bulge_british_armor": {
-   "figure": [
-    "bulge_british_armor_0.glb",
-    "bulge_british_armor_1.glb"
-   ],
-   "veicolo": true
   }
  },
  "blocchi": {
@@ -152,10 +124,6 @@
   "B69": "bulge_us_armor",
   "B51": "bulge_us_airborne",
   "B52": "bulge_us_airborne",
-  "B54": "bulge_us_airborne",
-  "B67": "bulge_british_inf",
-  "B68": "bulge_british_inf",
-  "B73": "bulge_british_inf",
-  "B72": "bulge_british_armor"
+  "B54": "bulge_us_airborne"
  }
 }

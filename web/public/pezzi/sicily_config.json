@@ -68,5 +68,15 @@
     "dz": 0.0
    }
   }
+ },
+ "sicily_italian_garrison": {
+  "scelta": null,
+  "figure": {
+   "sicily_italian_garrison_0.glb": {
+    "gradi": 0.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
  }
 }
