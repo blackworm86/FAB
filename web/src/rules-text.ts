@@ -43,26 +43,101 @@ German engineers work in their own army's zone (14.52); an army without its engi
 • Breakthrough movement (8.21), Breakthrough combat (8.22), Reinforce a battle (8.23), Retreat before combat (8.24), Rally (8.25), Quality replacements (8.26), Reroute a reinforcement (8.27).`],
   replacement_inf: ['Infantry replacement', `Admin Phase (17.31): one step to a supplied, reduced infantry-class unit of the printed Higher Echelon, even in a contested area. It cannot bring back eliminated units nor create an elite step. The German Strategic Reserve chit may go to any German army.`],
   replacement_arm: ['Armor replacement', `Admin Phase (17.32): one step to a supplied, reduced armor-class unit of the printed Higher Echelon, even in a contested area. It cannot bring back eliminated units nor create an elite step.`],
-  naval_support: ['Naval support (16.21)', `Combat: an artillery asset that fires only in coastal areas.
-• Shock and Awe: instead of firing, one naval asset removes the defending field works, first thing in the battle.
-• Reduction of support: each Reinforcement Phase one naval asset in the Used Box is eliminated.`],
-  event_asset_delayed: ['Asset Delayed (17.32)', `No effect: when drawn it is eliminated at once, and it counts as one of the draws.`],
-  event_fading_morale: ['Fading Italian Morale (17.21)', `Conditional: it enters the Allied cup when a port is captured undamaged or a yellow-star area falls for the first time. Played in the Admin Phase: Italian morale fades one level (1-3).
-• The Axis, then the Allies, eliminate Italian assets from the Available Box (one; one each; two each).
-• Italian units in every battle are disordered or check morale by the level; a failed check at level 2-3 costs a step, and a 10 (veteran) or 8-10 (green) is a surrender.`],
-  event_army_release: ['US 7th Army Release (17.23)', `Admin Phase: all six American divisions are released from their army boundaries (never into zone B).`],
-  event_patton_slap: ['Patton Soldier Slap (17.11)', `Admin Phase, for the rest of the game: a US single-use Special Action costs two events (the reusable block and the British are unaffected).`],
-  event_tactical_extract: ['Axis Tactical Extract (17.12)', `Admin Phase: in the following Movement Phase German units may move out of a contested area into an adjacent enemy-controlled or contested area (not newly contested, not farther from Messina); they end the move recovering.`],
-  'sicily:air_mission': ['Air support (16.3)', `Regardless of supply. Combat (16.32): one per side, as extra artillery or +2 to one unit. Dogfighting (16.31): the other player may cancel it with an air asset of his own; both are used.
-• Interdiction (16.33, Admin Phase): +1 MP to enter and leave the area, no strat-move in or out, until your Supply Phase.
-• Air supply (16.34, Supply Phase): an unsupplied area gets no morale checks and may recover (still no assets).
-• Captured airfields (16.4): each Allied capture adds a conditional air asset to the Allied cup; the next Axis air asset drawn fills the empty box.`],
-  'sicily:engineer': ['Engineer asset', `Admin Phase, one function per engineer (4.3), then it goes to the Used Box:
-• Blow up bridges (4.31): from a supplied, friendly, uncontested area, up to two bridges on its river boundaries.
-• Repair a bridge (4.32); field works (4.33) where a friendly unit of its army stands (Axis engineers: any Axis unit, 14.53).
-• Ports (14.51): the Axis damages, the Allies repair, Syracuse, Catania or Palermo one level per Admin Phase (the port friendly, supplied, uncontested; the Allies need a unit of the right army there). Messina cannot be damaged.
-Combat (6.32, 6.33): a battle asset that fires in ground combat, or (attacker) removes the enemy field works instead of firing.`],
-  'sicily:command_staff': ['Staff asset', `Admin Phase, one staff function (8.3): intelligence gathering, a reserve marker, or replacements found (Allied: a non-elite step to an infantry-class unit; Axis, 14.63: an eliminated Italian infantry asset back to the Available Box).`],
+  // Sicily: its own texts (the asset sweep of November 2026).
+  'sicily:artillery': ['Artillery asset', `Combat (6.22, 6.23, 6.31): assign it in a battle's set-up, the Attacker first, then the Defender. It fires in the artillery step, before ground fire: one die against the enemy point unit (optional 18.2: −1 against the Defender, +1 against an infantry point unit not in field works).
+• How many: up to 2 attacking, 1 defending. Naval support counts as artillery here; air support does not.
+• US and British units in one battle (6.22, 6.23): attacking, one artillery asset per army; defending, one in all.
+• Allied artillery helps only its own army: US assets US units, British assets British units (16.2). Axis artillery helps Italian and German units alike, in any zone (16.1, 16.12).
+• Supply: the Attacker's units must be supplied and trace supply, the Defender's must trace supply (6.22, 6.23, 9.34a).
+• A defended roadblock alone may receive one artillery asset of its own army and nothing else (4.35).
+• Hits on the Defender: the first removes field works; one artillery hit may be absorbed by disordering every defending unit (6.42). Artillery never takes a step loss (6.31).
+• After the battle it goes to the Used Box (optional 18.3: a defender's artillery left in a vacated area may be overrun).`],
+  'sicily:naval_support': ['Naval support (Allied, 16.21)', `The Allies start with four. Combat: it fires exactly like an artillery asset and counts against the artillery limit (2 attacking, 1 defending), but only in a coastal area. It is a strategic (red flag) asset: it may support US or British units.
+• Shock and Awe (attacking): instead of firing, one naval asset removes the defending field works as the very first act of the battle. A second naval asset in the same battle still fires as artillery. Choose it in the battle set-up.
+• A flanking invasion may receive only air and naval support (17.22).
+• Reduction of support: in every Reinforcement Phase, if a naval asset is in the Used Box, one of them is eliminated. This happens after the unused reusable Special Action has had its chance to save one (4.1a, Example 2).
+• It never takes a step loss. After the battle it goes to the Used Box.`],
+  'sicily:infantry_asset': ['Infantry battle asset', `Combat (6.22, 6.23, 6.32): assign it in a battle's set-up. It fires with the ground units: one die, infantry class, with the troop quality printed on the chit against the enemy point unit.
+• Up to 8 battle assets attacking, 5 defending; your units there must be in supply (9.34a).
+• Allied: only with units of its own army, US with US and British with British (16.2), and none at all when US and British units fight together (6.22, 6.23).
+• Axis: in any zone, for Italian and German units alike (16.1), but at most ONE Italian battle asset in a battle, attacking or defending (16.11).
+• The 82nd and 1st Airborne assets are ordinary battle assets: they make no airborne assault (14.27a).
+• It may take a loss before the point unit (6.43); one hit eliminates it. Otherwise it goes to the Used Box after the battle.`],
+  'sicily:armor_asset': ['Armor battle asset', `Combat (6.22, 6.23, 6.32): assign it in a battle's set-up. It fires with the ground units: one die, armor class, with the troop quality printed on the chit against the enemy point unit.
+• Up to 8 battle assets attacking, 5 defending; your units there must be in supply (9.34a).
+• Allied: only with units of its own army (16.2), and none when US and British units fight together (6.22, 6.23).
+• Axis: in any zone, for Italian and German units alike (16.1). The Italian mobile groups and armor count towards the limit of ONE Italian battle asset per battle (16.11).
+• It may take a loss before the point unit (6.43); one hit eliminates it. Otherwise it goes to the Used Box after the battle.`],
+  'sicily:ranger': ['US Ranger battalion (16.22)', `An elite infantry battle asset of the US 7th Army. It fires like any US battle asset: US units only, up to 8 battle assets attacking and 5 defending, none when US and British units fight together.
+• Field works (16.22): attacking, you may choose in the battle set-up that it removes the enemy field works automatically instead of rolling its die. This happens in offensive ground fire, before the other attackers' Success Numbers are worked out, and only if the attack was not aborted and the Ranger survived the defensive fire.
+• If the field works are already gone by then (they absorbed a hit, or naval Shock and Awe removed them), it rolls its die as usual.
+• It may take a loss before the point unit (6.43); one hit eliminates it. Otherwise it goes to the Used Box after the battle.`],
+  'sicily:commando': ['3rd Commando (British, 16.23, 17.22)', `An elite British infantry battle asset with two extra abilities.
+• Field works (16.23): like a US Ranger, attacking it may remove the enemy field works automatically instead of rolling its die, if the attack goes on and it survived the defensive fire. If the field works are already gone, it rolls as usual.
+• Flanking invasion, once per game (16.23, 17.22): in the Allied Admin Phase, land it in an enemy-controlled, uncontested coastal area within two areas of a British unit that stands in a coastal area. Only one flanking invasion per Admin Phase.
+• If Axis units are there, one round of combat is fought at once, in that Admin Phase, as a beach assault (the River Assault penalties). The Allies may commit only air and naval support to it; the Axis has no limits.
+• If it survives, or the area was empty, it stays there. It never starts a combat (it only defends), does not control the area, needs no supply, does not block Axis supply, and Axis units may not retreat into its area. Its battles get only air and naval support.
+• It is relieved, to the Used Box, the moment an Allied unit enters its area. A hit eliminates it.
+• Otherwise it is an ordinary British battle asset (up to 8 attacking, 5 defending; Used Box after the battle).`],
+  'sicily:flank': ['30th RCT (–) (US, 17.22)', `A veteran US infantry battle asset (two counters, two battalions). Every time it is in your Available Box in an Allied Admin Phase, it may instead be played as a flanking invasion event:
+• Land it in an enemy-controlled, uncontested coastal area within two areas of a US unit that stands in a coastal area. Only one flanking invasion per Admin Phase.
+• If Axis units are there, one round of combat is fought at once, in that Admin Phase, as a beach assault (the River Assault penalties). The Allies may commit only air and naval support to it; the Axis has no limits.
+• If it survives, or the area was empty, it stays there. It never starts a combat (it only defends), does not control the area, needs no supply, does not block Axis supply, and Axis units may not retreat into its area. Its battles get only air and naval support.
+• It is relieved, to the Used Box, the moment an Allied unit enters its area; from there it can land again in a later turn. A hit eliminates it.
+• As a battle asset it fires like any US infantry battle asset (US units only; up to 8 attacking, 5 defending).`],
+  'sicily:engineer': ['Engineer asset', `Admin Phase (4.3): one function per engineer, then it goes to the Used Box. Not for unsupplied areas or units, nor for air-supplied ones (9.34d).
+• Blow up bridges (4.31): from a supplied, friendly-controlled, uncontested area, blow one or two bridges on that area's river boundaries.
+• Repair a bridge (4.32): from a supplied, friendly, uncontested area, when you control the far side or contest it. Where a river is also an army boundary, either Allied army's engineer may bridge from its own side (14.52).
+• Field works (4.33): in a supplied, friendly, uncontested area with a unit of the engineer's army. Axis engineers work in any zone and for any Axis unit (14.53).
+• Ports (14.51): the Axis damages, the Allies repair, Syracuse, Catania or Palermo by one level, at most one level per port per Admin Phase. The port area must be friendly-controlled, in supply and (in this game) uncontested; the Allies also need a British unit there (Syracuse, Catania) or an American one (Palermo). A port takes at most two levels of damage, and Messina can never be damaged. A damaged port gives no arrivals, no supply and no extra draw (16.5).
+• Roadblock (4.34): in a supplied, friendly, vacant area with Terrain Difficulty 1 or more. The first enemy unit to enter pays +1 MP and stops, and the marker goes. Removed in the Supply Phase.
+• Defended roadblock (4.35): the engineer chit itself stands in such an area. Every enemy unit entering stops and must fight it. Only one artillery asset of its own army may help it (no other asset, no Special Action). Surviving, it goes to the Used Box in the Supply Phase; a hit eliminates it.
+Combat (6.32, 6.33): a battle asset (one die, the chit's quality) with the usual limits; an Italian engineer is the battle's one Italian battle asset (16.11). Attacking, it may instead remove the enemy field works if it survived the artillery and defensive fire; it still counts as a battle asset.`],
+  'sicily:command_staff': ['Staff asset', `Admin Phase (8.3): one staff function with no Higher Echelon limit, then it goes to the Used Box and recycles through the cup. Not for unsupplied or air-supplied units and areas (9.34d).
+• Replacements found (8.31), Allied staff: one non-elite step to any supplied, reduced infantry-class unit, US or British.
+• Axis staff, instead (14.63): it never adds steps to units; it moves one eliminated Italian infantry asset straight back to the Axis Available Box.
+• Intelligence gathering (8.32): reveal one enemy block anywhere, in any supply state, until the end of the Admin Phase.
+• Reserves made available (8.33): put an available reserve marker of the right army on an eligible unit (14.7). In the enemy's Admin Phase this gives you a reserve for his Reaction Phase.
+• Sicily has no other staff functions (14.62). The Axis staff is never one of the Italian assets lost to Fading Italian Morale (17.21c).`],
+  'sicily:air_mission': ['Air support (16.3)', `Both sides. One mission per asset, whatever the supply of the area; afterwards it goes to the Used Box and recycles like any asset.
+• Ground support (16.32, in a battle's set-up): one air asset per side per battle, outside the artillery and battle-asset limits, for unsupplied units too. Choose before your artillery fires: it fires as an extra artillery asset, or it gives +2 to one of your units in the battle. It never takes a step loss, and it goes to the Used Box even if the attack is aborted.
+• Dogfighting (16.31): when the enemy flies air support in a battle, an interdiction or an air supply mission, you may cancel that mission with one of your own air assets. In a battle this is your one air commitment there; the Attacker may answer the Defender's air out of turn. Both assets go to the Used Box, and neither side may fly another mission in its place.
+• Interdiction (16.33, Admin Phase, either player): place it on any land area. Enemy units pay +1 MP to enter and +1 MP to leave it, and may not strat-move into, out of or through it. It stays until the Supply Phase of the current player turn.
+• Air supply (16.34, Supply Phase, either player): place it on one area with your unsupplied units. They keep the unsupplied marker (still no assets, events, Special Actions, staff or engineers, 9.34a, 9.34d), but they make no out-of-supply morale check and their disordered markers adjust (9.35) this Supply Phase.
+• Captured airfields (16.4): the first time the Allies take Catania, Niscemi or Marsala, a conditional (C) Allied air asset goes into the Allied cup, and the next Axis air asset drawn fills the empty Captured Airfields box and is lost to the Axis.`],
+  'sicily:sa_block': ['Special Action (reusable block)', `Your personal command influence (8.1): a wooden block, usable for units of any of your armies (US and British; Italian and German), but never on units or areas out of supply (9.34d). After use it goes to the Used Box and comes back to Available in the next Reinforcement Phase. If it was still unused there, you may also bring one asset of your choice from the Used Box straight to Available (4.1a), for example a naval support asset before the fleet withdraws it (16.21). Uses (8.2, 14.61):
+• Breakthrough movement (8.21): one supplied armor-class unit in good order that has not moved this phase moves one area in the Breakthrough Phase, like an exploitation unit.
+• Breakthrough combat (8.22): fight a round in one already contested area in the Breakthrough Combat Phase.
+• Reinforce a battle (8.23, defender only, before the Attacker assigns assets): one unit in good order from an adjacent uncontested area joins, within stacking and the army zones. Never into a battle of a flanking invasion or defended roadblock alone. It cannot be the point unit unless the point unit falls.
+• Retreat before combat (8.24, defender only): all defending units retreat without disorder; the Attacker gets an exploitation opportunity.
+• Rally (8.25, Admin): all your disordered or recovering units in one supplied area and the areas next to it recover fully.
+• Quality replacements (8.26, Admin): one step to a supplied reduced unit, even an elite step.
+• Release a division (14.61, Allied, Admin): one division may leave its army boundaries; with a British division, one independent brigade (1st Canadian Armoured, 4th Armoured or 231st) is released too. Americans still never enter zone B, British never zone D.
+• Not in Sicily: rerouting a reinforcement (8.27, 14.64). Patton Soldier Slap does not affect the block.`],
+  'sicily:special_action_event': ['Special Action (single-use event, 17.31)', `Any one use of the reusable Special Action (8.2), but only for units of the army printed on it: US 7th Army or British 8th Army; the Axis events (red flag) work for any Italian or German unit. It goes to the Eliminated Box after use and does not count as a battle's one event.
+• Uses: breakthrough movement (8.21), breakthrough combat (8.22), reinforce a battle (8.23), retreat before combat (8.24), rally (8.25), quality replacements (8.26) and, for the Allies, releasing a division of its own army (14.61). Rerouting (8.27) is not used in Sicily (14.64).
+• Patton Soldier Slap (17.11): once the Axis has played it, US events work only in pairs. Two US Special Action events are spent together, for a Special Action or for the alternate use. British events and the reusable block are not affected.
+• Not for units or areas out of supply (9.34d).`],
+  'sicily:replacement_inf': ['Infantry replacement (17.24)', `Admin Phase: one non-elite step to a supplied, reduced infantry-class unit of the printed nationality (US or British), even in a contested area.
+• Infantry class (13.3): infantry, mountain, airborne, motorized infantry, engineer, artillery, garrison and ranger units.
+• It cannot bring back an eliminated unit, nor add a step that would be elite.
+• Not for units out of supply or kept going by air supply (9.34d, 16.34).`],
+  'sicily:replacement_arm': ['Armor replacement (17.25)', `Admin Phase: one non-elite step to a supplied, reduced armor-class unit of the printed nationality, even in a contested area.
+• Armor class (13.3): armor, armored cavalry and mechanized infantry.
+• It cannot bring back an eliminated unit, nor add a step that would be elite.
+• Not for units out of supply or kept going by air supply (9.34d, 16.34).`],
+  'sicily:event_asset_delayed': ['Asset Delayed (17.32)', `No effect: when drawn it goes straight to the Eliminated Box, and it still counts as one of your draws. It never reaches your hand, so it has no alternate use either.`],
+  'sicily:event_fading_morale': ['Fading Italian Morale (Allied, conditional, 17.21)', `The three events wait in the Captured Ports and Key VP Areas box. One goes into the Allied cup the first time a Sicilian port (Syracuse, Catania, Palermo) is Allied-controlled and undamaged, and the first time the Allies take each of the five yellow-star areas (Catania can do both). When it is drawn and played in an Admin Phase, Italian morale falls one level (1, 2, 3):
+• At once (17.21c): at level 1 the Axis eliminates one Italian asset from its Available Box; at level 2 the Axis, then the Allies, each pick one; at level 3 each picks two. Never the Staff asset.
+• Untried Italian units in a battle, when revealed (17.21d): at level 1 they are disordered; at levels 2 and 3 they are disordered and then check morale, and a failure costs a step and may be a surrender.
+• Tried Italian units in a battle (17.21e): at level 1 those in good order or recovering check morale and are disordered on a failure; at level 2 all are disordered; at level 3 those already disordered check morale (a failure costs a step and may be a surrender) and the others are disordered.
+• Surrender (17.21f): on that failed check, a veteran unit rolling 10, or a green unit rolling 8-10, surrenders and is eliminated. Attacking armor then gets an exploitation opportunity if the area is no longer contested.`],
+  'sicily:event_army_release': ['US 7th Army Release (17.23)', `Admin Phase: all six US divisions, the 82nd Airborne included, are released from their army boundaries at once, without a Special Action. They may now enter zone A or zone D (whichever their landing plan kept from them), but never zone B.`],
+  'sicily:event_patton_slap': ['Patton Soldier Slap (Axis, 17.11)', `Admin Phase: from then on, to the end of the game, a US single-use Special Action event works only when two of them are spent together, both for a Special Action and for the alternate use (4.21). The reusable Special Action block and the British events are not affected.`],
+  'sicily:event_tactical_extract': ['Axis Tactical Extract (17.12)', `Admin Phase: for the ensuing Movement Phase, German (not Italian) units may move one area straight out of a contested area into an adjacent enemy-controlled area or another contested area.
+• Neither area may be newly contested, and the area entered may not be farther from Messina (counted in areas) than the one left.
+• The units that move this way end recovering: they cannot attack, but will be in good order for the Allied player turn.
+• Play it in the Axis Admin Phase: it ends with the next Movement Phase, whoever moves.`],
   // Golan '73: its own texts (the asset sweep of November 2026).
   'golan:artillery': ['Artillery asset', `Combat (6.22-6.26): assign it in a battle's set-up, Attacker first, then Defender. It fires in the artillery step, before ground fire: one die at Success Number 5, −1 against the Defender, −1 if the enemy point unit is armour, a strongpoint or infantry in field works, −1 on the night turn (14.03).
 • How many: up to 2 attacking, 1 defending (6.31). Israel gets one more (3 and 2) while it controls Mt Hermon with a garrison or unit there; the bonus is lost for good once Syria takes it (16.21).
@@ -307,7 +382,7 @@ export const ALT_USE_GOLAN = 'Alternate use (4.21): in an Admin Phase, instead o
 const escH = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
 /** The description as HTML: paragraphs, and "• " lines as a list; events also get their alternate use. */
 export function ruleHtml(kind: string, event = false): string {
-  const d = (RULE[kind] ?? ['', ''])[1] + (event && !/event_delayed_response$|event_dugman5$/.test(kind) ? '\n' + (kind.startsWith('golan:') ? ALT_USE_GOLAN : ALT_USE) : ''); let out = '', list = false;
+  const d = (RULE[kind] ?? ['', ''])[1] + (event && !/event_(delayed_response|asset_delayed|dugman5)$/.test(kind) ? '\n' + (kind.startsWith('golan:') ? ALT_USE_GOLAN : ALT_USE) : ''); let out = '', list = false;
   for (const line of d.split('\n')) {
     if (line.startsWith('• ')) { if (!list) { out += '<ul class="rl">'; list = true; } out += `<li>${escH(line.slice(2))}</li>`; }
     else { if (list) { out += '</ul>'; list = false; } if (line.trim()) out += `<p>${escH(line)}</p>`; }

@@ -954,7 +954,7 @@ function pz150Check(g: Game, b: Battle) {
 }
 function next(g: Game, b: Battle) {
   fixPoint(g, b);
-  if (!unitsIn(g, b.area, b.attacker).filter((u) => !u.garrison).length) return end(g, b, 'Attacker eliminated');
+  if (!unitsIn(g, b.area, b.attacker).filter((u) => !u.garrison || !!CUR.battleAllowed?.(g, b.area)).length) return end(g, b, 'Attacker eliminated');   // Sicily 17.22: a flanking invasion attacks alone
   if (!fighters(g, b.area, b.attacker, true).length) { b.queue = []; return end(g, b, 'No attacker left in good order'); }   // 6.2: disordered units cannot carry the attack
   if (b.pz150 && (!b.queue.length || b.queue[0] === 'defFire' || b.queue[0] === 'offFire')) {
     pz150Check(g, b); const def = other(b.attacker);

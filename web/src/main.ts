@@ -748,6 +748,7 @@ function chitPanel(c: E.Chit): string {
   const a = selArea, out: string[] = [];
   if (c.box !== 'available') return '<p class="hint">Only chits in the Available Box can be used.</p>';
   if (g.phase === 'supply' && c.kind === 'air_mission' && VOL.id === 'bulge') return '<p class="hint">Air Supply (17.21): pick a cut-off area in the Supply check panel.</p>';
+  if (g.phase !== 'admin' && VOL.id === 'sicily' && c.kind === 'air_mission') return '<p class="hint">Air support: interdiction in the Admin Phase, ground support in a battle, air supply in the Supply Phase (use the panel), and dogfights against any of these (16.3).</p>';
   if (g.phase !== 'admin' && VOL.id === 'golan73' && ['sam', 'event_ew', 'event_counterbattery', 'air_mission'].includes(c.kind)) return `<p class="hint">${c.kind === 'sam' ? 'SAMs answer Israeli air missions east of the barrier as they are flown (16.12).' : c.kind === 'air_mission' ? 'Close air support in a battle\'s set-up; interdiction and reconnaissance in the Admin Phase (16.31).' : 'Played in a battle\'s set-up as your one event (17.33, 17.34).'}</p>`;
   if (g.phase !== 'admin') return `<p class="hint">${E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission' ? 'This chit is assigned to a battle during the Combat Phase.' : c.kind === 'fuel' ? 'Fuel is spent automatically when a German unit moves more than 3 MP or strategic-moves.' : c.kind === 'sa_block' || c.kind === 'special_action_event' ? 'Special Actions are spent in battles (reinforce / retreat), Breakthrough phases and the Admin Phase.' : 'Events are played in the Admin Phase.'}</p>`;
   if (VOL.id !== 'bulge') return '';                                                              // the other volumes offer everything through the glowing targets and buttons
@@ -885,7 +886,7 @@ function airPickHtml() {
   if (!airPick || airPick.step !== 'choose' || !g.battle) return '';
   const p = airPick;
   return `<div class="modal"><div class="sheet slim"><h3>${ico('air_mission')} Air Mission <button class="ico" data-ui="${reg(() => { airPick = null; })}" aria-label="Cancel">${ico('close')}</button></h3>
-    <p class="hint gx">${VOL.id === 'golan73' ? 'Close air support (16.31a): one per side (Israel may add a second, 16.22); it never takes a step loss and goes to the Used Box.' : 'Combat support (17.21): it is this battle\'s one event, and it can never take a step loss.'}</p>
+    <p class="hint gx">${VOL.id === 'golan73' ? 'Close air support (16.31a): one per side (Israel may add a second, 16.22); it never takes a step loss and goes to the Used Box.' : VOL.id === 'sicily' ? 'Ground support (16.32): one per side, outside the artillery and battle-asset limits; it never takes a step loss and goes to the Used Box.' : 'Combat support (17.21): it is this battle\'s one event, and it can never take a step loss.'}</p>
     <div class="row">${btn(`${ico('artillery')} Extra artillery`, () => { airPick = null; E.assign(g, g.battle!, p.id, 'arty'); }, 'primary', false, 'Fires like an artillery asset, outside the artillery limit')}${((n) => ubtn(`${ico('plus')} +${n} to one unit`, () => { airPick = { ...p, step: 'unit' }; }, '', false, `Then tap one of your blocks in this battle: +${n} to its Success Number`))(VOL.id === 'golan73' && p.side === 'syrian' ? 1 : 2)}</div></div></div>`;
 }
 /** 4.21: the chooser of the two eliminated assets an event brings back (the same sheet as the Special Action chooser). */
@@ -974,7 +975,8 @@ function click(e: PointerEvent) {
   if (g.battle && !g.pendingBlow) {                                                                         // a battle is on the table: tapping a block makes it that side's point unit
     const b = g.battle, u = unit ? g.units.find((x) => x.id === unit) : null, { chit: tapped } = pick(e);
     { const fn = tgt?.units.get(tapped ?? unit ?? ''); if (fn && (b.stage === 'attFirst' || b.stage === 'loss')) return act(fn); }
-    if (b.stage === 'setup' && airPick?.step === 'unit') { const p = airPick; if (u && u.side === p.side && u.area === b.area && !u.garrison) { airPick = null; return act(() => E.assign(g, b, p.id, 'support', u.id)); } airPick = null; say('Tap one of your own blocks in this battle for the +2. Cancelled.'); return refresh(); }
+    if (b.stage === 'setup' && airPick?.step === 'unit') { const p = airPick; if (u && u.side === p.side && u.area === b.area && (!u.garrison || u.id.startsWith('F-'))) {   // Sicily Example 15C: the flanking asset may get the +2
+ airPick = null; return act(() => E.assign(g, b, p.id, 'support', u.id)); } airPick = null; say('Tap one of your own blocks in this battle for the +2. Cancelled.'); return refresh(); }
     if (b.stage === 'setup' && tapped) { const c = E.chit(g, tapped); if (mine(c.side)) act(() => E.unassign(g, b, tapped)); else say('Those are the other player\'s assets.'); return; }
     if (b.stage === 'setup' && u && seen(u) && mine(u.side) && !u.garrison && !(u.side === b.attacker && u.disorder)) act(() => E.setPoint(g, b, u.side, u.id));
     return;
@@ -1530,6 +1532,7 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
     if (sel != null) return { label: `Fight ${areaName(sel)}`, fn: fight(sel) };
     if (must.length && allowed() && mine(g.phasing)) { const at = lastFight != null ? center(lastFight) : null, next = at ? [...must].sort((x, y) => center(x).distanceTo(at) - center(y).distanceTo(at))[0] : must[0]; return { label: `Next battle: ${areaName(next)}`, fn: fight(next) }; }      // after a battle the button names the nearest one still to fight
   }
+  if (g.phase === 'admin' && VOL.id === 'sicily' && !g.battle && mine(g.phasing)) { const fl = E.sicily.flankBattles(g); if (fl.length) return { label: `Fight ${areaName(fl[0])}`, fn: () => { selArea = fl[0]; selUnit = null; battleFx = []; rollFx = []; E.startBattle(g, fl[0]); } }; }   // 17.22: the landing round, before the Admin Phase ends
   if (online.active && !online.both() && (g.phase === 'admin' || g.phase === 'reinforcement')) {            // both sides work in these steps: the other side says it is done, the Phasing Player ends the step
     const me = online.mySide(); if (!me) return null;
     if (me !== g.phasing) { const on = !!g.done?.includes(me); return { label: on ? 'Done · tap to undo' : 'Done', fn: () => act(() => E.setDone(g, me, !on)) }; }
