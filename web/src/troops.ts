@@ -134,16 +134,21 @@ export const radius = (t: Pick<Troop, 'size'>) => Math.max(0.55, Math.max(t.size
 
 const PIP: Record<string, [string, string]> = { elite: ['#e3222b', '#ffffff'], veteran: ['#141414', '#ffffff'], green: ['#ffffff', '#141414'] };
 const pipMats = new Map<string, THREE.SpriteMaterial>();
-/** The unit's pips as one strip that always faces the camera and stays level on screen. */
-function pips(n: number, q: string) {
-  const key = `${n}${q}`; let m = pipMats.get(key);
+/** The unit's pips as one strip that always faces the camera and stays level on screen: from the left, the steps it has lost, faint and in the
+ *  quality they had (owner, 13 Nov), then its present steps, solid, in its present quality. qs: the quality at each strength (qs[s - 1]). */
+function pips(n: number, qs: string[]) {
+  const max = Math.max(n, qs.length), key = `${n}|${qs.join()}`; let m = pipMats.get(key);
   if (!m) {
-    const c = document.createElement('canvas'); c.width = 64 * n; c.height = 64; const x = c.getContext('2d')!, [fill, ring] = PIP[q] ?? PIP.veteran;
-    for (let i = 0; i < n; i++) { x.beginPath(); x.arc(32 + 64 * i, 32, 28, 0, 7); x.fillStyle = ring; x.fill(); x.beginPath(); x.arc(32 + 64 * i, 32, 21, 0, 7); x.fillStyle = fill; x.fill(); }
+    const c = document.createElement('canvas'); c.width = 64 * max; c.height = 64; const x = c.getContext('2d')!;
+    for (let i = 0; i < max; i++) {
+      const lost = i < max - n, q = lost ? qs[max - 1 - i] : qs[n - 1], [fill, ring] = PIP[q] ?? PIP.veteran;
+      x.globalAlpha = lost ? 0.35 : 1;
+      x.beginPath(); x.arc(32 + 64 * i, 32, 28, 0, 7); x.fillStyle = ring; x.fill(); x.beginPath(); x.arc(32 + 64 * i, 32, 21, 0, 7); x.fillStyle = fill; x.fill();
+    }
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
     m = new THREE.SpriteMaterial({ map: t, depthTest: false, depthWrite: false }); pipMats.set(key, m);
   }
-  const s = new THREE.Sprite(m); s.scale.set(0.3 * n, 0.3, 1); s.renderOrder = 3; return s;
+  const s = new THREE.Sprite(m); s.scale.set(0.3 * max, 0.3, 1); s.renderOrder = 3; return s;
 }
 /** A thin circle round the figure's footprint (w along x, d along z), in the side's colour, brass when selected. */
 function ring(w: number, d: number, color: THREE.ColorRepresentation, selected: boolean) {
@@ -155,12 +160,12 @@ function ring(w: number, d: number, color: THREE.ColorRepresentation, selected: 
 }
 /** A unit drawn as its figure, centred on the group's origin (the spot the block would take). */
 /** yaw: overrides the side's usual facing (in battle the two sides face each other). */
-export function troopGroup(t: Troop, unitId: string, side: string, color: THREE.ColorRepresentation, n: number, quality: string, selected: boolean, yaw = yawOf(side)) {
+export function troopGroup(t: Troop, unitId: string, side: string, color: THREE.ColorRepresentation, n: number, qs: string[], selected: boolean, yaw = yawOf(side)) {
   const g = new THREE.Group(), f = t.figs[variant(unitId, t.figs.length)].clone(true);
   f.rotation.y = yaw; f.scale.multiplyScalar(zoom); g.add(f);
   const across = Math.abs(Math.sin(yaw)) > 0.5, sz = t.size.clone().multiplyScalar(zoom);   // facing east or west: the figure's length lies along x
   g.add(ring((across ? sz.z : sz.x) + 0.3, (across ? sz.x : sz.z) + 0.3, color, selected));
-  const s = pips(n, quality); s.position.y = sz.y + 0.35; g.add(s);
+  const s = pips(n, qs); s.position.y = sz.y + 0.35; g.add(s);
   g.userData.troop = true; g.userData.top = sz.y;
   return g;
 }

@@ -509,7 +509,7 @@ function drawPieces() {
     order.forEach((u, n) => {
       const hid = faceDown(u), t = troops && !hid ? troopOf(u.id) : null, sel = u.id === selUnit || (!!g.battle && !hid && (u.id === g.battle.attPoint || u.id === g.battle.defPoint));
       // facing: heading() (the way it last moved; in a contested area toward the other side; in a battle close-up row against row)
-      const m = t ? troopGroup(t, u.id, u.side, woodOf(u), u.str, u.q[u.str - 1] ?? 'veteran', sel, heading(u, a.id, cont, g.battle?.area === a.id)) : block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
+      const m = t ? troopGroup(t, u.id, u.side, woodOf(u), u.str, u.q.length ? u.q : ['veteran'], sel, heading(u, a.id, cont, g.battle?.area === a.id)) : block(u, hid), p = lay.spots[n]; m.userData.hidden = hid;
       const flat = !t && cont && !hid && !u.garrison && u.up === a.id;                                                     // revealed blocks lie flat, label up, while the area is contested
       m.position.x = p.x; m.position.z = p.z;
       if (flat) { m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, viewRot(), 0); m.position.y = 0.4; }
