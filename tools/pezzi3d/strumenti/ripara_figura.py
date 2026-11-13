@@ -43,6 +43,25 @@ def bordi_aperti(g):
     return aperti, rep, inv.reshape(-1)
 
 
+def pulisci_texture(g, lato=512):
+    """Texture pulita: la texture è un mosaico di isolette (una per pezzo di mesh) su sfondo nero senza margine, e al GPU i bordi
+    delle isolette si mescolano col nero: sono le righe scure sulla figura. Qui la texture si ingrandisce a lato x lato e il nero
+    attorno alle isolette si riempie col colore dell'isoletta più vicina ("padding"). Restituisce l'immagine (PIL)."""
+    from PIL import Image, ImageDraw, ImageFilter
+    from scipy import ndimage
+    img = g.visual.material.baseColorTexture.convert("RGB").resize((lato, lato), Image.LANCZOS)
+    mask = Image.new("L", (lato, lato), 0); d = ImageDraw.Draw(mask)
+    uv = np.asarray(g.visual.uv)
+    for f in g.faces:
+        d.polygon([(float(uv[i][0]) * lato, (1 - float(uv[i][1])) * lato) for i in f], fill=255)
+    valido = np.asarray(mask.filter(ImageFilter.MinFilter(5))) > 0       # via 2 pixel di bordo: sono già sfumati col nero
+    a = np.asarray(img)
+    if not valido.any():
+        return img
+    _, (iy, ix) = ndimage.distance_transform_edt(~valido, return_indices=True)
+    return Image.fromarray(a[iy, ix])
+
+
 def conta(percorso):
     return len(bordi_aperti(carica(percorso))[0])
 
@@ -51,7 +70,13 @@ def ripara(percorso):
     """Chiude i buchi di percorso (sovrascrive, salvando l'originale una volta). Restituisce (bordi aperti prima, dopo, buchi chiusi)."""
     g = carica(percorso)
     aperti, rep, inv = bordi_aperti(g)
-    if not aperti:
+    if not aperti:                      # niente buchi: solo la texture
+        mat = g.visual.material
+        mat.baseColorTexture = pulisci_texture(g)
+        ORIGINALI.mkdir(parents=True, exist_ok=True)
+        if not (ORIGINALI / Path(percorso).name).exists():
+            shutil.copy2(percorso, ORIGINALI / Path(percorso).name)
+        Path(percorso).write_bytes(trimesh.Scene(g).export(file_type="glb"))
         return 0, 0, 0
     uv = np.asarray(g.visual.uv) if getattr(g.visual, "uv", None) is not None else None
     # un buco = una componente connessa dei bordi aperti
@@ -69,17 +94,20 @@ def ripara(percorso):
     centro = {}
     for r, pos in comp.items():
         idx = [int(rep[p]) for p in pos]                            # un vertice vero per ogni posizione del bordo
-        V.append(np.mean([g.vertices[i] for i in idx], axis=0))
-        if U is not None:
-            U.append(np.mean([uv[i] for i in idx], axis=0))
-        centro[r] = len(V) - 1
+        centro[r] = np.mean([g.vertices[i] for i in idx], axis=0)
     for a, b in aperti:                                             # il bordo (a,b) è percorso a->b: il tappo lo percorre b->a
-        nuovi.append([int(rep[b]), int(rep[a]), centro[trova(a)]])
+        ia, ib = int(rep[a]), int(rep[b])                           # un vertice centrale per ogni triangolo, con coordinata texture a metà del bordo:
+        V.append(centro[trova(a)])                                  # il triangolo ha area zero nella texture e prende il colore del bordo che chiude
+        if U is not None:
+            U.append((uv[ia] + uv[ib]) / 2)
+        nuovi.append([ib, ia, len(V) - 1])
     facce = np.vstack([g.faces, np.array(nuovi)])
     mat = g.visual.material if hasattr(g.visual, "material") else None
     m = trimesh.Trimesh(np.array(V), facce, process=False)
     if U is not None:
         m.visual = trimesh.visual.TextureVisuals(uv=np.array(U), material=mat)
+        if mat is not None and getattr(mat, "baseColorTexture", None) is not None:
+            mat.baseColorTexture = pulisci_texture(m)
     ORIGINALI.mkdir(parents=True, exist_ok=True)
     if not (ORIGINALI / Path(percorso).name).exists():
         shutil.copy2(percorso, ORIGINALI / Path(percorso).name)
