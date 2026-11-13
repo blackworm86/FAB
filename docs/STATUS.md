@@ -4,6 +4,8 @@ Kept by the project-management session (`docs/PARALLEL.md` §4). It reads `main`
 
 **Last review: Friday 13 November 2026, 10:00 UTC** (`main` at `bed5cca`).
 
+**How to run the project** (who does what, what to type, which model for which work): `docs/MANUAL.md`.
+
 **The plan of action** (aim, open items, order, agents, coordination): `docs/ROADMAP.md`, written 13 November, waiting for the owner's go-ahead.
 
 **Put in place for the plan, 13 November evening**: `npm run verify` (eleven checks, one table; all passing), the rules fingerprint in `bot/fingerprint.txt` (also in CI), the load check, three helpers (`fab-verifier`, `fab-rules-referee`, `fab-playtester`) and the `fab-playtest` procedure, the session notes in `docs/sessions/`, the four gates in `docs/PARALLEL.md`. The helpers have not been used yet: the first playtest is their trial.
