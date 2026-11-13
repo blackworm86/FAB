@@ -52,7 +52,7 @@ function phasePill(who: E.Side, pAt: number, label: string) {
     () => {
       phaseOpen = !phaseOpen;
     },
-  )}"><span class="tt">T${g.turn} · <b class="${who}">${nm(who).toUpperCase()}</b> · <b class="stp">${label.toUpperCase()}</b></span>${dots}<span class="car" aria-hidden="true">▾</span></button>${list}</div>`;
+  )}"><span class="tt"><span class="l1">T${g.turn} · <b class="${who}"><span class="lng">${nm(who).toUpperCase()}</span><span class="sht">${VOL.tag[who]}</span></b></span><span class="dot2"> · </span><b class="stp">${label.toUpperCase()}</b></span>${dots}<span class="car" aria-hidden="true">▾</span></button>${list}</div>`;
 }
 /** The top bar; `vp` is the score strip, which sits inside it (one bar instead of two). */
 export function topBar(vp = '') {
