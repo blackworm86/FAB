@@ -114,9 +114,9 @@ A faithful online version of GMT's **Fast Action Battles**: the full rules enfor
 | Independent helpers are sent together; a blocked one is reported, not skipped | the `fab-playtest` skill |
 | Several sessions only for work in different files | the parallel sessions, as today |
 
-Left out on purpose: its 49 roles and 78 commands (directors, sprints, epics, stories, design documents), which suit a studio starting a game, not a finished engine with one owner; its own hooks (this project has the `ponytail` and `impeccable` ones). Nothing of its text was copied.
+Of its 49 roles, fifteen are here as `fab-…` helpers, rewritten for this game (coding, design, graphics, words, review, test: `docs/MANUAL.md` section 2). Left out: the 16 specialists for other game engines, sound, story, in-game economy, live events, community and analytics (the game has none of them), the directors (the owner directs, the project-management session produces), and its sprint, epic and design-document ceremony. Nothing of its text was copied.
 
-**Put in place on 13 November**: `npm run verify`, `bot/fingerprint.txt`, `web/e2e/load.mjs`; the helpers `fab-verifier`, `fab-rules-referee`, `fab-playtester`; the skill `fab-playtest`; the session notes; the gates in `docs/PARALLEL.md`. **Not yet run**: the first playtest (step 4 below), which is the trial that says whether the helpers earn their cost.
+**Put in place on 13 November**: `npm run verify`, `bot/fingerprint.txt`, `web/e2e/load.mjs`; fifteen helpers (three for checks first, twelve role helpers added the same evening on the owner's request); the skill `fab-playtest`; the session notes; the gates in `docs/PARALLEL.md`. **Not yet run**: the first playtest (step 4 below), which is the trial that says whether the helpers earn their cost.
 
 **How to put them in place**
 

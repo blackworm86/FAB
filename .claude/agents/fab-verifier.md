@@ -1,6 +1,6 @@
 ---
 name: fab-verifier
-description: Runs FAB's checks (npm run verify) and returns one pass/fail table with the failing lines. Use before pushing a large change, or when a session wants the checks run without filling its own context with logs. It edits nothing.
+description: "Runs FAB's checks (npm run verify) and returns one pass/fail table with the failing lines. Use before pushing a large change, or when a session wants the checks run without filling its own context with logs. It edits nothing."
 tools: Bash, Read, Grep, Glob
 model: sonnet
 maxTurns: 20

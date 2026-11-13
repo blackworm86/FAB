@@ -1,6 +1,6 @@
 ---
 name: fab-playtester
-description: Plays one FAB volume on one screen size in a real browser, as a player would, and reports where play got stuck or looked wrong, each finding with a screenshot. Use for a re-test after a change of flow, or through the fab-playtest skill for all volumes at once. It changes no code.
+description: "Plays one FAB volume on one screen size in a real browser, as a player would, and reports where play got stuck or looked wrong, each finding with a screenshot. Use for a re-test after a change of flow, or through the fab-playtest skill for all volumes at once. It changes no code."
 tools: Bash, Read, Write, Glob, Grep
 model: sonnet
 maxTurns: 80
