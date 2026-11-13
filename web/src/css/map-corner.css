@@ -1,0 +1,331 @@
+/* Supply planning, the map's corner (legend, layer switch), one meaning per colour, phone map tools and bars */
+/* supply planning: a destination where the block would be out of supply (striped, like the hatched area), a supply source, a destination tag held at the screen edge */
+.bdg.nosup {
+  background: repeating-linear-gradient(135deg, #7d2417 0 5px, #a7392b 5px 10px) !important;
+  color: #fff !important;
+  border-color: #fff !important;
+}
+.bdg.src {
+  background: #0b0d08e6 !important;
+  border: 1px solid var(--gold) !important;
+  color: var(--gold) !important;
+  min-width: 0;
+  padding: 1px 6px;
+  font-size: 12px;
+  box-shadow: none;
+}
+.bdg.edge {
+  opacity: 0.85;
+  border-style: dashed !important;
+}
+.legend .chips {
+  display: flex;
+  gap: 4px;
+  margin: 2px 0 4px;
+}
+.legend .chips .chip {
+  padding: 2px 8px;
+  font-size: 11px;
+  min-height: 0;
+}
+
+/* the map's corner: legend, one-tap colour layer switch, the active layer's key under it */
+.mapdock {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: calc(100% - 24px);
+}
+.mapdock .dockrow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+.mapdock .mlchip {
+  position: static;
+}
+.mapdock .legend {
+  position: static;
+}
+.laysw {
+  display: flex;
+  align-items: stretch;
+  background: #0b0d08cc;
+  border: 1px solid var(--line);
+}
+.laysw b {
+  display: flex;
+  align-items: center;
+  padding: 0 8px 0 10px;
+  font: 600 11px var(--sfd);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--line);
+}
+.laysw button {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  min-height: 34px;
+  padding: 4px 10px;
+  background: none;
+  border: 0;
+  border-left: 1px solid #8d906555;
+  color: var(--ink);
+  font: 600 13px var(--sfd);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.laysw button .ic {
+  width: 15px;
+  height: 15px;
+}
+.laysw button .s {
+  display: none;
+}
+.laysw button:hover {
+  background: #ffffff10;
+}
+.laysw button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+}
+.laysw button[aria-pressed='true'] {
+  background: var(--gold);
+  color: #1a1608;
+}
+@media (max-width: 520px) {
+  .mapdock {
+    left: 8px;
+    top: 8px;
+    max-width: calc(100% - 16px);
+  }
+  .mapdock .dockrow {
+    flex-wrap: nowrap;
+    max-width: 100%;
+  }
+  .laysw {
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .laysw b,
+  .laysw button .ic,
+  .laysw button .l {
+    display: none;
+  }
+  .laysw button .s {
+    display: inline;
+  }
+  .laysw button {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+    padding: 0 9px;
+    flex: none;
+  }
+  .mapdock .mlchip {
+    min-height: 44px;
+    flex: none;
+  }
+  .mapdock .mlchip span {
+    display: none;
+  }
+}
+
+/* one meaning per colour: lime = you can go there, red = battle, dark stripes = out of supply */
+.bdg.ok {
+  background: #c8e86a !important;
+  color: #1a1608 !important;
+}
+.bdg.opt {
+  background: #0b0d08e6 !important;
+  color: #ff9c8a !important;
+  border-color: #d1432f !important;
+}
+.bdg.nosup,
+.bdg.ok.nosup {
+  background: repeating-linear-gradient(135deg, #23251a 0 5px, #4a4c3c 5px 10px) !important;
+  color: #fff !important;
+  border-color: #fff !important;
+}
+.mapkey i.nosupkey {
+  background: repeating-linear-gradient(135deg, #23251a 0 3px, #d8d4c0 3px 6px);
+}
+
+/* phone map tools under the layer bar: a quarter turn of the board, and Deselect while something is selected */
+.maptools {
+  display: none;
+  gap: 6px;
+}
+.maptools button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  background: #0b0d08cc;
+  border: 1px solid var(--line);
+  color: var(--gold);
+  font: 600 13px var(--sfd);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.maptools button .ic {
+  width: 18px;
+  height: 18px;
+}
+@media (max-width: 700px), (pointer: coarse) {
+  .maptools {
+    display: flex;
+  }
+}
+
+/* phone top bar: the turn line gives way (smaller, then cut with …) so Menu, View and Pieces always stay on screen */
+@media (max-width: 520px) {
+  .c-stat {
+    min-width: 0;
+    flex: 1 1 auto;
+    justify-content: flex-end;
+  }
+  .c-stat > button {
+    flex: none;
+  }
+  .c-stat .tp {
+    min-width: 0;
+    flex: 0 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.04em;
+    font-size: 14px;
+  }
+  .c-stat .tp small {
+    display: none;
+  }
+}
+/* phone bottom bar: the shortcut chips get the whole top lane; undo moves down beside the main button */
+@media (max-width: 700px) {
+  .c-bar.b {
+    grid-template-columns: minmax(0, 1fr) 44px 112px 40px !important;
+  }
+  .c-bar.b .dchips {
+    grid-column: 1 / 4 !important;
+  }
+  .c-bar.b .dundo {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+  }
+  .c-bar.b .go,
+  .c-bar.b .gowait {
+    grid-column: 3 / 5 !important;
+  }
+}
+/* picture tiles in a volume prompt (Golan 15.2 release): the block and its name, as the card chips */
+.volpanel .cbchips .pc {
+  width: 66px !important;
+  height: auto !important;
+  min-height: 0;
+}
+.volpanel .cbchips .pc .b3 {
+  --s: 38px !important;
+  margin: 4px auto 14px;
+}
+.volpanel .cbchips .pc small {
+  display: block;
+  font-size: 10px;
+  line-height: 1.1;
+}
+/* messages never share the map's top-left corner (legend, layer bar, phone tools): when they move up, they sit top right; on a phone they stay out of the way (the log is in the Menu) */
+.feed.top,
+.stage:has(.c-dispatch, .c-ledger) .feed {
+  left: auto;
+  right: 12px;
+  justify-items: end;
+}
+@media (max-width: 700px) {
+  .feed.top {
+    display: none;
+  }
+}
+/* a chit's name in its panel wraps onto a second line instead of being cut */
+.cbt b {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* phone sizes (9 November critique): no text under 12 px on the table, 44 px taps in the sheets, labels on two lines instead of cut */
+@media (max-width: 700px) {
+  .m2 small,
+  .chp small,
+  .arr small,
+  .slot .lab,
+  .slot small {
+    font-size: 12px !important;
+  }
+  .arr small {
+    max-width: 84px;
+    white-space: normal !important;
+    overflow: hidden;
+    text-overflow: clip !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.15;
+  }
+  .tabs button span {
+    font-size: 12px;
+  }
+  .sheet .chip {
+    min-height: 44px !important;
+  }
+  .mlchip {
+    min-height: 44px;
+  }
+  .c-dispatch:not(.chitbar) {
+    max-height: 38% !important;
+    overflow-y: auto;
+  } /* a block's card leaves most of the map in view */
+  .vbtns {
+    flex-wrap: wrap !important;
+  }
+  .vbtns button {
+    flex: 1 1 40%;
+    white-space: normal;
+  } /* end screen: buttons wrap instead of cutting "New game" */
+}
+
+/* tutorial: the coach leads. Its Next/Start is the filled main button; on a reading step (nothing to tap on the table) the game's bottom bar steps back; the spotlight darkens the rest of the screen */
+.tut-coach button.tut-go {
+  background: var(--gold);
+  color: #1a1608;
+  border-color: var(--gold);
+}
+body:has(.tut-coach:not(.has-target):not(.is-menu)) #ui .c-bar.b {
+  opacity: 0.35;
+  pointer-events: none;
+}
+.tut-ring {
+  border-width: 4px;
+  box-shadow:
+    0 0 0 9999px #0007,
+    0 0 0 6px #e7b04a55,
+    0 0 22px var(--gold);
+}
+@media (min-width: 861px) {
+  #dice {
+    top: 132px;
+  }
+} /* below the battle header, which stays readable while the dice roll */

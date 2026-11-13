@@ -1,0 +1,258 @@
+/* Area tags and the small fixes after them */
+/* area tags (owner's drawing, 11 Nov): TDN shape with the area number, TDN badge, name, VP marks; one size on screen; Labels on the Layer bar sets on / see-through / off */
+#tags {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+.atag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px 0 2px;
+  border-radius: 12px;
+  background: rgba(14, 15, 10, 0.66);
+  border: 1px solid rgba(231, 176, 74, 0.35);
+  color: #f3ecd0;
+  font: 600 13px var(--sfd);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px #0006;
+  will-change: transform;
+}
+.atag .sw {
+  position: relative;
+  display: inline-block;
+  width: 21px;
+  height: 21px;
+  flex: none;
+}
+.atag svg {
+  width: 21px;
+  height: 21px;
+  display: block;
+  overflow: visible;
+}
+.atag svg circle,
+.atag svg rect,
+.atag svg polygon {
+  stroke: #1b1c14;
+  stroke-width: 1.4;
+}
+.atag.t0 svg circle {
+  fill: #efe4b8;
+}
+.atag.t1 svg rect {
+  fill: #e2b44c;
+}
+.atag.t2 svg polygon {
+  fill: #a4a59a;
+}
+.atag.t3 svg polygon {
+  fill: #3d4a2c;
+}
+.atag svg text {
+  font: 700 11px var(--sfd);
+  text-anchor: middle;
+  dominant-baseline: central;
+  fill: #1b1c14;
+}
+.atag svg text.n3 {
+  font-size: 8px;
+}
+.atag svg text.n2 {
+  font-size: 10px;
+}
+.atag.t3 svg text {
+  fill: #f3ecd0;
+}
+.atag .sw b {
+  position: absolute;
+  right: -8px;
+  top: -7px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #1b1c14;
+  border: 1px solid #efe4b8;
+  color: #efe4b8;
+  font: 700 11px/14px var(--sfd);
+  text-align: center;
+}
+.atag .nm {
+  margin-left: 4px;
+}
+.atag img {
+  width: 13px;
+  height: 13px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 1px #fffa);
+}
+#tags .atag {
+  opacity: 0.78;
+  background: rgba(14, 15, 10, 0.5);
+  border-color: rgba(231, 176, 74, 0.22);
+  box-shadow: none;
+  transition: opacity 0.12s;
+}
+#tags.solid .atag {
+  opacity: 1;
+  background: rgba(14, 15, 10, 0.66);
+  border-color: rgba(231, 176, 74, 0.35);
+  box-shadow: 0 1px 4px #0006;
+}
+#tags .atag.hov {
+  opacity: 1;
+  background: rgba(14, 15, 10, 0.9);
+  border-color: var(--gold);
+  box-shadow:
+    0 0 0 2px #e7b04a55,
+    0 2px 8px #000a;
+  z-index: 1;
+}
+.labsw {
+  margin-left: 6px;
+}
+.labsw button {
+  gap: 6px;
+}
+.labsw button b {
+  color: #b3ad8b;
+  font: 600 12px var(--sfd);
+  letter-spacing: 0.12em;
+}
+.labsw button[aria-pressed='true'] b {
+  color: #1a1608;
+}
+@media (max-width: 700px) {
+  .labsw {
+    margin-left: 4px;
+    flex: none;
+  }
+  .labsw button b,
+  .labsw button .ic {
+    display: none;
+  }
+  .atag {
+    height: 22px;
+    font-size: 12px;
+  }
+}
+/* zoomed far out: a VP area shows only its VP marks; the area under the mouse (or selected) keeps its whole tag */
+#tags.far .atag:not(.hov) {
+  background: none;
+  border-color: transparent;
+  box-shadow: none;
+  opacity: 0.9;
+  padding: 0;
+  gap: 1px;
+}
+#tags.far .atag:not(.hov) .sw,
+#tags.far .atag:not(.hov) .nm {
+  display: none;
+}
+.sheet.menu > h3,
+.sheet.menu > .tabs {
+  flex: none;
+} /* a long tab (the log) scrolls inside; the title and tabs never shrink away */
+/* the Labels control is a view setting, not a layer: no selected-layer brass fill; the eye and the state word say what it does */
+.labsw button,
+.labsw button[aria-pressed='true'] {
+  background: transparent;
+  color: var(--gold);
+}
+.labsw button[aria-pressed='false'] {
+  color: #9a9c7c;
+}
+.labsw button[aria-pressed='true'] b,
+.labsw button b {
+  color: #b3ad8b;
+}
+.labsw button:hover {
+  background: #ffffff10;
+}
+@media (max-width: 700px) {
+  .labsw button .ic {
+    display: inline-block !important;
+    width: 16px;
+    height: 16px;
+  }
+  .labsw button {
+    gap: 4px;
+    padding: 0 8px;
+  }
+}
+/* red is for battles: a step loss pops up in the miss salmon, and End move steps back to an outline while a block is half-way through its move */
+.fx.loss {
+  border-color: #ff9c8a;
+  background: #1c1410f2;
+}
+.fx.loss b {
+  color: #ff9c8a;
+}
+button.go.quiet {
+  background: transparent !important;
+  color: #ff9c8a !important;
+  border: 1px solid #d1432f88 !important;
+  box-shadow: none !important;
+}
+.mapbubble:not([style*='transform']) {
+  visibility: hidden;
+} /* not placed yet: never flash in the corner */
+.linkbtn {
+  display: inline;
+  min-height: 0 !important;
+  padding: 0 2px !important;
+  border: 0 !important;
+  background: none !important;
+  color: var(--gold) !important;
+  font: inherit !important;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.maplegend {
+  max-height: calc(100vh - 230px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+} /* the key grew a section: it scrolls inside the map, never past the bottom bar */
+/* the score inside the top bar (one bar instead of two): the current turn and the next two with their sudden-death numbers, a short gauge, the net; the full track is in the score window */
+.vps .nets {
+  display: none;
+}
+/* lean top bar where it does nothing (11 Nov critique): during a battle the phase tabs, score, View and Pieces step back (menu, the turn and the step stay); before the first turn there is no score; the sandbox button waits outside battles */
+body:has(#ui .c-table) .sbfab {
+  display: none !important;
+}
+/* the phase names give way first (Italian names are longer): the inactive ones shorten, the buttons on the right always stay on screen */
+@media (min-width: 701px) {
+  .c-bar.t .c-crumbs {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .c-bar.t .c-crumbs span:not(.on) {
+    flex: 0 1 auto;
+    min-width: 2.6em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-inline: 8px;
+  }
+  .c-bar.t .c-crumbs span.on {
+    flex: none;
+  }
+  .c-bar.t > :not(.c-crumbs) {
+    flex-shrink: 0;
+  }
+}
+.tops {
+  grid-template-columns: minmax(0, 1fr);
+}
+.tops > .c-bar.t {
+  min-width: 0;
+} /* the bar never grows past the screen; its phase names shrink instead */

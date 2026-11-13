@@ -1,0 +1,302 @@
+/* The home page (first version), heavier icons, and the first compact pass */
+/* home */
+.hbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.hbar h1 {
+  font-size: 28px;
+}
+.hbar p {
+  margin: 0;
+}
+.hbar .who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.avatar {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--gold);
+  color: #1a1608;
+  font: 700 20px var(--sfd);
+}
+.homein .lh h2,
+.homein .lh h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.homein .lh {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.sheetbox {
+  background: #0b0d08;
+  border: 1px solid var(--gold);
+  padding: 10px;
+  margin-bottom: 10px;
+  display: grid;
+  gap: 10px;
+}
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.tile {
+  min-height: 76px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+  background: #11140c;
+  border: 2px solid var(--line);
+  color: var(--ink);
+}
+.tile b {
+  font: 700 28px var(--sfd);
+  letter-spacing: 0.1em;
+}
+.tile small {
+  opacity: 0.75;
+}
+.tile.german b {
+  color: var(--ge);
+}
+.tile.allied b {
+  color: var(--al);
+}
+.tile.on {
+  border-color: var(--gold);
+  background: #e7b04a22;
+}
+.tile.on small {
+  opacity: 1;
+}
+.joincard {
+  padding: 8px;
+}
+.joincard .row {
+  flex-wrap: nowrap;
+}
+.joincard .primary {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+/* clearer icons: heavier line, a little larger */
+.ic {
+  stroke-width: 2.1;
+}
+button .ic {
+  width: 22px;
+  height: 22px;
+}
+.chip .ic {
+  width: 22px;
+  height: 22px;
+}
+.hbar h1 {
+  font-size: 22px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.matchrow .open .seats {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.matchrow .open .seats b {
+  font: 700 12px var(--sf);
+  border: 1px solid currentColor;
+  padding: 0 3px;
+  opacity: 0.8;
+}
+.st {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #e7b04a;
+}
+.st.live {
+  background: #7ee08d;
+}
+.joincard .row {
+  flex-wrap: nowrap;
+}
+.joincard .primary {
+  flex: none;
+}
+.hbar > div:first-child {
+  min-width: 0;
+  flex: 1;
+}
+.hbar h1 {
+  white-space: normal;
+  font-size: 20px;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+}
+.hbar .who {
+  flex: none;
+}
+.homepage,
+.homein {
+  max-width: 100vw;
+}
+.hbar h1 {
+  line-height: 1;
+}
+/* compact pass: everything a notch smaller so less scrolls and the table gets the room */
+.c-bar.t {
+  height: 44px !important;
+  gap: 4px;
+}
+.c-bar.t button.ico {
+  min-width: 44px !important;
+  height: 44px !important;
+}
+.c-bar.t .ic,
+.c-bar.t svg {
+  width: 18px;
+  height: 18px;
+}
+.c-crumbs span {
+  font-size: 13px !important;
+  padding-block: 0 !important;
+}
+.c-stat {
+  font-size: 11px !important;
+  gap: 8px !important;
+}
+.c-stat b {
+  font-size: 17px !important;
+}
+.c-bar.b {
+  min-height: 48px !important;
+  padding-block: 4px !important;
+}
+.c-prompt {
+  font-size: 12.5px !important;
+  line-height: 1.25 !important;
+}
+button.go {
+  padding: 8px 14px !important;
+  font-size: 15px !important;
+  min-height: 40px;
+}
+button.go .ic {
+  width: 16px;
+  height: 16px;
+}
+.c-ledger {
+  padding: 6px 12px;
+}
+.c-ledger h3 {
+  font-size: 16px !important;
+  margin-bottom: 3px !important;
+}
+.ln2,
+.fl {
+  padding: 2px 0 !important;
+}
+.fl .who,
+.ln2 .who {
+  font-size: 14px !important;
+}
+.m2 {
+  font-size: 12px;
+  padding: 0 5px;
+}
+.c-hand {
+  height: 84px !important;
+  padding-top: 8px !important;
+}
+.dock .card2,
+.card2 {
+  width: 62px !important;
+  height: 62px !important;
+}
+.handtab {
+  gap: 4px;
+}
+.handtab button {
+  min-height: 36px;
+  padding: 0 8px;
+}
+.handtab .ic {
+  width: 18px;
+  height: 18px;
+}
+.cardtip {
+  font-size: 11.5px;
+  padding: 4px 8px;
+  max-height: 96px;
+}
+.cardtip img {
+  width: 36px;
+  height: 36px;
+}
+.chitbar {
+  padding: 5px 8px !important;
+}
+.cbimg {
+  width: 40px !important;
+  height: 40px !important;
+}
+.cbt b {
+  font-size: 15px !important;
+}
+.cbt small {
+  font-size: 11.5px !important;
+}
+.cbhead .ico {
+  min-width: 38px !important;
+  height: 38px !important;
+}
+.c-table.slim {
+  padding: 3px 8px !important;
+}
+.bside .chp,
+.chp {
+  font-size: 12px;
+  padding: 0 5px;
+}
+.chp .ic {
+  width: 14px;
+  height: 14px;
+}
+.c-table.slim .c-title {
+  font-size: 14px !important;
+}
+.c-table.slim .c-title b {
+  font-size: 16px !important;
+}
+.c-table.slim .c-vs .big {
+  font-size: 16px !important;
+}
+.seatbar {
+  padding: 3px 8px;
+  font-size: 12px;
+  top: 4px;
+}
+.seatbar button {
+  min-height: 34px !important;
+}
+.arrtray {
+  padding: 4px 8px 2px !important;
+}
+.arr .b3 {
+  --s: 44px !important;
+}

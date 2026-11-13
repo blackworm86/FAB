@@ -1,0 +1,656 @@
+/* Chat, supply explanation, victory points, glowing chits, one look for every piece, chit bar */
+/* chat: a side panel on computers, a bottom sheet on phones */
+.chatbtn {
+  position: relative;
+}
+.chatbtn .unread {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--alarm, #d1432f);
+  color: #fff;
+  font: 700 11px/18px var(--sfd);
+  font-style: normal;
+  text-align: center;
+}
+.chat {
+  position: fixed;
+  right: 8px;
+  top: 56px;
+  bottom: 72px;
+  width: min(340px, calc(100vw - 16px));
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: #0b0d08f2;
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 24px #000b;
+}
+.chead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.chead b {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font: 700 15px var(--sfd);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.clist {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overscroll-behavior: contain;
+}
+.cm {
+  max-width: 86%;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: #1a1d14;
+}
+.cm small b {
+  color: var(--ink);
+}
+.cm.german .sd {
+  color: var(--ge);
+}
+.cm.allied .sd {
+  color: var(--al);
+} /* the side by its name in its colour, no stripe */
+.cm.me {
+  align-self: flex-end;
+  background: #262b1c;
+}
+.cm small {
+  display: block;
+  opacity: 0.7;
+  font-size: 11px;
+}
+.cm p {
+  margin: 2px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.cquick {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 4px 8px;
+  scrollbar-width: none;
+}
+.cquick button {
+  flex: none;
+  padding: 3px 8px;
+  font-size: 12px;
+  border-radius: 12px;
+}
+.cin {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid var(--line);
+}
+.cin input {
+  flex: 1;
+  min-width: 0;
+  background: #1a1d14;
+  color: inherit;
+  border: 1px solid var(--line);
+  padding: 8px;
+  font: inherit;
+  font-size: 16px;
+}
+.cwatch {
+  padding: 8px;
+  margin: 0;
+}
+@media (max-width: 700px) {
+  .chat {
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
+    width: auto;
+    height: min(58vh, 58dvh);
+    border-radius: 12px 12px 0 0;
+    z-index: 90;
+  }
+}
+/* supply: the line's explanation and the Supply Phase list */
+.sup {
+  margin: 4px 0;
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+.sup .ic {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+}
+.sup.ok {
+  color: var(--ink);
+}
+.sup.bad {
+  color: #ff8a7a;
+}
+.supply .supl {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  align-items: center;
+  padding: 5px 2px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid #ffffff1a;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.supply .supl img {
+  width: 34px;
+  height: 34px;
+}
+.supply .supl span {
+  flex: 1;
+  display: grid;
+}
+.supply .supl small {
+  opacity: 0.7;
+}
+.supply .sn {
+  background: var(--gold);
+  color: #111;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+#fps {
+  position: fixed;
+  left: 6px;
+  bottom: 6px;
+  z-index: 200;
+  padding: 2px 6px;
+  background: #000c;
+  color: #9fe870;
+  font: 12px monospace;
+  pointer-events: none;
+}
+/* victory points: strip, breakdown, end of game */
+.tops {
+  display: grid;
+}
+.vps {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-bottom: 1px solid #8d906555;
+  background: #0b0d08e8;
+  color: #ddd;
+  font: 12px var(--mono, monospace);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+.vlab {
+  font: 700 13px var(--sfd);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.vlab.ge,
+h4.ge,
+.vtot .ge,
+.ge {
+  color: #c9ccd2;
+}
+.vlab.al,
+h4.al,
+.vtot .al,
+.al {
+  color: #b8d27a;
+}
+.vlab.net {
+  color: var(--gold);
+}
+.vtt {
+  display: flex;
+  gap: 3px;
+}
+.vtb {
+  width: 40px;
+  height: 26px;
+  border: 1px solid #4a4f38;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+  background: #14170f;
+}
+.vtb b {
+  font: 700 11px var(--sfd);
+  color: #bbb;
+}
+.vtb i {
+  font-style: normal;
+  font-size: 9px;
+  color: #ff8a7a;
+}
+.vtb i.no {
+  color: #a7a78a;
+}
+.vtb.now {
+  border-color: var(--gold);
+  background: #2a2410;
+}
+.vtb.now b {
+  color: var(--gold);
+}
+.vtb.past {
+  opacity: 0.45;
+}
+.gauge {
+  flex: 1;
+  position: relative;
+  height: 12px;
+  min-width: 90px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #5a7a35, #2a3320 48%, #2a2d31 52%, #6d7684);
+}
+.gauge .z {
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  bottom: -3px;
+  width: 1px;
+  background: #fff8;
+}
+.gauge .sd {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: #d1432f;
+}
+.gauge .sd span {
+  position: absolute;
+  top: 14px;
+  left: -22px;
+  font-size: 9px;
+  color: #ff8a7a;
+  white-space: nowrap;
+}
+.gauge .nd {
+  position: absolute;
+  top: -6px;
+  width: 12px;
+  height: 24px;
+  margin-left: -6px;
+  border-radius: 3px;
+  background: var(--gold);
+  border: 2px solid #1a1608;
+  box-shadow: 0 2px 6px #000;
+  transition: left 0.6s;
+}
+@media (max-width: 700px) {
+  .vtt,
+  .vps > .vlab:first-child {
+    display: none;
+  }
+  .vps {
+    gap: 8px;
+    height: 44px;
+  }
+}
+.vsheet {
+  width: min(780px, 96vw);
+}
+.vsheet h3 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.vtot {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  font: 700 32px var(--sfd);
+}
+.vtot small {
+  display: block;
+  font-size: 11px;
+  color: #999;
+  text-align: center;
+  letter-spacing: 0.1em;
+}
+.vtot i {
+  color: #666;
+  font-style: normal;
+}
+.vnote {
+  text-align: center;
+  margin: 2px 0 8px;
+}
+.vnote b {
+  color: var(--gold);
+}
+.vcols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 700px) {
+  .vcols {
+    grid-template-columns: 1fr;
+  }
+}
+.vrow {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  border-bottom: 1px solid #ffffff12;
+}
+.vrow b {
+  font-family: var(--sfd);
+}
+.vrow.cut {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+.vkills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.vkill {
+  width: 34px;
+  height: 34px;
+  filter: grayscale(0.4);
+}
+.vtab div {
+  padding: 3px 8px;
+  border-left: 3px solid transparent;
+}
+.vtab .on {
+  border-color: var(--gold);
+  background: #2a2410;
+  color: var(--gold);
+}
+.vend {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  overflow: auto;
+  background: radial-gradient(circle at 50% 30%, #1d2114f2, #0b0d08fc);
+  padding: 24px 16px;
+}
+.vin {
+  width: min(760px, 100%);
+  margin: 0 auto;
+}
+.vban {
+  text-align: center;
+  padding: 18px;
+  border: 1px solid var(--gold);
+  background: linear-gradient(#2a2410, #14170f);
+}
+.vban small {
+  letter-spacing: 0.3em;
+  color: #999;
+}
+.vban h1 {
+  margin: 6px 0;
+  font: 700 44px var(--sfd);
+  letter-spacing: 0.05em;
+  color: var(--gold);
+  line-height: 1;
+}
+.vban p {
+  margin: 0;
+}
+.vcards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 14px 0;
+}
+.vcards div {
+  border: 1px solid #3a3f2a;
+  background: #11140c;
+  padding: 10px;
+  text-align: center;
+}
+.vcards b {
+  display: block;
+  font: 700 26px var(--sfd);
+}
+.vchart {
+  width: 100%;
+  height: auto;
+  background: #11140c;
+  border: 1px solid #3a3f2a;
+}
+.vend h4 {
+  font: 700 14px var(--sfd);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #aaa;
+  margin: 14px 0 4px;
+}
+.vbtns {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 18px 0 8px;
+}
+@media (max-width: 700px) {
+  .vban h1 {
+    font-size: 30px;
+  }
+}
+/* phones: the top bar must fit; map layers stay in Menu > Settings, the sandbox reset in its Turn tab */
+@media (max-width: 560px) {
+  .c-bar.t {
+    overflow: hidden;
+  }
+}
+/* chits that can be played now glow softly */
+.card2.live:not(.wood) img,
+.pc.live img,
+.card2.live.wood .b3 .f {
+  box-shadow:
+    0 0 0 2px #ffe08aaa,
+    0 0 14px 4px #ffd25a88;
+  animation: liveglow 2.4s ease-in-out infinite;
+}
+@keyframes liveglow {
+  50% {
+    box-shadow:
+      0 0 0 2px #ffe08a55,
+      0 0 8px 2px #ffd25a44;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card2.live img,
+  .pc.live img {
+    animation: none;
+  }
+}
+/* one look for every piece: cardboard counters (rounded, with an edge) and 3D wooden blocks, in every window */
+img.cb {
+  border-radius: 7%;
+  box-shadow:
+    0 1px 0 #e3dccb,
+    0 2px 0 #b9b2a0,
+    0 3px 0 #8a8472,
+    0 6px 10px #0009;
+}
+.card2:not(.wood) img {
+  border-radius: 7%;
+}
+.cbimg {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  flex: none;
+}
+.cbimg img.cb {
+  width: 100%;
+  height: 100%;
+}
+.cbimg .b3 {
+  --s: 32px;
+  margin: 0;
+}
+.inspect .big {
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.inspect .big img.cb {
+  width: 72px;
+  height: 72px;
+}
+.inspect .big .b3 {
+  --s: 56px;
+}
+.cardtip > img.cb {
+  width: 56px;
+  height: 56px;
+  flex: none;
+}
+.cardtip > .b3 {
+  --s: 44px;
+  flex: none;
+}
+.oobu .b3 {
+  --s: 44px;
+  margin: 6px auto 4px;
+}
+.oobu img.cb {
+  width: 46px;
+  height: 46px;
+}
+.supl .b3 {
+  --s: 24px;
+  margin: 4px 12px 4px 4px;
+}
+.supl img.cb {
+  width: 34px;
+  height: 34px;
+}
+.lbd > .b3 {
+  --s: 78px;
+  margin: 8px 18px 8px 4px;
+}
+.lbd > img.cb {
+  width: 96px;
+  height: 96px;
+  flex: none;
+}
+.lbrow .b3 {
+  --s: 38px;
+  margin: 4px 10px 4px 2px;
+}
+.lbt img.cb {
+  width: 64px;
+  height: 64px;
+}
+.vkill .b3 {
+  --s: 28px;
+  margin: 2px 8px 2px 2px;
+  filter: grayscale(0.4);
+}
+.vkill img.cb {
+  width: 32px;
+  height: 32px;
+}
+.pc img.cb {
+  width: 100%;
+  height: 100%;
+}
+.pc .b3 {
+  --s: 34px;
+  margin: 6px auto;
+}
+/* the chit's full description reads top to bottom (it was split into side-by-side columns) and scrolls on small screens */
+.inspect.slimcard {
+  display: block;
+}
+/* chit bar: the header stays put while the description scrolls; more room while it is open; a fade says there is more */
+.chitbar .cbhead {
+  position: sticky;
+  top: -8px;
+  z-index: 1;
+  background: #0b0d08;
+  padding: 6px 0;
+  margin-top: -6px;
+}
+.chitbar.open {
+  z-index: 2;
+  max-height: 70% !important;
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 22px), #0008);
+  mask-image: linear-gradient(#000 calc(100% - 22px), #0008);
+  overscroll-behavior: contain;
+}
+/* a filter or fading on a container flattens a 3D block inside it: fade and grey the faces instead */
+.vkill {
+  width: auto !important;
+  height: auto !important;
+  filter: none !important;
+}
+.vkill .b3 {
+  --s: 36px !important;
+  margin: 4px 14px 8px 4px !important;
+  filter: none !important;
+}
+.vkill .b3 i {
+  filter: grayscale(0.35) brightness(0.9);
+}
+.oob.past {
+  opacity: 1 !important;
+}
+.oob.past h4,
+.oob.past small,
+.oob.past img.cb,
+.oob.past .b3 i {
+  opacity: 0.5;
+}
+.pc:disabled {
+  opacity: 1 !important;
+}
+.pc:disabled img,
+.pc:disabled .b3 i {
+  opacity: 0.45;
+}
+/* the defender's Special Action buttons in a battle say what they do */
+.bside .row button.ico {
+  width: auto;
+  padding: 0 10px;
+  gap: 6px;
+  display: inline-flex;
+  align-items: center;
+}
+.bsa {
+  font: 700 12px var(--sfd);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}

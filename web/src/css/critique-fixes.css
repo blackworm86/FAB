@@ -1,0 +1,249 @@
+/* Fixes from the later critiques: sizes, phones, end screen, bubbles, taps */
+/* small labels on the strip and the layer key, readable: at least 11-12 px, in ink rather than rule-olive */
+.vtt[data-cap]::before {
+  font-size: 10.5px;
+  color: #ff9c8a;
+}
+.laysw b {
+  font-size: 12px;
+  color: #b3ad8b;
+}
+.legend small {
+  font-size: 12px;
+  color: #b3ad8b;
+}
+.volpanel b {
+  display: block;
+}
+.volpanel b .ic {
+  vertical-align: -3px;
+  margin-right: 6px;
+} /* the title flows as one line of text, so a rule link stays inside its brackets */
+.mapbubble .fwnote {
+  font-size: 12px;
+  color: #b3ad8b;
+  max-width: 260px;
+  line-height: 1.25;
+} /* hits rolled vs hits to take, when field works absorbed one */
+@media (max-width: 700px) {
+  .mapbubble .fwnote {
+    white-space: normal;
+    max-width: 120px;
+    line-height: 1.2;
+  }
+  /* no shortcut chips: one row, the explanations button beside the main button, no empty lane */
+  .c-bar.b:not(:has(.dchip)) {
+    grid-template-rows: 44px !important;
+    height: auto !important;
+  }
+  .c-bar.b:not(:has(.dchip)) > * {
+    grid-row: 1 !important;
+  }
+  .c-bar.b:not(:has(.dchip)) .go,
+  .c-bar.b:not(:has(.dchip)) .gowait {
+    grid-column: 3 !important;
+  }
+  .c-bar.b:not(:has(.dchip)) .guidebtn {
+    grid-column: 4 !important;
+    align-self: center;
+  }
+}
+.gauge {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--gauge-l, #9db36a) 70%, #000),
+    #23251a 48%,
+    #23251a 52%,
+    color-mix(in srgb, var(--gauge-r, #b9bcc0) 70%, #000)
+  );
+}
+.bside h4 small.role {
+  font: 600 11px var(--sfd);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #b3ad8b;
+  margin-left: 2px;
+}
+.c-vs {
+  display: grid;
+  justify-items: center;
+}
+.c-vs .vlbl {
+  font: 600 10.5px var(--sfd);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #b3ad8b;
+  line-height: 1;
+}
+@media (max-width: 700px) {
+  .bside h4 small.role {
+    display: none;
+  }
+}
+/* end screen: the actions stay in view at the bottom on every screen size */
+.vbtns {
+  position: sticky;
+  bottom: -24px;
+  padding: 10px 12px;
+  background: #0b0d08f2;
+  border-top: 1px solid #8d906555;
+  z-index: 1;
+}
+/* phone: the main button may wrap to two lines, so "Next battle: Udenbreth" is never cut */
+@media (max-width: 700px) {
+  .c-bar.b .go {
+    white-space: normal !important;
+    line-height: 1.1;
+    text-overflow: clip !important;
+  }
+}
+/* small taps: Legend chip, sheet chips (3D, AL), rule links in panels */
+@media (max-width: 700px), (pointer: coarse) {
+  .mlchip {
+    min-width: 44px;
+    justify-content: center;
+  }
+  .sheet .chip {
+    min-width: 44px;
+    justify-content: center;
+  }
+  .maplegend .mlhead .ico {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+a.rlink {
+  padding-block: 6px;
+  margin-block: -6px;
+}
+.vtb {
+  height: auto;
+  min-height: 32px;
+  padding: 2px 0;
+  gap: 2px;
+  align-content: center;
+}
+.vtb b,
+.vtb i {
+  line-height: 1;
+} /* turn and sudden-death numbers both inside the box */
+/* no automatic font boosting on phones and tablets; the VP strip grows with its boxes when text is larger */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+@media (min-width: 701px) {
+  .vps {
+    height: auto;
+    min-height: 38px;
+    padding-block: 3px;
+  }
+}
+/* an open window (menu, pieces, rules) hides what floats over the map: leader lines and effect pop-ups sit above #ui's layer */
+body:has(#ui .modal) #leaders,
+body:has(#ui .modal) #fx,
+body:has(#rules) #leaders,
+body:has(#rules) #fx {
+  display: none !important;
+}
+.mapbubble button.ab span small {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #b3ad8b;
+  margin-top: 1px;
+} /* what each choice does, readable on touch (no hover tooltip there) */
+@media (max-width: 700px) {
+  .mapbubble {
+    max-width: calc(100vw - 16px) !important;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+} /* a phone keeps the whole bubble on screen */
+.card2 .ckind {
+  display: none;
+}
+@media (max-width: 700px) {
+  .card2 {
+    position: relative;
+  }
+  .card2 .ckind {
+    display: block;
+    position: absolute;
+    left: 50%;
+    bottom: -6px;
+    transform: translateX(-50%);
+    padding: 1px 6px;
+    background: #0b0d08e6;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font: 600 12px var(--sfd);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+}
+/* phone end screen: the four buttons in one row, icon over label, pinned to the bottom edge (two rows fell off the screen) */
+@media (max-width: 700px) {
+  .vbtns {
+    bottom: 0;
+    flex-wrap: nowrap !important;
+    gap: 6px;
+    background: #0b0d08 !important;
+  }
+  .vbtns button {
+    display: flex;
+    align-items: center;
+    flex: 1 1 0 !important;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 4px;
+    font-size: 12px;
+    white-space: nowrap !important;
+    min-height: 52px;
+    justify-content: center;
+  }
+}
+@media (min-width: 701px) {
+  .dundo span {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.2;
+    text-align: left;
+  }
+} /* "Undo: …" on two lines instead of cut */
+/* the Pieces window: chits large enough to read their printed name */
+#ui .modal .pcgrid {
+  gap: 8px !important;
+}
+#ui .modal .pcgrid .pc {
+  width: 72px !important;
+  height: 72px !important;
+}
+.log .ll,
+.feed .fl2 {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+.stag {
+  flex: none;
+}
+.lt {
+  display: block;
+  min-width: 0;
+}
+.lt::first-letter {
+  text-transform: uppercase;
+} /* log lines start with a capital (engine lines are written lower-case) */
+.maplegend .ar {
+  font: 600 15px var(--sf);
+  letter-spacing: -2px;
+}

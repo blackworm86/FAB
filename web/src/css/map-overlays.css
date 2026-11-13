@@ -1,0 +1,345 @@
+/* Map overlays, the phone route ticket, battle set-up on phones, the step bar, critique fixes */
+/* map overlays (DESIGN.md › Map overlays) */
+.bdg.ok {
+  background: #44692c !important;
+  color: #fff !important;
+}
+.bdg.stop {
+  background: var(--gold) !important;
+  color: #1a1608 !important;
+}
+.bdg.fuel {
+  background: #1a1608 !important;
+  color: var(--gold) !important;
+  border-color: var(--gold) !important;
+}
+.bdg.fuel::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 9px;
+  margin-right: 3px;
+  background: currentColor;
+  clip-path: polygon(50% 0, 100% 60%, 85% 95%, 50% 100%, 15% 95%, 0 60%);
+}
+.bdg.lab {
+  background: #ece6cce8 !important;
+  color: #1a1608 !important;
+  border: 1px solid #8a7a3a !important;
+  font: 700 12px var(--sfd) !important;
+  letter-spacing: 0.06em;
+  padding: 1px 6px !important;
+  border-radius: 3px !important;
+  pointer-events: none;
+  white-space: nowrap;
+} /* the printed number and name, lifted above a stack that covers them */
+
+/* phones: with a destination chosen, the panel shrinks to a one-line route ticket so the route stays in view */
+.route .tline {
+  display: none;
+}
+@media (max-width: 700px) {
+  .c-dispatch.previewing > *:not(.route) {
+    display: none !important;
+  }
+  .c-dispatch.previewing {
+    padding: 6px 8px !important;
+  }
+  .c-dispatch.previewing .route {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 !important;
+    padding: 4px 6px !important;
+  }
+  .c-dispatch.previewing .route > *:not(.tline):not(button) {
+    display: none;
+  }
+  .c-dispatch.previewing .route .tline {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-size: 12.5px;
+  }
+  .c-dispatch.previewing .route .tline b {
+    font: 700 15px var(--sfd);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .c-dispatch.previewing .route button {
+    flex: none;
+    min-height: 40px !important;
+    width: auto !important;
+    padding-inline: 14px !important;
+  }
+}
+
+.bdg.war {
+  background: var(--red) !important;
+  color: #fff !important;
+  font-size: 12px !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px !important;
+}
+.bdg.opt {
+  background: #1a1608 !important;
+  color: var(--gold) !important;
+  border-color: var(--gold) !important;
+  font-size: 12px !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px !important;
+}
+
+.mapkey {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+}
+.mapkey span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.mapkey i {
+  width: 16px;
+  height: 12px;
+  display: inline-block;
+  flex: none;
+}
+.mapkey small {
+  font-size: inherit;
+  color: var(--line);
+}
+.askrow {
+  border: 1px solid #d1432f88;
+  background: #7d24171f;
+  padding: 8px 10px;
+  margin: 8px 0;
+  scroll-margin-top: 8px;
+}
+.askrow p {
+  margin: 0 0 6px;
+}
+.sheet:focus {
+  outline: none;
+}
+.mapkey i.fuel {
+  background: #1a1608;
+  border: 1px solid var(--gold);
+}
+.mapkey .ar {
+  font-family: var(--sf);
+  letter-spacing: -2px;
+}
+.mapkey .ic {
+  width: 16px;
+  height: 16px;
+  color: #c8e86a;
+}
+
+.fx.fw {
+  border-color: var(--gold) !important;
+  background: #2a1f08f2 !important;
+}
+.fx.fw b {
+  color: var(--gold) !important;
+} /* no blue outside the rivers */
+.vlab.net.ge {
+  color: var(--ge) !important;
+}
+.vlab.net.al {
+  color: var(--al) !important;
+}
+
+.chp small {
+  font: 500 11px var(--sf);
+  opacity: 0.75;
+  margin-left: 3px;
+}
+.vtt[data-cap]::before {
+  content: attr(data-cap);
+  align-self: center;
+  margin-right: 4px;
+  font: 600 9px/1.2 var(--sfd);
+  letter-spacing: 0.1em;
+  color: #ff8a7acc;
+  text-align: right;
+  white-space: pre;
+} /* a label in front of the turn boxes, inside the bar (it used to hang below it and get cut off) */
+.vtt {
+  position: relative;
+}
+
+/* battle set-up: the two Special Actions sit behind one control on phones */
+.bsarow .satog {
+  display: none;
+}
+.bsarow .sabtns {
+  display: contents;
+}
+@media (max-width: 700px) {
+  .bsarow .satog {
+    display: inline-flex;
+  }
+  .bsarow:not(.open) .sabtns {
+    display: none;
+  }
+}
+
+.skipmap {
+  position: absolute;
+  left: 8px;
+  top: -60px;
+  z-index: 200;
+  background: var(--gold);
+  color: #1a1608;
+  font: 700 14px var(--sfd);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  text-decoration: none;
+}
+.skipmap:focus {
+  top: 8px;
+  outline: 2px solid #fff;
+}
+.keys {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 4px 0 8px;
+  font-size: 12.5px;
+}
+.keys dt {
+  font: 700 12px var(--sf);
+  color: var(--gold);
+  border: 1px solid var(--line);
+  padding: 1px 6px;
+  justify-self: start;
+}
+.keys dd {
+  margin: 0;
+}
+
+/* the step bar follows the printed sequence of play: 8 phases, smaller type so they fit */
+.c-crumbs span {
+  font-size: 12.5px;
+  letter-spacing: 0.1em;
+  padding-inline: 9px;
+}
+.c-crumbs span.on {
+  padding-inline: 16px;
+}
+.c-stat .ph small {
+  font: 600 11px var(--sf);
+  opacity: 0.7;
+  letter-spacing: 0;
+}
+@media (max-width: 1280px) and (min-width: 701px) {
+  .c-crumbs span:not(.on) {
+    font-size: 11px;
+    padding-inline: 6px;
+    letter-spacing: 0.06em;
+  }
+}
+@media (max-width: 1100px) and (min-width: 701px) {
+  .c-crumbs span:not(.on):not(.done) {
+    display: none;
+  }
+  .c-crumbs span.done {
+    display: none;
+  }
+  .c-crumbs span.done:nth-last-child(1) {
+    display: inline;
+  }
+}
+
+/* small fixes from the critique: readable sizes and contrast */
+.matchrow .open .seats b {
+  color: #c9a24f !important;
+  opacity: 1 !important;
+}
+.matchrow .stw {
+  font-size: 11px;
+  color: #b3ad8b;
+  margin-right: 4px;
+}
+input::placeholder {
+  color: #9a9a8a;
+  opacity: 1;
+}
+.gauge .sd span {
+  font-size: 10.5px !important;
+  color: #fff !important;
+  background: #7d2417;
+  padding: 0 3px;
+}
+.bx .bxfoot,
+.bx small {
+  font-size: max(3cqw, 9px) !important;
+}
+.faces i {
+  position: relative;
+}
+.faces i s {
+  position: absolute;
+  right: -3px;
+  top: -6px;
+  font: 700 9px var(--sf);
+  text-decoration: none;
+  background: #0b0d08;
+  border-radius: 6px;
+  padding: 0 2px;
+}
+.bdg.war {
+  background: #b8351f !important;
+} /* a little more contrast for the white text */
+.faces i s .ic {
+  width: 8px;
+  height: 8px;
+  display: block;
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  /* phones held sideways: the block panel is a slim column on the left, the map stays in view */
+  .c-dispatch {
+    width: min(300px, 42vw) !important;
+    left: 8px !important;
+    right: auto !important;
+    bottom: 8px !important;
+    max-height: calc(100% - 16px) !important;
+    overflow: auto;
+    padding: 6px 10px !important;
+  }
+  .c-dispatch h3 {
+    font-size: 18px !important;
+    margin: 0 !important;
+  }
+  .c-dispatch .row button {
+    min-height: 36px !important;
+    padding: 4px 10px !important;
+  }
+}
+a.btnlink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  background: #1d2114;
+}
+a.btnlink.primary {
+  background: var(--gold);
+  color: #1a1608;
+  border-color: transparent;
+  font: 700 15px var(--sfd);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}

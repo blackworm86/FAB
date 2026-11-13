@@ -1,0 +1,594 @@
+/* The battle table, its header and rows, the compact hand, the battle focus (blur and glow) */
+/* battle table: one slim header, one row per side, icons instead of words */
+.c-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 20px;
+}
+.c-title b {
+  font: 700 20px var(--sfd);
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+.chp {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 7px;
+  background: #ffffff14;
+  font: 700 13px var(--sf);
+}
+.chp .ic {
+  width: 16px;
+  height: 16px;
+}
+.c-side h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  letter-spacing: 0.1em;
+}
+.c-side h4 .ic {
+  width: 18px;
+  height: 18px;
+}
+.c-side h4 .tag {
+  font: 700 12px var(--sf);
+  padding: 1px 5px;
+  color: #111;
+  background: currentColor;
+}
+.c-side h4 .tag {
+  background: none;
+  border: 1px solid currentColor;
+  color: inherit;
+}
+.c-side h4 small {
+  margin: 0;
+  padding: 0 4px;
+  background: #ffffff18;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+.slot .lab {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.slot .lab .ic {
+  width: 14px;
+  height: 14px;
+}
+.slot > .ic {
+  width: 22px;
+  height: 22px;
+  opacity: 0.45;
+}
+@media (max-width: 700px) {
+  .c-table {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
+    padding: 4px 8px 6px;
+  }
+  .c-title {
+    margin: 0;
+    font-size: 16px;
+    justify-content: flex-start;
+  }
+  .c-title b {
+    font-size: 17px;
+    letter-spacing: 0.08em;
+  }
+  .c-side,
+  .c-side.german {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+  .c-side h4 {
+    flex-direction: column;
+    width: 40px;
+    gap: 2px;
+    flex: none;
+  }
+  .c-side h4 .nm,
+  .c-side h4 small {
+    display: none;
+  }
+  .c-body,
+  .c-side.german .c-body {
+    flex: 1;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 8px;
+    flex-wrap: nowrap;
+    align-items: center;
+    min-width: 0;
+  }
+  .c-row {
+    gap: 4px;
+    flex-wrap: nowrap;
+  }
+  .c-slots {
+    gap: 6px;
+    margin-left: auto;
+  }
+  .slot {
+    width: auto;
+    min-width: 74px;
+    min-height: 52px;
+    padding: 14px 4px 4px;
+  }
+  .slot .lab {
+    top: -9px;
+    font-size: 10px;
+  }
+  .blk .b3 {
+    --s: 50px;
+    margin: 0 6px 6px 0;
+  }
+  .c-vs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .c-vs .big {
+    font-size: 22px;
+  }
+  .c-vs .gauge {
+    width: 90px;
+    margin: 0;
+  }
+}
+@media (max-width: 700px) {
+  .c-body,
+  .c-side.german .c-body {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+  .c-slots {
+    margin-left: 0;
+  }
+}
+.modes {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.modes .ico {
+  min-width: 44px;
+  height: 44px;
+}
+.modes .ico.on {
+  background: var(--gold);
+  color: #1a1608;
+}
+.cardtip {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 0 8px;
+  padding: 6px 10px;
+  background: #0b0d08f2;
+  border: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.35;
+  max-height: 128px;
+  overflow: auto;
+}
+.cardtip img {
+  width: 44px;
+  height: 44px;
+  border-radius: 3px;
+  flex: none;
+}
+.cardtip b {
+  display: block;
+  font: 700 14px var(--sfd);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.cardtip small {
+  color: #b3ad8b;
+  font: 500 11px var(--sf);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.cardtip span {
+  display: block;
+}
+.cardtip em {
+  display: block;
+  font-style: normal;
+  color: var(--bad);
+}
+.cardtip em.ok {
+  color: var(--good);
+}
+.handtab .ico.on {
+  background: var(--gold);
+  color: #1a1608;
+}
+@media (pointer: coarse) {
+  .mini button.x {
+    width: 32px;
+    height: 32px;
+    top: -12px;
+    right: -12px;
+  }
+  .mini button.x .ic {
+    width: 16px;
+    height: 16px;
+  }
+  .slot .mini {
+    margin: 6px;
+  }
+}
+.seatbar {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: calc(100% - 16px);
+  padding: 6px 10px;
+  background: #0b0d08f2;
+  border: 1px solid var(--gold);
+  font-size: 13px;
+}
+.seatbar button {
+  min-height: 40px;
+}
+.matchrow {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.matchrow .open {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  display: grid;
+  gap: 1px;
+  background: #11140c;
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  color: inherit;
+}
+.matchrow .open b {
+  font: 700 18px var(--sfd);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.matchrow .open small {
+  opacity: 0.75;
+}
+.matchrow .row {
+  flex: none;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  margin-top: 0;
+}
+.matchrow {
+  border-bottom: 0;
+} /* boxed rows: no rule under them, buttons as tall as the card */
+.newgame {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+.homein .lh {
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.homein .who {
+  font-size: 13px;
+  opacity: 0.85;
+}
+button.plain {
+  background: none;
+  border: 0;
+  color: var(--gold);
+  text-decoration: underline;
+  min-height: 0;
+  padding: 0 4px;
+}
+.seatrow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 4px 0;
+}
+.seatrow b {
+  width: 70px;
+  font: 700 16px var(--sfd);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.seatrow span {
+  flex: 1;
+}
+.seatbar.err {
+  border-color: var(--bad);
+  color: #ffb3a7;
+}
+.seatbar {
+  z-index: 40;
+}
+.syncdot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  align-self: center;
+  background: #7ee08d;
+}
+.syncdot.wait {
+  background: #e7b04a;
+}
+.syncdot.bad {
+  background: #ff5a4d;
+  box-shadow: 0 0 0 3px #ff5a4d55;
+}
+.modal {
+  z-index: 80;
+}
+.c-table .c-row {
+  display: none;
+}
+@media (min-width: 701px) {
+  .c-table {
+    padding: 4px 12px 6px;
+  }
+  .c-table .slot {
+    width: 92px;
+    min-height: 52px;
+    padding-top: 12px;
+  }
+  .c-table .mini {
+    width: 38px;
+    height: 38px;
+  }
+  .c-title {
+    font-size: 17px;
+  }
+}
+/* battle: one slim bar on top, the table below it, a compact hand */
+.c-table.slim {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  top: 4px;
+  padding: 4px 10px;
+  max-height: none !important;
+  overflow: visible;
+}
+.c-table.slim .bmid {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.c-table.slim .c-title {
+  margin: 0;
+}
+.c-table.slim .c-vs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.c-table.slim .c-vs .big {
+  font-size: 20px;
+}
+.c-table.slim .c-vs .gauge {
+  width: 70px;
+  margin: 0;
+}
+.bside {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.bside h4 {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  font: 700 14px var(--sfd);
+}
+.bside.allied h4 {
+  color: var(--al);
+}
+.bside.german h4 {
+  color: var(--ge);
+}
+.bside.theirs {
+  opacity: 0.65;
+}
+.bside h4 .tag {
+  border: 1px solid currentColor;
+  padding: 0 4px;
+  font: 700 12px var(--sf);
+}
+.bside h4 small {
+  background: #ffffff18;
+  color: var(--ink);
+  padding: 0 4px;
+  text-transform: uppercase;
+}
+.bside button.ico {
+  min-width: 36px;
+  height: 36px;
+}
+@media (max-width: 700px) {
+  .c-table.slim {
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 3px 6px;
+    gap: 2px 8px;
+  }
+  .c-table.slim .bmid {
+    order: -1;
+    flex-basis: 100%;
+    gap: 6px;
+  }
+  .c-table.slim .c-title {
+    font-size: 15px;
+  }
+  .c-table.slim .c-vs .gauge {
+    display: none;
+  }
+}
+.dock .c-hand {
+  height: 96px;
+  padding-top: 12px;
+}
+.dock .card2 {
+  width: 74px;
+  height: 74px;
+}
+/* battle focus: blur and dim everything but the contested area; its edge glows */
+#gl.blurred {
+  filter: blur(5px) brightness(0.5) saturate(0.8);
+}
+#gl2 {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  display: none;
+}
+#glow {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  display: none;
+  overflow: visible;
+}
+#glow polygon {
+  fill: none;
+  stroke-linejoin: round;
+}
+#glow .set {
+  stroke: #ffd37a;
+  stroke-width: 6;
+  filter: drop-shadow(0 0 7px #ffd37a) drop-shadow(0 0 18px #ffb347);
+  animation: glowp 2.4s ease-in-out infinite;
+}
+#glow .fire {
+  stroke: #ff7a6a;
+  stroke-width: 6;
+  filter: drop-shadow(0 0 7px #ff7a6a) drop-shadow(0 0 18px #ff4d3a);
+  animation: glowp 1.4s ease-in-out infinite;
+}
+@keyframes glowp {
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #glow polygon {
+    animation: none !important;
+  }
+}
+.mapbubble {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 11;
+  pointer-events: auto;
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  background: #0b0d08f2;
+  border: 1px solid var(--gold);
+  padding: 6px 10px;
+  font-size: 13px;
+  max-width: 260px;
+  text-align: center;
+}
+.mapbubble b {
+  font: 700 20px var(--sfd);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.mapbubble.wait b {
+  font-size: 15px;
+  color: var(--ink);
+}
+.mapbubble .row {
+  display: flex;
+  gap: 6px;
+}
+.mapbubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-top-color: var(--gold);
+  border-bottom: 0;
+}
+.chip.iconly {
+  min-width: 48px;
+  justify-content: center;
+  padding: 0 10px;
+}
+.chip .ic {
+  width: 20px;
+  height: 20px;
+}
+.tabs button .ic {
+  width: 22px;
+  height: 22px;
+  display: block;
+  margin: 0 auto;
+}
+.sheet h3 .ic {
+  width: 22px;
+  height: 22px;
+  vertical-align: -3px;
+  margin-right: 6px;
+}
+.tabrow {
+  flex-wrap: nowrap;
+}
+.sheet h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sheet h3 .ico {
+  margin-left: auto;
+}
+.sheet h3 .ic {
+  margin: 0;
+}

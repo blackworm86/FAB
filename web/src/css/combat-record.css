@@ -1,0 +1,208 @@
+/* The combat record (die faces, after-action card), colour rules, words beside icons */
+/* combat record: die faces, the dice so far, the after-action card */
+.faces {
+  display: inline-flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+.faces i {
+  font: 700 13px var(--sf);
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  min-width: 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid currentColor;
+}
+.faces i.h {
+  color: var(--good);
+  background: #a9e08a1f;
+}
+.faces i.m {
+  color: var(--bad);
+  background: #ff9c8a14;
+}
+.rrec {
+  margin-top: 8px;
+  border-top: 1px solid #8d906544;
+  padding-top: 4px;
+}
+.rrec summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 12px var(--sfd);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #b3ad8b;
+  padding: 4px 0;
+  list-style: none;
+}
+.rrec summary::-webkit-details-marker {
+  display: none;
+}
+.rrec summary small {
+  font: 400 11px var(--sf);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.rrec .rr {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 3px 0;
+  font-size: 12px;
+}
+.rrec .rr .who {
+  flex: 1 1 110px;
+}
+.rrec .rr .sn {
+  color: #b3ad8b;
+}
+.rrec .rr b.hit {
+  color: var(--good);
+}
+.rrec .rr b.miss {
+  color: var(--bad);
+}
+.aar .aarfx {
+  display: grid;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+#gl:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+} /* the map has keyboard focus */
+@media (max-width: 700px) {
+  /* phones: the shortcuts get the top lane (fading where they run off) with undo and the explanations switch at its end; the prompt has the rest of the bottom row, beside the main button, on up to two lines */
+  .c-bar.b {
+    grid-template-columns: minmax(0, 1fr) 62px 44px 40px !important;
+    grid-template-rows: 44px 44px !important;
+    grid-template-areas: none !important;
+  }
+  .c-bar.b .dchips {
+    grid-column: 1 / 3 !important;
+    grid-row: 1 !important;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .c-bar.b .dchips.more {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+  }
+  .c-bar.b .dundo {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+  }
+  .c-bar.b .guidebtn {
+    grid-column: 4 !important;
+    grid-row: 1 !important;
+    align-self: center;
+    justify-self: end;
+  }
+  .c-bar.b .c-prompt {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    padding-right: 2px !important;
+    white-space: normal !important;
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3 !important;
+    overflow: hidden;
+    line-height: 1.25 !important;
+    font-size: 12px !important;
+    align-self: center;
+  }
+  .c-bar.b .go,
+  .c-bar.b .gowait {
+    grid-column: 2 / 5 !important;
+    grid-row: 2 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+
+/* colour rules (critique): red only for the one main action, brass for the active step and selection, quiet toggles, readable badges */
+button.go:disabled {
+  background: #2a2d22;
+  color: #8d9065;
+  box-shadow: none;
+  opacity: 1;
+}
+.engch .row button.on {
+  background: #e7b04a1f !important;
+  color: var(--gold) !important;
+  border-color: var(--gold) !important;
+}
+.bdg.stop,
+.bdg.fuel {
+  color: #1a1608;
+}
+.bdg.ok {
+  background: #44692c;
+}
+.supply .sn {
+  background: transparent !important;
+  color: var(--gold) !important;
+  border: 1px solid #e7b04a88;
+}
+.vban h1.ge {
+  color: var(--ge);
+}
+.vban h1.al {
+  color: var(--al);
+}
+.vcards b:has(.ge) {
+  white-space: nowrap;
+  font-size: clamp(16px, 5vw, 26px);
+} /* "GE 0 · AL 0" stays on one line */
+
+/* words beside the icons (critique): modifier names, the expected-hits ratio, the view toggles */
+.m2 small {
+  font: 500 11px var(--sf);
+  opacity: 0.85;
+  margin-left: 2px;
+}
+.m2[role='button'] {
+  cursor: pointer;
+}
+.c-vs .big .xs {
+  font: 700 11px var(--sfd);
+  letter-spacing: 0.08em;
+  vertical-align: middle;
+  margin: 0 4px;
+  opacity: 0.85;
+}
+.c-vs .big .xs.al {
+  color: var(--al);
+}
+.c-vs .big .xs.ge {
+  color: var(--ge);
+}
+.c-vs .xcap {
+  display: block;
+  font: 500 11px var(--sf);
+  color: #b3ad8b;
+  text-align: center;
+  margin-top: 1px;
+}
+.vtb i {
+  font-size: 12px !important;
+}
+.m2[role='button'] {
+  position: relative;
+  min-height: 20px;
+}
+.m2[role='button']::after {
+  content: '';
+  position: absolute;
+  inset: -8px -2px;
+} /* a finger-sized tap area around the small chip */
+.c-vs .big small.xs {
+  display: inline !important;
+}

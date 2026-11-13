@@ -65,7 +65,7 @@ Goal: keep the design, split the few oversized files by moving code, no rewrite 
 | 2. One formatting pass | Prettier over all the source code (`npm run format` at the repository root; width 140), with a CI check (`format:check`). | **Done 13 Nov**: engine 417 and table 134 tests, type checks and the production build pass; picture check: no visible change (Sicily 42 of 42 identical, The Bulge desktop identical, The Bulge phone the known ~1% camera noise). `bot/` tests not run here (no packages installed). Sessions must merge `origin/main` and run `npm run format` on their own unpushed changes before pushing. |
 | 3. Split `web/src/main.ts` | The table's code moved, as it is, into 22 themed modules; `main.ts` went from 7,338 to about 700 lines and no module is over about 620. | **Done 13 Nov** (details below) |
 | 4. Split the engine | `engine/src/game.ts` went from 3,666 to about 500 lines: The Bulge's own rules in `vol/` like the other two volumes, the series rules by phase. | **Done 13 Nov** (details below) |
-| 5. Split `style.css` | One file per screen. | — |
+| 5. Split `style.css` | The 10,578-line stylesheet became 28 files in `web/src/css/` (largest about 1,040 lines), listed in order in `web/src/style.css`. | **Done 13 Nov** (details below) |
 | 6. Docs and ownership | `HANDOVER.md` as current state plus changelog; ownership in `PARALLEL.md` by module. | — |
 | 7. Guard | A CI check on file size. | — |
 
@@ -92,6 +92,13 @@ Goal: keep the design, split the few oversized files by moving code, no rewrite 
 - **Side effect**: 58 internal helpers (for example `roll`, `next`, `end`, `check`) are now also visible to the table and the computer opponent, because the modules reach each other through `game.ts`. Nothing uses them; they should not be relied on.
 - **Not done**: `vol/golan.ts` (2,450 lines) and `vol/sicily.ts` (1,790 lines) are as they were; the plan covered `game.ts` only. Golan and Sicily have no seeded-game fingerprint, only their tests and the random full-game fuzzer.
 - **For the rules and computer-opponent sessions**: merge `origin/main` before touching `engine/`; a change made on the old `game.ts` has to be redone in the new module. Keep importing from `./game` or `index.ts`, not from the new modules directly.
+
+### Step 5, what was done
+
+- **28 files** in `web/src/css/`, named by what they style (`base`, `layout`, `battle`, `tutorial`, `rules-reference`, `replay`, `sandbox-panel`, `top-bar` …). `web/src/style.css` now only lists them with `@import`, in the order they had.
+- **The order must be kept**: the stylesheet is a cascade, later rules override earlier ones (it grew by layers of fixes). So the files are stretches of the old file in their old order, not one file per screen: some screens (the home page, the top bar, the sandbox) still appear in two or three files, from different rounds. Merging a screen's rules into one place would change which rule wins and needs the pictures checked screen by screen; not done.
+- **Checked**: the production stylesheet is byte-for-byte identical to the one before the split (so nothing can look different), the development server loads and shows the same colours, Golan's 43 pictures match, formatting is clean.
+- **For the other sessions**: a CSS change made on the old `style.css` has to be redone in the right file of `web/src/css/` (search for the selector). New rules go at the end of the file that styles that screen, or in a new file added at the end of the list.
 
 ## Proposals for other files (for you to approve; this session does not change them)
 

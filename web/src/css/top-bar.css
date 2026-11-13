@@ -1,0 +1,293 @@
+/* The top bar (13 November): step pill, VP track, the Map button, phones */
+/* Top bar (owner-approved mockup, 13 Nov): the step as one pill with eight dots, the full VP track filling the middle, always visible (battles too) */
+.c-bar.t {
+  gap: 10px;
+}
+.phwrap {
+  position: relative;
+  flex: none;
+}
+.phpill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 12px;
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  cursor: pointer;
+}
+.phpill .tt {
+  font: 700 15px var(--sfd);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.phpill .tt b {
+  font: inherit;
+}
+.phpill .tt b.stp {
+  color: var(--gold);
+}
+.pdots {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+.pdots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4a4f38;
+}
+.pdots i.done {
+  background: #8d9065;
+}
+.pdots i.on {
+  width: 16px;
+  border-radius: 4px;
+  background: var(--gold);
+}
+.phpill .car {
+  color: #9a9c7c;
+  font-size: 12px;
+}
+.phlist {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  z-index: 60;
+  width: 280px;
+  padding: 6px;
+  background: #0b0d08f7;
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 24px #000a;
+}
+.phlist small {
+  display: block;
+  padding: 4px 10px 6px;
+  font: 700 11px var(--sfd);
+  letter-spacing: 0.14em;
+  color: #9a9c7c;
+  text-transform: uppercase;
+}
+.phlist div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 10px;
+  font: 600 14px var(--sfd);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9a9c7c;
+}
+.phlist div.done {
+  color: #aca78d;
+}
+.phlist div.on {
+  background: var(--gold);
+  color: #1a1608;
+}
+.phlist div i {
+  font-style: normal;
+  width: 18px;
+  opacity: 0.75;
+}
+.c-bar.t .vps {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto !important;
+  height: 46px !important;
+  min-height: 0 !important;
+  margin: 0;
+  padding: 0 12px !important;
+  gap: 10px;
+  border: 1px solid #8d906588 !important;
+  background: #12140d !important;
+}
+.c-bar.t .vps .vtt::before {
+  display: none;
+}
+.c-bar.t .vps .vtb {
+  width: 46px;
+  height: 36px;
+  flex: none;
+}
+.c-bar.t .vps .vtb b {
+  font-size: 12px;
+}
+.c-bar.t .vps .vtb i {
+  font-size: 12px !important;
+}
+.c-bar.t .vps .gauge {
+  flex: 1 1 120px;
+  min-width: 80px;
+  width: auto;
+}
+.c-bar.t .vps .vlab.net {
+  font-size: 16px;
+  flex: none;
+}
+.c-bar.t .c-stat {
+  margin-left: 0;
+  flex: none;
+}
+@media (max-width: 1300px) and (min-width: 701px) {
+  .c-bar.t .vps .vtb {
+    width: 38px;
+  }
+  .phpill .pdots {
+    display: none;
+  }
+}
+@media (max-width: 700px) {
+  .c-bar.t .vps {
+    flex: none;
+    height: 34px !important;
+    padding: 0 8px !important;
+  }
+  .c-bar.t .vps > :not(.nets) {
+    display: none !important;
+  }
+  .c-bar.t .vps .nets {
+    display: inline !important;
+    font-size: 13px;
+  }
+  .phpill {
+    height: 36px;
+    padding: 0 8px;
+    min-width: 0;
+  }
+  .phpill .pdots,
+  .phpill .car {
+    display: none;
+  }
+  .phwrap {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .phpill {
+    max-width: 100%;
+  }
+  .phpill .tt {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 13px;
+  }
+}
+.tops:has(+ .stage .c-table) .vps,
+body:has(#ui .c-table) .c-bar.t .vps {
+  display: flex !important;
+}
+/* The map's own tools as one Map button (all screens): the layers, the area labels and the legend open as a list under it */
+.mapmenu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 12px;
+  background: #0b0d08e6;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font: 600 13px var(--sfd);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.mapmenu-btn b {
+  color: var(--gold);
+  font-weight: 600;
+}
+.mapmenu-btn .msep {
+  font-style: normal;
+  color: #6b6e55;
+  margin: 0 2px;
+}
+.mapmenu-btn .ic {
+  width: 16px;
+  height: 16px;
+}
+.mapdock:not(.menuopen) .dockrow > .mlchip,
+.mapdock:not(.menuopen) .dockrow > .laysw {
+  display: none !important;
+}
+.mapdock.menuopen .dockrow {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 340px;
+  padding: 8px;
+  background: #0b0d08f5;
+  border: 1px solid var(--line);
+}
+.mapdock.menuopen .dockrow > .mapmenu-btn {
+  border-color: var(--gold);
+}
+.mapdock.menuopen .dockrow > .laysw {
+  display: flex;
+  margin: 0;
+  flex-wrap: wrap;
+}
+.mapdock.menuopen .dockrow > .laysw > b {
+  flex-basis: 100%;
+  padding: 4px 2px;
+}
+.mapdock.menuopen .dockrow > .laysw button {
+  flex: 1 1 auto;
+  justify-content: center;
+  min-height: 36px;
+}
+.mapdock.menuopen .dockrow > .mlchip {
+  position: static;
+  justify-content: flex-start;
+}
+@media (max-width: 700px) {
+  .mapmenu-btn {
+    min-height: 44px;
+  }
+  .mapmenu-btn > span:first-of-type {
+    max-width: 60vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mapdock.menuopen .dockrow {
+    width: calc(100vw - 24px);
+  }
+  .mapdock.menuopen .dockrow > .laysw button {
+    min-height: 44px;
+  }
+  .mapdock:not(.menuopen) .maptools button[title='Rotate the map'] {
+    display: none !important;
+  }
+}
+.mapdock .labsw button {
+  background: none !important;
+  color: var(--ink) !important;
+}
+.mapdock .labsw button[aria-pressed='true'] {
+  background: var(--gold) !important;
+  color: #1a1608 !important;
+}
+.mapdock .labsw > b {
+  color: #b3ad8b;
+}
+.mapdock .labsw button .s {
+  display: none;
+}
+.mapdock .labsw button .l,
+.mapdock .labsw button .ic {
+  display: inline-block !important;
+}
+.mapdock.menuopen .dockrow > .mlchip {
+  order: 9;
+}
+.mapdock.menuopen .dockrow > .mlchip span {
+  display: inline !important;
+}
+@media (max-width: 700px) {
+  .c-bar.t .c-stat > span {
+    display: none !important;
+  }
+} /* phones: the step pill gets the room ("you both" is only on developer tables) */

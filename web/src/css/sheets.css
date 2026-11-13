@@ -1,0 +1,240 @@
+/* Sheets and the home page */
+/* sheets and home */
+.sheet {
+  padding: 10px 12px !important;
+  max-height: 92vh !important;
+}
+.sheet h3 {
+  font-size: 20px !important;
+  margin-bottom: 4px !important;
+}
+.sheet h4 {
+  font-size: 13px !important;
+  margin: 5px 0 2px !important;
+}
+.chips {
+  gap: 5px !important;
+  margin: 2px 0 6px !important;
+}
+.chip {
+  min-height: 36px !important;
+  padding: 0 9px !important;
+  font-size: 13px;
+}
+.chip.iconly {
+  min-width: 40px !important;
+}
+.tabs button {
+  min-height: 36px !important;
+}
+.pc {
+  width: 46px !important;
+  height: 46px !important;
+}
+.pcgrid {
+  gap: 4px !important;
+  margin: 2px 0 6px !important;
+}
+.inspect {
+  padding: 6px !important;
+  margin: 3px 0 6px !important;
+}
+.inspect img.big {
+  width: 52px !important;
+  height: 52px !important;
+}
+.inspect p {
+  font-size: 12px !important;
+}
+.oobu {
+  width: 52px !important;
+}
+.oobu img {
+  width: 44px !important;
+  height: 44px !important;
+}
+.oob {
+  padding: 3px 0 !important;
+}
+.homein {
+  padding: 10px 12px 20px !important;
+  gap: 8px !important;
+}
+.hbar h1 {
+  font-size: 17px !important;
+}
+.hbar p {
+  font-size: 11px;
+}
+.avatar {
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+}
+.hbar button.ico {
+  min-width: 36px;
+  height: 36px;
+}
+.homein .card {
+  padding: 8px 10px !important;
+}
+.homein .card h2 {
+  font-size: 16px !important;
+  margin: 0 !important;
+}
+.homein button,
+.homein input,
+.homein select {
+  min-height: 38px !important;
+}
+.matchrow {
+  padding: 3px 0 !important;
+}
+.matchrow .open {
+  padding: 5px 8px !important;
+}
+.matchrow .open b {
+  font-size: 15px !important;
+}
+.tile {
+  min-height: 56px !important;
+}
+.tile b {
+  font-size: 22px !important;
+}
+.sheetbox {
+  padding: 8px !important;
+  gap: 6px !important;
+}
+.mapbubble {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+.mapbubble b {
+  font-size: 16px;
+}
+.fx {
+  padding: 4px 9px 4px 8px;
+}
+.fx b {
+  font-size: 16px;
+}
+.fx .ic {
+  width: 22px;
+  height: 22px;
+}
+.legend {
+  font-size: 10.5px;
+  padding: 4px 6px;
+}
+@media (min-width: 521px) {
+  .c-bar.t {
+    height: 48px !important;
+  }
+}
+@media (min-width: 900px) {
+  .dock .card2,
+  .card2 {
+    width: 72px !important;
+    height: 72px !important;
+  }
+  .c-hand {
+    height: 96px !important;
+  }
+}
+.c-hand {
+  justify-content: safe center;
+}
+.mapbubble {
+  flex-direction: row;
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px !important;
+  max-width: none;
+}
+.mapbubble .hits {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  font: 700 22px var(--sfd) !important;
+  margin: 0;
+}
+.mapbubble .hits small {
+  font: 600 9px var(--sf);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.mapbubble button.ab {
+  min-width: 42px;
+  min-height: 42px !important;
+  padding: 0 8px;
+  justify-content: center;
+}
+.mapbubble button.ab .ic {
+  width: 22px;
+  height: 22px;
+}
+.mapbubble .row {
+  gap: 4px;
+}
+.mapbubble > span {
+  max-width: 150px;
+  font-size: 11.5px;
+  text-align: left;
+}
+.mapbubble.wait b {
+  font-size: 13px !important;
+}
+#marks {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  overflow: hidden;
+}
+.mm {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 6px #000a;
+}
+.mm .ic {
+  width: 14px !important;
+  height: 14px !important;
+  stroke-width: 3;
+}
+.mm.go {
+  background: #c8e86a;
+  color: #0b0d08;
+  animation: mmp 1.8s ease-in-out infinite;
+}
+.mm.no {
+  background: #0b0d08e6;
+  border: 1px solid #8d9065;
+  color: #e7b04a;
+  width: 18px;
+  height: 18px;
+}
+.mm.no .ic {
+  width: 11px !important;
+  height: 11px !important;
+}
+@keyframes mmp {
+  50% {
+    transform-origin: center;
+    filter: brightness(1.25);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mm.go {
+    animation: none;
+  }
+}

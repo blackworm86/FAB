@@ -1,0 +1,457 @@
+/* The home page: the war-room table and the shelf of box covers */
+/* home: the war-room table behind, a shelf of box covers (our own artwork) to choose the FAB volume */
+.homepage {
+  background-color: #0b0d08;
+  background-size: cover;
+  background-position: center;
+}
+.homein {
+  width: min(780px, 100%);
+}
+.homein .card {
+  background: #12150ef0;
+  box-shadow: 0 10px 24px #000a;
+}
+.homein h2.sec {
+  margin: 6px 0 -4px;
+  font: 600 13px var(--sfd);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8d9065;
+}
+.shelf {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.cover {
+  position: relative;
+  display: block;
+  text-align: left;
+  padding: 0 !important;
+  border: 1px solid #000 !important;
+  background: #111;
+  overflow: hidden;
+  cursor: pointer;
+  aspect-ratio: 3 / 4;
+  box-shadow: 0 12px 26px #000c;
+  color: #fff;
+  min-height: 0 !important;
+}
+.cover .art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cover .band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  padding: 8px 10px 6px;
+  background: linear-gradient(#000d, #0000);
+}
+.cover .band small {
+  display: block;
+  font: 600 10px var(--sfd);
+  letter-spacing: 0.22em;
+  opacity: 0.85;
+}
+.cover .band b {
+  display: block;
+  font: 700 clamp(20px, 4vw, 32px) / 0.95 var(--sfd);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 6px #000;
+}
+.cover .foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 8px 10px;
+  background: linear-gradient(#0000, #000e);
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 6px;
+  font-size: 11px;
+}
+.cover .foot > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cover .cst {
+  font: 700 11px var(--sfd);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border: 1px solid currentColor;
+  flex: none;
+}
+.cover .cst.ready {
+  color: var(--gold);
+}
+.cover .cst.soon {
+  color: #c9c4a6;
+}
+.cover[aria-pressed='true'] {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
+}
+.cover:hover:not([aria-pressed='true']) {
+  outline: 1px solid #e7b04a88;
+  outline-offset: 3px;
+}
+.cover.soon svg {
+  filter: saturate(0.75) brightness(0.85);
+}
+.soonbox {
+  border-style: dashed !important;
+}
+@media (max-width: 600px) {
+  .shelf {
+    grid-template-columns: repeat(3, 42%);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding: 4px 4px 8px;
+    margin: 0 -4px;
+  }
+  .shelf .cover {
+    scroll-snap-align: start;
+  }
+  .shelf .cover .foot > span:first-child {
+    display: none;
+  }
+  .shelf .cover .foot {
+    justify-content: flex-end;
+  }
+}
+
+/* home: a table waiting for your move carries the page's one red action */
+.matchrow.yours {
+  flex-wrap: wrap;
+}
+.matchrow .resume {
+  flex: 1 0 100%;
+  min-height: 46px;
+  font-size: 16px;
+}
+.stampy {
+  margin-left: 10px;
+  font: 700 11px var(--sfd);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--red);
+  border: 1px solid currentColor;
+  padding: 1px 6px;
+  vertical-align: 3px;
+}
+
+/* phones: the volumes as box spines stacked on a shelf (our own design, each in its volume's colour); the pulled-out box is the chosen one */
+.spines {
+  display: none;
+}
+@media (max-width: 600px) {
+  .shelf {
+    display: none !important;
+  }
+  .spines {
+    display: grid;
+    gap: 3px;
+    padding: 6px 0 10px;
+    border-bottom: 6px solid #3a2a1c;
+    box-shadow: 0 8px 12px -6px #000;
+  }
+  .spine {
+    position: relative;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    height: 58px;
+    padding: 0 12px 0 7px !important;
+    margin-right: var(--off);
+    border: 0 !important;
+    text-align: left;
+    color: #fff;
+    cursor: pointer;
+    box-shadow:
+      inset 0 2px 0 #ffffff26,
+      inset 0 -3px 0 #0006,
+      0 2px 3px #000a;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .spine .thumb {
+    width: 44px;
+    height: 44px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid #0008;
+    box-shadow: 0 0 0 1px #ffffff22;
+  }
+  .spine .thumb svg {
+    position: absolute;
+    left: 0;
+    top: -12px;
+    width: 44px;
+    height: 59px;
+  }
+  .spine .tt small {
+    display: block;
+    font: 600 10px var(--sfd);
+    letter-spacing: 0.22em;
+    opacity: 0.8;
+  }
+  .spine .tt b {
+    display: block;
+    font: 700 24px/1 var(--sfd);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .spine .cst {
+    font: 700 11px var(--sfd);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border: 1px solid currentColor;
+  }
+  .spine .cst.ready {
+    color: var(--gold);
+  }
+  .spine .cst.soon {
+    color: #ffffffb0;
+  }
+  .sp-bulge {
+    background: linear-gradient(90deg, #161616, #0d0d0d 60%, #1c1c1c);
+  }
+  .sp-bulge .tt b {
+    color: #f2f0e6;
+  }
+  .sp-sicily {
+    background: linear-gradient(90deg, #9e2a22, #7f1d17 60%, #a3322a);
+  }
+  .sp-sicily .tt b {
+    color: #fff3e0;
+  }
+  .sp-golan73 {
+    background: linear-gradient(90deg, #7b7046, #625934 60%, #82764a);
+  }
+  .sp-golan73 .tt b {
+    color: #f6f0d8;
+  }
+  .spine[aria-pressed='true'] {
+    transform: translateX(-4px) scale(1.015);
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+    z-index: 1;
+  }
+  .spine.soon .thumb {
+    filter: saturate(0.7) brightness(0.85);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spine {
+    transition: none;
+  }
+}
+
+/* boxes laid out like the series boxes (our art and type): front on wide screens, spine on phones */
+.cover {
+  container-type: inline-size;
+}
+.bx {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  color: var(--ink);
+  display: grid;
+  grid-template-rows: 60% 1fr;
+}
+.bx .bxart {
+  position: relative;
+  overflow: hidden;
+}
+.bx .bxart .art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.bx.inset .bxart {
+  margin: 6cqw 6cqw 0;
+  outline: 0.8cqw solid #f2f0e8;
+}
+.bxt {
+  font: 800 italic 17cqw/0.9 var(--sfd);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.bx .bxt {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 9%;
+  text-align: center;
+  text-shadow: 0 0 2cqw #ffffff99;
+}
+.bx.inset .bxt {
+  top: 11%;
+}
+.bx .bxlow {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 1cqw;
+  padding-top: 7cqw;
+  position: relative;
+}
+.bx .bxser {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.5cqw;
+  font: 700 italic 6.2cqw/1 var(--sfd);
+  letter-spacing: 0.01em;
+  margin-bottom: 4cqw;
+}
+.bx .bxser i {
+  font-style: italic;
+}
+.bx .bxmark {
+  width: 9cqw;
+  height: 9cqw;
+}
+.bx small {
+  font: 700 italic 3.2cqw/1 var(--sfd);
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+.bx em {
+  font: 800 italic 5cqw/1 var(--sfd);
+  text-align: center;
+  padding: 0 4cqw;
+}
+.bx .bxfoot {
+  position: absolute;
+  left: 4cqw;
+  right: 4cqw;
+  bottom: 3cqw;
+  display: flex;
+  justify-content: space-between;
+  font: 600 3cqw/1 var(--sfd);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.cover > .cst {
+  position: absolute;
+  right: 3cqw;
+  top: 2.5cqw;
+  z-index: 2;
+  background: #000a;
+  font: 700 11px var(--sfd);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border: 1px solid currentColor;
+}
+.cover .band,
+.cover .foot {
+  display: none;
+}
+@media (max-width: 600px) {
+  .spine {
+    display: block !important;
+    padding: 0 !important;
+    height: 58px;
+    overflow: hidden;
+    background: none !important;
+  }
+  .bxs {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: 62px minmax(0, 1fr) auto 34px;
+    align-items: center;
+    gap: 10px;
+    padding-right: 64px;
+    background: var(--bg);
+    color: var(--ink);
+    box-shadow:
+      inset 0 2px 0 #ffffff26,
+      inset 0 -3px 0 #0005;
+  }
+  .bxs .bxsart {
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+  .bxs .bxsart .art {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .bxs .bxt {
+    font-size: 27px;
+    text-shadow: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bxs .bxsv {
+    display: grid;
+    text-align: center;
+    line-height: 1.05;
+  }
+  .bxs .bxsv small {
+    font: 700 10px var(--sfd);
+    letter-spacing: 0.06em;
+    opacity: 0.75;
+  }
+  .bxs .bxsv i {
+    font: 700 italic 10.5px var(--sfd);
+    max-width: 70px;
+  }
+  .bxs .bxmark {
+    width: 26px;
+    height: 26px;
+  }
+  .spine > .cst {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    background: #000b;
+  }
+  .spine .thumb,
+  .spine .tt {
+    display: none;
+  }
+}
+@media (max-width: 380px) {
+  .bxs .bxsv {
+    display: none;
+  }
+  .bxs {
+    grid-template-columns: 56px minmax(0, 1fr) 30px;
+  }
+}
+/* the title sits on a pale ground, like a light map */
+
+.bxs .bxsart .art {
+  top: 0 !important;
+  height: 100% !important;
+  width: 100% !important;
+}
