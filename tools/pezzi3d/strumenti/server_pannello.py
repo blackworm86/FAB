@@ -308,6 +308,15 @@ def op_ripara_figure(log, dati):
     return {}
 
 
+def op_prepara_figure(log, dati):
+    """Dai modelli scaricati (modelli/ai_grezzi/<tipo>.glb) alle figure del gioco di un volume: separa_figure.py (posa, misura, buchi, texture)."""
+    vol = str(dati.get("vol", ""))
+    if vol not in ("bulge", "golan73", "sicily"):
+        raise RuntimeError("volume sconosciuto")
+    esegui_processo(log, script("separa_figure.py") + ["--volume", vol], cwd=QUI)
+    return {"cartella": str(cartella_figure())}
+
+
 def op_test_sagome(log):
     esegui_processo(log, script("test_sagome.py") + [str(RADICE / "concept" / "scelti")], cwd=QUI)
     return {"foglio": "concept/scelti/_test_sagome.png"}
@@ -621,6 +630,8 @@ class Gestore(BaseHTTPRequestHandler):
             return {"lavoro": nuovo_lavoro("Pulizia " + dati["nome"], op_pulisci, dati)}
         if percorso == "/api/figure/ripara":
             return {"lavoro": nuovo_lavoro("Chiudo i buchi", op_ripara_figure, dati)}
+        if percorso == "/api/figure/prepara":
+            return {"lavoro": nuovo_lavoro("Figure per il gioco · " + str(dati.get("vol")), op_prepara_figure, dati)}
         if percorso == "/api/figure/config":
             salva_config_figura(dati)
             return {"ok": True}
