@@ -133,134 +133,13 @@ import {
   tagHover,
   TDN_COL,
   tint,
-  tutView,
   viewRot,
   viewSide,
   ZONE_COL,
 } from './map-paint';
 export * from './map-paint';
-
-/* ---------- camera ---------- */
-let target = new THREE.Vector3(17, 0, -3),
-  yaw = 0,
-  pitch = 1.0,
-  dist = 36,
-  opened = false;
-function placeCam() {
-  const hx = MW / (2 * S),
-    hz = MH / (2 * S);
-  target.x = Math.max(-hx, Math.min(hx, target.x));
-  target.z = Math.max(-hz, Math.min(hz, target.z)); /* the view never wanders off the map */
-  cam.position.set(
-    target.x + dist * Math.sin(yaw) * Math.cos(pitch),
-    dist * Math.sin(pitch),
-    target.z + dist * Math.cos(yaw) * Math.cos(pitch),
-  );
-  cam.lookAt(target);
-}
-const ptrs = new Map<number, [number, number]>();
-let moved = 0,
-  pinch = 0;
-canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-canvas.addEventListener('pointerdown', (e) => {
-  goal = null;
-  camTouched = true;
-  if (phaseOpen || mapMenu) {
-    phaseOpen = false;
-    mapMenu = false;
-    render();
-  }
-  canvas.setPointerCapture(e.pointerId);
-  ptrs.set(e.pointerId, [e.clientX, e.clientY]);
-  moved = 0;
-  pinch = 0;
-});
-canvas.addEventListener('pointermove', (e) => {
-  const p = ptrs.get(e.pointerId);
-  if (!p) return;
-  ptrs.set(e.pointerId, [e.clientX, e.clientY]);
-  if (ptrs.size === 2) {
-    const [a, b] = [...ptrs.values()],
-      d = Math.hypot(a[0] - b[0], a[1] - b[1]);
-    if (pinch) dist = clampDist((dist * pinch) / d);
-    pinch = d;
-    moved = 99;
-    return;
-  }
-  const dx = e.clientX - p[0],
-    dy = e.clientY - p[1];
-  moved += Math.abs(dx) + Math.abs(dy);
-  if (e.buttons === 2 || e.shiftKey || lock) {
-    yaw -= dx * 0.006;
-    pitch = Math.min(1.5, Math.max(0.35, pitch + dy * 0.006));
-  } else {
-    const k = dist * 0.0018,
-      c = Math.cos(yaw),
-      s = Math.sin(yaw);
-    target.x -= (dx * c + dy * s) * k;
-    target.z -= (-dx * s + dy * c) * k;
-  }
-});
-canvas.addEventListener('pointerup', (e) => {
-  ptrs.delete(e.pointerId);
-  if (moved < 6) click(e);
-});
-canvas.addEventListener('pointercancel', (e) => ptrs.delete(e.pointerId));
-canvas.addEventListener(
-  'wheel',
-  (e) => {
-    goal = null;
-    camTouched = true;
-    e.preventDefault();
-    dist = clampDist(dist * Math.exp(e.deltaY * 0.0012));
-  },
-  { passive: false },
-);
-
-const ray = new THREE.Raycaster();
-function pick(e: PointerEvent) {
-  const r = canvas.getBoundingClientRect();
-  ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), cam);
-  const own = (o: THREE.Object3D) => {
-    let x: THREE.Object3D | null = o;
-    while (x && x.parent !== pieces) x = x.parent;
-    return x ?? o;
-  }; // a figure answers for its unit
-  const hits = ray.intersectObjects(pieces.children, true).map((h) => ({ ...h, object: own(h.object) })),
-    units = [...new Set(hits.map((h) => h.object.userData.unit as string | undefined).filter((x): x is string => !!x))];
-  const hitPiece = hits.find((h) => h.object.userData.unit || h.object.userData.chit) ?? hits[0]; // a marker lying on a block does not hide the block
-  if (units.length > 1 && selUnit && units.includes(selUnit))
-    return { unit: units[(units.indexOf(selUnit) + 1) % units.length], chit: undefined, area: areaAt(ray) }; // tapping a stack again picks the next block in it
-  return {
-    unit: hitPiece?.object.userData.unit as string | undefined,
-    chit: hitPiece?.object.userData.chit as string | undefined,
-    area: areaAt(ray),
-  };
-}
-function areaAt(ray: THREE.Raycaster): number | null {
-  const hitBoard = show3d()
-    ? (() => {
-        const p = REL!.hit(ray.ray);
-        return p ? { point: p } : undefined;
-      })()
-    : ray.intersectObject(board)[0];
-  let area: number | null = null;
-  if (hitBoard) {
-    const px = (hitBoard.point.x + MW / (2 * S)) * S,
-      py = (hitBoard.point.z + MH / (2 * S)) * S;
-    area = MAP.areas.find((a) => shownArea(a.id) && (!g.inPlay || g.inPlay.includes(a.id)) && inside(px, py, a.polygon))?.id ?? null;
-  }
-  return area;
-}
-function inside(x: number, y: number, poly: [number, number][]) {
-  let c = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const [xi, yi] = poly[i],
-      [xj, yj] = poly[j];
-    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c;
-  }
-  return c;
-}
+import { areaAt, dist, opened, pick, pitch, placeCam, ptrs, ray, setDist, setOpened, setPitch, setYaw, target, yaw } from './camera';
+export * from './camera';
 
 /* ---------- ui helpers ---------- */
 /* ---------- playing a chit: the blocks or areas it can be used on light up, and a tap applies it ---------- */
@@ -856,9 +735,10 @@ export function arrOpts(): { area: number; sa: boolean }[] {
 
 /* ---------- camera focus ---------- */
 type Goal = { t: THREE.Vector3; dist: number; pitch: number; fast?: boolean } | null;
-let goal: Goal = null,
+export let goal: Goal = null,
   saved: Goal = null,
   inBattle = false;
+export const setGoal = <T extends typeof goal>(v: T): T => ((goal = v), v);
 /** Reinforcing a battle by Special Action (the defender): neighbouring blocks that may join light up and a tap moves one in. */
 let reinforcing = false;
 function reinforceTargets(): Tgt | null {
@@ -892,8 +772,8 @@ function reinforceTargets(): Tgt | null {
 }
 let frameKey = '';
 /** The battle camera: held on the contested area (fitted to it), where the player can still zoom and orbit but not pan away. */
-let lock: { c: THREE.Vector3; d: number } | null = null;
-const clampDist = (d: number) =>
+export let lock: { c: THREE.Vector3; d: number } | null = null;
+export const clampDist = (d: number) =>
   lock ? Math.min(lock.d * 1.7, Math.max(lock.d * 0.45, d)) : Math.min(innerWidth < 700 ? 64 : 72, Math.max(7, d)); // desktop: no further out than the map filling most of the screen (it shrank into a corner)      // phones: never so far out that the map leaves a black band
 export function areaWorld(id: number) {
   return MAP.areas.find((a) => a.id === id)!.polygon.map(([x, y]) => toWorld(x, y));
@@ -922,7 +802,7 @@ function syncBattleCam() {
     if (!wide) fit = fit / Math.max(0.55, Math.min(1, clearRatio * 1.25)); // only the band between the panels shows the battle
     lock = wide ? null : { c, d: fit };
     goal = { t: c, dist: wide ? fit * 1.8 : fit, pitch: 1.15, fast: true };
-    yaw = viewRot();
+    setYaw(viewRot());
   }
   if (!b) {
     reinforcing = false;
@@ -966,7 +846,7 @@ function confirmMove() {
     refresh();
   } // one area at a time: it stays picked while it has points left
 }
-function click(e: PointerEvent) {
+export function click(e: PointerEvent) {
   let { unit, area } = pick(e);
   if (tut) {
     const t = tut.gate(unit, area);
@@ -2522,7 +2402,8 @@ function drag(ev: PointerEvent, el: HTMLElement) {
 }
 
 /* ---------- views ---------- */
-let phaseOpen = false;
+export let phaseOpen = false;
+export const setPhaseOpen = <T extends typeof phaseOpen>(v: T): T => ((phaseOpen = v), v);
 /** The turn, side and step as one pill with a dot per step (owner, 13 Nov); a tap lists the whole sequence of the player turn. */
 function phasePill(who: E.Side, pAt: number, label: string) {
   const setup = g.phase === 'deploy',
@@ -3541,7 +3422,7 @@ function rotateQuarter() {
     t0: performance.now(),
     dur: 450,
     fn: (k) => {
-      yaw = y0 + (Math.PI / 2) * (1 - (1 - k) * (1 - k));
+      setYaw(y0 + (Math.PI / 2) * (1 - (1 - k) * (1 - k)));
       lastInput = performance.now();
     },
   });
@@ -3561,7 +3442,8 @@ function labelsBtn() {
   };
   return `<div class="laysw labsw" role="group" aria-label="Area labels"><b>Labels</b>${(['on', 'tr', 'off'] as const).map((m) => `<button aria-pressed="${labelMode === m}" title="Area labels: ${LABEL_NAME[m]}" data-ui="${reg(() => set(m))}">${ico('tag')}<span class="l">${LABEL_NAME[m]}</span><span class="s">${{ on: 'On', tr: 'Dim', off: 'Off' }[m]}</span></button>`).join('')}</div>`;
 }
-let mapMenu = false; // phones: the layers, legend and rotate fold into one Map button
+export let mapMenu = false; // phones: the layers, legend and rotate fold into one Map button
+export const setMapMenu = <T extends typeof mapMenu>(v: T): T => ((mapMenu = v), v);
 function mapDock() {
   if (g.battle) return ''; // the battle bar takes the top of the map
   if (legendOpen && SANDBOX && SBU.st.sbOpen && innerWidth < 700) {
@@ -4014,7 +3896,7 @@ const cutOffCount = (sd: E.Side) => MAP.areas.filter((a) => g.control[a.id] === 
 const resetBtn = () =>
   ubtn(`${ico('home')}<span>Reset view</span>`, () => {
     goal = homeGoal();
-    yaw = viewRot();
+    setYaw(viewRot());
   });
 function layersHtml() {
   const map = VOL.art.relief
@@ -4705,7 +4587,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
     (e) =>
       (e.onclick = () => {
         goal = homeGoal();
-        yaw = viewRot();
+        setYaw(viewRot());
       }),
   );
   ui.querySelectorAll<HTMLElement>('[data-tint]').forEach(
@@ -4784,7 +4666,7 @@ function syncView() {
   if (v === lastView) return;
   const fresh = lastView === null;
   lastView = v;
-  yaw = v !== VOL.bottom ? Math.PI : 0;
+  setYaw(v !== VOL.bottom ? Math.PI : 0);
   if (!fresh) goal = g.inPlay ? homeGoal() : { t: openingTarget(), dist, pitch };
   paintBoard();
 }
@@ -4924,6 +4806,7 @@ export let lastInput = performance.now(),
   frameAt = 0,
   openFrame = false,
   camTouched = false;
+export const setCamTouched = <T extends typeof camTouched>(v: T): T => ((camTouched = v), v);
 export const setLastInput = <T extends typeof lastInput>(v: T): T => ((lastInput = v), v);
 /** ?fps=1: a small corner counter (frames per second, slowest frame) for measuring on a real phone. */
 const fpsEl = new URLSearchParams(location.search).has('fps')
@@ -4967,8 +4850,8 @@ function frame() {
   if (goal) {
     const k = goal.fast ? 0.28 : 0.1;
     target.lerp(goal.t, k);
-    dist += (goal.dist - dist) * k;
-    pitch += (goal.pitch - pitch) * k;
+    setDist(dist + (goal.dist - dist) * k);
+    setPitch(pitch + (goal.pitch - pitch) * k);
     if (target.distanceTo(goal.t) < 0.05 && Math.abs(dist - goal.dist) < 0.1) goal = null;
   }
   if (lock && !goal) target.copy(lock.c);
@@ -5010,13 +4893,13 @@ function frame() {
     }
   }
   if (!opened) {
-    opened = true;
+    setOpened(true);
     if (!g.inPlay && !TUT) {
       target.copy(openingTarget());
       if (innerWidth <= 700) {
         const ps = g.units.filter((u) => u.area != null && MAP.areas.some((x) => x.id === u.area)).map((u) => center(u.area!)),
           span = ps.length ? Math.max(...ps.map((p) => p.x)) - Math.min(...ps.map((p) => p.x)) : 40;
-        dist = clampDist(span * 1.25 + 8);
+        setDist(clampDist(span * 1.25 + 8));
       }
     }
   } // the first frame looks at the front of this game; a phone frames the front's width, not the whole sheet
@@ -5040,8 +4923,8 @@ function frame() {
         showAreas(ids);
         if (openFrame && goal) {
           target.copy(goal.t);
-          dist = goal.dist;
-          pitch = goal.pitch;
+          setDist(goal.dist);
+          setPitch(goal.pitch);
           goal = null;
         }
       }
@@ -5416,7 +5299,7 @@ if (import.meta.env.DEV || DEV_FAKE || SANDBOX || TUTORIAL)
       viewMap: (mx: number, my: number, d: number, pt: number, yw: number) => {
         const p = toWorld(mx, my);
         goal = { t: new THREE.Vector3(p.x, show3d() ? REL!.h(p.x, p.z) : 0, p.z), dist: d, pitch: pt, fast: true };
-        yaw = yw;
+        setYaw(yw);
       },
       tut: () => tut,
       tagPpu: () => tagPpu,
@@ -5469,7 +5352,7 @@ if (import.meta.env.DEV || DEV_FAKE || SANDBOX || TUTORIAL)
       board: () => boardCv.toDataURL('image/png'),
       view: (x: number, z: number, d: number, pt: number, yw: number) => {
         goal = { t: new THREE.Vector3(x, 0, z), dist: d, pitch: pt, fast: true };
-        yaw = yw;
+        setYaw(yw);
       },
       layout: () => ({
         MW,
