@@ -1,3 +1,12 @@
+// The series engine's core: the game's types and tables, the small helpers everything uses, a new game, control and victory
+// points, and the registration of The Bulge's rules. The rest of the engine lives in the modules listed below (The Bulge's own
+// rules in vol/, then the series rules by phase: reinforce, admin, moves, battle-setup, fire, battle-end, supply, turn), which
+// were part of this file until November 2026. Each `export * from` line passes a module's names on, so the volumes, the table
+// and the tests go on importing everything from './game' (or index.ts).
+// THE ORDER OF THOSE LINES MATTERS: the modules load in that order, before this file's own code. A module imports from this
+// file what it calls later, inside its functions; it must not need a value of this file while loading (in the tests not even a
+// function: that is why The Bulge's hooks are registered here, at the end, and not in vol/bulge.ts).
+// To move more code out: `node scripts/move-code.mjs` in web/ (see its first lines).
 import entryJson from '../../data/bulge/entry_areas.json';
 import { areas, edgeKey } from './map';
 import { d10, rng } from './dice';

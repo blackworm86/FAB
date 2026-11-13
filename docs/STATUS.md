@@ -64,7 +64,7 @@ Goal: keep the design, split the few oversized files by moving code, no rewrite 
 | 1. Safety net | A picture check of every phase, a selected block, a battle and the main windows for each game on desktop and phone (`web/e2e/shots.mjs`). | **Done 13 Nov** (details below) |
 | 2. One formatting pass | Prettier over all the source code (`npm run format` at the repository root; width 140), with a CI check (`format:check`). | **Done 13 Nov**: engine 417 and table 134 tests, type checks and the production build pass; picture check: no visible change (Sicily 42 of 42 identical, The Bulge desktop identical, The Bulge phone the known ~1% camera noise). `bot/` tests not run here (no packages installed). Sessions must merge `origin/main` and run `npm run format` on their own unpushed changes before pushing. |
 | 3. Split `web/src/main.ts` | The table's code moved, as it is, into 22 themed modules; `main.ts` went from 7,338 to about 700 lines and no module is over about 620. | **Done 13 Nov** (details below) |
-| 4. Split the engine | The Bulge's own rules to `engine/src/vol/bulge.ts`; the rest of `game.ts` by phase. | — |
+| 4. Split the engine | `engine/src/game.ts` went from 3,666 to about 500 lines: The Bulge's own rules in `vol/` like the other two volumes, the series rules by phase. | **Done 13 Nov** (details below) |
 | 5. Split `style.css` | One file per screen. | — |
 | 6. Docs and ownership | `HANDOVER.md` as current state plus changelog; ownership in `PARALLEL.md` by module. | — |
 | 7. Guard | A CI check on file size. | — |
@@ -83,6 +83,15 @@ Goal: keep the design, split the few oversized files by moving code, no rewrite 
 - **Checked at the end**: type check, 134 unit tests, formatting, the production build (opened for all three games, the home page, the computer-opponent tables and Italian), the browser smoke test, and the picture check against the pictures taken before the split: 114 of 127 identical; the other 13 are the known camera noise (the same pictures, with the same percentages, that differ between two runs of unchanged code; looked at by eye).
 - **What it does not do**: the modules still share the same state and know each other through `main.ts`; untangling that is a later, optional job. The engine tests were not run (the engine was not touched).
 - **For the other sessions**: merge `origin/main` before any work on the table; a change made on the old `main.ts` will not merge by itself and has to be redone in the new module (ask this session which one).
+
+### Step 4, what was done
+
+- **The modules** (in `engine/src/`): `vol/bulge-setup` (The Bulge's scenarios and set-up) and `vol/bulge` (its exclusive rules), then the series rules by phase: `reinforce` (chit draws, arrivals), `admin` (Special Actions, engineers, replacements, staff, air missions), `moves`, `battle-setup`, `fire`, `battle-end` (hit choices, retreats), `supply`, `turn` (ending a phase, results, the move audit). `game.ts` keeps the types, the small helpers, a new game, control and victory points.
+- **How**: the same tool as step 3, ten commits, each checked with the engine's type check and its 417 tests, the table's type check, and a fingerprint of the rules: twelve complete seeded games of The Bulge (all four scenarios, with and without optional rules) had to end with exactly the same result, turn and action counts as before.
+- **Checked at the end**: engine 417, computer opponent 11 and table 134 tests, formatting, the production build opened in a browser for all three games and both computer-opponent tables, the browser smoke test. Everything the engine offered to the table, the computer opponent and the tests is still there under the same names.
+- **Side effect**: 58 internal helpers (for example `roll`, `next`, `end`, `check`) are now also visible to the table and the computer opponent, because the modules reach each other through `game.ts`. Nothing uses them; they should not be relied on.
+- **Not done**: `vol/golan.ts` (2,450 lines) and `vol/sicily.ts` (1,790 lines) are as they were; the plan covered `game.ts` only. Golan and Sicily have no seeded-game fingerprint, only their tests and the random full-game fuzzer.
+- **For the rules and computer-opponent sessions**: merge `origin/main` before touching `engine/`; a change made on the old `game.ts` has to be redone in the new module. Keep importing from `./game` or `index.ts`, not from the new modules directly.
 
 ## Proposals for other files (for you to approve; this session does not change them)
 
