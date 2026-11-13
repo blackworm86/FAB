@@ -69,7 +69,6 @@ def forma_pulita(g, budget):
     if len(m.faces) > budget:
         m = m.simplify_quadric_decimation(face_count=budget)
         m.merge_vertices(); m.update_faces(m.nondegenerate_faces()); m.remove_unreferenced_vertices()
-    trimesh.repair.fill_holes(m)
     trimesh.repair.fix_winding(m)
     return m
 
