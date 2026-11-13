@@ -158,7 +158,7 @@ const cam = new THREE.PerspectiveCamera(38, 1, 0.5, 600);
 scene.add(new THREE.HemisphereLight(0xeef3ff, 0x2a2622, 1.0));
 const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(-20, 50, 32); sun.castShadow = true;
 { const r = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 820 ? 1024 : 4096; sun.shadow.mapSize.set(r, r); }      // a phone: 16 times less graphics memory
-Object.assign(sun.shadow.camera, { left: -58, right: 58, top: 58, bottom: -58, far: 220 }); scene.add(sun);       // the shadow box covers the whole table (it was lost inside the comment above, so the sun never lit the scene)
+Object.assign(sun.shadow.camera, { left: -58, right: 58, top: 58, bottom: -58, far: 220 }); sun.shadow.normalBias = 0.06; sun.shadow.bias = -0.0004; scene.add(sun);       // the shadow box covers the whole table; the bias stops a surface from shadowing itself (stripes across the figures)
 
 const board: THREE.Mesh<THREE.BufferGeometry, THREE.Material> = new THREE.Mesh(new THREE.PlaneGeometry(MW / S, MH / S), new THREE.MeshStandardMaterial({ map: null, roughness: 0.9 }));
 board.rotation.x = -Math.PI / 2; board.receiveShadow = true; scene.add(board);
@@ -219,7 +219,7 @@ const tintData = new Uint8Array(256 * 4), tintTex = new THREE.DataTexture(tintDa
 const relPixels = (im: HTMLImageElement) => { let c = relArt.get(im); if (!c) { c = document.createElement('canvas'); c.width = boardCv.width; c.height = boardCv.height; c.getContext('2d')!.drawImage(im, 0, 0, c.width, c.height); if (keepIfInked(im, c)) relArt.set(im, c); } return c; };
 const show3d = () => map3d && !!REL;
 /** Phones and small tablets: the 3D map is drawn lighter (fewer pixels, no shadows, a coarser ground, fewer trees). */
-const fullRatio = Math.min(2, devicePixelRatio);
+const fullRatio = PHONE ? Math.min(2, devicePixelRatio) : Math.max(1.5, Math.min(2, devicePixelRatio));      // a desktop draws at least 1.5x and the browser scales it down: smooth edges on a standard screen
 function tuneForMap() { const lite = PHONE && show3d(); renderer.setPixelRatio(lite ? Math.min(1.3, devicePixelRatio) : fullRatio); sun.castShadow = !lite; }
 function applyMap3d() {
   const on = show3d(); tuneForMap(); diorama.visible = on; table.position.y = on ? -1.42 : -0.02; if (REL) REL.props.visible = on;
@@ -736,24 +736,25 @@ let tgt: Tgt | null = null, infoOpen = false, infoFor = '', tgtMode = '';
 const abtn = (icon: string, label: string, fn: () => void, cls = '', dis = false, title = '') => btn(`${ico(icon)}<span>${esc(label)}</span>`, fn, 'ab ' + cls, dis, title || label);
 /** The selected chit: a slim bar with its picture, a one-line instruction, an info toggle and the actions as icon buttons. */
 function chitBar(c: E.Chit): string {
-  if (!mine(c.side)) return `<div class="c-dispatch chitbar ${infoOpen ? 'open' : ''}"><div class="cbhead"><span class="cbimg">${chitPic(c)}</span><div class="cbt"><b>${esc(c.name)}</b><small>The other side's piece: you can only look</small></div><button class="ico" data-ui="${reg(() => { selChit = null; })}" aria-label="Put away" title="Put away">${ico('close')}</button></div><div class="inspect slimcard">${ruleHtml(VOL.ruleKey(c.kind), E.isEvent(c))}</div></div>`;
-  const tg = tgt, body = chitPanel(c), [kind] = RULE[VOL.ruleKey(c.kind)] ?? [c.kind];
+  if (!mine(c.side)) return `<div class="c-dispatch chitbar ${infoOpen ? 'open' : ''}"><div class="cbhead"><span class="cbimg">${chitPic(c)}</span><div class="cbt"><b>${esc(c.name)}</b><small>The other side's piece: you can only look</small></div><button class="ico" data-ui="${reg(() => { selChit = null; })}" aria-label="Put away" title="Put away">${ico('close')}</button></div><div class="inspect slimcard">${ruleHtml(VOL.ruleKey(c.kind, c), E.isEvent(c))}</div></div>`;
+  const tg = tgt, body = chitPanel(c), [kind] = RULE[VOL.ruleKey(c.kind, c)] ?? [c.kind];
   const chips = tg?.chips.map((x) => `<button class="pc ${c.side}" data-do="${reg(x.fn)}" title="${esc(x.label)}">${x.img}<small>${esc(x.label)}</small></button>`).join('') ?? '';
   if (infoFor !== c.id) { infoFor = c.id; infoOpen = guide === 'full'; }      // each chit opens with its rules folded (short mode) or shown (full mode)
   return `<div class="c-dispatch chitbar ${infoOpen ? 'open' : ''}"><div class="cbhead"><span class="cbimg">${chitPic(c)}</span><div class="cbt"><b>${esc(c.name)}</b><small>${tg?.hint ? gx(esc(tg.hint), esc(kind)) : esc(kind)}</small></div>
     <button class="ico" data-ui="${reg(() => { infoOpen = !infoOpen; })}" aria-pressed="${infoOpen}" aria-label="What it does" title="What it does">${ico('info')}</button><button class="ico" data-ui="${reg(() => { selChit = null; })}" aria-label="Put away" title="Put away">${ico('close')}</button></div>
-    ${tg && tg.modes.length > 1 ? `<div class="modes" role="group" aria-label="What to do">${tg.modes.map((m) => `<button class="ico ${m.id === tgtMode ? 'on' : ''}" data-ui="${reg(() => { tgtMode = m.id; refresh(); })}" title="${esc(m.label)}" aria-label="${esc(m.label)}">${ico(m.icon)}<span>${esc(m.label)}</span></button>`).join('')}</div>` : ''}${infoOpen ? `<div class="inspect slimcard">${ruleHtml(VOL.ruleKey(c.kind), E.isEvent(c))}</div>` : ''}${chips ? `<div class="cbchips">${chips}</div>` : ''}${tg?.buttons.length || altOk(c) ? `<div class="row">${(tg?.buttons ?? []).map((b) => abtn(b.icon, b.label, b.fn, '', false, b.title)).join('')}${altOk(c) ? ubtn(`${ico('swap')}<span>Alternate use</span>`, () => { altPick = { chit: c.id, sel: [] }; }, 'ab', false, '4.21: spend the event to put two eliminated assets of your choice back in the cup') : ''}</div>` : ''}${iconify(body)}</div>`;
+    ${tg && tg.modes.length > 1 ? `<div class="modes" role="group" aria-label="What to do">${tg.modes.map((m) => `<button class="ico ${m.id === tgtMode ? 'on' : ''}" data-ui="${reg(() => { tgtMode = m.id; refresh(); })}" title="${esc(m.label)}" aria-label="${esc(m.label)}">${ico(m.icon)}<span>${esc(m.label)}</span></button>`).join('')}</div>` : ''}${infoOpen ? `<div class="inspect slimcard">${ruleHtml(VOL.ruleKey(c.kind, c), E.isEvent(c))}</div>` : ''}${chips ? `<div class="cbchips">${chips}</div>` : ''}${tg?.buttons.length || altOk(c) ? `<div class="row">${(tg?.buttons ?? []).map((b) => abtn(b.icon, b.label, b.fn, '', false, b.title)).join('')}${altOk(c) ? ubtn(`${ico('swap')}<span>Alternate use</span>`, () => { altPick = { chit: c.id, sel: [] }; }, 'ab', false, '4.21: spend the event to put two eliminated assets of your choice back in the cup') : ''}</div>` : ''}${iconify(body)}</div>`;
 }
 function chitPanel(c: E.Chit): string {
   const a = selArea, out: string[] = [];
   if (c.box !== 'available') return '<p class="hint">Only chits in the Available Box can be used.</p>';
+  if (g.phase === 'supply' && c.kind === 'air_mission' && VOL.id === 'bulge') return '<p class="hint">Air Supply (17.21): pick a cut-off area in the Supply check panel.</p>';
+  if (g.phase !== 'admin' && VOL.id === 'sicily' && c.kind === 'air_mission') return '<p class="hint">Air support: interdiction in the Admin Phase, ground support in a battle, air supply in the Supply Phase (use the panel), and dogfights against any of these (16.3).</p>';
+  if (g.phase !== 'admin' && VOL.id === 'golan73' && ['sam', 'event_ew', 'event_counterbattery', 'air_mission'].includes(c.kind)) return `<p class="hint">${c.kind === 'sam' ? 'SAMs answer Israeli air missions east of the barrier as they are flown (16.12).' : c.kind === 'air_mission' ? 'Close air support in a battle\'s set-up; interdiction and reconnaissance in the Admin Phase (16.31).' : 'Played in a battle\'s set-up as your one event (17.33, 17.34).'}</p>`;
   if (g.phase !== 'admin') return `<p class="hint">${E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission' ? 'This chit is assigned to a battle during the Combat Phase.' : c.kind === 'fuel' ? 'Fuel is spent automatically when a German unit moves more than 3 MP or strategic-moves.' : c.kind === 'sa_block' || c.kind === 'special_action_event' ? 'Special Actions are spent in battles (reinforce / retreat), Breakthrough phases and the Admin Phase.' : 'Events are played in the Admin Phase.'}</p>`;
   if (VOL.id !== 'bulge') return '';                                                              // the other volumes offer everything through the glowing targets and buttons
   if (c.kind.startsWith('replacement') || c.kind === 'event_arriving_regiment' || c.kind.startsWith('rebuild')) {
-    const el = g.units.filter((x) => E.eligibleForStep(c, x));                                       // blocks on the map light up; eliminated ones come back from the chips above
-    if (!el.length) out.push('<p class="hint">No reduced, supplied unit of the right class and Higher Echelon.</p>');
-    if (c.kind.startsWith('rebuild')) g.units.filter((x) => x.area == null && x.max === 1 && x.side === c.side && x.q[0] !== 'elite' && !x.garrison && (c.kind.endsWith('arm') === (x.cls === 'armor')) && x.str === 0).forEach((x) => out.push(a == null ? '<p class="hint">Select an objective area to return an eliminated unit.</p>' : btn(`Return ${esc(x.name)} to ${esc(areaName(a))}`, () => E.playRebuild(g, c.id, x.id, a))));
-  } else if (c.kind === 'event_bodenplatte') { out.push(btn(`Strike Allied air missions (${E.boxOf(g, 'allied', 'available').filter((x) => x.kind === 'air_mission').length} in the Available Box)`, () => E.playBodenplatte(g, c.id), 'primary')); }
+    if (!tgt || !(tgt.units.size + tgt.areas.size + tgt.pick.size + tgt.chips.length)) out.push('<p class="hint">No reduced, supplied unit of the right class and Higher Echelon (never the elite step)' + (c.kind.startsWith('rebuild') ? ', and no eliminated one-step unit to bring back' : '') + '.</p>');
+  }
   else if (c.kind === 'fuel') out.push('<p class="hint gx">Fuel is spent automatically when a German unit moves more than 3 MP or strategic-moves.</p>');
   return `<div class="row">${out.join('')}</div>`;
 }
@@ -885,8 +886,8 @@ function airPickHtml() {
   if (!airPick || airPick.step !== 'choose' || !g.battle) return '';
   const p = airPick;
   return `<div class="modal"><div class="sheet slim"><h3>${ico('air_mission')} Air Mission <button class="ico" data-ui="${reg(() => { airPick = null; })}" aria-label="Cancel">${ico('close')}</button></h3>
-    <p class="hint gx">Combat support (17.21): it is this battle's one event, and it can never take a step loss.</p>
-    <div class="row">${btn(`${ico('artillery')} Extra artillery`, () => { airPick = null; E.assign(g, g.battle!, p.id, 'arty'); }, 'primary', false, 'Fires like an artillery asset, outside the artillery limit')}${ubtn(`${ico('plus')} +2 to one unit`, () => { airPick = { ...p, step: 'unit' }; }, '', false, 'Then tap one of your blocks in this battle: +2 to its Success Number')}</div></div></div>`;
+    <p class="hint gx">${VOL.id === 'golan73' ? 'Close air support (16.31a): one per side (Israel may add a second, 16.22); it never takes a step loss and goes to the Used Box.' : VOL.id === 'sicily' ? 'Ground support (16.32): one per side, outside the artillery and battle-asset limits; it never takes a step loss and goes to the Used Box.' : 'Combat support (17.21): it is this battle\'s one event, and it can never take a step loss.'}</p>
+    <div class="row">${btn(`${ico('artillery')} Extra artillery`, () => { airPick = null; E.assign(g, g.battle!, p.id, 'arty'); }, 'primary', false, 'Fires like an artillery asset, outside the artillery limit')}${((n) => ubtn(`${ico('plus')} +${n} to one unit`, () => { airPick = { ...p, step: 'unit' }; }, '', false, `Then tap one of your blocks in this battle: +${n} to its Success Number`))(VOL.id === 'golan73' && p.side === 'syrian' ? 1 : 2)}</div></div></div>`;
 }
 /** 4.21: the chooser of the two eliminated assets an event brings back (the same sheet as the Special Action chooser). */
 let altPick: { chit: string; sel: string[] } | null = null;
@@ -974,7 +975,8 @@ function click(e: PointerEvent) {
   if (g.battle && !g.pendingBlow) {                                                                         // a battle is on the table: tapping a block makes it that side's point unit
     const b = g.battle, u = unit ? g.units.find((x) => x.id === unit) : null, { chit: tapped } = pick(e);
     { const fn = tgt?.units.get(tapped ?? unit ?? ''); if (fn && (b.stage === 'attFirst' || b.stage === 'loss')) return act(fn); }
-    if (b.stage === 'setup' && airPick?.step === 'unit') { const p = airPick; if (u && u.side === p.side && u.area === b.area && !u.garrison) { airPick = null; return act(() => E.assign(g, b, p.id, 'support', u.id)); } airPick = null; say('Tap one of your own blocks in this battle for the +2. Cancelled.'); return refresh(); }
+    if (b.stage === 'setup' && airPick?.step === 'unit') { const p = airPick; if (u && u.side === p.side && u.area === b.area && (!u.garrison || u.id.startsWith('F-'))) {   // Sicily Example 15C: the flanking asset may get the +2
+ airPick = null; return act(() => E.assign(g, b, p.id, 'support', u.id)); } airPick = null; say('Tap one of your own blocks in this battle for the +2. Cancelled.'); return refresh(); }
     if (b.stage === 'setup' && tapped) { const c = E.chit(g, tapped); if (mine(c.side)) act(() => E.unassign(g, b, tapped)); else say('Those are the other player\'s assets.'); return; }
     if (b.stage === 'setup' && u && seen(u) && mine(u.side) && !u.garrison && !(u.side === b.attacker && u.disorder)) act(() => E.setPoint(g, b, u.side, u.id));
     return;
@@ -1384,6 +1386,7 @@ function tapCard(id: string) {
 function playChitOn(c: E.Chit, area: number) {
   selArea = area;
   const panel = () => { selChit = c.id; refresh(); };
+  if (VOL.id !== 'bulge') { const t = VOL.targetsFor(() => g, c, { area: null, mode: tgtMode, setArea: () => {}, setMode: () => {}, face: (u) => unitPic(u), areaName }); const f = t?.areas.get(area); return f ? act(f) : panel(); }   // a drop does what tapping the glowing area does, with the volume's own rules
   switch (c.kind) {
     case 'event_release': return act(() => E.releaseUnit(g, c.id, area as 4 | 6));
     case 'air_mission': return act(() => E.playInterdiction(g, c.id, area));
@@ -1529,6 +1532,7 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
     if (sel != null) return { label: `Fight ${areaName(sel)}`, fn: fight(sel) };
     if (must.length && allowed() && mine(g.phasing)) { const at = lastFight != null ? center(lastFight) : null, next = at ? [...must].sort((x, y) => center(x).distanceTo(at) - center(y).distanceTo(at))[0] : must[0]; return { label: `Next battle: ${areaName(next)}`, fn: fight(next) }; }      // after a battle the button names the nearest one still to fight
   }
+  if (g.phase === 'admin' && VOL.id === 'sicily' && !g.battle && mine(g.phasing)) { const fl = E.sicily.flankBattles(g); if (fl.length) return { label: `Fight ${areaName(fl[0])}`, fn: () => { selArea = fl[0]; selUnit = null; battleFx = []; rollFx = []; E.startBattle(g, fl[0]); } }; }   // 17.22: the landing round, before the Admin Phase ends
   if (online.active && !online.both() && (g.phase === 'admin' || g.phase === 'reinforcement')) {            // both sides work in these steps: the other side says it is done, the Phasing Player ends the step
     const me = online.mySide(); if (!me) return null;
     if (me !== g.phasing) { const on = !!g.done?.includes(me); return { label: on ? 'Done · tap to undo' : 'Done', fn: () => act(() => E.setDone(g, me, !on)) }; }
@@ -1601,7 +1605,7 @@ function dockChips(): string {
     else if (all.length) c('Battles', all.length, false, () => { selArea = nextOf(all, selArea); lookAt(selArea!); });
   }
   if (g.phase === 'btMove' || g.phase === 'btCombat') { const n = E.saAvailable(g, g.phasing).length; if (n && mine(g.phasing)) c('Special Actions', n, false, null, 'Special Actions you can spend now'); }
-  if (VOL.id === 'bulge' && g.phase === 'supply' && g.supplyPending && mine(g.phasing) && !g.airSupply && E.boxOf(g, g.phasing, 'available').some((x) => x.kind === 'air_mission') && E.airSupplyAreas(g, g.phasing).length) c('Air supply available', null, true, null, '17.21: an Air Mission can supply one cut-off area (in the Supply check panel)');
+  if (VOL.id === 'bulge' && g.phase === 'supply' && g.supplyPending && mine('allied') && E.boxOf(g, 'allied', 'available').some((x) => x.kind === 'air_mission') && E.airSupplyAreas(g, 'allied').length) c('Air supply available', null, true, null, '17.21: each Air Mission can supply one cut-off area, in either Supply Phase (in the Supply check panel)');
   return out.length ? `<div class="dchips">${out.join('')}</div>` : '';
 }
 function undoBtn(): string {
@@ -1620,7 +1624,7 @@ let piecesBox: 'available' | 'cup' | 'used' | 'eliminated' = 'available', pieces
 const chitPic = (c: E.Chit) => (c.kind === 'sa_block' ? b3(chitImg(c), c.side) : `<img class="cb" alt="" draggable="false" src="${chitImg(c)}">`);
 const unitPic = (u: E.Unit) => (u.garrison ? `<img class="cb" alt="" draggable="false" src="${unitFace(u)}">` : b3(unitFace(u), sideOfUnit(u)));
 const pieceBtn = (c: E.Chit, f: () => void, on = false, dis = false) => `<button class="pc ${c.side} ${on ? 'on' : ''} ${c.box === 'available' && usableNow(c) ? 'live' : ''}" data-ui="${reg(f)}" ${dis ? 'disabled' : ''} title="${esc(c.name)}" aria-label="${esc(chitLabel(c))}">${chitPic(c)}</button>`;
-const ruleCard = (c: E.Chit) => { const [t] = RULE[VOL.ruleKey(c.kind)] ?? [c.kind, '']; return `<span class="big">${chitPic(c)}</span><div><h4>${esc(c.name)} <small>${esc(t)}</small></h4>${ruleHtml(VOL.ruleKey(c.kind), E.isEvent(c))}</div>`; };
+const ruleCard = (c: E.Chit) => { const [t] = RULE[VOL.ruleKey(c.kind, c)] ?? [c.kind, '']; return `<span class="big">${chitPic(c)}</span><div><h4>${esc(c.name)} <small>${esc(t)}</small></h4>${ruleHtml(VOL.ruleKey(c.kind, c), E.isEvent(c))}</div>`; };
 const seatedView = () => online.active && !online.both() && !!online.mySide();
 function piecesHtml() {
   const sd = piecesSide ?? viewSide(), seg = (h: string, cls = '') => `<span class="seg ${cls}">${h}</span>`;
@@ -1659,8 +1663,8 @@ function dispatch() {
   const c = selChit ? g.chits.find((x) => x.id === selChit) : null;
   if (c && g.phase === 'admin') return chitBar(c);
   if (g.phase === 'supply' && g.supplyPending && !rollView) {                                         // 9.4: who is cut off and what they need, then the roll
-    const list = E.supplyChecks(g), own = mine(g.phasing), air = E.boxOf(g, g.phasing, 'available').filter((x) => x.kind === 'air_mission'), as = own && air.length && !g.airSupply ? E.airSupplyAreas(g, g.phasing) : [];
-    const airRow = as.length ? `<div class="airsup"><b>${ico('air_mission')} Air supply (17.21)</b><span class="hint gx">Spend an Air Mission to supply one cut-off area until the next Supply Phase:</span><div class="row">${as.map((ar) => btn(esc(areaName(ar)), () => E.playAirSupply(g, air[0].id, ar))).join('')}</div></div>` : '';
+    const list = E.supplyChecks(g), own = mine(g.phasing), air = E.boxOf(g, 'allied', 'available').filter((x) => x.kind === 'air_mission'), as = mine('allied') && air.length ? E.airSupplyAreas(g, 'allied') : [];   // 17.21: any Supply Phase, one mission per area
+    const airRow = as.length ? `<div class="airsup"><b>${ico('air_mission')} Air supply (17.21)</b><span class="hint gx">Spend an Air Mission to supply one cut-off area (garrisons too) until the next Supply Phase:</span><div class="row">${as.map((ar) => btn(esc(areaName(ar)), () => E.playAirSupply(g, air[0].id, ar))).join('')}</div></div>` : '';
     const rows = list.map(({ unit: x, sn, rounds }) => `<button class="supl" data-ui="${reg(() => { if (x.area != null) { const c2 = center(x.area); goal = { t: new THREE.Vector3(c2.x, 0, c2.z), dist: Math.min(dist, 30), pitch, fast: true }; } })}" title="Show on the map">${unitPic(x)}<span><b>${esc(x.name)}</b><small>${esc(areaName(x.area!))} · ${E.quality(x)}${x.disorder ? ' · disordered' : ''}${rounds > 1 ? ' · two checks (14.93)' : ''}</small></span><b class="sn">needs ${sn} or less</b></button>`).join('');
     return `<div class="c-dispatch supply"><h3 class="${g.phasing}">Supply check</h3><p class="hint gx">${list.length ? `9.4: each cut-off ${nm(g.phasing)} unit rolls morale. Fail: disordered; already disordered: a step loss (green 8+, veteran 10: surrenders).` : `Every ${nm(g.phasing)} unit is in supply.`}</p>${airRow}
       <div class="row">${own ? `<span class="hint">${list.length ? 'Roll with the red button below.' : 'Nobody is cut off.'}</span>` : `<span class="hint">Waiting for the ${nm(g.phasing)} player to roll.</span>`}</div><div class="suplist">${rows}</div></div>`;
@@ -1674,7 +1678,7 @@ function dispatch() {
     const cs = E.boxOf(g, sd, 'used').filter((c) => E.isAsset(c)), pick = recoverSel[sd] ? cs.find((c) => c.id === recoverSel[sd]) : null, own = mine(sd);
     return `<h4 class="${sd}">${nm(sd)}</h4><div class="pcgrid">${cs.map((c) => pieceBtn(c, () => { recoverSel[sd] = recoverSel[sd] === c.id ? null : c.id; }, recoverSel[sd] === c.id, !own)).join('') || '<small>Nothing in the Used Box</small>'}</div>
       <div class="row">${btn(pick ? `Bring back ${esc(pick.name)}` : 'Choose an asset', () => { E.recoverAsset(g, sd, pick!.id); recoverSel[sd] = null; }, 'primary', !pick || !own)}${btn('None', () => E.recoverAsset(g, sd, null), '', !own)}</div>
-      ${pick ? `<details class="rdet"><summary><b>${esc(pick.name)}</b> · ${esc((RULE[VOL.ruleKey(pick.kind)] ?? [pick.kind])[0])} <span>What it does</span></summary>${ruleHtml(VOL.ruleKey(pick.kind), E.isEvent(pick))}</details>` : ''}`;
+      ${pick ? `<details class="rdet"><summary><b>${esc(pick.name)}</b> · ${esc((RULE[VOL.ruleKey(pick.kind, pick)] ?? [pick.kind])[0])} <span>What it does</span></summary>${ruleHtml(VOL.ruleKey(pick.kind, pick), E.isEvent(pick))}</details>` : ''}`;
   }).join('')}</div>`;
   const u = selUnit ? g.units.find((x) => x.id === selUnit) : null;
   if (u) {
@@ -1691,7 +1695,7 @@ function dispatch() {
     const noFuel = VOL.features.fuel && first(u.side) && g.opts.fuel && ['movement', 'strategic', 'btMove', 'reaction'].includes(g.phase) && mine(u.side) && !u.garrison && !E.boxOf(g, P1, 'available').some((x) => x.kind === 'fuel');
     const warns = (noFuel ? `<div class="warnbox">${ico('fuel')}<span><b>No fuel left</b>${gx('. German blocks may move at most 3 MP this turn and cannot use strategic movement (16.13).', ': 3 MP max, no strategic move.')}</span></div>` : '')
       + (u.interdict && mine(u.side) && ['movement', 'reaction', 'btMove', 'admin'].includes(g.phase) ? `<div class="warnbox bad">${ico('warn')}<span><b>Greif Interdict</b>${gx(' on this block. Moving it, building field works or taking a reserve marker triggers a morale check (+2). Fail: it may only stay or move one area (17.11).', ': moving triggers a morale check (+2).')}</span></div>` : '');
-    return `<div class="c-dispatch ${o ? 'previewing' : ''}">${warns}<h3 class="${u.side}">${esc(u.name)}</h3><div class="pipsrow">${pips(u)} <small>${u.garrison ? 'asset' : u.cls} · ${mv ? 'moving · ' : ''}${tags.join(' · ') || 'in order'}${hasLegend(VOL.id) ? ` <button class="linkbtn" data-ui="${reg(() => { legendOpen = true; legendShownAt = performance.now(); })}" title="What the markers on the pieces mean">Markers?</button>` : ''}</small></div>${moving}${seen(u) ? supLine : ''}${route}
+    return `<div class="c-dispatch ${o ? 'previewing' : ''}">${warns}<h3 class="${u.side}">${esc(u.name)}</h3><div class="pipsrow">${pips(u)} <small>${u.garrison ? 'asset' : u.cls} · ${mv ? 'moving · ' : ''}${tags.join(' · ') || 'in order'}${hasLegend(VOL.id) ? ` <button class="linkbtn" data-ui="${reg(() => { legendOpen = true; legendShownAt = performance.now(); })}" title="What the markers on the pieces mean">Markers?</button>` : ''}</small></div>${((k) => (k && RULE[k] ? `<details class="rdet"><summary><b>${esc(RULE[k][0])}</b> <span>What it does</span></summary>${ruleHtml(k)}</details>` : ''))(mine(u.side) || seen(u) ? VOL.unitRule(u) : null)}${moving}${seen(u) ? supLine : ''}${route}
       <div class="row">${mv && mine(u.side) ? btn('Stop here', () => { E.endMove(g); selUnit = null; }, 'primary', false, 'This block\'s move ends here') : ''}${!mv && mine(u.side) && ['movement', 'strategic', 'reaction', 'btMove'].includes(g.phase) && (skipNow().has(u.id) || canAct(u)) ? ubtn(skipNow().has(u.id) ? 'Skipped · undo' : 'Skip', () => { if (skipped.has(u.id)) skipped.delete(u.id); else { skipped.add(u.id); selUnit = null; } refresh(); }, '', false, 'Nothing to do for this unit in this step: no halo, left out of Can move') : ''}${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve', () => E.setReserve(g, u.id, false)) : btn('Reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u))) : ''}${fw ? btn('Fortify', () => VOL.fieldWorks(g, u.id)) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn('Activate (SA)', () => pickSA(u.side, u.ech, (sa) => E.activateBreakthrough(g, u.id, sa)), '', !E.saAvailable(g, u.side, u.ech).length) : ''}${E.peiperCan(g, u) ? btn(`${u.peiperFull ? ico('check') : ''}KG Peiper: full move (18.3)`, () => E.setPeiperFull(g, u.id, !u.peiperFull), u.peiperFull ? 'primary' : '', false, 'Once per game, up to turn 3: this exploitation move uses Peiper\'s full movement allowance instead of one area') : ''}</div></div>`;
   }
   return '';
@@ -1790,7 +1794,7 @@ function tray() {
 function cardTip() {
   const c = handInspect ? g.chits.find((x) => x.id === handInspect) : null, b = g.battle;
   if (!c || !b) return '<div class="cardtip"><span>Tap a card to read its rule.</span></div>';
-  const [t, d] = RULE[VOL.ruleKey(c.kind)] ?? [c.kind, ''], why = VOL.battleUse(g, b, c);
+  const [t, d] = RULE[VOL.ruleKey(c.kind, c)] ?? [c.kind, ''], why = VOL.battleUse(g, b, c);
   return `<div class="cardtip">${chitPic(c)}<div><b>${esc(c.name)} <small>${esc(t)}</small></b><span>${esc(d.split("\n")[0])}</span>${why ? `<em>Cannot join: ${esc(why)}</em>` : '<em class="ok">Can join this battle</em>'}</div></div>`;
 }
 let handAll = false;

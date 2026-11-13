@@ -38,6 +38,7 @@ export interface SicilyState {
   dropPending: boolean; airborneAreas: number[];               // 14.27a: airborne units still to place; areas just assaulted from the air
   navalShock: Record<string, string>; rangerFw: Record<string, string>;   // 16.21 / 16.22: per battle key, the asset that removes the field works
   sunrise: boolean; sunriseZoneA: number[];
+  airPrev?: Record<string, 0 | 1 | 2>; airNoMore?: number; airCancelled?: number[];   // 16.31: what an Air Supply changed (undone by a dogfight), no replacement after a dogfight
 }
 export const state = (g: Game) => g.vol as unknown as SicilyState;
 const need = (cond: unknown, msg: string) => { if (!cond) throw new Error(msg); };
@@ -211,7 +212,8 @@ const zonesAt = (g: Game, a: number) => (state(g).sunrise ? [state(g).sunriseZon
 export const zoneOk = (g: Game, u: Unit, a: number) => { const z = allowedZones(g, u); return !z || isBox(a) || zonesAt(g, a).some((x) => z.has(x)); };
 /** 14.61: release a division (and, for the British, one independent brigade with it) by a Special Action of its own army. */
 export function releaseDivision(g: Game, division: string, chitId?: string, brigade?: string) {
-  needAdmin(g); const V = state(g), us = g.units.filter((u) => u.side === 'allied' && u.division === division && regular(u)); need(us.length, 'no such division');
+  needAdmin(g); need(!['br_1st_cdn_arm', 'br_4th_arm', 'br_231st'].includes(division), 'a brigade is released only together with a British division (14.61)');
+  const V = state(g), us = g.units.filter((u) => u.side === 'allied' && u.division === division && regular(u)); need(us.length, 'no such division');
   need(!isReleased(g, us[0]), `${us[0].name} is already released`);
   const n = nation(us[0]); need(n === 'us' || n === 'british', 'an Allied division');
   if (brigade) { need(n === 'british' && ['br_1st_cdn_arm', 'br_4th_arm', 'br_231st'].includes(brigade) && !V.released.includes(brigade), 'one of the three independent British brigades, not yet released (14.61)'); }
@@ -230,7 +232,7 @@ const etnaFree = (g: Game): SSide | undefined => (contested(g, ETNA) ? undefined
 function moveCtx(g: Game): SMoveCtx {
   const count = (a: number): Record<SSide, number> => ({ allied: unitsIn(g, a, 'allied').length, axis: unitsIn(g, a, 'axis').length });
   return { units: count, controller: (a) => g.control[a] as SSide | undefined, blownBridges: new Set(g.blown), interdicted: (a) => interdictedBy(g, a) as SSide | undefined,
-    untriedOnly: (a) => unitsIn(g, a).length > 0 && unitsIn(g, a).every((u) => u.untried), etnaFree: etnaFree(g), etnaCtl: g.control[ETNA] as SSide | undefined, contestedAtStart: new Set(g.contestedAtMoveStart) };
+    untriedOnly: (a) => unitsIn(g, a).length > 0 && unitsIn(g, a).every((u) => u.untried), etnaFree: etnaFree(g), etnaCtl: g.control[ETNA] as SSide | undefined, contestedAtStart: new Set(g.contestedAtMoveStart), roadblock: (a) => (g.roadblocks[a] ?? unitsIn(g, a).find((u) => u.id.startsWith('DR-'))?.side) as SSide | undefined };
 }
 function sicilyReach(g: Game, u: Unit, one: boolean): Opt[] {
   const V = state(g), a = u.area!;
@@ -320,7 +322,7 @@ export function airDrop(g: Game, unitId: string, a: number | null) {
   const u = unit(g, unitId), V = state(g), t = airDropTargets(g, unitId);
   need(u.box === 'airborne_assault' && g.phase === 'combat' && g.phasing === 'allied' && !g.fought.length && !g.battle, 'airborne units drop at the start of the Allied Combat Phase (14.27a)');
   if (a == null || !t.length) { need(!t.length, 'that unit can drop somewhere'); u.box = undefined; eliminate(g, u); say(g, `${u.name} has no drop zone and is eliminated (14.27a)`, 'allied'); }
-  else { need(t.includes(a), 'not a legal drop zone'); u.box = undefined; u.area = a; u.moved = true; if (unitsIn(g, a, 'axis').length) { if (!g.riverAssault.includes(a)) g.riverAssault.push(a); V.airborneAreas.push(a); } updateControl(g, a); say(g, `${u.name} drops into ${nameOf(a)} (14.27a)`, 'allied'); }
+  else { need(t.includes(a), 'not a legal drop zone'); u.box = undefined; u.area = a; u.moved = true; if (unitsIn(g, a, 'axis').length) { if (!g.riverAssault.includes(a)) g.riverAssault.push(a); V.airborneAreas.push(a); } updateControl(g, a); if (V.flank[a]) relieveFlank(g, a); say(g, `${u.name} drops into ${nameOf(a)} (14.27a)`, 'allied'); }
   V.dropPending = g.units.some((x) => x.box === 'airborne_assault' && x.side === 'allied');
 }
 /** The drops done at once: each unit to its first drop zone, or lost. */
@@ -332,7 +334,7 @@ const seaRetreat = (g: Game, u: Unit, from: number) => u.side === 'allied' && !i
 function onPhase(g: Game, phase: string, when: 'start' | 'mid' | 'end') {
   const V = state(g);
   if (phase === 'deploy' && when === 'end') onDeployEnd(g);
-  if (when === 'start') { syncPortBoxes(g); V.portWorked = []; }
+  if (when === 'start') { syncPortBoxes(g); V.portWorked = []; if (phase === 'admin') V.airCancelled = []; }
   if (phase === 'movement' && when === 'start') { V.untriedActed = undefined; V.beachAssault = {}; V.evacMp = {}; }
   if (phase === 'strategic' && when === 'start') V.stratUnit = undefined;
   if (phase === 'movement' && when === 'end') {
@@ -436,12 +438,14 @@ function assault(g: Game, area: number, entered: { id: string; river: boolean; b
 }
 function canAssign(g: Game, b: Battle, side: Side, c: Chit, mode?: 'arty' | 'support'): string | null {
   const B = battleState(b), V = state(g), mine = b.assets[side].map((id) => chit(g, id)), att = side === b.attacker;
+  const own = unitsIn(g, b.area, side), dr = !own.some(regular) && own.find((u) => u.id.startsWith('DR-'));
+  if (dr) return isArty(c) && c.kind !== 'naval_support' && c.ech === dr.ech && !mine.some(isArty) ? null : 'a defended roadblock gets one artillery asset of its own army, nothing else (4.35)';
   if (c.kind === 'air_mission') {                                                                      // 16.3: regardless of supply; 16.32: one per side
     if (B.noAir[side]) return 'the dogfight settled the air over this battle (16.31)';
     if (airOf(b, side).length) return 'one air support asset per side in a battle (16.32)';
     void mode; return null;
   }
-  if (unitsIn(g, b.area, side).some((u) => u.unsupplied && regular(u)) || !inSupply(g, side, b.area)) return 'units that cannot trace supply may not have assets (9.34a)';
+  if (unitsIn(g, b.area, side).some((u) => u.unsupplied && regular(u)) || (unitsIn(g, b.area, side).some(regular) && !inSupply(g, side, b.area))) return 'units that cannot trace supply may not have assets (9.34a)';   // 17.22(iii): a flanking invasion alone needs no supply
   if (V.flank[b.area] && side === 'allied' && c.kind !== 'naval_support') return 'a flanking invasion gets only air and naval support (17.22)';
   if (c.kind === 'naval_support' && !sarea(b.area)?.coastal) return 'naval support only in coastal areas (16.21)';
   if (side === 'allied' && !c.strategic && c.nation && !unitsIn(g, b.area, 'allied').some((u) => nation(u) === c.nation && regular(u))) return `${c.nation === 'us' ? 'American' : 'British'} assets only assist their own army (16.2)`;
@@ -519,6 +523,7 @@ function adjustFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground', lis
 function navalShockFirst(g: Game, b: Battle) {
   const V = state(g), id = V.navalShock[`${b.area}`], def = other(b.attacker);
   if (id && b.assets[b.attacker].includes(id) && g.fieldWorks.includes(b.area) && (g.fwOwner[b.area] ?? def) === def) { g.fieldWorks = g.fieldWorks.filter((a) => a !== b.area); say(g, `${chit(g, id).name} removes the field works in ${nameOf(b.area)} (16.21)`, b.attacker); }
+  else if (id) delete V.navalShock[`${b.area}`];                                                     // no field works to remove: it fires as artillery
 }
 /** The field works go before the fire of the step the asset gave up (16.21 naval support first; 16.22 Rangers in the ground step, if the attack goes on and they survived). */
 function beforeFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground') {
@@ -526,6 +531,7 @@ function beforeFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground') {
   // the naval asset's bombardment is the first act of the battle (beforeBegin); the Rangers act in the ground step
   for (const [id, rule] of (kind === 'arty' ? [] : [[V.rangerFw[key], '16.22']]) as [string | undefined, string][]) {
     if (id && b.assets[side].includes(id) && g.fieldWorks.includes(b.area) && (g.fwOwner[b.area] ?? def) === def) { g.fieldWorks = g.fieldWorks.filter((a) => a !== b.area); say(g, `${chit(g, id).name} removes the field works in ${nameOf(b.area)} (${rule})`, side); }
+    else if (id) delete V.rangerFw[key];                                                              // nothing left to remove: it rolls as usual
   }
 }
 /** 16.21 Shock and Awe: a committed naval support asset of the attacker removes the defending field works instead of firing. */
@@ -567,24 +573,25 @@ const used = (c: Chit) => { c.box = 'used'; c.area = undefined; };
 const gone = (c: Chit) => { c.box = 'eliminated'; c.area = undefined; };
 /* ---------- air support in the Admin and Supply Phases (16.33, 16.34, 16.31) ---------- */
 export function airInterdiction(g: Game, chitId: string, a: number) {
-  needAdmin(g); const c = avail(g, chitId, ['air_mission']); need(!isBox(a) && !g.interdicted[a], 'a land area not already interdicted');
+  needAdmin(g); const c = avail(g, chitId, ['air_mission']); need(!isBox(a) && !g.interdicted[a], 'a land area not already interdicted'); need(!state(g).airCancelled?.includes(a), 'the dogfight cancelled the interdiction here: no replacement (16.31)');
   c.box = 'map'; c.area = a; c.mission = 'interdiction'; g.interdicted[a] = c.id; say(g, `Air interdiction over ${nameOf(a)} (16.33)`, c.side);
 }
 export function dogfightInterdiction(g: Game, chitId: string, a: number) {
   needAdmin(g); const c = avail(g, chitId, ['air_mission']), id = g.interdicted[a]; need(id && chit(g, id).side !== c.side, 'no enemy interdiction there');
-  const t = chit(g, id!); used(t); t.mission = undefined; delete g.interdicted[a]; used(c); say(g, `Dogfight: the interdiction over ${nameOf(a)} is cancelled (16.31)`, c.side);
+  const t = chit(g, id!); used(t); t.mission = undefined; delete g.interdicted[a]; (state(g).airCancelled ??= []).push(a); used(c); say(g, `Dogfight: the interdiction over ${nameOf(a)} is cancelled (16.31)`, c.side);
 }
 export function airSupply(g: Game, chitId: string, a: number) {
   need(g.phase === 'supply', 'in the Supply Phase'); const c = avail(g, chitId, ['air_mission']);
   need(unitsIn(g, a, c.side).some((u) => u.unsupplied), 'one of your unsupplied areas');
-  need(!g.airSupply, 'one Air Supply mission at a time');
+  need(!g.airSupply, 'one Air Supply mission at a time'); need(state(g).airNoMore !== g.turn * 10 + (g.phasing === 'allied' ? 1 : 2), 'the dogfight cancelled the Air Supply mission: no replacement this Supply Phase (16.31)');
   c.box = 'map'; c.area = a; c.mission = 'supply'; g.airSupply = { area: a, side: c.side, id: c.id, stamp: g.turn };
-  if (c.side === g.phasing) for (const u of unitsIn(g, a, c.side)) if (u.disorder) u.disorder = u.disorder === 2 ? 0 : 2;   // 16.34 (2): the marker stays, but no morale check (supplyChecks) and the 9.35 adjustment is allowed
+  const V = state(g); V.airPrev = {}; for (const u of unitsIn(g, a, c.side)) if (u.unsupplied && u.disorder) { V.airPrev[u.id] = u.disorder; u.disorder = u.disorder === 2 ? 0 : 2; }   // either player's mission; supplied units were already adjusted   // 16.34 (2): the marker stays, but no morale check (supplyChecks) and the 9.35 adjustment is allowed
   say(g, `Air supply over ${nameOf(a)} (16.34)`, c.side);
 }
 export function dogfightAirSupply(g: Game, chitId: string) {
   need(g.phase === 'supply' && !!g.airSupply, 'no Air Supply mission to cancel'); const c = avail(g, chitId, ['air_mission']); need(c.side !== g.airSupply!.side, 'your own mission');
-  const t = chit(g, g.airSupply!.id); for (const u of unitsIn(g, g.airSupply!.area, t.side)) u.unsupplied = !unitSupply(g, u);
+  const t = chit(g, g.airSupply!.id), V = state(g); for (const u of unitsIn(g, g.airSupply!.area, t.side)) if (V.airPrev?.[u.id] != null) u.disorder = V.airPrev[u.id];   // 16.31: undo the recovery; the unsupplied marker never came off
+  V.airPrev = undefined; V.airNoMore = g.turn * 10 + (g.phasing === 'allied' ? 1 : 2);
   used(t); t.mission = undefined; g.airSupply = null; used(c); say(g, 'Dogfight: the Air Supply mission is cancelled (16.31)', c.side);
 }
 /* ---------- ports (14.51) ---------- */
@@ -607,7 +614,7 @@ export function playPatton(g: Game, chitId: string) { needAdmin(g); const c = av
 export function playTacticalExtract(g: Game, chitId: string) { needAdmin(g); const c = avail(g, chitId, ['event_tactical_extract']); gone(c); state(g).extract = true; say(g, 'Axis Tactical Extract: this Movement Phase German units may move out of contested areas towards Messina (17.12)', 'axis'); }
 /** 17.21b-c: Italian morale fades one level; the Axis, then the Allies, pick the Italian assets eliminated from the Available Box. */
 export function playFadingMorale(g: Game, chitId: string) {
-  needAdmin(g); const c = avail(g, chitId, ['event_fading_morale']), V = state(g); gone(c); V.morale = Math.min(3, V.morale + 1);
+  needAdmin(g); const V = state(g); need(!V.moralePick || !Object.values(V.moralePick).some((n) => n > 0), 'first pick the Italian assets of the last Fading Italian Morale (17.21c)'); const c = avail(g, chitId, ['event_fading_morale']); gone(c); V.morale = Math.min(3, V.morale + 1);
   const n = V.morale === 1 ? { axis: 1, allied: 0 } : V.morale === 2 ? { axis: 1, allied: 1 } : { axis: 2, allied: 2 };
   const pool = () => g.chits.filter((x) => x.side === 'axis' && x.nation === 'italian' && x.box === 'available' && x.kind !== 'command_staff' && (isArty(x) || isBattleAsset(x)));
   V.moralePick = { axis: Math.min(n.axis, pool().length), allied: Math.min(n.allied, Math.max(0, pool().length - n.axis)) };
@@ -636,6 +643,8 @@ export function playFlanking(g: Game, chitId: string, a: number) {
 function relieveFlank(g: Game, a: number) { const V = state(g), id = V.flank[a]; if (!id) return; const c = chit(g, id); used(c); g.units = g.units.filter((u) => u.id !== `F-${id}`); delete V.flank[a]; say(g, `${c.name} is relieved and goes to the Used Box (17.22)`, 'allied'); }
 /** A battle may open in the Allied Admin Phase where a flanking invasion just landed on defenders (17.22). */
 const battleAllowed = (g: Game, a: number) => g.phase === 'admin' && g.phasing === 'allied' && state(g).flankTurn === g.turn && !!state(g).flank[a] && g.units.some((u) => u.id === `F-${state(g).flank[a]}` && u.area === a);   // 17.22(i): only the round of the landing
+/** 17.22: the flanking invasion battles still to fight in this Admin Phase. */
+export const flankBattles = (g: Game) => Object.keys(state(g).flank).map(Number).filter((a) => battleAllowed(g, a) && contested(g, a) && !g.fought.includes(a) && g.battle?.area !== a);
 /* ---------- 17.11 Patton: a US single-use Special Action costs two events ---------- */
 function saFilter(g: Game, _side: Side, list: Chit[], ech?: string) {
   if (!state(g).patton) return list;

@@ -23,7 +23,8 @@ export interface SMoveCtx {
   untriedOnly?: (a: number) => boolean;                        // 14.42: the area holds only untried Italian units
   etnaFree?: SSide;                                            // 14.1: the side that controls an uncontested Mount Etna
   etnaCtl?: SSide;                                             // 14.1: the side that controls Mount Etna, contested or not
-  contestedAtStart?: Set<number>;                              // 17.12: areas already contested when the phase began
+  contestedAtStart?: Set<number>;
+  roadblock?: (a: number) => SSide | undefined;                  // 4.34 / 4.35: whose roadblock (marker or defended) is there                              // 17.12: areas already contested when the phase began
 }
 export interface SReach { area: number; cost: number; path: number[]; mustStop: boolean }
 
@@ -49,7 +50,7 @@ export function reachable(u: SMoveUnit, ctx: SMoveCtx): SReach[] {
       if (u.allowed && !zonesOf(to).some((z) => u.allowed!.has(z))) continue;                        // 14.41: outside the army's zones
       if (u.untried && enemyThere) continue;                                                           // 15.3a
       if (startContested && atStart && u.extract) {                                                    // 17.12: out of a contested area into an enemy-controlled or contested one, not away from Messina
-        if (!(contestedTo || (ctx.controller?.(to) === enemy && !enemyThere)) || distMessina(to) > distMessina(from)) continue;
+        if (!((contestedTo && ctx.contestedAtStart?.has(to)) || (ctx.controller?.(to) === enemy && !enemyThere)) || distMessina(to) > distMessina(from)) continue;   // not newly contested
       } else if (startContested && (enemyThere || (atStart && (contestedTo || ctx.controller?.(to) === enemy)))) continue;   // 5.34
       let all = false;
       if (c.restricted) {                                                                              // 14.1
@@ -62,12 +63,13 @@ export function reachable(u: SMoveUnit, ctx: SMoveCtx): SReach[] {
       if (atStart && startContested) step += 1;
       if (ctx.interdicted?.(to) === enemy) step += 1;                                                  // 16.33: to enter and to leave
       if (ctx.interdicted?.(from) === enemy) step += 1;
+      const rb = ctx.roadblock?.(to) === enemy; if (rb) step += 1;                                  // 4.34: +1 MP and stop
       let cost = all ? allowance : cur.cost + step;
       if (u.motorized && enemyThere && cost > 3 && !first) continue;                                   // 15.1: into a contested area it moves as infantry
       if (cost > allowance && !first) continue;                                                        // 5.33 only a one-area move may exceed the allowance
       if (cost > allowance) cost = allowance;
       const old = best.get(to); if (old && old.cost <= cost) continue;
-      best.set(to, { area: to, cost, path: [...cur.path, to], mustStop: enemyThere });
+      best.set(to, { area: to, cost, path: [...cur.path, to], mustStop: enemyThere || rb });
       todo.push(to);
     }
   }

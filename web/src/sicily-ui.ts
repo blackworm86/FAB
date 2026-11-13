@@ -38,6 +38,8 @@ export function sicilyTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): T
       { id: 'blow', icon: 'xbold', label: 'Blow a bridge (4.31)', apply: () => pair((x, f, n) => E.blowBridges(x, id, f, [n]), 'Tap the area the engineer works from, then the bridge to blow') },
       { id: 'repair', icon: 'engineer', label: 'Repair a bridge (4.32)', apply: () => pair((x, f, n) => E.repairBridge(x, id, f, n), 'Tap the area the engineer works from, then the bridge to repair') },
       { id: 'fw', icon: 'gear', label: 'Field works (4.33)', apply: () => single((x, ar) => E.fieldWorksFor(x, id, ar), 'Tap a glowing area to build field works') },
+      { id: 'rb', icon: 'flag', label: 'Roadblock (4.34)', apply: () => single((x, ar) => E.roadblock(x, id, ar, false), 'Tap a glowing area for the roadblock') },
+      { id: 'drb', icon: 'engineer', label: 'Defended roadblock (4.35)', apply: () => single((x, ar) => E.roadblock(x, id, ar, true), 'Tap a glowing area: the engineer stands there as a defended roadblock') },
       { id: 'port', icon: 'wave', label: side === 'axis' ? 'Damage a port (14.51)' : 'Repair a port (14.51)', apply: () => { for (const p of PORTS) if (works(g, (x) => S.portWork(x, id, p))) t.buttons.push({ icon: 'wave', label: `${side === 'axis' ? 'Damage' : 'Repair'} ${PORT_NAME[p]}`, fn: run((x) => S.portWork(x, id, p)) }); t.hint = t.buttons.length ? 'One damage level per Admin Phase; the port must be yours, supplied and uncontested' : 'No port can be worked on now (yours, supplied, uncontested; the Allies need a unit of the right army there)'; } },
     ]); break;
     case 'air_mission': modes([
@@ -46,8 +48,8 @@ export function sicilyTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): T
     ]); break;
     case 'event_army_release': t.buttons.push({ icon: 'next', label: 'Release the 7th Army', fn: run((x) => S.playArmyRelease(x, id)), title: '17.23: every American division may leave its original zones (never zone B)' }); t.hint = 'US 7th Army Release'; break;
     case 'event_patton_slap': t.buttons.push({ icon: 'flag', label: 'Play the event', fn: run((x) => S.playPatton(x, id)), title: '17.11: from now on a US single-use Special Action costs two events' }); t.hint = 'Patton Soldier Slap'; break;
-    case 'event_tactical_extract': t.buttons.push({ icon: 'next', label: 'Play the event', fn: run((x) => S.playTacticalExtract(x, id)), title: '17.12: this Movement Phase German units may leave contested areas towards Messina; they end recovering' }); t.hint = 'Axis Tactical Extract'; break;
-    case 'event_fading_morale': t.buttons.push({ icon: 'warn', label: 'Italian morale fades', fn: run((x) => S.playFadingMorale(x, id)), title: '17.21: one level worse; Italian assets are eliminated and the Italian units check morale in every battle' }); t.hint = `Fading Italian Morale (now level ${S.state(g).morale})`; break;
+    case 'event_tactical_extract': t.buttons.push({ icon: 'next', label: 'Play the event', fn: run((x) => S.playTacticalExtract(x, id)), title: '17.12: this Movement Phase German units may leave contested areas towards Messina; they end recovering' }); t.hint = g.phasing === 'axis' ? 'Axis Tactical Extract' : 'Played now it lasts only for the Allied Movement Phase: keep it for your own Admin Phase'; break;
+    case 'event_fading_morale': if (works(g, (x) => S.playFadingMorale(x, id))) { t.buttons.push({ icon: 'warn', label: 'Italian morale fades', fn: run((x) => S.playFadingMorale(x, id)), title: '17.21: one level worse; Italian assets are eliminated and the Italian units check morale in every battle' }); t.hint = `Fading Italian Morale (now level ${S.state(g).morale})`; } else t.hint = 'First pick the Italian assets of the last Fading Italian Morale'; break;
     case 'infantry_asset': if (!c.flank) return null; single((x, ar) => S.playFlanking(x, id, ar), 'Tap an Axis-held coastal area within two areas of your units on the coast: the asset lands there'); break;
     case 'replacement_inf': case 'replacement_arm': units((x, uid) => E.playReplacement(x, id, uid), 'Tap a glowing block to add a non-elite step'); break;
     case 'sa_block': case 'special_action_event': {
@@ -56,6 +58,7 @@ export function sicilyTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): T
         { id: 'repl', icon: 'infantry_asset', label: 'Quality replacement (8.26): one step', apply: () => units((x, uid) => E.qualityReplacement(x, uid, id), 'Tap a glowing block to add a step') },
       ];
       if (side === 'allied') list.push({ id: 'release', icon: 'next', label: 'Release a division (14.61)', apply: () => units((x, uid) => { const u = x.units.find((v) => v.id === uid)!; S.releaseDivision(x, u.division!, id); }, 'Tap a block of the division to release from its army boundaries') });
+      if (side === 'allied') for (const br of ['br_1st_cdn_arm', 'br_4th_arm', 'br_231st'].filter((d) => !S.state(g).released.includes(d) && g.units.some((u) => u.division === d))) list.push({ id: `rel-${br}`, icon: 'next', label: `Release a British division with the ${g.units.find((u) => u.division === br)!.name} (14.61)`, apply: () => units((x, uid) => { const u = x.units.find((v) => v.id === uid)!; S.releaseDivision(x, u.division!, id, br); }, 'Tap a block of the British division to release; the brigade goes with it') });
       modes(list); break;
     }
     case 'command_staff': modes([
@@ -111,7 +114,7 @@ export function sicilyPanel(g: Game, ctx: PanelCtx): string {
     for (const sd of E.sidesOf(g)) {
       if (!ctx.mine(sd)) continue;
       const enemyAir = E.airOf(b, E.other(sd)), mine = g.chits.find((x) => x.kind === 'air_mission' && x.side === sd && x.box === 'available');
-      if (enemyAir.length && mine && !S.battleState(b).noAir[sd]) out.push(`<div class="volpanel"><b>${ctx.ico('air_mission')} Dogfight (16.31)</b><span>${nm(sd)}: cancel the enemy air support over this battle with your own ${esc(mine.name)}; both are used, and neither side flies more here.</span><div class="row">${ctx.btn('Dogfight', () => S.dogfight(live(), live().battle!, mine.id), 'primary')}</div></div>`);
+      if (enemyAir.length && mine && !S.battleState(b).noAir[sd] && !E.airOf(b, sd).length) out.push(`<div class="volpanel"><b>${ctx.ico('air_mission')} Dogfight (16.31)</b><span>${nm(sd)}: cancel the enemy air support over this battle with your own ${esc(mine.name)}; both are used, and neither side flies more here.</span><div class="row">${ctx.btn('Dogfight', () => S.dogfight(live(), live().battle!, mine.id), 'primary')}</div></div>`);
     }
     if (ctx.mine(b.attacker) && g.fieldWorks.includes(b.area)) {
       const key = `${b.area}`, nav = b.assets[b.attacker].map((id) => E.chit(g, id)).filter((x) => x.kind === 'naval_support'), rng = b.assets[b.attacker].map((id) => E.chit(g, id)).filter((x) => x.subtype === 'ranger' || x.subtype === 'commando');
@@ -120,10 +123,11 @@ export function sicilyPanel(g: Game, ctx: PanelCtx): string {
     }
     if (S.battleState(b).flank) out.push(`<div class="volpanel"><small>A flanking invasion: the Allies may commit only air and naval support (17.22).</small></div>`);
   }
-  if (g.phase === 'supply' && ctx.mine(g.phasing)) {
-    const air = g.chits.find((x) => x.kind === 'air_mission' && x.side === g.phasing && x.box === 'available');
-    const need = [...new Set(g.units.filter((u) => u.side === g.phasing && u.area != null && u.unsupplied && !S.isBox(u.area)).map((u) => u.area!))];
-    if (air && need.length && !g.airSupply) out.push(`<div class="volpanel"><b>${ctx.ico('air_mission')} Air supply (16.34)</b><span>One unsupplied area gets no morale checks this Supply Phase and its units may recover.</span><div class="row">${ctx.ubtn('Choose the area', () => ctx.pickArea('Air supply: tap the area', need, (a) => S.airSupply(live(), air.id, a)), 'primary')}</div></div>`);
+  if (g.phase === 'supply' && !g.airSupply) for (const sd of E.sidesOf(g)) {                       // 16.34: either player, in any Supply Phase
+    if (!ctx.mine(sd)) continue;
+    const air = g.chits.find((x) => x.kind === 'air_mission' && x.side === sd && x.box === 'available');
+    const need = [...new Set(g.units.filter((u) => u.side === sd && u.area != null && u.unsupplied && !S.isBox(u.area)).map((u) => u.area!))];
+    if (air && need.length) out.push(`<div class="volpanel"><b>${ctx.ico('air_mission')} ${esc(nm(sd))} air supply (16.34)</b><span>One unsupplied area gets no morale checks this Supply Phase and its units may recover.</span><div class="row">${ctx.ubtn('Choose the area', () => ctx.pickArea('Air supply: tap the area', need, (a) => S.airSupply(live(), air.id, a)), 'primary')}</div></div>`);
   }
   if (g.phase === 'supply' && g.airSupply && ctx.mine(E.other(g.airSupply.side))) {
     const air = g.chits.find((x) => x.kind === 'air_mission' && x.side !== g.airSupply!.side && x.box === 'available');
