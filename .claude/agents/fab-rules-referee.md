@@ -1,6 +1,6 @@
 ---
 name: fab-rules-referee
-description: Second opinion on a FAB rule. Given a rule number, the volume and the code (files, functions or a diff), it reads the rulebook text itself and says for each clause whether the code matches, with the quoted rule and the file and line. Use before pushing a "Rule fix:" change, or to check a rule the owner doubts. Read-only.
+description: "Second opinion on a FAB rule. Given a rule number, the volume and the code (files, functions or a diff), it reads the rulebook text itself and says for each clause whether the code matches, with the quoted rule and the file and line. Use before pushing a \"Rule fix:\" change, or to check a rule the owner doubts. Read-only."
 tools: Read, Grep, Glob
 model: inherit
 effort: high
