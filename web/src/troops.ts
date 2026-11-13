@@ -3,6 +3,7 @@
 // layout places it, given the figure's footprint. Figures come from tools/pezzi3d (strumenti/separa_figure.py); docs/ASSETS-3D.md.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 export type Troop = { figs: THREE.Object3D[]; size: THREE.Vector3 };
 type Index = { tipi: Record<string, { figure: string[]; veicolo: boolean }>; blocchi: Record<string, string> };
@@ -27,7 +28,8 @@ export async function loadTroops(vol: string, base = './'): Promise<boolean> {
   await Promise.all(Object.entries(idx.tipi).map(async ([tipo, t]) => {
     const own = cfg[tipo], files = own?.scelta != null && t.figure[own.scelta] ? [t.figure[own.scelta]] : t.figure;
     const figs = await Promise.all(files.map((f) => loader.loadAsync(`${base}pezzi/${f}`).then((gl) => {
-      gl.scene.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { o.castShadow = true; o.userData.shared = true; for (const mt of ([] as THREE.Material[]).concat(m.material)) mt.side = THREE.DoubleSide; } });   // double-sided: a hole left in a model shows its back, not the ground   // shared by every copy: never disposed with the board
+      gl.scene.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { o.castShadow = true; o.userData.shared = true; for (const mt of ([] as THREE.Material[]).concat(m.material)) mt.side = THREE.DoubleSide;
+        m.geometry = toCreasedNormals(m.geometry, THREE.MathUtils.degToRad(50)); } });      // the files carry no normals, so every triangle was shaded flat (visible polygon edges): smooth shading, with a crease where the surface turns more than 50°   // double-sided: a hole left in a model shows its back, not the ground   // shared by every copy: never disposed with the board
       const k = SCALE * (t.veicolo ? 1 : INFANTRY), c = bodyCentre(gl.scene), root = new THREE.Group();
       const o = own?.figure?.[f] ?? {}, turn = new THREE.Group();
       gl.scene.scale.setScalar(k); gl.scene.position.set(-c.x * k, 0, -c.z * k); turn.add(gl.scene);         // the body (not a gun barrel or a rifle) sits on the origin
