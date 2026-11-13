@@ -10,11 +10,26 @@ import { GOLAN_PICTURES } from './golan-chit-pictures';
 type PicName = keyof typeof GOLAN_PICTURES;
 const PIC: Partial<Record<PicName, string>> = {};
 export async function loadGolanChitArt(base = './golan73/chit/') {
-  const uri = (b: Blob) => new Promise<string>((ok, bad) => { const r = new FileReader(); r.onload = () => ok(r.result as string); r.onerror = () => bad(r.error); r.readAsDataURL(b); });
-  await Promise.all((Object.keys(GOLAN_PICTURES) as PicName[]).map(async (n) => { const r = await fetch(`${base}${n}.png`); if (r.ok) PIC[n] = await uri(await r.blob()); }));
+  const uri = (b: Blob) =>
+    new Promise<string>((ok, bad) => {
+      const r = new FileReader();
+      r.onload = () => ok(r.result as string);
+      r.onerror = () => bad(r.error);
+      r.readAsDataURL(b);
+    });
+  await Promise.all(
+    (Object.keys(GOLAN_PICTURES) as PicName[]).map(async (n) => {
+      const r = await fetch(`${base}${n}.png`);
+      if (r.ok) PIC[n] = await uri(await r.blob());
+    }),
+  );
 }
 /** A printed picture in its place on the 160-unit chit. */
-const picture = (n: PicName) => { const h = PIC[n], [x, y, w, hh] = GOLAN_PICTURES[n]; return h ? `<image href="${h}" x="${x}" y="${y}" width="${w}" height="${hh}" preserveAspectRatio="none"/>` : ''; };
+const picture = (n: PicName) => {
+  const h = PIC[n],
+    [x, y, w, hh] = GOLAN_PICTURES[n];
+  return h ? `<image href="${h}" x="${x}" y="${y}" width="${w}" height="${hh}" preserveAspectRatio="none"/>` : '';
+};
 
 const { txt, open, flat, panel, turn, square, star, MK, wrap, QDOT, INK, CX, CY } = CHIT_KIT;
 export type GSide = 'israeli' | 'syrian';
@@ -26,102 +41,218 @@ const CREAM: Record<GSide, string> = { israeli: '#f3f0e2', syrian: '#f8efc8' };
 /** Printed colours (sampled from the counters): the plain asset ground, the event panel inside its white line, the Syrian unit boxes. */
 const GROUND: Record<GSide, string> = { israeli: '#d3c598', syrian: '#dba43f' };
 const EVENT: Record<GSide, string> = { israeli: '#b6b188', syrian: '#dec046' };
-const SY_BOX = '#f7f7c8', SY_CDO = '#f7d653';
+const SY_BOX = '#f7f7c8',
+  SY_CDO = '#f7d653';
 export const ECH_GOLAN: Record<string, string> = { is_northern_command: CREAM.israeli, sy_golan_front: CREAM.syrian };
 
 /* ---------- emblems and pictures, all vector ---------- */
-const tri = (x: number, y: number, r: number, up: boolean) => { const s = up ? -1 : 1; return `M${x} ${y + s * r}L${(x + r * 0.866).toFixed(1)} ${(y - s * r / 2).toFixed(1)}L${(x - r * 0.866).toFixed(1)} ${(y - s * r / 2).toFixed(1)}Z`; };
+const tri = (x: number, y: number, r: number, up: boolean) => {
+  const s = up ? -1 : 1;
+  return `M${x} ${y + s * r}L${(x + r * 0.866).toFixed(1)} ${(y - (s * r) / 2).toFixed(1)}L${(x - r * 0.866).toFixed(1)} ${(y - (s * r) / 2).toFixed(1)}Z`;
+};
 /** Star of David (Israel), drawn as two outlined triangles. */
-export const davidStar = (x: number, y: number, r: number, col = '#fff', w = r * 0.16) => `<path d="${tri(x, y, r, true)}${tri(x, y, r, false)}" fill="none" stroke="${col}" stroke-width="${w.toFixed(1)}" stroke-linejoin="miter"/>`;
+export const davidStar = (x: number, y: number, r: number, col = '#fff', w = r * 0.16) =>
+  `<path d="${tri(x, y, r, true)}${tri(x, y, r, false)}" fill="none" stroke="${col}" stroke-width="${w.toFixed(1)}" stroke-linejoin="miter"/>`;
 /** Crescent and star (the Syrian emblem on the Golan counters). */
-export const crescent = (x: number, y: number, r: number, col = '#fff', bg = '#3d5a2c') => `<circle cx="${x}" cy="${y}" r="${r}" fill="${col}"/><circle cx="${x + r * 0.32}" cy="${y - r * 0.08}" r="${r * 0.82}" fill="${bg}"/>${star(x + r * 0.62, y - r * 0.05, r * 0.36, col)}`;
-const bolt = (x: number, y: number, s: number) => `<path d="M${x + 6 * s} ${y - 34 * s}L${x - 20 * s} ${y + 4 * s}H${x - 2 * s}L${x - 10 * s} ${y + 34 * s}L${x + 20 * s} ${y - 8 * s}H${x + 2 * s}Z" fill="#ffe14d" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>`;
-const tankPic = (x: number, y: number, s: number, f = '#2b2d2a') => `<g transform="translate(${x} ${y}) scale(${s})" fill="${f}"><rect x="-30" y="2" width="60" height="12" rx="6"/><path d="M-26 2L-20 -8H22L28 2Z"/><path d="M-10 -8V-16H12L14 -8Z"/><rect x="12" y="-15" width="30" height="4" rx="1.5"/></g>`;
-const gunPic = (x: number, y: number, s: number) => `<g transform="translate(${x} ${y}) scale(${s})" fill="#2b2d2a"><circle cx="-14" cy="10" r="8"/><circle cx="8" cy="10" r="8"/><path d="M-26 2H20L24 -4H-22Z"/><path d="M-4 -2L38 -26L41 -21L2 4Z"/><path d="M-22 2L-40 14L-36 17L-16 6Z"/></g>`;
-const jetPic = (x: number, y: number, s: number) => `<g transform="translate(${x} ${y}) scale(${s})" fill="#3a4a5e"><path d="M-40 0L30 -4L40 0L30 4Z"/><path d="M-6 -2L-22 -26H-14L10 -2ZM-6 2L-22 26H-14L10 2Z"/><path d="M-36 -1L-42 -12H-36L-28 -1ZM-36 1L-42 12H-36L-28 1Z"/></g>`;
-const samPic = (x: number, y: number, s: number) => `<g transform="translate(${x} ${y}) scale(${s})"><rect x="-34" y="10" width="68" height="10" rx="4" fill="#2b2d2a"/><path d="M-20 10L-8 -2H8L14 10Z" fill="#2b2d2a"/>${[-14, 0, 14].map((d) => `<g transform="translate(${d} -2) rotate(-38)"><rect x="-3" y="-34" width="6" height="34" fill="#e9eaea" stroke="#2b2d2a" stroke-width="1.6"/><path d="M-3 -34L0 -42L3 -34Z" fill="#c03a2a"/></g>`).join('')}</g>`;
-const ssmPic = (x: number, y: number, s: number) => `<g transform="translate(${x} ${y}) scale(${s})"><rect x="-38" y="6" width="70" height="12" rx="3" fill="#2b2d2a"/><circle cx="-26" cy="20" r="5" fill="#2b2d2a"/><circle cx="-6" cy="20" r="5" fill="#2b2d2a"/><circle cx="20" cy="20" r="5" fill="#2b2d2a"/><path d="M20 6V-6H34L38 6Z" fill="#2b2d2a"/><g transform="rotate(-24 -10 4)"><rect x="-40" y="-2" width="48" height="8" rx="2" fill="#e9eaea" stroke="#2b2d2a" stroke-width="1.6"/><path d="M8 -2L18 2L8 6Z" fill="#c03a2a"/></g></g>`;
-const skull = (x: number, y: number) => `<g transform="translate(${x} ${y})"><path d="M-30 18L30 34M-30 34L30 18" stroke="#f3eee0" stroke-width="7" stroke-linecap="round"/><circle cy="-4" r="20" fill="#f3eee0"/><rect x="-10" y="10" width="20" height="10" rx="2" fill="#f3eee0"/><circle cx="-7.5" cy="-4" r="5.5" fill="#2b2420"/><circle cx="7.5" cy="-4" r="5.5" fill="#2b2420"/></g>`;
-const moroccoFlag = (x: number, y: number, w: number, h: number) => { const cx = x + w / 2, cy = y + h / 2, r = h * 0.3; const p = Array.from({ length: 5 }, (_, i) => [cx + r * Math.sin(i * 4 * Math.PI / 5), cy - r * Math.cos(i * 4 * Math.PI / 5)]);
-  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#c1272d" stroke="${INK}" stroke-width="1.6"/><path d="M${p.map((q) => q.map((v) => v.toFixed(1)).join(' ')).join('L')}Z" fill="none" stroke="#006233" stroke-width="3"/>`; };
+export const crescent = (x: number, y: number, r: number, col = '#fff', bg = '#3d5a2c') =>
+  `<circle cx="${x}" cy="${y}" r="${r}" fill="${col}"/><circle cx="${x + r * 0.32}" cy="${y - r * 0.08}" r="${r * 0.82}" fill="${bg}"/>${star(x + r * 0.62, y - r * 0.05, r * 0.36, col)}`;
+const bolt = (x: number, y: number, s: number) =>
+  `<path d="M${x + 6 * s} ${y - 34 * s}L${x - 20 * s} ${y + 4 * s}H${x - 2 * s}L${x - 10 * s} ${y + 34 * s}L${x + 20 * s} ${y - 8 * s}H${x + 2 * s}Z" fill="#ffe14d" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>`;
+const tankPic = (x: number, y: number, s: number, f = '#2b2d2a') =>
+  `<g transform="translate(${x} ${y}) scale(${s})" fill="${f}"><rect x="-30" y="2" width="60" height="12" rx="6"/><path d="M-26 2L-20 -8H22L28 2Z"/><path d="M-10 -8V-16H12L14 -8Z"/><rect x="12" y="-15" width="30" height="4" rx="1.5"/></g>`;
+const gunPic = (x: number, y: number, s: number) =>
+  `<g transform="translate(${x} ${y}) scale(${s})" fill="#2b2d2a"><circle cx="-14" cy="10" r="8"/><circle cx="8" cy="10" r="8"/><path d="M-26 2H20L24 -4H-22Z"/><path d="M-4 -2L38 -26L41 -21L2 4Z"/><path d="M-22 2L-40 14L-36 17L-16 6Z"/></g>`;
+const jetPic = (x: number, y: number, s: number) =>
+  `<g transform="translate(${x} ${y}) scale(${s})" fill="#3a4a5e"><path d="M-40 0L30 -4L40 0L30 4Z"/><path d="M-6 -2L-22 -26H-14L10 -2ZM-6 2L-22 26H-14L10 2Z"/><path d="M-36 -1L-42 -12H-36L-28 -1ZM-36 1L-42 12H-36L-28 1Z"/></g>`;
+const samPic = (x: number, y: number, s: number) =>
+  `<g transform="translate(${x} ${y}) scale(${s})"><rect x="-34" y="10" width="68" height="10" rx="4" fill="#2b2d2a"/><path d="M-20 10L-8 -2H8L14 10Z" fill="#2b2d2a"/>${[-14, 0, 14].map((d) => `<g transform="translate(${d} -2) rotate(-38)"><rect x="-3" y="-34" width="6" height="34" fill="#e9eaea" stroke="#2b2d2a" stroke-width="1.6"/><path d="M-3 -34L0 -42L3 -34Z" fill="#c03a2a"/></g>`).join('')}</g>`;
+const ssmPic = (x: number, y: number, s: number) =>
+  `<g transform="translate(${x} ${y}) scale(${s})"><rect x="-38" y="6" width="70" height="12" rx="3" fill="#2b2d2a"/><circle cx="-26" cy="20" r="5" fill="#2b2d2a"/><circle cx="-6" cy="20" r="5" fill="#2b2d2a"/><circle cx="20" cy="20" r="5" fill="#2b2d2a"/><path d="M20 6V-6H34L38 6Z" fill="#2b2d2a"/><g transform="rotate(-24 -10 4)"><rect x="-40" y="-2" width="48" height="8" rx="2" fill="#e9eaea" stroke="#2b2d2a" stroke-width="1.6"/><path d="M8 -2L18 2L8 6Z" fill="#c03a2a"/></g></g>`;
+const skull = (x: number, y: number) =>
+  `<g transform="translate(${x} ${y})"><path d="M-30 18L30 34M-30 34L30 18" stroke="#f3eee0" stroke-width="7" stroke-linecap="round"/><circle cy="-4" r="20" fill="#f3eee0"/><rect x="-10" y="10" width="20" height="10" rx="2" fill="#f3eee0"/><circle cx="-7.5" cy="-4" r="5.5" fill="#2b2420"/><circle cx="7.5" cy="-4" r="5.5" fill="#2b2420"/></g>`;
+const moroccoFlag = (x: number, y: number, w: number, h: number) => {
+  const cx = x + w / 2,
+    cy = y + h / 2,
+    r = h * 0.3;
+  const p = Array.from({ length: 5 }, (_, i) => [cx + r * Math.sin((i * 4 * Math.PI) / 5), cy - r * Math.cos((i * 4 * Math.PI) / 5)]);
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#c1272d" stroke="${INK}" stroke-width="1.6"/><path d="M${p.map((q) => q.map((v) => v.toFixed(1)).join(' ')).join('L')}Z" fill="none" stroke="#006233" stroke-width="3"/>`;
+};
 
 /* ---------- NATO symbols inside the unit square (CX, CY, 68 wide) ---------- */
-const X = (cy = CY, s = 34) => `<path d="M${CX - s} ${cy - s}L${CX + s} ${cy + s}M${CX + s} ${cy - s}L${CX - s} ${cy + s}" stroke="${INK}" stroke-width="2.4"/>`;
-const OVAL = (cy = CY) => `<rect x="${CX - 26.5}" y="${cy - 17}" width="53" height="34" rx="17" fill="none" stroke="${INK}" stroke-width="3.4"/>`;
+const X = (cy = CY, s = 34) =>
+  `<path d="M${CX - s} ${cy - s}L${CX + s} ${cy + s}M${CX + s} ${cy - s}L${CX - s} ${cy + s}" stroke="${INK}" stroke-width="2.4"/>`;
+const OVAL = (cy = CY) =>
+  `<rect x="${CX - 26.5}" y="${cy - 17}" width="53" height="34" rx="17" fill="none" stroke="${INK}" stroke-width="3.4"/>`;
 /** Special forces / commando: the X with arrow tips on the upper arms. */
-const SF = (cy = CY) => `${X(cy)}<path d="M${CX - 32} ${cy - 32}l20 3-17 17zM${CX + 32} ${cy - 32}l-20 3 17 17z" fill="${INK}"/>`;      // arrowheads on the upper arms, as printed
-const AT = (cy = CY) => `<path d="M${CX - 34} ${cy - 34}L${CX} ${cy + 34}L${CX + 34} ${cy - 34}" fill="none" stroke="${INK}" stroke-width="3.4"/><circle cx="${CX}" cy="${cy - 6}" r="4.2" fill="${INK}"/>`;     // as printed: a V from the top corners, a dot inside
+const SF = (cy = CY) => `${X(cy)}<path d="M${CX - 32} ${cy - 32}l20 3-17 17zM${CX + 32} ${cy - 32}l-20 3 17 17z" fill="${INK}"/>`; // arrowheads on the upper arms, as printed
+const AT = (cy = CY) =>
+  `<path d="M${CX - 34} ${cy - 34}L${CX} ${cy + 34}L${CX + 34} ${cy - 34}" fill="none" stroke="${INK}" stroke-width="3.4"/><circle cx="${CX}" cy="${cy - 6}" r="4.2" fill="${INK}"/>`; // as printed: a V from the top corners, a dot inside
 const RECON = (cy = CY) => `<path d="M${CX - 34} ${cy + 34}L${CX + 34} ${cy - 34}" stroke="${INK}" stroke-width="2.4"/>${OVAL(cy)}`;
 
-export type GCounter = { id: string; kind: string; side: GSide | 'none'; echelon?: string; turn?: number | string | null; name: string; quality?: string | null; subtype?: string | null; symbol?: string; area?: number; brigade?: string };
+export type GCounter = {
+  id: string;
+  kind: string;
+  side: GSide | 'none';
+  echelon?: string;
+  turn?: number | string | null;
+  name: string;
+  quality?: string | null;
+  subtype?: string | null;
+  symbol?: string;
+  area?: number;
+  brigade?: string;
+};
 const T = (t: GCounter['turn']) => (t === 'scenario' ? null : t) as number | 'S' | null;
-const dotAt = (q: string | null | undefined, cx: number, cy: number) => { if (!q || !QDOT[q]) return ''; const [f, ring] = QDOT[q]; return `${ring ? `<circle cx="${cx}" cy="${cy}" r="10.5" fill="${ring}"/>` : ''}<circle cx="${cx}" cy="${cy}" r="${ring ? 8 : 7.5}" fill="${f}"/>`; };
+const dotAt = (q: string | null | undefined, cx: number, cy: number) => {
+  if (!q || !QDOT[q]) return '';
+  const [f, ring] = QDOT[q];
+  return `${ring ? `<circle cx="${cx}" cy="${cy}" r="10.5" fill="${ring}"/>` : ''}<circle cx="${cx}" cy="${cy}" r="${ring ? 8 : 7.5}" fill="${f}"/>`;
+};
 /** A unit-type chit: frame, turn, quality dot, the unit square with its symbol, the name. */
-const unitChit = (c: GCounter, sym: string, sq = CREAM[c.side as GSide]) => `${open(c.side as GSide)}${turn(T(c.turn), 14, 36, 33)}${dotAt(c.quality, CX, 17)}${square(sq)}${sym}${txt(c.name, CX, 143, 23, { anchor: 'middle', max: 104 })}</svg>`;
+const unitChit = (c: GCounter, sym: string, sq = CREAM[c.side as GSide]) =>
+  `${open(c.side as GSide)}${turn(T(c.turn), 14, 36, 33)}${dotAt(c.quality, CX, 17)}${square(sq)}${sym}${txt(c.name, CX, 143, 23, { anchor: 'middle', max: 104 })}</svg>`;
 /** An event chit: frame, panel in the event colour, turn, picture, one or two lines of lettering. */
-const eventChit = (c: GCounter, fill: string, pic: string, lines: string[], o: { ink?: string; size?: number } = {}) => `${open(c.side as GSide)}${panel(fill)}${turn(T(c.turn), 22, 52, 32)}${pic}${lines.map((l, i) => txt(l, 81, (lines.length > 1 ? 116 : 140) + i * 26, o.size ?? 24, { w: 'b', italic: true, anchor: 'middle', fill: o.ink ?? INK, max: 112 })).join('')}</g></svg>`;
-const emblem = (side: GSide, x: number, y: number, r: number) => side === 'israeli' ? davidStar(x, y, r) : crescent(x, y, r * 0.8, '#fff', SIDE_BG[side]);
+const eventChit = (c: GCounter, fill: string, pic: string, lines: string[], o: { ink?: string; size?: number } = {}) =>
+  `${open(c.side as GSide)}${panel(fill)}${turn(T(c.turn), 22, 52, 32)}${pic}${lines.map((l, i) => txt(l, 81, (lines.length > 1 ? 116 : 140) + i * 26, o.size ?? 24, { w: 'b', italic: true, anchor: 'middle', fill: o.ink ?? INK, max: 112 })).join('')}</g></svg>`;
+const emblem = (side: GSide, x: number, y: number, r: number) =>
+  side === 'israeli' ? davidStar(x, y, r) : crescent(x, y, r * 0.8, '#fff', SIDE_BG[side]);
 const SIDE_BG: Record<GSide, string> = { israeli: '#0f55b5', syrian: '#3d5a2c' };
 
 /** A chit with a printed picture: the plain ground (assets) or the event panel in its white line, the turn, the picture, the lettering. */
-function pictureChit(c: GCounter, pic: PicName, label: string, o: { event?: boolean; size?: number; y?: number; top?: string; dot?: string } = {}) {
-  const side = c.side as GSide, ev = !!o.event;
+function pictureChit(
+  c: GCounter,
+  pic: PicName,
+  label: string,
+  o: { event?: boolean; size?: number; y?: number; top?: string; dot?: string } = {},
+) {
+  const side = c.side as GSide,
+    ev = !!o.event;
   return `${open(side, [GROUND[side], side === 'israeli' ? '#e2d8b6' : '#e9bf6c', side === 'israeli' ? '#a99e76' : '#a97a26'])}${ev ? panelLine(EVENT[side]) : ''}${picture(pic)}${turn(T(c.turn), ev ? 17 : 9, ev ? 38 : 33, 30)}${o.dot ? dotAt(o.dot, 80, 26) : ''}${o.top ? txt(o.top, 90, 36, 19, { italic: true, anchor: 'middle', max: 96 }) : ''}${txt(label, 80, o.y ?? 143, o.size ?? 26, { w: 'b', italic: true, anchor: 'middle', max: 128 })}</svg>`;
 }
 /** The event panel as printed: a white line just inside the frame, the panel colour within. */
-const panelLine = (fill: string) => `<rect x="12" y="12" width="136" height="136" fill="#fff"/><rect x="15.5" y="15.5" width="129" height="129" fill="${fill}"/>`;
+const panelLine = (fill: string) =>
+  `<rect x="12" y="12" width="136" height="136" fill="#fff"/><rect x="15.5" y="15.5" width="129" height="129" fill="${fill}"/>`;
 /** An event panel with lines of lettering. */
-const eventLines = (c: GCounter, lines: string[], o: { y0: number; dy: number; size: number; bold?: boolean; italic?: boolean; extra?: string }) => { const side = c.side as GSide;
-  return `${open(side, [GROUND[side], side === 'israeli' ? '#e2d8b6' : '#e9bf6c', side === 'israeli' ? '#a99e76' : '#a97a26'])}${panelLine(EVENT[side])}${o.extra ?? ''}${turn(T(c.turn), 17, 38, 30)}${lines.map((l, i) => txt(l, 82, o.y0 + i * o.dy, o.size, { w: o.bold === false ? 'r' : 'b', italic: o.italic, anchor: 'middle', max: 124 })).join('')}</svg>`; };
+const eventLines = (
+  c: GCounter,
+  lines: string[],
+  o: { y0: number; dy: number; size: number; bold?: boolean; italic?: boolean; extra?: string },
+) => {
+  const side = c.side as GSide;
+  return `${open(side, [GROUND[side], side === 'israeli' ? '#e2d8b6' : '#e9bf6c', side === 'israeli' ? '#a99e76' : '#a97a26'])}${panelLine(EVENT[side])}${o.extra ?? ''}${turn(T(c.turn), 17, 38, 30)}${lines.map((l, i) => txt(l, 82, o.y0 + i * o.dy, o.size, { w: o.bold === false ? 'r' : 'b', italic: o.italic, anchor: 'middle', max: 124 })).join('')}</svg>`;
+};
 /** The HQ Staff asset: Israeli light blue box with dark letters, Syrian dark green box with white letters. */
-const staffChit = (c: GCounter) => { const side = c.side as GSide, is = side === 'israeli';
-  return `${open(side, [GROUND[side], is ? '#e2d8b6' : '#e9bf6c', is ? '#a99e76' : '#a97a26'])}${turn(T(c.turn), 9, 33, 30)}<rect x="42" y="38" width="76" height="72" fill="${is ? '#bed9ee' : '#46603d'}" stroke="${is ? '#14191c' : '#46603d'}" stroke-width="${is ? 4 : 0}"/>${txt('HQ', 80, 92, 46, { w: 'b', anchor: 'middle', fill: is ? '#1d262b' : '#fff', stroke: is ? undefined : '#1d262b', sw: 50, max: 64 })}${txt('Staff Asset', 80, 143, 23, { w: 'b', anchor: 'middle', max: 124 })}</svg>`; };
+const staffChit = (c: GCounter) => {
+  const side = c.side as GSide,
+    is = side === 'israeli';
+  return `${open(side, [GROUND[side], is ? '#e2d8b6' : '#e9bf6c', is ? '#a99e76' : '#a97a26'])}${turn(T(c.turn), 9, 33, 30)}<rect x="42" y="38" width="76" height="72" fill="${is ? '#bed9ee' : '#46603d'}" stroke="${is ? '#14191c' : '#46603d'}" stroke-width="${is ? 4 : 0}"/>${txt('HQ', 80, 92, 46, { w: 'b', anchor: 'middle', fill: is ? '#1d262b' : '#fff', stroke: is ? undefined : '#1d262b', sw: 50, max: 64 })}${txt('Staff Asset', 80, 143, 23, { w: 'b', anchor: 'middle', max: 124 })}</svg>`;
+};
 /** 4.21 / 17.21 arriving battalion: the brigade's colour stripe behind its unit box, as on the brigade's blocks. */
-const battalionChit = (c: GCounter) => { const mech = /Mech/.test(c.name), col = STRIPE[c.brigade ?? ''] ?? '#999', m = c.name.match(/^Battalion only for (.+)$/);
+const battalionChit = (c: GCounter) => {
+  const mech = /Mech/.test(c.name),
+    col = STRIPE[c.brigade ?? ''] ?? '#999',
+    m = c.name.match(/^Battalion only for (.+)$/);
   const box = `<rect x="15.5" y="47" width="129" height="13" fill="${col}"/><path d="M76 30V36M84 30V36" stroke="#111" stroke-width="2.4"/><rect x="56" y="37" width="48" height="30" fill="#fff" stroke="#111" stroke-width="3"/><rect x="64" y="43" width="32" height="18" rx="9" fill="none" stroke="#111" stroke-width="2.6"/>${mech ? '<path d="M56 37L104 67M104 37L56 67" stroke="#111" stroke-width="2"/>' : ''}`;
-  return eventLines(c, ['Battalion', 'only for', m ? m[1] : c.name], { y0: 97, dy: 22, size: 19, bold: false, extra: box }); };
+  return eventLines(c, ['Battalion', 'only for', m ? m[1] : c.name], { y0: 97, dy: 22, size: 19, bold: false, extra: box });
+};
 /** Syrian replacements as printed: a small unit box over two lines. */
-const replacementChit = (c: GCounter) => { const mech = c.kind === 'replacement_mech';
+const replacementChit = (c: GCounter) => {
+  const mech = c.kind === 'replacement_mech';
   const box = `<rect x="57" y="34" width="46" height="28" fill="#fff" stroke="#111" stroke-width="3"/><rect x="64" y="40" width="32" height="16" rx="8" fill="none" stroke="#111" stroke-width="2.4"/>${mech ? '<path d="M57 34L103 62M103 34L57 62" stroke="#111" stroke-width="2"/>' : ''}`;
-  return eventLines(c, [mech ? 'Mech' : 'Armor', 'Replacement'], { y0: 98, dy: 28, size: 24, extra: box }); };
+  return eventLines(c, [mech ? 'Mech' : 'Armor', 'Replacement'], { y0: 98, dy: 28, size: 24, extra: box });
+};
 /** The Syrian reserve marker: the flag (red, white, black with the gold hawk) over two lines. */
-const syReserve = () => `${open('syrian', [GROUND.syrian, '#e9bf6c', '#a97a26'])}<rect x="34" y="20" width="92" height="16" fill="#cf2a2c"/><rect x="34" y="36" width="92" height="16" fill="#fff"/><rect x="34" y="52" width="92" height="16" fill="#141414"/><path d="M74 39H86L84 44L88 46H72L76 44Z M78 46H82V50H78Z" fill="#c9a23a"/><rect x="34" y="20" width="92" height="48" fill="none" stroke="#2b2618" stroke-width="1.5"/>${txt('Syrian Army', 80, 104, 23, { w: 'b', anchor: 'middle', fill: '#2b2618', max: 128 })}${txt('Reserve Unit', 80, 134, 23, { w: 'b', anchor: 'middle', fill: '#2b2618', max: 128 })}</svg>`;
+const syReserve = () =>
+  `${open('syrian', [GROUND.syrian, '#e9bf6c', '#a97a26'])}<rect x="34" y="20" width="92" height="16" fill="#cf2a2c"/><rect x="34" y="36" width="92" height="16" fill="#fff"/><rect x="34" y="52" width="92" height="16" fill="#141414"/><path d="M74 39H86L84 44L88 46H72L76 44Z M78 46H82V50H78Z" fill="#c9a23a"/><rect x="34" y="20" width="92" height="48" fill="none" stroke="#2b2618" stroke-width="1.5"/>${txt('Syrian Army', 80, 104, 23, { w: 'b', anchor: 'middle', fill: '#2b2618', max: 128 })}${txt('Reserve Unit', 80, 134, 23, { w: 'b', anchor: 'middle', fill: '#2b2618', max: 128 })}</svg>`;
 
 /** The SVG of one Golan counter (asset, event or marker), 160 x 160 units. */
 export function golanChitSvg(c: GCounter): string {
-  const side = c.side as GSide, k = c.kind;
-  const asBulge = (over: Partial<Counter> = {}) => chitSvg({ id: c.id, kind: k, name: c.name, side: c.side, ech: c.echelon ?? 'none', turn: T(c.turn), q: c.quality ?? null, ...over } as Counter);
+  const side = c.side as GSide,
+    k = c.kind;
+  const asBulge = (over: Partial<Counter> = {}) =>
+    chitSvg({
+      id: c.id,
+      kind: k,
+      name: c.name,
+      side: c.side,
+      ech: c.echelon ?? 'none',
+      turn: T(c.turn),
+      q: c.quality ?? null,
+      ...over,
+    } as Counter);
   switch (k) {
-    case 'command_staff': return staffChit(c);
-    case 'special_action_event': return asBulge(side === 'syrian' ? { ech: 'sy_sa' } : {});               // the series' Special Action, on the Syrian event panel colour
-    case 'armor_asset': return side === 'syrian' ? unitChit({ ...c, name: c.name.replace(/ Recon$/, '') }, RECON(), SY_BOX) : asBulge();               // the Syrian recon battalion, as printed
-    case 'replacement_arm': return side === 'syrian' ? replacementChit(c) : asBulge();
-    case 'artillery': case 'rocket_artillery': case 'engineer': return asBulge();
-    case 'infantry_asset': return c.subtype === 'anti_tank' ? unitChit({ ...c, name: c.name.replace(/ AT$/, '') }, AT(), side === 'syrian' ? SY_BOX : undefined) : c.subtype === 'special_forces' ? unitChit(c, SF()) : asBulge();
-    case 'commando': return unitChit(c, SF(), SY_CDO);
-    case 'event_release': { const m = c.name.match(/^(.*?) ((?:Tank|Mech|Inf) Brigade) Released$/), ls = m ? [m[1], m[2], 'Released'] : [c.name];
-      return eventLines(c, ls, { y0: 60, dy: 30, size: 25, italic: true }); }
-    case 'garrison': return `${open(side)}<rect x="14" y="17" width="21" height="38" fill="#fff"/>${txt(String(c.area ?? ''), 30, 51, 21, { rot: -90 })}${dotAt(c.quality, CX + 2, 19)}${square(CREAM[side], CY + 2, 70)}${X(CY + 2, 35)}${txt(c.name, CX, 145, 21, { anchor: 'middle', max: 112 })}</svg>`;
-    case 'task_force': return unitChit({ ...c, name: 'Task Force' }, c.symbol === 'armor' ? OVAL() : X());
-    case 'replacement_mech': return side === 'syrian' ? replacementChit(c) : asBulge();
-    case 'event_arriving_battalion': return battalionChit(c);
-    case 'air_mission': return pictureChit(c, side === 'israeli' ? 'air_is' : 'air_sy', 'Air Support');
-    case 'sam': return pictureChit(c, 'sam', 'SAM', { size: 30 });
-    case 'event_ew': return pictureChit(c, side === 'israeli' ? 'ew_is' : 'ew_sy', 'EW', { event: true, size: 30, y: 140 });
-    case 'event_counterbattery': return pictureChit(c, side === 'israeli' ? 'cb_is' : 'cb_sy', side === 'israeli' ? 'Counter-battery' : 'Counterbattery', { event: true, size: 19, y: 137 });
-    case 'event_ssm_strike': return pictureChit(c, 'ssm', 'SSM Strike', { event: true, size: 22, y: 140 });
-    case 'event_dugman5': return pictureChit(c, 'dugman', 'Dugman 5', { event: true, size: 26, y: 137, top: 'Operation' });
-    case 'event_lt_zvika': return pictureChit(c, 'zvika', 'Lt. Zvika', { event: true, dot: 'elite' });
-    case 'event_king_hassan': return eventChit(c, CREAM[side], moroccoFlag(54, 46, 54, 36), ["King Hassan's", 'Troublemakers'], { size: 19 });
-    case 'event_ssm': return eventChit(c, '#bfe0f4', ssmPic(82, 62, 1), ['SSM Strike']);
-    case 'minefield': return `${open('israeli', [GROUND.israeli, '#e2d8b6', '#a99e76'])}${picture('skull')}${txt('DANGER', 80, 35, 25, { w: 'b', anchor: 'middle', fill: '#3a2e24', max: 120 })}${txt('MINEFIELD', 80, 147, 25, { w: 'b', anchor: 'middle', fill: '#3a2e24', max: 132 })}</svg>`;
-    case 'marker_at_ditch_bridged': {                                   // as printed: the AT ditch (a grey barbed line) with a bridge (two splayed brackets) across it
+    case 'command_staff':
+      return staffChit(c);
+    case 'special_action_event':
+      return asBulge(side === 'syrian' ? { ech: 'sy_sa' } : {}); // the series' Special Action, on the Syrian event panel colour
+    case 'armor_asset':
+      return side === 'syrian' ? unitChit({ ...c, name: c.name.replace(/ Recon$/, '') }, RECON(), SY_BOX) : asBulge(); // the Syrian recon battalion, as printed
+    case 'replacement_arm':
+      return side === 'syrian' ? replacementChit(c) : asBulge();
+    case 'artillery':
+    case 'rocket_artillery':
+    case 'engineer':
+      return asBulge();
+    case 'infantry_asset':
+      return c.subtype === 'anti_tank'
+        ? unitChit({ ...c, name: c.name.replace(/ AT$/, '') }, AT(), side === 'syrian' ? SY_BOX : undefined)
+        : c.subtype === 'special_forces'
+          ? unitChit(c, SF())
+          : asBulge();
+    case 'commando':
+      return unitChit(c, SF(), SY_CDO);
+    case 'event_release': {
+      const m = c.name.match(/^(.*?) ((?:Tank|Mech|Inf) Brigade) Released$/),
+        ls = m ? [m[1], m[2], 'Released'] : [c.name];
+      return eventLines(c, ls, { y0: 60, dy: 30, size: 25, italic: true });
+    }
+    case 'garrison':
+      return `${open(side)}<rect x="14" y="17" width="21" height="38" fill="#fff"/>${txt(String(c.area ?? ''), 30, 51, 21, { rot: -90 })}${dotAt(c.quality, CX + 2, 19)}${square(CREAM[side], CY + 2, 70)}${X(CY + 2, 35)}${txt(c.name, CX, 145, 21, { anchor: 'middle', max: 112 })}</svg>`;
+    case 'task_force':
+      return unitChit({ ...c, name: 'Task Force' }, c.symbol === 'armor' ? OVAL() : X());
+    case 'replacement_mech':
+      return side === 'syrian' ? replacementChit(c) : asBulge();
+    case 'event_arriving_battalion':
+      return battalionChit(c);
+    case 'air_mission':
+      return pictureChit(c, side === 'israeli' ? 'air_is' : 'air_sy', 'Air Support');
+    case 'sam':
+      return pictureChit(c, 'sam', 'SAM', { size: 30 });
+    case 'event_ew':
+      return pictureChit(c, side === 'israeli' ? 'ew_is' : 'ew_sy', 'EW', { event: true, size: 30, y: 140 });
+    case 'event_counterbattery':
+      return pictureChit(c, side === 'israeli' ? 'cb_is' : 'cb_sy', side === 'israeli' ? 'Counter-battery' : 'Counterbattery', {
+        event: true,
+        size: 19,
+        y: 137,
+      });
+    case 'event_ssm_strike':
+      return pictureChit(c, 'ssm', 'SSM Strike', { event: true, size: 22, y: 140 });
+    case 'event_dugman5':
+      return pictureChit(c, 'dugman', 'Dugman 5', { event: true, size: 26, y: 137, top: 'Operation' });
+    case 'event_lt_zvika':
+      return pictureChit(c, 'zvika', 'Lt. Zvika', { event: true, dot: 'elite' });
+    case 'event_king_hassan':
+      return eventChit(c, CREAM[side], moroccoFlag(54, 46, 54, 36), ["King Hassan's", 'Troublemakers'], { size: 19 });
+    case 'event_ssm':
+      return eventChit(c, '#bfe0f4', ssmPic(82, 62, 1), ['SSM Strike']);
+    case 'minefield':
+      return `${open('israeli', [GROUND.israeli, '#e2d8b6', '#a99e76'])}${picture('skull')}${txt('DANGER', 80, 35, 25, { w: 'b', anchor: 'middle', fill: '#3a2e24', max: 120 })}${txt('MINEFIELD', 80, 147, 25, { w: 'b', anchor: 'middle', fill: '#3a2e24', max: 132 })}</svg>`;
+    case 'marker_at_ditch_bridged': {
+      // as printed: the AT ditch (a grey barbed line) with a bridge (two splayed brackets) across it
       const teeth = [26, 50, 110, 134].map((x) => `M${x - 10} 78L${x} 98L${x + 10} 78Z`).join('');
-      return `${open('syrian', ['#c9a043', '#dfbb63', '#9c7a28'])}${txt('AT Ditch', 80, 46, 30, { w: 'b', italic: true, anchor: 'middle', max: 124 })}<path d="M12 70H148V79H12Z${teeth}" fill="#6f6c66"/><path d="M58 50L68 63V97L58 110M102 50L92 63V97L102 110" fill="none" stroke="#2f302e" stroke-width="5" stroke-linejoin="miter"/>${txt('Bridged', 80, 140, 31, { w: 'b', italic: true, anchor: 'middle', max: 124 })}</svg>`; }
-    case 'marker_control': return golanControl(side === 'syrian' ? 'syrian' : 'israeli');
-    case 'reserve_marker': { if (side === 'syrian') return syReserve(); const s = 'israeli', [a, b] = s === 'israeli' ? ['Northern Cmd', 'Reserve Unit'] : ['Syrian Army', 'Reserve Unit'];
-      return `${flat(SIDE_BG[s])}${emblem(s, 80, 40, 24)}${txt(a, 80, 100, 32, { w: 'b', anchor: 'middle', fill: '#fff', max: 130 })}${txt(b, 80, 134, 24, { anchor: 'middle', fill: '#fff', max: 130 })}</svg>`; }
-    case 'field_works': return CHIT_KIT.marker('Field Works')!;
+      return `${open('syrian', ['#c9a043', '#dfbb63', '#9c7a28'])}${txt('AT Ditch', 80, 46, 30, { w: 'b', italic: true, anchor: 'middle', max: 124 })}<path d="M12 70H148V79H12Z${teeth}" fill="#6f6c66"/><path d="M58 50L68 63V97L58 110M102 50L92 63V97L102 110" fill="none" stroke="#2f302e" stroke-width="5" stroke-linejoin="miter"/>${txt('Bridged', 80, 140, 31, { w: 'b', italic: true, anchor: 'middle', max: 124 })}</svg>`;
+    }
+    case 'marker_control':
+      return golanControl(side === 'syrian' ? 'syrian' : 'israeli');
+    case 'reserve_marker': {
+      if (side === 'syrian') return syReserve();
+      const s = 'israeli',
+        [a, b] = s === 'israeli' ? ['Northern Cmd', 'Reserve Unit'] : ['Syrian Army', 'Reserve Unit'];
+      return `${flat(SIDE_BG[s])}${emblem(s, 80, 40, 24)}${txt(a, 80, 100, 32, { w: 'b', anchor: 'middle', fill: '#fff', max: 130 })}${txt(b, 80, 134, 24, { anchor: 'middle', fill: '#fff', max: 130 })}</svg>`;
+    }
+    case 'field_works':
+      return CHIT_KIT.marker('Field Works')!;
     case 'marker': {
       if (c.name === 'Game Turn' || c.name === 'VPs') return golanTrack(c.name, side === 'syrian' ? 'syrian' : 'israeli');
       if (c.name === 'Out of Supply') return mapMarkerSvg('OOS') ?? asBulge();
@@ -131,21 +262,31 @@ export function golanChitSvg(c: GCounter): string {
   return `${flat('#ddd')}${txt(c.name, 80, 86, 20, { anchor: 'middle', max: 140 })}</svg>`;
 }
 /** Two-sided track markers: Game Turn and VPs, one face per side. */
-export const golanTrack = (name: 'Game Turn' | 'VPs' | string, side: GSide) => name === 'VPs'
-  ? `${flat(SIDE_BG[side])}${emblem(side, 80, 52, 30)}${txt('VPs', 80, 138, 50, { w: 'b', anchor: 'middle', fill: '#fff', max: 130 })}</svg>`
-  : `${flat(SIDE_BG[side])}${txt('Game', 80, 74, 52, { w: 'b', anchor: 'middle', fill: '#fff', max: 130 })}${txt('Turn', 80, 126, 52, { w: 'b', anchor: 'middle', fill: '#fff', max: 130 })}</svg>`;
-export const golanControl = (side: GSide) => `${flat(SIDE_BG[side])}<rect x="10" y="10" width="140" height="140" fill="none" stroke="#fff" stroke-width="3" opacity=".5"/>${emblem(side, 80, 80, 50)}</svg>`;
+export const golanTrack = (name: 'Game Turn' | 'VPs' | string, side: GSide) =>
+  name === 'VPs'
+    ? `${flat(SIDE_BG[side])}${emblem(side, 80, 52, 30)}${txt('VPs', 80, 138, 50, { w: 'b', anchor: 'middle', fill: '#fff', max: 130 })}</svg>`
+    : `${flat(SIDE_BG[side])}${txt('Game', 80, 74, 52, { w: 'b', anchor: 'middle', fill: '#fff', max: 130 })}${txt('Turn', 80, 126, 52, { w: 'b', anchor: 'middle', fill: '#fff', max: 130 })}</svg>`;
+export const golanControl = (side: GSide) =>
+  `${flat(SIDE_BG[side])}<rect x="10" y="10" width="140" height="140" fill="none" stroke="#fff" stroke-width="3" opacity=".5"/>${emblem(side, 80, 80, 50)}</svg>`;
 /** Counter backs: Asset or Event (khaki / gold), the Strongpoint back of the task forces, the garrison back. */
 export function golanBackSvg(id: string): string {
-  const lines = (fill: string, ls: string[], rot = -6, size = 33) => `${flat(fill)}${ls.map((l, i) => txt(l, 80, (ls.length === 1 ? 92 : 54) + i * 34, size, { w: 'b', anchor: 'middle', rot, max: 110 })).join('')}</svg>`;
+  const lines = (fill: string, ls: string[], rot = -6, size = 33) =>
+    `${flat(fill)}${ls.map((l, i) => txt(l, 80, (ls.length === 1 ? 92 : 54) + i * 34, size, { w: 'b', anchor: 'middle', rot, max: 110 })).join('')}</svg>`;
   switch (id) {
-    case 'back_is_asset': return lines(LABEL.israeli, ['Asset', 'or', 'Event']);
-    case 'back_sy_asset': return lines(LABEL.syrian, ['Asset', 'or', 'Event']);
-    case 'back_is_strongpoint': return lines(LABEL.israeli, ['Strongpoint'], -38, 30);
-    case 'back_garrison': return lines(LABEL.israeli, ['Garrison'], -38, 32);
-    case 'back_game_turn_is': return golanTrack('Game Turn', 'israeli');
-    case 'back_vps_sy': return golanTrack('VPs', 'syrian');
-    case 'back_control_sy': return golanControl('syrian');
+    case 'back_is_asset':
+      return lines(LABEL.israeli, ['Asset', 'or', 'Event']);
+    case 'back_sy_asset':
+      return lines(LABEL.syrian, ['Asset', 'or', 'Event']);
+    case 'back_is_strongpoint':
+      return lines(LABEL.israeli, ['Strongpoint'], -38, 30);
+    case 'back_garrison':
+      return lines(LABEL.israeli, ['Garrison'], -38, 32);
+    case 'back_game_turn_is':
+      return golanTrack('Game Turn', 'israeli');
+    case 'back_vps_sy':
+      return golanTrack('VPs', 'syrian');
+    case 'back_control_sy':
+      return golanControl('syrian');
   }
   return lines('#ccc', [id]);
 }
@@ -153,37 +294,105 @@ export function golanBackSvg(id: string): string {
 /* ---------- block labels (100 x 100: the block's wood shows as a thin frame round the sticker; full strength edge on top, turned 90° per step lost) ---------- */
 // Measured from the printed stickers: the stripe runs edge to edge a little below the centre and passes behind the unit box;
 // pips sit 18 in from each edge; the set-up or arrival code reads up the left edge; the name sits bottom right beside that edge's pips.
-export type GUnit = { id: string; name: string; side: GSide; steps?: number; quality_by_step?: (string | null)[]; symbol?: string; division?: string | null; brigade?: string | null; start_area?: number; start_box?: string; arrival_turn?: number | string; entry?: string[]; initial_steps?: number; kind?: string; cls?: string };
+export type GUnit = {
+  id: string;
+  name: string;
+  side: GSide;
+  steps?: number;
+  quality_by_step?: (string | null)[];
+  symbol?: string;
+  division?: string | null;
+  brigade?: string | null;
+  start_area?: number;
+  start_box?: string;
+  arrival_turn?: number | string;
+  entry?: string[];
+  initial_steps?: number;
+  kind?: string;
+  cls?: string;
+};
 /** Sticker paper. */
 const STICKER: Record<GSide, string> = { israeli: '#d3c296', syrian: '#d7a039' };
 /** Brigade stripes (Israel: the eight two-block brigades, 15.51) and division stripes (Syria). */
 export const STRIPE: Record<string, string> = {
-  golani: '#f09018', '179th': '#5490b4', '4th': '#a8549c', '679th': '#f0f0cc', '9th': '#f0e430', '205th': '#6c8460', '317th': '#b4d8e4', '670th': '#cc5424',
-  '5th_inf': '#f0cc48', '9th_inf': '#b4d8e4', '7th_inf': '#e43c30', '3rd_tank': '#d8cc90', '1st_tank': '#6c9060',
+  golani: '#f09018',
+  '179th': '#5490b4',
+  '4th': '#a8549c',
+  '679th': '#f0f0cc',
+  '9th': '#f0e430',
+  '205th': '#6c8460',
+  '317th': '#b4d8e4',
+  '670th': '#cc5424',
+  '5th_inf': '#f0cc48',
+  '9th_inf': '#b4d8e4',
+  '7th_inf': '#e43c30',
+  '3rd_tank': '#d8cc90',
+  '1st_tank': '#6c9060',
 };
 /** The unit box: Israeli divisions by colour (the optional divisional rule), Syrian cream, gold for the independent units. */
 const BOXFILL: Record<string, string> = { '36th_armored': '#b4b088', '240th_armored': '#dfd2c1', '146th_armored': '#b4d9ec' };
-const boxFill = (u: GUnit) => (u.side === 'israeli' ? BOXFILL[u.division ?? ''] ?? BOXFILL['36th_armored'] : u.division ? '#fcf9ce' : '#f8d64e');
+const boxFill = (u: GUnit) =>
+  u.side === 'israeli' ? (BOXFILL[u.division ?? ''] ?? BOXFILL['36th_armored']) : u.division ? '#fcf9ce' : '#f8d64e';
 const stripeOf = (u: GUnit) => (u.side === 'israeli' ? STRIPE[u.brigade ?? ''] : STRIPE[u.division ?? '']);
 /** The name as printed on the sticker: the recon battalions and the paratroopers carry just their number. */
 const printed = (u: GUnit) => u.name.replace(/ (Recon|Para)$/, '');
-const tankSil = (x: number, y: number, s: number, rot: number, fill: string) => `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s})" fill="${fill}"><path d="M-30 4Q-33 4-33 8V12Q-33 17-27 17H26Q32 17 32 12V8Q32 4 29 4Z"/><path d="M-27 4L-21 -5H23L29 4Z"/><path d="M-12 -5L-8 -13H10L14 -5Z"/><rect x="10" y="-11.5" width="34" height="3.2" rx="1.2"/></g>`;
-const rifleSil = (x: number, y: number, s: number, rot: number) => `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s})" fill="#141414"><path d="M-34 -3H-14L-10 -6H22V-2H36V1H22V3H8L4 12H-2L1 3H-8L-14 4L-30 9Q-35 9-35 4Z"/><rect x="-6" y="-10" width="10" height="4"/><path d="M10 3L13 13H8L6 3Z"/></g>`;
+const tankSil = (x: number, y: number, s: number, rot: number, fill: string) =>
+  `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s})" fill="${fill}"><path d="M-30 4Q-33 4-33 8V12Q-33 17-27 17H26Q32 17 32 12V8Q32 4 29 4Z"/><path d="M-27 4L-21 -5H23L29 4Z"/><path d="M-12 -5L-8 -13H10L14 -5Z"/><rect x="10" y="-11.5" width="34" height="3.2" rx="1.2"/></g>`;
+const rifleSil = (x: number, y: number, s: number, rot: number) =>
+  `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s})" fill="#141414"><path d="M-34 -3H-14L-10 -6H22V-2H36V1H22V3H8L4 12H-2L1 3H-8L-14 4L-30 9Q-35 9-35 4Z"/><rect x="-6" y="-10" width="10" height="4"/><path d="M10 3L13 13H8L6 3Z"/></g>`;
 /** 512 px SVG of a Golan block face (sticker on its wood) at strength str, by the series rule (block-kit.ts). */
 export function golanBlockSvg(u: GUnit, str = u.steps ?? 1): string {
-  const side = u.side, wood = hex(GOLAN_WOOD[side]), paper = STICKER[side], max = u.steps ?? 1, q = u.quality_by_step ?? [];
+  const side = u.side,
+    wood = hex(GOLAN_WOOD[side]),
+    paper = STICKER[side],
+    max = u.steps ?? 1,
+    q = u.quality_by_step ?? [];
   if (u.kind === 'special_action_block') {
-    const panelFill = side === 'israeli' ? '#b8b48a' : '#f8d64e', sp = side === 'israeli' ? '#fff' : '#141414', art = CHIT_ART.saArrow;
+    const panelFill = side === 'israeli' ? '#b8b48a' : '#f8d64e',
+      sp = side === 'israeli' ? '#fff' : '#141414',
+      art = CHIT_ART.saArrow;
     return `${frame(wood)}${sticker(paper)}<rect x="11" y="11" width="78" height="78" fill="${panelFill}" stroke="#fff" stroke-width="3.4"/>${word(String(u.arrival_turn ?? 2), 16, 30, 16, 12)}${word('Special', 57, 29, 15, 50, { anchor: 'middle', fill: sp, italic: true })}${art ? `<svg x="13" y="35" width="74" height="40" viewBox="0 0 122 72"><image href="${art}" width="130" height="72"/></svg>` : ''}${word('Action', 55, 84, 15, 50, { anchor: 'middle', italic: true })}</svg>`;
   }
-  if (u.kind === 'ghost') return `${frame(wood)}${sticker(paper)}${davidStar(50, 46, 29, '#fff', 8.5)}${davidStar(50, 46, 29, '#1e56a8', 5)}${tankSil(49, 49, 0.98, 0, '#5d554cdd')}<g opacity=".55">${davidStar(50, 46, 29, '#1e56a8', 5)}</g>${word('S*', 10, 22, 13, 14)}${word('Ghost', 50, 90, 16, 44, { anchor: 'middle', fill: '#57524a', italic: true })}</svg>`;
+  if (u.kind === 'ghost')
+    return `${frame(wood)}${sticker(paper)}${davidStar(50, 46, 29, '#fff', 8.5)}${davidStar(50, 46, 29, '#1e56a8', 5)}${tankSil(49, 49, 0.98, 0, '#5d554cdd')}<g opacity=".55">${davidStar(50, 46, 29, '#1e56a8', 5)}</g>${word('S*', 10, 22, 13, 14)}${word('Ghost', 50, 90, 16, 44, { anchor: 'middle', fill: '#57524a', italic: true })}</svg>`;
   if (u.kind === 'strongpoint') {
-    const h = Array.from({ length: 6 }, (_, i) => { const a = (i * 60 - 90) * Math.PI / 180; return `${(50 + 24 * Math.cos(a)).toFixed(1)} ${(53 + 24 * Math.sin(a)).toFixed(1)}`; }).join('L');
+    const h = Array.from({ length: 6 }, (_, i) => {
+      const a = ((i * 60 - 90) * Math.PI) / 180;
+      return `${(50 + 24 * Math.cos(a)).toFixed(1)} ${(53 + 24 * Math.sin(a)).toFixed(1)}`;
+    }).join('L');
     const [f, s] = PIP[q[0] ?? 'veteran'] ?? PIP.veteran;
     const body = `<path d="M${h}Z" fill="${boxFill(u)}" stroke="#5a5c5e" stroke-width="3.2" stroke-linejoin="round"/>${u.symbol === 'armor' ? tankSil(47, 56, 0.78, -24, '#141414') : rifleSil(50, 55, 0.82, -52)}<circle cx="50" cy="29" r="4" fill="${f}" stroke="${s}" stroke-width="1.3"/>${word('S*', 10, 22, 13, 14)}${word('Strongpoint', 50, 89, 15, 76, { anchor: 'middle' })}`;
-    return blockFace({ wood, paper, box: '', steps: max, q, name: '', star: true, body, edgeOf: (s) => (max - s === 2 ? 3 : max - s) }, str);      // the bottom keeps the word "Strongpoint": the last step goes on the left
+    return blockFace(
+      { wood, paper, box: '', steps: max, q, name: '', star: true, body, edgeOf: (s) => (max - s === 2 ? 3 : max - s) },
+      str,
+    ); // the bottom keeps the word "Strongpoint": the last step goes on the left
   }
-  const code = u.start_area != null ? { t: String(u.start_area), bg: '#fff' } : u.start_box === 'air_assault' ? { t: 'AA', bg: '#9fcbe6' } : u.start_box === 'strategic_reserve' ? { t: 'SR', bg: '#9fcbe6' }
-    : u.start_box === 'operational_reserve' ? { t: `OR-${(u.entry ?? []).join('')}`, bg: '#9fcbe6' } : u.arrival_turn != null ? { t: `${u.arrival_turn}${u.entry?.length ? `-${u.entry.join('')}` : ''}` } : null;
-  return blockFace({ wood, paper, box: boxFill(u), symbol: u.symbol, steps: max, q, name: printed(u), nameBg: u.start_box === 'air_assault' ? '#f8e23c' : undefined, code, stripe: stripeOf(u), arrowAt: u.initial_steps }, str);
+  const code =
+    u.start_area != null
+      ? { t: String(u.start_area), bg: '#fff' }
+      : u.start_box === 'air_assault'
+        ? { t: 'AA', bg: '#9fcbe6' }
+        : u.start_box === 'strategic_reserve'
+          ? { t: 'SR', bg: '#9fcbe6' }
+          : u.start_box === 'operational_reserve'
+            ? { t: `OR-${(u.entry ?? []).join('')}`, bg: '#9fcbe6' }
+            : u.arrival_turn != null
+              ? { t: `${u.arrival_turn}${u.entry?.length ? `-${u.entry.join('')}` : ''}` }
+              : null;
+  return blockFace(
+    {
+      wood,
+      paper,
+      box: boxFill(u),
+      symbol: u.symbol,
+      steps: max,
+      q,
+      name: printed(u),
+      nameBg: u.start_box === 'air_assault' ? '#f8e23c' : undefined,
+      code,
+      stripe: stripeOf(u),
+      arrowAt: u.initial_steps,
+    },
+    str,
+  );
 }

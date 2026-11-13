@@ -1,0 +1,18 @@
+# Only source code is formatted: data, translations, docs, generated files and the tools' own scripts are left as they are.
+*
+!*/
+!engine/src/**
+!engine/test/**
+!web/src/**
+!web/test/**
+!web/e2e/**
+!web/scripts/**
+!web/*.ts
+!bot/src/**
+!bot/test/**
+!bot/scripts/**
+!tools/push-worker/**
+**/node_modules
+**/*.json
+**/*.md
+**/*.html

@@ -13,18 +13,31 @@ export const edgeKey = (a: number, b: number) => (a < b ? `${a}-${b}` : `${b}-${
 export function useMap(v: Volume) {
   areas = new Map(v.map.areas.map((a) => [a.id, a]));
   edges = new Map(v.map.connections.map((c) => [edgeKey(c.a, c.b), c]));
-  adj = new Map(); sheetAdj = new Map(); PLAY = null;                                            // another map: the previous game's sheet (area ids) must not carry over
-  for (const c of v.map.connections) { const m = c.sheet ? sheetAdj : adj; (m.get(c.a) ?? m.set(c.a, []).get(c.a)!).push(c.b); (m.get(c.b) ?? m.set(c.b, []).get(c.b)!).push(c.a); }
+  adj = new Map();
+  sheetAdj = new Map();
+  PLAY = null; // another map: the previous game's sheet (area ids) must not carry over
+  for (const c of v.map.connections) {
+    const m = c.sheet ? sheetAdj : adj;
+    (m.get(c.a) ?? m.set(c.a, []).get(c.a)!).push(c.b);
+    (m.get(c.b) ?? m.set(c.b, []).get(c.b)!).push(c.a);
+  }
 }
-onGameSwitch(useMap); useMap(CUR);
+onGameSwitch(useMap);
+useMap(CUR);
 
-export const connection = (a: number, b: number) => { const c = edges.get(edgeKey(a, b)); return c?.sheet && !(PLAY?.has(a) && PLAY.has(b)) ? undefined : c; };
+export const connection = (a: number, b: number) => {
+  const c = edges.get(edgeKey(a, b));
+  return c?.sheet && !(PLAY?.has(a) && PLAY.has(b)) ? undefined : c;
+};
 /** The areas in play: all of them, or the Introductory ("Nuts!") map sheet (24.33). Set by the game being played (setPlayArea). */
-export const setPlayArea = (ids: number[] | null | undefined) => { PLAY = ids?.length ? new Set(ids) : null; };
+export const setPlayArea = (ids: number[] | null | undefined) => {
+  PLAY = ids?.length ? new Set(ids) : null;
+};
 export const inPlay = (a: number) => !PLAY || PLAY.has(a);
 /** All neighbours on the full map, also outside the area of play (to find the edge of the Introductory sheet). */
 export const allNeighbors = (a: number) => adj.get(a) ?? [];
-export const neighbors = (a: number) => (PLAY ? [...(adj.get(a) ?? []), ...(PLAY.has(a) ? sheetAdj.get(a) ?? [] : [])].filter((n) => PLAY!.has(n)) : adj.get(a) ?? []);
+export const neighbors = (a: number) =>
+  PLAY ? [...(adj.get(a) ?? []), ...(PLAY.has(a) ? (sheetAdj.get(a) ?? []) : [])].filter((n) => PLAY!.has(n)) : (adj.get(a) ?? []);
 /** The area of play, or null for the whole map. */
 export const playArea = (): ReadonlySet<number> | null => PLAY;
 export const zoneOf = (a: number) => areas.get(a)!.zone;

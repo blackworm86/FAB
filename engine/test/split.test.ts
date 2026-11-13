@@ -1,143 +1,264 @@
 import { describe, expect, it } from 'vitest';
 import { newGame, startBattle, mustFight, useGame, golan, setPlayArea, inPlay, type Game } from '../src';
-import { attackerChoice, defenderChoice, chooseFirstLoss, chooseRetreat, retreatOptions, declineExploit, autoRecover, endPhase, visibleTo } from '../src';
+import {
+  attackerChoice,
+  defenderChoice,
+  chooseFirstLoss,
+  chooseRetreat,
+  retreatOptions,
+  declineExploit,
+  autoRecover,
+  endPhase,
+  visibleTo,
+} from '../src';
 import { toPublic, compose, secretsOf, revealsIn, freshReveals, isPlaceholder, setReady, type Priv } from '../src';
 describe('split hidden blocks (no server)', () => {
-  const SG = 'salt-g', SA = 'salt-a';
-  it('keeps each seat\'s block details out of the shared copy and puts them back for their owner', () => {
-    const { g, area } = (() => { const x = newGame(5); x.phase = 'combat'; x.phasing = 'german'; return { g: x, area: mustFight(x)[0] ?? 11 }; })();
+  const SG = 'salt-g',
+    SA = 'salt-a';
+  it("keeps each seat's block details out of the shared copy and puts them back for their owner", () => {
+    const { g, area } = (() => {
+      const x = newGame(5);
+      x.phase = 'combat';
+      x.phasing = 'german';
+      return { g: x, area: mustFight(x)[0] ?? 11 };
+    })();
     const pubG = toPublic(g, 'german', SG, new Map());
-    const pub = JSON.parse(toPublic(JSON.parse(pubG) as Game, 'allied', SA, new Map())) as Game;     // both sides' clients hide their own
+    const pub = JSON.parse(toPublic(JSON.parse(pubG) as Game, 'allied', SA, new Map())) as Game; // both sides' clients hide their own
     const own = g.units.find((u) => u.side === 'german' && u.area != null && !u.garrison)!;
     expect(JSON.stringify(pub)).not.toContain(own.name);
     const privG: Priv = { salt: SG, secrets: secretsOf(g, 'german') };
-    const mine = compose(pub, privG, {}).game, back = mine.units.find((u) => u.id === own.id)!;
-    expect(back.name).toBe(own.name); expect(back.str).toBe(own.str);
+    const mine = compose(pub, privG, {}).game,
+      back = mine.units.find((u) => u.id === own.id)!;
+    expect(back.name).toBe(own.name);
+    expect(back.str).toBe(own.str);
     const theirs = mine.units.find((u) => u.side === 'allied' && u.area === area && !u.garrison)!;
-    expect(isPlaceholder(theirs)).toBe(true);                                              // the German seat cannot read Allied blocks
+    expect(isPlaceholder(theirs)).toBe(true); // the German seat cannot read Allied blocks
   });
   it('reveals a battle area through the reveals document, then combat can begin', () => {
-    const g = newGame(5); g.phase = 'combat'; g.phasing = 'german'; g.deferBegin = true; const area = mustFight(g)[0] ?? 11;
-    const b = startBattle(g, area); setReady(g, b, 'german'); setReady(g, b, 'allied'); expect(b.stage).toBe('setup');
+    const g = newGame(5);
+    g.phase = 'combat';
+    g.phasing = 'german';
+    g.deferBegin = true;
+    const area = mustFight(g)[0] ?? 11;
+    const b = startBattle(g, area);
+    setReady(g, b, 'german');
+    setReady(g, b, 'allied');
+    expect(b.stage).toBe('setup');
     const reveals = revealsIn(g, 'allied', area, SA);
     const pub = JSON.parse(toPublic(g, 'allied', SA, new Map())) as Game;
     const { game } = compose(pub, { salt: SG, secrets: secretsOf(g, 'german') }, reveals);
-    const foe = game.units.find((u) => u.side === 'allied' && u.area === area && !u.garrison)!; expect(isPlaceholder(foe)).toBe(false);
+    const foe = game.units.find((u) => u.side === 'allied' && u.area === area && !u.garrison)!;
+    expect(isPlaceholder(foe)).toBe(false);
   });
 });
 
 describe('reveals stay current', () => {
   it('publishes a block again when its details changed, so a second battle shows the new strength', () => {
-    const g = newGame(5); g.phase = 'combat'; g.phasing = 'german'; const area = mustFight(g)[0] ?? 11;
-    const first = revealsIn(g, 'allied', area, 'sa'), u = g.units.find((x) => x.side === 'allied' && x.area === area && !x.garrison)!;
+    const g = newGame(5);
+    g.phase = 'combat';
+    g.phasing = 'german';
+    const area = mustFight(g)[0] ?? 11;
+    const first = revealsIn(g, 'allied', area, 'sa'),
+      u = g.units.find((x) => x.side === 'allied' && x.area === area && !x.garrison)!;
     expect(Object.keys(freshReveals({}, first)).length).toBe(Object.keys(first).length);
-    expect(Object.keys(freshReveals(first, revealsIn(g, 'allied', area, 'sa'))).length).toBe(0);             // nothing changed: nothing to publish
+    expect(Object.keys(freshReveals(first, revealsIn(g, 'allied', area, 'sa'))).length).toBe(0); // nothing changed: nothing to publish
     u.str = Math.max(1, u.str - 1);
-    const now = revealsIn(g, 'allied', area, 'sa'), changed = freshReveals(first, now);
-    expect(Object.values(changed).some((r) => r.id === u.id && r.str === u.str)).toBe(u.str !== (Object.values(first).find((r) => r.id === u.id)!.str));
+    const now = revealsIn(g, 'allied', area, 'sa'),
+      changed = freshReveals(first, now);
+    expect(Object.values(changed).some((r) => r.id === u.id && r.str === u.str)).toBe(
+      u.str !== Object.values(first).find((r) => r.id === u.id)!.str,
+    );
   });
 });
 
 import { SplitSeat, initSplit, beginCombat, neighbors } from '../src';
 describe('two seats play a split table', () => {
   it('hides, reveals at battle, hides again, and shows the updated strength in a later battle', () => {
-    const g0 = newGame(5); g0.phase = 'combat'; g0.phasing = 'german'; const area = mustFight(g0)[0] ?? 11;
+    const g0 = newGame(5);
+    g0.phase = 'combat';
+    g0.phasing = 'german';
+    const area = mustFight(g0)[0] ?? 11;
     const sp = initSplit(g0, 'sg', 'sa');
-    let pub = sp.pub, reveals = {} as Record<string, never>;
-    const ger = new SplitSeat('german'), al = new SplitSeat('allied'); ger.priv = sp.german; al.priv = sp.allied;
+    let pub = sp.pub,
+      reveals = {} as Record<string, never>;
+    const ger = new SplitSeat('german'),
+      al = new SplitSeat('allied');
+    ger.priv = sp.german;
+    al.priv = sp.allied;
     const play = (seat: SplitSeat, other: SplitSeat, f: (g: Game) => void) => {
-      const g = seat.open(JSON.parse(pub) as Game); f(g);
-      const out = seat.save(g); pub = out.pub; for (const k of out.gone ?? []) delete (reveals as Record<string, unknown>)[k]; const fresh = seat.due(g); Object.assign(reveals, fresh); ger.reveals = { ...reveals }; al.reveals = { ...reveals }; void other;
+      const g = seat.open(JSON.parse(pub) as Game);
+      f(g);
+      const out = seat.save(g);
+      pub = out.pub;
+      for (const k of out.gone ?? []) delete (reveals as Record<string, unknown>)[k];
+      const fresh = seat.due(g);
+      Object.assign(reveals, fresh);
+      ger.reveals = { ...reveals };
+      al.reveals = { ...reveals };
+      void other;
     };
-    play(ger, al, (g) => { startBattle(g, area); });
+    play(ger, al, (g) => {
+      startBattle(g, area);
+    });
     play(ger, al, (g) => setReady(g, g.battle!, 'german'));
     play(al, ger, (g) => setReady(g, g.battle!, 'allied'));
-    play(ger, al, (g) => setReady(g, g.battle!, 'german'));                                            // 6.24 the Attacker's point unit, last
-    play(al, ger, () => undefined);                                                                       // the Defender's browser sees it and publishes its blocks
+    play(ger, al, (g) => setReady(g, g.battle!, 'german')); // 6.24 the Attacker's point unit, last
+    play(al, ger, () => undefined); // the Defender's browser sees it and publishes its blocks
     // both point units designated: each side's blocks in the area are published, then the attacker begins combat on a game where all of them are known
-    play(ger, al, (g) => { const foe = g.units.filter((u) => u.side === 'allied' && u.area === area && !u.garrison); expect(foe.length).toBeGreaterThan(0); expect(foe.every((u) => !isPlaceholder(u))).toBe(true); beginCombat(g, g.battle!); });
-    const seen = ger.open(JSON.parse(pub) as Game); expect(seen.units.filter((u) => u.area === area && isPlaceholder(u)).length).toBe(0);
+    play(ger, al, (g) => {
+      const foe = g.units.filter((u) => u.side === 'allied' && u.area === area && !u.garrison);
+      expect(foe.length).toBeGreaterThan(0);
+      expect(foe.every((u) => !isPlaceholder(u))).toBe(true);
+      beginCombat(g, g.battle!);
+    });
+    const seen = ger.open(JSON.parse(pub) as Game);
+    expect(seen.units.filter((u) => u.area === area && isPlaceholder(u)).length).toBe(0);
     // the Allied block loses a step, retreats and is hidden again
     let id = '';
-    play(al, ger, (g) => { const u = g.units.find((x) => x.side === 'allied' && x.area === area && !x.garrison && x.str > 1) ?? g.units.find((x) => x.side === 'allied' && x.area === area && !x.garrison)!; id = u.id; u.str = Math.max(1, u.str - 1); g.battle = null; const to = neighbors(area).find((n) => !g.units.some((x) => x.area === n))!; u.area = to; u.up = undefined; });
-    expect(ger.open(JSON.parse(pub) as Game).units.some((u) => u.id === id)).toBe(false);   // hidden again: the German seat can no longer tell which block it is
+    play(al, ger, (g) => {
+      const u =
+        g.units.find((x) => x.side === 'allied' && x.area === area && !x.garrison && x.str > 1) ??
+        g.units.find((x) => x.side === 'allied' && x.area === area && !x.garrison)!;
+      id = u.id;
+      u.str = Math.max(1, u.str - 1);
+      g.battle = null;
+      const to = neighbors(area).find((n) => !g.units.some((x) => x.area === n))!;
+      u.area = to;
+      u.up = undefined;
+    });
+    expect(ger.open(JSON.parse(pub) as Game).units.some((u) => u.id === id)).toBe(false); // hidden again: the German seat can no longer tell which block it is
     const moved = al.open(JSON.parse(pub) as Game).units.find((u) => u.id === id)!;
     expect(moved.area).not.toBe(area);
-    expect(JSON.stringify(JSON.parse(pub))).not.toContain(`"id":"${id}"`);               // the shared copy no longer names it
+    expect(JSON.stringify(JSON.parse(pub))).not.toContain(`"id":"${id}"`); // the shared copy no longer names it
     // a later battle where it stands: the reveal carries its new strength
     const target = moved.area!;
-    play(ger, al, (g) => { const mine = g.units.find((u) => u.side === 'german' && u.area != null && !u.garrison)!; mine.area = target; g.phase = 'combat'; g.phasing = 'german'; startBattle(g, target); setReady(g, g.battle!, 'german'); });
-    play(al, ger, (g) => { setReady(g, g.battle!, 'allied'); });
-    play(ger, al, (g) => setReady(g, g.battle!, 'german')); play(al, ger, () => undefined);            // 6.24 the Attacker's point unit; the Defender's browser publishes
-    const later = ger.open(JSON.parse(pub) as Game), now = later.units.find((u) => u.id === id)!;
+    play(ger, al, (g) => {
+      const mine = g.units.find((u) => u.side === 'german' && u.area != null && !u.garrison)!;
+      mine.area = target;
+      g.phase = 'combat';
+      g.phasing = 'german';
+      startBattle(g, target);
+      setReady(g, g.battle!, 'german');
+    });
+    play(al, ger, (g) => {
+      setReady(g, g.battle!, 'allied');
+    });
+    play(ger, al, (g) => setReady(g, g.battle!, 'german'));
+    play(al, ger, () => undefined); // 6.24 the Attacker's point unit; the Defender's browser publishes
+    const later = ger.open(JSON.parse(pub) as Game),
+      now = later.units.find((u) => u.id === id)!;
     const truth = al.open(JSON.parse(pub) as Game).units.find((u) => u.id === id)!;
-    expect(isPlaceholder(now)).toBe(false); expect(now.str).toBe(truth.str);            // not the strength it had when it was first revealed
+    expect(isPlaceholder(now)).toBe(false);
+    expect(now.str).toBe(truth.str); // not the strength it had when it was first revealed
   });
 });
 
 import { settleUp, closeBattle, roll_step } from '../src';
 describe('face-up blocks stand up again', () => {
   it('a block revealed in a battle is hidden again when its area is no longer contested', () => {
-    const g = newGame(5); g.phase = 'combat'; g.phasing = 'german'; const area = mustFight(g)[0] ?? 11;
-    const b = startBattle(g, area); for (const u of g.units) if (u.area === area && !u.garrison) u.up = area; void b;
+    const g = newGame(5);
+    g.phase = 'combat';
+    g.phasing = 'german';
+    const area = mustFight(g)[0] ?? 11;
+    const b = startBattle(g, area);
+    for (const u of g.units) if (u.area === area && !u.garrison) u.up = area;
+    void b;
     const al = g.units.find((u) => u.side === 'allied' && u.area === area && !u.garrison)!;
     expect(isPlaceholder(al)).toBe(false);
-    for (const u of g.units.filter((x) => x.side === 'german' && x.area === area)) u.area = null as unknown as number;        // the attackers leave
-    expect(al.up).toBe(area); settleUp(g); expect(al.up).toBeUndefined();
-    void closeBattle; void roll_step;
+    for (const u of g.units.filter((x) => x.side === 'german' && x.area === area)) u.area = null as unknown as number; // the attackers leave
+    expect(al.up).toBe(area);
+    settleUp(g);
+    expect(al.up).toBeUndefined();
+    void closeBattle;
+    void roll_step;
   });
 });
 
 import { move, moveOptions } from '../src';
 describe('entering a face-up contested area (5.22)', () => {
   it('a unit that moves into an area whose enemy is face-up is revealed', () => {
-    const g = newGame(5); g.phase = 'movement'; g.phasing = 'german'; g.contestedAtMoveStart = [];
+    const g = newGame(5);
+    g.phase = 'movement';
+    g.phasing = 'german';
+    g.contestedAtMoveStart = [];
     const al = g.units.find((u) => u.side === 'allied' && u.area != null && !u.garrison)!;
     for (const u of g.units.filter((x) => x.side === 'german' && x.area === al.area)) u.area = null as unknown as number;
-    const ge = g.units.find((u) => u.side === 'german' && u.area != null && !u.garrison && moveOptions(g, u.id).some((o) => o.area === al.area));
+    const ge = g.units.find(
+      (u) => u.side === 'german' && u.area != null && !u.garrison && moveOptions(g, u.id).some((o) => o.area === al.area),
+    );
     if (!ge) return;
-    al.up = al.area!; const first = g.units.filter((x) => x.side === 'german' && !x.garrison && x.area != null && x.id !== ge.id && moveOptions(g, x.id).some((o) => o.area === al.area))[0];
+    al.up = al.area!;
+    const first = g.units.filter(
+      (x) => x.side === 'german' && !x.garrison && x.area != null && x.id !== ge.id && moveOptions(g, x.id).some((o) => o.area === al.area),
+    )[0];
     g.contestedAtMoveStart = [al.area!];
-    const mover = first ?? ge; const r = move(g, mover.id, al.area!); if (r === 'moved') expect(mover.up).toBe(al.area);
+    const mover = first ?? ge;
+    const r = move(g, mover.id, al.area!);
+    if (r === 'moved') expect(mover.up).toBe(al.area);
   });
   it('the shared copy names no hidden block anywhere: log, checks, battle', () => {
     const g = newGame(7);
-    while (g.phase !== 'supply' || g.turn < 2) {                                         // play into turn 2 with real battles, logs and rolls
-      for (const a of mustFight(g)) { const b = startBattle(g, a); beginCombat(g, b); for (let i = 0; i < 90 && b.stage !== 'done'; i++) { if (b.stage === 'attChoice') attackerChoice(g, b, false); else if (b.stage === 'defChoice') defenderChoice(g, b, false); else if (b.stage === 'attFirst') chooseFirstLoss(g, b, b.attPoint); else if (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]); else if (b.stage === 'exploit') declineExploit(g, b); else roll_step(g, b); } closeBattle(g); }
-      autoRecover(g); endPhase(g);
+    while (g.phase !== 'supply' || g.turn < 2) {
+      // play into turn 2 with real battles, logs and rolls
+      for (const a of mustFight(g)) {
+        const b = startBattle(g, a);
+        beginCombat(g, b);
+        for (let i = 0; i < 90 && b.stage !== 'done'; i++) {
+          if (b.stage === 'attChoice') attackerChoice(g, b, false);
+          else if (b.stage === 'defChoice') defenderChoice(g, b, false);
+          else if (b.stage === 'attFirst') chooseFirstLoss(g, b, b.attPoint);
+          else if (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]);
+          else if (b.stage === 'exploit') declineExploit(g, b);
+          else roll_step(g, b);
+        }
+        closeBattle(g);
+      }
+      autoRecover(g);
+      endPhase(g);
     }
     const hidden = g.units.filter((u) => !visibleTo(g, u, 'spectator') && u.name.length > 2);
     expect(hidden.length).toBeGreaterThan(0);
-    for (const u of hidden) (g.checks ??= []).push({ who: u.name, why: 'Out of supply morale check (9.4)', sn: 5, die: 7, ok: false, area: u.area });   // as the Supply Phase records them
+    for (const u of hidden)
+      (g.checks ??= []).push({ who: u.name, why: 'Out of supply morale check (9.4)', sn: 5, die: 7, ok: false, area: u.area }); // as the Supply Phase records them
     const pub = toPublic(JSON.parse(toPublic(g, 'german', 'salt-g', new Map())) as Game, 'allied', 'salt-a', new Map());
     for (const u of hidden) expect(pub, u.name).not.toContain(`"${u.name}"`);
     for (const u of hidden) expect(pub.includes(u.name + ' '), u.name).toBe(false);
   });
 });
 
-
 describe('a revealed block hidden again is not traceable (playtest: Peiper stayed known)', () => {
   it('withdraws the reveal and gives the block a new opaque id; the owner still recognises the old one', async () => {
     const { SplitSeat, secretsOf: sec, compose: comp, isPlaceholder: ph } = await import('../src');
-    const g = newGame(5); g.phase = 'combat'; g.phasing = 'german'; const area = mustFight(g)[0] ?? 11;
-    const al = new SplitSeat('allied'); al.priv = { salt: 'sa', secrets: sec(g, 'allied') };
+    const g = newGame(5);
+    g.phase = 'combat';
+    g.phasing = 'german';
+    const area = mustFight(g)[0] ?? 11;
+    const al = new SplitSeat('allied');
+    al.priv = { salt: 'sa', secrets: sec(g, 'allied') };
     const u = g.units.find((x) => x.side === 'allied' && x.area === area && !x.garrison)!;
-    u.up = area;                                                                         // face-up in a battle
-    const shown = al.due(g); const oldAlias = Object.keys(shown).find((k) => shown[k].id === u.id)!;
+    u.up = area; // face-up in a battle
+    const shown = al.due(g);
+    const oldAlias = Object.keys(shown).find((k) => shown[k].id === u.id)!;
     expect(oldAlias).toBeTruthy();
-    const pub1 = al.save(g).pub; expect(pub1).not.toContain(oldAlias);                 // visible: shown by name, no alias needed
-    u.up = undefined;                                                                    // hidden again (6.24)
+    const pub1 = al.save(g).pub;
+    expect(pub1).not.toContain(oldAlias); // visible: shown by name, no alias needed
+    u.up = undefined; // hidden again (6.24)
     const out = al.save(g);
-    expect(out.gone).toContain(oldAlias); expect(out.priv?.epoch?.[u.id]).toBe(1);
-    expect(out.pub).not.toContain(oldAlias); expect(out.pub).not.toContain(u.name);
-    const left = { ...shown }; delete left[oldAlias];
+    expect(out.gone).toContain(oldAlias);
+    expect(out.priv?.epoch?.[u.id]).toBe(1);
+    expect(out.pub).not.toContain(oldAlias);
+    expect(out.pub).not.toContain(u.name);
+    const left = { ...shown };
+    delete left[oldAlias];
     const seenByGerman = comp(JSON.parse(out.pub) as Game, null, left).game;
-    expect(seenByGerman.units.some((x) => x.id === u.id)).toBe(false);                   // the German seat cannot link it back
-    const mineAgain = comp(JSON.parse(pub1.split(u.id).join(oldAlias)) as Game, al.priv, {}).game;   // an older copy written with the old id
+    expect(seenByGerman.units.some((x) => x.id === u.id)).toBe(false); // the German seat cannot link it back
+    const mineAgain = comp(JSON.parse(pub1.split(u.id).join(oldAlias)) as Game, al.priv, {}).game; // an older copy written with the old id
     expect(ph(mineAgain.units.find((x) => x.id === u.id)!)).toBe(false);
   });
   it('hides a name only as a whole word in the log', () => {
-    const g = newGame(5); g.phase = 'combat'; g.phasing = 'german';
+    const g = newGame(5);
+    g.phase = 'combat';
+    g.phasing = 'german';
     const a = g.units.find((x) => x.side === 'allied' && x.area != null && !x.garrison)!;
     g.log.push(`T1 AL supply: 9${a.name} eliminated`, `T1 AL supply: ${a.name} eliminated`);
     const pub = JSON.parse(toPublic(g, 'allied', 'sa', new Map())) as Game;
@@ -148,25 +269,43 @@ describe('a revealed block hidden again is not traceable (playtest: Peiper staye
 describe('withdrawing a reveal is not a move', () => {
   it('the referee check ignores a hidden block that only got a new opaque id', async () => {
     const { auditChange } = await import('../src');
-    const g = newGame(5); g.phase = 'movement'; g.phasing = 'german';
+    const g = newGame(5);
+    g.phase = 'movement';
+    g.phasing = 'german';
     const prev = JSON.parse(toPublic(g, 'allied', 'sa', new Map())) as Game;
-    const next = JSON.parse(JSON.stringify(prev)) as Game; const h = next.units.find((u) => u.name === 'Hidden block')!; h.id = 'hNEWALIAS';
+    const next = JSON.parse(JSON.stringify(prev)) as Game;
+    const h = next.units.find((u) => u.name === 'Hidden block')!;
+    h.id = 'hNEWALIAS';
     expect(auditChange(prev, next, 'allied')).toEqual([]);
-    next.units.find((u) => u.name === 'Hidden block')!.area = 999;                     // a real move by the wrong side is still flagged
+    next.units.find((u) => u.name === 'Hidden block')!.area = 999; // a real move by the wrong side is still flagged
     expect(auditChange(prev, next, 'allied').length).toBe(1);
   });
   it('a Golan ghost or strongpoint shows nothing of what it is in the shared copy', () => {
-    useGame('golan73'); const g = newGame(3, { scenario: 'badr' }); golan.autoStrongpoints(g, 'historical');
-    const ghost = g.units.find((u) => u.ghost && u.area != null)!, fort = g.units.find((u) => u.fort && u.area != null)!;
+    useGame('golan73');
+    const g = newGame(3, { scenario: 'badr' });
+    golan.autoStrongpoints(g, 'historical');
+    const ghost = g.units.find((u) => u.ghost && u.area != null)!,
+      fort = g.units.find((u) => u.fort && u.area != null)!;
     const pub = JSON.parse(toPublic(g, 'israeli', 'salt-i', new Map())) as Game;
-    for (const u of pub.units.filter((x) => isPlaceholder(x))) { expect(u.ghost).toBeUndefined(); expect(u.fort).toBeUndefined(); expect(u.kind).toBeUndefined(); expect(u.division).toBeUndefined(); }
+    for (const u of pub.units.filter((x) => isPlaceholder(x))) {
+      expect(u.ghost).toBeUndefined();
+      expect(u.fort).toBeUndefined();
+      expect(u.kind).toBeUndefined();
+      expect(u.division).toBeUndefined();
+    }
     expect(pub.units.some((u) => u.id === ghost.id || u.id === fort.id)).toBe(false);
     const back = compose(pub, { salt: 'salt-i', secrets: secretsOf(g, 'israeli') }, {}).game;
-    expect(back.units.find((u) => u.id === ghost.id)!.ghost).toBe(true); expect(back.units.find((u) => u.id === fort.id)!.fort).toBe(fort.fort);
+    expect(back.units.find((u) => u.id === ghost.id)!.ghost).toBe(true);
+    expect(back.units.find((u) => u.id === fort.id)!.fort).toBe(fort.fort);
     useGame('bulge');
   });
   it('switching volume clears the area of play (a Nuts! sheet must not carry over to another map)', () => {
-    useGame('bulge'); newGame(1, { scenario: 'intro' }); setPlayArea([1, 2, 3]); expect(inPlay(40)).toBe(false);
-    useGame('golan73'); expect(inPlay(40)).toBe(true); useGame('bulge');
+    useGame('bulge');
+    newGame(1, { scenario: 'intro' });
+    setPlayArea([1, 2, 3]);
+    expect(inPlay(40)).toBe(false);
+    useGame('golan73');
+    expect(inPlay(40)).toBe(true);
+    useGame('bulge');
   });
 });

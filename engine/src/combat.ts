@@ -7,27 +7,48 @@ const LEVEL: Record<Quality, number> = { green: 0, veteran: 1, elite: 2 };
 export interface Shooter {
   kind: 'unit' | 'battle' | 'artillery' | 'air';
   cls: 'armor' | 'infantry';
-  quality?: Quality;            // artillery assets have none
-  dice: number;                 // current steps (1 per artillery asset)
-  disordered?: boolean; unsupplied?: boolean;
-  airSupport?: boolean;         // air mission used as battle support: +2 (17.21)
-  side?: string; rocket?: boolean; strongpoint?: 'armor' | 'infantry'; closeAirSupport?: boolean;    // read by other volumes' tables
+  quality?: Quality; // artillery assets have none
+  dice: number; // current steps (1 per artillery asset)
+  disordered?: boolean;
+  unsupplied?: boolean;
+  airSupport?: boolean; // air mission used as battle support: +2 (17.21)
+  side?: string;
+  rocket?: boolean;
+  strongpoint?: 'armor' | 'infantry';
+  closeAirSupport?: boolean; // read by other volumes' tables
 }
 /** What the shooter is shooting at: the opposing point unit and its status. */
-export interface Target { pointCls: 'armor' | 'infantry'; pointQuality: Quality; fieldWorks?: boolean; riverAssaultMarker?: boolean; strongpoint?: 'armor' | 'infantry' }
-export interface Setting { attacker: boolean; tdn: number; riverAssault?: boolean; advArty?: boolean; night?: boolean }
+export interface Target {
+  pointCls: 'armor' | 'infantry';
+  pointQuality: Quality;
+  fieldWorks?: boolean;
+  riverAssaultMarker?: boolean;
+  strongpoint?: 'armor' | 'infantry';
+}
+export interface Setting {
+  attacker: boolean;
+  tdn: number;
+  riverAssault?: boolean;
+  advArty?: boolean;
+  night?: boolean;
+}
 
 /** Success Number with every modifier listed, so the UI can explain it (Player Aid C, artillery and ground fire tables). */
 export function successNumber(s: Shooter, t: Target, c: Setting) {
   const parts: [string, number][] = [['base', 5]];
-  const add = (why: string, v: number) => { if (v) parts.push([why, v]); };
-  if (t.pointCls === 'armor') add("target's point unit is armor", -1);                 // "armor, or infantry in field works": never both
+  const add = (why: string, v: number) => {
+    if (v) parts.push([why, v]);
+  };
+  if (t.pointCls === 'armor')
+    add("target's point unit is armor", -1); // "armor, or infantry in field works": never both
   else if (t.fieldWorks) add("target's point unit is in field works", -1);
-  if (s.kind === 'artillery' && c.advArty) {                                           // 18.6 optional advanced artillery modifiers
+  if (s.kind === 'artillery' && c.advArty) {
+    // 18.6 optional advanced artillery modifiers
     if (c.attacker) add('target is the defender (18.6)', -1);
     if (t.pointCls === 'infantry' && !t.fieldWorks) add('infantry point unit not in field works (18.6)', 1);
   }
-  if (s.kind !== 'artillery') {                                                        // the artillery table has only the row above
+  if (s.kind !== 'artillery') {
+    // the artillery table has only the row above
     if (s.cls === 'armor') add('firing unit is armor', 1);
     if (s.quality) add(`${s.quality} firing on ${t.pointQuality} point unit`, LEVEL[s.quality] - LEVEL[t.pointQuality]);
     if (c.attacker) add('terrain (TDN)', -c.tdn);
@@ -41,14 +62,19 @@ export function successNumber(s: Shooter, t: Target, c: Setting) {
 }
 
 /** Morale check SN (Player Aid C morale table). */
-export const moraleSn = (q: Quality, disordered = false, unsupplied = false) => 5 + { elite: 2, veteran: 0, green: -2 }[q] - +disordered - +unsupplied;
+export const moraleSn = (q: Quality, disordered = false, unsupplied = false) =>
+  5 + { elite: 2, veteran: 0, green: -2 }[q] - +disordered - +unsupplied;
 
 /** Distribution of the total hits from several dice groups: pmf[k] = P(exactly k hits). */
 export function hitPmf(groups: { dice: number; sn: number }[]): number[] {
   let pmf = [1];
   for (const g of groups) {
-    const p = hitProb(g.sn); let c = 1; // C(n,k) built up step by step
-    const bin = Array.from({ length: g.dice + 1 }, (_, k) => { if (k) c = (c * (g.dice - k + 1)) / k; return c * p ** k * (1 - p) ** (g.dice - k); });
+    const p = hitProb(g.sn);
+    let c = 1; // C(n,k) built up step by step
+    const bin = Array.from({ length: g.dice + 1 }, (_, k) => {
+      if (k) c = (c * (g.dice - k + 1)) / k;
+      return c * p ** k * (1 - p) ** (g.dice - k);
+    });
     const out = new Array(pmf.length + g.dice).fill(0);
     pmf.forEach((a, i) => bin.forEach((b, j) => (out[i + j] += a * b)));
     pmf = out;

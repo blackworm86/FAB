@@ -4,4 +4,7 @@ const { publicKey, privateKey } = await crypto.subtle.generateKey({ name: 'ECDSA
 const raw = new Uint8Array(await crypto.subtle.exportKey('raw', publicKey));
 const pub = Buffer.from(raw).toString('base64url');
 console.log('VAPID public key (VITE_VAPID_PUBLIC and VAPID_PUBLIC):\n' + pub);
-console.log('\nVAPID private key (paste when wrangler asks for VAPID_PRIVATE_JWK):\n' + JSON.stringify(await crypto.subtle.exportKey('jwk', privateKey)));
+console.log(
+  '\nVAPID private key (paste when wrangler asks for VAPID_PRIVATE_JWK):\n' +
+    JSON.stringify(await crypto.subtle.exportKey('jwk', privateKey)),
+);

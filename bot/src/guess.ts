@@ -5,12 +5,15 @@ import * as E from '../../engine/src';
 import type { Game, Side } from '../../engine/src';
 
 export function guessFull(view: Game, seat: Side, r: () => number): Game {
-  const g = structuredClone(view), enemy = E.other(seat), seen = new Set(g.units.map((u) => u.id));
+  const g = structuredClone(view),
+    enemy = E.other(seat),
+    seen = new Set(g.units.map((u) => u.id));
   E.useGame(g.game ?? 'bulge');
   const pool = E.newGame(1, g.opts).units.filter((u) => u.side === enemy && !seen.has(u.id));
-  for (const u of g.units) if (u.side === enemy && E.isPlaceholder(u) && pool.length) {
-    const pick = pool.splice(Math.floor(r() * pool.length), 1)[0];
-    Object.assign(u, E.secretOf(pick), { str: Math.max(1, Math.ceil(pick.max * (0.5 + 0.5 * r()))) });
-  }
+  for (const u of g.units)
+    if (u.side === enemy && E.isPlaceholder(u) && pool.length) {
+      const pick = pool.splice(Math.floor(r() * pool.length), 1)[0];
+      Object.assign(u, E.secretOf(pick), { str: Math.max(1, Math.ceil(pick.max * (0.5 + 0.5 * r()))) });
+    }
   return g;
 }

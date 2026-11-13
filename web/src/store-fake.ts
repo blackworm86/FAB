@@ -5,34 +5,93 @@ import type { Account, ChatMsg, Seats, Store, StateDoc } from './online';
 /** `?dev=1&fake=german` / `&fake=allied`: the hiding (shared copy + private details + reveals), kept in localStorage so two tabs can play it. */
 /** ?dev=1&fake=german&rules=bridgeLimit,peiper,pz150&bid=2: optional rules (18) for the two-seat test table. */
 function devRules() {
-  const q = new URLSearchParams(location.search), out: Record<string, unknown> = {};
+  const q = new URLSearchParams(location.search),
+    out: Record<string, unknown> = {};
   for (const k of (q.get('rules') ?? '').split(',').filter(Boolean)) out[k] = true;
-  const bid = Number(q.get('bid')); if (bid) out.bid = Math.max(-5, Math.min(5, bid));
+  const bid = Number(q.get('bid'));
+  if (bid) out.bid = Math.max(-5, Math.min(5, bid));
   return out;
 }
 export function fakeStore(side: Side): Store {
-  const P = 'fab-fake-pub', V = (x: Side) => 'fab-fake-priv-' + x, R = 'fab-fake-reveals';
+  const P = 'fab-fake-pub',
+    V = (x: Side) => 'fab-fake-priv-' + x,
+    R = 'fab-fake-reveals';
   const none = async () => '';
   const seats: Seats = { german: 'u-german', allied: 'u-allied', germanName: 'German (dev)', alliedName: 'Allied (dev)' };
-  const get = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) ?? 'null') as T | null; } catch { return null; } };
-  const put = (k: string, v: unknown) => { localStorage.setItem(k, JSON.stringify(v)); window.dispatchEvent(new StorageEvent('storage', { key: k })); };
-  const scen = new URLSearchParams(location.search).get('scen') as 'tournament' | 'campaign' | 'intro' | 'cold' | null;      // ?dev=1&fake=german&scen=cold: a two-seat test table of that scenario
-  const stored = get<{ json: string }>(P), storedScen = stored ? (JSON.parse(stored.json) as { opts?: { scenario?: string } }).opts?.scenario : null;
-  if (!stored || (scen && storedScen !== scen) || Object.entries(devRules()).some(([k, v]) => (JSON.parse(stored.json) as { opts?: Record<string, unknown> }).opts?.[k] !== v)) { localStorage.removeItem(R); const sp = initSplit(newGame(5, { scenario: scen ?? 'tournament', fuel: true, ...devRules() }), 'sg', 'sa'); put(V('german'), sp.german); put(V('allied'), sp.allied); put(P, { rev: 1, json: sp.pub }); }
-  const on = (k: string, f: () => void) => { f(); window.addEventListener('storage', (e) => { if (e.key === k) f(); }); };
+  const get = <T>(k: string): T | null => {
+    try {
+      return JSON.parse(localStorage.getItem(k) ?? 'null') as T | null;
+    } catch {
+      return null;
+    }
+  };
+  const put = (k: string, v: unknown) => {
+    localStorage.setItem(k, JSON.stringify(v));
+    window.dispatchEvent(new StorageEvent('storage', { key: k }));
+  };
+  const scen = new URLSearchParams(location.search).get('scen') as 'tournament' | 'campaign' | 'intro' | 'cold' | null; // ?dev=1&fake=german&scen=cold: a two-seat test table of that scenario
+  const stored = get<{ json: string }>(P),
+    storedScen = stored ? (JSON.parse(stored.json) as { opts?: { scenario?: string } }).opts?.scenario : null;
+  if (
+    !stored ||
+    (scen && storedScen !== scen) ||
+    Object.entries(devRules()).some(([k, v]) => (JSON.parse(stored.json) as { opts?: Record<string, unknown> }).opts?.[k] !== v)
+  ) {
+    localStorage.removeItem(R);
+    const sp = initSplit(newGame(5, { scenario: scen ?? 'tournament', fuel: true, ...devRules() }), 'sg', 'sa');
+    put(V('german'), sp.german);
+    put(V('allied'), sp.allied);
+    put(P, { rev: 1, json: sp.pub });
+  }
+  const on = (k: string, f: () => void) => {
+    f();
+    window.addEventListener('storage', (e) => {
+      if (e.key === k) f();
+    });
+  };
   return {
     uid: 'u-' + side,
-    watchSeats: (next) => next(seats), sit: async () => '',
+    watchSeats: (next) => next(seats),
+    sit: async () => '',
     watchState: (next) => on(P, () => next(get<StateDoc>(P))),
-    setState: async (d) => put(P, { ...d, by: 'u-' + side }),                      // like the database: each write is signed by its writer
-    watchPriv: (next) => on(V(side), () => next(get<Priv>(V(side)))), setPriv: async (p) => put(V(side), p),
+    setState: async (d) => put(P, { ...d, by: 'u-' + side }), // like the database: each write is signed by its writer
+    watchPriv: (next) => on(V(side), () => next(get<Priv>(V(side)))),
+    setPriv: async (p) => put(V(side), p),
     watchChat: (next) => on('fab-fake-chat', () => next(get<ChatMsg[]>('fab-fake-chat') ?? [])),
-    addJournal: async (part, d) => { const j = get<Record<string, Record<string, { at: number; d: string }>>>('fab-fake-journal') ?? {}; (j[part] ??= {})[`e${Date.now()}${Math.random().toString(36).slice(2, 6)}`] = { at: Date.now(), d }; put('fab-fake-journal', j); },
+    addJournal: async (part, d) => {
+      const j = get<Record<string, Record<string, { at: number; d: string }>>>('fab-fake-journal') ?? {};
+      (j[part] ??= {})[`e${Date.now()}${Math.random().toString(36).slice(2, 6)}`] = { at: Date.now(), d };
+      put('fab-fake-journal', j);
+    },
     readJournal: async () => get<Record<string, Record<string, { at: number; d: string }>>>('fab-fake-journal') ?? {},
-    sendChat: async (s, text) => { put('fab-fake-chat', [...(get<ChatMsg[]>('fab-fake-chat') ?? []), { id: String(Date.now()), uid: 'u-' + s, side: s, name: s, text, t: Date.now() }].slice(-100)); return ''; },
-    watchReveals: (next) => on(R, () => next(get<Reveals>(R) ?? {})), mergeReveals: async (r) => put(R, { ...(get<Reveals>(R) ?? {}), ...r }),
-    dropReveals: async (keys) => { const r = { ...(get<Reveals>(R) ?? {}) }; for (const k of keys) delete r[k]; put(R, r); },
-    account: (): Account => ({ uid: 'u-' + side, name: side, email: '', guest: false, admin: false }), onAccount: () => undefined,
-    google: none, emailSignIn: none, emailRegister: none, resetPassword: none, signOut: none, freeSeat: none, createMatch: async () => '!Not available in the development table', deleteMatch: none, leaveMatch: none, watchMyMatches: (next) => next([]),
+    sendChat: async (s, text) => {
+      put(
+        'fab-fake-chat',
+        [
+          ...(get<ChatMsg[]>('fab-fake-chat') ?? []),
+          { id: String(Date.now()), uid: 'u-' + s, side: s, name: s, text, t: Date.now() },
+        ].slice(-100),
+      );
+      return '';
+    },
+    watchReveals: (next) => on(R, () => next(get<Reveals>(R) ?? {})),
+    mergeReveals: async (r) => put(R, { ...(get<Reveals>(R) ?? {}), ...r }),
+    dropReveals: async (keys) => {
+      const r = { ...(get<Reveals>(R) ?? {}) };
+      for (const k of keys) delete r[k];
+      put(R, r);
+    },
+    account: (): Account => ({ uid: 'u-' + side, name: side, email: '', guest: false, admin: false }),
+    onAccount: () => undefined,
+    google: none,
+    emailSignIn: none,
+    emailRegister: none,
+    resetPassword: none,
+    signOut: none,
+    freeSeat: none,
+    createMatch: async () => '!Not available in the development table',
+    deleteMatch: none,
+    leaveMatch: none,
+    watchMyMatches: (next) => next([]),
   };
 }

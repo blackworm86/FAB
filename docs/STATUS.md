@@ -62,8 +62,8 @@ Goal: keep the design, split the few oversized files by moving code, no rewrite 
 | Step | What | State |
 |---|---|---|
 | 1. Safety net | A picture check of every phase, a selected block, a battle and the main windows for each game on desktop and phone (`web/e2e/shots.mjs`). | **Done 13 Nov** (details below) |
-| 2. One formatting pass | An automatic formatter over all the code, with a CI check. Needs a short freeze of the other sessions. | Next |
-| 3. Split `web/src/main.ts` | Move code into modules, one small commit each. | — |
+| 2. One formatting pass | Prettier over all the source code (`npm run format` at the repository root; width 140), with a CI check (`format:check`). | **Done 13 Nov**: engine 417 and table 134 tests, type checks and the production build pass; picture check: no visible change (Sicily 42 of 42 identical, The Bulge desktop identical, The Bulge phone the known ~1% camera noise). `bot/` tests not run here (no packages installed). Sessions must merge `origin/main` and run `npm run format` on their own unpushed changes before pushing. |
+| 3. Split `web/src/main.ts` | Move code into modules, one small commit each. | Next (now 7,300 lines after formatting) |
 | 4. Split the engine | The Bulge's own rules to `engine/src/vol/bulge.ts`; the rest of `game.ts` by phase. | — |
 | 5. Split `style.css` | One file per screen. | — |
 | 6. Docs and ownership | `HANDOVER.md` as current state plus changelog; ownership in `PARALLEL.md` by module. | — |

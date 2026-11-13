@@ -1,9 +1,25 @@
 // Golan '73 movement, against the Play Book's examples of play (23.0; docs/games/golan73/rules/playbook-examples.md).
 import { describe, expect, it } from 'vitest';
-import { reachable, stratReachable, pathCost, areas, area, ASSEMBLY, neighbors, connection, type GMoveCtx, type GMoveUnit, type GSide } from '../src/golan';
+import {
+  reachable,
+  stratReachable,
+  pathCost,
+  areas,
+  area,
+  ASSEMBLY,
+  neighbors,
+  connection,
+  type GMoveCtx,
+  type GMoveUnit,
+  type GSide,
+} from '../src/golan';
 
 type Occ = Partial<Record<number, Partial<Record<GSide, number>>>>;
-const ctx = (occ: Occ = {}, more: Partial<GMoveCtx> = {}): GMoveCtx => ({ turn: 5, units: (a) => ({ israeli: occ[a]?.israeli ?? 0, syrian: occ[a]?.syrian ?? 0 }), ...more });
+const ctx = (occ: Occ = {}, more: Partial<GMoveCtx> = {}): GMoveCtx => ({
+  turn: 5,
+  units: (a) => ({ israeli: occ[a]?.israeli ?? 0, syrian: occ[a]?.syrian ?? 0 }),
+  ...more,
+});
 const at = (u: GMoveUnit, c: GMoveCtx, a: number) => reachable(u, c).find((r) => r.area === a);
 const isr = (cls: 'armor' | 'infantry', a: number): GMoveUnit => ({ side: 'israeli', cls, area: a });
 const syr = (cls: 'armor' | 'infantry', a: number): GMoveUnit => ({ side: 'syrian', cls, area: a });
@@ -41,18 +57,23 @@ describe('Example 3: basic movement', () => {
     expect(pathCost(isr('armor', 6), ctx(), [6, 7, 36])!.limited).toEqual(['7-36']);
   });
   it('E–G: Golani in 35: no escarpment without road into 8; 36 by field 2; 34 occupied 2, then 38 for 1', () => {
-    const g = isr('infantry', 35), c = ctx({ 34: { israeli: 1 }, 42: { israeli: 1 } }, { crossedThisPhase: new Set(['7-36']) });
+    const g = isr('infantry', 35),
+      c = ctx({ 34: { israeli: 1 }, 42: { israeli: 1 } }, { crossedThisPhase: new Set(['7-36']) });
     expect(pathCost(g, c, [35, 8])).toBeNull();
     expect(pathCost(g, c, [35, 36])!.cost).toBe(2);
-    expect(pathCost(g, c, [35, 36, 42])).toBeNull();     // occupied: 2 + 2 > 3
-    expect(pathCost(g, c, [35, 36, 43])).toBeNull();     // wadi by field
-    expect(pathCost(g, c, [35, 36, 7])).toBeNull();      // escarpment already crossed this phase
-    expect(at(g, c, 38)!.cost).toBe(3); expect(at(g, c, 38)!.path).toEqual([35, 34, 38]);
+    expect(pathCost(g, c, [35, 36, 42])).toBeNull(); // occupied: 2 + 2 > 3
+    expect(pathCost(g, c, [35, 36, 43])).toBeNull(); // wadi by field
+    expect(pathCost(g, c, [35, 36, 7])).toBeNull(); // escarpment already crossed this phase
+    expect(at(g, c, 38)!.cost).toBe(3);
+    expect(at(g, c, 38)!.path).toEqual([35, 34, 38]);
   });
   it('H: 53/188 in 34 into enemy-held 33: road +1 occupied = 2 and must stop', () => {
     const r = at(isr('armor', 34), ctx({ 34: { israeli: 1 }, 33: { syrian: 1 } }), 33)!;
-    expect(r.cost).toBe(2); expect(r.mustStop).toBe(true);
-    expect(reachable(isr('armor', 34), ctx({ 34: { israeli: 1 }, 33: { syrian: 1 } })).some((x) => x.path.includes(33) && x.area !== 33)).toBe(false);
+    expect(r.cost).toBe(2);
+    expect(r.mustStop).toBe(true);
+    expect(
+      reachable(isr('armor', 34), ctx({ 34: { israeli: 1 }, 33: { syrian: 1 } })).some((x) => x.path.includes(33) && x.area !== 33),
+    ).toBe(false);
   });
 });
 
@@ -76,7 +97,11 @@ describe('Example 4: rugged boundaries', () => {
 
 describe('Example 5: anti-tank ditch', () => {
   it('A–C: crossing the AT ditch takes the whole allowance, allowed as a one-area move', () => {
-    for (const [from, to, cls] of [[64, 50, 'infantry'], [61, 57, 'infantry'], [60, 59, 'infantry']] as const) {
+    for (const [from, to, cls] of [
+      [64, 50, 'infantry'],
+      [61, 57, 'infantry'],
+      [60, 59, 'infantry'],
+    ] as const) {
       expect(pathCost(syr(cls, from), ctx({ [to]: { israeli: 1 } }), [from, to])!.cost).toBeGreaterThanOrEqual(3);
       expect(pathCost(syr('armor', from), ctx(), [from, to])!.cost).toBe(6);
     }
@@ -93,17 +118,20 @@ describe('Example 6: minefields', () => {
   const mines = { minefields: new Set(['47-48']) };
   it('C: 52nd Inf 48 → 47 across a minefield: road 1 +1 occupied +1 mine = 3, with a morale check', () => {
     const r = at(syr('infantry', 48), ctx({ 47: { israeli: 1 } }, mines), 47)!;
-    expect(r.cost).toBe(3); expect(r.triggers).toEqual(['minefield']);
+    expect(r.cost).toBe(3);
+    expect(r.triggers).toEqual(['minefield']);
   });
   it('B: after a failed check the recon must go round: 48 → 40 → 41 → 47', () => {
     const r = at({ ...syr('armor', 48), minefieldFailed: true }, ctx({}, { ...mines, turn: 3 }), 47)!;
     expect(r.path).toEqual([48, 40, 41, 47]);
-    expect(r.cost).toBe(4);                          // the printed map has a road on 40/41 (the example says 5)
+    expect(r.cost).toBe(4); // the printed map has a road on 40/41 (the example says 5)
   });
   it('after a failed check the allowance is spent: no further one-area move beyond it (5.33 only on the first step)', () => {
     expect(at({ ...syr('infantry', 48), spent: 3 }, ctx({}, mines), 40)).toBeUndefined();
   });
-  it('minefields do not affect Israeli units', () => { expect(at(isr('armor', 48), ctx({}, mines), 47)!.cost).toBe(1); });
+  it('minefields do not affect Israeli units', () => {
+    expect(at(isr('armor', 48), ctx({}, mines), 47)!.cost).toBe(1);
+  });
 });
 
 describe('Example 7: strategic movement', () => {
@@ -125,9 +153,11 @@ describe('Example 2 and 13: interdiction and commando raids', () => {
     expect(at(syr('armor', 75), c, 73)!.cost).toBe(3);
     expect(at(syr('armor', 73), c, 74)!.cost).toBe(2);
   });
-  it('13B: 4th Mech up the escarpment into a raided Ma\'ale Gamla: 1 + 1 + 1 = 3, raid roll, stop', () => {
+  it("13B: 4th Mech up the escarpment into a raided Ma'ale Gamla: 1 + 1 + 1 = 3, raid roll, stop", () => {
     const r = at(isr('armor', 12), ctx({}, { raids: new Set([24]) }), 24)!;
-    expect(r.cost).toBe(3); expect(r.triggers).toEqual(['raid']); expect(r.mustStop).toBe(true);
+    expect(r.cost).toBe(3);
+    expect(r.triggers).toEqual(['raid']);
+    expect(r.mustStop).toBe(true);
   });
 });
 
@@ -138,7 +168,8 @@ describe('special areas', () => {
     expect(at(syr('infantry', 59), ctx({}, { turn: 2 }), 83)).toBeUndefined();
   });
   it('night turn: Syrian infantry one area, armor two areas and 4 MP', () => {
-    const inf = reachable(syr('infantry', 63), ctx({}, { turn: 2 })), arm = reachable(syr('armor', 63), ctx({}, { turn: 2 }));
+    const inf = reachable(syr('infantry', 63), ctx({}, { turn: 2 })),
+      arm = reachable(syr('armor', 63), ctx({}, { turn: 2 }));
     expect(Math.max(...inf.map((r) => r.path.length))).toBe(2);
     expect(Math.max(...arm.map((r) => r.path.length))).toBeLessThanOrEqual(3);
     expect(Math.max(...arm.map((r) => r.cost))).toBeLessThanOrEqual(4);

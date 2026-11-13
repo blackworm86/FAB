@@ -1,0 +1,9 @@
+{
+  "name": "fab",
+  "private": true,
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": { "prettier": "3.3.3" }
+}

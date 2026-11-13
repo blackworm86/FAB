@@ -1,80 +1,251 @@
 import { describe, expect, it } from 'vitest';
-import { recoverAsset, eligibleForStep, playReplacement, BRITISH_AREAS, chooseFirstLoss, bridgeTargets, blowBridges, canReserve, setReserve, blocks, updateControlForTest, allocateForTest, defenderRetreatSA, arrivalOptions, placeArrival, newGame, endPhase as endPhaseRaw, autoRecover, mustFight, startBattle, beginCombat, roll_step, attackerChoice, defenderChoice, chooseRetreat, retreatOptions, closeBattle, moveOptions, boxOf, roadblock, roadblockAreas, playInterdiction, staffBoundary, staffPool, staffIntel,
-  playAirSupply, airSupplyAreas, rerouteOptions, reroute, stratOptions, move, resolveBlow, connection, neighbors, unitsIn, inSupply, assetLimits, areas, type Game } from '../src';
-const endPhase = (g: Game) => { autoRecover(g); endPhaseRaw(g); };
+import {
+  recoverAsset,
+  eligibleForStep,
+  playReplacement,
+  BRITISH_AREAS,
+  chooseFirstLoss,
+  bridgeTargets,
+  blowBridges,
+  canReserve,
+  setReserve,
+  blocks,
+  updateControlForTest,
+  allocateForTest,
+  defenderRetreatSA,
+  arrivalOptions,
+  placeArrival,
+  newGame,
+  endPhase as endPhaseRaw,
+  autoRecover,
+  mustFight,
+  startBattle,
+  beginCombat,
+  roll_step,
+  attackerChoice,
+  defenderChoice,
+  chooseRetreat,
+  retreatOptions,
+  closeBattle,
+  moveOptions,
+  boxOf,
+  roadblock,
+  roadblockAreas,
+  playInterdiction,
+  staffBoundary,
+  staffPool,
+  staffIntel,
+  playAirSupply,
+  airSupplyAreas,
+  rerouteOptions,
+  reroute,
+  stratOptions,
+  move,
+  resolveBlow,
+  connection,
+  neighbors,
+  unitsIn,
+  inSupply,
+  assetLimits,
+  areas,
+  type Game,
+} from '../src';
+const endPhase = (g: Game) => {
+  autoRecover(g);
+  endPhaseRaw(g);
+};
 
 function toAdmin(seed: number, turn = 2, campaign = false): Game {
   const g = newGame(seed, campaign ? { scenario: 'campaign' } : {});
-  for (const a of mustFight(g)) { const b = startBattle(g, a); beginCombat(g, b); for (let i = 0; i < 90 && b.stage !== 'done'; i++) { if (b.stage === 'attChoice') attackerChoice(g, b, false); else if (b.stage === 'defChoice') defenderChoice(g, b, false); else if (b.stage === 'attFirst') chooseFirstLoss(g, b, b.attPoint); else if (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]); else roll_step(g, b); } closeBattle(g); }
+  for (const a of mustFight(g)) {
+    const b = startBattle(g, a);
+    beginCombat(g, b);
+    for (let i = 0; i < 90 && b.stage !== 'done'; i++) {
+      if (b.stage === 'attChoice') attackerChoice(g, b, false);
+      else if (b.stage === 'defChoice') defenderChoice(g, b, false);
+      else if (b.stage === 'attFirst') chooseFirstLoss(g, b, b.attPoint);
+      else if (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]);
+      else roll_step(g, b);
+    }
+    closeBattle(g);
+  }
   while (!(g.turn === turn && g.phase === 'admin')) endPhase(g);
   return g;
 }
-const give = (g: Game, kind: string, side: 'german' | 'allied') => { const c = g.chits.find((x) => x.kind === kind && x.side === side)!; c.box = 'available'; return c; };
-const asGermanMover = (g: Game) => { g.phase = 'movement'; g.phasing = 'german'; g.units.forEach((u) => (u.moved = false)); };
+const give = (g: Game, kind: string, side: 'german' | 'allied') => {
+  const c = g.chits.find((x) => x.kind === kind && x.side === side)!;
+  c.box = 'available';
+  return c;
+};
+const asGermanMover = (g: Game) => {
+  g.phase = 'movement';
+  g.phasing = 'german';
+  g.units.forEach((u) => (u.moved = false));
+};
 
 describe('M3 rules', () => {
   it('roadblock marker (4.34): +1 MP, the enemy must stop, the marker goes when entered', () => {
-    const g = toAdmin(3), eng = give(g, 'engineer', 'allied');
+    const g = toAdmin(3),
+      eng = give(g, 'engineer', 'allied');
     asGermanMover(g);
-    const hit = roadblockAreas(g, 'allied').map((a) => ({ a, u: g.units.find((u) => u.side === 'german' && u.area != null && !u.garrison && moveOptions(g, u.id).some((o) => o.area === a))! })).find((x) => x.u);
+    const hit = roadblockAreas(g, 'allied')
+      .map((a) => ({
+        a,
+        u: g.units.find((u) => u.side === 'german' && u.area != null && !u.garrison && moveOptions(g, u.id).some((o) => o.area === a))!,
+      }))
+      .find((x) => x.u);
     expect(hit).toBeDefined();
     const before = moveOptions(g, hit!.u.id).find((o) => o.area === hit!.a)!;
-    g.phase = 'admin'; g.phasing = 'allied'; roadblock(g, eng.id, hit!.a, false); expect(eng.box).toBe('used');
-    asGermanMover(g); const after = moveOptions(g, hit!.u.id).find((o) => o.area === hit!.a);
-    if (after) { expect(after.mustStop).toBe(true); expect(after.cost).toBeGreaterThanOrEqual(Math.min(before.cost + 1, hit!.u.cls === 'armor' ? 6 : 3)); }
+    g.phase = 'admin';
+    g.phasing = 'allied';
+    roadblock(g, eng.id, hit!.a, false);
+    expect(eng.box).toBe('used');
+    asGermanMover(g);
+    const after = moveOptions(g, hit!.u.id).find((o) => o.area === hit!.a);
+    if (after) {
+      expect(after.mustStop).toBe(true);
+      expect(after.cost).toBeGreaterThanOrEqual(Math.min(before.cost + 1, hit!.u.cls === 'armor' ? 6 : 3));
+    }
     expect(g.roadblocks[hit!.a]).toBe('allied');
   });
   it('defended roadblock (4.35): the engineer becomes a garrison asset, returns to the Used Box after the turn', () => {
-    const g = toAdmin(4), eng = give(g, 'engineer', 'allied'), a = roadblockAreas(g, 'allied')[0];
-    g.phasing = 'allied'; roadblock(g, eng.id, a, true);
-    expect(eng.box).toBe('map'); expect(unitsIn(g, a, 'allied')[0].garrison).toBe(true);
-    g.phase = 'btCombat'; endPhase(g);
-    expect(eng.box).toBe('used'); expect(unitsIn(g, a).length).toBe(0);
+    const g = toAdmin(4),
+      eng = give(g, 'engineer', 'allied'),
+      a = roadblockAreas(g, 'allied')[0];
+    g.phasing = 'allied';
+    roadblock(g, eng.id, a, true);
+    expect(eng.box).toBe('map');
+    expect(unitsIn(g, a, 'allied')[0].garrison).toBe(true);
+    g.phase = 'btCombat';
+    endPhase(g);
+    expect(eng.box).toBe('used');
+    expect(unitsIn(g, a).length).toBe(0);
   });
   it('the same engineer makes a second defended roadblock later: one unit with that id, not two', () => {
-    const g = toAdmin(4), eng = give(g, 'engineer', 'allied'), a = roadblockAreas(g, 'allied')[0];
-    g.phasing = 'allied'; roadblock(g, eng.id, a, true); g.phase = 'btCombat'; endPhase(g);
-    eng.box = 'available'; g.phase = 'admin'; g.phasing = 'allied'; const a2 = roadblockAreas(g, 'allied')[0]; roadblock(g, eng.id, a2, true);
-    expect(g.units.filter((u) => u.id === `DR-${eng.id}`)).toHaveLength(1); expect(unitsIn(g, a2, 'allied')[0].garrison).toBe(true);
+    const g = toAdmin(4),
+      eng = give(g, 'engineer', 'allied'),
+      a = roadblockAreas(g, 'allied')[0];
+    g.phasing = 'allied';
+    roadblock(g, eng.id, a, true);
+    g.phase = 'btCombat';
+    endPhase(g);
+    eng.box = 'available';
+    g.phase = 'admin';
+    g.phasing = 'allied';
+    const a2 = roadblockAreas(g, 'allied')[0];
+    roadblock(g, eng.id, a2, true);
+    expect(g.units.filter((u) => u.id === `DR-${eng.id}`)).toHaveLength(1);
+    expect(unitsIn(g, a2, 'allied')[0].garrison).toBe(true);
   });
   it('Interdiction (17.2): Germans pay +1 to enter and leave, no strat-move through, the event goes at Supply', () => {
-    const g = toAdmin(5, 2, true), air = give(g, 'air_mission', 'allied');
-    asGermanMover(g); const u = g.units.find((x) => x.side === 'german' && x.area != null && !x.garrison && moveOptions(g, x.id).length)!, o = moveOptions(g, u.id)[0];
-    g.phase = 'admin'; g.phasing = 'allied'; playInterdiction(g, air.id, o.area); expect(air.box).toBe('map');
-    asGermanMover(g); const o2 = moveOptions(g, u.id).find((x) => x.area === o.area);
+    const g = toAdmin(5, 2, true),
+      air = give(g, 'air_mission', 'allied');
+    asGermanMover(g);
+    const u = g.units.find((x) => x.side === 'german' && x.area != null && !x.garrison && moveOptions(g, x.id).length)!,
+      o = moveOptions(g, u.id)[0];
+    g.phase = 'admin';
+    g.phasing = 'allied';
+    playInterdiction(g, air.id, o.area);
+    expect(air.box).toBe('map');
+    asGermanMover(g);
+    const o2 = moveOptions(g, u.id).find((x) => x.area === o.area);
     if (o2) expect(o2.cost).toBeGreaterThanOrEqual(o.cost);
-    g.phase = 'btCombat'; g.phasing = 'allied'; endPhase(g);
-    expect(air.box).toBe('eliminated'); expect(Object.keys(g.interdicted).length).toBe(0);
+    g.phase = 'btCombat';
+    g.phasing = 'allied';
+    endPhase(g);
+    expect(air.box).toBe('eliminated');
+    expect(Object.keys(g.interdicted).length).toBe(0);
   });
   it('Boundary Crossing Pre-authorized (14.62a) marks one German unit and is consumed by its move', () => {
-    const g = toAdmin(6), st = give(g, 'command_staff', 'german'), u = g.units.find((x) => x.side === 'german' && x.area != null && !x.garrison && x.ech && x.ech !== 'de_sr')!;
-    staffBoundary(g, st.id, u.id); expect(u.bcross).toBe(true); expect(st.box).toBe('used');
-    asGermanMover(g); const o = moveOptions(g, u.id)[0]; if (o) { /* movement code clears the marker */ }
+    const g = toAdmin(6),
+      st = give(g, 'command_staff', 'german'),
+      u = g.units.find((x) => x.side === 'german' && x.area != null && !x.garrison && x.ech && x.ech !== 'de_sr')!;
+    staffBoundary(g, st.id, u.id);
+    expect(u.bcross).toBe(true);
+    expect(st.box).toBe('used');
+    asGermanMover(g);
+    const o = moveOptions(g, u.id)[0];
+    if (o) {
+      /* movement code clears the marker */
+    }
   });
   it('Pooled Assets (14.62b) lifts the mixed-echelon limit and goes at Supply; Intelligence reveals an enemy unit until Admin ends', () => {
-    const g = toAdmin(7), st = give(g, 'command_staff', 'allied'), area = [...areas.keys()].find((a) => unitsIn(g, a, 'allied').length)!;
-    staffPool(g, st.id, area); expect(g.pooled).toBe(area);
-    const st2 = give(g, 'command_staff', 'german'); st2.box = 'available'; g.phasing = 'german';
-    const foe = g.units.find((u) => u.side === 'allied' && u.area != null && !u.garrison)!; staffIntel(g, st2.id, foe.id); expect(g.revealed).toBe(foe.id);
-    endPhase(g); expect(g.revealed).toBeNull();
-    g.phase = 'btCombat'; endPhase(g); expect(g.pooled).toBeNull();
+    const g = toAdmin(7),
+      st = give(g, 'command_staff', 'allied'),
+      area = [...areas.keys()].find((a) => unitsIn(g, a, 'allied').length)!;
+    staffPool(g, st.id, area);
+    expect(g.pooled).toBe(area);
+    const st2 = give(g, 'command_staff', 'german');
+    st2.box = 'available';
+    g.phasing = 'german';
+    const foe = g.units.find((u) => u.side === 'allied' && u.area != null && !u.garrison)!;
+    staffIntel(g, st2.id, foe.id);
+    expect(g.revealed).toBe(foe.id);
+    endPhase(g);
+    expect(g.revealed).toBeNull();
+    g.phase = 'btCombat';
+    endPhase(g);
+    expect(g.pooled).toBeNull();
   });
   it('Air Supply (17.2) supplies one unsupplied area until the next Supply Phase', () => {
-    const g = toAdmin(8, 2, true), air = give(g, 'air_mission', 'allied'), u = g.units.find((x) => x.side === 'allied' && x.area != null && !x.garrison)!;
+    const g = toAdmin(8, 2, true),
+      air = give(g, 'air_mission', 'allied'),
+      u = g.units.find((x) => x.side === 'allied' && x.area != null && !x.garrison)!;
     g.control[u.area!] = 'allied';
-    g.units.filter((x) => x.side === 'german').forEach((x) => { x.area = null; });
-    for (const n of areas.keys()) if (n !== u.area) g.control[n] = 'german';        // cut off
-    g.phase = 'supply'; g.phasing = 'allied'; g.units.forEach((x) => (x.moved = false));
+    g.units
+      .filter((x) => x.side === 'german')
+      .forEach((x) => {
+        x.area = null;
+      });
+    for (const n of areas.keys()) if (n !== u.area) g.control[n] = 'german'; // cut off
+    g.phase = 'supply';
+    g.phasing = 'allied';
+    g.units.forEach((x) => (x.moved = false));
     const opts = airSupplyAreas(g, 'allied');
-    if (opts.includes(u.area!)) { playAirSupply(g, air.id, u.area!); expect(inSupply(g, 'allied', u.area!)).toBe(true); endPhase(g); expect(u.unsupplied).toBe(false); g.turn++; g.phase = 'btCombat'; g.phasing = 'german'; endPhase(g); expect(g.airSupply).toBeNull(); expect(air.box).toBe('eliminated'); }
+    if (opts.includes(u.area!)) {
+      playAirSupply(g, air.id, u.area!);
+      expect(inSupply(g, 'allied', u.area!)).toBe(true);
+      endPhase(g);
+      expect(u.unsupplied).toBe(false);
+      g.turn++;
+      g.phase = 'btCombat';
+      g.phasing = 'german';
+      endPhase(g);
+      expect(g.airSupply).toBeNull();
+      expect(air.box).toBe('eliminated');
+    }
   });
   it('Reroute (8.27): a reinforcement may move to another entry area for a Special Action', () => {
     const g = newGame(9, { scenario: 'campaign' });
-    while (!(g.turn === 2 && g.phase === 'reinforcement')) { for (const a of mustFight(g)) { const b = startBattle(g, a); beginCombat(g, b); for (let i = 0; i < 90 && b.stage !== 'done'; i++) { if (b.stage === 'attChoice') attackerChoice(g, b, false); else if (b.stage === 'defChoice') defenderChoice(g, b, false); else if (b.stage === 'attFirst') chooseFirstLoss(g, b, b.attPoint); else if (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]); else roll_step(g, b); } closeBattle(g); } endPhase(g); }
-    for (const id of [...g.pendingArrivals]) { const o = arrivalOptions(g, id).find((x) => !x.sa); if (o) placeArrival(g, id, o.area); }
+    while (!(g.turn === 2 && g.phase === 'reinforcement')) {
+      for (const a of mustFight(g)) {
+        const b = startBattle(g, a);
+        beginCombat(g, b);
+        for (let i = 0; i < 90 && b.stage !== 'done'; i++) {
+          if (b.stage === 'attChoice') attackerChoice(g, b, false);
+          else if (b.stage === 'defChoice') defenderChoice(g, b, false);
+          else if (b.stage === 'attFirst') chooseFirstLoss(g, b, b.attPoint);
+          else if (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]);
+          else roll_step(g, b);
+        }
+        closeBattle(g);
+      }
+      endPhase(g);
+    }
+    for (const id of [...g.pendingArrivals]) {
+      const o = arrivalOptions(g, id).find((x) => !x.sa);
+      if (o) placeArrival(g, id, o.area);
+    }
     const u = g.units.find((x) => g.arrived.includes(x.id) && rerouteOptions(g, x.id).length);
-    if (u) { const to = rerouteOptions(g, u.id)[0], before = boxOf(g, u.side, 'available').length; reroute(g, u.id, to); expect(u.area).toBe(to); expect(boxOf(g, u.side, 'available').length).toBeLessThanOrEqual(before); }
-    expect(stratOptions(g, g.units[0].id)).toBeDefined(); expect(assetLimits).toBeDefined();
+    if (u) {
+      const to = rerouteOptions(g, u.id)[0],
+        before = boxOf(g, u.side, 'available').length;
+      reroute(g, u.id, to);
+      expect(u.area).toBe(to);
+      expect(boxOf(g, u.side, 'available').length).toBeLessThanOrEqual(before);
+    }
+    expect(stratOptions(g, g.units[0].id)).toBeDefined();
+    expect(assetLimits).toBeDefined();
   });
 });
 
@@ -84,12 +255,21 @@ describe('retreat choice (6.5)', () => {
     for (let seed = 1; seed <= 80 && !seen; seed++) {
       const g = newGame(seed);
       for (const a of mustFight(g)) {
-        const b = startBattle(g, a); beginCombat(g, b);
+        const b = startBattle(g, a);
+        beginCombat(g, b);
         for (let i = 0; i < 90 && b.stage !== 'done'; i++) {
           if (b.stage === 'attChoice') attackerChoice(g, b, false);
           else if (b.stage === 'defChoice') defenderChoice(g, b, true);
-          else if (b.stage === 'attFirst') chooseFirstLoss(g, b, b.attPoint); else if (b.stage === 'retreat') { const opts = retreatOptions(g, b); expect(opts.length).toBeGreaterThan(1); const u = g.units.find((x) => x.id === b.retreat!.queue[0])!; chooseRetreat(g, b, opts[opts.length - 1]); expect(u.area).toBe(opts[opts.length - 1]); expect(u.disorder).toBe(1); seen++; }
-          else roll_step(g, b);
+          else if (b.stage === 'attFirst') chooseFirstLoss(g, b, b.attPoint);
+          else if (b.stage === 'retreat') {
+            const opts = retreatOptions(g, b);
+            expect(opts.length).toBeGreaterThan(1);
+            const u = g.units.find((x) => x.id === b.retreat!.queue[0])!;
+            chooseRetreat(g, b, opts[opts.length - 1]);
+            expect(u.area).toBe(opts[opts.length - 1]);
+            expect(u.disorder).toBe(1);
+            seen++;
+          } else roll_step(g, b);
         }
         if (b.stage === 'done') closeBattle(g);
       }
@@ -100,46 +280,118 @@ describe('retreat choice (6.5)', () => {
 
 describe('retreat before combat (Special Action)', () => {
   it('stops at the retreat step when several areas are legal, then ends the battle with an exploitation chance', () => {
-    const g = newGame(1), sa = g.chits.find((c) => c.kind === 'sa_block' && c.side === 'allied')!;      // area 10: Allied defenders, retreat to 23 or 25
-    sa.box = 'available'; const b = startBattle(g, 10);
+    const g = newGame(1),
+      sa = g.chits.find((c) => c.kind === 'sa_block' && c.side === 'allied')!; // area 10: Allied defenders, retreat to 23 or 25
+    sa.box = 'available';
+    const b = startBattle(g, 10);
     defenderRetreatSA(g, b);
-    expect(sa.box).toBe('used'); expect(b.stage).toBe('retreat');
-    const opts = retreatOptions(g, b), first = g.units.find((x) => x.id === b.retreat!.queue[0])!;
+    expect(sa.box).toBe('used');
+    expect(b.stage).toBe('retreat');
+    const opts = retreatOptions(g, b),
+      first = g.units.find((x) => x.id === b.retreat!.queue[0])!;
     expect(opts.length).toBeGreaterThan(1);
-    chooseRetreat(g, b, opts[1]); expect(first.area).toBe(opts[1]); expect(first.disorder).toBe(0);                     // 8.24: no disorder
+    chooseRetreat(g, b, opts[1]);
+    expect(first.area).toBe(opts[1]);
+    expect(first.disorder).toBe(0); // 8.24: no disorder
     while (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]);
-    expect(b.stage).toBe('done'); expect(b.exploit).toBe(true);
+    expect(b.stage).toBe('done');
+    expect(b.exploit).toBe(true);
   });
 });
 
 describe('river crossings (5.35d, 5.35e, 7.31)', () => {
   const quiet = () => {
-    const g = newGame(5); g.phase = 'movement'; g.phasing = 'german'; g.fought = []; g.contestedAtMoveStart = [];
-    const ger = g.units.find((u) => u.side === 'german' && !u.garrison && u.cls === 'armor')!, al = g.units.find((u) => u.side === 'allied' && !u.garrison)!;
-    g.units.forEach((u) => { if (u !== ger && u !== al) u.area = null; });
+    const g = newGame(5);
+    g.phase = 'movement';
+    g.phasing = 'german';
+    g.fought = [];
+    g.contestedAtMoveStart = [];
+    const ger = g.units.find((u) => u.side === 'german' && !u.garrison && u.cls === 'armor')!,
+      al = g.units.find((u) => u.side === 'allied' && !u.garrison)!;
+    g.units.forEach((u) => {
+      if (u !== ger && u !== al) u.area = null;
+    });
     let pair: [number, number] | null = null;
-    for (const a of areas.keys()) { for (const b of neighbors(a)) { const c = connection(a, b)!; if (c.river && !c.restricted && !g.blown.includes(a < b ? `${a}-${b}` : `${b}-${a}`)) { pair = [a, b]; break; } } if (pair) break; }
-    const [a, b] = pair!; ger.area = a; al.area = b; ger.moved = false; ger.reserve = null; ger.disorder = 0; ger.unsupplied = false; g.control[a] = 'german'; g.control[b] = 'allied';
+    for (const a of areas.keys()) {
+      for (const b of neighbors(a)) {
+        const c = connection(a, b)!;
+        if (c.river && !c.restricted && !g.blown.includes(a < b ? `${a}-${b}` : `${b}-${a}`)) {
+          pair = [a, b];
+          break;
+        }
+      }
+      if (pair) break;
+    }
+    const [a, b] = pair!;
+    ger.area = a;
+    al.area = b;
+    ger.moved = false;
+    ger.reserve = null;
+    ger.disorder = 0;
+    ger.unsupplied = false;
+    g.control[a] = 'german';
+    g.control[b] = 'allied';
     return { g, ger, a, b };
   };
-  const blowUntil = (g: Game, id: string, to: number) => { for (let s = 1; s < 80; s++) { const g2: Game = JSON.parse(JSON.stringify(g)); g2.seed = s * 31; g2.rolls = 0; if (move(g2, id, to) !== 'blow') return null; if (resolveBlow(g2, true) !== 'stopped' && g2.blown.length > g.blown.length) return g2; } return null; };
+  const blowUntil = (g: Game, id: string, to: number) => {
+    for (let s = 1; s < 80; s++) {
+      const g2: Game = JSON.parse(JSON.stringify(g));
+      g2.seed = s * 31;
+      g2.rolls = 0;
+      if (move(g2, id, to) !== 'blow') return null;
+      if (resolveBlow(g2, true) !== 'stopped' && g2.blown.length > g.blown.length) return g2;
+    }
+    return null;
+  };
   it('a unit that crosses a bridge blown in reaction gets a river assault marker when the area is newly contested', () => {
-    const { g, ger, b } = quiet(), g2 = blowUntil(g, ger.id, b)!;
+    const { g, ger, b } = quiet(),
+      g2 = blowUntil(g, ger.id, b)!;
     expect(g2.units.find((u) => u.id === ger.id)!.area).toBe(b);
-    endPhase(g2); expect(g2.riverAssault).toContain(b);
+    endPhase(g2);
+    expect(g2.riverAssault).toContain(b);
   });
   it('an exploitation unit never crosses a bridge blown by its own attempt and then cannot move at all (7.31)', () => {
-    const { g, ger, b } = quiet(); g.phase = 'btMove'; ger.exploit = true;
-    for (let s = 1; s < 80; s++) { const g2: Game = JSON.parse(JSON.stringify(g)); g2.seed = s * 31; g2.rolls = 0; if (move(g2, ger.id, b) !== 'blow') continue; if (resolveBlow(g2, true) === 'stopped') { const u = g2.units.find((x) => x.id === ger.id)!; expect(u.area).not.toBe(b); expect(u.moved).toBe(true); expect(moveOptions(g2, u.id)).toEqual([]); return; } }
+    const { g, ger, b } = quiet();
+    g.phase = 'btMove';
+    ger.exploit = true;
+    for (let s = 1; s < 80; s++) {
+      const g2: Game = JSON.parse(JSON.stringify(g));
+      g2.seed = s * 31;
+      g2.rolls = 0;
+      if (move(g2, ger.id, b) !== 'blow') continue;
+      if (resolveBlow(g2, true) === 'stopped') {
+        const u = g2.units.find((x) => x.id === ger.id)!;
+        expect(u.area).not.toBe(b);
+        expect(u.moved).toBe(true);
+        expect(moveOptions(g2, u.id)).toEqual([]);
+        return;
+      }
+    }
     throw new Error('no blown bridge reached');
   });
   it('a unit that cannot cross loses 1 MP and may keep moving (5.35d)', () => {
-    const { g, ger } = quiet(); let found = false;
+    const { g, ger } = quiet();
+    let found = false;
     for (const o of moveOptions(g, ger.id).filter((x) => x.path.length > 2)) {
-      const last = o.path[o.path.length - 1], prev = o.path[o.path.length - 2];
+      const last = o.path[o.path.length - 1],
+        prev = o.path[o.path.length - 2];
       if (!connection(prev, last)!.river) continue;
-      g.units.find((u) => u.side === 'allied' && u.area != null)!.area = last; g.control[last] = 'allied';
-      for (let s = 1; s < 80 && !found; s++) { const g2: Game = JSON.parse(JSON.stringify(g)); g2.seed = s * 17; g2.rolls = 0; if (move(g2, ger.id, last) !== 'blow') break; if (resolveBlow(g2, true) === 'stopped') { const u = g2.units.find((x) => x.id === ger.id)!; expect(u.area).toBe(prev); expect(u.moved).toBe(false); expect(u.spent).toBeGreaterThan(0); expect(moveOptions(g2, u.id).length).toBeGreaterThan(0); found = true; } }
+      g.units.find((u) => u.side === 'allied' && u.area != null)!.area = last;
+      g.control[last] = 'allied';
+      for (let s = 1; s < 80 && !found; s++) {
+        const g2: Game = JSON.parse(JSON.stringify(g));
+        g2.seed = s * 17;
+        g2.rolls = 0;
+        if (move(g2, ger.id, last) !== 'blow') break;
+        if (resolveBlow(g2, true) === 'stopped') {
+          const u = g2.units.find((x) => x.id === ger.id)!;
+          expect(u.area).toBe(prev);
+          expect(u.moved).toBe(false);
+          expect(u.spent).toBeGreaterThan(0);
+          expect(moveOptions(g2, u.id).length).toBeGreaterThan(0);
+          found = true;
+        }
+      }
       if (found) break;
     }
     expect(found).toBe(true);
@@ -148,105 +400,207 @@ describe('river crossings (5.35d, 5.35e, 7.31)', () => {
 
 describe('rule fixes from the conformance review', () => {
   it('5.21: a reserve marker is removed when the area becomes contested; 5.2: a unit that moved cannot be marked', () => {
-    const g = newGame(5), u = g.units.find((x) => x.side === 'allied' && x.area != null && !x.garrison && canReserve(g, x))!;
-    setReserve(g, u.id, true, true); expect(u.reserve).not.toBeNull();
-    const foe = g.units.find((x) => x.side === 'german' && x.area != null && !x.garrison)!; foe.area = u.area; updateControlForTest(g, u.area!);
+    const g = newGame(5),
+      u = g.units.find((x) => x.side === 'allied' && x.area != null && !x.garrison && canReserve(g, x))!;
+    setReserve(g, u.id, true, true);
+    expect(u.reserve).not.toBeNull();
+    const foe = g.units.find((x) => x.side === 'german' && x.area != null && !x.garrison)!;
+    foe.area = u.area;
+    updateControlForTest(g, u.area!);
     expect(u.reserve).toBeNull();
-    const w = g.units.find((x) => x.side === 'allied' && x.area != null && !x.garrison && x !== u)!; w.moved = true; expect(canReserve(g, w)).toBe(false);
+    const w = g.units.find((x) => x.side === 'allied' && x.area != null && !x.garrison && x !== u)!;
+    w.moved = true;
+    expect(canReserve(g, w)).toBe(false);
   });
   it('6.43: losses spread over all units across volleys of one battle', () => {
-    const g = newGame(5); const a = mustFight(g).find((x) => blocks(g, x, 'german').length === 2 && blocks(g, x, 'allied').length >= 1)!;
-    const b = startBattle(g, a); b.attacker = 'german'; const us = blocks(g, a, 'german'); us.forEach((u) => { u.str = u.max = 3; u.q = ['green', 'green', 'green']; });
-    b.attPoint = us[0].id; allocateForTest(g, b, 'german', 1); allocateForTest(g, b, 'german', 1);
+    const g = newGame(5);
+    const a = mustFight(g).find((x) => blocks(g, x, 'german').length === 2 && blocks(g, x, 'allied').length >= 1)!;
+    const b = startBattle(g, a);
+    b.attacker = 'german';
+    const us = blocks(g, a, 'german');
+    us.forEach((u) => {
+      u.str = u.max = 3;
+      u.q = ['green', 'green', 'green'];
+    });
+    b.attPoint = us[0].id;
+    allocateForTest(g, b, 'german', 1);
+    allocateForTest(g, b, 'german', 1);
     expect(us.map((u) => u.str).sort()).toEqual([2, 2]);
   });
   it('9.5: a defended roadblock of the non-phasing side is removed too at the Supply Phase', () => {
-    const g = toAdmin(4, 2), eng = g.chits.find((c) => c.kind === 'engineer' && c.side === 'allied')!; eng.box = 'available';
-    g.phasing = 'allied'; const a = roadblockAreas(g, 'allied')[0]; roadblock(g, eng.id, a, true);
-    g.phasing = 'german'; g.phase = 'btCombat'; endPhase(g);
-    expect(g.units.some((u) => u.id.startsWith('DR-') && u.area != null)).toBe(false); expect(eng.box).toBe('used');
+    const g = toAdmin(4, 2),
+      eng = g.chits.find((c) => c.kind === 'engineer' && c.side === 'allied')!;
+    eng.box = 'available';
+    g.phasing = 'allied';
+    const a = roadblockAreas(g, 'allied')[0];
+    roadblock(g, eng.id, a, true);
+    g.phasing = 'german';
+    g.phase = 'btCombat';
+    endPhase(g);
+    expect(g.units.some((u) => u.id.startsWith('DR-') && u.area != null)).toBe(false);
+    expect(eng.box).toBe('used');
   });
 });
 
 describe('entry areas and engineers (14.2, 14.52, 16.11)', () => {
   it('a unit delayed one turn may enter any appropriate entry area for its army without a Special Action', () => {
     const g = newGame(5, { scenario: 'campaign' });
-    const u = g.units.find((x) => x.side === 'german' && x.arrival === 2 && x.ech === 'de_6pz') ?? g.units.find((x) => x.side === 'german' && x.arrival != null && x.area == null)!;
-    u.delayed = true; g.pendingArrivals = [u.id]; g.phase = 'reinforcement';
-    const o = arrivalOptions(g, u.id); expect(o.length).toBeGreaterThan(0); expect(o.every((x) => !x.sa)).toBe(true);
+    const u =
+      g.units.find((x) => x.side === 'german' && x.arrival === 2 && x.ech === 'de_6pz') ??
+      g.units.find((x) => x.side === 'german' && x.arrival != null && x.area == null)!;
+    u.delayed = true;
+    g.pendingArrivals = [u.id];
+    g.phase = 'reinforcement';
+    const o = arrivalOptions(g, u.id);
+    expect(o.length).toBeGreaterThan(0);
+    expect(o.every((x) => !x.sa)).toBe(true);
   });
   it('an army that lost its engineer may use another German engineer for bridging in its zone', () => {
-    const g = toAdmin(4, 2); const sixth = g.chits.filter((c) => c.kind === 'engineer' && c.ech === 'de_6pz'); sixth.forEach((c) => (c.box = 'eliminated'));
-    const other = g.chits.find((c) => c.kind === 'engineer' && c.ech === 'de_5pz')!; other.box = 'available';
+    const g = toAdmin(4, 2);
+    const sixth = g.chits.filter((c) => c.kind === 'engineer' && c.ech === 'de_6pz');
+    sixth.forEach((c) => (c.box = 'eliminated'));
+    const other = g.chits.find((c) => c.kind === 'engineer' && c.ech === 'de_5pz')!;
+    other.box = 'available';
     const a = [...areas.keys()].find((x) => areas.get(x)!.zone === 6 && bridgeTargets(g, 'german', x).length);
-    if (a != null) { blowBridges(g, other.id, a, [bridgeTargets(g, 'german', a)[0]]); expect(other.box).toBe('used'); }
+    if (a != null) {
+      blowBridges(g, other.id, a, [bridgeTargets(g, 'german', a)[0]]);
+      expect(other.box).toBe('used');
+    }
   });
 });
 
 describe('British limits (14.43)', () => {
   it('British blocks never get a destination, strat-move or entry outside the area northwest of the Meuse', () => {
-    const g = newGame(5, { scenario: 'campaign' }); const br = g.units.find((u) => u.ech === 'br_xxx')!;
-    for (const a of BRITISH_AREAS) { br.area = a; br.moved = false; g.phase = 'movement'; g.phasing = 'allied'; for (const o of moveOptions(g, br.id)) expect(BRITISH_AREAS.has(o.area)).toBe(true); }
+    const g = newGame(5, { scenario: 'campaign' });
+    const br = g.units.find((u) => u.ech === 'br_xxx')!;
+    for (const a of BRITISH_AREAS) {
+      br.area = a;
+      br.moved = false;
+      g.phase = 'movement';
+      g.phasing = 'allied';
+      for (const o of moveOptions(g, br.id)) expect(BRITISH_AREAS.has(o.area)).toBe(true);
+    }
   });
 });
 
 describe('second review fixes', () => {
   it('17.23: an arriving-regiment event brings an eliminated infantry division back with one step', () => {
-    const g = toAdmin(4, 2, true), c = g.chits.find((x) => x.kind === 'event_arriving_regiment' && x.division?.startsWith('1'))!; c.box = 'available';
-    const u = g.units.find((x) => x.name === '1 Inf')!; u.area = null; u.str = 0; g.elimLarge.push(u.id);
-    expect(eligibleForStep(c, u)).toBe(true); playReplacement(g, c.id, u.id);
-    expect(u.str).toBe(1); expect(u.area).not.toBeNull(); expect(g.elimLarge).not.toContain(u.id);
+    const g = toAdmin(4, 2, true),
+      c = g.chits.find((x) => x.kind === 'event_arriving_regiment' && x.division?.startsWith('1'))!;
+    c.box = 'available';
+    const u = g.units.find((x) => x.name === '1 Inf')!;
+    u.area = null;
+    u.str = 0;
+    g.elimLarge.push(u.id);
+    expect(eligibleForStep(c, u)).toBe(true);
+    playReplacement(g, c.id, u.id);
+    expect(u.str).toBe(1);
+    expect(u.area).not.toBeNull();
+    expect(g.elimLarge).not.toContain(u.id);
   });
-  it('Rochefort has terrain 0 in the map data', () => { expect(areas.get(82)!.tdn).toBe(0); });
+  it('Rochefort has terrain 0 in the map data', () => {
+    expect(areas.get(82)!.tdn).toBe(0);
+  });
 });
 
 describe('4.1a unused Special Action', () => {
   it('lets the player choose which asset returns from the Used Box before the box is recycled', () => {
-    const g = newGame(5); g.turn = 1; g.phasing = 'allied'; g.phase = 'supply'; g.fought = [];
-    const used = g.chits.find((c) => c.side === 'german' && c.kind === 'engineer')!, other = g.chits.find((c) => c.side === 'german' && c.kind === 'artillery')!;
-    used.box = 'used'; other.box = 'used'; g.chits.find((c) => c.kind === 'sa_block' && c.side === 'german')!.box = 'available';
+    const g = newGame(5);
+    g.turn = 1;
+    g.phasing = 'allied';
+    g.phase = 'supply';
+    g.fought = [];
+    const used = g.chits.find((c) => c.side === 'german' && c.kind === 'engineer')!,
+      other = g.chits.find((c) => c.side === 'german' && c.kind === 'artillery')!;
+    used.box = 'used';
+    other.box = 'used';
+    g.chits.find((c) => c.kind === 'sa_block' && c.side === 'german')!.box = 'available';
     endPhaseRaw(g);
-    expect(g.turn).toBe(2); expect(g.recover).toContain('german'); expect(used.box).toBe('used');
+    expect(g.turn).toBe(2);
+    expect(g.recover).toContain('german');
+    expect(used.box).toBe('used');
     expect(() => endPhaseRaw(g)).toThrow();
     recoverAsset(g, 'german', used.id);
-    expect(used.box).toBe('available'); expect(g.recover).not.toContain('german');
+    expect(used.box).toBe('available');
+    expect(g.recover).not.toContain('german');
   });
 });
 
 import { setReady, cancelBattle, assign as assignChit, passSA, actorOf, setPoint } from '../src/game';
 describe('battle set-up control', () => {
   it('goes in the order of 6.21-6.23, starts when both sides are ready, and can be withdrawn until the Attacker commits', () => {
-    const g = newGame(5); g.phase = 'combat'; g.phasing = 'german'; const a = mustFight(g)[0] ?? 11;
-    const sa = g.chits.find((c) => c.kind === 'sa_block' && c.side === 'allied')!; sa.box = 'available';
-    const b = startBattle(g, a); expect(b.defSA).toBe(true); expect(actorOf(g)).toBe('allied');                 // 6.21 the Defender decides on a Special Action first
-    expect(() => setReady(g, b, 'german')).toThrow(/6\.21/); passSA(g, b); expect(actorOf(g)).toBe('german');   // 6.22 then the Attacker assigns
-    expect(() => setReady(g, b, 'allied')).toThrow(/6\.22/); cancelBattle(g); expect(g.battle).toBeNull();
-    const b2 = startBattle(g, a); passSA(g, b2); setReady(g, b2, 'german'); expect(actorOf(g)).toBe('allied');  // 6.23 then the Defender
-    expect(() => setReady(g, b2, 'german', false)).toThrow(); expect(() => cancelBattle(g)).toThrow(/6\.22/);
+    const g = newGame(5);
+    g.phase = 'combat';
+    g.phasing = 'german';
+    const a = mustFight(g)[0] ?? 11;
+    const sa = g.chits.find((c) => c.kind === 'sa_block' && c.side === 'allied')!;
+    sa.box = 'available';
+    const b = startBattle(g, a);
+    expect(b.defSA).toBe(true);
+    expect(actorOf(g)).toBe('allied'); // 6.21 the Defender decides on a Special Action first
+    expect(() => setReady(g, b, 'german')).toThrow(/6\.21/);
+    passSA(g, b);
+    expect(actorOf(g)).toBe('german'); // 6.22 then the Attacker assigns
+    expect(() => setReady(g, b, 'allied')).toThrow(/6\.22/);
+    cancelBattle(g);
+    expect(g.battle).toBeNull();
+    const b2 = startBattle(g, a);
+    passSA(g, b2);
+    setReady(g, b2, 'german');
+    expect(actorOf(g)).toBe('allied'); // 6.23 then the Defender
+    expect(() => setReady(g, b2, 'german', false)).toThrow();
+    expect(() => cancelBattle(g)).toThrow(/6\.22/);
     expect(() => defenderRetreatSA(g, b2)).toThrow(/6\.21/);
-    expect(() => setPoint(g, b2, 'german', b2.attPoint)).toThrow(); setReady(g, b2, 'allied'); expect(b2.stage).toBe('setup');   // 6.24 the Defender's point unit first
-    expect(actorOf(g)).toBe('german'); setPoint(g, b2, 'german', b2.attPoint); setReady(g, b2, 'german'); expect(b2.stage).not.toBe('setup');
+    expect(() => setPoint(g, b2, 'german', b2.attPoint)).toThrow();
+    setReady(g, b2, 'allied');
+    expect(b2.stage).toBe('setup'); // 6.24 the Defender's point unit first
+    expect(actorOf(g)).toBe('german');
+    setPoint(g, b2, 'german', b2.attPoint);
+    setReady(g, b2, 'german');
+    expect(b2.stage).not.toBe('setup');
   });
 });
 
 import { visibleTo } from '../src/game';
 describe('block visibility', () => {
   it('hides upright enemy blocks until a battle reveals them', () => {
-    const g = newGame(5); g.phase = 'combat'; g.phasing = 'german'; const a = mustFight(g)[0] ?? 11;
-    const ge = g.units.find((u) => u.side === 'german' && u.area === a && !u.garrison), al = g.units.find((u) => u.side === 'allied' && u.area === a && !u.garrison);
-    expect(ge && al).toBeTruthy(); if (!ge || !al) return;
-    expect(visibleTo(g, al, 'german')).toBe(false); expect(visibleTo(g, al, 'allied')).toBe(true); expect(visibleTo(g, al, null)).toBe(true);
-    const b = startBattle(g, a); beginCombat(g, b); expect(visibleTo(g, al, 'german')).toBe(true); expect(visibleTo(g, ge, 'allied')).toBe(true);
+    const g = newGame(5);
+    g.phase = 'combat';
+    g.phasing = 'german';
+    const a = mustFight(g)[0] ?? 11;
+    const ge = g.units.find((u) => u.side === 'german' && u.area === a && !u.garrison),
+      al = g.units.find((u) => u.side === 'allied' && u.area === a && !u.garrison);
+    expect(ge && al).toBeTruthy();
+    if (!ge || !al) return;
+    expect(visibleTo(g, al, 'german')).toBe(false);
+    expect(visibleTo(g, al, 'allied')).toBe(true);
+    expect(visibleTo(g, al, null)).toBe(true);
+    const b = startBattle(g, a);
+    beginCombat(g, b);
+    expect(visibleTo(g, al, 'german')).toBe(true);
+    expect(visibleTo(g, ge, 'allied')).toBe(true);
   });
 });
 
 import { chooseRetreat as chooseRetreat2, retreatOptions as retreatOptions2, defenderRetreatSA as defenderRetreatSA2 } from '../src/game';
 describe('retreat bookkeeping', () => {
   it('a retreat before combat updates control and is logged', () => {
-    const g = newGame(5); g.phase = 'combat'; g.phasing = 'german'; const area = mustFight(g)[0] ?? 11;
-    const b = startBattle(g, area); const def = b.attacker === 'german' ? 'allied' : 'german';
-    try { defenderRetreatSA2(g, b); } catch { return; }                                             // no Special Action or a garrison: nothing to check here
-    if (g.battle?.retreat) { const to = retreatOptions2(g, g.battle)[0]; if (to != null) chooseRetreat2(g, g.battle, to); }
-    expect(g.log.some((l) => l.includes('retreats to'))).toBe(true); void def;
+    const g = newGame(5);
+    g.phase = 'combat';
+    g.phasing = 'german';
+    const area = mustFight(g)[0] ?? 11;
+    const b = startBattle(g, area);
+    const def = b.attacker === 'german' ? 'allied' : 'german';
+    try {
+      defenderRetreatSA2(g, b);
+    } catch {
+      return;
+    } // no Special Action or a garrison: nothing to check here
+    if (g.battle?.retreat) {
+      const to = retreatOptions2(g, g.battle)[0];
+      if (to != null) chooseRetreat2(g, g.battle, to);
+    }
+    expect(g.log.some((l) => l.includes('retreats to'))).toBe(true);
+    void def;
   });
 });
