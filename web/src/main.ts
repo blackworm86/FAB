@@ -5,7 +5,6 @@ import { loadChitArt, garrisonChit } from './chits';
 import { loadGolanChitArt } from './golan-art';
 import { loadSicilyChitArt } from './sicily-art';
 import type { PanelCtx } from './golan-ui';
-import { History } from './history';
 import { supplySources } from './supply-plan';
 import * as SB from './sandbox';
 import { vpStrip, vpSheet, endPanel } from './score';
@@ -34,7 +33,7 @@ import { ICONS, ico } from './icons';
 import { PIP } from './block-kit';
 import { esc, nm } from './util';
 import { sheets } from './sheets';
-import { pips, ABBR, chitLabel, iconify, STAGE_NAME, faces, modIcon, modWord } from './table-text';
+import { pips, ABBR, chitLabel, STAGE_NAME, faces, modIcon, modWord } from './table-text';
 import { initChat, chatBtn, chatHtml, bindChat } from './chat';
 import { acts, actv, resetActs, reg, regv, ubtn, btn, chip, srow, swtch } from './ui-kit';
 import { setZoom } from './troops';
@@ -43,14 +42,14 @@ import { moveNotice, handedOver, turnOf, noticesOn, noticesBlocked, noticesSuppo
 import { STEP_NAME, homeUrl, tutUrl, share, dropMatch, rulesHtml, bindAuth } from './home';
 import { hasLegend, legendCard } from './map-legend';
 import { type Tgt } from './chit-play';
-import { snap, diffFx, FxLayer, fxRow, FX_SAMPLES, type Fx } from './fx';
+import { snap, fxRow, FX_SAMPLES } from './fx';
 import { RULE, ruleHtml } from './rules-text';
 import { initTouch } from './touch';
 import { throwDice, clearDice, type DiceGroup } from './dice3d';
 import { initTutorial } from './tutorial';
 import { showRules, linkRules, RULES_GAMES } from './rules-link';
 import { coursesOf } from './tutorial-script';
-import { LAB_SIDE, lab, labClear, labDownload, labHuman, labStep, recordKey } from './lab';
+import { LAB_SIDE, lab, labClear, labDownload, labStep, recordKey } from './lab';
 import { $, areaName, first, KEY, LAB, MAP, MH, MW, P1, P2, PARAMS, POLE, S, toWorld, TUT, VOL } from './page';
 export * from './page';
 import {
@@ -140,404 +139,60 @@ import {
 export * from './map-paint';
 import { areaAt, dist, opened, pick, pitch, placeCam, ptrs, ray, setDist, setOpened, setPitch, setYaw, target, yaw } from './camera';
 export * from './camera';
-
-/* ---------- ui helpers ---------- */
-/* ---------- playing a chit: the blocks or areas it can be used on light up, and a tap applies it ---------- */
-export let tgt: Tgt | null = null,
-  infoOpen = false,
-  infoFor = '',
-  tgtMode = '';
-const abtn = (icon: string, label: string, fn: () => void, cls = '', dis = false, title = '') =>
-  btn(`${ico(icon)}<span>${esc(label)}</span>`, fn, 'ab ' + cls, dis, title || label);
-/** The selected chit: a slim bar with its picture, a one-line instruction, an info toggle and the actions as icon buttons. */
-function chitBar(c: E.Chit): string {
-  if (!mine(c.side))
-    return `<div class="c-dispatch chitbar ${infoOpen ? 'open' : ''}"><div class="cbhead"><span class="cbimg">${chitPic(c)}</span><div class="cbt"><b>${esc(c.name)}</b><small>The other side's piece: you can only look</small></div><button class="ico" data-ui="${reg(
-      () => {
-        setSelChit(null);
-      },
-    )}" aria-label="Put away" title="Put away">${ico('close')}</button></div><div class="inspect slimcard">${ruleHtml(VOL.ruleKey(c.kind, c), E.isEvent(c))}</div></div>`;
-  const tg = tgt,
-    body = chitPanel(c),
-    [kind] = RULE[VOL.ruleKey(c.kind, c)] ?? [c.kind];
-  const chips =
-    tg?.chips
-      .map(
-        (x) =>
-          `<button class="pc ${c.side}" data-do="${reg(x.fn)}" title="${esc(x.label)}">${x.img}<small>${esc(x.label)}</small></button>`,
-      )
-      .join('') ?? '';
-  if (infoFor !== c.id) {
-    infoFor = c.id;
-    infoOpen = guide === 'full';
-  } // each chit opens with its rules folded (short mode) or shown (full mode)
-  return `<div class="c-dispatch chitbar ${infoOpen ? 'open' : ''}"><div class="cbhead"><span class="cbimg">${chitPic(c)}</span><div class="cbt"><b>${esc(c.name)}</b><small>${tg?.hint ? gx(esc(tg.hint), esc(kind)) : esc(kind)}</small></div>
-    <button class="ico" data-ui="${reg(() => {
-      infoOpen = !infoOpen;
-    })}" aria-pressed="${infoOpen}" aria-label="What it does" title="What it does">${ico('info')}</button><button class="ico" data-ui="${reg(
-      () => {
-        setSelChit(null);
-      },
-    )}" aria-label="Put away" title="Put away">${ico('close')}</button></div>
-    ${
-      tg && tg.modes.length > 1
-        ? `<div class="modes" role="group" aria-label="What to do">${tg.modes
-            .map(
-              (m) =>
-                `<button class="ico ${m.id === tgtMode ? 'on' : ''}" data-ui="${reg(() => {
-                  tgtMode = m.id;
-                  refresh();
-                })}" title="${esc(m.label)}" aria-label="${esc(m.label)}">${ico(m.icon)}<span>${esc(m.label)}</span></button>`,
-            )
-            .join('')}</div>`
-        : ''
-    }${infoOpen ? `<div class="inspect slimcard">${ruleHtml(VOL.ruleKey(c.kind, c), E.isEvent(c))}</div>` : ''}${chips ? `<div class="cbchips">${chips}</div>` : ''}${
-      tg?.buttons.length || altOk(c)
-        ? `<div class="row">${(tg?.buttons ?? []).map((b) => abtn(b.icon, b.label, b.fn, '', false, b.title)).join('')}${
-            altOk(c)
-              ? ubtn(
-                  `${ico('swap')}<span>Alternate use</span>`,
-                  () => {
-                    altPick = { chit: c.id, sel: [] };
-                  },
-                  'ab',
-                  false,
-                  '4.21: spend the event to put two eliminated assets of your choice back in the cup',
-                )
-              : ''
-          }</div>`
-        : ''
-    }${iconify(body)}</div>`;
-}
-function chitPanel(c: E.Chit): string {
-  const a = selArea,
-    out: string[] = [];
-  if (c.box !== 'available') return '<p class="hint">Only chits in the Available Box can be used.</p>';
-  if (g.phase === 'supply' && c.kind === 'air_mission' && VOL.id === 'bulge')
-    return '<p class="hint">Air Supply (17.21): pick a cut-off area in the Supply check panel.</p>';
-  if (g.phase !== 'admin' && VOL.id === 'sicily' && c.kind === 'air_mission')
-    return '<p class="hint">Air support: interdiction in the Admin Phase, ground support in a battle, air supply in the Supply Phase (use the panel), and dogfights against any of these (16.3).</p>';
-  if (g.phase !== 'admin' && VOL.id === 'golan73' && ['sam', 'event_ew', 'event_counterbattery', 'air_mission'].includes(c.kind))
-    return `<p class="hint">${c.kind === 'sam' ? 'SAMs answer Israeli air missions east of the barrier as they are flown (16.12).' : c.kind === 'air_mission' ? "Close air support in a battle's set-up; interdiction and reconnaissance in the Admin Phase (16.31)." : "Played in a battle's set-up as your one event (17.33, 17.34)."}</p>`;
-  if (g.phase !== 'admin')
-    return `<p class="hint">${E.isArty(c) || E.isBattleAsset(c) || c.kind === 'air_mission' ? 'This chit is assigned to a battle during the Combat Phase.' : c.kind === 'fuel' ? 'Fuel is spent automatically when a German unit moves more than 3 MP or strategic-moves.' : c.kind === 'sa_block' || c.kind === 'special_action_event' ? 'Special Actions are spent in battles (reinforce / retreat), Breakthrough phases and the Admin Phase.' : 'Events are played in the Admin Phase.'}</p>`;
-  if (VOL.id !== 'bulge') return ''; // the other volumes offer everything through the glowing targets and buttons
-  if (c.kind.startsWith('replacement') || c.kind === 'event_arriving_regiment' || c.kind.startsWith('rebuild')) {
-    if (!tgt || !(tgt.units.size + tgt.areas.size + tgt.pick.size + tgt.chips.length))
-      out.push(
-        '<p class="hint">No reduced, supplied unit of the right class and Higher Echelon (never the elite step)' +
-          (c.kind.startsWith('rebuild') ? ', and no eliminated one-step unit to bring back' : '') +
-          '.</p>',
-      );
-  } else if (c.kind === 'fuel')
-    out.push('<p class="hint gx">Fuel is spent automatically when a German unit moves more than 3 MP or strategic-moves.</p>');
-  return `<div class="row">${out.join('')}</div>`;
-}
-
-/* ---------- flow ---------- */
-const STEPS = ['Prepare', 'Move', 'Fight', 'Breakthrough', 'Supply'],
-  STEP_OF: Record<E.Phase, number> = {
-    deploy: 1,
-    reinforcement: 0,
-    admin: 0,
-    movement: 1,
-    strategic: 1,
-    combat: 2,
-    reaction: 2,
-    btMove: 3,
-    btCombat: 3,
-    supply: 4,
-  };
-/** The red button that ends the step. */
-/** Sicily 14.27a: airborne units still to drop at the start of the Allied Combat Phase (they come before any battle). */
-const dropsLeft = () =>
-  VOL.id === 'sicily' && g.phase === 'combat' && !g.battle && (g.vol as { dropPending?: boolean } | undefined)?.dropPending
-    ? g.units.filter((u) => u.box === 'airborne_assault' && u.side === g.phasing).length
-    : 0;
-const endLabel = () =>
-  dropsLeft()
-    ? 'Drop the airborne first'
-    : g.phase === 'reinforcement'
-      ? 'End reinforcement'
-      : g.phase === 'deploy'
-        ? ((left) => {
-            const n = left.filter((u) => u.side === g.phasing).length;
-            return n ? `Place ${n} more first` : left.length ? 'Finish the panel first' : 'End set-up';
-          })(
-            VOL.pendingPlace(g)
-              .map((id) => g.units.find((x) => x.id === id)!)
-              .filter((u) => mine(u.side)),
-          )
-        : ((
-            {
-              admin: 'End admin',
-              movement: 'End movement',
-              strategic: 'End strategic',
-              combat: 'End combat',
-              reaction: 'End reaction',
-              btMove: 'End breakthrough moves',
-              btCombat: 'End breakthrough battles',
-              supply: 'End supply',
-            } as Record<string, string>
-          )[g.phase] ?? `End ${STEPS[STEP_OF[g.phase]].toLowerCase()}`); // the same name as the phase tab
-export const other = E.other;
-/** The printed sequence of play (the step bar): Breakthrough covers its movement and its combat. */
-const PHASES = ['Reinforcement', 'Admin', 'Movement', 'Strategic', 'Combat', 'Reaction', 'Breakthrough', 'Supply'],
-  PHASE_OF: Record<E.Phase, number> = {
-    deploy: 2,
-    reinforcement: 0,
-    admin: 1,
-    movement: 2,
-    strategic: 3,
-    combat: 4,
-    reaction: 5,
-    btMove: 6,
-    btCombat: 6,
-    supply: 7,
-  };
-/** Areas a battle can start in now. Breakthrough Combat (8.22): areas contested before movement only with a Special Action available. */
-export const fightable = () => {
-  const nw = g.phase === 'btCombat' ? new Set(E.newlyContested(g)) : null,
-    sa = nw && (E.saAvailable(g, g.phasing).length > 0 || (VOL.id === 'golan73' && E.golan.freeRoundLeft(g))),
-    first = E.firstBattle(g);
-  return E.contestedAreas(g).filter(
-    (a) =>
-      !g.fought.includes(a) &&
-      (!nw || nw.has(a) || sa) &&
-      (first == null || a === first) &&
-      E.fighters(g, a, g.phasing, true).some((u) => !u.garrison),
-  );
-}; // an attacker in good order (strongpoints and assets never attack)
-/* Owner, 13 Nov: no phase is ever skipped for the player; every step of the turn waits for its own End button. */
-let toast = '',
-  toastT = 0,
-  toastInfo = false;
-let sayDraw = 0;
-export const say = (t: string, info = false) => {
-  toast = t;
-  toastInfo = info;
-  clearTimeout(toastT);
-  toastT = window.setTimeout(() => {
-    toast = '';
-    render();
-  }, 3200);
-  if (!sayDraw)
-    sayDraw = window.setTimeout(() => {
-      sayDraw = 0;
-      render();
-    }, 0);
-}; // a refusal shows at once, even when the caller does not redraw
-export let dragTargets: number[] = [];
-const hist = new History<E.Game>();
-let note = '',
-  selArr: string | null = null;
-/** Who may act right now: one side, or both while each handles its own assets (admin, reinforcement, battle set-up). */
-const actorNow = () => E.actorOf(g);
-/** In the set-up: does `s` still have pieces or set-up choices to place (Golan: minefields, reserves, the Al-Owda raid; Sicily: the Allied landing plan)? */
-const placing = (s: E.Side) =>
-  g.units.some((u) => u.box === 'deploy' && u.side === s) ||
-  (g.game === 'golan73' &&
-    ((s === 'israeli' && !!E.golan.state(g).minesLeft) ||
-      (E.golan.setupReserves(g, s).all && E.golan.reservesLeft(g, s) > 0) ||
-      (s === 'syrian' && E.golan.alowdaRaidAreas(g).length > 0))) ||
-  (g.game === 'sicily' && s === 'allied' && !E.sicily.state(g).plan);
-let labActing = false; // the experimental computer's own action (lab.ts)
-const allowed = () =>
-  labActing ||
-  (LAB_SIDE
-    ? !heldBad && (actorNow() === 'both' || actorNow() === labHuman())
-    : !heldBad &&
-      (!online.active || online.both() || (online.mySide() != null && (actorNow() === 'both' || actorNow() === online.mySide())))); // a held-back change waits for a decision first
-/** In a shared-screen game every side is yours; online only your own seat's pieces. */
-export const mine = (s: E.Side) => (LAB_SIDE ? s === labHuman() : !online.active || online.both() || online.mySide() === s);
-const notYou = () =>
-  online.mySide() == null ? 'You are watching. Take a seat in the menu to play.' : `Wait for the ${nm(actorNow() as E.Side)} player.`;
-/* ---------- what a hit did: step losses, eliminations, retreats, field works ---------- */
-let battleFx: Fx[] = [],
-  rollFx: Fx[] = [];
-/** Record and show what changed between two states. */
-const fxLayer = new FxLayer(),
-  showFx = (l: Fx[]) => fxLayer.show(l);
-let pendingFx: Fx[] = [],
-  rollNoted = false;
-function noteFx(a: ReturnType<typeof snap>, x: E.Game, fresh?: boolean) {
-  const d = diffFx(a, x);
-  if (!d.length) return;
-  battleFx.push(...d);
-  if (fresh) {
-    rollFx = d;
-    pendingFx = d;
-  } else showFx(d);
-} // after a roll the effects wait for the dice to settle
-function act(f: () => void, after = '') {
-  if (!allowed()) return say(notYou());
-  if (online.mode === 'remote' && !online.rev) return say('The game is still loading…');
-  if (heldNext) commitRoll();
-  const before = g.battle ? snap(g) : null,
-    ck0 = g.checks?.length ?? 0;
-  const r = hist.run(
-    g,
-    () => {
-      f();
-    },
-    (a, b) =>
-      after || (b.log.slice(a.log.length).at(-1) ?? '').replace(new RegExp(`^T\\d+ (\\[\\w+\\] )?((${TAGRE}) \\w+: )?`), '').slice(0, 60),
-    lockOf,
-  );
-  setG(r.game);
-  if (r.error)
-    say(
-      /pending|already/.test(r.error.message)
-        ? `That choice is no longer open (the game is at ${g.battle?.stage ?? 'no battle'}). Refreshed.`
-        : r.error.message,
-    );
-  else {
-    note = after;
-    if (before && !rollNoted) noteFx(before, g);
-  } // a roll already noted its own effects, to show them once the dice have settled
-  rollNoted = false;
-  save();
-  refresh();
-  if (!r.error) showChecks((g.checks ?? []).slice(ck0));
-}
-/** What an action showed that cannot be taken back (undo locks there). */
-function lockOf(a: E.Game, b: E.Game): string {
-  const up = (x: E.Game) => x.units.filter((u) => u.up != null).length,
-    cup = (x: E.Game) => x.chits.filter((c) => c.box === 'cup').length;
-  if (b.revealed && b.revealed !== a.revealed) return 'a block was revealed';
-  if (up(b) > up(a)) return 'blocks revealed';
-  if (cup(b) < cup(a)) return 'chits drawn';
-  if (b.blown.length > a.blown.length) return 'bridge blown';
-  if (a.battle && !b.battle) return 'battle closed';
-  if (b.turn !== a.turn || b.phase !== a.phase || b.phasing !== a.phasing) return 'new phase';
-  return '';
-}
-function undo() {
-  if (!allowed()) return say(notYou());
-  if (heldNext) return say('Wait for the dice to land');
-  const lbl = hist.label,
-    r = hist.undo(g);
-  if (!r.game) return say(r.why ?? 'Nothing to undo');
-  const p = r.game;
-  p.log.push(`T${p.turn} ${nm(online.mySide() ?? p.phasing)} undid ${lbl ? '“' + lbl + '”' : 'an action'}`);
-  setG(p);
-  setSelUnit(setSelChit((selArr = setPreviewArea(setHoverArea(null)))));
-  note = '';
-  save();
-  refresh();
-}
-window.addEventListener('keydown', (e) => {
-  const t = e.target as HTMLElement | null,
-    typing = !!t?.matches?.('input,select,textarea');
-  if (e.key === 'Tab') {
-    const sheet = document.querySelector<HTMLElement>('#ui .modal > .sheet'); // Tab cycles inside an open menu instead of wandering onto the map behind it
-    if (sheet) {
-      const f = Array.from(sheet.querySelectorAll<HTMLElement>('button:not(:disabled), select, input, a[href], [tabindex="0"]')).filter(
-          (x) => x.offsetParent,
-        ),
-        a = document.activeElement;
-      if (f.length && (e.shiftKey ? a === f[0] || a === sheet : a === f[f.length - 1] || !sheet.contains(a))) {
-        e.preventDefault();
-        (e.shiftKey ? f[f.length - 1] : f[0]).focus();
-      }
-    }
-  }
-  if (e.key === 'Escape') {
-    const b = g.battle;
-    if (phaseOpen || mapMenu) {
-      phaseOpen = false;
-      mapMenu = false;
-      render();
-    } else if (modal || scoreOpen) {
-      modal = null;
-      scoreOpen = false;
-      render();
-    } else if (SANDBOX && SBU.st.sbOpen && !(e.target as HTMLElement | null)?.closest?.('input,textarea,select')) {
-      SBU.closeSb();
-      render();
-    } else if (b?.stage === 'setup' && !b.locked && mine(b.attacker) && allowed() && !b.assets[b.attacker].length && !b.ready?.length)
-      act(() => E.cancelBattle(g)); /* Esc backs out of a battle just opened (nothing placed yet), like its Cancel button */
-    else if (selUnit || selArr || selChit || selArea != null) {
-      setSelUnit((selArr = setSelChit(null)));
-      setSelArea(null);
-      setPreviewArea(null);
-      refresh();
-    }
-    return;
-  }
-  if (t === canvas && !modal) {
-    const dir: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
-    if (dir[e.key]) {
-      e.preventDefault();
-      kbStep(...dir[e.key]);
-      return;
-    }
-    if (e.key === 'Enter' && kbArea != null) {
-      e.preventDefault();
-      kbEnter();
-      return;
-    }
-  }
-  if (e.key === '?' && !typing && !e.ctrlKey && !e.metaKey) {
-    e.preventDefault();
-    void showRules();
-    return;
-  }
-  if ((e.key === 'n' || e.key === 'N') && !typing && !modal && !e.ctrlKey && !e.metaKey) {
-    const mv = canMove();
-    if (mv.length) {
-      setSelUnit(nextOf(mv, selUnit));
-      const u = g.units.find((x) => x.id === selUnit)!;
-      setSelArea((kbArea = u.area));
-      setPreviewArea(null);
-      lookAt(u.area!);
-      refresh();
-    }
-    return;
-  }
-  if (e.key === 'Enter' && !typing && !t?.matches?.('button,[role=button]') && !modal) {
-    const go = document.querySelector<HTMLButtonElement>('#ui .go:not(:disabled)');
-    if (go) {
-      e.preventDefault();
-      go.click();
-    }
-  }
-  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey && !(e.target as HTMLElement)?.matches?.('input,select')) {
-    e.preventDefault();
-    undo();
-  }
-});
-const tfAreas = () => [...E.areas.keys()].filter((a) => g.control[a] === 'allied' && !E.contested(g, a) && E.inSupply(g, 'allied', a));
-/** Place an arriving block; an area outside its listed ones costs a Special Action, and the player picks which one (8.27). In a set-up step the block is deployed. */
-/** Set-up: untried garrisons wait face down in one stack (15.3, 22.24); placing one draws a garrison at random, so the Axis player picks the area, never the unit. */
-const POOL = 'untried-pool';
-const poolIds = () => (g.phase === 'deploy' ? VOL.pendingPlace(g).filter((id) => g.units.find((u) => u.id === id)?.untried) : []);
-const realArr = (id: string | null) => (id === POOL ? (poolIds()[0] ?? null) : id);
-function arrive(id: string, area: number) {
-  if (id === POOL) {
-    const ids = poolIds();
-    id = ids[Math.floor(Math.random() * ids.length)];
-    if (!id) return;
-  }
-  if (g.phase === 'deploy') return VOL.place(g, id, area);
-  if (!g.pendingArrivals.includes(id)) return E.placeTaskForce(g, id, area);
-  const u = g.units.find((x) => x.id === id)!,
-    o = E.arrivalOptions(g, id).find((x) => x.area === area);
-  if (o?.sa) pickSA(u.side, u.ech, (sa) => E.placeArrival(g, id, area, sa));
-  else E.placeArrival(g, id, area);
-}
-/** When more than one Special Action could pay for an action, the player chooses which (a single-use event keeps the reusable block for later, 8.1).
- *  Runs inside an action: with one choice it pays at once, otherwise it opens the chooser and the chosen counter pays in a new action. */
-const ARMY_NAME: Record<string, string> = {
-  de_5pz: '5th Panzer Army',
-  de_6pz: '6th Panzer Army',
-  de_7a: '7th Army',
-  de_sr: 'Strategic Reserve',
-  us_1a: 'US 1st Army',
-  us_3a: 'US 3rd Army',
-  us_sr: 'US reserve',
-  br_xxx: 'British',
-};
+import {
+  act,
+  actorNow,
+  allowed,
+  ARMY_NAME,
+  arrive,
+  battleFx,
+  chitBar,
+  dragTargets,
+  dropsLeft,
+  endLabel,
+  fightable,
+  fxLayer,
+  hist,
+  infoOpen,
+  labActing,
+  lockOf,
+  mine,
+  note,
+  noteFx,
+  notYou,
+  other,
+  pendingFx,
+  PHASE_OF,
+  PHASES,
+  placing,
+  POOL,
+  realArr,
+  rollFx,
+  rollNoted,
+  say,
+  selArr,
+  setBattleFx,
+  setDragTargets,
+  setInfoOpen,
+  setLabActing,
+  setNote,
+  setPendingFx,
+  setRollFx,
+  setRollNoted,
+  setSelArr,
+  setTgt,
+  setTgtMode,
+  setToast,
+  setToastInfo,
+  showFx,
+  tfAreas,
+  tgt,
+  tgtMode,
+  toast,
+  toastInfo,
+  undo,
+} from './flow';
+export * from './flow';
 /* ---------- chat between the two players; watchers read it ---------- */
 /* ---------- the action feed: the newest log lines, fading, above the dock ---------- */
 let followFoe = (() => {
@@ -572,10 +227,11 @@ function feedHtml(): string {
     ? `<div class="feed ${g.phase === 'admin' || g.phase === 'reinforcement' ? 'top' : ''}" aria-live="polite">${feed.map((f) => `<div class="fl2 ${f.side}" style="animation-delay:${-(now - f.t) / 1000}s">${sideTag(f.text)}</div>`).join('')}</div>`
     : '';
 }
-let scoreOpen = false,
+export let scoreOpen = false,
   endHidden = false; // VP breakdown sheet; the end panel can be put aside to look at the final map
+export const setScoreOpen = <T extends typeof scoreOpen>(v: T): T => ((scoreOpen = v), v);
 /** A change by the other player that failed the rules check: it is held back, and the board keeps the last legal position until this player decides. */
-let heldBad: { game: E.Game; why: string[] } | null = null,
+export let heldBad: { game: E.Game; why: string[] } | null = null,
   gotRemote = false;
 function heldBadBar() {
   const why = heldBad!.why;
@@ -608,7 +264,7 @@ function restoreLegal() {
 }
 let auditWarn: string[] = []; // problems found in moves written by the other browser
 let saPick: { side: E.Side; run: (id: string) => void; cands: E.Chit[] } | null = null;
-function pickSA(side: E.Side, ech: string | undefined, run: (id?: string) => void) {
+export function pickSA(side: E.Side, ech: string | undefined, run: (id?: string) => void) {
   const seen = new Set<string>(),
     cands = E.saAvailable(g, side, ech).filter((c) => {
       const k = c.kind + c.ech;
@@ -649,8 +305,9 @@ function airPickHtml() {
       ))(VOL.id === 'golan73' && p.side === 'syrian' ? 1 : 2)}</div></div></div>`;
 }
 /** 4.21: the chooser of the two eliminated assets an event brings back (the same sheet as the Special Action chooser). */
-let altPick: { chit: string; sel: string[] } | null = null;
-const altOk = (c: E.Chit) =>
+export let altPick: { chit: string; sel: string[] } | null = null;
+export const setAltPick = <T extends typeof altPick>(v: T): T => ((altPick = v), v);
+export const altOk = (c: E.Chit) =>
   g.phase === 'admin' &&
   c.box === 'available' &&
   mine(c.side) &&
@@ -932,7 +589,7 @@ export function click(e: PointerEvent) {
   if (g.pendingBlow) return;
   if (selArr && area != null && arrOpts().some((o) => o.area === area)) {
     const id = selArr;
-    selArr = null;
+    setSelArr(null);
     return act(() => arrive(id, area));
   }
   if (selUnit && area != null && optsFor(selUnit).some((o) => o.area === area)) {
@@ -1912,9 +1569,10 @@ interface RollView {
 }
 let menuTab = 'Settings',
   restartAsk = false;
-let rollView: RollView | null = null,
+export let rollView: RollView | null = null,
   modal: 'menu' | 'boxes' | 'rules' | 'layers' | null = null,
   handSide: E.Side | null = null;
+export const setModal = <T extends typeof modal>(v: T): T => ((modal = v), v);
 function rollStage(b: E.Battle) {
   if (!allowed()) return say(notYou());
   const side = b.stage === 'attArty' || b.stage === 'offFire' || b.stage === 'exploit' ? b.attacker : other(b.attacker),
@@ -1925,9 +1583,9 @@ function rollStage(b: E.Battle) {
   const next = structuredClone(g),
     before = snap(g);
   E.roll_step(next, next.battle!);
-  rollFx = [];
+  setRollFx([]);
   noteFx(before, next, true);
-  rollNoted = true;
+  setRollNoted(true);
   try {
     localStorage.setItem(KEY, JSON.stringify(next));
   } catch {
@@ -1972,7 +1630,7 @@ export let heldNext: E.Game | null = null;
 const anims: { t0: number; dur: number; fn: (k: number) => void; end?: () => void }[] = [];
 export const fades = new THREE.Group();
 scene.add(fades);
-function commitRoll() {
+export function commitRoll() {
   const next = heldNext;
   if (!next) return;
   heldNext = null;
@@ -2055,7 +1713,7 @@ function runAnims() {
   }
 }
 /** Morale checks outside a battle (supply, Greif interdict): the camera goes to the unit and the dice are thrown on screen with PASS or FAIL. */
-function showChecks(cs: E.Check[]) {
+export function showChecks(cs: E.Check[]) {
   if (!cs.length || rollView) return;
   const a = cs.find((c) => c.area != null)?.area;
   if (a != null) {
@@ -2093,7 +1751,7 @@ function afterDice(rv: RollView) {
     hideDice();
     commitRoll();
     showFx(pendingFx);
-    pendingFx = [];
+    setPendingFx([]);
     render();
     if (rv.remote)
       setTimeout(() => {
@@ -2280,7 +1938,7 @@ function drag(ev: PointerEvent, el: HTMLElement) {
       ghost.classList.add('ghost');
       document.body.appendChild(ghost);
       if (!g.battle) {
-        dragTargets = chitTargets(c);
+        setDragTargets(chitTargets(c));
         if (dragTargets.length) {
           paintAreas();
           badges = badgeList();
@@ -2313,7 +1971,7 @@ function drag(ev: PointerEvent, el: HTMLElement) {
     if (!b && dragTargets.length) {
       // an event or asset dropped on the map
       const cands = dragTargets;
-      dragTargets = [];
+      setDragTargets([]);
       if (ghost && document.elementFromPoint(e.clientX, e.clientY) === canvas) {
         const area = pick(e).area;
         if (area != null && cands.includes(area)) return playChitOn(c, area);
@@ -2393,7 +2051,7 @@ function drag(ev: PointerEvent, el: HTMLElement) {
     window.removeEventListener('pointermove', mv);
     window.removeEventListener('pointerup', up);
     ghost?.remove();
-    dragTargets = [];
+    setDragTargets([]);
     refresh();
   };
   window.addEventListener('pointermove', mv);
@@ -2442,7 +2100,7 @@ function prompt() {
   return chip + verb(promptText());
 }
 /** Explanations: full for learning, short for experienced players (Menu > Settings, or the guide button in the bottom bar). `gx` = explanation only, `gs` = short form only. */
-let guide: 'full' | 'short' = (() => {
+export let guide: 'full' | 'short' = (() => {
   try {
     return localStorage.getItem('fab-guide') === 'full' ? 'full' : 'short';
   } catch {
@@ -2459,7 +2117,7 @@ const setGuide = (v: 'full' | 'short') => {
   document.body.classList.toggle('guide-short', v === 'short');
 };
 document.body.classList.toggle('guide-short', guide === 'short');
-const gx = (long: string, short = '') => `${short ? `<span class="gs">${short}</span>` : ''}<span class="gx">${long}</span>`;
+export const gx = (long: string, short = '') => `${short ? `<span class="gs">${short}</span>` : ''}<span class="gx">${long}</span>`;
 /** Before a roll: who fires, how many dice, what they need, at whom. */
 function stakes(b: E.Battle) {
   const sd = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker),
@@ -2632,8 +2290,8 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
     const fight = (a: number) => () => {
       setSelArea(a);
       setSelUnit(null);
-      battleFx = [];
-      rollFx = [];
+      setBattleFx([]);
+      setRollFx([]);
       if (g.phase === 'btCombat' && !E.newlyContested(g).includes(a) && !(VOL.id === 'golan73' && E.golan.freeRoundLeft(g)))
         pickSA(g.phasing, undefined, (sa) => E.startBattle(g, a, true, sa));
       else E.startBattle(g, a, g.phase === 'btCombat');
@@ -2653,8 +2311,8 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
         fn: () => {
           setSelArea(fl[0]);
           setSelUnit(null);
-          battleFx = [];
-          rollFx = [];
+          setBattleFx([]);
+          setRollFx([]);
           E.startBattle(g, fl[0]);
         },
       };
@@ -2702,14 +2360,14 @@ function primary(): { label: string; fn: () => void; dis?: boolean } | null {
   };
 }
 /* ---------- the actions dock: shortcuts with counts, labelled undo ---------- */
-const lookAt = (a: number) => {
+export const lookAt = (a: number) => {
   const p = center(a);
   goal = { t: new THREE.Vector3(p.x, 0, p.z), dist: Math.min(dist, 30), pitch };
 };
 let canMoveKey = '',
   canMoveIds: string[] = [];
 /** My blocks that can still move in this step (cached until the game changes). */
-function canMove(): string[] {
+export function canMove(): string[] {
   const k = `${g.turn}${g.phase}${g.phasing}${g.log.length}${hist.length}${online.devSeat}${skipNow().size}`;
   if (k === canMoveKey) return canMoveIds;
   canMoveKey = k;
@@ -2721,7 +2379,7 @@ function canMove(): string[] {
   return canMoveIds;
 }
 /** The next item after the current one, round and round. */
-const nextOf = <T>(list: T[], cur: T | null) => list[(list.indexOf(cur as T) + 1) % list.length];
+export const nextOf = <T>(list: T[], cur: T | null) => list[(list.indexOf(cur as T) + 1) % list.length];
 /** Ending a step while blocks can still move takes a second press: the button first says how many are left (a stray tap or Enter never ends a phase). */
 let endArmed = false,
   endArmT = 0;
@@ -2771,7 +2429,7 @@ function screenOf(a: number) {
     v = new THREE.Vector3(p.x, show3d() ? REL!.h(p.x, p.z) : 0, p.z).project(cam);
   return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height };
 }
-function kbStep(dx: number, dy: number) {
+export function kbStep(dx: number, dy: number) {
   const from = kbArea ?? previewArea ?? selArea ?? (selUnit ? (g.units.find((u) => u.id === selUnit)?.area ?? null) : null);
   if (from == null) {
     const r = canvas.getBoundingClientRect();
@@ -2809,7 +2467,7 @@ function kbStep(dx: number, dy: number) {
   say(`${areaName(kbArea!)} [${kbArea}]`, true);
   refresh();
 }
-function kbEnter() {
+export function kbEnter() {
   if (kbArea == null) return;
   const a = MAP.areas.find((x) => x.id === kbArea)!,
     w = toWorld(LAB[a.id]?.px ?? a.label[0], LAB[a.id]?.py ?? a.label[1]),
@@ -2951,7 +2609,7 @@ let piecesBox: 'available' | 'cup' | 'used' | 'eliminated' = 'available',
 
 /** A chit's picture; the reusable Special Action is a wooden block (8.1), drawn like the arriving blocks. */
 /** Every piece is drawn the same way everywhere: blocks (and the reusable Special Action) as 3D wooden blocks, chits, garrisons and Task Forces as cardboard counters. */
-const chitPic = (c: E.Chit) =>
+export const chitPic = (c: E.Chit) =>
   c.kind === 'sa_block' ? b3(chitImg(c), c.side) : `<img class="cb" alt="" draggable="false" src="${chitImg(c)}">`;
 const unitPic = (u: E.Unit) =>
   u.garrison ? `<img class="cb" alt="" draggable="false" src="${unitFace(u)}">` : b3(unitFace(u), sideOfUnit(u));
@@ -3095,7 +2753,7 @@ const panelCtx = (): PanelCtx => ({
   ico,
   pickArea: (label, areas, run) => {
     setAreaPick({ label, areas: new Set(areas), run });
-    setSelUnit(setSelChit((selArr = null)));
+    setSelUnit(setSelChit(setSelArr(null)));
     refresh();
   },
 });
@@ -3303,7 +2961,7 @@ function dragArrival(ev: PointerEvent, el: HTMLElement) {
       ghost.classList.add('ghost');
       document.body.appendChild(ghost);
       if (selArr !== id) {
-        selArr = id;
+        setSelArr(id);
         paintAreas();
         badges = badgeList();
         syncBadges();
@@ -3324,7 +2982,7 @@ function dragArrival(ev: PointerEvent, el: HTMLElement) {
     e.preventDefault();
     const clean = () => {
       if (selArr === id) {
-        selArr = null;
+        setSelArr(null);
         refresh();
       }
     };
@@ -3338,7 +2996,7 @@ function dragArrival(ev: PointerEvent, el: HTMLElement) {
       say('That is not a legal entry area for this block');
       return clean();
     }
-    selArr = null;
+    setSelArr(null);
     act(() => arrive(id, area));
   };
   const cancel = () => {
@@ -3474,7 +3132,7 @@ function mapDock() {
   const tools = `<div class="maptools"><button aria-label="Rotate the map a quarter turn" title="Rotate the map" data-ui="${reg(rotateQuarter)}">${ico('rotate')}</button>${
     sel
       ? `<button aria-label="Deselect" title="Deselect" data-ui="${reg(() => {
-          setSelUnit((selArr = setSelChit(null)));
+          setSelUnit(setSelArr(setSelChit(null)));
           setSelArea(null);
           setPreviewArea(null);
           setHoverArea(null);
@@ -3955,7 +3613,7 @@ function layersHtml() {
 }
 /** The game log, newest first, grouped by turn; each line tinted by the side it concerns. */
 /** A log line with its side prefix (GE / AL) as a coloured tag: side shown by colour and name. */
-const TAGRE = VOL.sides.map((s) => VOL.tag[s]).join('|'),
+export const TAGRE = VOL.sides.map((s) => VOL.tag[s]).join('|'),
   sideByTag = (t: string) => VOL.sides.find((s) => VOL.tag[s] === t || VOL.sideName[s] === t) ?? '';
 /** Engine log wording for the eye: side ids as names (german → German), and a real plural for hit(s). */
 const tidyLog = (x: string) =>
@@ -4013,11 +3671,11 @@ function modalHtml() {
   if (modal === 'layers') return layersHtml();
   if (modal === 'rules')
     return rulesHtml('menu', (t, ok) => {
-      toast = t;
-      toastInfo = ok;
+      setToast(t);
+      setToastInfo(ok);
       render();
       setTimeout(() => {
-        toast = '';
+        setToast('');
         render();
       }, 2500);
     });
@@ -4220,8 +3878,8 @@ function modalHtml() {
                   modal = null;
                   inBattle = false;
                   hist.clear();
-                  note = '';
-                  selArr = null;
+                  setNote('');
+                  setSelArr(null);
                   save();
                   if (LAB_SIDE) {
                     labClear();
@@ -4567,7 +4225,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
   ui.querySelectorAll<HTMLElement>('[data-arr]').forEach(
     (e) =>
       (e.onclick = () => {
-        selArr = selArr === e.dataset.arr ? null : e.dataset.arr!;
+        setSelArr(selArr === e.dataset.arr ? null : e.dataset.arr!);
         refresh();
         frameArrival();
       }),
@@ -4578,7 +4236,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
       (e.onclick = () => {
         const order: DevSeat[] = ['both', ...VOL.sides, 'watch'];
         setDevSeat(order[(order.indexOf(online.devSeat) + 1) % order.length]);
-        setSelUnit(setSelChit((selArr = null)));
+        setSelUnit(setSelChit(setSelArr(null)));
         setPreviewArea(null);
         refresh();
       }),
@@ -4726,11 +4384,11 @@ export function refresh() {
   SBU.hotseatSync();
   if (LAB_SIDE) {
     const as = (f: () => void) => {
-      labActing = true;
+      setLabActing(true);
       try {
         f();
       } finally {
-        labActing = false;
+        setLabActing(false);
       }
     };
     setTimeout(
@@ -4753,23 +4411,25 @@ export function refresh() {
     const key = `${online.devSeat}|${online.mySide()}|${g.battle?.attPoint}|${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`; // the dry runs behind the highlights are costly: redo them only when something they depend on changed
     if (key !== tgtKey) {
       tgtKey = key;
-      tgt = reinforcing
-        ? reinforceTargets()
-        : (decisionTargets() ??
-          (selChit && mine(g.chits.find((x) => x.id === selChit)?.side ?? P1)
-            ? VOL.targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, {
-                area: selArea,
-                mode: tgtMode,
-                setArea: (a) => {
-                  setSelArea(a);
-                },
-                setMode: (m) => {
-                  tgtMode = m;
-                },
-                face: (u) => unitPic(u),
-                areaName,
-              })
-            : null));
+      setTgt(
+        reinforcing
+          ? reinforceTargets()
+          : (decisionTargets() ??
+              (selChit && mine(g.chits.find((x) => x.id === selChit)?.side ?? P1)
+                ? VOL.targetsFor(() => g, g.chits.find((x) => x.id === selChit) ?? null, {
+                    area: selArea,
+                    mode: tgtMode,
+                    setArea: (a) => {
+                      setSelArea(a);
+                    },
+                    setMode: (m) => {
+                      setTgtMode(m);
+                    },
+                    face: (u) => unitPic(u),
+                    areaName,
+                  })
+                : null)),
+      );
     }
   }
   if (tint === 'control') {
@@ -4939,16 +4599,16 @@ function startOver(x: E.Game) {
   hideDice();
   setG(x);
   hist.clear();
-  setSelUnit(setSelChit((selArr = null)));
+  setSelUnit(setSelChit(setSelArr(null)));
   setSelArea(setPreviewArea(setHoverArea(null)));
   modal = null;
   scoreOpen = false;
   reinforcing = false;
-  battleFx = [];
-  rollFx = [];
+  setBattleFx([]);
+  setRollFx([]);
   tgtKey = '';
   inBattle = false;
-  note = '';
+  setNote('');
   setAreaPick(null);
   restartAsk = false;
   fxLayer.clear();
@@ -4978,7 +4638,7 @@ SBU.initSandboxUi({
     return selArr;
   },
   set selArr(v) {
-    selArr = v;
+    setSelArr(v);
   },
   get selArea() {
     return selArea;
@@ -5044,7 +4704,7 @@ setTut(
             goal = { t: new THREE.Vector3(p.x, 0, p.z), dist: Math.min(dist, innerWidth < 700 ? 34 : 30), pitch };
           },
           select: (id) => {
-            if (g.pendingArrivals.includes(id)) selArr = id;
+            if (g.pendingArrivals.includes(id)) setSelArr(id);
             else {
               setSelUnit(id);
               setSelArea(g.units.find((u) => u.id === id)?.area ?? null);
@@ -5062,7 +4722,7 @@ setTut(
           },
           fold: () => {
             if (infoOpen) {
-              infoOpen = false;
+              setInfoOpen(false);
               render();
             }
           },
@@ -5185,8 +4845,8 @@ void startOnline(
     setG(rg);
     const nb = g.battle;
     if (nb && !was) {
-      battleFx = [];
-      rollFx = [];
+      setBattleFx([]);
+      setRollFx([]);
     }
     const rolled = !!(was && nb && nb.area === was.area && nb.rolls.length > n0);
     if (pre) {
@@ -5236,7 +4896,7 @@ void startOnline(
         same && id && JSON.stringify(f(prev)) === JSON.stringify(f(g)) ? id : null; // the other player's write keeps what you picked, unless it changed that very piece
       setSelUnit(keep(prevG, selUnit, (x) => x.units.find((u) => u.id === selUnit)));
       setSelChit(keep(prevG, selChit, (x) => x.chits.find((c) => c.id === selChit)));
-      selArr = keep(prevG, selArr, (x) => [x.pendingArrivals.includes(selArr!), x.units.find((u) => u.id === selArr)?.area]);
+      setSelArr(keep(prevG, selArr, (x) => [x.pendingArrivals.includes(selArr!), x.units.find((u) => u.id === selArr)?.area]));
       if (!same) setSelArea(null);
       if (!selUnit) setPreviewArea(null);
       setHoverArea(null);
