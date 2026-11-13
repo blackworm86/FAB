@@ -66,7 +66,7 @@ Goal: keep the design, split the few oversized files by moving code, no rewrite 
 | 3. Split `web/src/main.ts` | The table's code moved, as it is, into 22 themed modules; `main.ts` went from 7,338 to about 700 lines and no module is over about 620. | **Done 13 Nov** (details below) |
 | 4. Split the engine | `engine/src/game.ts` went from 3,666 to about 500 lines: The Bulge's own rules in `vol/` like the other two volumes, the series rules by phase. | **Done 13 Nov** (details below) |
 | 5. Split `style.css` | The 10,578-line stylesheet became 28 files in `web/src/css/` (largest about 1,040 lines), listed in order in `web/src/style.css`. | **Done 13 Nov** (details below) |
-| 6. Docs and ownership | `HANDOVER.md` as current state plus changelog; ownership in `PARALLEL.md` by module. | — |
+| 6. Docs and ownership | `HANDOVER.md` as current state (history moved to the new `docs/CHANGELOG.md`), `PLAN.md` corrected, ownership in `PARALLEL.md` by module. | **Done 13 Nov** (details below) |
 | 7. Guard | A CI check on file size. | — |
 
 ### Step 1, what was done
@@ -100,8 +100,15 @@ Goal: keep the design, split the few oversized files by moving code, no rewrite 
 - **Checked**: the production stylesheet is byte-for-byte identical to the one before the split (so nothing can look different), the development server loads and shows the same colours, Golan's 43 pictures match, formatting is clean.
 - **For the other sessions**: a CSS change made on the old `style.css` has to be redone in the right file of `web/src/css/` (search for the selector). New rules go at the end of the file that styles that screen, or in a new file added at the end of the list.
 
+### Step 6, what was done (with the owner's permission to edit those files)
+
+- **`docs/HANDOVER.md`** now has: what this is, where it stands (short), where the code is (the modules, the two load-order rules, the CSS order, the formatter, the move tool), pending owner actions, open work, how to run and measure (formatter, bot, shots), skills and hooks, things that bit us (three new ones). The long history of 9–13 November moved word for word to the new **`docs/CHANGELOG.md`**, with a note on what in it is superseded.
+- **`docs/PARALLEL.md`**: the ownership table is by module and has the UI and the 3D figures as rows; the formatting and picture-check rules are written there; section 3 now says the figures decision is waiting for the owner, instead of "dropped".
+- **`docs/PLAN.md`**: the stack describes what was built (plain TypeScript and three.js, no React; online without a game server); a note says it is the starting plan.
+- **`docs/ARCHITECTURE.md`** and **`README.md`**: one line each updated for the split files.
+- **Not changed**: `engine/README.md` (it describes an early Golan layout, `battle.ts` / `events.ts`, that no longer matches the files; a rewrite of it is a separate small job).
+- The figures wording says "waiting for the owner", not a decision; it must be updated once decision 1 is made.
+
 ## Proposals for other files (for you to approve; this session does not change them)
 
-- `docs/PARALLEL.md` §3 and `docs/HANDOVER.md` §2: match what you decide about figures; remove the "Figures by default" line.
-- `docs/HANDOVER.md` §4: renumber; mark the "faster battles" note as superseded.
 - Ask the rules session to start commit messages that change a rule with "Rule fix:".

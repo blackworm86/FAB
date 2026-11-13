@@ -1,13 +1,17 @@
 # FAB: The Bulge – app plan
 
+The plan the project started from (2025–2026). It is kept for the reasons behind the milestones; the current state is in `docs/HANDOVER.md` and `docs/STATUS.md`. Since then Sicily and Golan '73 were added on the same engine, online play was built (M4), and the first computer opponent was removed and is being rebuilt.
+
+
 ## Goal of the first demo (playable ASAP)
 Hot-seat, one browser, Tournament scenario turn 1–2 playable end to end with the core loop:
 setup → move → combat → supply → next player. No AI, no network, no hidden blocks yet.
 
-## Stack
-- `engine/` – TypeScript rules, pure functions over a `GameState` + an action log (undo, replay, seeded dice). Vitest.
-- `web/` – Vite + React + three.js (react-three-fiber/drei) board; Zustand for UI state. Map image as board texture, area polygons from `map.json` for picking.
-- Later: same engine on a small server (Cloudflare Durable Objects / PartyKit) for online play with hidden information.
+## Stack (as built)
+- `engine/` – TypeScript rules, pure functions over a `GameState` + an action log (undo, replay, seeded dice). Vitest. Split into modules in November 2026 (`docs/HANDOVER.md` section 3).
+- `web/` – Vite + plain TypeScript and three.js (no React, no state library): a 3D table, HTML overlays, chits and dice; the interface is drawn from the game state on every change. Map image as board texture, area polygons from the map data for picking.
+- `bot/` – the computer opponent, in its own experimental area (`docs/COMPUTER-PLAYER-PLAN.md`).
+- Online: no game server. Each browser runs the engine; Firebase Realtime Database (free plan) shares the game and hides secret blocks (`docs/ARCHITECTURE.md`). The original plan (a small server on Cloudflare or PartyKit) was not needed.
 
 ## Milestones
 **M1 – Demo (target: first playable)**

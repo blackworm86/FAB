@@ -50,7 +50,7 @@ Every push to `main` runs the checks and publishes the site to GitHub Pages (`.g
 
 | Folder | Contents |
 |---|---|
-| `engine/src` | The rules engine: pure TypeScript, no browser code. `game.ts` is the series rules; `vol/` holds each volume's exclusive rules. |
+| `engine/src` | The rules engine: pure TypeScript, no browser code. `game.ts` is the core of the series rules and the files beside it hold them by phase (`reinforce`, `admin`, `moves`, `battle-setup`, `fire`, `battle-end`, `supply`, `turn`); `vol/` holds each volume's exclusive rules. |
 | `web/src` | The client: three.js table, panels, online glue, rules reader, tutorials. |
 | `data/<volume>/` | Map, units, counters, scenarios, rules text (`rules.json`) for each volume. |
 | `tools/` | Scripts that build the data: map and art extraction, rules text (`tools/rules/`), database rules tests. |
