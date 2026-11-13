@@ -73,7 +73,29 @@ const stmts = sf.statements.map((st) => {
 });
 const byName = new Map();
 for (const s of stmts) for (const n of s.names) byName.set(n, s);
-const setterOf = (n) => 'set' + n[0].toUpperCase() + n.slice(1);
+// A variable's setter is `setName`; when that name is already something else (a real function, an import), `setNameValue`.
+const taken = new Set(byName.keys());
+for (const st of sf.statements)
+  if (ts.isImportDeclaration(st) && st.importClause) {
+    const c = st.importClause,
+      nb = c.namedBindings;
+    if (c.name) taken.add(c.name.text);
+    if (nb) (ts.isNamespaceImport(nb) ? [nb] : nb.elements).forEach((e) => taken.add(e.name.text));
+  }
+const isSetter = (set, n) =>
+  byName.has(set) &&
+  byName
+    .get(set)
+    .st.getText()
+    .replace(/^export /, '')
+    .startsWith(`const ${set} = <T extends typeof ${n}>(v: T): T =>`);
+const setterOf = (n) => {
+  const base = 'set' + n[0].toUpperCase() + n.slice(1),
+    free = (x) => !taken.has(x) || isSetter(x, n);
+  if (free(base)) return base;
+  if (!free(base + 'Value')) throw new Error(`no free setter name for "${n}"`);
+  return base + 'Value';
+};
 
 /* ---- the selection ---- */
 const moved = new Set();
