@@ -9,6 +9,7 @@ import { settleUp, setupSide } from './battle-setup';
 import { eliminate } from './fire';
 import { mustFight, retreatPaths } from './battle-end';
 import { rollSupply, supplyPhase } from './supply';
+import { adminActor } from './admin';
 import {
   blocks,
   contested,
@@ -70,12 +71,13 @@ function placeRiverAssaults(g: Game) {
   g.riverCross = [];
   g.blowTried = [];
 }
-export function setDone(g: Game, side: Side, on = true) {
+export function setDone(g: Game, side: Side, on = true): void {
+  if (on && g.phase === 'admin' && side !== g.phasing && g.done?.includes(g.phasing)) return endPhase(g); // 4.2c: the second player's Done ends the Admin Phase
   const d = (g.done ?? []).filter((x) => x !== side);
   if (on) d.push(side);
   g.done = d;
 }
-export function endPhase(g: Game) {
+export function endPhase(g: Game): void {
   useGame(g.game ?? 'bulge');
   setPlayArea(g.inPlay);
   if (g.phase === 'supply' && g.supplyPending) rollSupply(g);
@@ -87,6 +89,7 @@ export function endPhase(g: Game) {
   if (g.battle) throw new Error('finish the open battle first');
   if (g.pendingBlow) throw new Error('resolve the bridge-blowing attempt first');
   if (mustFight(g).length) throw new Error('newly contested areas must be fought first');
+  if (g.phase === 'admin' && !g.done?.includes(g.phasing)) return setDone(g, g.phasing); // 4.2b: the phasing player's end of the Admin Phase hands it to the other player
   g.done = [];
   const ph = g.phase;
   if (ph !== 'supply') CUR.onPhase?.(g, ph, 'end'); // supply's end ran in rollSupply
@@ -275,7 +278,8 @@ export function actorOf(g: Game): Side | 'both' {
         : ['defArty', 'defFire', 'defChoice', 'retreat'].includes(b.stage)
           ? other(b.attacker)
           : b.attacker;
-  if (g.phase === 'admin' || g.phase === 'reinforcement' || g.phase === 'deploy') return 'both'; // the set-up: each side places its own pieces
+  if (g.phase === 'admin') return CUR.adminBoth?.(g) ? 'both' : adminActor(g); // 4.2b/c: the phasing player first, then the other
+  if (g.phase === 'reinforcement' || g.phase === 'deploy') return 'both'; // the set-up: each side places its own pieces
   return g.phase === 'reaction' ? other(g.phasing) : g.phasing;
 }
 const PHASE_ORDER: Phase[] = ['reinforcement', 'admin', 'movement', 'strategic', 'combat', 'reaction', 'btMove', 'btCombat', 'supply'];

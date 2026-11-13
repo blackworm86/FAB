@@ -148,6 +148,7 @@ describe('Golan optional rules of the rule book (18.1–18.5)', () => {
     const arty = g.chits.filter((c) => c.side === 'israeli' && isArty(c)),
       id = give(g, arty[0].id);
     give(g, arty[1].id);
+    g.phasing = 'israeli';
     expect(() => golan.artilleryInterdiction(g, id, a)).toThrow(/optional/);
     g.opts.artyInterdict = true;
     golan.state(g).artyInt = [];

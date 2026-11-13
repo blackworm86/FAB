@@ -50,6 +50,7 @@ describe('Sicily rules sweep', () => {
     runTo(g, 2, 'axis', 'admin');
     const air = chit(g, 'USC06a');
     air.box = 'available';
+    g.done = ['axis']; // 4.2c: the Allies' part of the Axis Admin Phase
     S.airInterdiction(g, air.id, 59); // the Allies interdict in the Axis player turn (Example 3)
     for (let i = 0; i < 50 && g.phase !== 'supply'; i++) step(g);
     expect(g.phase).toBe('supply');

@@ -1,7 +1,8 @@
-# rules · 13 Nov 2026, 19:10
-Doing: nothing in hand; the asset and event sweep of all three volumes is finished and pushed (report: docs/AUDIT-2026-11.md section 5).
-Next: the owner's answers to the 17 open rule questions (listed in the report), one at a time; then fix what each answer needs, as "Rule fix:" commits.
-Waiting for the owner: "In the Admin Phase both players can now act in any order. The rules say the phasing player acts first. Should the game make the phasing player go first?" (4.2b/c)
-Last checked: npm run verify after merging main: everything passed except formatting of engine/src/vol/bulge-setup.ts, which is the same on main (not from this session).
+# rules · 13 Nov 2026, 21:00
+
+Doing: nothing in hand; the Admin Phase order (4.2b/c) is fixed and pushed as the owner ruled: both draw, the phasing player acts and taps Done, then the other player acts and ends the step.
+Next: the remaining 16 open rule questions (docs/AUDIT-2026-11.md section 5), one at a time.
+Waiting for the owner: next question (16.23): a US garrison or Task Force alone is fought "like a defended roadblock"; does that battle also lose the US extra artillery asset, as a battle with a real defended roadblock does?
+Last checked: npm run verify: all passed after the fingerprint update, 13 Nov 21:00.
 Files in hand: none
-Notes: new tests engine/test/{bulge,sicily,golan}-sweep.test.ts. Each volume chooses its own explanation texts through VOL.ruleKey(kind, chit) and VOL.unitRule(unit); the texts are the 'bulge:', 'sicily:' and 'golan:' keys in rules-text.ts.
+Notes: for the computer-opponent session: in the Admin Phase the engine now turns the phasing side's endPhase into "Done" (hand over) and the other side's setDone into the end of the phase, so the bot's current end() works unchanged. actorOf(g) in the Admin Phase is now one side (E.adminActor), 'both' only while a Sicily dogfight may answer an interdiction.

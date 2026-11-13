@@ -33,7 +33,7 @@ import {
 import { airPick, heldBad, pickSA, setEndHidden } from './choices';
 import { center, reinforcing, setGoal } from './map-input';
 import { btArmor, skipNow } from './map-marks';
-import { endRoll, rollStage, rollView } from './rolls';
+import { endRoll, rollStage, rollView, setHandSide } from './rolls';
 import { lastFight, render, setLastFight, showAreas } from './main';
 
 /* ---------- views ---------- */
@@ -153,7 +153,7 @@ function promptText() {
     case 'admin':
       return selChit && tgt?.hint
         ? `<b>${esc(tgt.hint)}</b>${tgt.areas.size + tgt.units.size > 0 ? ` · ${tgt.areas.size + tgt.units.size} lit` : ''}`
-        : `<b>Tap a card</b>${gx(' to play it, or end the step.')}`;
+        : `<b>${esc(nm(E.adminActor(g)))}: tap a card</b>${gx(g.done?.includes(g.phasing) ? ' to play it, then end the step.' : ` to play it, then Done: the ${nm(other(g.phasing))} player acts next (4.2).`)}`;
     case 'movement':
       if (selUnit && g.moving?.id === selUnit)
         return `<b>${E.allowance(g, g.units.find((x) => x.id === selUnit)!) - (g.units.find((x) => x.id === selUnit)!.spent ?? 0)} MP left.</b>${gx(" Tap a green area to go on, or <b>Stop here</b>. Choosing another block ends this one's move.", ' Go on, or Stop here.')}`;
@@ -294,7 +294,26 @@ export function primary(): { label: string; fn: () => void; dis?: boolean } | nu
         },
       };
   } // 17.22: the landing round, before the Admin Phase ends
-  if (online.active && !online.both() && (g.phase === 'admin' || g.phase === 'reinforcement')) {
+  if (g.phase === 'admin' && !g.done?.includes(g.phasing)) {
+    // 4.2b/c: the phasing player acts first and hands over; then the other player acts and ends the phase
+    const me = online.active && !online.both() ? online.mySide() : g.phasing;
+    if (!me) return null;
+    if (me !== g.phasing) return { label: `Waiting for ${nm(g.phasing)}`, fn: () => {}, dis: true };
+    return {
+      label: `Done · ${nm(other(g.phasing))} acts`,
+      fn: () =>
+        act(() => {
+          E.setDone(g, g.phasing);
+          setHandSide(null);
+          setSelChit(null);
+          setSelArea(null);
+        }),
+      dis: !!g.recover.length || !!g.artyPick,
+    };
+  }
+  if (g.phase === 'admin' && online.active && !online.both() && online.mySide() === g.phasing)
+    return { label: `Waiting for ${nm(other(g.phasing))}`, fn: () => {}, dis: true };
+  if (online.active && !online.both() && g.phase === 'reinforcement') {
     // both sides work in these steps: the other side says it is done, the Phasing Player ends the step
     const me = online.mySide();
     if (!me) return null;

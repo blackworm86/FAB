@@ -646,7 +646,7 @@ const L_ZONES: Lesson = {
     },
     {
       title: 'To the move',
-      text: 'Released, the 5th may operate in zones A, B and C; never D. <b>Tap End admin.</b>',
+      text: 'Released, the 5th may operate in zones A, B and C; never D. <b>Tap Done</b> (the Axis acts next), <b>then End admin.</b>',
       target: GO,
       done: (g) => g.phase === 'movement',
       act: (g) => {
@@ -743,6 +743,7 @@ const L_AIR: Lesson = {
       text: 'Two Allied air support assets now sit over <b>Bolognetta</b> and <b>Salemi</b>. <b>Tap Show me</b> to see them placed.',
       rule: '16.33 Interdiction',
       auto: (g) => {
+        E.setDone(g, 'axis'); // 4.2b/c: you finished your part; the Allies act now
         S.airInterdiction(g, 'USC06a', 56);
         S.airInterdiction(g, 'USC06b', 59);
       },

@@ -56,8 +56,14 @@ export function spendSA(g: Game, side: Side, ech?: string | string[], why = 'Spe
   CUR.onSpendSA?.(g, side, c);
   return c;
 }
-export const needAdmin = (g: Game) => {
+/** 4.2b/c: in the Admin Phase the phasing player acts first; once he is done (g.done), the other player acts and ends the phase. */
+export const adminActor = (g: Game): Side => (g.done?.includes(g.phasing) ? other(g.phasing) : g.phasing);
+export const needAdmin = (g: Game, side?: Side) => {
   if (g.phase !== 'admin') throw new Error('only in the Admin Phase');
+  if (side && side !== adminActor(g))
+    throw new Error(
+      side === g.phasing ? 'your part of the Admin Phase is over (4.2b)' : 'the phasing player acts first; you act once he is done (4.2c)',
+    );
 };
 export const suppliedArea = (g: Game, side: Side, a: number) => g.control[a] === side && inSupply(g, side, a) && !contested(g, a);
 export const supplied = (g: Game, side: Side, a: number) =>
@@ -81,7 +87,7 @@ export function bridgeTargets(g: Game, side: Side, area: number) {
   ); // 17.12: one try per Admin Phase on a Greif bridge
 }
 export function blowBridges(g: Game, id: string, area: number, targets: number[]) {
-  needAdmin(g);
+  needAdmin(g, chit(g, id).side);
   const c = chit(g, id);
   if (c.kind !== 'engineer' || c.box !== 'available') throw new Error('engineer not available');
   if (
@@ -120,7 +126,7 @@ export function repairTargets(g: Game, side: Side, area: number) {
   );
 }
 export function repairBridge(g: Game, id: string, area: number, to: number) {
-  needAdmin(g);
+  needAdmin(g, chit(g, id).side);
   const c = chit(g, id);
   if (c.kind !== 'engineer' || c.box !== 'available' || !assetZoneOk(g, c, area, true) || !repairTargets(g, c.side, area).includes(to))
     throw new Error('not a legal repair');
@@ -136,7 +142,7 @@ export function repairBridge(g: Game, id: string, area: number, to: number) {
   );
 }
 export function fieldWorksFor(g: Game, id: string, area: number) {
-  needAdmin(g);
+  needAdmin(g, chit(g, id).side);
   const c = chit(g, id);
   const same = blocks(g, area, c.side).some((u) => u.ech === c.ech || c.ech === 'us_sr' || u.ech === 'us_sr');
   if (
@@ -180,7 +186,7 @@ export const regimentAreas = (g: Game, unitId: string) => {
   return [...new Set([...listedEntries(u), ...appropriateAreas(u, g)])].filter((a) => g.control[a] === u.side && entryOpen(g, u, a));
 };
 export function playReplacement(g: Game, id: string, unitId: string, area?: number) {
-  needAdmin(g);
+  needAdmin(g, chit(g, id).side);
   const c = chit(g, id),
     u = g.units.find((x) => x.id === unitId)!;
   if (c.box !== 'available' || !eligibleForStep(c, u, g)) throw new Error('that unit is not eligible');
@@ -203,7 +209,7 @@ export function playReplacement(g: Game, id: string, unitId: string, area?: numb
   say(g, `${c.name}: ${u.name} gains a step (${u.str}/${u.max})`, c.side);
 }
 export function playRebuild(g: Game, id: string, unitId: string, area: number) {
-  needAdmin(g);
+  needAdmin(g, chit(g, id).side);
   const c = chit(g, id),
     u = g.units.find((x) => x.id === unitId)!;
   const arm = c.kind === 'rebuild_or_replace_arm';
@@ -232,7 +238,7 @@ export const alternateCandidates = (g: Game, side: Side) =>
   boxOf(g, side, 'eliminated').filter((x) => isAsset(x) && x.kind !== 'garrison' && x.kind !== 'task_force' && !x.bid);
 /** 4.21: spend an event to put two eliminated assets of the owner's choice (`ids`) back in the cup; without `ids`, a fixed priority picks them (tests). */
 export function alternateUse(g: Game, id: string, ids?: string[]) {
-  needAdmin(g);
+  needAdmin(g, chit(g, id).side);
   const c = chit(g, id);
   if (c.box !== 'available' || isAsset(c) || c.kind === 'sa_block') throw new Error('not an event');
   if (CUR.saFilter && !CUR.saFilter(g, c.side, boxOf(g, c.side, 'available'), c.ech).includes(c))
@@ -251,7 +257,7 @@ export function alternateUse(g: Game, id: string, ids?: string[]) {
   say(g, `${c.name} used as alternate event: ${back.map((x) => x.name).join(', ')} back to the cup`, c.side);
 }
 export function rally(g: Game, side: Side, area: number, chitId?: string) {
-  needAdmin(g);
+  needAdmin(g, side);
   if (g.control[area] !== side || !inSupply(g, side, area)) throw new Error('area must be supplied and friendly'); // 8.25: any supplied area, contested or not
   const sa = spendSA(g, side, undefined, 'Rally the troops', chitId, area),
     only = sa.kind === 'special_action_event' && sa.ech !== 'us_sr' ? sa.ech : null; // 8.1 a single-use event only affects its own Higher Echelon (17.1: a German one only in its army's zone)
@@ -261,8 +267,8 @@ export function rally(g: Game, side: Side, area: number, chitId?: string) {
     for (const u of blocks(g, a, side)) if (u.disorder && !helpless(g, u) && fits(u, a)) u.disorder = 0;
 }
 export function qualityReplacement(g: Game, unitId: string, chitId?: string) {
-  needAdmin(g);
   const u = g.units.find((x) => x.id === unitId)!;
+  needAdmin(g, u.side);
   if (u.area == null || u.str < 1 || u.garrison || u.fort || helpless(g, u) || u.str >= u.max)
     throw new Error('not eligible (strongpoints never receive steps, Golan 15.6)'); // 8.26: a supplied reduced unit on the map
   spendSA(g, u.side, u.ech, 'Quality replacements', chitId, u.area!);
@@ -270,7 +276,7 @@ export function qualityReplacement(g: Game, unitId: string, chitId?: string) {
   say(g, `${u.name} gains a step`, u.side);
 }
 export function staffReplacement(g: Game, id: string, unitId: string) {
-  needAdmin(g);
+  needAdmin(g, chit(g, id).side);
   const c = chit(g, id),
     u = g.units.find((x) => x.id === unitId)!;
   if (
@@ -288,7 +294,7 @@ export function staffReplacement(g: Game, id: string, unitId: string) {
   say(g, `Command staff: ${u.name} gains a step`, c.side);
 }
 export function staffReserve(g: Game, id: string, unitId: string) {
-  needAdmin(g);
+  needAdmin(g, chit(g, id).side);
   const c = chit(g, id);
   if (c.kind !== 'command_staff' || c.box !== 'available') throw new Error('not available');
   const u = g.units.find((x) => x.id === unitId)!,
@@ -302,7 +308,7 @@ export function staffReserve(g: Game, id: string, unitId: string) {
   c.box = 'used';
 }
 export function releaseUnit(g: Game, id: string, area: 4 | 6) {
-  needAdmin(g);
+  needAdmin(g, chit(g, id).side);
   const c = chit(g, id);
   if (c.kind !== 'event_release' || c.box !== 'available') throw new Error('not available');
   const nm: Record<string, string> = { '11th': '11 Pz', '10th': '10SS', '17th': '17SS', '6th': '6SS' },
@@ -360,7 +366,7 @@ const vacantSupplied = (g: Game, side: Side, a: number) =>
   (!g.inPlay || g.inPlay.includes(a)) && supplied(g, side, a) && !unitsIn(g, a).length && areas.get(a)!.tdn >= 1;
 /** 4.34 / 4.35: a roadblock marker, or the engineer itself as a defended roadblock. */
 export function roadblock(g: Game, id: string, area: number, defended: boolean) {
-  needAdmin(g);
+  needAdmin(g, chit(g, id).side);
   const c = chit(g, id);
   if (c.kind !== 'engineer' || c.box !== 'available' || !assetZoneOk(g, c, area) || !vacantSupplied(g, c.side, area) || g.roadblocks[area])
     throw new Error('needs a supplied, friendly, vacant area with a Terrain Difficulty Number of 1 or more');
@@ -395,7 +401,7 @@ export function roadblockAreas(g: Game, side: Side) {
   return [...areas.keys()].filter((a) => vacantSupplied(g, side, a) && !g.roadblocks[a]);
 }
 const staff = (g: Game, id: string) => {
-  needAdmin(g);
+  needAdmin(g, chit(g, id).side);
   const c = chit(g, id);
   if (c.kind !== 'command_staff' || c.box !== 'available') throw new Error('command staff not available');
   return c;
@@ -429,7 +435,7 @@ export function staffIntel(g: Game, id: string, unitId: string) {
 }
 /** 17.2 Interdiction Mission (Allied air mission, Admin Phase). */
 export function playInterdiction(g: Game, id: string, area: number) {
-  needAdmin(g);
+  needAdmin(g, chit(g, id).side);
   const c = chit(g, id);
   if (c.kind !== 'air_mission' || c.box !== 'available' || !areas.has(area) || g.interdicted[area])
     throw new Error('needs an Air Mission in the Available Box and a free area');

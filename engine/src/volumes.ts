@@ -188,6 +188,8 @@ export interface Volume {
   firstBattle?: (g: Game) => number | undefined;
   /** A side the rules make act out of turn now (Golan 15.2: Syria places the units released at the Purple Line). */
   pendingSide?: (g: Game) => Side | undefined;
+  /** Admin Phase: both sides may act now (Sicily: a dogfight may answer an interdiction at once). */
+  adminBoth?: (g: Game) => boolean;
   /** May this unit take a reserve marker (beyond the series conditions)? */
   reserveOk?: (g: Game, u: Unit) => boolean;
   /** A committed asset other than a battle asset that may take a step loss (Golan 18.32: artillery in direct support). */

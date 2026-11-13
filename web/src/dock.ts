@@ -88,7 +88,7 @@ export function dockChips(): string {
   if (g.battle) return '';
   if (g.phase === 'admin' || g.phase === 'reinforcement') {
     const own = online.active && !online.both() ? online.mySide() : null,
-      hs = handSide ?? own ?? g.phasing,
+      hs = handSide ?? own ?? (g.phase === 'admin' ? E.adminActor(g) : g.phasing),
       live = g.chits.filter((x) => x.box === 'available' && x.side === hs && mine(x.side) && usableNow(x)); // the side whose hand is shown, so the count matches the hand
     if (live.length)
       c(
