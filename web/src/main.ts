@@ -219,7 +219,7 @@ const tintData = new Uint8Array(256 * 4), tintTex = new THREE.DataTexture(tintDa
 const relPixels = (im: HTMLImageElement) => { let c = relArt.get(im); if (!c) { c = document.createElement('canvas'); c.width = boardCv.width; c.height = boardCv.height; c.getContext('2d')!.drawImage(im, 0, 0, c.width, c.height); if (keepIfInked(im, c)) relArt.set(im, c); } return c; };
 const show3d = () => map3d && !!REL;
 /** Phones and small tablets: the 3D map is drawn lighter (fewer pixels, no shadows, a coarser ground, fewer trees). */
-const fullRatio = Math.min(2, devicePixelRatio);
+const fullRatio = PHONE ? Math.min(2, devicePixelRatio) : Math.max(1.5, Math.min(2, devicePixelRatio));      // a desktop draws at least 1.5x and the browser scales it down: smooth edges on a standard screen
 function tuneForMap() { const lite = PHONE && show3d(); renderer.setPixelRatio(lite ? Math.min(1.3, devicePixelRatio) : fullRatio); sun.castShadow = !lite; }
 function applyMap3d() {
   const on = show3d(); tuneForMap(); diorama.visible = on; table.position.y = on ? -1.42 : -0.02; if (REL) REL.props.visible = on;
