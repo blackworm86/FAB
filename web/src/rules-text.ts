@@ -25,12 +25,6 @@ German engineers work in their own army's zone (14.52); an army without its engi
   infantry_asset: ['Infantry battle asset', `Combat (6.32): assign it in battle set-up to a battle of its Higher Echelon. It fires with the ground units (one die, infantry class).
 • Battle assets may take the first loss instead of the point unit (6.43).
 • A hit eliminates it; otherwise it goes to the Used Box after the battle.`],
-  task_force: ['Task Force (Allied, turns 2-5)', `Reinforcement Phase (16.22): place it in any uncontested, friendly-controlled, supplied area (other friendly forces may be there). It then acts exactly like a garrison (16.21):
-• It never moves. Alone it defends like a defended roadblock (4.35); with Allied units it is their battle asset.
-• It cannot retreat: if the units beside it retreat, it is destroyed and counts as one hit (6.42c). A hit or a failed out-of-supply morale check also eliminates it. It cannot be returned by the alternate event use (4.21).`],
-  fuel: ['Fuel asset (German, 16.13)', `With the fuel rule, a German unit that moves more than 3 movement points, or strat-moves, spends one fuel asset (it goes to the Used Box).
-• With no fuel available, German units may move only up to 3 MP and may not strat-move.
-• Fuel is spent automatically when you move.`],
   command_staff: ['Command Staff asset', `Admin Phase, any ONE staff function, with no Higher Echelon limit (8.3); then it goes to the Used Box:
 • Replacements found (8.31): one non-elite step to any supplied infantry-class unit.
 • Intelligence gathering (8.32): reveal one enemy block anywhere until the end of the Admin Phase.
@@ -49,38 +43,6 @@ German engineers work in their own army's zone (14.52); an army without its engi
 • Breakthrough movement (8.21), Breakthrough combat (8.22), Reinforce a battle (8.23), Retreat before combat (8.24), Rally (8.25), Quality replacements (8.26), Reroute a reinforcement (8.27).`],
   replacement_inf: ['Infantry replacement', `Admin Phase (17.31): one step to a supplied, reduced infantry-class unit of the printed Higher Echelon, even in a contested area. It cannot bring back eliminated units nor create an elite step. The German Strategic Reserve chit may go to any German army.`],
   replacement_arm: ['Armor replacement', `Admin Phase (17.32): one step to a supplied, reduced armor-class unit of the printed Higher Echelon, even in a contested area. It cannot bring back eliminated units nor create an elite step.`],
-  rebuild_or_replace_inf: ['Rebuild or Replace (US 1st Army, infantry)', `Admin Phase (17.22): either a replacement step like 17.31, or bring an eliminated one-step non-elite infantry unit back, placed in any friendly-controlled objective area (even contested).`],
-  rebuild_or_replace_arm: ['Rebuild or Replace (US 1st Army, armor)', `Admin Phase (17.22): either a replacement step like 17.32, or bring an eliminated one-step non-elite armor unit back, placed in any friendly-controlled objective area (even contested).`],
-  event_arriving_regiment: ['Arriving Infantry Regiment', `Admin Phase (17.23): a step of replacements for the printed division (it may restore the 1st Infantry Division's elite step). If that division is eliminated, it comes back with one step in a friendly entry area.`],
-  event_release: ['Strategic Reserve Division Released', `Admin Phase (17.13): the printed German division enters the game in Entry Area Y or Z (German player's choice).`],
-  event_greif_bridge: ['Greif Team: Bridge', `Admin Phase (17.12): place it on a river boundary. It stays until the bridge is blown or a German unit crosses it.
-• Allied attempts to blow this bridge during a German crossing succeed only on a 1 (instead of 1-5).
-• An Allied engineer blowing it in the Admin Phase needs a 1-5, and may try only once that phase.`],
-  event_greif_interdict: ['Greif Team: Interdict', `Admin Phase (17.11): place it on an American block. The next time that unit tries to move, build field works or take a reserve marker, it is revealed and makes a morale check with +2.
-• Fail: it may only stay or move one area, and may not build field works or go in reserve.
-• Pass: no effect. Either way the event is then eliminated.
-• If the unit's next move is by a friendly Special Action (8.21, 8.23, 8.24), the marker is removed with no effect.`],
-  event_bodenplatte: ['Operation Bodenplatte', `Admin Phase (17.14): roll one die for each Air Mission in the Allied Available Box: 1-5 = no effect, 6-9 = delayed (back to the cup), 10 = eliminated (Player Aid D; the Play Book numbers the die the other way round, with a typo).`],
-  event_delayed_response: ['Delayed Response', `No effect (17.34): when drawn it goes straight to the Eliminated Box, and it still counts as one of your draws. It cannot be used for the alternate use (4.21).`],
-  /* ---- Golan '73 (Vol. III): rule numbers from its exclusive rules ---- */
-  commando: ['Commando battalion (16.11)', `Admin Phase: land in a vacant Israeli-controlled area next to a Syrian-occupied one. The first Israeli unit entering rolls: 1–2 the raid succeeds, 3–5 partly (the commandos do not fire back), 6+ the helicopters are shot down.
-• It stands like a defended roadblock and must be fought; a Syrian unit entering relieves it (back to the Used Box).
-• In a battle it is a Syrian battle asset (infantry class).`],
-  sam: ['SAM battery (16.12)', `When an Israeli air mission is flown east of the SAM barrier, Syria may fire one SAM: shot down on a 1; the mission is cancelled on a low roll (the threshold falls as the war goes on).
-• Used SAMs roll for reduction each Reinforcement Phase (6+: one is eliminated). The first three losses each release an Israeli air asset (16.23).`],
-  'golan:air_mission': ['Air support (16.3)', `Combat: fires as artillery or supports one unit (+1 Syrian, +2 Israeli). Israel may commit two (one of each) only west of the SAM barrier or when no SAM is available (16.22).
-• Admin Phase: interdiction over an area (+1 MP to enter and leave until the second player's Supply Phase) or reconnaissance (the enemy blocks there are shown).
-• Never on the night turn (14.03). Israeli missions east of the SAM barrier may be answered by a SAM.`],
-  'golan:event_release': ['Strategic Reserve released (17.11)', `Admin Phase: the named brigade is released and placed at once in a friendly-controlled Syrian entry area.`],
-  event_ssm_strike: ['SSM strike (17.12)', `Admin Phase: each Israeli air asset in the Available Box goes back to the cup on a roll of 1–2.`],
-  event_arriving_battalion: ['Arriving battalion (17.21)', `Admin Phase, to its brigade: +2 steps to one supplied unit, +1 to each of two, or an eliminated unit back with 2 steps in an Assembly area (and off the eliminated-units VP track).`],
-  event_dugman5: ['Operation Dugman 5 (17.22)', `Played when drawn: one die per SAM in the Available Box. 1: destroyed (an Israeli air asset is released). 2–3: back to the cup. 10: an Israeli air asset is lost.`],
-  event_lt_zvika: ['Lt. Zvika Greengold (17.23)', `Admin Phase: an elite armor defended roadblock in an empty Israeli-controlled area. It stays until destroyed and may be reinforced by a Special Action.`],
-  event_king_hassan: ["King Hassan's Troublemakers (17.24)", `Admin Phase: for the rest of the game the Moroccan brigade fires only in defence and never enters an Israeli-controlled area.`],
-  replacement_mech: ['Mechanized replacement (17.32)', `Admin Phase: one step to a supplied reduced mech or infantry-class unit, even in a contested area; elite steps allowed.`],
-  event_ew: ['Electronic warfare (17.33)', `Battle set-up, before the Defender assigns anything: the Attacker jams the defence. Each defending unit rolls: 5 or less, disordered. The Defender may answer with his own EW card (+2 to each roll). If every defender is disordered, no defending assets, air or SAMs.`],
-  event_counterbattery: ['Counterbattery (17.34)', `Battle set-up, as the side's one event: after the enemy artillery fires, roll. 1–5: one enemy artillery asset goes that many turns down the track, then straight back to the Available Box.`],
-  garrison: ['Garrison (16.24)', `A standing asset in its area: it defends like a defended roadblock, alone or beside Israeli units. It is destroyed by a hit or when the units leave it behind in a retreat.`],
   naval_support: ['Naval support (16.21)', `Combat: an artillery asset that fires only in coastal areas.
 • Shock and Awe: instead of firing, one naval asset removes the defending field works, first thing in the battle.
 • Reduction of support: each Reinforcement Phase one naval asset in the Used Box is eliminated.`],
@@ -101,10 +63,129 @@ German engineers work in their own army's zone (14.52); an army without its engi
 • Ports (14.51): the Axis damages, the Allies repair, Syracuse, Catania or Palermo one level per Admin Phase (the port friendly, supplied, uncontested; the Allies need a unit of the right army there). Messina cannot be damaged.
 Combat (6.32, 6.33): a battle asset that fires in ground combat, or (attacker) removes the enemy field works instead of firing.`],
   'sicily:command_staff': ['Staff asset', `Admin Phase, one staff function (8.3): intelligence gathering, a reserve marker, or replacements found (Allied: a non-elite step to an infantry-class unit; Axis, 14.63: an eliminated Italian infantry asset back to the Available Box).`],
-  air_mission: ['Allied Air Mission', `One of three missions (17.21), then it goes to the Eliminated Box. It may be played on unsupplied areas.
-• Combat support: the battle's one event; either fires as artillery (outside the artillery limit), or gives +2 to one Allied unit's Success Number. It cannot take a step-loss.
-• Interdiction (Admin): mark an area; Germans pay +1 MP to enter AND to leave it and may not strat-move through it, until the Supply Phase.
-• Air supply (Supply Phase): one unsupplied area and its units are supplied until the next Supply Phase.`],
+  // Golan '73: its own texts (the asset sweep of November 2026).
+  'golan:artillery': ['Artillery asset', `Combat (6.22-6.26): assign it in a battle's set-up, Attacker first, then Defender. It fires in the artillery step, before ground fire: one die at Success Number 5, −1 against the Defender, −1 if the enemy point unit is armour, a strongpoint or infantry in field works, −1 on the night turn (14.03).
+• How many: up to 2 attacking, 1 defending (6.31). Israel gets one more (3 and 2) while it controls Mt Hermon with a garrison or unit there; the bonus is lost for good once Syria takes it (16.21).
+• Syrian units of different divisions in one area: one artillery asset only (15.12). Optional 18.5 does the same for Israeli divisions.
+• A garrison, commando raid, Lt. Zvika or defended roadblock fighting alone may have this one artillery asset and nothing else (4.35).
+• None on Mt Hermon: only infantry-class battle assets and air support there (14.16).
+• Supply: the Attacker's units must be supplied and trace supply, the Defender's must trace supply (6.22, 6.23, 9.34a).
+• It never takes a step loss. After the battle it goes to the Used Box. An enemy Counterbattery event may send it down the Turn Track (17.34).
+• Optional 18.31: once per Admin Phase, an interdiction next to your units or a strongpoint (+1 MP in and out for the enemy, no strat-move). Optional 18.32 (Israeli): it supports the point unit (+1) instead of firing, and may then take a loss.`],
+  'golan:rocket_artillery': ['Rocket artillery asset', `Combat: fires exactly like an artillery asset, in the artillery step, with the same limits (2 attacking, 1 defending; 3 and 2 for Israel while it holds Mt Hermon, 16.21), and +1 to its Success Number (16.4).
+• Mixed Syrian divisions: one artillery asset in all (15.12). Not on Mt Hermon (14.16).
+• It never takes a step loss. After the battle it goes to the Used Box; an enemy Counterbattery may send it down the Turn Track (17.34).`],
+  'golan:air_mission': ['Air support asset (16.3)', `An asset that recycles through the cup. Not on the night turn (14.03), never over an Assembly area, and supply does not matter (16.31). After a mission it goes to the Used Box. It cannot come back by the alternate event use (17.4).
+• Close air support (Combat Phase, 16.31a): one per side per battle, attacking or defending. Choose before your artillery fires: it fires as an extra artillery asset (outside the artillery limit), or one of your units in the battle gets +2 (Israeli) or +1 (Syrian). It never takes a loss and goes to the Used Box even if the attack is aborted.
+• Israel may commit two to one battle, one as artillery and one supporting a unit; east of the SAM barrier only while no SAM is in the Syrian Available Box (16.22).
+• With mixed Syrian divisions it still flies, as artillery only (15.12). Allowed on Mt Hermon (14.16). Not for a garrison, raid or Lt. Zvika fighting alone (4.35). Optional 18.4: Syrian close air support only when Syria attacks.
+• Interdiction (Admin Phase, 16.31b): place it on any area. Enemy units pay +1 MP to enter it and +1 MP to leave it, and may not strat-move in or out, until the Supply Phase of the second player turn.
+• Reconnaissance (Admin Phase, 16.31c): place it on an enemy-occupied area. Every enemy block there is shown to you for the rest of the phase; then it goes to the Used Box.
+• SAMs (16.12): an Israeli mission in an area east of the SAM barrier may be fired on at once by an available Syrian SAM. A cancelled mission cannot be replaced by another air asset there.
+• Israel brings lost air assets back by a Special Action (14.61d); its three conditional ones join the cup as SAMs are destroyed (16.23). The Syrian SSM Strike (17.12) and Operation Dugman 5 (17.22) can send them back to the cup or destroy one.`],
+  'golan:sam': ['SAM air defence (Syrian, 16.12)', `Used only as an answer: whenever an Israeli air support asset is placed in an area east of the Syrian SAM barrier (an Admin-Phase mission or in a battle), Syria may fire one available SAM before anything else happens. Roll one die:
+• Turns 1-3: 1 shot down (Eliminated Box), 2-7 the mission is cancelled (air asset to the Used Box), 8-10 no effect.
+• Turns 4-6: 1 shot down, 2-5 cancelled, 6-10 no effect. Turns 7-9: 1 shot down, 2-3 cancelled, 4-10 no effect. The Battle for Nafakh uses the turns 4-6 column.
+• Whatever the result, the SAM then goes to the Used Box. A cancelled mission may not be replaced by another air asset (in that battle, or over that area this Admin Phase).
+• While any SAM is in the Available Box, Israel may commit only one air asset to a battle east of the barrier (16.22).
+• A defence entirely disordered by Electronic Warfare jamming fires no SAM (17.33).
+• Reduction, each Reinforcement Phase: one die per SAM in the Used Box. If any die is 6 or more, one SAM goes to the Eliminated Box. Each of the first three SAMs eliminated releases a conditional Israeli air asset into the cup (16.23). Operation Dugman 5 can also destroy SAMs or send them back to the cup (17.22).
+• A lost SAM comes back to the cup by a Syrian Special Action (14.61c), never by the alternate event use (17.4).`],
+  'golan:commando': ['Commando battalion (Syrian, 16.11)', `Use it in one of two ways.
+Raid (Admin Phase): place it in a vacant, Israeli-controlled area next to an area with a Syrian unit (any Terrain Difficulty). Israeli units may not strat-move or retreat into that area. The first Israeli unit to enter pays +1 MP and stops, and Syria rolls one die:
+• 1-2, success: the Israelis must fight it like a defended roadblock in the Combat Phase (one die, elite infantry; only one artillery asset may help it, no events, no Special Action).
+• 3-5, partial success: the same, but it never fires back; it only blocks movement and retreats.
+• 6-10, failure: the helicopters are shot down. It goes to the Eliminated Box and the Israeli unit may move on with the MP it has left.
+• A raid never needs supply and stays through the Supply Phase until it is eliminated or relieved. A Syrian unit entering relieves it (to the Used Box); a relieving unit that enters a contested area is revealed.
+Battle asset (Combat Phase): an elite, infantry-class battle asset (allowed on Mt Hermon). Used this way, it has no raid until it is drawn again.
+It never comes back by the alternate event use (17.4).`],
+  'golan:garrison': ['Garrison (Israeli, 16.24)', `Five garrisons start in Ramat Magshimim, Tel Faris, Nafakh, Tel Abu Nida and Mt Hermon. They never leave their area.
+• Alone it is fought like a defended roadblock (4.35): Syrian units entering stop and must fight it; only one artillery asset may help it, with no other asset, no event and no Special Action.
+• With Israeli units it is their battle asset (one die, its printed quality) and may take a loss before the point unit.
+• It cannot retreat. The units with it may absorb a hit by retreating, but that destroys the garrison: worth it only to escape encirclement when a single hit was scored.
+• It is eliminated by a hit, by staying behind in a retreat, or by failing an out-of-supply morale check. It never goes to the Used Box and cannot come back by the alternate event use (4.21).
+• While the Mt Hermon garrison (or any Israeli unit) holds an Israeli Mt Hermon, Israel may use one extra artillery asset (16.21).`],
+  'golan:task_force': ['Task Force (Israeli, 15.6)', `Conditional: eight wait in the Evacuated Strongpoints box, four armour-supported and four infantry-supported. When a strongpoint is evacuated (a regular Israeli unit leaves or retreats from its contested area), the strongpoint is removed and a Task Force of its type (tank symbol: armour; rifle symbol: infantry) goes into the Israeli cup.
+• Once drawn it is an ordinary battle asset: one die, veteran, armour or infantry class. Assign it in a battle's set-up; it may take a loss before the point unit; one hit eliminates it; otherwise it goes to the Used Box.
+• An infantry Task Force may be used on Mt Hermon (14.16).
+• Errata: an Israeli attack in an area with an Israeli strongpoint may bring the strongpoint in only by removing it for good and committing its Task Force to that battle at once.
+• It can come back by the alternate event use (4.21).`],
+  'golan:engineer': ['Engineer asset', `Admin Phase (4.3, 14.5): one function per engineer, then it goes to the Used Box. Never for unsupplied areas or units (9.34d).
+• Blow up bridges (4.31): from a supplied, friendly-controlled, uncontested area, blow one or two bridges on that area's river boundaries. Bridges exist only where a road crosses a river (14.41).
+• Repair a bridge (4.32): from a supplied, friendly, uncontested area, when you control the far side or contest it.
+• Bridge the AT ditch (14.51a): from a supplied, friendly, uncontested area across an AT ditch boundary, into a friendly area or a contested enemy-controlled one. The AT Ditch Bridged marker turns the ditch into the road or field connection printed there. Eight markers in all.
+• Lift a minefield (14.52, Syrian only): next to a supplied, friendly-controlled, uncontested area.
+• Field works (4.33): in a supplied, friendly, uncontested area with one of your units; never where a strongpoint stands (15.6).
+• Roadblock (4.34): in a supplied, friendly, vacant area with Terrain Difficulty 1 or more. The first enemy unit to enter pays +1 MP and stops; then the marker goes. Removed in the Supply Phase.
+• Defended roadblock (4.35): the engineer itself stands in such an area. Every enemy unit entering stops and must fight it; only one artillery asset may help it, with no events and no Special Action. If it survives, it goes to the Used Box in the Supply Phase.
+Combat: a battle asset (one die, infantry class; allowed on Mt Hermon). Attacking, instead of firing it may remove the enemy field works (6.33), or (Syrian, in an area on the Israeli side of the Purple Line) bridge one AT ditch boundary of that area (14.51b). Either job needs it to survive the artillery and defensive fire, and the attack must not be aborted. One engineer, one job.`],
+  'golan:armor_asset': ['Armor battle asset', `Combat (6.22, 6.23, 6.32): assign it in a battle's set-up. It fires with your ground units: one die, armour class (+1), with the quality printed on the chit against the enemy point unit.
+• Up to 8 battle assets attacking, 5 defending. Your units there must be in supply (9.34a).
+• Golan's commands are unified (13.2): any of your units may have it, except Syrian units of different divisions in one area, which get no battle assets at all (15.12; optional 18.5 for Israel).
+• Not on Mt Hermon (14.16: only infantry-class battle assets there). Not for a garrison, raid or Lt. Zvika fighting alone (4.35).
+• It may take a loss before the point unit (6.43); one hit eliminates it. Otherwise it goes to the Used Box after the battle.`],
+  'golan:infantry_asset': ['Infantry battle asset', `Combat (6.22, 6.23, 6.32): assign it in a battle's set-up. It fires with your ground units: one die, infantry class, with the quality printed on the chit against the enemy point unit.
+• Up to 8 battle assets attacking, 5 defending. Your units there must be in supply (9.34a).
+• Golan's commands are unified (13.2): any of your units may have it, except Syrian units of different divisions in one area, which get no battle assets at all (15.12; optional 18.5 for Israel).
+• Allowed on Mt Hermon (14.16). Not for a garrison, raid or Lt. Zvika fighting alone (4.35).
+• Optional 18.6: the Syrian 5th, 7th and 9th AT assets fire +1 against an armour point unit, and Israeli armour attacking a Syrian defence with an AT asset fires −1 (in Al-Owda only the defending +1).
+• It may take a loss before the point unit (6.43); one hit eliminates it. Otherwise it goes to the Used Box after the battle.`],
+  'golan:command_staff': ['Staff asset', `Admin Phase, either player's (8.3): one staff function, then it goes to the Used Box and recycles through the cup. Not for unsupplied units or areas (9.34d). Golan adds no staff functions of its own (14.62).
+• Replacements (8.31): one non-elite step to a supplied, reduced infantry-class unit (never a strongpoint).
+• Intelligence (8.32): reveal one enemy block anywhere, in any supply state, until the end of the Admin Phase.
+• Reserves (8.33): put an available reserve marker on an eligible unit: supplied, in good order, uncontested (14.7). An Israeli unit in an Assembly area qualifies.
+• Battle for Nafakh (22.46): whenever Syria holds Nafakh, the Israeli staff goes into the cup and the Israeli reusable Special Action is lost until the staff is drawn again.`],
+  'golan:sa_block': ['Special Action (reusable block)', `Your personal command influence (8.1), for any of your units, but never for unsupplied units or areas (9.34d). After use it goes to the Used Box and is back in the Available Box next Reinforcement Phase. If you did not use it, you may also bring one asset of your choice from the Used Box straight to the Available Box (4.1a). Uses:
+• Rally (8.25, Admin): all your disordered or recovering units in one supplied area and the areas next to it recover fully.
+• Quality replacements (8.26, Admin): one step to a supplied, reduced unit, even an elite step (never a strongpoint).
+• Merge units (14.61a, Israeli, Admin): fold one unit into another with the same unit symbol, in the same or adjacent uncontested Israeli areas, both in good order. No VP for Syria.
+• Release the Operational Reserve (14.61b, Syrian, Admin, from turn 3): the next 3rd Tank Division unit (15th, then 81st, then 65th) enters in a friendly-controlled Entry area of its own.
+• Replace a SAM (14.61c, Syrian) or an air support asset (14.61d, Israeli), Admin: from the Eliminated Box into the cup.
+• Reinforce a battle (8.23, Defender only, before the Attacker assigns assets): one unit in good order from an adjacent uncontested area joins, within stacking. Never into a battle of a garrison, raid or defended roadblock alone; Lt. Zvika may be reinforced (17.23).
+• Retreat before combat (8.24, Defender only): all defending units retreat without disorder; the Attacker gets an exploitation opportunity. Strongpoints and garrisons stay.
+• Breakthrough movement (8.21): one supplied armour-class unit in good order that has not moved this phase moves one area, like an exploitation unit.
+• Breakthrough combat (8.22): fight a round in one already contested area in the Breakthrough Combat Phase.
+• Reroute a reinforcement (8.27, Reinforcement Phase): place an arriving unit in another appropriate entry area.`],
+  'golan:special_action_event': ['Special Action (single-use event, 17.35)', `Any one use of the reusable Special Action (8.2, 14.61), for any of your units: Golan's commands are unified (13.2). It goes to the Eliminated Box after use and is not the battle's one event. Never for unsupplied units or areas (9.34d).
+• Uses: rally (8.25), quality replacements (8.26), merge units (14.61a, Israeli), release the Operational Reserve (14.61b, Syrian, from turn 3), replace a SAM or an air asset (14.61c, 14.61d), reinforce a battle (8.23), retreat before combat (8.24), breakthrough movement (8.21), breakthrough combat (8.22), reroute a reinforcement (8.27).`],
+  'golan:replacement_arm': ['Armor replacement (17.31)', `Admin Phase: one step to any supplied, reduced armour-class unit of yours (armour, mech or recon), even in a contested area. The step may be elite.
+• It cannot bring back an eliminated unit, and it never helps a strongpoint (15.6) or an unsupplied unit (9.34d).`],
+  'golan:replacement_mech': ['Mechanized replacement (17.32)', `Admin Phase: one step to any supplied, reduced mech unit or infantry-class unit of yours, even in a contested area. The step may be elite.
+• It cannot bring back an eliminated unit, and it never helps a strongpoint (15.6) or an unsupplied unit (9.34d).`],
+  'golan:event_release': ['Strategic Reserve released (Syrian, 17.11)', `Admin Phase: the brigade printed on it (Assad Guard, 141st Tank or 62nd Mech) leaves the Strategic Reserve box and is placed at once in any friendly-controlled Syrian Entry area (V-Z) that has room and no Israeli unit.
+• The first Israeli unit to cross the Purple Line releases two of the three at once (15.2). If its brigade is already in play, the event is good only for its alternate use.`],
+  'golan:event_ssm_strike': ['SSM Strike (Syrian, 17.12)', `Admin Phase: roll one die for each Israeli air support asset now in the Israeli Available Box (air assets on the map are safe). 1-2: it goes back to the Israeli cup. 3-10: no effect.`],
+  'golan:event_arriving_battalion': ['Arriving battalion (Israeli, 17.21)', `Admin Phase, two steps for the brigade printed on it (179th Armored, 4th Mech or 679th Armored), one of:
+• +2 steps to one supplied unit of that brigade;
+• +1 step to each of its two units, both supplied and reduced;
+• or, if one of its units has been eliminated, that one block comes back with 2 steps in either Assembly area and leaves the Eliminated Large Units track (19.2).
+• It cannot go to any other brigade.`],
+  'golan:event_dugman5': ['Operation Dugman 5 (Israeli, 17.22)', `Played automatically in the Admin Phase in which it is drawn. Israel rolls one die for each SAM in the Syrian Available Box:
+• 1, great success: the SAM goes to the Eliminated Box (each of the first three SAM losses releases a conditional Israeli air asset, 16.23).
+• 2-3, limited success: the SAM goes back to the Syrian cup.
+• 4-9, failure: no effect.
+• 10, a really bad idea: an Israeli air support asset goes from the Israeli Available Box to the Eliminated Box (from the cup if none is available).
+• With no SAM available it has no effect. As it is played at once, it has no alternate use.`],
+  'golan:event_lt_zvika': ['Lt. Zvika Greengold (Israeli, 17.23)', `Admin Phase: place it in a supplied, vacant, Israeli-controlled area (any Terrain Difficulty). It acts as a defended roadblock (4.35): Syrian units entering stop and must fight it (one die, elite, armour class). Alone it may have one artillery asset and no event.
+• Unlike other defended roadblocks, a Special Action may bring an adjacent unit into its battle (8.23).
+• It is not removed in the Supply Phase: it stays until it is eliminated.
+• Optional variant (18.9): in the Supply Phase Israel may take it back into the cup, to play it again when drawn.`],
+  'golan:event_king_hassan': ["King Hassan's Troublemakers (Israeli, 17.24)", `Admin Phase: the marker goes on the Syrian Moroccan brigade for the rest of the game.
+• The Moroccans fire only when defending: in a Syrian attack they roll no dice (they can still take losses).
+• They may never move into an Israeli-controlled area, contested or not, whatever the kind of move (also by reaction, breakthrough or a Special Action reinforcement).`],
+  'golan:event_ew': ['Electronic Warfare (17.33)', `Played in a battle as your one event (6.22, 6.23), in one of two ways:
+• Command disruption (Attacker only): with the Attacker's assets, before the Defender assigns any. Each defending unit (not garrisons or other standing assets) rolls one die: 5 or less, it is disordered at once. If every defending unit is disordered, the Defender may assign no artillery, air support, battle asset or SAM in this battle.
+• Countermeasures (Defender only): the immediate answer to a command disruption, +2 to each of those rolls. It is the Defender's one event.
+• The battle cannot start until the Defender has rolled.`],
+  'golan:event_counterbattery': ['Counterbattery strike (17.34)', `Played in a battle as your one event, before the first roll. The Attacker may also play it after seeing the Defender commit artillery. After the enemy artillery has fired, roll one die:
+• 1-5: one enemy artillery asset from this battle goes onto the Turn Track that many turns ahead. On that turn it arrives straight in the Available Box, not counted in that turn's draw.
+• 6-10: no effect. If the enemy fires no artillery, the event is spent for nothing.`],
+  'golan:strongpoint': ['Strongpoint (Israeli, 15.6)', `A one-step unit that never moves and never attacks: it only defends, always with one die; a rifle symbol fires −1, a tank symbol +1.
+• It counts as field works against the Attacker (no field works marker may be placed with it), is always in supply but supplies no other unit, never retreats and never receives replacement steps.
+• Evacuation: when a regular Israeli unit leaves or retreats from its contested area, the strongpoint goes to the Evacuated Strongpoints box and a Task Force of its type goes into the Israeli cup.
+• Errata: an Israeli attack in its area may use it only by removing it for good and committing its Task Force.`],
+  'golan:ghost': ['Ghost (Israeli, 15.7)', `A dummy block, placed face-down at the start in an area next to the Purple Line, so that each such area holds one ghost or one strongpoint. It cannot move, attack or defend. When the blocks of a battle are revealed it is removed to the Eliminated Box; an area held only by a ghost gives no exploitation.
+• Optional advanced ghosts (A 18.10) let ghosts move and serve as reserves.`],
   // The Bulge: its own texts (the asset sweep of November 2026); the other volumes keep the shared ones above.
   'bulge:artillery': ['Artillery asset', `Combat (6.22-6.26): assign it in a battle's set-up (Attacker first, then Defender). It fires in the artillery step before ground fire: one die at Success Number 5, −1 if the enemy point unit is armor or infantry in field works (optional 18.6: −1 against the Defender, +1 against infantry not in field works).
 • How many: up to 2 attacking, 1 defending (6.31). With units of mixed Higher Echelons: one per involved echelon when attacking, one in all when defending.
@@ -222,10 +303,11 @@ German engineers (14.52): only in their own army's zone; on a river that is also
 };
 /** Any event chit, single-use Special Actions included (8.1), can instead return two assets from the Eliminated Box to the cup (4.21). */
 export const ALT_USE = 'Alternate use (4.21): instead of its printed effect, the event may return two of your assets of your choice from the Eliminated Box to the cup (never garrisons or Task Forces, nor The Bulge\'s bid fuel). Delayed Response cannot be used this way.';
+export const ALT_USE_GOLAN = 'Alternate use (4.21): in an Admin Phase, instead of its printed effect, an event (Special Action and replacement events included) may move two of your assets of your choice from the Eliminated Box to your cup. Never commandos, SAMs, air support or garrisons (17.4, 16.24). Operation Dugman 5 is played the moment it is drawn, so it has no alternate use.';
 const escH = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
 /** The description as HTML: paragraphs, and "• " lines as a list; events also get their alternate use. */
 export function ruleHtml(kind: string, event = false): string {
-  const d = (RULE[kind] ?? ['', ''])[1] + (event && !kind.endsWith('event_delayed_response') ? '\n' + ALT_USE : ''); let out = '', list = false;
+  const d = (RULE[kind] ?? ['', ''])[1] + (event && !/event_delayed_response$|event_dugman5$/.test(kind) ? '\n' + (kind.startsWith('golan:') ? ALT_USE_GOLAN : ALT_USE) : ''); let out = '', list = false;
   for (const line of d.split('\n')) {
     if (line.startsWith('• ')) { if (!list) { out += '<ul class="rl">'; list = true; } out += `<li>${escH(line.slice(2))}</li>`; }
     else { if (list) { out += '</ul>'; list = false; } if (line.trim()) out += `<p>${escH(line)}</p>`; }

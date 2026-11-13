@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { passSA as passSA_, setReady as setReady_, type Battle as Battle_, type Game as Game_ } from '../src';
 /** 6.21-6.23: past the Defender's Special Action decision and the Attacker's assets, to the Defender's own asset step. */
 const defStep = (g: Game_, b: Battle_) => { if (b.defSA) passSA_(g, b); setReady_(g, b, b.attacker); };
-import { endPhase, moveOptions, mustFight, inSupply, contested, edgeKey, areas, neighbors, startBattle, beginCombat, roll_step as rollStep, defenderRetreatSA, chooseRetreat, retreatOptions,
+import { visibleTo, endPhase, moveOptions, mustFight, inSupply, contested, edgeKey, areas, neighbors, startBattle, beginCombat, roll_step as rollStep, defenderRetreatSA, chooseRetreat, retreatOptions,
   assign, canAssign, fireList, roadblock, rally, qualityReplacement, staffReplacement, setReserve, golan, type Game } from '../src';
 import { fight, playOut, newGolanGame, unit, chit, onMap, count, move, give, fresh } from './golan-helpers';
 
@@ -62,7 +62,8 @@ describe('air missions and commando raids (16.11, 16.31)', () => {
     const g = newGolanGame(3); fresh(g); g.phasing = 'israeli';
     const air = g.chits.find((c) => c.kind === 'air_mission' && c.side === 'israeli' && c.box === 'available')!;
     golan.airRecon(g, air.id, 64); expect(golan.state(g).intel).toBeUndefined(); golan.declineSam(g);
-    expect(golan.state(g).intel?.units).toEqual(onMap(g, 64).filter((u) => u.side === 'syrian').map((u) => u.id));
+    const syr = onMap(g, 64).filter((u) => u.side === 'syrian'); expect(syr.length).toBeGreaterThan(0);
+    expect(syr.every((u) => visibleTo(g, u, 'israeli'))).toBe(true);                               // 16.31c: the player now sees them
   });
   it('commandos land in a vacant Israeli area next to Syrian units; Example 13: up the escarpment into the raid costs 3', () => {
     const g = newGolanGame(4); fresh(g);
@@ -86,7 +87,7 @@ describe('events (17.x, 4.21)', () => {
   });
   it('17.22 Dugman 5 rolls once per available SAM', () => {
     const g = newGolanGame(7); fresh(g); const sams = g.chits.filter((c) => c.kind === 'sam' && c.box === 'available').length;
-    const before = g.log.length; golan.resolveDugman(g, chit(g, give(g, 'IC20'))); expect(g.log.length - before).toBe(sams);
+    const before = g.log.length; golan.resolveDugman(g, chit(g, give(g, 'IC20'))); expect(g.log.length - before).toBe(sams + 1);                  // the announcement, then one roll per SAM
   });
   it('17.21 arriving battalions: +2, +1/+1, or an eliminated block back at 2 steps in an Assembly area (and off the VP track)', () => {
     const g = newGolanGame(8); fresh(g);

@@ -4,6 +4,7 @@
  *  Intelligence Gathering) are published to a shared "reveals" document by the owner's client. */
 import { visibleTo, other, sidesOf, type Game, type Side, type Unit } from './game';
 import { alias } from './redact';
+import { CUR } from './volumes';
 
 export type UnitSecret = Pick<Unit, 'name' | 'cls' | 'q' | 'max' | 'str' | 'code' | 'symbol' | 'ech' | 'entry' | 'arrival' | 'chitId' | 'from' | 'ghost' | 'fort' | 'kind' | 'division' | 'brigade' | 'symbol2' | 'peiperFull' | 'heydte' | 'motorized'>;
 export interface Priv { salt: string; secrets: Record<string, UnitSecret>; epoch?: Record<string, number>; fresh?: true }   // fresh: the salt was made by whoever created the table, who may keep it: the first to sit here changes it (rotateSalt)
@@ -121,6 +122,7 @@ export class SplitSeat {
     const b = g.battle; if (b && b.stage === 'setup' && b.attPointDone) want = { ...want, ...revealsIn(g, this.side, b.area, this.priv) };
     for (const u of g.units) if (u.side === this.side && u.up != null && u.up === u.area) want[aliasOf(this.priv, u.id)] = { id: u.id, ...secretOf(u) };            // blocks that are face-up (a battle, or entering a face-up area) are shown to the other side
     if (g.revealed && g.units.find((u) => u.id === g.revealed)?.side === this.side) want = { ...want, ...revealOf(g, g.revealed, this.priv) };
+    for (const u of g.units) if (u.side === this.side && u.area != null && CUR.seenBy?.(g, u, other(this.side))) want = { ...want, ...revealOf(g, u.id, this.priv) };   // a volume's own reveal (Golan air reconnaissance)
     return want;
   }
 }

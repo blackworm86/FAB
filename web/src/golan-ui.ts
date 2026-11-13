@@ -35,7 +35,10 @@ export function golanTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): Tg
   };
   switch (k) {
     case 'engineer': modes([
-      { id: 'blow', icon: 'xbold', label: 'Blow a bridge (4.31)', apply: () => pair((x, f, n) => G.blowBridges(x, id, f, [n]), 'Tap the area the engineer works from, then the bridge to blow') },
+      { id: 'blow', icon: 'xbold', label: 'Blow bridges (4.31)', apply: () => {
+        pair((x, f, n) => G.blowBridges(x, id, f, [n]), 'Tap the area the engineer works from, then the bridge to blow');
+        if (a != null) { const two = E.neighbors(a).filter((n) => onMap(n) && works(g, (x) => G.blowBridges(x, id, a, [n])));            // 4.31: one or two bridges from the same area
+          for (let i = 0; i < two.length; i++) for (let j = i + 1; j < two.length; j++) if (works(g, (x) => G.blowBridges(x, id, a, [two[i], two[j]]))) t.buttons.push({ icon: 'xbold', label: `Blow both: ${ctx.areaName(two[i])} and ${ctx.areaName(two[j])}`, fn: run((x) => G.blowBridges(x, id, a, [two[i], two[j]])) }); } } },
       { id: 'repair', icon: 'engineer', label: 'Repair a bridge (4.32)', apply: () => pair((x, f, n) => G.repairBridge(x, id, f, n), 'Tap the area the engineer works from, then the bridge to repair') },
       { id: 'ditch', icon: 'wave', label: 'Bridge the AT ditch (14.51a)', apply: () => pair((x, f, n) => G.bridgeDitch(x, id, f, n), 'Tap the area the engineer works from, then the ditch boundary to bridge') },
       ...(side === 'syrian' ? [{ id: 'mine', icon: 'warn', label: 'Lift a minefield (14.52)', apply: () => pair((x, f, n) => G.removeMinefield(x, id, f, n), 'Tap the area next to the minefield, then across it') }] : []),
@@ -50,7 +53,7 @@ export function golanTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): Tg
     case 'artillery': case 'rocket_artillery': if (!g.opts.artyInterdict) return null; single((x, ar) => G.artilleryInterdiction(x, id, ar), 'Tap the area to interdict: +1 MP in and out, no strat-move (18.31)'); break;
     case 'commando': single((x, ar) => G.placeRaid(x, id, ar), 'Tap a vacant Israeli area next to Syrian units: the commandos land there'); break;
     case 'event_lt_zvika': single((x, ar) => G.playLtZvika(x, id, ar), 'Tap an empty Israeli area: Lt. Zvika holds it'); break;
-    case 'event_release': if (works(g, (x) => G.playRelease(x, id))) t.buttons.push({ icon: 'next', label: 'Release the unit', fn: run((x) => G.playRelease(x, id)), title: '17.11: it is placed at once in a friendly-controlled entry area' }); t.hint = t.buttons.length ? 'The unit is released from the Strategic Reserve' : 'That unit is already in play'; break;
+    case 'event_release': single((x, ar) => G.playRelease(x, id, ar), 'Tap a glowing Entry area: the brigade enters there (17.11)'); if (!t.areas.size) t.hint = 'Its brigade is already in play, or no Entry area has room: only the alternate use is left'; break;
     case 'event_ssm_strike': t.buttons.push({ icon: 'air_mission', label: 'Fire the SSMs', fn: run((x) => G.playSSM(x, id)), title: '17.12: each Israeli air asset in the Available Box goes back to the cup on 1–2' }); t.hint = 'Strike the Israeli air assets'; break;
     case 'event_king_hassan': t.buttons.push({ icon: 'flag', label: 'Play the event', fn: run((x) => G.playKingHassan(x, id)), title: '17.24: the Moroccan brigade fires only in defence and keeps out of Israeli-controlled areas' }); t.hint = "King Hassan's Troublemakers"; break;
     case 'replacement_arm': case 'replacement_mech': units((x, uid) => G.playReplacement(x, id, uid), 'Tap a glowing block to add a step'); break;
@@ -71,7 +74,7 @@ export function golanTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): Tg
         const from = ctx.mode.startsWith('merge:') ? ctx.mode.slice(6) : '';
         if (!from) { for (const u of g.units.filter((u) => u.side === 'israeli' && u.area != null && g.units.some((v) => works(g, (x) => G.mergeUnits(x, u.id, v.id, id))))) t.units.set(u.id, () => { ctx.setMode('merge:' + u.id); }); t.hint = 'Tap the block that folds into another'; }
         else { for (const v of g.units.filter((v) => works(g, (x) => G.mergeUnits(x, from, v.id, id)))) t.units.set(v.id, run((x) => G.mergeUnits(x, from, v.id, id))); t.hint = `Tap the block that takes ${g.units.find((u) => u.id === from)?.name ?? 'its'} steps`; } } });
-      if (side === 'syrian' && works(g, (x) => G.releaseOperationalReserve(x, id))) list.push({ id: 'release', icon: 'next', label: 'Release the next 3rd Tank Division unit (14.61b)', apply: () => { t.buttons.push({ icon: 'next', label: 'Release the next unit', fn: run((x) => G.releaseOperationalReserve(x, id)) }); t.hint = '15th, 81st, 65th, in that order'; } });
+      if (side === 'syrian' && works(g, (x) => G.releaseOperationalReserve(x, id))) list.push({ id: 'release', icon: 'next', label: 'Release the next 3rd Tank Division unit (14.61b)', apply: () => single((x, ar) => G.releaseOperationalReserve(x, id, ar), 'Tap a glowing Entry area: the 15th, 81st, 65th enter in that order (14.61b)') });
       const lost = g.chits.find((x) => x.side === side && x.box === 'eliminated' && x.kind === (side === 'syrian' ? 'sam' : 'air_mission'));
       if (lost) list.push({ id: 'asset', icon: 'air_mission', label: side === 'syrian' ? 'Replace a lost SAM (14.61c)' : 'Replace a lost air asset (14.61d)', apply: () => { t.buttons.push({ icon: 'undo', label: `Bring back ${lost.name}`, fn: run((x) => G.replaceAsset(x, side, lost.id, id)) }); t.hint = 'From the Eliminated Box back into the cup'; } });
       modes(list);
@@ -125,7 +128,7 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
     const B = G.battleState(b), def = E.other(b.attacker);
     if (B.ew?.pending) out.push(`<div class="volpanel"><b>${ctx.ico('warn')} Jamming (17.33)</b><span>${nm(def)}: each defending unit rolls, 5 or less disordered. Play your EW card for +2 to each roll, or roll without it.</span><div class="row">${ctx.btn('Roll without countermeasures', () => G.answerJamming(live(), b), 'primary', !ctx.mine(def))}</div></div>`);
     if (b.attacker === 'syrian' && b.area < 100 && !G.isAssembly(b.area) && b.assets.syrian.some((id) => E.chit(g, id).kind === 'engineer')) {
-      const ditch = E.neighbors(b.area).filter((n) => n < 100 && E.connection(b.area, n)?.atDitch && !V.bridgedDitch.includes(E.edgeKey(b.area, n)));
+      const ditch = E.neighbors(b.area).filter((n) => n < 100 && E.connection(b.area, n)?.atDitch && !V.bridgedDitch.includes(E.edgeKey(b.area, n)) && works(g, (x) => G.setEngineerBridge(x, x.battle!, n)));   // only where the engine allows it (Israeli side of the Purple Line, markers left)
       if (ditch.length) out.push(`<div class="volpanel"><b>${ctx.ico('engineer')} Engineer (14.51b)</b><span>Bridge the AT ditch instead of firing (if it survives both fire steps):</span><div class="row">${ditch.map((n) => ctx.btn(`towards ${esc(ctx.areaName(n))}`, () => G.setEngineerBridge(live(), b, B.engBridge === E.edgeKey(b.area, n) ? null : n), B.engBridge === E.edgeKey(b.area, n) ? 'on' : '', !ctx.mine('syrian'))).join('')}</div></div>`);
     }
     for (const s of E.sidesOf(g)) if (B.event[s]) out.push(`<div class="volpanel"><small>${nm(s)} event: ${esc(E.chit(g, B.event[s]!).name)}</small></div>`);

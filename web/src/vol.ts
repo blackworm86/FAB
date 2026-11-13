@@ -130,7 +130,7 @@ function golan(): VolView {
     unitSvg: (u, g) => (u.garrison && u.chitId ? chitArt(E.chit(g, u.chitId)) : unitArt(u)), chitSvg: chitArt,
     cssSide: (u) => u.side,
     reserveTag: (u) => (u.side === 'syrian' ? 'R' : 'RI'),
-    ruleKey: (k) => (k === 'air_mission' || k === 'event_release' ? `golan:${k}` : k), unitRule: (u) => (u.garrison ? 'garrison' : null), targetsFor: golanTargets,
+    ruleKey: (k) => (RULE[`golan:${k}`] ? `golan:${k}` : k), unitRule: (u) => (u.garrison ? (u.id.startsWith('R-') ? 'golan:commando' : u.id.startsWith('Z-') ? 'golan:event_lt_zvika' : u.id.startsWith('DR-') ? 'golan:engineer' : 'golan:garrison') : u.fort ? 'golan:strongpoint' : u.ghost ? 'golan:ghost' : null), targetsFor: golanTargets,
     battleCard: golanBattleCard, battleUse: golanBattleUse, playInBattle: golanPlayInBattle,
     ruleArt: golanRuleArt,
     panel: golanPanel, blocksBegin: golanBlocksBegin, edgeMarks: golanEdgeMarks, markSvg: (code) => EDGE[code]?.() ?? mapMarkerSvg(code), boxes: GOLAN_BOXES,

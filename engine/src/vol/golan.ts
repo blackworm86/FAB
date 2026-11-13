@@ -36,7 +36,7 @@ export interface GolanState {
   minefieldFailed: string[];                              // units that failed a minefield check this turn (14.02)
   assaultEntered: Record<number, string[]>;               // units that entered an enemy area across an unbridged ditch or river this phase (14.01)
   kingHassan: boolean;                                    // 17.24 in effect
-  intel?: { side: Side; units: string[] };                // 16.31c: enemy blocks a reconnaissance showed, for the rest of the phase
+  intel?: { side: Side; area: number };                // 16.31c: enemy blocks a reconnaissance showed, for the rest of the phase
   freeCombatRound: number;                                // 22.17: Syrian free Breakthrough combat rounds left on turn 1
   purpleLineCrossed: boolean; airReleased: number; hermonLost: boolean;
   release?: { pick: boolean; place: string[] };           // 15.2/15.4a: the Syrian choice and placements the Israeli move waits for
@@ -475,7 +475,8 @@ export function samEliminated(g: Game) {
 }
 /** 17.22 Operation Dugman 5: must be played when drawn; one die per Syrian SAM in the Available Box. */
 export function resolveDugman(g: Game, c: Chit) {
-  c.box = 'eliminated';
+  c.box = 'eliminated'; say(g, 'Operation Dugman 5 is played (17.22)', 'israeli');
+  if (!g.chits.some((x) => x.kind === 'sam' && x.box === 'available')) say(g, 'Dugman 5: no SAM in the Syrian Available Box, no effect', 'israeli');
   for (const sam of g.chits.filter((x) => x.kind === 'sam' && x.box === 'available')) {
     const die = rollDie(g);
     if (die === 1) { sam.box = 'eliminated'; samEliminated(g); say(g, `Dugman 5: ${die}, great success: a SAM battery is destroyed`, 'israeli'); }
@@ -548,7 +549,7 @@ function adjustFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground', lis
   const V = state(g), B = battleState(b), drop = (f: (x: Fire) => boolean) => { for (let i = list.length - 1; i >= 0; i--) if (f(list[i])) list.splice(i, 1); };
   if (side === b.attacker && V.kingHassan) drop((f) => f.key === 'S07');
   if (side === 'syrian' && V.raidPartial.includes(b.area)) drop((f) => { const u = g.units.find((x) => x.id === f.key); return !!u?.garrison && !!u.chitId && chit(g, u.chitId).kind === 'commando'; });
-  if (side === b.attacker && B.engBridge) drop((f) => f.isAsset && b.assets[side].includes(f.key) && chit(g, f.key).kind === 'engineer');
+  if (side === b.attacker && B.engBridge) { const i = list.findIndex((f) => f.isAsset && b.assets[side].includes(f.key) && chit(g, f.key).kind === 'engineer'); if (i >= 0) list.splice(i, 1); }   // one engineer bridges, the others fire
   if (side === 'israeli') {
     const firers = list.filter((f) => !f.isAsset).map((f) => ({ brigade: g.units.find((u) => u.id === f.key)?.brigade, sn: f.sn, side: side as GSide })).filter((x): x is { brigade: string; sn: number; side: GSide } => !!x.brigade);
     for (const x of brigadeExtraDie(firers)) list.push({ key: `brigade:${x.brigade}`, who: `${x.brigade} brigade integrity`, shooter: { kind: 'unit', cls: 'infantry', dice: 1 }, dice: 1, sn: x.sn, parts: [['brigade integrity extra die (15.51)', 0]], isAsset: true });
@@ -559,7 +560,7 @@ function beforeFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground') {
   const B = battleState(b); if (kind !== 'ground' || side !== b.attacker || !B.engBridge) return;
   const engineers = b.assets.syrian.filter((id) => chit(g, id).kind === 'engineer').length;
   if (b.engFw && engineers < 2) { B.engBridge = undefined; say(g, 'The one engineer removes the field works: the ditch is not bridged (6.33, 14.51b)'); return; }
-  if (engineers) { state(g).bridgedDitch.push(B.engBridge); say(g, `A Syrian engineer bridges the AT ditch ${B.engBridge} (14.51b)`); }
+  if (engineers && state(g).bridgedDitch.length < 8) { state(g).bridgedDitch.push(B.engBridge); say(g, `A Syrian engineer bridges the AT ditch ${B.engBridge} (14.51b)`); }
 }
 /** 17.34 Counterbattery: after the enemy artillery fired, 1–5 sends one of its artillery assets that many turns down the track. */
 function afterFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground') {
@@ -779,13 +780,14 @@ export function setEngineerBridge(g: Game, b: Battle, to: number | null) {
   const B = battleState(b); if (to == null) { B.engBridge = undefined; return; }
   const c = connection(b.area, to);
   need(b.attacker === 'syrian' && !garea(b.area).syria && c?.atDitch && !state(g).bridgedDitch.includes(edgeKey(b.area, to)), 'no AT ditch to bridge there');
+  need(state(g).bridgedDitch.length < 8, 'all eight AT Ditch Bridged markers are in use (14.51a)');
   need(b.assets.syrian.some((id) => chit(g, id).kind === 'engineer'), 'assign an engineer asset first');
   B.engBridge = edgeKey(b.area, to);
 }
 
 /* ---------- air missions in the Admin Phase (16.31b/c) and commando raids (16.11a) ---------- */
 const noSamReplay = (g: Game, a: number) => need(!(state(g).samCancelled ?? []).includes(a), 'a SAM cancelled an air mission over that area: no replacement this phase (16.12)');
-const airOk = (g: Game, a: number) => { need(!isNight(g), 'no air missions on the night turn (14.03)'); need(!isAssembly(a), 'not over an Assembly area'); };
+const airOk = (g: Game, a: number) => { need(!state(g).samTarget, 'Syria must first answer the air mission already flown (16.12)'); need(!isNight(g), 'no air missions on the night turn (14.03)'); need(!isAssembly(a), 'not over an Assembly area'); };
 export function airInterdiction(g: Game, chitId: string, a: number) {
   needAdmin(g); const c = avail(g, chitId, ['air_mission']); airOk(g, a); need(!g.interdicted[a], 'that area is already interdicted'); noSamReplay(g, a);
   c.box = 'map'; c.area = a; c.mission = 'interdiction'; g.interdicted[a] = c.id;
@@ -806,14 +808,14 @@ export function artilleryInterdiction(g: Game, chitId: string, a: number) {
 }
 export function airRecon(g: Game, chitId: string, a: number) {
   needAdmin(g); const c = avail(g, chitId, ['air_mission']); airOk(g, a); noSamReplay(g, a);
-  need(unitsIn(g, a, other(c.side)).some(regular), 'reconnaissance over an enemy-occupied area');
+  need(unitsIn(g, a, other(c.side)).some((u) => !u.garrison), 'reconnaissance over an enemy-occupied area');   // strongpoints and ghosts too
   c.box = 'map'; c.area = a; c.mission = 'recon';
   if (c.side === 'israeli' && eastOfSam(a) && samAvailable(g)) { state(g).samTarget = c.id; say(g, `Air reconnaissance over ${nameOf(a)}: Syria may answer with a SAM (16.31c)`, c.side); return; }
   finishRecon(g, c);
 }
 /** The reconnaissance flies: the enemy blocks in the area are shown for the rest of the phase. */
 export function finishRecon(g: Game, c: Chit) {
-  state(g).intel = { side: c.side, units: unitsIn(g, c.area!, other(c.side)).filter(regular).map((u) => u.id) };
+  state(g).intel = { side: c.side, area: c.area! };
   c.mission = undefined; used(c); say(g, 'Reconnaissance reveals the enemy blocks (16.31c)', c.side);
 }
 /** 16.11a: a commando from the Available Box lands on a vacant Israeli-controlled area next to a Syrian-occupied one; it stands there like a defended roadblock. */
@@ -860,8 +862,8 @@ export function playSSM(g: Game, chitId: string) {
 export function playArrivingBattalion(g: Game, chitId: string, choice: { add: string } | { split: [string, string] } | { rebuild: string; assembly: 'A' | 'B' }) {
   needAdmin(g); const c = avail(g, chitId, ['event_arriving_battalion']);
   const mine = (id: string) => { const u = unit(g, id); need(u.side === 'israeli' && !!c.brigade && u.brigade === c.brigade, `${u.name} is not of the ${c.brigade} brigade`); return u; };
-  if ('add' in choice) { const u = mine(choice.add); need(u.area != null && inSupply(g, 'israeli', u.area) && u.str + 2 <= u.max, 'a supplied unit with room for two steps'); u.str += 2; }
-  else if ('split' in choice) for (const id of choice.split) { const u = mine(id); need(u.area != null && inSupply(g, 'israeli', u.area) && u.str < u.max, 'supplied, reduced units'); u.str += 1; }
+  if ('add' in choice) { const u = mine(choice.add); need(u.area != null && !u.unsupplied && u.str + 2 <= u.max, 'a supplied unit with room for two steps'); u.str += 2; }
+  else if ('split' in choice) for (const id of choice.split) { const u = mine(id); need(u.area != null && !u.unsupplied && u.str < u.max, 'supplied, reduced units'); u.str += 1; }
   else {
     const u = mine(choice.rebuild); need(u.area == null && u.str === 0, 'only an eliminated unit comes back');
     Object.assign(u, { area: choice.assembly === 'B' ? ASSEMBLY.B : ASSEMBLY.A, str: Math.min(2, u.max), disorder: 0, unsupplied: false, box: undefined });
@@ -872,7 +874,7 @@ export function playArrivingBattalion(g: Game, chitId: string, choice: { add: st
 /** 17.23 Lt. Zvika Greengold: an elite armor defended roadblock in an unoccupied Israeli-controlled area, staying until destroyed. */
 export function playLtZvika(g: Game, chitId: string, a: number) {
   needAdmin(g); const c = avail(g, chitId, ['event_lt_zvika']);
-  need(!isAssembly(a) && g.control[a] === 'israeli' && vacant(g, a), 'an unoccupied Israeli-controlled area');
+  need(!isAssembly(a) && g.control[a] === 'israeli' && vacant(g, a) && inSupply(g, 'israeli', a), 'a supplied, unoccupied Israeli-controlled area (17.23, 4.35)');
   c.box = 'map'; c.area = a; c.q = 'elite'; g.units.push(asGarrison(c, 'Z', a, 'armor', 'elite')); say(g, `Lt. Zvika takes position in ${nameOf(a)} (17.23)`, 'israeli');
 }
 /** 17.24 King Hassan's Troublemakers: the Moroccans fire only in defence and never enter Israeli-controlled areas, for the rest of the game. */
@@ -883,7 +885,7 @@ export function playKingHassan(g: Game, chitId: string) {
 export function playReplacement(g: Game, chitId: string, unitId: string) {
   needAdmin(g); const c = avail(g, chitId, ['replacement_arm', 'replacement_mech']), u = unit(g, unitId);
   need(!u.fort, 'strongpoints never receive replacement steps (15.6)');
-  need(u.side === c.side && reduced(u) && inSupply(g, u.side, u.area!), 'a supplied, reduced unit of your own');
+  need(u.side === c.side && reduced(u) && !u.unsupplied, 'a supplied, reduced unit of your own (9.31: its status from the last Supply Phase)');
   need(c.kind === 'replacement_arm' ? u.cls === 'armor' : u.symbol === 'mech' || u.cls === 'infantry', c.kind === 'replacement_arm' ? 'armor replacements go to armor-class units' : 'mechanized replacements go to mech or infantry-class units');
   u.str += 1; gone(c); say(g, `${u.name} gets a replacement step (17.3)`, c.side);
 }
@@ -891,6 +893,7 @@ export function playReplacement(g: Game, chitId: string, unitId: string) {
 /** 4.21 with 17.4: the eliminated assets an event may bring back (never commandos, SAMs, air support or garrisons). */
 export const alternateEventCandidates = (g: Game, side: Side) => g.chits.filter((a) => a.side === side && a.box === 'eliminated' && !['commando', 'sam', 'air_mission', 'garrison', 'sa_block', 'command_staff'].includes(a.kind) && !a.kind.startsWith('event') && !a.kind.startsWith('replacement_') && a.kind !== 'special_action_event');
 export function alternateEventUse(g: Game, chitId: string, assetIds: string[]) {
+  needAdmin(g);
   const c = chit(g, chitId);
   need(c.box === 'available' && (c.kind.startsWith('event') || c.kind.startsWith('replacement_') || c.kind === 'special_action_event'), 'play an event from the Available Box');   // 17.31/17.32 replacements are events
   need(assetIds.length === Math.min(2, alternateEventCandidates(g, c.side).length), 'choose two assets from your Eliminated Box (4.21)');
@@ -906,7 +909,7 @@ export function mergeUnits(g: Game, fromId: string, intoId: string, chitId?: str
   need(a.side === 'israeli' && b.side === 'israeli' && a.id !== b.id && regular(a) && regular(b) && a.symbol === b.symbol, 'two Israeli units with the same unit symbol');
   need(!g.opts.israeliDivisions || a.division === b.division, 'with Israeli divisional organization, merging units must be of the same division (18.5)');
   need(a.area != null && b.area != null && (a.area === b.area || neighbors(a.area).includes(b.area)), 'in the same or adjacent areas');
-  need([a.area!, b.area!].every((x) => isAssembly(x) || (g.control[x] === 'israeli' && !contested(g, x))) && a.disorder === 0 && b.disorder === 0, 'uncontested friendly areas, units in good order');
+  need([a.area!, b.area!].every((x) => isAssembly(x) || (g.control[x] === 'israeli' && !contested(g, x))) && a.disorder === 0 && b.disorder === 0 && !a.unsupplied && !b.unsupplied, 'uncontested friendly areas, supplied units in good order (9.34d)');
   spendSA(g, 'israeli', undefined, `merge ${a.name} into ${b.name} (14.61a)`, chitId);
   b.str = Math.min(b.max, b.str + a.str); a.area = null; a.str = 0; dropReserve(g, a);                      // no VP for Syria (19.2)
 }
@@ -943,6 +946,7 @@ const takeEvent = (g: Game, b: Battle, c: Chit, kind: string) => {
 export function playJamming(g: Game, b: Battle, chitId: string) {
   const c = chit(g, chitId), def = other(b.attacker);
   need(c.side === b.attacker, 'only the Attacker jams (17.33)');
+  need(!b.defSA, 'the Defender first decides on his Special Action (6.21)'); need(!b.ready?.includes(b.attacker), 'jam with your assets, before committing them (6.22)');
   need(!b.assets[def].length && !airOf(b, def).length, 'the Defender has already assigned assets');
   takeEvent(g, b, c, 'event_ew'); battleState(b).ew = { pending: true };
   say(g, 'Electronic warfare: command disruption (17.33)', b.attacker);
@@ -969,7 +973,7 @@ export function playCounterbattery(g: Game, b: Battle, chitId: string) {
 export function reinforceOptions(g: Game, b: Battle) {
   const def = other(b.attacker), here = unitsIn(g, b.area, def);
   if (b.stage !== 'setup' || blocks(g, b.area, def).filter(regular).length >= 2) return [];
-  if (!here.some(regular) && !here.some((u) => u.garrison && u.chitId && chit(g, u.chitId).kind === 'event_lt_zvika')) return [];
+  if (!here.some((u) => regular(u) || !!u.fort) && !here.some((u) => u.garrison && u.chitId && chit(g, u.chitId).kind === 'event_lt_zvika')) return [];
   return g.units.filter((u) => u.side === def && u.area != null && neighbors(b.area).includes(u.area) && regular(u) && u.disorder === 0 && !contested(g, u.area)).map((u) => u.id);
 }
 
@@ -1054,6 +1058,8 @@ function afterDeploy(g: Game) {
 export const specialActions = (g: Game, side: Side) => saAvailable(g, side);
 
 registerHooks('golan73', {
+  seenBy: (g, u, side) => { const i = state(g).intel; return !!i && i.side === side && u.side !== side && u.area === i.area; },   // 16.31c: the reconnaissance shows the whole area for the rest of the phase
+  moveOk: (g, u, a) => !(state(g).kingHassan && u.id === 'S07' && !isAssembly(a) && g.control[a] === 'israeli'),                 // 17.24: also by Special Action
   newGame: newGolanGame as Volume['newGame'], markerKey: () => 'res', reach: golanReach, beforeMove, afterMove,
   stratAllowed: (g, u) => interdictedBy(g, u.area!) !== other(u.side) && !(isNight(g) && g.stratMoves >= (u.side === 'israeli' ? 2 : 1)), stratStep,   // 14.03: night strat-moves, Israel 2, Syria 1
   afterStrat: (g, _u, path) => { g.stratMoves++; const V = state(g); for (let i = 1; i < path.length; i++) { const c = connection(path[i - 1], path[i])!; if (c.escarpment || c.rugged) V.crossed.push(edgeKey(path[i - 1], path[i])); } },

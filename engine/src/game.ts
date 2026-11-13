@@ -859,7 +859,8 @@ export function fireList(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground'
     for (const a of airOf(b, side)) if (a.mode === 'arty') add(a.id, 'Air Mission (artillery)', { kind: 'air', cls: 'infantry', dice: 1 }, true);
   } else {
     for (const u of fighters(g, b.area, side, att)) { if (u.paradrop === 'partial') continue; const sup = airOf(b, side).some((a) => a.mode === 'support' && a.unit === u.id); add(u.id, u.name, { kind: u.garrison ? 'battle' : 'unit', cls: u.cls, quality: quality(u), dice: u.fort ? 1 : u.str, disordered: u.disorder > 0, unsupplied: u.unsupplied, airSupport: sup, closeAirSupport: sup, strongpoint: u.fort }, !!u.garrison); }
-    for (const id of b.assets[side]) { const c = chit(g, id); if (!isBattleAsset(c) || (att && kind === 'ground' && c.kind === 'engineer' && engRemovesFw(g, b))) continue; add(id, c.name, { kind: 'battle', cls: chitClass(c), quality: c.q, dice: 1 }, true); }
+    let skipEng = att && kind === 'ground' && engRemovesFw(g, b);                                    // 6.33: one engineer does the job instead of firing, the others fire
+    for (const id of b.assets[side]) { const c = chit(g, id); if (!isBattleAsset(c)) continue; if (skipEng && c.kind === 'engineer') { skipEng = false; continue; } add(id, c.name, { kind: 'battle', cls: chitClass(c), quality: c.q, dice: 1 }, true); }
   }
   CUR.adjustFire?.(g, b, side, kind, out);
   return out;
@@ -867,7 +868,8 @@ export function fireList(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground'
 function doFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground', engBusy = false) {
   CUR.beforeFire?.(g, b, side, kind);
   let total = 0;
-  for (const f of fireList(g, b, side, kind).filter((x) => !(engBusy && b.assets[side].includes(x.key) && chit(g, x.key).kind === 'engineer'))) { const dice = Array.from({ length: f.dice }, () => roll(g)), hits = dice.filter((d) => succeeds(d, f.sn)).length; total += hits; b.rolls.push({ who: f.who, sn: f.sn, dice, hits, kind }); }
+  let skip = engBusy;
+  for (const f of fireList(g, b, side, kind).filter((x) => { if (skip && b.assets[side].includes(x.key) && chit(g, x.key).kind === 'engineer') { skip = false; return false; } return true; })) { const dice = Array.from({ length: f.dice }, () => roll(g)), hits = dice.filter((d) => succeeds(d, f.sn)).length; total += hits; b.rolls.push({ who: f.who, sn: f.sn, dice, hits, kind }); }
   say(g, `${areas.get(b.area)!.name}: ${side} ${kind === 'arty' ? 'artillery' : 'ground fire'} ${total} hit(s)`);
   CUR.afterFire?.(g, b, side, kind);
   return total;
@@ -967,6 +969,7 @@ function next(g: Game, b: Battle) {
 export function settleUp(g: Game) { for (const u of g.units) if (u.up != null && (u.up !== u.area || !contested(g, u.up))) u.up = undefined; }
 export function visibleTo(g: Game, u: Unit, side: Side | 'spectator' | null): boolean {
   if (side === null || u.side === side || u.garrison || g.revealed === u.id || u.area == null) return true;
+  if (side !== 'spectator' && CUR.seenBy?.(g, u, side)) return true;                                  // a volume's own reveal (Golan air reconnaissance, 16.31c)
   if (u.up === u.area && contested(g, u.area)) return true;                                           // face-up only while the area stays contested (the blocks stand up again when the enemy leaves)
   return g.units.some((x) => x.area === u.area && x.side !== u.side && x.up === u.area);
 }

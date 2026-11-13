@@ -51,6 +51,8 @@ export interface Volume {
   /** The block's movement allowance in MP now (default 6 armor, 3 infantry). */
   allowance?: (g: Game, u: Unit) => number;
   moveOk?: (g: Game, u: Unit, area: number) => boolean;
+  /** A block the volume shows to the enemy for now (Golan reconnaissance). */
+  seenBy?: (g: Game, u: Unit, side: Side) => boolean;
   /** Something that happens before the unit moves (a morale check, a raid); a string ends the move with that result. */
   beforeMove?: (g: Game, u: Unit, opt: Opt) => string | void;
   afterMove?: (g: Game, u: Unit, opt: Opt) => void;
