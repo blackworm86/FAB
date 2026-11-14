@@ -50,7 +50,7 @@ A very busy week: about 160 changes reached `main` from four sessions working at
 
 ## Decisions waiting for you
 
-0. **Tutorial**: to be cancelled and rebuilt (your decision, 13 November). When, and whether the present lessons come off the site in the meantime, is still to be said.
+0. **Tutorial**: to be cancelled and rebuilt (your decision, 13 November). The outlines are written (14 November): `docs/TUTORIAL-OUTLINE.md`, three courses, about 42 minutes in all. Waiting for your approval, and whether the present lessons stay on the site meanwhile.
 
 1. ~~Figures~~ Answered 13 November: kept, to be polished after the streamlining work.
 2. **Playtest the computer opponent** (`?lab=german`, `?lab=allied`) and say whether it is good enough to move to levels.
