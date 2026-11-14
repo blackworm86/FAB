@@ -79,26 +79,31 @@ export function sicilyTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): T
       );
     t.hint = t.units.size ? hint : 'No block qualifies right now';
   };
-  /** 14.61: the divisions this counter may release, one button each: a division is released as a whole, wherever its blocks are (at sea, in the Airborne Assault box, not yet arrived). */
+  /** 14.61: the divisions this counter may release light up on the map, every block of each (on the map, At Sea, Airborne Assault); a tap on any of them
+   *  releases its division (owner, 14 Nov). A division with no block on the table yet keeps a named button. */
   const divisions = (brigade?: string) => {
-    const seen = new Set<string>();
+    const seen = new Set<string>(),
+      onTable = (u: E.Unit) => u.area != null || u.box === 'at_sea' || u.box === 'airborne_assault'; // the boxes drawn on the map
+    let lit = 0;
     for (const u of g.units.filter((x) => x.side === 'allied' && x.division)) {
       if (seen.has(u.division!)) continue;
       seen.add(u.division!);
-      if (works(g, (x) => S.releaseDivision(x, u.division!, id, brigade)))
-        t.chips.push({
-          label: `${u.name} · ${u.nation === 'british' ? '8th Army' : '7th Army'}`,
-          img: ctx.face(u),
-          fn: run((x) => S.releaseDivision(x, u.division!, id, brigade)),
-        });
+      if (!works(g, (x) => S.releaseDivision(x, u.division!, id, brigade))) continue;
+      const go = run((x) => S.releaseDivision(x, u.division!, id, brigade)),
+        blocks = g.units.filter((v) => v.division === u.division && onTable(v));
+      for (const v of blocks) t.units.set(v.id, go);
+      lit += blocks.length ? 1 : 0;
+      if (!blocks.length)
+        t.chips.push({ label: `${u.name} · ${u.nation === 'british' ? '8th Army' : '7th Army'}`, img: ctx.face(u), fn: go });
     }
-    t.hint = t.chips.length
-      ? brigade
-        ? 'Choose the British division to release; the brigade goes with it'
-        : 'Choose the division to release from its army boundaries'
-      : c.kind === 'special_action_event'
-        ? 'No division to release: this Special Action releases only a division of its own army, not yet released (14.61)'
-        : 'No division left to release (14.61)';
+    t.hint =
+      lit || t.chips.length
+        ? brigade
+          ? 'Tap a lit block: its British division is released, and the brigade with it (14.61)'
+          : 'Tap a lit block: its whole division is released and may cross army boundaries (14.61)'
+        : c.kind === 'special_action_event'
+          ? 'No division to release: this Special Action releases only a division of its own army, not yet released (14.61)'
+          : 'No division left to release (14.61)';
   };
   const modes = (list: { id: string; icon: string; label: string; apply: () => void }[]) => {
     for (const m of list) t.modes.push({ id: m.id, icon: m.icon, label: m.label });

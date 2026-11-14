@@ -339,6 +339,10 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
     row.addEventListener('scroll', edge, { passive: true });
   });
   ui.querySelector<HTMLElement>('.chitbar .cbchips')?.scrollIntoView({ block: 'end' }); // a card's named choices are what the player came for: in view, whatever the panel's height
+  {
+    const on = ui.querySelector<HTMLElement>('.chitbar.lights .modes .on'); // a phone's single row of options shows the chosen one
+    if (on?.parentElement) on.parentElement.scrollLeft = on.offsetLeft - on.parentElement.offsetLeft - 8;
+  }
   ui.querySelectorAll<HTMLElement>('.volstack, .dock .c-ledger').forEach((st) => {
     // a set-up panel taller than its space fades at the bottom with a ▾, so it reads as "more below" (playtest B7)
     const edge = () => st.classList.toggle('more', st.scrollTop + st.clientHeight < st.scrollHeight - 2);

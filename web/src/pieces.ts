@@ -438,6 +438,16 @@ export function drawPieces() {
       m.userData.unit = u.id;
       m.userData.hidden = faceDown(u);
       pieces.add(m);
+      if (tgt?.units.has(u.id)) {
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(1.15, 1.45, 40),
+          new THREE.MeshBasicMaterial({ color: MAPC.ring, transparent: true, opacity: 0.95, side: THREE.DoubleSide }),
+        );
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.set(p.x, 0.09, p.z);
+        ring.scale.setScalar(m.scale.x);
+        markers.add(ring);
+      } // a block in a box can be a target too (Sicily: releasing its division)
     });
   }
   if (g.battle) drawPointMarks(g.battle);

@@ -778,3 +778,25 @@ body:has(.mappanel) .sbfab {
 #leaders {
   z-index: 7;
 }
+
+/* owner, 14 Nov: a card that lights blocks or areas on the map gives the phone's screen to the map (Sicily release on the map) */
+@media (max-width: 700px) {
+  #ui:has(.chitbar.lights) .dock .c-hand,
+  #ui:has(.chitbar.lights) .dock .handtab {
+    display: none;
+  }
+  #ui .chitbar.lights .modes {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  #ui .chitbar.lights .modes .ico {
+    flex: 0 0 auto;
+    max-width: 78%;
+  }
+  #ui .chitbar.lights .modes .ico span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
