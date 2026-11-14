@@ -1,11 +1,11 @@
 // Lessons, played in a browser: every step's target must be on screen. Walks each course step by step: a step whose
 // target is a button or card is pressed, a block or area is tapped on the map, the rest is played the way the coach would (advance). A target that never
 // shows up (an element renamed or moved) is reported with its course, lesson and step.
-// Run with the dev server up:  node e2e/tutorials.mjs   (BASE=http://localhost:5199/; COURSES=bulge,golan73,sicily)
+// Run with the dev server up:  node e2e/tutorials.mjs   (BASE=http://localhost:5199/; COURSES=bulge-basics,golan73-whats-new,sicily-whats-new)
 import { chromium } from 'playwright';
 
 const BASE = process.env.BASE ?? 'http://localhost:5199/';
-const COURSES = (process.env.COURSES ?? 'bulge,golan73,golan73-new,sicily').split(',');
+const COURSES = (process.env.COURSES ?? 'bulge-basics,golan73-whats-new,sicily-whats-new').split(',');
 const browser = await chromium.launch();
 let bad = 0;
 for (const c of COURSES) {

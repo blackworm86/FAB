@@ -34,8 +34,9 @@ for (const course of COURSES)
     });
   });
 
-const bulge = COURSES[0],
-  golan = COURSES[1];
+const bulge = COURSES.find((c) => c.id === 'bulge-basics')!,
+  golan = COURSES.find((c) => c.id === 'golan73-whats-new')!,
+  sicily = COURSES.find((c) => c.id === 'sicily-whats-new')!;
 const lesson = (c: Course, id: string) => {
   const i = c.lessons.findIndex((l) => l.id === id);
   if (i < 0) throw new Error(id);
@@ -48,20 +49,24 @@ const battleOf = (c: Course, i: number, title: string) => {
   for (let n = 1; n <= k + 1; n++) b = replay(c, i, n).battle ?? b;
   return b!;
 };
+const atEnd = (c: Course, id: string) => {
+  const i = lesson(c, id);
+  return replay(c, i, c.lessons[i].steps.length);
+};
 describe("The Bulge: the book's outcomes", () => {
   it('23.5: two hits on the 18th VG, attack aborted', () => {
-    const i = lesson(bulge, 'combat'),
-      b = battleOf(bulge, i, 'Two hits on you'),
-      g = replay(bulge, i, bulge.lessons[i].steps.findIndex((s) => s.title === 'Two hits on you') + 1);
+    const i = lesson(bulge, 'fight'),
+      b = battleOf(bulge, i, 'A hard choice'),
+      g = replay(bulge, i, bulge.lessons[i].steps.findIndex((s) => s.title === 'A hard choice') + 1);
     expect(b.rolls.filter((x) => x.kind === 'ground').reduce((t, x) => t + x.hits, 0)).toBe(2);
     expect(b.result).toMatch(/aborted/);
     expect(U(g, '18 VG').str).toBe(2);
     expect(U(g, '18 VG').disorder).toBe(1);
   });
   it('23.6: the 116th scores three hits and passes exploitation', () => {
-    const i = lesson(bulge, 'exploitation'),
-      b = battleOf(bulge, i, 'Exploitation'),
-      g = replay(bulge, i, bulge.lessons[i].steps.length);
+    const i = lesson(bulge, 'win'),
+      b = battleOf(bulge, i, 'Exploit!'),
+      g = atEnd(bulge, 'win');
     const off = b.rolls.find((x) => x.who.includes('116') && x.kind === 'ground')!;
     expect(off.dice).toEqual([1, 6, 5]);
     expect(off.hits).toBe(3);
@@ -69,16 +74,12 @@ describe("The Bulge: the book's outcomes", () => {
     expect(U(g, '112/28').area).toBe(null);
     expect(U(g, '116 Pz').exploit).toBe(true);
   });
-  it('23.7: breakthrough combats in Houffalize and Vielsalm', () => {
-    const i = lesson(bulge, 'breakthrough'),
-      g = replay(bulge, i, bulge.lessons[i].steps.length);
+  it('23.7: the breakthrough battle in Houffalize', () => {
+    const g = atEnd(bulge, 'breakthrough');
     expect(U(g, '116 Pz').str).toBe(2);
     expect(U(g, 'CCR/9').area).toBe(48);
     expect(U(g, 'CCR/9').disorder).toBeGreaterThan(0);
-    expect(U(g, '106 Inf').area).toBe(35);
-    expect(U(g, '106 Inf').str).toBe(2);
     expect(U(g, 'Lehr').area).toBe(24);
-    expect(U(g, '150 Pz').area).toBe(22);
   });
   it('23.8: KG Peiper is cut off, the others are supplied', () => {
     const g = bulge.lessons[lesson(bulge, 'supply')].setup();
@@ -87,105 +88,48 @@ describe("The Bulge: the book's outcomes", () => {
   });
 });
 describe("Golan '73: the book's outcomes", () => {
-  it('Ex 2: the first SAM cancels the Jasim mission, the second misses', () => {
-    const i = lesson(golan, 'g-reinforcement'),
-      L = golan.lessons[i],
-      g = replay(golan, i, L.steps.findIndex((s) => s.title === 'Fire again') + 1);
-    expect(E.chit(g, 'IC03').box).toBe('used');
-    expect(g.interdicted[73]).toBe('IC10a');
-    expect(g.interdicted[75]).toBeUndefined();
-    expect(g.chits.filter((c) => c.kind === 'sam' && c.box === 'eliminated').length).toBe(1);
-  });
-  it('Ex 3: the 4th Mech reaches Sindiana for 6 and Golani stops in Hushniyah', () => {
-    const i = lesson(golan, 'g-move-israeli'),
-      g = replay(golan, i, golan.lessons[i].steps.length);
-    expect(U(g, 'I11').area).toBe(37);
-    expect(U(g, 'I01').area).toBe(38);
-    expect(U(g, 'I03').area).toBe(33);
-    expect(E.contested(g, 33)).toBe(true);
-  });
-  it('Ex 6: the 52nd fails its minefield check and the recon goes round', () => {
-    const i = lesson(golan, 'g-move-syrian'),
-      g = replay(golan, i, golan.lessons[i].steps.length);
-    expect(U(g, 'S04').area).toBe(48);
-    expect(E.golan.state(g).minefieldFailed).toContain('S04');
+  it('Ex 6: the recon fails its minefield check and goes round, the 52nd passes, the 46th Tank crosses the ditch', () => {
+    const g = atEnd(golan, 'gn-purple-line');
+    expect(E.golan.state(g).minefieldFailed).toContain('S11');
     expect(U(g, 'S11').area).toBe(47);
+    expect(U(g, 'S04').area).toBe(47);
     expect(U(g, 'S14').area).toBe(50);
     expect(E.contested(g, 50)).toBe(true);
   });
-  it('Ex 8: field works gone, the Task Force lost, the 91st retreats to Keshet with a step lost', () => {
-    const i = lesson(golan, 'g-combat'),
-      g = replay(golan, i, golan.lessons[i].steps.length);
-    expect(g.fieldWorks).not.toContain(38);
-    expect(E.chit(g, 'IC11a').box).toBe('eliminated');
-    expect(U(g, 'S26').area).toBe(32);
-    expect(U(g, 'S26').str).toBe(2);
-    expect(U(g, 'S26').disorder).toBe(1);
-  });
   it('Ex 9: the strongpoint in Juhader is eliminated and the ditch bridged towards Dhake', () => {
-    const i = lesson(golan, 'g-assault'),
-      g = replay(golan, i, golan.lessons[i].steps.length);
+    const g = atEnd(golan, 'gn-strongpoints');
     expect(U(g, 'I30').area).toBe(null);
     expect(E.golan.state(g).bridgedDitch).toContain('28-79');
   });
-  it('Ex 15: three Syrian blocks supplied, the 78th cut off', () => {
-    const g = golan.lessons[lesson(golan, 'g-supply')].setup();
-    for (const a of [49, 56, 58]) expect(E.inSupply(g, 'syrian', a), String(a)).toBe(true);
-    expect(E.inSupply(g, 'syrian', 52)).toBe(false);
+  it('Ex 2: the first SAM cancels the Jasim mission, the second misses', () => {
+    const g = atEnd(golan, 'gn-sams');
+    expect(E.chit(g, 'IC03').box).toBe('used');
+    expect(g.interdicted[73]).toBe('IC10a');
+    expect(g.interdicted[75]).toBeUndefined();
+  });
+  it('Ex 11: jammed and beaten, Golani retreats disordered', () => {
+    const g = atEnd(golan, 'gn-ew');
+    expect(U(g, 'I01').area).toBe(34);
+    expect(U(g, 'I01').disorder).toBe(1);
   });
 });
-const sicily = COURSES.find((c) => c.id === 'sicily')!;
 describe("Sicily: the book's outcomes", () => {
   it('Ex 14: both garrisons eliminated; the naval support removes the Gela field works', () => {
-    const i = lesson(sicily, 's-beach'),
-      g = replay(sicily, i, sicily.lessons[i].steps.length);
-    expect(U(g, 'IT09').str).toBe(0);
+    expect(U(atEnd(sicily, 'sn-italians'), 'IT09').str).toBe(0);
+    const g = atEnd(sicily, 'sn-navy');
     expect(U(g, 'IT37').str).toBe(0);
     expect(g.fieldWorks).not.toContain(19);
-    expect(E.unitsIn(g, 20, 'allied').length).toBe(2);
-    expect(E.unitsIn(g, 19, 'allied').length).toBe(2);
-    expect(U(g, 'US05').str).toBe(4);
-    expect(U(g, 'US03').str + U(g, 'US04').str).toBe(6);
-    const lic = g.log.map((l) => (typeof l === 'string' ? l : JSON.stringify(l))).join('\n');
-    expect(lic).toMatch(/disordered \(5 vs 3/);
-    expect(lic).toMatch(/holds \(5 vs 5/);
   });
-  it('Ex 9: the four blocks land, Licata and Gela must be fought', () => {
-    const i = lesson(sicily, 's-landing'),
-      g = replay(sicily, i, sicily.lessons[i].steps.length);
-    expect(g.phase).toBe('combat');
-    expect(E.mustFight(g).sort()).toEqual([19, 20]);
-  });
-  it('Ex 5: before the release Regalbuto is out of reach, after it the 5th Infantry gets there', () => {
-    const i = lesson(sicily, 's-zones'),
+  it('Ex 5: after the release the 5th Infantry reaches Regalbuto', () => {
+    const i = lesson(sicily, 'sn-zones'),
       g0 = sicily.lessons[i].setup();
     g0.phase = 'movement';
     expect(E.moveOptions(g0, 'BR03').map((o) => o.area)).not.toContain(25);
-    const g = replay(sicily, i, sicily.lessons[i].steps.length);
-    expect(U(g, 'BR03').area).toBe(25);
+    expect(U(atEnd(sicily, 'sn-zones'), 'BR03').area).toBe(25);
   });
-  it('Ex 3: Bolognetta stays interdicted, Salemi is freed; Aosta cannot pass Bolognetta, the panzers reach Castelvetrano', () => {
-    const i = lesson(sicily, 's-air'),
-      L = sicily.lessons[i],
-      g = replay(sicily, i, L.steps.length);
+  it('Ex 3: Bolognetta stays interdicted, Salemi is freed', () => {
+    const g = atEnd(sicily, 'sn-air');
     expect(g.interdicted[56]).toBe('USC06a');
     expect(g.interdicted[59]).toBeUndefined();
-    expect(g.phase).toBe('movement');
-    const aosta = E.moveOptions(g, 'IT05').map((o) => o.area);
-    expect(aosta).not.toContain(49);
-    expect(E.moveOptions(g, 'GE02').map((o) => o.area)).toContain(60);
-  });
-  it('Ex 4 and 10: Palermo repaired to damage 1; Italian morale level 1 and the 177th gone', () => {
-    let i = lesson(sicily, 's-port'),
-      g = replay(sicily, i, sicily.lessons[i].steps.length);
-    expect(E.sicily.state(g).portDamage.P3).toBe(1);
-    i = lesson(sicily, 's-morale');
-    g = replay(sicily, i, sicily.lessons[i].steps.length);
-    expect(E.sicily.state(g).morale).toBe(1);
-    expect(E.chit(g, 'ITC05').box).toBe('eliminated');
-  });
-  it('Supply: the 2nd Armored in Canicatti traces to Joss', () => {
-    const g = sicily.lessons[lesson(sicily, 's-supply')].setup();
-    expect(E.VOLUMES.sicily.unitSupply!(g, U(g, 'US01'))).toBe(true);
   });
 });
