@@ -153,7 +153,10 @@ export function drawRestricted(c: CanvasRenderingContext2D, border: [number, num
   if (ang > Math.PI / 2) ang -= Math.PI;
   if (ang < -Math.PI / 2) ang += Math.PI;
   c.translate(mid[0], mid[1]);
-  c.rotate(ang + (far ? Math.PI : 0)); // the name reads the right way up from the player's side c.font = 'italic 700 9px "Arial Narrow", Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.rotate(ang + (far ? Math.PI : 0)); // the name reads the right way up from the player's side
+  c.font = 'italic 700 9px "Arial Narrow", Arial, sans-serif';
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
   c.lineWidth = 2.6;
   c.strokeStyle = '#e9e6d4';
   c.strokeText(label, 0, 0);
