@@ -125,7 +125,7 @@ Goal: keep the design, split the few oversized files by moving code, no rewrite 
 
 - `npm run check:size` (at the repository root, also a CI check) fails when a source file (`.ts`, `.mjs`, `.css`) is over **1,000 lines**. Six files already over have a ceiling of their size, so they may not grow: `vol/golan.ts` (2,450), `vol/sicily.ts` (1,791), the sweep fuzz test, the Golan and Bulge lessons (to be rebuilt anyway), `css/battle-strip.css`. Tested: it passes now and fails on a 1,002-line file.
 - **The streamlining plan is finished.** Overall result: `main.ts` 7,338 → 711 lines in 22 modules, `game.ts` 3,666 → 503 in 10 modules, `style.css` 10,578 → 28 files, code formatted by Prettier, pictures, a rules fingerprint and a byte-identical stylesheet as proof nothing changed.
-- Still open from it, if wanted: split `vol/golan.ts` and `vol/sicily.ts` the same way (no seeded-game fingerprint exists for them, only tests and the fuzzer), and merge each screen's CSS into one place.
+- Still open from it, if wanted: split `vol/golan.ts` and `vol/sicily.ts` the same way (since 13 November evening they have a seeded-game fingerprint too: sixteen games in `engine/test/fingerprint-golan-sicily.txt`, part of the engine tests; checked: it fails when the rules change, passes when they do not), and merge each screen's CSS into one place.
 
 ## Proposals for other files (for you to approve; this session does not change them)
 

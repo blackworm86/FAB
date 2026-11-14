@@ -35,7 +35,7 @@ Brief a helper like a colleague who knows nothing: the goal, the files, what cha
 **The gates** (a change does not go to `main` without them):
 
 1. **Push gate, every session**: `npm run verify` passes (`-- --browser` when `web/` changed, `-- --quick` only when nothing in `engine/` or `bot/` changed).
-2. **Rule gate, the rules session**: a "Rule fix:" has a test, a referee verdict without "differs", and, when The Bulge's seeded games change, an updated `bot/fingerprint.txt` in the same commit (`cd bot && npm run fingerprint -- --update`).
+2. **Rule gate, the rules session**: a "Rule fix:" has a test, a referee verdict without "differs", and, when seeded games change, the updated fingerprint in the same commit: The Bulge's `bot/fingerprint.txt` (`cd bot && npm run fingerprint -- --update`), Golan '73 and Sicily's `engine/test/fingerprint-golan-sicily.txt` (`cd engine && npx vitest run test/sweep-fuzz.test.ts -u`).
 3. **Look gate, any change that must not alter the look**: `npm run shots` before, `npm run shots:compare` after.
 4. **Owner gate**: a mockup before a big interface change; a ruling before a rule the text leaves open. One question at a time.
 

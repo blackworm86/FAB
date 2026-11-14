@@ -57,6 +57,7 @@ cd bot && npm ci && npm test                                # the computer oppon
 cd tools/rules-test && npm ci && npm test                   # needs Java (Firebase emulator)
 cd web && npm run dev                                       # the table, on the Vite address
 cd bot && npm run fingerprint                               # twelve seeded games of The Bulge must end as in bot/fingerprint.txt
+                                                            # Golan and Sicily: the engine's own tests do it (test/fingerprint-golan-sicily.txt; deliberate change: npx vitest run test/sweep-fuzz.test.ts -u)
 cd web && npm run e2e                                       # browser smoke test, dev server up
 cd web && npm run load                                      # each game and a lesson open without an error (a minute), dev server up
 cd web && npm run shots                                     # pictures of every phase, battle and window, per game and screen;
