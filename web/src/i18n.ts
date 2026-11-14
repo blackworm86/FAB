@@ -50,22 +50,58 @@ export async function loadLang() {
     /* it-ui.json last: the interface's own words win over a lesson's */ D.patterns.push(...p.patterns);
     Object.assign(D.html, p.html);
   }
-  PATS = D.patterns.map(([re, out]) => [new RegExp(`^${re}$`), out]);
+  // a rule number such as "(9.4)" is drawn as a link, which splits the text: every entry also answers without its rule number
+  const RULE = /\s*\(\d[\w.]*\)(\.?)$/,
+    RULE_RE = /\s*\\\(\d[^()]*\\\)(\\\.)?$/;
+  for (const [k, v] of Object.entries(D.text)) {
+    const k2 = k.replace(RULE, '$1');
+    if (k2 !== k && D.text[k2] == null) D.text[k2] = v.replace(RULE, '$1');
+  }
+  const bare = D.patterns
+    .filter(([re]) => RULE_RE.test(re))
+    .map(([re, out]) => [re.replace(RULE_RE, '$1'), out.replace(RULE, '$1')] as [string, string]);
+  PATS = [...D.patterns, ...bare].map(([re, out]) => [new RegExp(`^${re}$`), out]);
 }
 /** A string in the chosen language (or itself when there is no translation yet). */
-const MEMO = new Map<string, string>(); // a text no dictionary entry covers tried every pattern on each redraw: once per text now (the language changes by reloading the page)
+const MEMO = new Map<string, string | null>(); // a text no dictionary entry covers tried every pattern on each redraw: once per text now (the language changes by reloading the page)
 export function tr(s: string): string {
   if (LANG === 'en' || !s) return s;
+  const r = tr0(s);
+  if (r == null && COLLECT) missing.add(s);
+  return r ?? s;
+}
+/** The translation, or null when no entry covers the text. */
+function tr0(s: string): string | null {
   const t = D.text[s];
   if (t != null) return t;
-  const m0 = MEMO.get(s);
-  if (m0 != null) return m0;
-  const r = trPattern(s);
+  if (MEMO.has(s)) return MEMO.get(s)!;
+  const r = trLoose(s) ?? trPattern(s) ?? trColon(s);
   if (MEMO.size > 5000) MEMO.clear();
   MEMO.set(s, r);
   return r;
 }
-function trPattern(s: string): string {
+function trLoose(s: string): string | null {
+  const flip = (x: string) => (x[0] === x[0].toUpperCase() ? x[0].toLowerCase() : x[0].toUpperCase()) + x.slice(1),
+    dot = s.endsWith('.'),
+    bare = dot ? s.slice(0, -1) : s;
+  for (const [k, fix] of [
+    [flip(s), flip],
+    [dot ? bare : s + '.', (t: string) => (dot ? t + '.' : t.replace(/\.$/, ''))],
+    [flip(bare), (t: string) => flip(t) + (dot ? '.' : '')],
+    [flip(bare) + '.', (t: string) => flip(t).replace(/\.$/, '') + (dot ? '.' : '')],
+  ] as [string, (t: string) => string][]) {
+    const t = D.text[k];
+    if (t != null) return fix(t);
+  }
+  return null;
+}
+/** Last resort: "116 Pz: Out of supply morale check": the name before the colon stays, the words after it are translated. */
+function trColon(s: string): string | null {
+  const c = s.indexOf(': '),
+    t = c > 0 ? tr0(s.slice(c + 2)) : null;
+  return t == null ? null : `${tr(s.slice(0, c))}: ${t}`;
+}
+function trPattern(s: string): string | null {
   for (const [re, out] of PATS) {
     const m = re.exec(s);
     if (m)
@@ -76,8 +112,7 @@ function trPattern(s: string): string {
         })
         .replace(/\b1 colpi\b/g, '1 colpo');
   } // one pattern serves 1 and many hits      // the pattern's variable parts are translated too when the dictionary knows them (a side, "last action")
-  if (COLLECT) missing.add(s);
-  return s;
+  return null;
 }
 /** A passage with markup (a lesson's text), whole. */
 export const trHtml = (s: string) => (LANG === 'en' || !s ? s : (D.html[s] ?? (COLLECT && missing.add(`html:${s}`), s)));

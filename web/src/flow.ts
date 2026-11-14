@@ -473,4 +473,9 @@ export const ARMY_NAME: Record<string, string> = {
   us_3a: 'US 3rd Army',
   us_sr: 'US reserve',
   br_xxx: 'British',
+  br_8th_army: 'British 8th Army',
+  us_7th_army: 'US 7th Army',
+  it_6th_army: 'Italian 6th Army',
+  is_northern_command: 'Northern Command',
+  sy_golan_front: 'Golan Front',
 };

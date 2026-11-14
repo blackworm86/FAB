@@ -7,7 +7,7 @@ import { g, selChit, setSelArea, setSelChit } from './game-state';
 import { canvas } from './scene';
 import { paintAreas } from './map-paint';
 import { pick } from './camera';
-import { act, dragTargets, mine, say, setDragTargets, tgtMode } from './flow';
+import { act, ARMY_NAME, dragTargets, mine, say, setDragTargets, tgtMode } from './flow';
 import { setAirPick } from './choices';
 import { badgeList, setBadges, syncBadges } from './routes';
 import { chitPic, refresh, refusal, render, setRefusal, unitPic } from './main';
@@ -54,7 +54,7 @@ export function usableNow(c: E.Chit): boolean {
   return liveSet.has(c.id);
 }
 export const card = (c: E.Chit, r = 0, why: string | null = null) =>
-  `<div tabindex="0" role="button" class="card2 ${c.side} ${c.kind === 'sa_block' ? 'wood' : ''} ${why ? 'bad' : usableNow(c) ? 'live' : ''} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" style="--r:${r}deg" title="${esc(why ?? c.name + ' · ' + c.ech)}" aria-label="${esc(c.name)}">${chitPic(c)}${g.battle ? `<span class="ckind">${E.isArty(c) ? 'Arty' : /air/.test(c.kind) ? 'Air' : 'Asset'}</span>` : ''}</div>`; /* phones have no hover title: the kind is written on the card */
+  `<div tabindex="0" role="button" class="card2 ${c.side} ${c.kind === 'sa_block' ? 'wood' : ''} ${why ? 'bad' : usableNow(c) ? 'live' : ''} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" style="--r:${r}deg" title="${esc(why ?? c.name + (ARMY_NAME[c.ech] ? ' · ' + ARMY_NAME[c.ech] : ''))}" aria-label="${esc(c.name)}">${chitPic(c)}${g.battle ? `<span class="ckind">${E.isArty(c) ? 'Arty' : /air/.test(c.kind) ? 'Air' : 'Asset'}</span>` : ''}</div>`; /* phones have no hover title: the kind is written on the card */
 /** How much neighbouring cards overlap so the whole hand fits: each card keeps at least 34 px (46 on phones) visible, and the hand scrolls when even that does not fit. */
 const overlapFor = (n: number) => {
   const cw = innerWidth >= 900 ? 72 : 62,
