@@ -424,3 +424,11 @@
   font-style: normal;
   color: var(--ink);
 }
+#ui .c-bar.b .go.choice small:empty {
+  display: none;
+}
+@media (max-width: 700px) {
+  #ui .c-bar.b:has(.choice) {
+    grid-template-rows: auto auto minmax(52px, auto) !important;
+  }
+}

@@ -547,7 +547,8 @@ document.addEventListener(
   true,
 );
 let playKey: string | null = null,
-  chitFramed = '';
+  chitFramed = '',
+  retreatFramed = '';
 export let lastFight: number | null = null;
 export const setLastFight = <T extends typeof lastFight>(v: T): T => ((lastFight = v), v);
 export function refresh() {
@@ -641,6 +642,15 @@ export function refresh() {
         if (ids.length) setTimeout(() => showAreas(ids), 60); // once the panel is drawn: the areas the card can act on come into view, clear of it (playtest 2, item 9)
       }
       if (!selChit) chitFramed = '';
+    }
+    {
+      const rb = g.battle?.stage === 'retreat' ? g.battle : null,
+        rk = rb ? `${rb.area}|${E.retreatOptions(g, rb).join()}` : '';
+      if (rk && rk !== retreatFramed) {
+        const ids = [rb!.area, ...E.retreatOptions(g, rb!)];
+        setTimeout(() => showAreas(ids), 700); // after the battle view lets go: the block and every area it may retreat to, in view (owner, 14 Nov)
+      }
+      retreatFramed = rk;
     }
   }
   if (tint === 'control') {

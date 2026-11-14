@@ -378,8 +378,33 @@ export function barChoices(): { label: string; sub: string; title: string; fn: (
         fn: () => E.attackerChoice(g, g.battle!, true),
       },
     ];
+  if (b.stage === 'retreat') {
+    const o = E.retreatOptions(g, b);
+    return o.length && o.length <= 2
+      ? o.map((a) => ({
+          label: `Retreat to ${areaName(a)}`,
+          sub: '',
+          title: `Retreat to ${areaName(a)}`,
+          fn: () => E.chooseRetreat(g, g.battle!, a),
+        }))
+      : []; // more than two: the lit areas on the map are the choice
+  }
   if (b.stage !== 'defChoice') return [];
   const arty = b.pendingKind === 'arty';
+  let where = ''; // where a retreat would lead, before it is chosen (owner, 14 Nov: it looked as if there was nowhere to go)
+  if (!arty)
+    try {
+      const t = structuredClone(g),
+        ids = E.unitsIn(g, b.area, other(b.attacker)).map((u) => u.id);
+      E.defenderChoice(t, t.battle!, true);
+      const o =
+        t.battle?.stage === 'retreat'
+          ? E.retreatOptions(t, t.battle)
+          : [...new Set(t.units.filter((u) => ids.includes(u.id) && u.area != null && u.area !== b.area).map((u) => u.area!))];
+      where = o.length === 1 ? ` · to ${areaName(o[0])}` : o.length ? ` · ${o.length} areas to choose` : '';
+    } catch {
+      /* the engine says why when it is pressed */
+    }
   return [
     {
       label: 'Take losses',
@@ -396,7 +421,7 @@ export function barChoices(): { label: string; sub: string; title: string; fn: (
         }
       : {
           label: 'Retreat',
-          sub: '1 hit fewer, leave disordered',
+          sub: `1 hit fewer${where || ', leave disordered'}`,
           title: 'Retreat (absorbs 1 hit, units disordered)',
           fn: () => E.defenderChoice(g, g.battle!, true),
         },
