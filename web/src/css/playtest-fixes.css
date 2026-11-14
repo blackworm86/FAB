@@ -236,3 +236,15 @@
 .toast {
   pointer-events: none;
 }
+/* playtest 2, B5: Take losses / Retreat and the "What the markers mean" link reach a finger's 44 px */
+#ui .mapbubble button.ab {
+  min-height: 44px !important;
+}
+#ui .c-dispatch .linkbtn {
+  position: relative;
+}
+#ui .c-dispatch .linkbtn::after {
+  content: '';
+  position: absolute;
+  inset: -15px -4px;
+}

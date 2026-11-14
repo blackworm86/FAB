@@ -123,6 +123,16 @@ function promptText() {
   const b = g.battle;
   if (rollView?.pos) return gx('<b>Read the dice:</b> green hits, salmon misses. Then continue.', '<b>Read the dice,</b> then continue.');
   if (areaPick) return `<b>${esc(areaPick.label)}</b>, or tap elsewhere to cancel.`;
+  if (endArmed && g.game === 'sicily' && g.phase === 'movement') {
+    const sea = g.units.filter(
+      (u) =>
+        u.side === g.phasing &&
+        u.area != null &&
+        (E.sicily.isLandingBox(u.area) || (g.phasing === 'allied' && E.sicily.isPortBox(u.area) && !u.reserve)),
+    ).length;
+    if (sea)
+      return `<b>Ending now:</b> ${sea} block${sea > 1 ? 's' : ''} still on the beaches ${sea > 1 ? 'go' : 'goes'} back to sea and ${sea > 1 ? 'try' : 'tries'} to land again next turn (14.24b).`; // playtest 2, A7
+  }
   if (reinforcing && b) return '<b>Tap a glowing neighbouring block</b> to bring it in, or tap the map to cancel.';
   if (airPick?.step === 'unit' && b) return '<b>Air Mission +2:</b> tap one of your blocks in the battle.';
   if (online.active && !allowed() && !g.over)
@@ -172,7 +182,7 @@ function promptText() {
       return selChit && tgt?.hint
         ? `<b>${esc(tgt.hint)}</b>${tgt.areas.size + tgt.units.size > 0 ? ` · ${tgt.areas.size + tgt.units.size} lit` : ''}`
         : E.boxOf(g, E.adminActor(g), 'available').length
-          ? `<b>${esc(nm(E.adminActor(g)))}: tap a card</b>${gx(g.done?.includes(g.phasing) ? ' to play it if you wish, then end the step.' : ` to play it if you wish, then Done: the ${nm(other(g.phasing))} player acts next (4.2).`)}`
+          ? `<b>${esc(nm(E.adminActor(g)))}: tap a card</b>${gx(g.done?.includes(g.phasing) ? ' to play it if you wish, then end the step.' : ` to play it if you wish, then Done: the ${nm(other(g.phasing))} player acts next (4.2).`, ' if you wish, or Done.')}`
           : `<b>${esc(nm(E.adminActor(g)))}: no cards to play.</b>${gx(g.done?.includes(g.phasing) ? ' End the step.' : ` Press Done: the ${nm(other(g.phasing))} player acts next (4.2).`)}`;
     case 'movement':
       if (selUnit && g.moving?.id === selUnit)
