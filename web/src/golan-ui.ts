@@ -512,7 +512,7 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
       mines = V.minesLeft ?? 0;
     if (sp)
       out.push(
-        `<div class="volpanel"><b>${ctx.ico('lock')} Strongpoints and ghosts (15.7)</b><span>${sp} to place face-down, one in each area next to the Purple Line: drag them from the tray, or place them all at once.</span><div class="row">${ctx.btn('Shuffle face-down', () => G.autoStrongpoints(live(), 'shuffle'), 'primary', false, 'Random, as most players do (errata)')}${ctx.btn('Historical placement', () => G.autoStrongpoints(live(), 'historical'), '', false, "The errata's rough historical set-up")}</div></div>`,
+        `<div class="volpanel"><b>${ctx.ico('lock')} Strongpoints and ghosts (15.7)</b><span>${sp} to place face-down, one in each area next to the Purple Line: drag them from the tray, or place them all at once.</span><div class="row">${ctx.btn(`Shuffle all ${sp} face-down`, () => G.autoStrongpoints(live(), 'shuffle'), 'primary', false, 'Places every one at random, as most players do (errata)')}${ctx.btn('Historical placement', () => G.autoStrongpoints(live(), 'historical'), '', false, "Places every one as in the errata's rough historical set-up")}</div></div>`,
       );
     if (mines) {
       const keys = G.minefieldOptions(g).map((k) => k.split('-').map(Number)),

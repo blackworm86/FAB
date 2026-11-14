@@ -445,7 +445,7 @@ export function paintAreas() {
     }
     if (id === (previewArea ?? hoverArea) && r) {
       c = MAPC.preview;
-      o = 0.5;
+      o = VOL.id === 'sicily' ? 0.85 : 0.5; // Sicily's tan-and-lime map hid the lit destination (playtest 3)
     }
     if (id === selArea && !selUnit) {
       c = MAPC.sel;

@@ -177,7 +177,7 @@ function stakes(b: E.Battle) {
   if (!fl.length) return ((p) => `<b>Nothing can fire.</b>${p && !p.dis ? ` Press <b>${esc(p.label)}</b>.` : ''}`)(primary()); // say what moves the battle on (playtest C5)
   const dice = fl.reduce((a, f) => a + f.dice, 0),
     sns = [...new Set(fl.map((f) => f.sn))].sort((x, y) => x - y);
-  return `<b>${nm(sd)} ${esc(STAGE_NAME[b.stage].toLowerCase())}:</b> ${dice} ${dice === 1 ? 'die' : 'dice'} · hit on ${sns.at(-1)! < 1 ? 'a 1 only' : sns.length === 1 || sns[0] < 1 ? `${sns.at(-1)} or less` : `${sns[0]}–${sns.at(-1)} or less`}${gx(` · at ${E.unitsIn(g, b.area, other(sd)).length} ${nm(other(sd))} block${E.unitsIn(g, b.area, other(sd)).length === 1 ? '' : 's'}`)}`;
+  return `<b>${nm(sd)} ${esc(STAGE_NAME[b.stage].toLowerCase())}:</b> ${dice} ${dice === 1 ? 'die' : 'dice'} · ${sns.length === 1 ? `hit on ${sns[0] < 1 ? 'a 1 only' : `${sns[0]} or less`}` : fl.map((f) => `${esc(f.who)} hits on ${f.sn < 1 ? 'a 1 only' : `${f.sn} or less`}`).join(', ')}${gx(` · at ${E.unitsIn(g, b.area, other(sd)).length} ${nm(other(sd))} block${E.unitsIn(g, b.area, other(sd)).length === 1 ? '' : 's'}`)}`;
 }
 /** The blocks of the side acting now that can move in this step (the same test as the green areas). */
 const movers = () => {

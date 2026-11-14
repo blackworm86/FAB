@@ -42,8 +42,10 @@ import {
   actorNow,
 } from './flow';
 import {
+  airPick,
   airPickHtml,
   altPickHtml,
+  setAirPick,
   auditWarn,
   endHidden,
   feedHtml,
@@ -184,6 +186,7 @@ export function render() {
 function renderInner() {
   if (document.activeElement?.closest?.('.authform')) return; // do not wipe what is being typed
   resetActs();
+  if (airPick && (g.battle?.stage !== 'setup' || g.chits.find((c) => c.id === airPick!.id)?.box !== 'available')) setAirPick(null); // the air card was placed or the battle moved on: its prompt goes (playtest 3, item 1)
   if (!g.battle || g.battle.stage !== 'setup') setRefusal('');
   canvas.style.display = inGame() ? '' : 'none';
   if (!inGame()) return; // the home page is home.ts; this page only plays a table
@@ -202,6 +205,9 @@ function renderInner() {
   if (rollView && !g.battle && !rollView.check) endRoll(); // dice left on screen after the battle is over
   const p = primary(),
     b = g.battle,
+    rolling = rollView
+      ? (rollView.side ?? g.units.find((u) => rollView!.groups.some((x) => x.label.split(':')[0] === u.name))?.side ?? null) // whose dice are on screen (playtest 3, item 3)
+      : null,
     actor = actorNow(),
     chs = barChoices(),
     vpHtml = volPanel(),
@@ -210,7 +216,7 @@ function renderInner() {
       chs.length || !allowed()
         ? []
         : panelPicks(
-            (panelFull.split('<div class="volpanel').find((x) => /class="[^"]*\bprimary\b/.test(x)) ?? '') +
+            (!p || p.dis ? (panelFull.split('<div class="volpanel').find((x) => /class="[^"]*\bprimary\b/.test(x)) ?? '') : '') + // the panel's button only when the main one has nothing to do (playtest 3, item 7)
               (selUnit && !b ? cardHtml : ''),
           ) /* the first panel with a decisive button: the step at hand */
             .slice(0, p && !p.dis ? 1 : 2);
@@ -304,7 +310,7 @@ function renderInner() {
               }),
           )
         : ''
-    }${toast && (modal || TUT) ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}${passHtml()}<div class="c-bar b ${actor !== 'both' && !g.over ? `actor ${actor}` : ''}"><div class="c-prompt" aria-live="polite">${toast && !modal && !TUT ? `<span class="toast barmsg${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</span>` : ''}${actor !== 'both' && !g.over ? `<span class="whotag">${esc(nm(actor))} decides</span> ` : ''}${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}<span class="gl">Explain: <b>${guide}</b></span></button>${undoBtn()}${chs.length ? chs.map((c, i) => btn(`<span>${esc(c.label)}<small>${esc(c.sub)}</small></span>`, c.fn, `go choice ${i ? 'alt' : ''}`, false, c.title)).join('') : picks.length ? picks.map((x) => `<button class="go choice" ${x.attr}="${x.id}" title="${esc(x.text)}"><span>${esc(x.text)}</span></button>`).join('') + (p && !p.dis && allowed() ? mainBtn().replace('class="go ', 'class="go choice alt ') : '') : mainBtn()}${dockChips()}</div></div>` +
+    }${toast && (modal || TUT) ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}${passHtml()}<div class="c-bar b ${rolling ? `actor ${rolling}` : actor !== 'both' && !g.over ? `actor ${actor}` : ''}"><div class="c-prompt" aria-live="polite">${toast && !modal && !TUT ? `<span class="toast barmsg${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</span>` : ''}${rolling ? `<span class="whotag">${esc(nm(rolling))} rolls</span> ` : actor !== 'both' && !g.over ? `<span class="whotag">${esc(nm(actor))} decides</span> ` : ''}${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}<span class="gl">Explain: <b>${guide}</b></span></button>${undoBtn()}${chs.length ? chs.map((c, i) => btn(`<span>${esc(c.label)}<small>${esc(c.sub)}</small></span>`, c.fn, `go choice ${i ? 'alt' : ''}`, false, c.title)).join('') : picks.length ? picks.map((x) => `<button class="go choice" ${x.attr}="${x.id}" title="${esc(x.text)}"><span>${esc(x.text)}</span></button>`).join('') + (p && !p.dis && allowed() ? mainBtn().replace('class="go ', 'class="go choice alt ') : '') : mainBtn()}${dockChips()}</div></div>` +
     modalHtml();
   const ui = $('#ui');
   {
@@ -333,7 +339,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
     row.addEventListener('scroll', edge, { passive: true });
   });
   ui.querySelector<HTMLElement>('.chitbar .cbchips')?.scrollIntoView({ block: 'end' }); // a card's named choices are what the player came for: in view, whatever the panel's height
-  ui.querySelectorAll<HTMLElement>('.volstack').forEach((st) => {
+  ui.querySelectorAll<HTMLElement>('.volstack, .dock .c-ledger').forEach((st) => {
     // a set-up panel taller than its space fades at the bottom with a ▾, so it reads as "more below" (playtest B7)
     const edge = () => st.classList.toggle('more', st.scrollTop + st.clientHeight < st.scrollHeight - 2);
     edge();

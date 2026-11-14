@@ -35,6 +35,8 @@ export interface RollView {
   morale?: boolean;
   check?: boolean;
   title: string;
+  /** whose dice they are (the tag in the bar names them while the dice are read) */
+  side?: E.Side;
   groups: (DiceGroup & { parts: [string, number][]; hits: number })[];
   pos: { x: number; y: number; group: number; v: number }[] | null;
 }
@@ -71,6 +73,7 @@ export function rollStage(b: E.Battle) {
   const fresh = next.battle!.rolls.slice(n0);
   heldNext = next;
   rollView = {
+    side,
     remote: labActing,
     morale: stage === 'exploit',
     title: `${nm(side)} ${STAGE_NAME[stage]}`,

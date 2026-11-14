@@ -118,7 +118,10 @@ export function openingTarget() {
 }
 /** The opening view: the whole map, or a scenario's own sheet (its play area) framed from above. */
 export function homeGoal() {
-  const ids = g.inPlay ? MAP.areas.filter((a) => g.inPlay!.includes(a.id)).flatMap((a) => a.polygon.map(([x, y]) => toWorld(x, y))) : []; // every corner of the sheet
+  const ids = [
+    ...MAP.areas.filter((a) => !g.inPlay || g.inPlay.includes(a.id)).flatMap((a) => a.polygon.map(([x, y]) => toWorld(x, y))),
+    ...(g.inPlay ? [] : Object.values(VOL.art.holdBoxes ?? {}).flatMap(([x, y, w, h]) => [toWorld(x, y), toWorld(x + w, y + h)])),
+  ]; // every corner of the sheet; a full map also takes in its holding boxes (Sicily: At Sea, Airborne Assault, playtest 3 item 5)
   if (!ids.length) return { t: openingTarget(), dist: innerWidth < 700 ? 52 : 36, pitch: 1.0 };
   const x0 = Math.min(...ids.map((p) => p.x)),
     x1 = Math.max(...ids.map((p) => p.x)),
@@ -126,7 +129,7 @@ export function homeGoal() {
     z1 = Math.max(...ids.map((p) => p.z));
   return {
     t: new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2),
-    dist: clampDist(Math.max(x1 - x0, (z1 - z0) * 1.3) * (innerWidth < 700 ? 1.7 : 1.12) + 3),
+    dist: Math.min(95, Math.max(7, Math.max(x1 - x0, (z1 - z0) * 1.3) * (innerWidth < 700 ? 1.7 : 1.12) + 3)), // the whole sheet, even past the hand-zoom limit
     pitch: 1.0,
   };
 }

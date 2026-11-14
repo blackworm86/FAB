@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import * as E from '../../engine/src';
 import { troopOf, troopGroup, radius as troopR, arrange, yawOf } from './troops';
-import { borderAngle, borderMid, cellsOf, first, MAP, near, P1, pole, POLE, toWorld, VOL } from './page';
+import { borderAngle, borderMid, cellsOf, first, MAP, near, P1, pole, POLE, S, toWorld, VOL } from './page';
 import { g, selUnit } from './game-state';
 import {
   block,
@@ -435,6 +435,7 @@ export function drawPieces() {
         p = toWorld(bx + ((i % cols) + 0.5) * (bw / cols), by + (Math.floor(i / cols) + 0.5) * (bh / rws));
       m.position.x = p.x;
       m.position.z = p.z;
+      m.scale.setScalar(Math.min(1, (0.9 * Math.min(bw / cols, bh / rws)) / (1.6 * S))); // a full box: smaller blocks in rows, never a heap spilling out (playtest 3, item 5)
       m.userData.unit = u.id;
       m.userData.hidden = faceDown(u);
       pieces.add(m);

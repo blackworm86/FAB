@@ -27,7 +27,7 @@ import {
 import { battleFx, fightable, mine, other, POOL, rollFx, selArr } from './flow';
 import { pickSA } from './choices';
 import { reinforcing, setReinforcing } from './map-input';
-import { endRoll, handSide, rollView, setHandSide } from './rolls';
+import { endRoll, handSide, rollView, setHandSide, type RollView } from './rolls';
 import { autoFill, card, fan, handInfo, handInspect, handStyle, setHandInfo, setHandInspect, usableNow } from './cards';
 import { gx } from './prompt';
 import { chitPic } from './pieces-window';
@@ -86,6 +86,15 @@ function cardTip() {
   return `<div class="cardtip">${chitPic(c)}<div><b>${esc(c.name)} <small>${esc(t)}</small></b><span>${esc(d.split('\n')[0])}</span>${why ? `<em>Cannot join: ${esc(why)}</em>` : '<em class="ok">Can join this battle</em>'}</div></div>`;
 }
 let handAll = false;
+/** Sicily 15.3b: say what the reveal roll of an untried garrison is, while it is read (playtest 3). */
+const untriedNote = (rv: RollView) =>
+  rv.groups
+    .filter((x) => /: untried unit revealed \(15\.3b\)$/.test(x.label))
+    .map((x) => {
+      const u = g.units.find((v) => v.name === x.label.split(':')[0]);
+      return `<p class="hint gx">${esc(x.label.split(':')[0])} is revealed (15.3b): a morale check before defensive fire, SN ${x.sn}${u && E.quality(u) === 'green' && x.sn === 3 ? ' (5, −2 green)' : ''}. Rolls of 1–${x.sn} pass; higher, it is disordered.</p>`;
+    })
+    .join('');
 export function handCards() {
   const b = g.battle;
   if (!b && (g.phase === 'reinforcement' || g.phase === 'deploy')) return tray();
@@ -126,6 +135,7 @@ export function handCards() {
   const own = online.active && !online.both() ? online.mySide() : null,
     s = handSide ?? own ?? (g.battle && !mine(g.phasing) ? other(g.phasing) : g.phase === 'admin' ? E.adminActor(g) : g.phasing), // 4.2c: the hand of the side acting now
     cs = [...E.boxOf(g, s, 'available')].sort((x, y) => x.kind.localeCompare(y.kind) || x.name.localeCompare(y.name));
+  if (!cs.length && handSide == null) return ''; // an empty hand chip only floated over the map (playtest 3)
   const live = cs.filter((c) => usableNow(c)),
     rest = cs.filter((c) => !usableNow(c)),
     shown = handAll || !live.length ? [...live, ...rest] : live; // the cards you can play now first; the rest on request
@@ -234,7 +244,7 @@ export function ledger() {
       jam = /^Jamming/.test(rv.title); // read from the defender's side: a die of 5 or less disorders the unit (playtest 2, item 3)
     return `<div class="c-ledger tight" data-ui="${reg(() => {
       if (rollView?.pos) endRoll();
-    })}" title="Tap to continue"><div class="lh"><h3>${esc(rv.title)}</h3><b class="tot ${(jam ? hits === rv.groups.length : hits) ? 'hit' : 'miss'}">${rv.pos ? (jam ? (rv.groups.length - hits ? `${rv.groups.length - hits} disordered` : 'all hold') : rv.morale ? `${hits} of ${rv.groups.length} pass` : `${hits} hit${hits === 1 ? '' : 's'}`) : '…'}</b></div>${rv.remote && !rv.pos ? `<p class="hint">${ico('dice')} The other player is rolling…</p>` : ''}${rv.pos ? rollFx.map(fxRow).join('') : ''}${rv.groups.map((x) => `<div class="ln2"><span class="who">${esc(x.label)}</span><span class="sn">SN ${x.sn}</span>${rv.pos ? faces(x.dice, x.sn, jam) : `<span class="cnt">${x.dice.length}${ico('dice')}</span>`}<b class="${x.hits ? 'hit' : 'miss'}">${jam ? (x.hits ? 'holds' : 'disordered') : x.hits}</b>${x.parts.length ? `<span class="chips2">${modChips(x.parts)}</span>` : ''}</div>`).join('')}
+    })}" title="Tap to continue"><div class="lh"><h3>${esc(rv.title)}</h3><b class="tot ${(jam ? hits === rv.groups.length : hits) ? 'hit' : 'miss'}">${rv.pos ? (jam ? (rv.groups.length - hits ? `${rv.groups.length - hits} disordered` : 'all hold') : rv.morale ? `${hits} of ${rv.groups.length} pass` : `${hits} hit${hits === 1 ? '' : 's'}`) : '…'}</b></div>${rv.remote && !rv.pos ? `<p class="hint">${ico('dice')} The other player is rolling…</p>` : ''}${rv.pos ? rollFx.map(fxRow).join('') : ''}${untriedNote(rv)}${rv.groups.map((x) => `<div class="ln2"><span class="who">${esc(x.label)}</span><span class="sn">SN ${x.sn}</span>${rv.pos ? faces(x.dice, x.sn, jam) : `<span class="cnt">${x.dice.length}${ico('dice')}</span>`}<b class="${x.hits ? 'hit' : 'miss'}">${jam ? (x.hits ? 'holds' : 'disordered') : x.hits}</b>${x.parts.length ? `<span class="chips2">${modChips(x.parts)}</span>` : ''}</div>`).join('')}
       </div>`;
   }
   if (!b || g.pendingBlow) return '';
@@ -247,7 +257,7 @@ export function ledger() {
       ${mineStep ? `<div class="row">${btn('Decline (stay hidden)', () => E.declineExploit(g, b), '', false, '6.8: you may decline the opportunity and keep the blocks hidden')}</div>` : `<p class="hint">Waiting for the ${nm(b.attacker)} player to roll.</p>`}</div>`;
   }
   if (b.stage === 'done')
-    return `<div class="c-ledger tight aar"><div class="lh"><h3>Battle over · ${esc(areaName(b.area))}</h3></div><p class="resline">${esc(b.result ?? '')}</p>${battleFx.length ? `<div class="aarfx">${battleFx.map(fxRow).join('')}</div>` : '<p class="hint">No losses on either side.</p>'}${rollRecord(b, true)}</div>`;
+    return `<div class="c-ledger tight aar"><div class="lh"><h3>Battle over · ${esc(areaName(b.area))}</h3></div><p class="resline">${esc(b.result ?? '')}</p>${g.log.slice(-30).some((l) => l.endsWith(`A Ghost is revealed in ${areaName(b.area)} and removed (15.7)`)) ? '<p class="hint gx">The ghost was removed when it was revealed (15.7): no die did it.</p>' : ''}${battleFx.length ? `<div class="aarfx">${battleFx.map(fxRow).join('')}</div>` : '<p class="hint">No losses on either side.</p>'}${rollRecord(b, true)}</div>`;
   if (b.stage.endsWith('Choice')) {
     const sd = b.stage === 'attChoice' ? b.attacker : other(b.attacker); // the bubble on the table holds the choice; the report keeps the dice that caused it
     return `<div class="c-ledger tight"><div class="lh"><h3 class="${sd}">${nm(sd)} ${b.pending} hit${b.pending === 1 ? '' : 's'} to take</h3></div>${rollRecord(b, true)}</div>`;

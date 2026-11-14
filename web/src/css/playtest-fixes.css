@@ -693,3 +693,58 @@
     width: calc(100vw - 16px);
   }
 }
+/* playtest 3, items 2 and 9: while the device is being passed, the hand stays hidden from the other player; the strip floats
+   above the dock (nothing below it moves when it goes, so a tap never lands on a control that jumped into place) */
+#ui .dock {
+  position: relative;
+}
+#ui .dock .passstrip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  z-index: 50;
+}
+#ui .dock:has(.passstrip) .c-hand,
+#ui .dock:has(.passstrip) .handtab,
+#ui .dock:has(.passstrip) .arrtray {
+  visibility: hidden;
+}
+/* playtest 3, item 4: a battle result or dice list longer than its space says so (fade and ▾, as the set-up panels) */
+#ui .dock .c-ledger.more {
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 36px), #0006);
+  mask-image: linear-gradient(#000 calc(100% - 36px), #0006);
+}
+#ui .dock .c-ledger {
+  position: relative;
+}
+#ui .dock .c-ledger.more::after {
+  content: '▾ more';
+  position: sticky;
+  bottom: 0;
+  display: block;
+  width: fit-content;
+  margin: -24px auto 0;
+  padding: 0 12px;
+  font: 700 13px/22px var(--sfd);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: #0b0d08;
+  border: 1px solid var(--gold);
+  pointer-events: none;
+}
+@media (max-width: 700px) {
+  #ui .dock .c-ledger {
+    max-height: 46vh !important;
+  }
+}
+/* playtest 3, item 6: the sandbox button never sits on the open Map layers panel */
+body:has(.mappanel) .sbfab {
+  display: none !important;
+}
+
+/* playtest 3: the leader lines and rings go under the interface, so they never cross the bubble's words */
+#leaders {
+  z-index: 7;
+}
