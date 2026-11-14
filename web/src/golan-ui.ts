@@ -439,6 +439,15 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
   if (b && b.stage === 'setup') {
     const B = G.battleState(b),
       def = E.other(b.attacker);
+    for (const sd of [b.attacker, def]) {
+      // 17.34: the Counterbattery player picks which enemy artillery asset it goes for
+      const arts = b.assets[E.other(sd)].map((id) => E.chit(g, id)).filter(E.isArty);
+      if (!B.counterbattery[sd] || arts.length < 2 || !ctx.mine(sd)) continue;
+      const cur = B.cbTarget?.[sd] ?? arts[0].id;
+      out.push(
+        `<div class="volpanel"><b>${ctx.ico('artillery')} Counterbattery target (17.34)</b><span>${nm(sd)}: on a 1–5 this enemy artillery asset goes down the Turn Track.</span><div class="row">${arts.map((a) => ctx.btn(`${a.id === cur ? '✓ ' : ''}${esc(a.name)}`, () => G.setCounterbatteryTarget(live(), live().battle!, sd, a.id))).join('')}</div></div>`,
+      );
+    }
     if (B.ew?.pending)
       out.push(
         `<div class="volpanel"><b>${ctx.ico('warn')} Jamming (17.33)</b><span>${nm(def)}: each defending unit rolls, 5 or less disordered. Play your EW card for +2 to each roll, or roll without it.</span><div class="row">${ctx.btn('Roll without countermeasures', () => G.answerJamming(live(), b), 'primary', !ctx.mine(def))}</div></div>`,

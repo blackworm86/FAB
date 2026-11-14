@@ -408,7 +408,7 @@ Combat: a battle asset (one die, infantry class; allowed on Mt Hermon). Attackin
   'golan:event_counterbattery': [
     'Counterbattery strike (17.34)',
     `Played in a battle as your one event, before the first roll. The Attacker may also play it after seeing the Defender commit artillery. After the enemy artillery has fired, roll one die:
-• 1-5: one enemy artillery asset from this battle goes onto the Turn Track that many turns ahead. On that turn it arrives straight in the Available Box, not counted in that turn's draw.
+• 1-5: one enemy artillery asset from this battle (your choice, when there are two) goes onto the Turn Track that many turns ahead. On that turn it arrives straight in the Available Box, not counted in that turn's draw.
 • 6-10: no effect. If the enemy fires no artillery, the event is spent for nothing.`,
   ],
   'golan:strongpoint': [

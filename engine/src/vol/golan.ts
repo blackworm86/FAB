@@ -98,6 +98,7 @@ export interface GolanState {
 export interface GolanBattle {
   event: Partial<Record<Side, string>>;
   counterbattery: Partial<Record<Side, string>>;
+  cbTarget?: Partial<Record<Side, string>>; // 17.34: the enemy artillery asset the Counterbattery player picked
   ew?: { pending: boolean };
   defLocked?: boolean;
   engBridge?: string;

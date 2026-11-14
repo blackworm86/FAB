@@ -513,6 +513,13 @@ export function playCounterbattery(g: Game, b: Battle, chitId: string) {
   battleState(b).counterbattery[side] = chitId;
   say(g, 'Counterbattery strike prepared (17.34)', side);
 }
+/** 17.34: which enemy artillery asset of this battle the Counterbattery strike goes for (the player's choice; otherwise the first). */
+export function setCounterbatteryTarget(g: Game, b: Battle, side: Side, assetId: string) {
+  const B = battleState(b);
+  need(!!B.counterbattery[side], 'no Counterbattery prepared');
+  need(b.assets[other(side)].includes(assetId) && isArty(chit(g, assetId)), 'an enemy artillery asset in this battle');
+  (B.cbTarget ??= {})[side] = assetId;
+}
 /** 8.23: the units that may reinforce the Defender from an adjacent uncontested area (not into a battle held by assets alone, 4.35, except Lt. Zvika, 17.23). */
 export function reinforceOptions(g: Game, b: Battle) {
   const def = other(b.attacker),

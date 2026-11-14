@@ -181,4 +181,22 @@ describe('Golan asset and event sweep', () => {
     expect(unit(g, 'I05').disorder).toBe(1); // 4 with no +2: disordered
     expect(unit(g, 'I30').disorder).toBe(0); // the supplied strongpoint: 4 + 2 = 6, holds
   });
+  it('17.34 (owner: the rulebook): the Counterbattery player picks the enemy artillery asset', () => {
+    const g = newGolanGame(45);
+    for (const u of unitsIn(g, 27)) if (u.id !== 'I30') u.area = null;
+    unit(g, 'S01').area = 27;
+    g.phase = 'combat';
+    g.phasing = 'syrian';
+    g.contestedAtMoveStart = [27];
+    const b = startBattle(g, 27);
+    const arts = g.chits.filter((c) => c.side === 'syrian' && c.kind === 'artillery').slice(0, 2);
+    for (const c of arts) c.box = 'map';
+    b.assets.syrian.push(...arts.map((c) => c.id));
+    golan.battleState(b).counterbattery.israeli = 'IC30';
+    golan.setCounterbatteryTarget(g, b, 'israeli', arts[1].id);
+    g.force = [3];
+    golan.afterFire(g, b, 'syrian', 'arty');
+    expect(arts[1].box).toBe('future');
+    expect(arts[0].box).toBe('map');
+  });
 });
