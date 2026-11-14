@@ -111,7 +111,7 @@ def proposta(g, k, asse=0, tieni="tutte"):
                 lab[f] = voti.argmax()
         ordine = np.argsort([c[lab == j, asse].mean() for j in range(k)])   # figure numerate lungo l'asse
         lab = np.argsort(ordine)[lab]
-    for j in range(k):   # briciole: parti minuscole di una figura che stanno fuori dal resto (la punta del fucile del vicino)
+    for j in range(k if k > 1 else 0):   # briciole (solo nei gruppi: in una figura sola una parte staccata è vera, es. la canna di una mitragliatrice): parti minuscole di una figura che stanno fuori dal resto (la punta del fucile del vicino)
         f = np.where(lab == j)[0]
         if not len(f):
             continue
