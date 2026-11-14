@@ -190,7 +190,9 @@ function promptText() {
           '<b>Breakthrough combat:</b> brass = costs a Special Action',
         );
       if (dropsLeft())
-        return `<b>Drop your airborne unit${dropsLeft() > 1 ? 's' : ''} first:</b> choose the drop zone in the panel on the map (14.27a).`;
+        return g.units.some((u) => u.box === 'airborne_assault' && u.side === g.phasing && !E.sicily.airDropTargets(g, u.id).length)
+          ? `<b>An airborne unit has no drop zone:</b> remove it in the panel on the map; it is lost (14.27a).`
+          : `<b>Drop your airborne unit${dropsLeft() > 1 ? 's' : ''} first:</b> choose the drop zone in the panel on the map (14.27a).`; /* playtest 2, item 16 */
       return m
         ? `<b>Tap a red area</b>${gx(' to fight there, or press <b>Next battle</b>.', ' or Next battle.')}`
         : fightable().length
@@ -225,6 +227,8 @@ function setupPrompt(b: E.Battle): string {
     return pt
       ? `<b>${nm(who)}: point unit ${esc(pt)}.</b> Tap another block to change it, or Begin combat.${gx(' The defender has designated his (6.24).')}`
       : `<b>${nm(who)}: tap a block to make it your point unit</b>, then Begin combat.${gx(' The defender has designated his (6.24).')}`;
+  if (!att && (b.vol as { defLocked?: boolean } | undefined)?.defLocked)
+    return `<b>${nm(who)} defends, jammed:</b> all defending units are disordered, so no artillery, air, SAM or battle assets (17.33).${pt ? '' : ' Pick your point unit,'} then Done.`; // playtest 2, item 5
   return att
     ? `<b>${nm(who)} attacks: tap a card to add it.</b>${gx(' The defender answers after you (6.22); you pick your point unit last.')}`
     : `<b>${nm(who)} defends: tap a card to add it</b>${gx(`, and a block to change the point unit${pt ? ` (now ${esc(pt)})` : ''}. The attacker's assets are on the table (6.23).`, pt ? ` · point unit ${esc(pt)}` : ' and pick your point unit.')}`;

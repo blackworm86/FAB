@@ -22,7 +22,7 @@ import { rollView } from './rolls';
 import { gx } from './prompt';
 import { recoverSel } from './dock';
 import { pieceBtn, unitPic } from './pieces-window';
-import { legendOpen, legendShownAt, refresh, setLegendOpen, setLegendShownAt } from './main';
+import { legendOpen, legendShownAt, refresh, setLegendOpen, setLegendShownAt, showAreas } from './main';
 
 /** What the volume's own prompts may use: buttons, who is mine, an area pick on the map. */
 export const panelCtx = (): PanelCtx => ({
@@ -37,6 +37,7 @@ export const panelCtx = (): PanelCtx => ({
     setAreaPick({ label, areas: new Set(areas), run });
     setSelUnit(setSelChit(setSelArr(null)));
     refresh();
+    setTimeout(() => showAreas(areas), 60); // the areas to pick come into view, clear of the panels (playtest 2, item 15)
   },
 });
 export function dispatch() {
