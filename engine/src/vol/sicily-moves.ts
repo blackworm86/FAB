@@ -73,6 +73,11 @@ export function releaseDivision(g: Game, division: string, chitId?: string, brig
       'one of the three independent British brigades, not yet released (14.61)',
     );
   }
+  const ev = chitId ? chit(g, chitId) : null;
+  need(
+    !ev || ev.kind !== 'special_action_event' || ev.ech === us[0].ech,
+    `a single-use Special Action releases only a division of its own army: this one is not for the ${us[0].name} (14.61)`,
+  );
   spendSA(g, 'allied', us[0].ech, `release the ${us[0].name} division from its army boundaries (14.61)`, chitId);
   V.released.push(division);
   if (brigade) V.released.push(brigade);
