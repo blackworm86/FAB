@@ -242,14 +242,22 @@ function frame() {
   if (frameAt && performance.now() > frameAt) {
     frameAt = 0;
     if (!g.battle && mine(g.phasing) && allowed()) {
-      // a new step (or the opening): what it is about comes into view
+      // a new step (or the opening): what it is about comes into view; a set-up step frames every area its pieces may go (playtest B8)
       const ids =
         g.phase === 'combat' || g.phase === 'btCombat'
           ? E.mustFight(g).slice(0, 1)
           : ['movement', 'btMove'].includes(g.phase)
             ? [...new Set(g.units.filter((u) => u.side === g.phasing && u.area != null && optsFor(u.id).length).map((u) => u.area!))]
-            : [];
-      if (ids.length && !ids.some(onScreen)) {
+            : g.phase === 'deploy'
+              ? [
+                  ...new Set(
+                    VOL.pendingPlace(g).flatMap((id) =>
+                      g.units.find((u) => u.id === id)?.side === g.phasing ? VOL.placeOptions(g, id) : [],
+                    ),
+                  ),
+                ]
+              : [];
+      if (ids.length && (g.phase === 'deploy' || !ids.some(onScreen))) {
         showAreas(ids);
         if (openFrame && goal) {
           target.copy(goal.t);

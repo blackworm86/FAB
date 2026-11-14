@@ -20,7 +20,7 @@ import { cam, canvas } from './scene';
 import { map3d, setMap3d } from './map3d';
 import { FIG_VOLS, setTroopSize, setTroopsOn, troopSize, troopsOn } from './piece-kit';
 import { paintAreas, paintBoard, saveLayers, supOk, viewRot } from './map-paint';
-import { dist, pitch, setYaw, yaw } from './camera';
+import { dist, pitch, setYaw, target, yaw } from './camera';
 import { hist, say, setNote, setSelArr, setToast, setToastInfo } from './flow';
 import { followFoe, setFollowFoe } from './choices';
 import { center, clampDist, setGoal, setInBattle } from './map-input';
@@ -139,42 +139,74 @@ export function frameSide(sd: E.Side) {
     z1 = Math.max(...ids.map((p) => p.z));
   setGoal({ t: new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), dist: clampDist(Math.max(x1 - x0, (z1 - z0) * 1.3) * 0.95 + 8), pitch });
 }
-/** True when the area's centre is inside the visible part of the screen (clear of the bars at top and bottom). */
-/** The part of the canvas no panel covers, in normalised screen units (-1..1): the sandbox panel on the right, the block card or battle report at the bottom right. */
-function freeView() {
-  const r = canvas.getBoundingClientRect();
-  let x1 = 0.85,
-    y0 = -0.6;
-  for (const q of ['.sbx', '.c-dispatch', '.c-ledger']) {
-    const e = document.querySelector<HTMLElement>(`#ui ${q}`);
-    if (!e || !e.offsetParent) continue;
+/** The part of the canvas no bar or panel covers, in pixels: each one over the map (bars, Map button, block card, battle panel, set-up panel,
+ *  tray, hand, sandbox) takes away the strip of screen, top, bottom, left or right, that leaves the most map (playtest B8). */
+function freeRect() {
+  const r = canvas.getBoundingClientRect(),
+    f = { l: r.left + 16, t: r.top + 40, r: r.right - 16, b: r.bottom - 12 }; // room for the labels and MP badges drawn above an area's centre
+  const panels =
+    '#ui .c-bar, #ui .mapdock, #ui .sbx, #ui .c-dispatch, #ui .c-ledger, #ui .volstack, #ui .arrtray, #ui .c-hand, #ui .handtab';
+  for (const e of Array.from(document.querySelectorAll<HTMLElement>(panels))) {
     const b = e.getBoundingClientRect();
-    if (b.width > r.width * 0.6) {
-      y0 = Math.max(y0, 1 - ((b.top - r.top) / r.height) * 2 + 0.05);
-      continue;
-    }
-    x1 = Math.min(x1, ((b.left - r.left) / r.width) * 2 - 1 - 0.05);
+    if (!e.offsetParent || !b.width || b.bottom < f.t || b.top > f.b || b.right < f.l || b.left > f.r) continue;
+    const cuts = [
+      { ...f, t: Math.max(f.t, b.bottom + 8) },
+      { ...f, b: Math.min(f.b, b.top - 8) },
+      { ...f, l: Math.max(f.l, b.right + 8) },
+      { ...f, r: Math.min(f.r, b.left - 8) },
+    ];
+    Object.assign(f, cuts.sort((x, y) => (y.r - y.l) * (y.b - y.t) - (x.r - x.l) * (x.b - x.t))[0]); // the cut that leaves the most map
   }
-  return { x0: -0.85, x1: Math.max(-0.3, x1), y0: Math.min(0.3, y0), y1: 0.75 };
+  return f;
 }
-export const onScreen = (a: number) => {
-  const v = center(a).clone().project(cam),
-    f = freeView();
-  return v.x > f.x0 && v.x < f.x1 && v.y > f.y0 && v.y < f.y1 && v.z < 1;
-};
-/** Bring areas into view when any of them is off screen: the camera frames them all, no closer than now. */
+const ray = new THREE.Raycaster(),
+  ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+/** Where the areas land on screen with the camera aimed at t from distance d (the live camera is not moved). */
+function shot(t: THREE.Vector3, d: number, ids: number[]) {
+  const c = cam.clone(),
+    r = canvas.getBoundingClientRect();
+  c.position.set(t.x + d * Math.sin(yaw) * Math.cos(pitch), d * Math.sin(pitch), t.z + d * Math.cos(yaw) * Math.cos(pitch));
+  c.lookAt(t);
+  c.updateMatrixWorld();
+  const px = ids.map((a) => {
+    const v = center(a).clone().project(c);
+    return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height };
+  });
+  /** The point of the table under a screen pixel. */
+  const at = (x: number, y: number) => {
+    ray.setFromCamera(new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1), c);
+    return ray.ray.intersectPlane(ground, new THREE.Vector3());
+  };
+  return { px, at };
+}
+const inside = (p: { x: number; y: number }, f: ReturnType<typeof freeRect>) => p.x >= f.l && p.x <= f.r && p.y >= f.t && p.y <= f.b;
+export const onScreen = (a: number) => inside(shot(target, dist, [a]).px[0], freeRect());
+/** Bring areas into view when any of them is hidden: the camera frames them all in the part of the screen no panel covers, no closer than now. */
 export function showAreas(ids: number[]) {
-  if (!ids.length || ids.every(onScreen)) return;
+  if (!ids.length) return;
+  const f = freeRect();
+  if (shot(target, dist, ids).px.every((p) => inside(p, f))) return;
   const ps = ids.map(center),
-    x0 = Math.min(...ps.map((p) => p.x)),
-    x1 = Math.max(...ps.map((p) => p.x)),
-    z0 = Math.min(...ps.map((p) => p.z)),
-    z1 = Math.max(...ps.map((p) => p.z));
-  const f = freeView(),
-    d = clampDist(Math.max(dist, Math.max(x1 - x0, (z1 - z0) * 1.3) * 1.1 + 10)),
-    t = new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2);
-  const shift = -((f.x0 + f.x1) / 2) * d * 0.45 * (innerWidth / innerHeight) * 0.5; // a panel on the right: aim to the right so the areas land in the free part (approximate, camera faces the map)
-  setGoal({ t: t.add(new THREE.Vector3(Math.cos(yaw) * shift, 0, -Math.sin(yaw) * shift)), dist: d, pitch });
+    t = new THREE.Vector3(
+      (Math.min(...ps.map((p) => p.x)) + Math.max(...ps.map((p) => p.x))) / 2,
+      0,
+      (Math.min(...ps.map((p) => p.z)) + Math.max(...ps.map((p) => p.z))) / 2,
+    );
+  let d = dist;
+  for (let k = 0; k < 6; k++) {
+    const { px, at } = shot(t, d, ids),
+      x0 = Math.min(...px.map((p) => p.x)),
+      x1 = Math.max(...px.map((p) => p.x)),
+      y0 = Math.min(...px.map((p) => p.y)),
+      y1 = Math.max(...px.map((p) => p.y));
+    const grow = Math.max((x1 - x0) / (f.r - f.l), (y1 - y0) / (f.b - f.t));
+    if (grow > 1) d = clampDist(d * grow * 1.05); // too wide or tall for the free part: step back
+    const a = at((x0 + x1) / 2, (y0 + y1) / 2),
+      b = at((f.l + f.r) / 2, (f.t + f.b) / 2);
+    if (a && b) t.add(a.sub(b)); // the middle of the areas onto the middle of the free part
+    if (grow <= 1 && px.every((p) => inside(p, f))) break;
+  }
+  setGoal({ t, dist: d, pitch });
 }
 export const cutOffCount = (sd: E.Side) => MAP.areas.filter((a) => g.control[a.id] === sd && !supOk(sd, a.id)).length;
 const resetBtn = () =>
