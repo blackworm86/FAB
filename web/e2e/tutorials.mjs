@@ -19,7 +19,7 @@ for (const c of COURSES) {
   await page.goto(`${BASE}?tutorial=${c}`);
   await page.waitForFunction(() => window.__fab?.tut?.(), null, { timeout: 60000 });
   await page.waitForTimeout(2500);
-  const where = () => page.evaluate(() => window.__fab.tut()?.where() ?? {}); // no coach left: the course is over
+  const where = () => page.evaluate(() => window.__fab?.tut?.()?.where() ?? {}); // no coach left: the course is over
   let last = '',
     same = 0,
     steps = 0,
