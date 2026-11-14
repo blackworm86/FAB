@@ -232,3 +232,7 @@
   width: max-content;
   max-width: calc(100vw - 32px);
 }
+/* playtest 2, B7 and item 17: a message never blocks a tap on what lies under it (it has no buttons of its own) */
+.toast {
+  pointer-events: none;
+}
