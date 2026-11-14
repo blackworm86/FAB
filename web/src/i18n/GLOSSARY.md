@@ -72,3 +72,5 @@ Use these terms everywhere (interface and tutorials) so the game reads as one vo
 | airfield                                                                 | aeroporto                                                                           |
 | Purple Line, Fading Italian Morale, chit and asset names (Air Support)   | as printed, in English                                                              |
 | Sicily (the island) / Sicily (the game)                                  | Sicilia / Sicily                                                                    |
+
+Owner's decision (14 November 2026): **Purple Line** and the **chit names** (Greif Team Bridge, Air Support…) stay in English, as printed on the map and the counters.
