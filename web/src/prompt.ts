@@ -216,7 +216,8 @@ function promptText() {
       return `<b>Ending now:</b> ${sea} block${sea > 1 ? 's' : ''} still on the beaches ${sea > 1 ? 'go' : 'goes'} back to sea and ${sea > 1 ? 'try' : 'tries'} to land again next turn (14.24b).`; // playtest 2, A7
   }
   if (reinforcing && b) return '<b>Tap a glowing neighbouring block</b> to bring it in, or tap the map to cancel.';
-  if (airPick?.step === 'unit' && b) return '<b>Air Mission +2:</b> tap one of your blocks in the battle.';
+  if (airPick?.step === 'unit' && b)
+    return `<b>Air Mission +${VOL.id === 'golan73' && airPick.side === 'syrian' ? 1 : 2}:</b> tap one of your blocks in the battle.`; // Golan 16.31a: +2 Israeli, +1 Syrian
   if (online.active && !allowed() && !g.over)
     return online.mySide() == null
       ? '<b>Watching.</b> Take a seat in the menu.'
