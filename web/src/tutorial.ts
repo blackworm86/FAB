@@ -153,14 +153,14 @@ export function initTutorial(h: TutHost, course: Course) {
   function onNext() {
     const s = step();
     if (!s || h.busy()) return;
-    if (s.auto) h.act(() => s.auto!(h.game()), s.title);
+    if (s.auto) h.act(() => s.auto!(h.game()), trHtml(s.title));
     next();
   }
   /** "Do it for me" on a try step: the coach plays the player's action. */
   function skipTry() {
     const s = step();
     if (!s || h.busy()) return;
-    if (s.act) h.act(() => s.act!(h.game()), s.title);
+    if (s.act) h.act(() => s.act!(h.game()), trHtml(s.title));
     next();
   }
   function back() {
@@ -458,7 +458,7 @@ export function initTutorial(h: TutHost, course: Course) {
       if (!s || h.busy()) return;
       if (s.auto) return onNext();
       if (s.act) {
-        h.act(() => s.act!(h.game()), s.title);
+        h.act(() => s.act!(h.game()), trHtml(s.title));
         if (!s.done) next();
         return;
       }
