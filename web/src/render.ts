@@ -303,6 +303,12 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
     edge();
     row.addEventListener('scroll', edge, { passive: true });
   });
+  ui.querySelectorAll<HTMLElement>('.volstack').forEach((st) => {
+    // a set-up panel taller than its space fades at the bottom with a ▾, so it reads as "more below" (playtest B7)
+    const edge = () => st.classList.toggle('more', st.scrollTop + st.clientHeight < st.scrollHeight - 2);
+    edge();
+    st.addEventListener('scroll', edge, { passive: true });
+  });
   {
     const h = ui.querySelector<HTMLElement>('.c-hand'),
       a = ui.querySelector<HTMLElement>('.arrtray');

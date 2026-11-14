@@ -1,8 +1,7 @@
-# interface · 14 Nov 2026 (item 6 done)
-Doing: playtest report 2026-11-13, owner's order (section G). Done: B1, B2 (phone pill and instruction line), A1, A2 (Sicily buttons say why they wait; airborne battle first), A3 (desktop top bar fits Golan's 9 turns), A6 ("End anyway?" waits for a click; any other click disarms it), C1 (pop-ups avoid the battle panel and header; no repeated lines), B3 (phone hit choice under the battle header), B4 (phone Map button shorter; empty hand is a small switch at the edge).
-A4 (upside-down names on reduced blocks): owner chose to leave blocks turning like the real ones (14 Nov). Not a bug.
-Next: B5 tap targets, B6 11 px "−1" labels, B7 set-up panels below the fold, B8 camera, C items.
+# interface · 14 Nov 2026 (playtest 2026-11-13, item 7)
+Doing: playtest report 2026-11-13 in the owner's order. Done: B1-B7, A1-A3, A6, C1-C7, C8 (via C1), C9 (point unit named), C11. A4: owner keeps blocks turning like the real ones (not a bug).
+Next (not done, need a reproduction first): B8 camera framing (destination off the right edge, British beachheads off screen, empty band beyond the map edge; the tilted camera looks past the map's top); C9 rest (Sicily dogfight panel staying after the Axis declined); C10 (Allied hand grey and cut at the edges; German hand behind the instruction bar) - not seen in my runs.
 Waiting for the owner: nothing.
-Last checked: npm run verify --quick: all passed except formatting of engine/src/vol/bulge-setup.ts (rules session's file, not mine), 14 Nov.
+Last checked: npm run verify --browser, 14 Nov: all passed except formatting of engine/src/vol/bulge-setup.ts (rules session's file).
 Files in hand: none.
-Notes: phone bottom-bar overrides live in web/src/css/playtest-fixes.css (loaded last; selectors need the #ui prefix to win). A5, A7, A8, A9 and section D belong to the rules session or the owner.
+Notes: phone overrides live in web/src/css/playtest-fixes.css (loaded last; #ui prefix to win). it-ui.json is written with json.dumps(ensure_ascii=False, indent=1); plain texts go under "text", regexes under "patterns"; desktop turns "Tap" into "Click", so add both. C4 changed one line of engine/src/vol/sicily-combat.ts (a morale roll's record: 1 = passed, like the other volumes). A5, A7-A9 and section D belong to the rules session or the owner.

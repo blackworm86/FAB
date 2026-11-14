@@ -531,7 +531,9 @@ export function syncTags() {
     const nw = new Set(E.newlyContested(g)),
       sa = E.saAvailable(g, g.phasing).length > 0;
     for (const a of E.contestedAreas(g).filter((x) => !g.fought.includes(x)))
-      add(nw.has(a) ? 'FIGHT' : sa ? 'NEEDS SA' : 'NEEDS SA · NONE LEFT', nw.has(a) ? 'fight' : sa ? 'sa' : 'off', { area: a });
+      add(nw.has(a) ? 'FIGHT' : sa ? 'COSTS A SPECIAL ACTION' : 'NO SPECIAL ACTION LEFT', nw.has(a) ? 'fight' : sa ? 'sa' : 'off', {
+        area: a,
+      });
   }
   if (selArr) for (const o of arrOpts()) if (o.sa) add('SA', 'sa', { area: o.area });
 }

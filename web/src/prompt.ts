@@ -112,7 +112,7 @@ export const gx = (long: string, short = '') => `${short ? `<span class="gs">${s
 function stakes(b: E.Battle) {
   const sd = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker),
     fl = E.fireList(g, b, sd, b.stage.endsWith('Arty') ? 'arty' : 'ground');
-  if (!fl.length) return 'Nothing can fire.';
+  if (!fl.length) return ((p) => `<b>Nothing can fire.</b>${p && !p.dis ? ` Press <b>${esc(p.label)}</b>.` : ''}`)(primary()); // say what moves the battle on (playtest C5)
   const dice = fl.reduce((a, f) => a + f.dice, 0),
     sns = [...new Set(fl.map((f) => f.sn))].sort((x, y) => x - y);
   return `<b>${nm(sd)} ${esc(STAGE_NAME[b.stage].toLowerCase())}:</b> ${dice} ${dice === 1 ? 'die' : 'dice'} · hit on ${sns.length === 1 ? `${sns[0]} or less` : `${sns[0]}–${sns.at(-1)} or less`}${gx(` · at ${E.unitsIn(g, b.area, other(sd)).length} ${nm(other(sd))} block${E.unitsIn(g, b.area, other(sd)).length === 1 ? '' : 's'}`)}`;
@@ -159,14 +159,19 @@ function promptText() {
       }).length;
       return n
         ? `<b>Set-up:</b> drag a block from the tray to a lit area, or use the panel.` /* the count is on the main button */
-        : '<b>Set-up:</b> finish the steps in the panel on the map, then end the set-up.';
+        : ((p) =>
+            p && !p.dis
+              ? `<b>Set-up done:</b> press <b>${esc(p.label)}</b>.`
+              : '<b>Set-up:</b> finish the steps in the panel on the map, then end the set-up.')(primary());
     }
     case 'reinforcement':
       return '<b>Pick a new block</b>, then a lit entry area.';
     case 'admin':
       return selChit && tgt?.hint
         ? `<b>${esc(tgt.hint)}</b>${tgt.areas.size + tgt.units.size > 0 ? ` · ${tgt.areas.size + tgt.units.size} lit` : ''}`
-        : `<b>${esc(nm(E.adminActor(g)))}: tap a card</b>${gx(g.done?.includes(g.phasing) ? ' to play it, then end the step.' : ` to play it, then Done: the ${nm(other(g.phasing))} player acts next (4.2).`)}`;
+        : E.boxOf(g, E.adminActor(g), 'available').length
+          ? `<b>${esc(nm(E.adminActor(g)))}: tap a card</b>${gx(g.done?.includes(g.phasing) ? ' to play it if you wish, then end the step.' : ` to play it if you wish, then Done: the ${nm(other(g.phasing))} player acts next (4.2).`)}`
+          : `<b>${esc(nm(E.adminActor(g)))}: no cards to play.</b>${gx(g.done?.includes(g.phasing) ? ' End the step.' : ` Press Done: the ${nm(other(g.phasing))} player acts next (4.2).`)}`;
     case 'movement':
       if (selUnit && g.moving?.id === selUnit)
         return `<b>${E.allowance(g, g.units.find((x) => x.id === selUnit)!) - (g.units.find((x) => x.id === selUnit)!.spent ?? 0)} MP left.</b>${gx(" Tap a green area to go on, or <b>Stop here</b>. Choosing another block ends this one's move.", ' Go on, or Stop here.')}`;
@@ -180,12 +185,12 @@ function promptText() {
       if (g.phase === 'btCombat' && !m && E.contestedAreas(g).some((a) => !g.fought.includes(a) && !E.newlyContested(g).includes(a)))
         return gx(
           '<b>Breakthrough combat.</b> Newly contested areas are free; areas already contested before movement need a Special Action (brass tags).',
-          '<b>Breakthrough combat:</b> brass = needs SA',
+          '<b>Breakthrough combat:</b> brass = costs a Special Action',
         );
       if (dropsLeft())
         return `<b>Drop your airborne unit${dropsLeft() > 1 ? 's' : ''} first:</b> choose the drop zone in the panel on the map (14.27a).`;
       return m
-        ? '<b>Tap a red area.</b>'
+        ? `<b>Tap a red area</b>${gx(' to fight there, or press <b>Next battle</b>.', ' or Next battle.')}`
         : fightable().length
           ? '<b>Tap a contested area</b> to fight, or end the step.'
           : 'No battles left.';
@@ -213,11 +218,14 @@ function setupPrompt(b: E.Battle): string {
     return `<b>${nm(who)}</b> ${b.defSA ? 'decides on a Special Action…' : last ? 'designates the point unit…' : 'assigns assets…'}`;
   if (b.defSA)
     return `<b>${nm(who)}: Special Action?</b>${gx(' Reinforce or retreat before the attacker commits his assets (6.21), or go on without.')}`;
+  const pt = g.units.find((u) => u.id === (att ? b.attPoint : b.defPoint))?.name; // the point unit already chosen is named, so a tap shows it registered (playtest C9)
   if (last)
-    return `<b>${nm(who)}: tap a block to make it your point unit</b>, then Begin combat.${gx(' The defender has designated his (6.24).')}`;
+    return pt
+      ? `<b>${nm(who)}: point unit ${esc(pt)}.</b> Tap another block to change it, or Begin combat.${gx(' The defender has designated his (6.24).')}`
+      : `<b>${nm(who)}: tap a block to make it your point unit</b>, then Begin combat.${gx(' The defender has designated his (6.24).')}`;
   return att
     ? `<b>${nm(who)} attacks: tap a card to add it.</b>${gx(' The defender answers after you (6.22); you pick your point unit last.')}`
-    : `<b>${nm(who)} defends: tap a card to add it</b>${gx(", and a block to make it the point unit. The attacker's assets are on the table (6.23).", ' and pick your point unit.')}`;
+    : `<b>${nm(who)} defends: tap a card to add it</b>${gx(`, and a block to change the point unit${pt ? ` (now ${esc(pt)})` : ''}. The attacker's assets are on the table (6.23).`, pt ? ` · point unit ${esc(pt)}` : ' and pick your point unit.')}`;
 }
 export function primary(): { label: string; fn: () => void; dis?: boolean } | null {
   const b = g.battle;

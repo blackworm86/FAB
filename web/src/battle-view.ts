@@ -191,6 +191,11 @@ function engChoice(b: E.Battle): string {
 export let refusal = '',
   saOpen = false; // the last refused battle chit, shown in the set-up panel
 export const setRefusal = <T extends typeof refusal>(v: T): T => ((refusal = v), v);
+/** Whose roll it is, from the name it carries (a block or an asset): the record mixes both sides (playtest C7). */
+const rollSide = (who: string) => {
+  const n = who.split(':')[0].replace(/^Overrun /, '');
+  return (g.units.find((u) => u.name === n) ?? g.chits.find((c) => c.name === n))?.side;
+};
 /** Every roll of this battle so far, newest first: who rolled, against what, and the faces; it stays with the battle until it ends. */
 function rollRecord(b: E.Battle, open = false) {
   if (!b.rolls.length) return '';
@@ -198,7 +203,7 @@ function rollRecord(b: E.Battle, open = false) {
     .reverse()
     .map(
       (r) =>
-        `<div class="rr"><span class="who">${esc(r.who)}</span><span class="sn">SN ${r.sn}</span>${faces(r.dice, r.sn)}<b class="${r.hits ? 'hit' : 'miss'}">${r.hits}${r.kind === 'morale' ? (r.hits ? ' pass' : ' fail') : ` hit${r.hits === 1 ? '' : 's'}`}</b></div>`,
+        `<div class="rr"><span class="who">${((sd) => (sd ? `<b class="rside ${sd}">${VOL.tag[sd]}</b> ` : ''))(rollSide(r.who))}${esc(r.who)}</span><span class="sn">SN ${r.sn}</span>${faces(r.dice, r.sn)}<b class="${r.hits ? 'hit' : 'miss'}">${r.kind === 'morale' ? (r.hits ? 'pass' : 'fail') : `${r.hits} hit${r.hits === 1 ? '' : 's'}`}</b></div>`,
     )
     .join('');
   return `<details class="rrec" ${open ? 'open' : ''}><summary>${ico('dice')} Dice so far <small>${b.rolls.length} roll${b.rolls.length === 1 ? '' : 's'}</small></summary>${rows}</details>`;

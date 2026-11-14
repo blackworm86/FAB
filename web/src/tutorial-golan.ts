@@ -366,9 +366,9 @@ const L_SETUP: Lesson = {
     },
     {
       title: 'Lay the minefields',
-      text: 'Three minefields are printed on the map. <b>Tap Place the rest for me</b> for the other three. By hand you would tap the two areas on either side of a boundary: never on the ditch, the escarpment, a river, Mt Hermon or rugged ground, and only one mined boundary per area.',
+      text: 'Three minefields are printed on the map. <b>Tap Lay the other minefields for me</b> for the other three. By hand you would tap the two areas on either side of a boundary: never on the ditch, the escarpment, a river, Mt Hermon or rugged ground, and only one mined boundary per area.',
       rule: '14.02 Minefields',
-      target: { el: '.volpanel button', text: 'random', label: 'random minefields button' },
+      target: { el: '.volpanel button', text: 'Lay the other minefields', label: 'automatic minefields button' },
       done: (g) => !G.state(g).minesLeft,
       act: (g) => G.autoMinefields(g),
     },

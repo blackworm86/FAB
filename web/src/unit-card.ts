@@ -175,7 +175,7 @@ export function dispatch() {
         ? ` <button class="linkbtn" data-ui="${reg(() => {
             setLegendOpen(true);
             setLegendShownAt(performance.now());
-          })}" title="What the markers on the pieces mean">Markers?</button>`
+          })}" title="What the markers on the pieces mean">What the markers mean</button>`
         : ''
     }</small></div>${((k) => (k && RULE[k] ? `<details class="rdet"><summary><b>${esc(RULE[k][0])}</b> <span>What it does</span></summary>${ruleHtml(k)}</details>` : ''))(mine(u.side) || seen(u) ? VOL.unitRule(u) : null)}${moving}${seen(u) ? supLine : ''}${route}
       <div class="row">${

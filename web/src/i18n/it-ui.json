@@ -3498,7 +3498,23 @@
   "brass = needs SA": "ottone = serve un'AS",
   "Map:": "Mappa:",
   "to play it, then end the step.": "per giocarla, poi termina il passo.",
-  "Not yet:": "Non ancora:"
+  "Not yet:": "Non ancora:",
+  "to play it if you wish, then end the step.": "per giocarla, se vuoi, poi termina il passo.",
+  "End the step.": "Termina il passo.",
+  "Set-up done:": "Schieramento completato:",
+  "to fight there, or press": "per combattere lì, oppure premi",
+  "Next battle": "Prossima battaglia",
+  "or Next battle.": "o Prossima battaglia.",
+  "Tap a red area": "Tocca un'area rossa",
+  "press": "premi",
+  "Press": "Premi",
+  "Lay the other minefields for me": "Posa gli altri campi minati in automatico",
+  "Tap another block to change it, or Begin combat.": "Tocca un altro blocco per cambiarla, o Inizia il combattimento.",
+  "Click another block to change it, or Begin combat.": "Clicca un altro blocco per cambiarla, o Inizia il combattimento.",
+  "COSTS A SPECIAL ACTION": "COSTA UN'AZIONE SPECIALE",
+  "NO SPECIAL ACTION LEFT": "NESSUNA AZIONE SPECIALE RIMASTA",
+  "What the markers mean": "Cosa significano gli indicatori",
+  "brass = costs a Special Action": "ottone = costa un'Azione Speciale"
  },
  "patterns": [
   [
@@ -9300,6 +9316,34 @@
   [
    "Chits each side draws this turn \\((.+) / (.+)\\)",
    "Pedine che ogni parte pesca in questo turno ($1 / $2)"
+  ],
+  [
+   "(.+): no cards to play\\.",
+   "$1: nessuna carta da giocare."
+  ],
+  [
+   "to play it if you wish, then Done: the (.+) player acts next \\(4\\.2\\)\\.",
+   "per giocarla, se vuoi, poi Fatto: tocca al giocatore $1 (4.2)."
+  ],
+  [
+   "Press Done: the (.+) player acts next \\(4\\.2\\)\\.",
+   "Premi Fatto: tocca al giocatore $1 (4.2)."
+  ],
+  [
+   "(.+): point unit (.+)\\.",
+   "$1: unità di punta $2."
+  ],
+  [
+   ", and a block to change the point unit \\(now (.+)\\)\\. The attacker's assets are on the table \\(6\\.23\\)\\.",
+   ", e un blocco per cambiare l'unità di punta (ora $1). Le risorse dell'attaccante sono sul tavolo (6.23)."
+  ],
+  [
+   ", and a block to change the point unit\\. The attacker's assets are on the table \\(6\\.23\\)\\.",
+   ", e un blocco per cambiare l'unità di punta. Le risorse dell'attaccante sono sul tavolo (6.23)."
+  ],
+  [
+   "· point unit (.+)",
+   "· unità di punta $1"
   ]
  ],
  "html": {}
