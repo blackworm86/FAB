@@ -156,7 +156,13 @@ function italianMorale(g: Game, b: Battle) {
   const checkOne = (u: Unit, why: string, lossOnFail: boolean) => {
     const sn = sicilyMoraleSn(g, u, 'check'),
       { r, ok } = moraleCheck(g, u, sn, why);
-    b.rolls.push({ who: `${u.name}: ${why}`, sn, dice: [r], hits: ok ? 0 : 1, kind: 'morale' });
+    b.rolls.push({
+      who: `${u.name}: ${why}`,
+      sn,
+      dice: [r],
+      hits: ok ? 1 : 0,
+      kind: 'morale' /* 1 = the check passed, as in the other volumes */,
+    });
     if (ok) return say(g, `${u.name} holds (${r} vs ${sn}, ${why})`);
     if (!lossOnFail) {
       u.disorder = 1;
