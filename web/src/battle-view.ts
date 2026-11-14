@@ -118,9 +118,9 @@ export function handCards() {
           handAll = !handAll;
         })}" aria-pressed="${handAll}">${handAll ? `Playable only (${live.length})` : `Show all`}</button>`
       : '';
-  return `<div class="handtab"><button data-ui="${reg(() => {
+  return `<div class="handtab ${shown.length ? '' : 'empty'}"><button data-ui="${reg(() => {
     setHandSide(other(s));
-  })}" class="${s}">${nm(s)} hand · ${cs.length} ${ico('swap')}</button>${more}</div><div class="c-hand" ${handStyle(shown.length)}>${fan(shown.map((c) => card(c)))}</div>`;
+  })}" class="${s}">${nm(s)} hand · ${cs.length} ${ico('swap')}</button>${more}</div>${shown.length ? `<div class="c-hand" ${handStyle(shown.length)}>${fan(shown.map((c) => card(c)))}</div>` : ''}`;
 }
 function stats(b: E.Battle, s: E.Side) {
   const ls = (['arty', 'ground'] as const).flatMap((k) => E.fireList(g, b, s, k)),

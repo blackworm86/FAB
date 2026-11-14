@@ -134,3 +134,13 @@
     gap: 6px;
   }
 }
+/* B4: on phones the Map button names only the layer (labels are inside the menu); an empty hand is a small switch at the right edge, not a chip over the map */
+@media (max-width: 700px) {
+  .mapmenu-btn .mlab {
+    display: none;
+  }
+  .handtab.empty {
+    justify-content: flex-end !important;
+    padding-inline: 8px !important;
+  }
+}

@@ -156,5 +156,5 @@ export function mapDock() {
     () => {
       mapMenu = !mapMenu;
     },
-  )}">${ico('layers')}<span>Map: <b>${cur}</b><i class="msep">·</i>Labels <b>${LABEL_NAME[labelMode]}</b></span><span aria-hidden="true">▾</span></button>${mapLegend()}<div class="laysw" role="group" aria-label="Map colour layer"><b>Layer</b>${sw}</div>${labelsBtn()}</div>${legend()}${tools}</div>`;
+  )}">${ico('layers')}<span>Map: <b>${cur}</b><span class="mlab"><i class="msep">·</i>Labels <b>${LABEL_NAME[labelMode]}</b></span></span><span aria-hidden="true">▾</span></button>${mapLegend()}<div class="laysw" role="group" aria-label="Map colour layer"><b>Layer</b>${sw}</div>${labelsBtn()}</div>${legend()}${tools}</div>`;
 }
