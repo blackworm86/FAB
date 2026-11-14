@@ -62,7 +62,7 @@ Golan and Sicily open with no area names and block faces too small to read (`gol
 
 ### 7. Results are flat and empty steps cost a press each (annoying)
 "Battle over" looks like any other roll and states the result up to three times. Supply, Strategic, Reaction and Breakthrough often show "nothing to do" and still need one press each; every roll needs a "continue".
-**Proposal:** one headline in the winner's colour ("Syrians hold Tel Saki") with the list under it. For empty steps, keep the press (your rule: nothing happens by itself) but let one button name the run: "Nothing to do in Strategic, Reaction, Breakthrough: go to Supply". **This one is your decision.**
+**Proposal:** one headline in the winner's colour ("Syrians hold Tel Saki") with the list under it. For empty steps, keep the press (your rule: nothing happens by itself) but let one button name the run: "Nothing to do in Strategic, Reaction, Breakthrough: go to Supply". **Owner, 14 November: yes, one button may pass a run of empty steps** (it names them; still one press, nothing by itself).
 
 ### 8. Messages cover the thing they are about (annoying)
 Pop-ups over panel buttons, the coach card over the panel it explains, the drop-zone panel over the drop zone. One missing rule: *a message never covers the control it is about*. Reasons belong in the bar, not in floating pop-ups.
@@ -98,4 +98,4 @@ Pop-ups over panel buttons, the coach card over the panel it explains, the drop-
 2. Problem 3: the instruction line built from what is possible (no new look, low risk).
 3. Problem 8: reasons into the bar, nothing covers its own control.
 4. Problem 4: the newcomer's start.
-5. Problems 5 and 6, then 7 after your decision, then the smaller things.
+5. Problems 5 and 6, then 7 (approved), then the smaller things.
