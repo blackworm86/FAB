@@ -6,7 +6,7 @@ import { esc, nm } from './util';
 import { btn } from './ui-kit';
 import { type Tgt } from './chit-play';
 import { $, areaName, LAB, MAP, MH, MW, S, toWorld, VOL } from './page';
-import { g, selArea, selUnit } from './game-state';
+import { areaPick, g, selArea, selUnit } from './game-state';
 import { board, cam, canvas, scene } from './scene';
 import { diorama, REL, setFocusOn, show3d } from './map3d';
 import { markers, overlays, pieces, table } from './piece-kit';
@@ -60,11 +60,27 @@ export function syncAreaTags() {
     tagEls.set(a.id, d);
   }
 }
+let namedKey = '',
+  named = new Set<number>();
+/** The areas the current instruction or main button names: the battles to fight, the retreat areas, the areas to pick. */
+function namedAreas() {
+  const k = `${g.turn}${g.phasing}${g.phase}${g.log.length}${g.battle?.stage}${areaPick ? [...areaPick.areas].join() : ''}`;
+  if (k !== namedKey) {
+    namedKey = k;
+    named = new Set([
+      ...(g.phase === 'combat' || g.phase === 'btCombat' ? E.mustFight(g) : []),
+      ...(g.battle?.stage === 'retreat' ? E.retreatOptions(g, g.battle) : []),
+      ...(areaPick ? areaPick.areas : []),
+    ]);
+  }
+  return named;
+}
 function placeAreaTags() {
   const layer = $('#tags');
   if (labelMode === 'off' || !tagEls.size) return;
-  layer.style.display = g.battle ? 'none' : '';
-  if (g.battle) return; // the battle has the screen
+  const inBattle = !!g.battle && g.battle.stage !== 'retreat'; // choosing where to retreat: the names are needed
+  layer.style.display = inBattle ? 'none' : '';
+  if (inBattle) return; // the battle has the screen
   const r = canvas.getBoundingClientRect(),
     v = new THREE.Vector3(),
     under = new Map<number, number>();
@@ -95,11 +111,13 @@ function placeAreaTags() {
     const sx = (v.x * 0.5 + 0.5) * r.width,
       by = under.get(id),
       sy = by != null ? by + 15 : (-v.y * 0.5 + 0.5) * r.height; // a busy area: just under its lowest piece
-    const hov = id === tagHover || id === selArea;
+    const hov = id === tagHover || id === selArea,
+      keep = far && !hov && (d.classList.contains('vp') || namedAreas().has(id)); // objectives and the areas the instruction names keep their name at every zoom (design review, problem 6)
     const pin = id === inView,
       px = pin ? Math.min(r.width - 90, Math.max(90, sx)) : sx,
       py = pin ? Math.min(r.height - 30, Math.max(30, sy)) : sy;
-    d.style.display = (v.z < 1 || pin) && (!far || hov || d.classList.contains('vp')) ? '' : 'none';
+    d.style.display = (v.z < 1 || pin) && (!far || hov || keep) ? '' : 'none';
+    d.classList.toggle('keep', keep);
     d.style.transform = `translate(${px.toFixed(1)}px, ${py.toFixed(1)}px) translate(-50%, -50%)`;
     d.classList.toggle('hov', hov);
   }

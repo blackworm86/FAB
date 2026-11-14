@@ -8,7 +8,8 @@ import { ico } from './icons';
 import { esc, nm } from './util';
 import { chatHtml, bindChat } from './chat';
 import { acts, actv, resetActs, reg, ubtn, btn } from './ui-kit';
-import { homeUrl, bindAuth } from './home';
+import { homeUrl, bindAuth, tutUrl } from './home';
+import { coursesOf } from './tutorial-list';
 import { clearDice } from './dice3d';
 import { linkRules } from './rules-link';
 import { LAB_SIDE, labStep } from './lab';
@@ -59,7 +60,7 @@ import { badgeList, drawRoute, setBadges, syncBadges } from './routes';
 import { barChoices, decisionBubble, decisionTargets, syncAreaTags, syncMoveMarks, syncTags } from './map-marks';
 import { endRoll, heldNext, menuTab, modal, rollStage, rollView, setModal } from './rolls';
 import { chitTargets, drag, lastPointer, setLastPointer, tapCard } from './cards';
-import { canMove, endArmed, guardEnd, guide, primary, prompt, setGuide, topBar } from './prompt';
+import { canMove, endArmed, guardEnd, guide, lessonDone, primary, prompt, setGuide, topBar } from './prompt';
 import { dockChips, undoBtn } from './dock';
 import { piecesSide, piecesTab, setInspectId, unitPic } from './pieces-window';
 import { dispatch, dragArrival, frameArrival } from './unit-card';
@@ -241,7 +242,7 @@ function renderInner() {
             },
           )}</div>`
         : ''
-    }${volPanel()}${mapDock()}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${SBU.hotCoverHtml()}${saPickHtml()}${altPickHtml()}${airPickHtml()}${chatHtml()}${
+    }${volPanel()}${mapDock()}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${SBU.hotCoverHtml()}${newcomerCard()}${saPickHtml()}${altPickHtml()}${airPickHtml()}${chatHtml()}${
       scoreOpen
         ? vpSheet(
             g,
@@ -284,7 +285,7 @@ function renderInner() {
               }),
           )
         : ''
-    }${toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}${passHtml()}<div class="c-bar b ${actor !== 'both' && !g.over ? `actor ${actor}` : ''}"><div class="c-prompt" aria-live="polite">${actor !== 'both' && !g.over ? `<span class="whotag">${esc(nm(actor))} decides</span> ` : ''}${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}</button>${undoBtn()}${chs.length ? chs.map((c, i) => btn(`<span>${esc(c.label)}<small>${esc(c.sub)}</small></span>`, c.fn, `go choice ${i ? 'alt' : ''}`, false, c.title)).join('') : !p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go ${g.moving && p.label.startsWith('End') ? 'quiet' : ''}" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` +
+    }${toast && (modal || TUT) ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}${passHtml()}<div class="c-bar b ${actor !== 'both' && !g.over ? `actor ${actor}` : ''}"><div class="c-prompt" aria-live="polite">${toast && !modal && !TUT ? `<span class="toast barmsg${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</span>` : ''}${actor !== 'both' && !g.over ? `<span class="whotag">${esc(nm(actor))} decides</span> ` : ''}${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}<span class="gl">Explain: <b>${guide}</b></span></button>${undoBtn()}${chs.length ? chs.map((c, i) => btn(`<span>${esc(c.label)}<small>${esc(c.sub)}</small></span>`, c.fn, `go choice ${i ? 'alt' : ''}`, false, c.title)).join('') : !p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go ${g.moving && p.label.startsWith('End') ? 'quiet' : ''}" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` +
     modalHtml();
   const ui = $('#ui');
   {
@@ -329,7 +330,8 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
         lw = cs[0]?.offsetWidth ?? 0,
         cw = cs[0]?.getBoundingClientRect().width ?? 0, // as drawn: scaled and tilted
         avail = h.clientWidth - 24,
-        step = n > 1 ? Math.min(lw, Math.max(innerWidth < 900 ? 46 : 40, (avail - cw) / (n - 1))) : lw,
+        fit = n > 1 ? (avail - cw) / (n - 1) : lw,
+        step = n > 1 ? (innerWidth < 700 && fit < 46 ? lw + 6 : Math.min(lw, Math.max(innerWidth < 900 ? 46 : 40, fit))) : lw, // a phone hand that cannot fit scrolls as whole cards (design review, problem 5)
         over = cw + (n - 1) * step > avail;
       if (n > 1 && lw) {
         h.style.setProperty('--ov', `${Math.round(lw - step)}px`);
@@ -529,6 +531,32 @@ function driveSplit() {
 export let ctlKey = '',
   tgtKey = '';
 export const setTgtKey = <T extends typeof tgtKey>(v: T): T => ((tgtKey = v), v);
+/** A first table with no lesson finished: one card offers the lesson of this game, or to just play (design review, problem 4). Shown once. */
+function newcomerCard() {
+  if (TUT || SANDBOX || g.over || lessonDone()) return '';
+  try {
+    if (localStorage.getItem('fab-newcomer')) return '';
+  } catch {
+    return '';
+  }
+  const c = coursesOf(VOL.id)[0];
+  if (!c) return '';
+  const seen = () => {
+    try {
+      localStorage.setItem('fab-newcomer', '1');
+    } catch {
+      /* private mode */
+    }
+  };
+  return `<div class="newcard" role="dialog" aria-label="New to FAB?"><b>New to FAB?</b><span>${esc(c.title)} · about ${c.minutes} minutes, on this map.</span><div class="row">${ubtn(
+    'Start the lesson',
+    () => {
+      seen();
+      location.href = tutUrl(c.id);
+    },
+    'primary',
+  )}${ubtn('Just play', seen)}</div></div>`;
+}
 /** The side that must act now, and the side the device is to be passed to (until the first tap anywhere). */
 let lastActor: string | null = null,
   passTo: E.Side | null = null;

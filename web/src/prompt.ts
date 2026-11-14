@@ -141,10 +141,20 @@ export function prompt() {
       : '')
   );
 }
+/** Has this browser finished at least one lesson of any course? */
+export const lessonDone = () => {
+  try {
+    return Object.keys(localStorage).some((k) => /^fab-tut:.*:done$/.test(k) && !!localStorage.getItem(k));
+  } catch {
+    return true;
+  }
+};
 /** Explanations: full for learning, short for experienced players (Menu > Settings, or the guide button in the bottom bar). `gx` = explanation only, `gs` = short form only. */
 export let guide: 'full' | 'short' = (() => {
   try {
-    return localStorage.getItem('fab-guide') === 'full' ? 'full' : 'short';
+    const v = localStorage.getItem('fab-guide');
+    if (v === 'full' || v === 'short') return v; // the player's own choice
+    return lessonDone() ? 'short' : 'full'; // a newcomer gets the full explanations until a lesson is finished (design review, problem 4)
   } catch {
     return 'short';
   }
