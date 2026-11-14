@@ -4,7 +4,8 @@
    "figure": [
     "sicily_us_armor_0.glb"
    ],
-   "veicolo": true
+   "veicolo": true,
+   "lunghezza": 5.9
   },
   "sicily_us_inf": {
    "figure": [
@@ -34,13 +35,15 @@
    "figure": [
     "sicily_british_armor_0.glb"
    ],
-   "veicolo": true
+   "veicolo": true,
+   "lunghezza": 5.9
   },
   "sicily_italian_motorized_inf": {
    "figure": [
     "sicily_italian_motorized_inf_0.glb"
    ],
-   "veicolo": true
+   "veicolo": true,
+   "lunghezza": 6.2
   },
   "sicily_italian_mountain_inf": {
    "figure": [
@@ -64,7 +67,8 @@
    "figure": [
     "sicily_german_mech_0.glb"
    ],
-   "veicolo": true
+   "veicolo": true,
+   "lunghezza": 5.92
   }
  },
  "blocchi": {

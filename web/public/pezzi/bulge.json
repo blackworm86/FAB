@@ -4,13 +4,15 @@
    "figure": [
     "bulge_german_armor_0.glb"
    ],
-   "veicolo": true
+   "veicolo": true,
+   "lunghezza": 6.87
   },
   "bulge_german_mech": {
    "figure": [
     "bulge_german_mech_0.glb"
    ],
-   "veicolo": true
+   "veicolo": true,
+   "lunghezza": 5.98
   },
   "bulge_german_inf": {
    "figure": [
@@ -40,19 +42,37 @@
    "figure": [
     "bulge_us_cavalry_0.glb"
    ],
-   "veicolo": true
+   "veicolo": true,
+   "lunghezza": 5.0
   },
   "bulge_us_armor": {
    "figure": [
     "bulge_us_armor_0.glb"
    ],
-   "veicolo": true
+   "veicolo": true,
+   "lunghezza": 5.9
   },
   "bulge_us_airborne": {
    "figure": [
     "bulge_us_airborne_0.glb"
    ],
    "veicolo": false
+  },
+  "bulge_british_inf": {
+   "figure": [
+    "bulge_british_inf_0.glb",
+    "bulge_british_inf_1.glb",
+    "bulge_british_inf_2.glb"
+   ],
+   "veicolo": false
+  },
+  "bulge_british_armor": {
+   "figure": [
+    "bulge_british_armor_0.glb",
+    "bulge_british_armor_1.glb"
+   ],
+   "veicolo": true,
+   "lunghezza": 5.9
   }
  },
  "blocchi": {
@@ -124,6 +144,10 @@
   "B69": "bulge_us_armor",
   "B51": "bulge_us_airborne",
   "B52": "bulge_us_airborne",
-  "B54": "bulge_us_airborne"
+  "B54": "bulge_us_airborne",
+  "B67": "bulge_british_inf",
+  "B68": "bulge_british_inf",
+  "B73": "bulge_british_inf",
+  "B72": "bulge_british_armor"
  }
 }
