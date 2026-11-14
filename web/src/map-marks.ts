@@ -357,6 +357,8 @@ export function decisionBubble(): string {
   const fw = g.log.slice(-4).some((l) => / field works absorb 1 hit$/.test(l)); // the ledger shows the hits rolled; field works took one before the choice
   return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b>${fw ? `<span class="fwnote">${b.pending + 1} rolled − 1 absorbed by field works</span>` : ''}${hint}</div>`;
 }
+/** A retreat destination by name: an area, or the sea (Sicily 14.28). */
+export const retName = (a: number) => (a === E.SEA ? 'sea' : areaName(a));
 /** The big choice of a battle step (take the hits or abort / retreat): the bar shows these as its buttons when the main button has nothing to do. */
 export function barChoices(): { label: string; sub: string; title: string; fn: () => void }[] {
   const b = g.battle;
@@ -382,9 +384,9 @@ export function barChoices(): { label: string; sub: string; title: string; fn: (
     const o = E.retreatOptions(g, b);
     return o.length && o.length <= 2
       ? o.map((a) => ({
-          label: `Retreat to ${areaName(a)}`,
+          label: `Retreat to ${retName(a)}`,
           sub: '',
-          title: `Retreat to ${areaName(a)}`,
+          title: `Retreat to ${retName(a)}`,
           fn: () => E.chooseRetreat(g, g.battle!, a),
         }))
       : []; // more than two: the lit areas on the map are the choice
@@ -401,7 +403,14 @@ export function barChoices(): { label: string; sub: string; title: string; fn: (
         t.battle?.stage === 'retreat'
           ? E.retreatOptions(t, t.battle)
           : [...new Set(t.units.filter((u) => ids.includes(u.id) && u.area != null && u.area !== b.area).map((u) => u.area!))];
-      where = o.length === 1 ? ` · to ${areaName(o[0])}` : o.length ? ` · ${o.length} areas to choose` : '';
+      const stuck = E.retreatBlocked(g, b); // 6.6: a unit with nowhere to go loses a step instead; Retreat stays a legal choice
+      where = stuck.length
+        ? ` · no retreat area: ${stuck.map((u) => u.name).join(', ')} lose${stuck.length > 1 ? '' : 's'} a step instead`
+        : o.length === 1
+          ? ` · to ${retName(o[0])}`
+          : o.length
+            ? ` · ${o.length} areas to choose`
+            : '';
     } catch {
       /* the engine says why when it is pressed */
     }

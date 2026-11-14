@@ -196,7 +196,7 @@ function promptText() {
   if (g.pendingBlow) return `<b>${nm(other(g.units.find((x) => x.id === g.pendingBlow!.unit)!.side))}</b>: attempt to blow the bridge?`;
   if (b?.stage === 'retreat') {
     const o = E.retreatOptions(g, b);
-    return `<b>Choose the retreat area:</b> ${o.length} lit on the map${o.length <= 2 ? ', or use the buttons' : ''}.${gx(' The blocks go to the nearest friendly area with room (6.6).')}`;
+    return `<b>Choose the retreat area:</b> ${o.length <= 3 ? o.map((a) => esc(a === E.SEA ? 'the sea' : areaName(a))).join(' or ') : `${o.length} areas`}, lit on the map.${gx(' The blocks go to the nearest friendly area with room (6.6).')}`;
   }
   if (b && b.stage === 'setup' && b.attPointDone) return '<b>Point units designated.</b> Blocks are revealed…';
   if (b)
