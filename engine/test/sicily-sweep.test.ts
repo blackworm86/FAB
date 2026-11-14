@@ -161,4 +161,65 @@ describe('Sicily asset and event sweep', () => {
     nav.box = 'available';
     expect(E.canAssign(g, b, 'allied', nav) ?? '').not.toMatch(/9\.34a/);
   });
+  it('14.51 (owner: the rulebook): a port may be damaged while its area is contested', () => {
+    const g = newSicilyGame(21);
+    clear(g, 57);
+    unit(g, 'IT05').area = 57;
+    unit(g, 'US03').area = 57;
+    g.control[57] = 'axis';
+    g.phase = 'admin';
+    g.phasing = 'axis';
+    g.done = [];
+    E.chit(g, 'ITC06').box = 'available';
+    expect(E.contested(g, 57)).toBe(true);
+    S.portWork(g, 'ITC06', 'P3');
+    expect(S.state(g).portDamage.P3).toBeGreaterThan(0);
+  });
+  it('16.33 (owner: the rulebook): both sides may interdict the same area, and each slows only the enemy', () => {
+    const g = newSicilyGame(22);
+    g.phase = 'admin';
+    g.phasing = 'allied';
+    g.done = [];
+    S.airInterdiction(g, air(g, 'allied'), 21);
+    g.done = ['allied'];
+    S.airInterdiction(g, air(g, 'axis'), 21);
+    expect(g.chits.filter((c) => c.mission === 'interdiction' && c.area === 21).length).toBe(2);
+  });
+  it('16.34 (owner: the rulebook): several Air Supply missions, one area each', () => {
+    const g = newSicilyGame(23);
+    for (const [id, a] of [
+      ['US03', 30],
+      ['US04', 28],
+    ] as const) {
+      clear(g, a);
+      Object.assign(unit(g, id), { area: a, unsupplied: true, disorder: 0 });
+      g.control[a] = 'allied';
+    }
+    g.phase = 'supply';
+    g.phasing = 'allied';
+    S.airSupply(g, air(g, 'allied'), 30);
+    S.airSupply(g, air(g, 'allied', 1), 28);
+    expect(E.airSup(g).length).toBe(2);
+    S.dogfightAirSupply(g, air(g, 'axis'), 28);
+    expect(E.airSup(g).map((m) => m.area)).toEqual([30]);
+  });
+  it('6.22 (owner: the rulebook): with US and British units together air support fires only as artillery', () => {
+    const g = newSicilyGame(24);
+    clear(g, 19);
+    clear(g, 20);
+    unit(g, 'US03').area = 19;
+    unit(g, 'BR03').area = 19;
+    unit(g, 'IT05').area = 19;
+    unit(g, 'IT05').untried = false;
+    g.control[19] = 'axis';
+    g.phase = 'combat';
+    g.phasing = 'allied';
+    g.contestedAtMoveStart = [19];
+    g.fought = [];
+    const b = E.startBattle(g, 19);
+    if (b.defSA) E.passSA(g, b);
+    const id = air(g, 'allied');
+    expect(E.canAssign(g, b, 'allied', E.chit(g, id), 'support')).toMatch(/6\.22/);
+    expect(E.canAssign(g, b, 'allied', E.chit(g, id), 'arty')).toBeNull();
+  });
 });

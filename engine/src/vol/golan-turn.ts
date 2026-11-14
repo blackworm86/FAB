@@ -102,18 +102,21 @@ export function onPhase(g: Game, phase: string, when: 'start' | 'mid' | 'end') {
   if (phase === 'supply' && when === 'end' && g.phasing === 'israeli' && !isNafakh(g) && !isAlOwda(g) && jordanCrossed(g))
     g.over = 'Syrian Automatic Victory: a supplied Syrian unit west of the Jordan (19.5)';
 }
-/** The Reinforcement Phase's Golan extras: the SAM barrier reduction (16.12) and the units released into the Arriving box. */
+/** 16.12: the SAM barrier reduction, at step 4.1b, after the 4.1a recovery and just before the Used Box goes to the cup. */
+export function samReduction(g: Game, side: Side) {
+  if (side !== 'syrian') return false;
+  const sams = g.chits.filter((c) => c.kind === 'sam' && c.box === 'used'),
+    rolls = sams.map(() => rollDie(g));
+  if (rolls.some((r) => r >= 6)) {
+    sams[0].box = 'eliminated';
+    samEliminated(g);
+    say(g, `SAM reduction rolls ${rolls.join(', ')}: one SAM asset is eliminated (16.12)`, side);
+  }
+  return false;
+}
+/** The Reinforcement Phase's Golan extras: the units released into the Arriving box. */
 export function reinforce(g: Game, side: Side) {
   if (side === 'israeli') alowdaDraw(g);
-  if (side === 'syrian') {
-    const sams = g.chits.filter((c) => c.kind === 'sam' && c.box === 'used'),
-      rolls = sams.map(() => rollDie(g));
-    if (rolls.some((r) => r >= 6)) {
-      sams[0].box = 'eliminated';
-      samEliminated(g);
-      say(g, `SAM reduction rolls ${rolls.join(', ')}: one SAM asset is eliminated (16.12)`, side);
-    }
-  }
   for (const u of g.units)
     if (u.side === side && u.box === 'arriving') {
       u.box = undefined;

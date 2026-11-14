@@ -292,7 +292,7 @@ export function swapStrongpointIntoAttack(g: Game) {
 export const keepAssigned = (_g: Game, b: Battle, c: Chit) => battleState(b).spSwap === c.id;
 export function evacuateStrongpoint(g: Game, a: number) {
   const sp = unitsIn(g, a, 'israeli').find((u) => u.fort);
-  if (!sp || !unitsIn(g, a, 'syrian').some(regular) || unitsIn(g, a, 'israeli').some(regular)) return;
+  if (!sp || !unitsIn(g, a, 'syrian').some(regular)) return; // 15.6: evacuated as soon as a regular unit leaves or retreats from the contested area
   sp.area = null;
   sp.box = 'evacuated';
   const tf = g.chits.find(

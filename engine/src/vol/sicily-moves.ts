@@ -92,10 +92,9 @@ export function playArmyRelease(g: Game, chitId: string) {
 }
 
 /* ================= movement (14.1, 14.24-14.26, 14.29, 14.4, 15.1, 15.3, 16.33, 17.12) ================= */
-const interdictedBy = (g: Game, a: number): Side | undefined => {
-  const id = g.interdicted[a];
-  return id ? chit(g, id).side : undefined;
-};
+/** 16.33: an interdiction mission of `side` over the area (the missions are the air chits on the map; both sides may interdict one area). */
+const interdictedBy = (g: Game, a: number, side: Side) =>
+  g.chits.some((c) => c.mission === 'interdiction' && c.box === 'map' && c.area === a && c.side === side);
 export const etnaFree = (g: Game): SSide | undefined => (contested(g, ETNA) ? undefined : (g.control[ETNA] as SSide | undefined));
 function moveCtx(g: Game): SMoveCtx {
   const count = (a: number): Record<SSide, number> => ({ allied: unitsIn(g, a, 'allied').length, axis: unitsIn(g, a, 'axis').length });
@@ -103,7 +102,7 @@ function moveCtx(g: Game): SMoveCtx {
     units: count,
     controller: (a) => g.control[a] as SSide | undefined,
     blownBridges: new Set(g.blown),
-    interdicted: (a) => interdictedBy(g, a) as SSide | undefined,
+    interdicted: (a, by) => interdictedBy(g, a, by),
     untriedOnly: (a) => unitsIn(g, a).length > 0 && unitsIn(g, a).every((u) => u.untried),
     etnaFree: etnaFree(g),
     etnaCtl: g.control[ETNA] as SSide | undefined,
@@ -227,14 +226,14 @@ export function stratAllowed(g: Game, u: Unit) {
     k = army(nation(u));
   if (isLandingBox(u.area!)) return false;
   if (isPortBox(u.area!) && contested(g, BOX.get(u.area!)!.area)) return false; // 14.24c
-  if (interdictedBy(g, u.area!) === other(u.side)) return false;
+  if (interdictedBy(g, u.area!, other(u.side))) return false;
   return (V.strat[k] ?? 0) < 1;
 }
 export function stratStep(g: Game, u: Unit, a: number, n: number): boolean | 'end' {
   const c = connection(a, n)!;
   if (isBox(n) || c.restricted) return false;
   if (!zoneOk(g, u, n)) return false; // 14.82: only released units cross their army boundaries
-  if (interdictedBy(g, n) === other(u.side)) return false; // 16.33
+  if (interdictedBy(g, n, other(u.side))) return false; // 16.33
   return true;
 }
 export function afterStrat(g: Game, u: Unit) {

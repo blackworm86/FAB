@@ -206,6 +206,7 @@ export function finishRecon(g: Game, c: Chit) {
 export function placeRaid(g: Game, chitId: string, a: number) {
   needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['commando']);
+  need(g.phasing === 'syrian', 'a commando raid is made in the Syrian Admin Phase (16.11a, 4.2b)');
   need(
     !isAssembly(a) && g.control[a] === 'israeli' && vacant(g, a) && neighbors(a).some((n) => blocks(g, n, 'syrian').some(regular)),
     'a vacant Israeli-controlled area next to a Syrian-occupied area',
@@ -496,7 +497,7 @@ export function answerJamming(g: Game, b: Battle, counterChitId?: string) {
   }
   for (const u of fighters(g, b.area, def, false).filter((x) => !x.garrison)) {
     const die = rollDie(g),
-      mod = counterChitId ? 2 : 0,
+      mod = counterChitId && !u.unsupplied ? 2 : 0, // 9.34d: a friendly event does not help unsupplied units
       hit = die + mod <= 5;
     b.rolls.push({ who: `${u.name}: jamming`, sn: 5, dice: [die + mod], hits: hit ? 1 : 0, kind: 'morale' });
     if (hit) u.disorder = 1;
