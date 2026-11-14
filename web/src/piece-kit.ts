@@ -3,10 +3,10 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import * as E from '../../engine/src';
 import { TUTORIAL } from './online';
-import { loadTroops, setZoom } from './troops';
+import { loadTroops, setStudio, setZoom } from './troops';
 import { MAP, MH, MW, S, VOL } from './page';
 import { g } from './game-state';
-import { cam, canvas, scene } from './scene';
+import { cam, canvas, renderer, scene } from './scene';
 import { areaWorld, battleFig, lastInput, refresh, setLastInput, unitR, viewRot } from './main';
 
 export const table = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({ color: 0x3b2a1d, roughness: 1 }));
@@ -96,6 +96,7 @@ export function wantTroops() {
   if (!troopsOn || TUTORIAL || !FIG_VOLS.includes(VOL.id)) return false;
   if (!troopsAsked) {
     troopsAsked = true;
+    setStudio(renderer);
     void loadTroops(VOL.id)
       .then((ok) => {
         troopsReady = ok;
