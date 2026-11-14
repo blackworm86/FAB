@@ -285,7 +285,7 @@ export const setRollNoted = <T extends typeof rollNoted>(v: T): T => ((rollNoted
 export function noteFx(a: ReturnType<typeof snap>, x: E.Game, fresh?: boolean) {
   const d = diffFx(a, x);
   if (!d.length) return;
-  battleFx.push(...d);
+  battleFx.push(...d.filter((f) => !battleFx.some((o) => o.head === f.head && o.text === f.text && o.unit === f.unit))); // the battle summary names each effect once
   if (fresh) {
     rollFx = d;
     pendingFx = d;

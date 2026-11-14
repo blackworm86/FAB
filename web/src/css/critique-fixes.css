@@ -28,7 +28,7 @@
 @media (max-width: 700px) {
   .mapbubble .fwnote {
     white-space: normal;
-    max-width: 120px;
+    max-width: 230px;
     line-height: 1.2;
   }
   /* no shortcut chips: one row, the explanations button beside the main button, no empty lane */

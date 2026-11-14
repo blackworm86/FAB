@@ -266,6 +266,7 @@ function placeBubbles() {
       cy = pts.reduce((t, p) => t + p.y, 0) / pts.length,
       w = e.offsetWidth || 160,
       h = e.offsetHeight || 44;
+    const top = Math.max(60, (document.querySelector('#ui .c-table')?.getBoundingClientRect().bottom ?? 0) - r.top + 8); // never over the battle header
     const fitsR = maxX + 28 + w < r.width - 8,
       fitsL = minX - 28 - w > 8,
       below = !fitsR && !fitsL,
@@ -277,10 +278,10 @@ function placeBubbles() {
           ? Math.min(r.width - w - 8, maxX + 28)
           : Math.max(8, minX - 28 - w),
       y = below
-        ? ((floor) => (maxY + 18 + h <= floor ? maxY + 18 : Math.max(60, Math.min(floor - h, Math.min(...pts.map((p) => p.y)) - h - 18))))(
+        ? ((floor) => (maxY + 18 + h <= floor ? maxY + 18 : Math.max(top, Math.min(floor - h, Math.min(...pts.map((p) => p.y)) - h - 18))))(
             Math.min(r.height - 70, (document.querySelector('#ui .c-ledger')?.getBoundingClientRect().top ?? 1e9) - r.top - 8),
           )
-        : Math.min(r.height - h - 70, Math.max(60, cy - h / 2));
+        : Math.min(r.height - h - 70, Math.max(top, cy - h / 2));
     const pr = (e.offsetParent as HTMLElement | null)?.getBoundingClientRect() ?? r;
     e.style.transform = `translate(${x + r.left - pr.left}px, ${y + r.top - pr.top}px)`; // the bubble lives in the stage, the lines over the canvas
     const tg = (e.dataset.tg ?? '')

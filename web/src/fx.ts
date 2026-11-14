@@ -122,12 +122,12 @@ export class FxLayer {
       layer.prepend(this.svg);
     }
     let lines = '';
-    const used: { x: number; y: number; w: number; h: number }[] = Array.from(document.querySelectorAll<HTMLElement>('.mapbubble')).map(
-      (b) => {
-        const r = b.getBoundingClientRect();
-        return { x: r.left - 6, y: r.top - 6, w: r.width + 12, h: r.height + 12 };
-      },
-    ); // never over a choice bubble
+    const used: { x: number; y: number; w: number; h: number }[] = Array.from(
+      document.querySelectorAll<HTMLElement>('.mapbubble, .c-ledger, .c-table'),
+    ).map((b) => {
+      const r = b.getBoundingClientRect();
+      return { x: r.left - 6, y: r.top - 6, w: r.width + 12, h: r.height + 12 };
+    }); // never over a choice bubble or the battle panel
     for (let i = this.els.length - 1; i >= 0; i--) {
       const f = this.els[i];
       if (now - f.born > 9000) {
@@ -141,17 +141,22 @@ export class FxLayer {
       if (!show) continue;
       const w = f.el.offsetWidth || 150,
         h = f.el.offsetHeight || 40,
-        dir = p.x >= p.cx ? 1 : -1;
-      let x = dir > 0 ? p.x + p.rad + 34 : p.x - p.rad - 34 - w,
-        y = p.y - h / 2 - 26;
-      x = Math.max(6, Math.min(innerWidth - w - 6, x));
-      const hit = (yy: number) => used.some((u) => x < u.x + u.w && x + w > u.x && yy < u.y + u.h + 4 && yy + h + 4 > u.y),
-        y0 = y;
-      while (hit(y) && y < innerHeight - h - 90) y += h + 6; // stacked, never on top of each other or of a choice bubble
-      if (hit(y)) {
+        y0 = p.y - h / 2 - 26;
+      let dir = p.x >= p.cx ? 1 : -1,
+        x = 0,
         y = y0;
-        while (hit(y) && y > 60) y -= h + 6;
-      } // no room below: look above
+      const hit = (yy: number) => used.some((u) => x < u.x + u.w && x + w > u.x && yy < u.y + u.h + 4 && yy + h + 4 > u.y);
+      for (const d of [dir, -dir]) {
+        dir = d;
+        x = Math.max(6, Math.min(innerWidth - w - 6, dir > 0 ? p.x + p.rad + 34 : p.x - p.rad - 34 - w));
+        y = y0;
+        while (hit(y) && y < innerHeight - h - 90) y += h + 6; // stacked, never on top of each other, a choice bubble or the battle panel
+        if (hit(y)) {
+          y = y0;
+          while (hit(y) && y > 60) y -= h + 6;
+        } // no room below: look above
+        if (!hit(y)) break;
+      } // no room on this side: the other side of the block
       used.push({ x, y, w, h });
       f.el.style.transform = `translate(${x}px, ${y}px)`;
       const bx = dir > 0 ? x : x + w,
