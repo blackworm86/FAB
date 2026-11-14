@@ -36,6 +36,7 @@ import {
   toast,
   toastInfo,
   undo,
+  setupSide,
 } from './flow';
 import {
   airPickHtml,
@@ -504,7 +505,7 @@ export let lastFight: number | null = null;
 export const setLastFight = <T extends typeof lastFight>(v: T): T => ((lastFight = v), v);
 export function refresh() {
   {
-    const ph = `${g.turn}${g.phasing}${g.phase}`;
+    const ph = `${g.turn}${g.phasing}${g.phase}${g.phase === 'deploy' ? setupSide() + VOL.pendingPlace(g).some((id) => VOL.placeOptions(g, id).length) : ''}`; // a set-up step that opens new places (Sicily: the beachheads once the plan is chosen) is a new step
     if (ph !== lastPhase) {
       const was = lastPhase;
       setLastPhase(ph);

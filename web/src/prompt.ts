@@ -25,6 +25,8 @@ import {
   PHASE_OF,
   PHASES,
   placing,
+  setupSide,
+  deployBlock,
   say,
   setBattleFx,
   setRollFx,
@@ -73,7 +75,7 @@ export function topBar(vp = '') {
     i = first(g.phasing) ? 0 : 1,
     pAt = PHASE_OF[g.phase],
     phaseLabel = g.phase === 'deploy' ? 'Set-up' : PHASES[pAt];
-  const who = g.phase === 'deploy' && !placing(g.phasing) && placing(other(g.phasing)) ? other(g.phasing) : g.phasing; // set-up: the side placing its pieces now (Sicily: the Allied landing plan after the Axis garrisons)
+  const who = setupSide();
   return `<div class="c-bar t"><button class="ico" data-modal="menu" title="Menu, log and new game" aria-label="Menu, log and new game">${ico('menu')}</button>${phasePill(who, pAt, phaseLabel)}
     ${vp}<div class="c-stat">${online.active && online.mode === 'remote' ? `<span class="syncdot ${/NOT SAVED/.test(online.sync) ? 'bad' : /saving|connecting/.test(online.sync) ? 'wait' : 'ok'}" title="${esc(online.sync)}" aria-label="${esc(online.sync)}"></span>` : ''}${online.active && !(!online.both() && online.mySide() === g.phasing) ? `<span>YOU<b class="${online.mySide() ?? ''}">${online.both() ? 'BOTH' : (online.mySide() ?? 'WATCHING').toUpperCase()}</b></span>` : ''}${online.devSwitch() ? `<button class="ico dev" data-seat title="Developer: switch seat (${nm(P1)}, ${nm(P2)}, both, watching)" aria-label="Switch seat">${ico('swap')}<span class="bl">Seat</span></button>` : ''}${(g.phase === 'admin' || g.phase === 'reinforcement') && (tr.ge[i] || tr.al[i]) ? `<span title="Chits each side draws this turn (${nm(P1)} / ${nm(P2)})">CHITS<b>${tr.ge[i]}/${tr.al[i]}</b></span>` : ''}${chatBtn()}<button class="ico ${tint !== 'off' ? 'on' : ''}" data-tint title="View: 2D or 3D, blocks or figures, reset the camera" aria-label="View">${ico('eye')}<span class="bl">View</span></button><button class="ico" data-modal="boxes" title="Pieces: boxes, arrivals" aria-label="Pieces">${ico('boxes')}<span class="bl">Pieces</span></button></div></div>`;
 }
@@ -153,16 +155,16 @@ function promptText() {
   const m = E.mustFight(g).length;
   switch (g.phase) {
     case 'deploy': {
-      const n = VOL.pendingPlace(g).filter((id) => {
-        const u = g.units.find((x) => x.id === id)!;
-        return mine(u.side) && u.side === g.phasing;
-      }).length;
+      const ids = VOL.pendingPlace(g).filter((id) => {
+          const u = g.units.find((x) => x.id === id)!;
+          return mine(u.side) && u.side === setupSide();
+        }),
+        n = ids.length;
       return n
-        ? `<b>Set-up:</b> drag a block from the tray to a lit area, or use the panel.` /* the count is on the main button */
-        : ((p) =>
-            p && !p.dis
-              ? `<b>Set-up done:</b> press <b>${esc(p.label)}</b>.`
-              : '<b>Set-up:</b> finish the steps in the panel on the map, then end the set-up.')(primary());
+        ? ids.some((id) => VOL.placeOptions(g, id).length)
+          ? `<b>Set-up:</b> drag a block from the tray to a lit area, or use the panel.` /* the count is on the main button */
+          : '<b>Set-up:</b> first make the choice in the panel on the map, then place the blocks.' /* Sicily: the landing plan before the invasion units */
+        : ((w) => (w ? `<b>Not yet:</b> ${esc(w)}.` : `<b>Set-up done:</b> press <b>${esc(endLabel())}</b>.`))(deployBlock());
     }
     case 'reinforcement':
       return '<b>Pick a new block</b>, then a lit entry area.';
@@ -376,7 +378,7 @@ export function primary(): { label: string; fn: () => void; dis?: boolean } | nu
       !!g.recover.length ||
       !!g.artyPick ||
       (g.phase === 'supply' && !!g.supplyPending) ||
-      (g.phase === 'deploy' && VOL.pendingPlace(g).some((id) => mine(g.units.find((u) => u.id === id)!.side))),
+      (g.phase === 'deploy' && (VOL.pendingPlace(g).some((id) => mine(g.units.find((u) => u.id === id)!.side)) || !!deployBlock())),
   };
 }
 /* ---------- the actions dock: shortcuts with counts, labelled undo ---------- */

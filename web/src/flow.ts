@@ -163,6 +163,17 @@ export const dropsLeft = () =>
   VOL.id === 'sicily' && g.phase === 'combat' && !g.battle && (g.vol as { dropPending?: boolean } | undefined)?.dropPending
     ? g.units.filter((u) => u.box === 'airborne_assault' && u.side === g.phasing).length
     : 0;
+/** Why the set-up cannot end yet, in the engine's own words (Golan: minefields still to lay), or null. */
+export const deployBlock = () => {
+  if (g.phase !== 'deploy') return null;
+  try {
+    E.endPhase(structuredClone(g));
+    return null;
+  } catch (e) {
+    const m = (e as Error).message;
+    return m ? m[0].toUpperCase() + m.slice(1) : null;
+  }
+};
 export const endLabel = () =>
   dropsLeft()
     ? 'Drop the airborne first'
@@ -170,8 +181,8 @@ export const endLabel = () =>
       ? 'End reinforcement'
       : g.phase === 'deploy'
         ? ((left) => {
-            const n = left.filter((u) => u.side === g.phasing).length;
-            return n ? `Place ${n} more first` : left.length ? 'Finish the panel first' : 'End set-up';
+            const n = left.filter((u) => u.side === setupSide()).length;
+            return n ? `Place ${n} more first` : left.length || deployBlock() ? 'Finish the panel first' : 'End set-up';
           })(
             VOL.pendingPlace(g)
               .map((id) => g.units.find((x) => x.id === id)!)
@@ -255,6 +266,8 @@ export const placing = (s: E.Side) =>
       (E.golan.setupReserves(g, s).all && E.golan.reservesLeft(g, s) > 0) ||
       (s === 'syrian' && E.golan.alowdaRaidAreas(g).length > 0))) ||
   (g.game === 'sicily' && s === 'allied' && !E.sicily.state(g).plan);
+/** The side placing its pieces in the set-up now (Sicily: the Allies land after the Axis garrisons, while the Axis stays the phasing side). */
+export const setupSide = () => (g.phase === 'deploy' && !placing(g.phasing) && placing(other(g.phasing)) ? other(g.phasing) : g.phasing);
 export let labActing = false; // the experimental computer's own action (lab.ts)
 export const setLabActing = <T extends typeof labActing>(v: T): T => ((labActing = v), v);
 /** Your own roll is on the table (rolls.ts tells): against the computer you may always clear it, even when the next step is the computer's. */

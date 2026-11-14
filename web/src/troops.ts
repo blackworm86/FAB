@@ -4,6 +4,40 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+
+let studio: THREE.Texture | null = null;
+/** The figures' look: painted plastic toy soldiers. A soft studio light reflected on them (only on figures: the board keeps its look),
+ * a satin clear coat, no metal. The decoy (ghost) is the same model as a pale see-through glass piece. */
+export function toyMaterial(map: THREE.Texture | null, ghost = false) {
+  const m = new THREE.MeshPhysicalMaterial({
+    map,
+    roughness: 0.55,
+    metalness: 0,
+    clearcoat: 0.45,
+    clearcoatRoughness: 0.35,
+    envMap: studio,
+    envMapIntensity: 0.55,
+    side: THREE.DoubleSide,
+  });
+  if (ghost)
+    Object.assign(m, {
+      color: new THREE.Color(0xcfe6ff),
+      transparent: true,
+      opacity: 0.38,
+      depthWrite: false,
+      emissive: new THREE.Color(0x6aa8ff),
+      emissiveIntensity: 0.25,
+    });
+  return m;
+}
+/** Builds the studio light once (needs the renderer); call before loadTroops. */
+export function setStudio(r: THREE.WebGLRenderer) {
+  if (studio) return;
+  const pm = new THREE.PMREMGenerator(r);
+  studio = pm.fromScene(new RoomEnvironment(), 0.04).texture;
+  pm.dispose();
+}
 
 export type Troop = { figs: THREE.Object3D[]; size: THREE.Vector3 };
 type Index = { tipi: Record<string, { figure: string[]; veicolo: boolean; lunghezza?: number }>; blocchi: Record<string, string> };
@@ -45,8 +79,12 @@ export async function loadTroops(vol: string, base = './'): Promise<boolean> {
               if (m.isMesh) {
                 o.castShadow = true;
                 o.userData.shared = true;
-                for (const mt of ([] as THREE.Material[]).concat(m.material)) mt.side = THREE.DoubleSide;
-                m.geometry = toCreasedNormals(m.geometry, THREE.MathUtils.degToRad(50));
+                const old = ([] as THREE.Material[]).concat(m.material)[0] as THREE.MeshStandardMaterial;
+                m.material = toyMaterial(old.map ?? null, tipo.endsWith('_ghost'));
+                if (old.vertexColors) (m.material as THREE.MeshPhysicalMaterial).vertexColors = true;
+                old.dispose();
+                if (tipo.endsWith('_ghost')) o.castShadow = false;
+                m.geometry = toCreasedNormals(m.geometry, THREE.MathUtils.degToRad(70));
               }
             }); // the files carry no normals, so every triangle was shaded flat (visible polygon edges): smooth shading, with a crease where the surface turns more than 50°   // double-sided: a hole left in a model shows its back, not the ground   // shared by every copy: never disposed with the board
             // a vehicle is sized by its real hull length (Meshy draws vehicles chunky and tall, so sizing by height made short ones tiny)

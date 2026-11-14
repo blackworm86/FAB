@@ -83,6 +83,7 @@ import {
   setNote,
   setRollFx,
   setSelArr,
+  setupSide,
 } from './flow';
 export * from './flow';
 import { auditWarn, followFoe, gotRemote, setAuditWarn, setGotRemote, setHeldBad, setScoreOpen } from './choices';
@@ -252,7 +253,7 @@ function frame() {
               ? [
                   ...new Set(
                     VOL.pendingPlace(g).flatMap((id) =>
-                      g.units.find((u) => u.id === id)?.side === g.phasing ? VOL.placeOptions(g, id) : [],
+                      g.units.find((u) => u.id === id)?.side === setupSide() ? VOL.placeOptions(g, id) : [],
                     ),
                   ),
                 ]
@@ -286,6 +287,7 @@ function startOver(x: E.Game) {
   setRollFx([]);
   setTgtKey('');
   setInBattle(false);
+  setLastPhase(''); // the new game's first step is framed like an opening, even when it is the same step as the old game's
   setNote('');
   setAreaPick(null);
   setRestartAsk(false);
