@@ -350,12 +350,57 @@ export function decisionBubble(): string {
   }
   if (b.stage === 'attFirst')
     return `<div class="mapbubble" ${at}><b>${b.pending} hit${b.pending > 1 ? 's' : ''}</b><span>Tap the point unit or an asset to take the first loss</span></div>`;
+  const hint = '<span class="choosebelow">Choose in the bar below ↓</span>'; // the choices are in the bar, under the thumb (design review, problem 2)
   if (b.stage === 'attChoice')
-    return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b><span class="fwnote">${b.pending + 1} hits rolled, 1 already taken: ${b.pending} left</span><div class="row">${btn(`${ico('back')}<span>Abort<small>all disordered, no losses</small></span>`, () => E.attackerChoice(g, g.battle!, true), 'ab', false, 'Abort: all attackers disordered, no losses')}${btn(`${ico('minus')}<span>Take losses<small>lose ${b.pending} step${b.pending > 1 ? 's' : ''}, fight on</small></span>`, () => E.attackerChoice(g, g.battle!, false), 'ab', false, 'Continue and take the step losses')}</div></div>`;
+    return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b><span class="fwnote">${b.pending + 1} hits rolled, 1 already taken: ${b.pending} left</span>${hint}</div>`;
   if (b.stage !== 'defChoice') return '';
-  const arty = b.pendingKind === 'arty',
-    fw = g.log.slice(-4).some((l) => / field works absorb 1 hit$/.test(l)); // the ledger shows the hits rolled; field works took one before the choice
-  return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b>${fw ? `<span class="fwnote">${b.pending + 1} rolled − 1 absorbed by field works</span>` : ''}<div class="row">${btn(`${ico('minus')}<span>Take losses<small>lose ${b.pending} step${b.pending > 1 ? 's' : ''}, hold the area</small></span>`, () => E.defenderChoice(g, g.battle!, false), 'ab', false, 'Stand and take the step losses')}${btn(`${ico(arty ? 'disorder' : 'back')}<span>${arty ? 'Disorder<small>1 hit fewer, all disordered</small>' : 'Retreat<small>1 hit fewer, leave disordered</small>'}</span>`, () => E.defenderChoice(g, g.battle!, true), 'ab', false, arty ? 'Disorder all defenders to absorb 1 hit' : 'Retreat (absorbs 1 hit, units disordered)')}</div></div>`;
+  const fw = g.log.slice(-4).some((l) => / field works absorb 1 hit$/.test(l)); // the ledger shows the hits rolled; field works took one before the choice
+  return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b>${fw ? `<span class="fwnote">${b.pending + 1} rolled − 1 absorbed by field works</span>` : ''}${hint}</div>`;
+}
+/** The big choice of a battle step (take the hits or abort / retreat): the bar shows these as its buttons when the main button has nothing to do. */
+export function barChoices(): { label: string; sub: string; title: string; fn: () => void }[] {
+  const b = g.battle;
+  if (!b || rollView || !allowed()) return [];
+  const n = b.pending,
+    st = `${n} step${n > 1 ? 's' : ''}`;
+  if (b.stage === 'attChoice')
+    return [
+      {
+        label: 'Take losses',
+        sub: `lose ${st}, fight on`,
+        title: 'Continue and take the step losses',
+        fn: () => E.attackerChoice(g, g.battle!, false),
+      },
+      {
+        label: 'Abort',
+        sub: 'all disordered, no losses',
+        title: 'Abort: all attackers disordered, no losses',
+        fn: () => E.attackerChoice(g, g.battle!, true),
+      },
+    ];
+  if (b.stage !== 'defChoice') return [];
+  const arty = b.pendingKind === 'arty';
+  return [
+    {
+      label: 'Take losses',
+      sub: `lose ${st}, hold the area`,
+      title: 'Stand and take the step losses',
+      fn: () => E.defenderChoice(g, g.battle!, false),
+    },
+    arty
+      ? {
+          label: 'Disorder',
+          sub: '1 hit fewer, all disordered',
+          title: 'Disorder all defenders to absorb 1 hit',
+          fn: () => E.defenderChoice(g, g.battle!, true),
+        }
+      : {
+          label: 'Retreat',
+          sub: '1 hit fewer, leave disordered',
+          title: 'Retreat (absorbs 1 hit, units disordered)',
+          fn: () => E.defenderChoice(g, g.battle!, true),
+        },
+  ];
 }
 /** Who can move now: a green arrow over every block that has somewhere to go; the side's other blocks get a grey dash. Hidden once a block is picked or a battle opens. */
 let moveMarks: { el: HTMLElement; unit: string }[] = [];

@@ -12,7 +12,7 @@ import { homeUrl, bindAuth } from './home';
 import { clearDice } from './dice3d';
 import { linkRules } from './rules-link';
 import { LAB_SIDE, labStep } from './lab';
-import { $, areaName, P1, VOL } from './page';
+import { $, areaName, P1, TUT, VOL } from './page';
 import { g, save, selArea, selChit, selUnit, setG, setPreviewArea, setSelArea, setSelChit, setSelUnit, showReplay } from './game-state';
 import { canvas } from './scene';
 import { drawPieces } from './pieces';
@@ -38,6 +38,7 @@ import {
   undo,
   setupSide,
   tgt,
+  actorNow,
 } from './flow';
 import {
   airPickHtml,
@@ -55,7 +56,7 @@ import {
 } from './choices';
 import { reinforceTargets, reinforcing, setGoal, syncBattleCam } from './map-input';
 import { badgeList, drawRoute, setBadges, syncBadges } from './routes';
-import { decisionBubble, decisionTargets, syncAreaTags, syncMoveMarks, syncTags } from './map-marks';
+import { barChoices, decisionBubble, decisionTargets, syncAreaTags, syncMoveMarks, syncTags } from './map-marks';
 import { endRoll, heldNext, menuTab, modal, rollStage, rollView, setModal } from './rolls';
 import { chitTargets, drag, lastPointer, setLastPointer, tapCard } from './cards';
 import { canMove, endArmed, guardEnd, guide, primary, prompt, setGuide, topBar } from './prompt';
@@ -199,7 +200,13 @@ function renderInner() {
   }
   if (rollView && !g.battle && !rollView.check) endRoll(); // dice left on screen after the battle is over
   const p = primary(),
-    b = g.battle;
+    b = g.battle,
+    actor = actorNow(),
+    chs = barChoices();
+  if (actor !== 'both' && actor !== lastActor) {
+    if (lastActor && !TUT && mine(actor) && mine(other(actor))) passTo = actor; // one device, both sides: ask to pass it (design review, problem 1)
+    lastActor = actor;
+  }
   const alert = g.pendingBlow
     ? (() => {
         const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!,
@@ -277,7 +284,7 @@ function renderInner() {
               }),
           )
         : ''
-    }${toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}</button>${undoBtn()}${!p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go ${g.moving && p.label.startsWith('End') ? 'quiet' : ''}" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` +
+    }${toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}${passHtml()}<div class="c-bar b ${actor !== 'both' && !g.over ? `actor ${actor}` : ''}"><div class="c-prompt" aria-live="polite">${actor !== 'both' && !g.over ? `<span class="whotag">${esc(nm(actor))} decides</span> ` : ''}${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}</button>${undoBtn()}${chs.length ? chs.map((c, i) => btn(`<span>${esc(c.label)}<small>${esc(c.sub)}</small></span>`, c.fn, `go choice ${i ? 'alt' : ''}`, false, c.title)).join('') : !p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go ${g.moving && p.label.startsWith('End') ? 'quiet' : ''}" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` +
     modalHtml();
   const ui = $('#ui');
   {
@@ -521,6 +528,23 @@ function driveSplit() {
 export let ctlKey = '',
   tgtKey = '';
 export const setTgtKey = <T extends typeof tgtKey>(v: T): T => ((tgtKey = v), v);
+/** The side that must act now, and the side the device is to be passed to (until the first tap anywhere). */
+let lastActor: string | null = null,
+  passTo: E.Side | null = null;
+const passHtml = () =>
+  passTo
+    ? `<div class="passstrip ${passTo}" role="status"><span aria-hidden="true">⇄</span><span>Pass to the ${esc(nm(passTo))} player</span><small>· tap to start</small></div>`
+    : '';
+document.addEventListener(
+  'pointerdown',
+  () => {
+    if (passTo) {
+      passTo = null;
+      setTimeout(render);
+    }
+  },
+  true,
+);
 let playKey: string | null = null,
   chitFramed = '';
 export let lastFight: number | null = null;

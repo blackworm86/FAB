@@ -254,3 +254,124 @@
   color: #b3ad8b;
   margin-top: 2px;
 }
+/* Design review 14 Nov, problems 1-2 (owner approved the mockup): the bar wears the colour of the side that must act now, says so,
+   asks to pass the device when that side changes, and carries the big choices as its buttons */
+#ui .c-bar.b.actor {
+  border-top: 4px solid var(--actor) !important;
+}
+.c-bar.b.german,
+.passstrip.german {
+  --actor: #c3c7cc;
+}
+.c-bar.b.allied,
+.passstrip.allied {
+  --actor: #a8c46a;
+}
+.c-bar.b.axis,
+.passstrip.axis {
+  --actor: #c3c7cc;
+}
+.c-bar.b.israeli,
+.passstrip.israeli {
+  --actor: #4fb3e3;
+}
+.c-bar.b.syrian,
+.passstrip.syrian {
+  --actor: #7fbf5c;
+}
+.c-prompt .whotag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 8px;
+  margin-right: 6px;
+  background: var(--actor);
+  color: #10120c;
+  font: 700 12px var(--sfd);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  vertical-align: 1px;
+}
+.c-prompt .whotag::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10120c;
+}
+.passstrip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 12px;
+  background: var(--actor);
+  color: #10120c;
+  font: 700 15px var(--sfd);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.passstrip small {
+  font: 500 12px var(--sf);
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.8;
+}
+#ui .c-bar.b .go.choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.05;
+  min-width: 200px;
+  padding: 4px 16px;
+}
+#ui .c-bar.b .go.choice span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+#ui .c-bar.b .go.choice small {
+  font: 500 12.5px var(--sfd);
+  letter-spacing: 0.02em;
+  text-transform: none;
+  opacity: 0.92;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+#ui .c-bar.b .go.choice.alt {
+  background: #1a1d14;
+  box-shadow: inset 0 0 0 2px var(--red, #d1432f);
+}
+@media (max-width: 700px) {
+  #ui .c-bar.b:has(.choice) {
+    grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) 44px !important;
+    grid-template-rows: auto auto 52px !important;
+  }
+  #ui .c-bar.b:has(.choice) .dchips,
+  #ui .c-bar.b:has(.choice) .c-prompt {
+    grid-column: 1 / 5 !important;
+  }
+  #ui .c-bar.b .go.choice {
+    grid-column: 2 !important;
+    min-width: 0;
+    padding: 2px 4px;
+  }
+  #ui .c-bar.b .go.choice.alt {
+    grid-column: 3 !important;
+  }
+  #ui .c-bar.b:has(.choice) .guidebtn {
+    grid-column: 4 !important;
+  }
+}
+.mapbubble .choosebelow {
+  font: 600 12px var(--sfd);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  white-space: nowrap;
+}
