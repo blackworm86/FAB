@@ -288,7 +288,7 @@ export function legend() {
         : tint === 'tdn'
           ? TDN_COL.map((c, i) => [c, `TDN ${i}`, i ? `attackers −${i} to hit` : 'no modifier'])
           : VOL.id === 'sicily'
-            ? (['A', 'B', 'C', 'D'] as const).map((z) => [SICILY_ZONE_COL[z], `Zone ${z}`, 'army zone (14.3)'])
+            ? (['A', 'B', 'C', 'D'] as const).map((z) => [SICILY_ZONE_COL[z], `Zone ${z}`, ''])
             : [
                 [ZONE_COL[5], 'Zone 5', '5th Panzer Army'],
                 [ZONE_COL[6], 'Zone 6', '6th Panzer Army'],

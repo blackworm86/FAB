@@ -593,3 +593,103 @@
     display: none;
   }
 }
+/* Map layers panel (owner approved the mockup, 14 Nov): three groups, every button of a group the same size */
+.mapdock .mappanel {
+  display: grid;
+  gap: 10px;
+  width: 360px;
+  padding: 10px;
+  background: #0b0d08f5;
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 20px #000a;
+}
+.mappanel .mphd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.mappanel .mphd b {
+  font: 700 16px var(--sfd);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.mappanel .mphd b span {
+  color: var(--gold);
+}
+.mappanel .mphd button {
+  width: 40px;
+  min-height: 40px;
+}
+.mappanel .mpgl {
+  font: 700 11px var(--sfd);
+  letter-spacing: 0.16em;
+  color: #9a9c7c;
+  text-transform: uppercase;
+  margin-bottom: -4px;
+}
+.mappanel .mtiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  grid-auto-flow: column;
+  gap: 6px;
+}
+.mappanel .mtiles button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 58px;
+  padding: 4px 2px;
+  font: 600 12.5px var(--sfd);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.mappanel .mtiles button[aria-pressed='true'],
+.mappanel .mseg button[aria-pressed='true'] {
+  background: var(--gold);
+  color: #10120c;
+  border-color: var(--gold);
+}
+.mappanel .mseg {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.mappanel .mseg button {
+  min-height: 44px;
+  font: 600 13px var(--sfd);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.mappanel .mseg button + button {
+  border-left: 0;
+}
+.mappanel .mtools {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.mappanel .mtools button {
+  min-height: 44px;
+  justify-content: center;
+  gap: 6px;
+  font: 600 12.5px var(--sfd);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  min-width: 0;
+  padding-inline: 4px;
+}
+.mappanel .mtools button .ic {
+  flex: none;
+}
+.mappanel .legend,
+.mappanel > div:not([class]) {
+  position: static !important;
+  margin: 0 !important;
+}
+@media (max-width: 700px) {
+  .mapdock .mappanel {
+    width: calc(100vw - 16px);
+  }
+}

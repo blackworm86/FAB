@@ -8,7 +8,8 @@ import { reg } from './ui-kit';
 import { hasLegend, legendCard } from './map-legend';
 import { VOL } from './page';
 import { g, selChit, selUnit, setHoverArea, setPreviewArea, setSelArea, setSelChit, setSelUnit } from './game-state';
-import { labelMode, setLabelMode, setTint, supplySide, tint } from './map-paint';
+import { labelMode, setLabelMode, setTint, supplySide, tint, viewRot } from './map-paint';
+import { homeGoal } from './menus';
 import { setYaw, yaw } from './camera';
 import { selArr, setSelArr } from './flow';
 import { setGoal } from './map-input';
@@ -96,21 +97,8 @@ function rotateQuarter() {
     },
   });
 }
-/** One button for the area tags: on → see-through → off, kept on this device. */
-const LABEL_NAME = { on: 'On', tr: 'See-through', off: 'Off' };
-function labelsBtn() {
-  // inside the Map list: the three settings side by side
-  const set = (m: typeof labelMode) => {
-    setLabelMode(m);
-    try {
-      localStorage.setItem('fab-labels', m);
-    } catch {
-      /* private mode */
-    }
-    syncAreaTags();
-  };
-  return `<div class="laysw labsw" role="group" aria-label="Area labels"><b>Labels</b>${(['on', 'tr', 'off'] as const).map((m) => `<button aria-pressed="${labelMode === m}" title="Area labels: ${LABEL_NAME[m]}" data-ui="${reg(() => set(m))}">${ico('tag')}<span class="l">${LABEL_NAME[m]}</span><span class="s">${{ on: 'On', tr: 'Dim', off: 'Off' }[m]}</span></button>`).join('')}</div>`;
-}
+/** The area tags: on, dim (see-through) or off, kept on this device. */
+const LABEL_NAME = { on: 'On', tr: 'Dim', off: 'Off' };
 export let mapMenu = false; // phones: the layers, legend and rotate fold into one Map button
 export const setMapMenu = <T extends typeof mapMenu>(v: T): T => ((mapMenu = v), v);
 export function mapDock() {
@@ -128,17 +116,6 @@ export function mapDock() {
     ['control', 'Control', 'Ctrl', 'flag', 'Who holds each area'],
     ['supply', 'Supply', 'Supply', 'fuel', 'Supply: which areas trace supply'],
   ];
-  const sw = opts
-    .map(
-      ([v, label, short, icon, title]) =>
-        `<button aria-pressed="${tint === v}" title="${title}" aria-label="${title}" data-ui="${reg(() => {
-          setTint(v);
-          mapMenu = false;
-          relayer();
-          if (v === 'supply') frameSide(supplySide());
-        })}">${ico(icon)}<span class="l">${label}</span><span class="s">${short}</span></button>`,
-    )
-    .join('');
   const sel = selUnit || selArr || selChit; // an area left selected after a move has no panel: no Deselect button for it (playtest 2, item 17)
   const tools = `<div class="maptools"><button aria-label="Rotate the map a quarter turn" title="Rotate the map" data-ui="${reg(rotateQuarter)}">${ico('rotate')}</button>${
     sel
@@ -152,9 +129,55 @@ export function mapDock() {
       : ''
   }</div>`;
   const cur = opts.find(([v]) => v === tint)?.[1] ?? 'None';
-  return `<div class="mapdock ${mapMenu ? 'menuopen' : ''}"><div class="dockrow"><button class="mapmenu-btn" aria-expanded="${mapMenu}" aria-label="Map layers, legend and rotate: ${cur}" data-ui="${reg(
+  const close = () => {
+    mapMenu = false;
+  };
+  if (mapMenu) {
+    // owner, 14 Nov: one panel, three groups, every button of a group the same size
+    const setL = (m: typeof labelMode) => {
+      setLabelMode(m);
+      try {
+        localStorage.setItem('fab-labels', m);
+      } catch {
+        /* private mode */
+      }
+      syncAreaTags();
+    };
+    const tiles = opts
+      .map(
+        ([v, label, , icon, title]) =>
+          `<button class="mtile" aria-pressed="${tint === v}" title="${title}" data-ui="${reg(() => {
+            setTint(v);
+            relayer();
+            if (v === 'supply') frameSide(supplySide());
+          })}">${ico(icon)}<span>${label}</span></button>`,
+      )
+      .join('');
+    const seg = (['on', 'tr', 'off'] as const)
+      .map(
+        (m) =>
+          `<button aria-pressed="${labelMode === m}" title="Area labels: ${LABEL_NAME[m]}" data-ui="${reg(() => setL(m))}">${LABEL_NAME[m]}</button>`,
+      )
+      .join('');
+    const tool = (icon: string, label: string, f: () => void, dis = false) =>
+      `<button data-ui="${reg(f)}" ${dis ? 'disabled' : ''}>${ico(icon)}<span>${label}</span></button>`;
+    return `<div class="mapdock menuopen"><div class="mappanel" role="dialog" aria-label="Map layers"><div class="mphd"><b>Map layers: <span>${cur}</span></b><button class="ico" aria-label="Close" data-ui="${reg(close)}">${ico('close')}</button></div><small class="mpgl">Colour layer</small><div class="mtiles" role="group" aria-label="Map colour layer">${tiles}</div>${legend()}<small class="mpgl">Area labels</small><div class="mseg" role="group" aria-label="Area labels">${seg}</div><div class="mtools">${tool(
+      'info',
+      'Legend',
+      () => {
+        mapMenu = false;
+        legendOpen = true;
+        legendShownAt = performance.now();
+      },
+      !hasLegend(VOL.id),
+    )}${tool('rotate', 'Rotate', rotateQuarter)}${tool('home', 'Reset view', () => {
+      setGoal(homeGoal());
+      setYaw(viewRot());
+    })}</div></div></div>`;
+  }
+  return `<div class="mapdock"><div class="dockrow"><button class="mapmenu-btn" aria-expanded="false" aria-label="Map layers: ${cur}" data-ui="${reg(
     () => {
-      mapMenu = !mapMenu;
+      mapMenu = true;
     },
-  )}">${ico('layers')}<span>Map layers: <b>${cur}</b><span class="mlab"><i class="msep">·</i>Labels <b>${LABEL_NAME[labelMode]}</b></span></span><span aria-hidden="true">▾</span></button>${mapLegend()}<div class="laysw" role="group" aria-label="Map colour layer"><b>Layer</b>${sw}</div>${labelsBtn()}</div>${legend()}${tools}</div>`;
+  )}">${ico('layers')}<span>Map layers: <b>${cur}</b><span class="mlab"><i class="msep">·</i>Labels <b>${LABEL_NAME[labelMode]}</b></span></span><span aria-hidden="true">▾</span></button></div>${legend()}${tools}</div>`;
 }
