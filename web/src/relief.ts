@@ -31,7 +31,16 @@ type Meta = {
   floatsFrom?: string /** a board file whose data-float items hover too (The Bulge: the entry strips of map-base.svg, instead of entry.png) */;
 };
 /** A printed item that hovers over the relief instead of being draped on it (arrows, entry triangles and strips, boxes): its box on the map and its picture, also turned for the far side. */
-export type Float = { x: number; y: number; w: number; h: number; img: HTMLImageElement; imgFlip: HTMLImageElement };
+export type Float = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  img: HTMLImageElement;
+  imgFlip: HTMLImageElement;
+  /** where it lies in the world and its level, once laid out (map-paint.ts) */
+  at?: { x0: number; x1: number; z0: number; z1: number; y: number };
+};
 export type Relief = {
   /** Height of the ground (cm) at world x, z. */
   h(x: number, z: number): number;

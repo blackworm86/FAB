@@ -450,7 +450,7 @@ function ring(
     );
     f.rotation.x = -Math.PI / 2;
     f.position.y = 0.025;
-    f.renderOrder = -1; // under the 'can act' glow
+    f.renderOrder = 4; // over the printed boxes (3), under the 'can act' glow (5)
     f.userData.drape = true;
     g.add(f);
   } // the formation colour of the block (command, division or brigade), on the figure's ground disc

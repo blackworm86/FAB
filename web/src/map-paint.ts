@@ -257,6 +257,9 @@ function floatCards() {
         const p = toWorld(f.x + (i / 6) * f.w, f.y + (j / 6) * f.h);
         top = Math.max(top, REL!.h(p.x, p.z));
       } // a printed card stays flat, as on the board: one level, just above the highest ground under it
+    const a = toWorld(f.x, f.y),
+      b = toWorld(f.x + f.w, f.y + f.h);
+    f.at = { x0: Math.min(a.x, b.x), x1: Math.max(a.x, b.x), z0: Math.min(a.z, b.z), z1: Math.max(a.z, b.z), y: top + 0.05 }; // the pieces standing on it stand on this level (map3d.ts)
     for (let k = 0; k < pos.count; k++) {
       const p = toWorld(f.x + (pos.getX(k) + 0.5) * f.w, f.y + (0.5 - pos.getY(k)) * f.h);
       pos.setXYZ(k, p.x, top + 0.05, p.z);
