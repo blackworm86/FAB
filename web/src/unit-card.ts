@@ -22,7 +22,7 @@ import { rollView } from './rolls';
 import { gx } from './prompt';
 import { recoverSel } from './dock';
 import { pieceBtn, unitPic } from './pieces-window';
-import { legendOpen, legendShownAt, refresh, setLegendOpen, setLegendShownAt } from './main';
+import { legendOpen, legendShownAt, refresh, setLegendOpen, setLegendShownAt, showAreas } from './main';
 
 /** What the volume's own prompts may use: buttons, who is mine, an area pick on the map. */
 export const panelCtx = (): PanelCtx => ({
@@ -37,8 +37,22 @@ export const panelCtx = (): PanelCtx => ({
     setAreaPick({ label, areas: new Set(areas), run });
     setSelUnit(setSelChit(setSelArr(null)));
     refresh();
+    setTimeout(() => showAreas(areas), 60); // the areas to pick come into view, clear of the panels (playtest 2, item 15)
   },
 });
+/** Why a block cannot take a reserve marker now (the first rule that stops it), shown under the greyed button (playtest 2, item 10). */
+const reserveWhy = (u: E.Unit) =>
+  u.moved
+    ? 'Reserve: it has moved this turn'
+    : u.disorder
+      ? 'Reserve: it is disordered'
+      : u.unsupplied
+        ? 'Reserve: it is out of supply'
+        : u.fort
+          ? 'Reserve: it is fortifying'
+          : u.area != null && E.contestedAreas(g).includes(u.area)
+            ? 'Reserve: its area is contested'
+            : 'Reserve: no reserve marker left, or not allowed for this block';
 export function dispatch() {
   if (g.battle || g.over) return '';
   const row = (k: string, v: string, c = '') => `<div class="r"><span>${k}</span><b class="${c}">${v}</b></div>`;
@@ -208,7 +222,7 @@ export function dispatch() {
               'Nothing to do for this unit in this step: no halo, left out of Can move',
             )
           : ''
-      }${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve', () => E.setReserve(g, u.id, false)) : btn('Reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u))) : ''}${fw ? btn('Fortify', () => VOL.fieldWorks(g, u.id)) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn('Activate (SA)', () => pickSA(u.side, u.ech, (sa) => E.activateBreakthrough(g, u.id, sa)), '', !E.saAvailable(g, u.side, u.ech).length) : ''}${E.peiperCan(g, u) ? btn(`${u.peiperFull ? ico('check') : ''}KG Peiper: full move (18.3)`, () => E.setPeiperFull(g, u.id, !u.peiperFull), u.peiperFull ? 'primary' : '', false, "Once per game, up to turn 3: this exploitation move uses Peiper's full movement allowance instead of one area") : ''}</div></div>`;
+      }${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve', () => E.setReserve(g, u.id, false)) : btn('Reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u), reserveWhy(u)) + (E.canReserve(g, u) || !reserveWhy(u) ? '' : `<small class="why">${esc(reserveWhy(u))}</small>`)) : ''}${fw ? btn('Fortify', () => VOL.fieldWorks(g, u.id)) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn('Activate (SA)', () => pickSA(u.side, u.ech, (sa) => E.activateBreakthrough(g, u.id, sa)), '', !E.saAvailable(g, u.side, u.ech).length) : ''}${E.peiperCan(g, u) ? btn(`${u.peiperFull ? ico('check') : ''}KG Peiper: full move (18.3)`, () => E.setPeiperFull(g, u.id, !u.peiperFull), u.peiperFull ? 'primary' : '', false, "Once per game, up to turn 3: this exploitation move uses Peiper's full movement allowance instead of one area") : ''}</div></div>`;
   }
   return '';
 }

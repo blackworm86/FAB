@@ -1,6 +1,6 @@
 // Golan '73: the asset and event sweep of November 2026 (one test per fix).
 import { describe, expect, it } from 'vitest';
-import { startBattle, unitsIn, visibleTo, passSA, defenderReinforceSA, golan, type Game } from '../src';
+import { startBattle, unitsIn, visibleTo, passSA, defenderReinforceSA, reinforcementPhase, recoverAsset, golan, type Game } from '../src';
 import { CUR } from '../src/volumes';
 import { newGolanGame, unit, chit, give } from './golan-helpers';
 
@@ -110,5 +110,93 @@ describe('Golan asset and event sweep', () => {
     passSA(g, b);
     golan.playJamming(g, b, ew);
     expect(() => defenderReinforceSA(g, b, 'I05', 'IC14')).toThrow(/6\.21/);
+  });
+  it('16.11a (owner: the rulebook): a commando raid only in the Syrian Admin Phase', () => {
+    const g = newGolanGame(41);
+    g.turn = 3;
+    g.phase = 'admin';
+    g.phasing = 'israeli';
+    g.done = ['israeli'];
+    const c = g.chits.find((x) => x.kind === 'commando')!;
+    c.box = 'available';
+    const a = Object.keys(g.control)
+      .map(Number)
+      .find((x) => {
+        try {
+          const t = structuredClone(g);
+          t.phasing = 'syrian';
+          t.done = [];
+          golan.placeRaid(t, c.id, x);
+          return true;
+        } catch {
+          return false;
+        }
+      });
+    expect(a).toBeDefined();
+    expect(() => golan.placeRaid(g, c.id, a!)).toThrow(/16\.11a/);
+  });
+  it('15.6 (owner: the rulebook): a strongpoint is evacuated as soon as a regular unit leaves its contested area', () => {
+    const g = newGolanGame(42);
+    for (const u of unitsIn(g, 27)) if (u.id !== 'I30') u.area = null;
+    for (const u of unitsIn(g, 26)) u.area = null;
+    unit(g, 'S01').area = 27;
+    for (const id of ['I05', 'I06']) Object.assign(unit(g, id), { area: 27, disorder: 0, unsupplied: false, moved: false, spent: 0 });
+    g.control[26] = 'israeli';
+    g.phase = 'movement';
+    g.phasing = 'israeli';
+    g.contestedAtMoveStart = [27];
+    unit(g, 'I05').area = 26; // one of the two leaves
+    golan.evacuateStrongpoint(g, 27);
+    expect(unit(g, 'I30').box).toBe('evacuated');
+  });
+  it('16.12 (owner: the rulebook): the SAM reduction comes after the 4.1a recovery', () => {
+    const g = newGolanGame(43);
+    g.turn = 3;
+    g.phasing = 'syrian';
+    const sam = g.chits.find((x) => x.kind === 'sam')!;
+    sam.box = 'used';
+    for (const c of g.chits) if (c.kind === 'sa_block') c.box = 'available';
+    g.force = [10, 10, 10, 10, 10, 10];
+    reinforcementPhase(g);
+    expect(g.recover).toContain('syrian');
+    expect(sam.box).toBe('used'); // not rolled yet
+    recoverAsset(g, 'syrian', sam.id); // the unused Special Action saves it
+    expect(sam.box).toBe('available');
+  });
+  it('9.34d (owner: the rulebook): Countermeasures do not help unsupplied defending units', () => {
+    const g = newGolanGame(44);
+    for (const u of unitsIn(g, 27)) if (u.id !== 'I30') u.area = null;
+    unit(g, 'S01').area = 27;
+    Object.assign(unit(g, 'I05'), { area: 27, disorder: 0, unsupplied: true });
+    g.phase = 'combat';
+    g.phasing = 'syrian';
+    g.contestedAtMoveStart = [27];
+    const ew = give(g, 'SC16'),
+      cm = give(g, 'IC36');
+    const b = startBattle(g, 27);
+    if (b.defSA) passSA(g, b);
+    golan.playJamming(g, b, ew);
+    g.force = [4, 4];
+    golan.answerJamming(g, b, cm);
+    expect(unit(g, 'I05').disorder).toBe(1); // 4 with no +2: disordered
+    expect(unit(g, 'I30').disorder).toBe(0); // the supplied strongpoint: 4 + 2 = 6, holds
+  });
+  it('17.34 (owner: the rulebook): the Counterbattery player picks the enemy artillery asset', () => {
+    const g = newGolanGame(45);
+    for (const u of unitsIn(g, 27)) if (u.id !== 'I30') u.area = null;
+    unit(g, 'S01').area = 27;
+    g.phase = 'combat';
+    g.phasing = 'syrian';
+    g.contestedAtMoveStart = [27];
+    const b = startBattle(g, 27);
+    const arts = g.chits.filter((c) => c.side === 'syrian' && c.kind === 'artillery').slice(0, 2);
+    for (const c of arts) c.box = 'map';
+    b.assets.syrian.push(...arts.map((c) => c.id));
+    golan.battleState(b).counterbattery.israeli = 'IC30';
+    golan.setCounterbatteryTarget(g, b, 'israeli', arts[1].id);
+    g.force = [3];
+    golan.afterFire(g, b, 'syrian', 'arty');
+    expect(arts[1].box).toBe('future');
+    expect(arts[0].box).toBe('map');
   });
 });

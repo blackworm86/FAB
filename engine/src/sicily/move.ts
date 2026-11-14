@@ -22,7 +22,7 @@ export interface SMoveCtx {
   units: (a: number) => Record<SSide, number>; // blocks and standing assets by side
   controller?: (a: number) => SSide | undefined;
   blownBridges?: Set<string>;
-  interdicted?: (a: number) => SSide | undefined; // owner of an interdiction air mission over the area (16.33)
+  interdicted?: (a: number, by: SSide) => boolean; // an interdiction air mission of `by` over the area (16.33; both sides may have one)
   untriedOnly?: (a: number) => boolean; // 14.42: the area holds only untried Italian units
   etnaFree?: SSide; // 14.1: the side that controls an uncontested Mount Etna
   etnaCtl?: SSide; // 14.1: the side that controls Mount Etna, contested or not
@@ -90,8 +90,8 @@ export function reachable(u: SMoveUnit, ctx: SMoveCtx): SReach[] {
       let step = c.type === 'road' ? 1 : 2;
       if (total(occ(to)) > 0 && !ctx.untriedOnly?.(to)) step += 1; // 5.32, 14.42
       if (atStart && startContested) step += 1;
-      if (ctx.interdicted?.(to) === enemy) step += 1; // 16.33: to enter and to leave
-      if (ctx.interdicted?.(from) === enemy) step += 1;
+      if (ctx.interdicted?.(to, enemy)) step += 1; // 16.33: to enter and to leave
+      if (ctx.interdicted?.(from, enemy)) step += 1;
       const rb = ctx.roadblock?.(to) === enemy;
       if (rb) step += 1; // 4.34: +1 MP and stop
       let cost = all ? allowance : cur.cost + step;

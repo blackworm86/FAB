@@ -37,6 +37,7 @@ import {
   toastInfo,
   undo,
   setupSide,
+  tgt,
 } from './flow';
 import {
   airPickHtml,
@@ -63,7 +64,7 @@ import { piecesSide, piecesTab, setInspectId, unitPic } from './pieces-window';
 import { dispatch, dragArrival, frameArrival } from './unit-card';
 import { mapDock } from './map-dock';
 import { battleTable, handCards, ledger, setRefusal, volPanel } from './battle-view';
-import { homeGoal, modalHtml, openingTarget, seatBar } from './menus';
+import { homeGoal, modalHtml, openingTarget, seatBar, showAreas } from './menus';
 import { camTouched, frameAt, fxBattle, lastPhase, openFrame, setFrameAt, setFxBattle, setLastPhase, setOpenFrame } from './main';
 
 export const inGame = () => HAS_TABLE || DEV_FAKE || SANDBOX || TUTORIAL || !!LAB_SIDE || online.mode === 'local';
@@ -313,7 +314,27 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
   {
     const h = ui.querySelector<HTMLElement>('.c-hand'),
       a = ui.querySelector<HTMLElement>('.arrtray');
-    if (h) h.scrollLeft = keepH;
+    if (h) {
+      // the cards are measured as drawn: they overlap just enough to fit the screen, each keeping a finger's width visible; past that the hand scrolls (playtest 2, item 18)
+      const cs = h.querySelectorAll<HTMLElement>('.card2'),
+        n = cs.length,
+        lw = cs[0]?.offsetWidth ?? 0,
+        cw = cs[0]?.getBoundingClientRect().width ?? 0, // as drawn: scaled and tilted
+        avail = h.clientWidth - 24,
+        step = n > 1 ? Math.min(lw, Math.max(innerWidth < 900 ? 46 : 40, (avail - cw) / (n - 1))) : lw,
+        over = cw + (n - 1) * step > avail;
+      if (n > 1 && lw) {
+        h.style.setProperty('--ov', `${Math.round(lw - step)}px`);
+        const hr = h.getBoundingClientRect(),
+          span = cs[n - 1].getBoundingClientRect().right - cs[0].getBoundingClientRect().left,
+          extra = span - (hr.width - 24); // the tilted end cards swing out further than their size: one correction from where they land
+        if (extra > 0 && !over) h.style.setProperty('--ov', `${Math.round(lw - step + extra / (n - 1) + 1)}px`);
+        h.style.overflowX = over ? 'auto' : 'hidden';
+        h.style.justifyContent = over ? 'flex-start' : '';
+        h.style.paddingInline = over ? '30px' : '';
+      }
+      h.scrollLeft = keepH;
+    }
     if (a) a.scrollLeft = keepA;
   }
   ui.querySelectorAll<HTMLElement>('[data-ui]').forEach(
@@ -500,7 +521,8 @@ function driveSplit() {
 export let ctlKey = '',
   tgtKey = '';
 export const setTgtKey = <T extends typeof tgtKey>(v: T): T => ((tgtKey = v), v);
-let playKey: string | null = null;
+let playKey: string | null = null,
+  chitFramed = '';
 export let lastFight: number | null = null;
 export const setLastFight = <T extends typeof lastFight>(v: T): T => ((lastFight = v), v);
 export function refresh() {
@@ -584,6 +606,16 @@ export function refresh() {
                   })
                 : null)),
       );
+      const t = tgt,
+        fk = `${selChit}|${tgtMode}|${selArea}`;
+      if (selChit && t && fk !== chitFramed) {
+        chitFramed = fk;
+        const ids = [
+          ...new Set([...t.pick.keys(), ...t.areas.keys(), ...[...t.units.keys()].map((id) => g.units.find((u) => u.id === id)?.area)]),
+        ].filter((a): a is number => a != null);
+        if (ids.length) setTimeout(() => showAreas(ids), 60); // once the panel is drawn: the areas the card can act on come into view, clear of it (playtest 2, item 9)
+      }
+      if (!selChit) chitFramed = '';
     }
   }
   if (tint === 'control') {

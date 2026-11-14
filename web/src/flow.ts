@@ -44,6 +44,7 @@ import {
   setPhaseOpen,
   setScoreOpen,
   showChecks,
+  rollView,
   TAGRE,
 } from './main';
 
@@ -309,7 +310,10 @@ export function act(f: () => void, after = '') {
   if (online.mode === 'remote' && !online.rev) return say('The game is still loading…');
   if (heldNext) commitRoll();
   const before = g.battle ? snap(g) : null,
-    ck0 = g.checks?.length ?? 0;
+    ck0 = g.checks?.length ?? 0,
+    bArea = g.battle?.area,
+    rl0 = g.battle?.rolls.length ?? 0;
+  const cb0 = g.chits.filter((c) => c.kind === 'event_counterbattery' && c.box !== 'eliminated' && c.box !== 'available').map((c) => c.id);
   const r = hist.run(
     g,
     () => {
@@ -334,6 +338,29 @@ export function act(f: () => void, after = '') {
   save();
   refresh();
   if (!r.error) showChecks((g.checks ?? []).slice(ck0));
+  if (
+    !r.error &&
+    cb0.some((id) => g.chits.find((c) => c.id === id)?.box === 'eliminated') &&
+    !g.log.slice(-12).some((l) => /Counterbattery:/.test(l))
+  )
+    say('Counterbattery spent with nothing to strike: no enemy artillery fired in this battle (17.34).'); // playtest 2, item 6
+  const b = g.battle;
+  if (!r.error && b && b.area === bArea && b.rolls.length > rl0 && !rollView)
+    showChecks(
+      b.rolls.slice(rl0).flatMap((x) =>
+        x.dice.map((die) => {
+          const jam = / jamming$/.test(x.who); // a jamming roll is read from the defender's side: a hit disorders the unit (playtest 2, item 3)
+          return {
+            who: x.who.replace(/: jamming$/, ''),
+            why: jam ? 'Jamming: 5 or less, disordered (17.33)' : x.who,
+            sn: x.sn,
+            die,
+            ok: jam ? !x.hits : !!x.hits,
+            area: b.area,
+          };
+        }),
+      ),
+    ); // a roll made outside a fire step (jamming, counterbattery…) is thrown on screen when it happens (playtest 2, item 4)
 }
 /** What an action showed that cannot be taken back (undo locks there). */
 export function lockOf(a: E.Game, b: E.Game): string {

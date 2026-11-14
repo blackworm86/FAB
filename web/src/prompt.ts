@@ -123,6 +123,16 @@ function promptText() {
   const b = g.battle;
   if (rollView?.pos) return gx('<b>Read the dice:</b> green hits, salmon misses. Then continue.', '<b>Read the dice,</b> then continue.');
   if (areaPick) return `<b>${esc(areaPick.label)}</b>, or tap elsewhere to cancel.`;
+  if (endArmed && g.game === 'sicily' && g.phase === 'movement') {
+    const sea = g.units.filter(
+      (u) =>
+        u.side === g.phasing &&
+        u.area != null &&
+        (E.sicily.isLandingBox(u.area) || (g.phasing === 'allied' && E.sicily.isPortBox(u.area) && !u.reserve)),
+    ).length;
+    if (sea)
+      return `<b>Ending now:</b> ${sea} block${sea > 1 ? 's' : ''} still on the beaches ${sea > 1 ? 'go' : 'goes'} back to sea and ${sea > 1 ? 'try' : 'tries'} to land again next turn (14.24b).`; // playtest 2, A7
+  }
   if (reinforcing && b) return '<b>Tap a glowing neighbouring block</b> to bring it in, or tap the map to cancel.';
   if (airPick?.step === 'unit' && b) return '<b>Air Mission +2:</b> tap one of your blocks in the battle.';
   if (online.active && !allowed() && !g.over)
@@ -172,7 +182,7 @@ function promptText() {
       return selChit && tgt?.hint
         ? `<b>${esc(tgt.hint)}</b>${tgt.areas.size + tgt.units.size > 0 ? ` · ${tgt.areas.size + tgt.units.size} lit` : ''}`
         : E.boxOf(g, E.adminActor(g), 'available').length
-          ? `<b>${esc(nm(E.adminActor(g)))}: tap a card</b>${gx(g.done?.includes(g.phasing) ? ' to play it if you wish, then end the step.' : ` to play it if you wish, then Done: the ${nm(other(g.phasing))} player acts next (4.2).`)}`
+          ? `<b>${esc(nm(E.adminActor(g)))}: tap a card</b>${gx(g.done?.includes(g.phasing) ? ' to play it if you wish, then end the step.' : ` to play it if you wish, then Done: the ${nm(other(g.phasing))} player acts next (4.2).`, ' if you wish, or Done.')}`
           : `<b>${esc(nm(E.adminActor(g)))}: no cards to play.</b>${gx(g.done?.includes(g.phasing) ? ' End the step.' : ` Press Done: the ${nm(other(g.phasing))} player acts next (4.2).`)}`;
     case 'movement':
       if (selUnit && g.moving?.id === selUnit)
@@ -190,7 +200,9 @@ function promptText() {
           '<b>Breakthrough combat:</b> brass = costs a Special Action',
         );
       if (dropsLeft())
-        return `<b>Drop your airborne unit${dropsLeft() > 1 ? 's' : ''} first:</b> choose the drop zone in the panel on the map (14.27a).`;
+        return g.units.some((u) => u.box === 'airborne_assault' && u.side === g.phasing && !E.sicily.airDropTargets(g, u.id).length)
+          ? `<b>An airborne unit has no drop zone:</b> remove it in the panel on the map; it is lost (14.27a).`
+          : `<b>Drop your airborne unit${dropsLeft() > 1 ? 's' : ''} first:</b> choose the drop zone in the panel on the map (14.27a).`; /* playtest 2, item 16 */
       return m
         ? `<b>Tap a red area</b>${gx(' to fight there, or press <b>Next battle</b>.', ' or Next battle.')}`
         : fightable().length
@@ -225,6 +237,8 @@ function setupPrompt(b: E.Battle): string {
     return pt
       ? `<b>${nm(who)}: point unit ${esc(pt)}.</b> Tap another block to change it, or Begin combat.${gx(' The defender has designated his (6.24).')}`
       : `<b>${nm(who)}: tap a block to make it your point unit</b>, then Begin combat.${gx(' The defender has designated his (6.24).')}`;
+  if (!att && (b.vol as { defLocked?: boolean } | undefined)?.defLocked)
+    return `<b>${nm(who)} defends, jammed:</b> all defending units are disordered, so no artillery, air, SAM or battle assets (17.33).${pt ? '' : ' Pick your point unit,'} then Done.`; // playtest 2, item 5
   return att
     ? `<b>${nm(who)} attacks: tap a card to add it.</b>${gx(' The defender answers after you (6.22); you pick your point unit last.')}`
     : `<b>${nm(who)} defends: tap a card to add it</b>${gx(`, and a block to change the point unit${pt ? ` (now ${esc(pt)})` : ''}. The attacker's assets are on the table (6.23).`, pt ? ` · point unit ${esc(pt)}` : ' and pick your point unit.')}`;

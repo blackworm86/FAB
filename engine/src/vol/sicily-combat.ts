@@ -59,7 +59,15 @@ export function canAssign(g: Game, b: Battle, side: Side, c: Chit, mode?: 'arty'
     // 16.3: regardless of supply; 16.32: one per side
     if (B.noAir[side]) return 'the dogfight settled the air over this battle (16.31)';
     if (airOf(b, side).length) return 'one air support asset per side in a battle (16.32)';
-    void mode;
+    if (
+      mode === 'support' &&
+      new Set(
+        unitsIn(g, b.area, side)
+          .filter(regular)
+          .map((u) => u.ech),
+      ).size > 1
+    )
+      return 'US and British units together: only artillery assets, so the air support fires as artillery (6.22, 6.23)';
     return null;
   }
   if (

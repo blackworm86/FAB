@@ -232,3 +232,25 @@
   width: max-content;
   max-width: calc(100vw - 32px);
 }
+/* playtest 2, B7 and item 17: a message never blocks a tap on what lies under it (it has no buttons of its own) */
+.toast {
+  pointer-events: none;
+}
+/* playtest 2, B5: Take losses / Retreat and the "What the markers mean" link reach a finger's 44 px */
+#ui .mapbubble button.ab {
+  min-height: 44px !important;
+}
+#ui .c-dispatch .linkbtn {
+  position: relative;
+}
+#ui .c-dispatch .linkbtn::after {
+  content: '';
+  position: absolute;
+  inset: -15px -4px;
+}
+.c-dispatch small.why {
+  display: block;
+  font-size: 12px;
+  color: #b3ad8b;
+  margin-top: 2px;
+}
