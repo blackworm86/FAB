@@ -41,6 +41,8 @@ Brief a helper like a colleague who knows nothing: the goal, the files, what cha
 
 **Session notes** (`docs/sessions/<session>.md`, format in `docs/sessions/README.md`): each session keeps its own short note, overwritten, never appended: doing, next, waiting for the owner, last checked. The file is the memory; the project-management session reads the notes to keep `docs/STATUS.md` and its "waiting for you" list.
 
+**Report to the project-management session** (owner's rule, 14 November 2026): when a session finishes a task (a fix pushed, a mockup ready for the owner, a question for the owner, a stop because it is blocked), it updates its session note and sends one short message to the project-management session with the `send_message` tool (session `session_01ME3JNXX3Jz48n28tShciN8`): what was finished, the commit, what the owner must do (if anything), what is next. Plain words, five lines at most; information, not a request. If the tool is not available, the session note on `main` is enough.
+
 ---
 
 ## 1. Computer opponent
