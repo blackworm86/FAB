@@ -99,6 +99,9 @@ A very busy week: about 160 changes reached `main` from four sessions working at
 - **Lessons:** good enough; on hold. No more lesson work until he says so.
 - **Computer opponent:** not good; on hold until the remaining problems of the game are fixed, then resumed.
 - **`database.rules.json`:** published. Done.
+- **3D figures:** finished and approved by the owner (32 types, toy look, see-through decoys; figures session report, commit 8ff398c). Open choice: blocks stay the default look (View › Units › Figures) unless the owner says otherwise.
+- **Sicily retreat (6.6):** compliant, tested by the rules session; the table must frame the lit retreat areas and name them (with the interface session).
+- **Reporting:** each session now reports to this one when it finishes a task (`docs/PARALLEL.md`).
 - **Sicily:** blocks in the At Sea and Airborne Assault boxes are not drawn on the map, and "Release a division" (14.61) cannot pick a division with no block in an area (`web/src/sicily-ui.ts:44`). Passed to the interface session; the rules session was asked whether a division may be released before it is ashore.
 
 0. **Tutorial**: to be cancelled and rebuilt (your decision, 13 November). The outlines are written (14 November): `docs/TUTORIAL-OUTLINE.md`, three courses, about 42 minutes in all. Waiting for your approval, and whether the present lessons stay on the site meanwhile.
