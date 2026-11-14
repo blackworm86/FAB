@@ -95,6 +95,12 @@ A very busy week: about 160 changes reached `main` from four sessions working at
 
 ## Decisions waiting for you
 
+**Owner, 14 November (evening):**
+- **Lessons:** good enough; on hold. No more lesson work until he says so.
+- **Computer opponent:** not good; on hold until the remaining problems of the game are fixed, then resumed.
+- **`database.rules.json`:** published. Done.
+- **Sicily:** blocks in the At Sea and Airborne Assault boxes are not drawn on the map, and "Release a division" (14.61) cannot pick a division with no block in an area (`web/src/sicily-ui.ts:44`). Passed to the interface session; the rules session was asked whether a division may be released before it is ashore.
+
 0. **Tutorial**: to be cancelled and rebuilt (your decision, 13 November). The outlines are written (14 November): `docs/TUTORIAL-OUTLINE.md`, three courses, about 42 minutes in all. Waiting for your approval, and whether the present lessons stay on the site meanwhile.
 
 1. ~~Figures~~ Answered 13 November: kept, to be polished after the streamlining work.
