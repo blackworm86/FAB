@@ -207,3 +207,12 @@
     white-space: nowrap;
   }
 }
+/* the Layer buttons in the Map menu: equal cells, three per row (the last one no longer stretches across a row of its own) */
+.mapdock.menuopen .dockrow > .laysw:not(.labsw) {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+.mapdock.menuopen .dockrow > .laysw:not(.labsw) > b {
+  grid-column: 1 / -1;
+}
