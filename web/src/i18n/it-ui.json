@@ -2227,7 +2227,7 @@
     "Click Next to go on": "Clicca Avanti per proseguire",
     "Exit": "Esci",
     "Back to the lesson →": "Torna alla lezione →",
-    "You play": "Schieramento:",
+    "You play": "Giochi con",
     "Hint": "Suggerimento",
     "Start →": "Inizia →",
     "Show me →": "Mostrami →",
@@ -5528,7 +5528,11 @@
       ", and a block to change the point unit\\. The attacker's assets are on the table \\(6\\.23\\)\\.",
       ", e un blocco per cambiare l'unità di punta. Le risorse dell'attaccante sono sul tavolo (6.23)."
     ],
-    ["· point unit (.+)", "· unità di punta $1"]
+    ["· point unit (.+)", "· unità di punta $1"],
+    ["(.+) · Lesson (\\d+) of (\\d+)", "$1 · Lezione $2 di $3"],
+    ["(.+) · (\\d+)\\.(\\d) min", "$1 · $2,$3 min"],
+    ["(.+) · (\\d+) min", "$1 · $2 min"],
+    ["(\\d+)\\.(\\d) min", "$1,$2 min"]
   ],
   "html": {}
 }

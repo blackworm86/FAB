@@ -6,9 +6,9 @@ const ctx = await b.newContext({ ...devices['iPhone 13'], deviceScaleFactor: 1 }
 const page = await ctx.newPage();
 const errs = [];
 page.on('pageerror', (e) => errs.push(e.message));
-await page.addInitScript(() => {
-  localStorage.setItem('fab-lang', 'en');
-});
+await page.addInitScript((lang) => {
+  localStorage.setItem('fab-lang', lang);
+}, process.env.UI_LANG ?? 'en');
 await page.goto('http://localhost:5199/?tutorial=' + process.env.COURSE + '');
 await page.waitForFunction(() => window.__fab?.tut?.(), null, { timeout: 90000 });
 await page.waitForTimeout(3000);
