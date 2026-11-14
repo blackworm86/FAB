@@ -23,7 +23,7 @@ import { paintAreas, paintBoard, saveLayers, supOk, viewRot } from './map-paint'
 import { dist, pitch, setYaw, target, yaw } from './camera';
 import { hist, say, setNote, setSelArr, setToast, setToastInfo } from './flow';
 import { followFoe, setFollowFoe } from './choices';
-import { center, clampDist, goal, setGoal, setInBattle } from './map-input';
+import { center, clampDist, goal, lock, setGoal, setInBattle } from './map-input';
 import { badgeList, setBadges, syncBadges } from './routes';
 import { menuTab, modal, restartAsk, setMenuTab, setModal, setRestartAsk } from './rolls';
 import { COARSE, guide, setGuide } from './prompt';
@@ -145,17 +145,29 @@ function freeRect() {
   const r = canvas.getBoundingClientRect(),
     f = { l: r.left + 16, t: r.top + 40, r: r.right - 16, b: r.bottom - 12 }; // room for the labels and MP badges drawn above an area's centre
   const panels =
-    '#ui .c-bar, #ui .mapdock, #ui .sbx, #ui .c-dispatch, #ui .c-ledger, #ui .volstack, #ui .arrtray, #ui .c-hand, #ui .handtab';
-  for (const e of Array.from(document.querySelectorAll<HTMLElement>(panels))) {
-    const b = e.getBoundingClientRect();
-    if (!e.offsetParent || !b.width || b.bottom < f.t || b.top > f.b || b.right < f.l || b.left > f.r) continue;
-    const cuts = [
-      { ...f, t: Math.max(f.t, b.bottom + 8) },
-      { ...f, b: Math.min(f.b, b.top - 8) },
-      { ...f, l: Math.max(f.l, b.right + 8) },
-      { ...f, r: Math.min(f.r, b.left - 8) },
-    ];
-    Object.assign(f, cuts.sort((x, y) => (y.r - y.l) * (y.b - y.t) - (x.r - x.l) * (x.b - x.t))[0]); // the cut that leaves the most map
+    '#ui .c-bar, #ui .mapdock .dockrow, #ui .mapdock .maptools, #ui .sbx, #ui .c-dispatch, #ui .c-ledger, #ui .volstack, #ui .arrtray, #ui .c-hand, #ui .handtab';
+  const boxes = Array.from(document.querySelectorAll<HTMLElement>(panels))
+    .filter((e) => e.offsetParent)
+    .map((e) => e.getBoundingClientRect())
+    .filter((b) => b.width && b.bottom > f.t && b.top < f.b && b.right > f.l && b.left < f.r);
+  const wide = (b: DOMRect) => b.width > (f.r - f.l) * 0.6;
+  // the panels across the screen split it into bands: the tallest free band is the map's
+  const cuts = boxes
+    .filter(wide)
+    .map((b) => [b.top - 8, b.bottom + 8])
+    .sort((x, y) => x[0] - y[0]);
+  let best = { t: f.t, b: f.t },
+    y = f.t;
+  for (const [t, b] of [...cuts, [f.b, f.b]]) {
+    if (Math.min(t, f.b) - y > best.b - best.t) best = { t: y, b: Math.min(t, f.b) };
+    y = Math.max(y, b);
+  }
+  f.t = best.t;
+  f.b = best.b;
+  // the narrow ones (Map button, a side panel) take their side of that band
+  for (const b of boxes.filter((x) => !wide(x) && x.bottom > f.t && x.top < f.b)) {
+    if (b.left + b.right > f.l + f.r) f.r = Math.min(f.r, b.left - 8);
+    else f.l = Math.max(f.l, b.right + 8);
   }
   return f;
 }
@@ -203,7 +215,7 @@ export function showAreas(ids: number[]) {
       y0 = Math.min(...px.map((p) => p.y)),
       y1 = Math.max(...px.map((p) => p.y));
     const grow = Math.max((x1 - x0) / (f.r - f.l), (y1 - y0) / (f.b - f.t));
-    if (grow > 1) d = clampDist(d * grow * 1.05); // too wide or tall for the free part: step back
+    if (grow > 1) d = lock ? clampDist(d * grow * 1.05) : Math.min(innerWidth < 700 ? 90 : 72, Math.max(7, d * grow * 1.05)); // too wide or tall for the free part: step back (a phone may go further out than by hand, to fit them all)
     const a = at((x0 + x1) / 2, (y0 + y1) / 2),
       b = at((f.l + f.r) / 2, (f.t + f.b) / 2);
     if (a && b) t.add(a.sub(b)); // the middle of the areas onto the middle of the free part
@@ -221,7 +233,7 @@ function layersHtml() {
   const map = VOL.art.relief
     ? srow(
         'Map',
-        VOL.art.reliefName,
+        map3d ? VOL.art.reliefName : 'The printed board, flat', // what is on now (playtest 2, item 14)
         `<span class="seg">${chip('2D', !map3d, () => setMap3d(false), 'The printed board, flat')}${chip('3D', map3d, () => setMap3d(true), VOL.art.reliefName)}</span>`,
       )
     : '';

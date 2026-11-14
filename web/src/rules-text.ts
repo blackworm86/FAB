@@ -142,7 +142,7 @@ German engineers work in their own army's zone (14.52); an army without its engi
 • Blow up bridges (4.31): from a supplied, friendly-controlled, uncontested area, blow one or two bridges on that area's river boundaries.
 • Repair a bridge (4.32): from a supplied, friendly, uncontested area, when you control the far side or contest it. Where a river is also an army boundary, either Allied army's engineer may bridge from its own side (14.52).
 • Field works (4.33): in a supplied, friendly, uncontested area with a unit of the engineer's army. Axis engineers work in any zone and for any Axis unit (14.53).
-• Ports (14.51): the Axis damages, the Allies repair, Syracuse, Catania or Palermo by one level, at most one level per port per Admin Phase. The port area must be friendly-controlled, in supply and (in this game) uncontested; the Allies also need a British unit there (Syracuse, Catania) or an American one (Palermo). A port takes at most two levels of damage, and Messina can never be damaged. A damaged port gives no arrivals, no supply and no extra draw (16.5).
+• Ports (14.51): the Axis damages, the Allies repair, Syracuse, Catania or Palermo by one level, at most one level per port per Admin Phase. The port area must be friendly-controlled and in supply, even if contested; the Allies also need a British unit there (Syracuse, Catania) or an American one (Palermo). A port takes at most two levels of damage, and Messina can never be damaged. A damaged port gives no arrivals, no supply and no extra draw (16.5).
 • Roadblock (4.34): in a supplied, friendly, vacant area with Terrain Difficulty 1 or more. The first enemy unit to enter pays +1 MP and stops, and the marker goes. Removed in the Supply Phase.
 • Defended roadblock (4.35): the engineer chit itself stands in such an area. Every enemy unit entering stops and must fight it. Only one artillery asset of its own army may help it (no other asset, no Special Action). Surviving, it goes to the Used Box in the Supply Phase; a hit eliminates it.
 Combat (6.32, 6.33): a battle asset (one die, the chit's quality) with the usual limits; an Italian engineer is the battle's one Italian battle asset (16.11). Attacking, it may instead remove the enemy field works if it survived the artillery and defensive fire; it still counts as a battle asset.`,
@@ -159,10 +159,10 @@ Combat (6.32, 6.33): a battle asset (one die, the chit's quality) with the usual
   'sicily:air_mission': [
     'Air support (16.3)',
     `Both sides. One mission per asset, whatever the supply of the area; afterwards it goes to the Used Box and recycles like any asset.
-• Ground support (16.32, in a battle's set-up): one air asset per side per battle, outside the artillery and battle-asset limits, for unsupplied units too. Choose before your artillery fires: it fires as an extra artillery asset, or it gives +2 to one of your units in the battle. It never takes a step loss, and it goes to the Used Box even if the attack is aborted.
+• Ground support (16.32, in a battle's set-up): one air asset per side per battle, a flanking invasion included, outside the artillery and battle-asset limits, for unsupplied units too. Choose before your artillery fires: it fires as an extra artillery asset, or it gives +2 to one of your units in the battle (with US and British units together only as artillery, 6.22). It never takes a step loss, and it goes to the Used Box even if the attack is aborted.
 • Dogfighting (16.31): when the enemy flies air support in a battle, an interdiction or an air supply mission, you may cancel that mission with one of your own air assets. In a battle this is your one air commitment there; the Attacker may answer the Defender's air out of turn. Both assets go to the Used Box, and neither side may fly another mission in its place.
-• Interdiction (16.33, Admin Phase, either player): place it on any land area. Enemy units pay +1 MP to enter and +1 MP to leave it, and may not strat-move into, out of or through it. It stays until the Supply Phase of the current player turn.
-• Air supply (16.34, Supply Phase, either player): place it on one area with your unsupplied units. They keep the unsupplied marker (still no assets, events, Special Actions, staff or engineers, 9.34a, 9.34d), but they make no out-of-supply morale check and their disordered markers adjust (9.35) this Supply Phase.
+• Interdiction (16.33, Admin Phase, either player): place it on any land area (both sides may interdict the same area). Enemy units pay +1 MP to enter and +1 MP to leave it, and may not strat-move into, out of or through it. It stays until the Supply Phase of the current player turn.
+• Air supply (16.34, Supply Phase, either player): place it on one area with your unsupplied units; you may fly several missions, one area each. They keep the unsupplied marker (still no assets, events, Special Actions, staff or engineers, 9.34a, 9.34d), but they make no out-of-supply morale check and their disordered markers adjust (9.35) this Supply Phase.
 • Captured airfields (16.4): the first time the Allies take Catania, Niscemi or Marsala, a conditional (C) Allied air asset goes into the Allied cup, and the next Axis air asset drawn fills the empty Captured Airfields box and is lost to the Axis.`,
   ],
   'sicily:sa_block': [
@@ -262,13 +262,13 @@ Combat (6.32, 6.33): a battle asset (one die, the chit's quality) with the usual
 • Whatever the result, the SAM then goes to the Used Box. A cancelled mission may not be replaced by another air asset (in that battle, or over that area this Admin Phase).
 • While any SAM is in the Available Box, Israel may commit only one air asset to a battle east of the barrier (16.22).
 • A defence entirely disordered by Electronic Warfare jamming fires no SAM (17.33).
-• Reduction, each Reinforcement Phase: one die per SAM in the Used Box. If any die is 6 or more, one SAM goes to the Eliminated Box. Each of the first three SAMs eliminated releases a conditional Israeli air asset into the cup (16.23). Operation Dugman 5 can also destroy SAMs or send them back to the cup (17.22).
+• Reduction, each Reinforcement Phase, after the unused Special Action has had its chance to save one (4.1a): one die per SAM in the Used Box. If any die is 6 or more, one SAM goes to the Eliminated Box. Each of the first three SAMs eliminated releases a conditional Israeli air asset into the cup (16.23). Operation Dugman 5 can also destroy SAMs or send them back to the cup (17.22).
 • A lost SAM comes back to the cup by a Syrian Special Action (14.61c), never by the alternate event use (17.4).`,
   ],
   'golan:commando': [
     'Commando battalion (Syrian, 16.11)',
     `Use it in one of two ways.
-Raid (Admin Phase): place it in a vacant, Israeli-controlled area next to an area with a Syrian unit (any Terrain Difficulty). Israeli units may not strat-move or retreat into that area. The first Israeli unit to enter pays +1 MP and stops, and Syria rolls one die:
+Raid (the Syrian Admin Phase, 4.2b): place it in a vacant, Israeli-controlled area next to an area with a Syrian unit (any Terrain Difficulty). Israeli units may not strat-move or retreat into that area. The first Israeli unit to enter pays +1 MP and stops, and Syria rolls one die:
 • 1-2, success: the Israelis must fight it like a defended roadblock in the Combat Phase (one die, elite infantry; only one artillery asset may help it, no events, no Special Action).
 • 3-5, partial success: the same, but it never fires back; it only blocks movement and retreats.
 • 6-10, failure: the helicopters are shot down. It goes to the Eliminated Box and the Israeli unit may move on with the MP it has left.
@@ -401,14 +401,14 @@ Combat: a battle asset (one die, infantry class; allowed on Mt Hermon). Attackin
   'golan:event_ew': [
     'Electronic Warfare (17.33)',
     `Played in a battle as your one event (6.22, 6.23), in one of two ways:
-• Command disruption (Attacker only): with the Attacker's assets, before the Defender assigns any. Each defending unit (not garrisons or other standing assets) rolls one die: 5 or less, it is disordered at once. If every defending unit is disordered, the Defender may assign no artillery, air support, battle asset or SAM in this battle.
-• Countermeasures (Defender only): the immediate answer to a command disruption, +2 to each of those rolls. It is the Defender's one event.
+• Command disruption (Attacker only): with the Attacker's assets, before the Defender assigns any. Each defending unit, strongpoints included (15.6), but not garrisons or other standing assets, rolls one die: 5 or less, it is disordered at once. If every defending unit is disordered, the Defender may assign no artillery, air support, battle asset or SAM in this battle.
+• Countermeasures (Defender only): the immediate answer to a command disruption, +2 to each of those rolls (not for unsupplied units, 9.34d). It is the Defender's one event.
 • The battle cannot start until the Defender has rolled.`,
   ],
   'golan:event_counterbattery': [
     'Counterbattery strike (17.34)',
     `Played in a battle as your one event, before the first roll. The Attacker may also play it after seeing the Defender commit artillery. After the enemy artillery has fired, roll one die:
-• 1-5: one enemy artillery asset from this battle goes onto the Turn Track that many turns ahead. On that turn it arrives straight in the Available Box, not counted in that turn's draw.
+• 1-5: one enemy artillery asset from this battle (your choice, when there are two) goes onto the Turn Track that many turns ahead. On that turn it arrives straight in the Available Box, not counted in that turn's draw.
 • 6-10: no effect. If the enemy fires no artillery, the event is spent for nothing.`,
   ],
   'golan:strongpoint': [

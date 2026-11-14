@@ -329,13 +329,22 @@ export function initTutorial(h: TutHost, course: Course) {
     const cw = coach.offsetWidth,
       ch = coach.offsetHeight;
     let x: number, y: number;
+    const panels = Array.from(document.querySelectorAll('#ui .volstack, #ui .c-table, #ui .c-ledger, #ui .mapbubble, #ui .c-dispatch'))
+      .filter(visible)
+      .map((e) => e.getBoundingClientRect()); // the panel a step explains stays readable (playtest 2, item 21)
+    const covers = (cx: number, cy: number) =>
+      [...panels, ...(r ? [{ left: r.x, top: r.y, right: r.x + r.w, bottom: r.y + r.h }] : [])].reduce(
+        (a, b) =>
+          a +
+          Math.max(0, Math.min(cx + cw, b.right) - Math.max(cx, b.left)) * Math.max(0, Math.min(cy + ch, b.bottom) - Math.max(cy, b.top)),
+        0,
+      );
     if (W < 700) {
-      // phones: under the top bar, or above the bottom bar when the target is up there
+      // phones: under the top bar or above the bottom bar, whichever covers less of the target and the panels
       x = 10;
-      y = top;
-      if (t && !('el' in t))
-        y = Math.max(top, bot - ch); // a block or area: the coach sits low, the map slides into the clear band above it (keep())
-      else if (r && r.y < y + ch + 6 && r.y + r.h > y) y = Math.max(top, bot - ch); // a button up there: the coach goes down
+      const low = Math.max(top, bot - ch);
+      y = t && !('el' in t) ? low : top; // a block or area: the coach sits low, the map slides into the clear band above it (keep())
+      if (covers(x, y) > covers(x, y === top ? low : top)) y = y === top ? low : top;
     } else if (!r && document.querySelector('#ui .modal')) {
       x = W - cw - 10;
       y = bot - ch;
@@ -353,18 +362,13 @@ export function initTutorial(h: TutHost, course: Course) {
         [10, top],
         [(W - cw) / 2, top],
       ];
-      const avoid = [
-        { left: r.x, top: r.y, right: r.x + r.w, bottom: r.y + r.h },
-        ...Array.from(document.querySelectorAll('#ui .c-ledger'))
-          .filter(visible)
-          .map((e) => e.getBoundingClientRect()),
-      ]; // the target and the fire report stay readable
+      const avoid = [{ left: r.x, top: r.y, right: r.x + r.w, bottom: r.y + r.h }, ...panels]; // the target and the panels stay readable
       const clear = ([cx, cy]: [number, number]) =>
         avoid.every((b) => cx + cw < b.left || cx > b.right || cy + ch < b.top || cy > b.bottom);
       const all = cands.map(
         ([cx, cy]) => [Math.min(W - cw - 10, Math.max(10, cx)), Math.min(bot - ch, Math.max(top, cy))] as [number, number],
       );
-      const fit = all.find(clear) ?? all.find(([cx, cy]) => cx + cw < r!.x || cx > r!.x + r!.w || cy + ch < r!.y || cy > r!.y + r!.h);
+      const fit = all.find(clear) ?? [...all].sort((a, b) => covers(...a) - covers(...b))[0];
       [x, y] = fit ?? [10, top];
     }
     coach.style.left = `${x}px`;

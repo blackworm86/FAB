@@ -7,7 +7,7 @@ import { PIP } from './block-kit';
 import { reg } from './ui-kit';
 import { hasLegend, legendCard } from './map-legend';
 import { VOL } from './page';
-import { g, selArea, selChit, selUnit, setHoverArea, setPreviewArea, setSelArea, setSelChit, setSelUnit } from './game-state';
+import { g, selChit, selUnit, setHoverArea, setPreviewArea, setSelArea, setSelChit, setSelUnit } from './game-state';
 import { labelMode, setLabelMode, setTint, supplySide, tint } from './map-paint';
 import { setYaw, yaw } from './camera';
 import { selArr, setSelArr } from './flow';
@@ -139,7 +139,7 @@ export function mapDock() {
         })}">${ico(icon)}<span class="l">${label}</span><span class="s">${short}</span></button>`,
     )
     .join('');
-  const sel = selUnit || selArr || selChit || selArea != null;
+  const sel = selUnit || selArr || selChit; // an area left selected after a move has no panel: no Deselect button for it (playtest 2, item 17)
   const tools = `<div class="maptools"><button aria-label="Rotate the map a quarter turn" title="Rotate the map" data-ui="${reg(rotateQuarter)}">${ico('rotate')}</button>${
     sel
       ? `<button aria-label="Deselect" title="Deselect" data-ui="${reg(() => {
@@ -156,5 +156,5 @@ export function mapDock() {
     () => {
       mapMenu = !mapMenu;
     },
-  )}">${ico('layers')}<span>Map: <b>${cur}</b><span class="mlab"><i class="msep">·</i>Labels <b>${LABEL_NAME[labelMode]}</b></span></span><span aria-hidden="true">▾</span></button>${mapLegend()}<div class="laysw" role="group" aria-label="Map colour layer"><b>Layer</b>${sw}</div>${labelsBtn()}</div>${legend()}${tools}</div>`;
+  )}">${ico('layers')}<span>Map layers: <b>${cur}</b><span class="mlab"><i class="msep">·</i>Labels <b>${LABEL_NAME[labelMode]}</b></span></span><span aria-hidden="true">▾</span></button>${mapLegend()}<div class="laysw" role="group" aria-label="Map colour layer"><b>Layer</b>${sw}</div>${labelsBtn()}</div>${legend()}${tools}</div>`;
 }

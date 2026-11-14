@@ -79,6 +79,27 @@ export function sicilyTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): T
       );
     t.hint = t.units.size ? hint : 'No block qualifies right now';
   };
+  /** 14.61: the divisions this counter may release, one button each: a division is released as a whole, wherever its blocks are (at sea, in the Airborne Assault box, not yet arrived). */
+  const divisions = (brigade?: string) => {
+    const seen = new Set<string>();
+    for (const u of g.units.filter((x) => x.side === 'allied' && x.division)) {
+      if (seen.has(u.division!)) continue;
+      seen.add(u.division!);
+      if (works(g, (x) => S.releaseDivision(x, u.division!, id, brigade)))
+        t.chips.push({
+          label: `${u.name} · ${u.nation === 'british' ? '8th Army' : '7th Army'}`,
+          img: ctx.face(u),
+          fn: run((x) => S.releaseDivision(x, u.division!, id, brigade)),
+        });
+    }
+    t.hint = t.chips.length
+      ? brigade
+        ? 'Choose the British division to release; the brigade goes with it'
+        : 'Choose the division to release from its army boundaries'
+      : c.kind === 'special_action_event'
+        ? 'No division to release: this Special Action releases only a division of its own army, not yet released (14.61)'
+        : 'No division left to release (14.61)';
+  };
   const modes = (list: { id: string; icon: string; label: string; apply: () => void }[]) => {
     for (const m of list) t.modes.push({ id: m.id, icon: m.icon, label: m.label });
     let mode = ctx.mode;
@@ -135,8 +156,8 @@ export function sicilyTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): T
                   fn: run((x) => S.portWork(x, id, p)),
                 });
             t.hint = t.buttons.length
-              ? 'One damage level per Admin Phase; the port must be yours, supplied and uncontested'
-              : 'No port can be worked on now (yours, supplied, uncontested; the Allies need a unit of the right army there)';
+              ? 'One damage level per Admin Phase; the port must be yours and supplied (contested is allowed)'
+              : 'No port can be worked on now (yours and supplied; the Allies need a unit of the right army there)';
           },
         },
       ]);
@@ -231,11 +252,7 @@ export function sicilyTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): T
           id: 'release',
           icon: 'next',
           label: 'Release a division (14.61)',
-          apply: () =>
-            units((x, uid) => {
-              const u = x.units.find((v) => v.id === uid)!;
-              S.releaseDivision(x, u.division!, id);
-            }, 'Tap a block of the division to release from its army boundaries'),
+          apply: () => divisions(),
         });
       if (side === 'allied')
         for (const br of ['br_1st_cdn_arm', 'br_4th_arm', 'br_231st'].filter(
@@ -245,11 +262,7 @@ export function sicilyTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): T
             id: `rel-${br}`,
             icon: 'next',
             label: `Release a British division with the ${g.units.find((u) => u.division === br)!.name} (14.61)`,
-            apply: () =>
-              units((x, uid) => {
-                const u = x.units.find((v) => v.id === uid)!;
-                S.releaseDivision(x, u.division!, id, br);
-              }, 'Tap a block of the British division to release; the brigade goes with it'),
+            apply: () => divisions(br),
           });
       modes(list);
       break;
@@ -402,26 +415,28 @@ export function sicilyPanel(g: Game, ctx: PanelCtx): string {
     if (S.battleState(b).flank)
       out.push(`<div class="volpanel"><small>A flanking invasion: the Allies may commit only air and naval support (17.22).</small></div>`);
   }
-  if (g.phase === 'supply' && !g.airSupply)
+  if (g.phase === 'supply')
     for (const sd of E.sidesOf(g)) {
       // 16.34: either player, in any Supply Phase
       if (!ctx.mine(sd)) continue;
       const air = g.chits.find((x) => x.kind === 'air_mission' && x.side === sd && x.box === 'available');
       const need = [
         ...new Set(g.units.filter((u) => u.side === sd && u.area != null && u.unsupplied && !S.isBox(u.area)).map((u) => u.area!)),
-      ];
+      ].filter((a) => works(g, (x) => S.airSupply(x, air?.id ?? '', a))); // one mission per area; several missions allowed (16.34)
       if (air && need.length)
         out.push(
-          `<div class="volpanel"><b>${ctx.ico('air_mission')} ${esc(nm(sd))} air supply (16.34)</b><span>One unsupplied area gets no morale checks this Supply Phase and its units may recover.</span><div class="row">${ctx.ubtn('Choose the area', () => ctx.pickArea('Air supply: tap the area', need, (a) => S.airSupply(live(), air.id, a)), 'primary')}</div></div>`,
+          `<div class="volpanel"><b>${ctx.ico('air_mission')} ${esc(nm(sd))} air supply (16.34)</b><span>Each mission: one unsupplied area gets no morale checks this Supply Phase and its units may recover.</span><div class="row">${ctx.ubtn('Choose the area', () => ctx.pickArea('Air supply: tap the area', need, (a) => S.airSupply(live(), air.id, a)), 'primary')}</div></div>`,
         );
     }
-  if (g.phase === 'supply' && g.airSupply && ctx.mine(E.other(g.airSupply.side))) {
-    const air = g.chits.find((x) => x.kind === 'air_mission' && x.side !== g.airSupply!.side && x.box === 'available');
-    if (air)
-      out.push(
-        `<div class="volpanel"><b>${ctx.ico('air_mission')} Dogfight (16.31)</b><span>Cancel the enemy Air Supply mission over ${esc(ctx.areaName(g.airSupply.area))} with ${esc(air.name)}.</span><div class="row">${ctx.btn('Dogfight', () => S.dogfightAirSupply(live(), air.id))}</div></div>`,
-      );
-  }
+  if (g.phase === 'supply')
+    for (const m of E.airSup(g)) {
+      if (!ctx.mine(E.other(m.side))) continue;
+      const air = g.chits.find((x) => x.kind === 'air_mission' && x.side !== m.side && x.box === 'available');
+      if (air)
+        out.push(
+          `<div class="volpanel"><b>${ctx.ico('air_mission')} Dogfight (16.31)</b><span>Cancel the enemy Air Supply mission over ${esc(ctx.areaName(m.area))} with ${esc(air.name)}.</span><div class="row">${ctx.btn('Dogfight', () => S.dogfightAirSupply(live(), air.id, m.area))}</div></div>`,
+        );
+    }
   return out.length ? `<div class="volstack">${out.join('')}</div>` : '';
 }
 /** Why combat cannot begin yet, or null. */

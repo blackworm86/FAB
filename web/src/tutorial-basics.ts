@@ -718,7 +718,7 @@ const L_SUPPLY: Lesson = {
     ),
     {
       title: 'See your supply',
-      text: '<b>Tap Map, then Supply.</b> Your supplied areas take your colour; areas cut off are striped.',
+      text: '<b>Tap Map layers, then Supply.</b> Your supplied areas take your colour; areas cut off are striped.',
       target: { el: ['.laysw button[title^="Supply"]', '.mapmenu-btn'], label: 'Supply in the Map list' },
       done: (_g, q) => q('.laysw button[aria-pressed="true"][title^="Supply"]'),
     },

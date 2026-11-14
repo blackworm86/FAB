@@ -8,11 +8,12 @@ import { ico } from './icons';
 import { esc, nm } from './util';
 import { chatHtml, bindChat } from './chat';
 import { acts, actv, resetActs, reg, ubtn, btn } from './ui-kit';
-import { homeUrl, bindAuth } from './home';
+import { homeUrl, bindAuth, tutUrl } from './home';
+import { coursesOf } from './tutorial-list';
 import { clearDice } from './dice3d';
 import { linkRules } from './rules-link';
 import { LAB_SIDE, labStep } from './lab';
-import { $, areaName, P1, VOL } from './page';
+import { $, areaName, P1, TUT, VOL } from './page';
 import { g, save, selArea, selChit, selUnit, setG, setPreviewArea, setSelArea, setSelChit, setSelUnit, showReplay } from './game-state';
 import { canvas } from './scene';
 import { drawPieces } from './pieces';
@@ -37,6 +38,8 @@ import {
   toastInfo,
   undo,
   setupSide,
+  tgt,
+  actorNow,
 } from './flow';
 import {
   airPickHtml,
@@ -54,16 +57,16 @@ import {
 } from './choices';
 import { reinforceTargets, reinforcing, setGoal, syncBattleCam } from './map-input';
 import { badgeList, drawRoute, setBadges, syncBadges } from './routes';
-import { decisionBubble, decisionTargets, syncAreaTags, syncMoveMarks, syncTags } from './map-marks';
+import { barChoices, decisionBubble, decisionTargets, syncAreaTags, syncMoveMarks, syncTags } from './map-marks';
 import { endRoll, heldNext, menuTab, modal, rollStage, rollView, setModal } from './rolls';
 import { chitTargets, drag, lastPointer, setLastPointer, tapCard } from './cards';
-import { canMove, endArmed, guardEnd, guide, primary, prompt, setGuide, topBar } from './prompt';
+import { canMove, endArmed, guardEnd, guide, lessonDone, primary, prompt, setGuide, topBar } from './prompt';
 import { dockChips, undoBtn } from './dock';
 import { piecesSide, piecesTab, setInspectId, unitPic } from './pieces-window';
 import { dispatch, dragArrival, frameArrival } from './unit-card';
 import { mapDock } from './map-dock';
 import { battleTable, handCards, ledger, setRefusal, volPanel } from './battle-view';
-import { homeGoal, modalHtml, openingTarget, seatBar } from './menus';
+import { homeGoal, modalHtml, openingTarget, seatBar, showAreas } from './menus';
 import { camTouched, frameAt, fxBattle, lastPhase, openFrame, setFrameAt, setFxBattle, setLastPhase, setOpenFrame } from './main';
 
 export const inGame = () => HAS_TABLE || DEV_FAKE || SANDBOX || TUTORIAL || !!LAB_SIDE || online.mode === 'local';
@@ -198,7 +201,13 @@ function renderInner() {
   }
   if (rollView && !g.battle && !rollView.check) endRoll(); // dice left on screen after the battle is over
   const p = primary(),
-    b = g.battle;
+    b = g.battle,
+    actor = actorNow(),
+    chs = barChoices();
+  if (actor !== 'both' && actor !== lastActor) {
+    if (lastActor && !TUT && mine(actor) && mine(other(actor))) passTo = actor; // one device, both sides: ask to pass it (design review, problem 1)
+    lastActor = actor;
+  }
   const alert = g.pendingBlow
     ? (() => {
         const u = g.units.find((x) => x.id === g.pendingBlow!.unit)!,
@@ -233,7 +242,7 @@ function renderInner() {
             },
           )}</div>`
         : ''
-    }${volPanel()}${mapDock()}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${SBU.hotCoverHtml()}${saPickHtml()}${altPickHtml()}${airPickHtml()}${chatHtml()}${
+    }${volPanel()}${mapDock()}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${SBU.hotCoverHtml()}${newcomerCard()}${saPickHtml()}${altPickHtml()}${airPickHtml()}${chatHtml()}${
       scoreOpen
         ? vpSheet(
             g,
@@ -276,7 +285,7 @@ function renderInner() {
               }),
           )
         : ''
-    }${toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}<div class="c-bar b"><div class="c-prompt" aria-live="polite">${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}</button>${undoBtn()}${!p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go ${g.moving && p.label.startsWith('End') ? 'quiet' : ''}" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` +
+    }${toast && (modal || TUT) ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}${passHtml()}<div class="c-bar b ${actor !== 'both' && !g.over ? `actor ${actor}` : ''}"><div class="c-prompt" aria-live="polite">${toast && !modal && !TUT ? `<span class="toast barmsg${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</span>` : ''}${actor !== 'both' && !g.over ? `<span class="whotag">${esc(nm(actor))} decides</span> ` : ''}${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}<span class="gl">Explain: <b>${guide}</b></span></button>${undoBtn()}${chs.length ? chs.map((c, i) => btn(`<span>${esc(c.label)}<small>${esc(c.sub)}</small></span>`, c.fn, `go choice ${i ? 'alt' : ''}`, false, c.title)).join('') : !p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go ${g.moving && p.label.startsWith('End') ? 'quiet' : ''}" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` +
     modalHtml();
   const ui = $('#ui');
   {
@@ -304,6 +313,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
     edge();
     row.addEventListener('scroll', edge, { passive: true });
   });
+  ui.querySelector<HTMLElement>('.chitbar .cbchips')?.scrollIntoView({ block: 'end' }); // a card's named choices are what the player came for: in view, whatever the panel's height
   ui.querySelectorAll<HTMLElement>('.volstack').forEach((st) => {
     // a set-up panel taller than its space fades at the bottom with a ▾, so it reads as "more below" (playtest B7)
     const edge = () => st.classList.toggle('more', st.scrollTop + st.clientHeight < st.scrollHeight - 2);
@@ -313,7 +323,28 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
   {
     const h = ui.querySelector<HTMLElement>('.c-hand'),
       a = ui.querySelector<HTMLElement>('.arrtray');
-    if (h) h.scrollLeft = keepH;
+    if (h) {
+      // the cards are measured as drawn: they overlap just enough to fit the screen, each keeping a finger's width visible; past that the hand scrolls (playtest 2, item 18)
+      const cs = h.querySelectorAll<HTMLElement>('.card2'),
+        n = cs.length,
+        lw = cs[0]?.offsetWidth ?? 0,
+        cw = cs[0]?.getBoundingClientRect().width ?? 0, // as drawn: scaled and tilted
+        avail = h.clientWidth - 24,
+        fit = n > 1 ? (avail - cw) / (n - 1) : lw,
+        step = n > 1 ? (innerWidth < 700 && fit < 46 ? lw + 6 : Math.min(lw, Math.max(innerWidth < 900 ? 46 : 40, fit))) : lw, // a phone hand that cannot fit scrolls as whole cards (design review, problem 5)
+        over = cw + (n - 1) * step > avail;
+      if (n > 1 && lw) {
+        h.style.setProperty('--ov', `${Math.round(lw - step)}px`);
+        const hr = h.getBoundingClientRect(),
+          span = cs[n - 1].getBoundingClientRect().right - cs[0].getBoundingClientRect().left,
+          extra = span - (hr.width - 24); // the tilted end cards swing out further than their size: one correction from where they land
+        if (extra > 0 && !over) h.style.setProperty('--ov', `${Math.round(lw - step + extra / (n - 1) + 1)}px`);
+        h.style.overflowX = over ? 'auto' : 'hidden';
+        h.style.justifyContent = over ? 'flex-start' : '';
+        h.style.paddingInline = over ? '30px' : '';
+      }
+      h.scrollLeft = keepH;
+    }
     if (a) a.scrollLeft = keepA;
   }
   ui.querySelectorAll<HTMLElement>('[data-ui]').forEach(
@@ -500,7 +531,52 @@ function driveSplit() {
 export let ctlKey = '',
   tgtKey = '';
 export const setTgtKey = <T extends typeof tgtKey>(v: T): T => ((tgtKey = v), v);
-let playKey: string | null = null;
+/** A first table with no lesson finished: one card offers the lesson of this game, or to just play (design review, problem 4). Shown once. */
+function newcomerCard() {
+  if (TUT || SANDBOX || g.over || lessonDone()) return '';
+  try {
+    if (localStorage.getItem('fab-newcomer')) return '';
+  } catch {
+    return '';
+  }
+  const c = coursesOf(VOL.id)[0];
+  if (!c) return '';
+  const seen = () => {
+    try {
+      localStorage.setItem('fab-newcomer', '1');
+    } catch {
+      /* private mode */
+    }
+  };
+  return `<div class="newcard" role="dialog" aria-label="New to FAB?"><b>New to FAB?</b><span>${esc(c.title)} · about ${c.minutes} minutes, on this map.</span><div class="row">${ubtn(
+    'Start the lesson',
+    () => {
+      seen();
+      location.href = tutUrl(c.id);
+    },
+    'primary',
+  )}${ubtn('Just play', seen)}</div></div>`;
+}
+/** The side that must act now, and the side the device is to be passed to (until the first tap anywhere). */
+let lastActor: string | null = null,
+  passTo: E.Side | null = null;
+const passHtml = () =>
+  passTo
+    ? `<div class="passstrip ${passTo}" role="status"><span aria-hidden="true">⇄</span><span>Pass to the ${esc(nm(passTo))} player</span><small>· tap to start</small></div>`
+    : '';
+document.addEventListener(
+  'pointerdown',
+  () => {
+    if (passTo) {
+      passTo = null;
+      setTimeout(render);
+    }
+  },
+  true,
+);
+let playKey: string | null = null,
+  chitFramed = '',
+  retreatFramed = '';
 export let lastFight: number | null = null;
 export const setLastFight = <T extends typeof lastFight>(v: T): T => ((lastFight = v), v);
 export function refresh() {
@@ -584,6 +660,25 @@ export function refresh() {
                   })
                 : null)),
       );
+      const t = tgt,
+        fk = `${selChit}|${tgtMode}|${selArea}`;
+      if (selChit && t && fk !== chitFramed) {
+        chitFramed = fk;
+        const ids = [
+          ...new Set([...t.pick.keys(), ...t.areas.keys(), ...[...t.units.keys()].map((id) => g.units.find((u) => u.id === id)?.area)]),
+        ].filter((a): a is number => a != null);
+        if (ids.length) setTimeout(() => showAreas(ids), 60); // once the panel is drawn: the areas the card can act on come into view, clear of it (playtest 2, item 9)
+      }
+      if (!selChit) chitFramed = '';
+    }
+    {
+      const rb = g.battle?.stage === 'retreat' ? g.battle : null,
+        rk = rb ? `${rb.area}|${E.retreatOptions(g, rb).join()}` : '';
+      if (rk && rk !== retreatFramed) {
+        const ids = [rb!.area, ...E.retreatOptions(g, rb!).filter((a) => a !== E.SEA)];
+        setTimeout(() => showAreas(ids), 700); // after the battle view lets go: the block and every area it may retreat to, in view (owner, 14 Nov)
+      }
+      retreatFramed = rk;
     }
   }
   if (tint === 'control') {

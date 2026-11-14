@@ -21,7 +21,7 @@ export const ECH: Record<string, string> = {
 const PAPER = { german: '#b5bcd3', germanDark: '#958c97', fj: '#86c3ee', us: '#93a536', british: '#e1b563' };
 const DARK_DE = new Set(['10SS', '17SS', '6SS']);
 /** Unit-box colour of each command, as printed on the stickers. */
-const BOX: Record<string, string> = {
+export const BOX: Record<string, string> = {
   de_6pz: '#a0237e',
   de_5pz: '#dfe1e6',
   de_7a: '#62bdf6',

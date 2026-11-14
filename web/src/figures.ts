@@ -378,10 +378,10 @@ export function bindFigure(root: HTMLElement, f: FigSpec, k: FigKit) {
       const r = document.createElement('div');
       r.className = 'dr';
       r.append(
-        sn == null ? who : `${who} · ${sn} or less`,
+        sn == null ? who : `${who} · ${sn < 1 ? 'a 1 only' : `${sn} or less`}`,
         ...ds.map((d) => {
           const e = document.createElement('span');
-          e.className = `die ${(sn == null ? ok : d <= sn) ? 'h' : 'm'}`;
+          e.className = `die ${(sn == null ? ok : d === 1 || (d !== 10 && d <= sn)) ? 'h' : 'm'}`; // a 1 always hits, a 10 always misses
           e.textContent = String(d);
           return e;
         }),

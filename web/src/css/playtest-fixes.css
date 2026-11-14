@@ -232,3 +232,347 @@
   width: max-content;
   max-width: calc(100vw - 32px);
 }
+/* playtest 2, B7 and item 17: a message never blocks a tap on what lies under it (it has no buttons of its own) */
+.toast {
+  pointer-events: none;
+}
+/* playtest 2, B5: Take losses / Retreat and the "What the markers mean" link reach a finger's 44 px */
+#ui .mapbubble button.ab {
+  min-height: 44px !important;
+}
+#ui .c-dispatch .linkbtn {
+  position: relative;
+}
+#ui .c-dispatch .linkbtn::after {
+  content: '';
+  position: absolute;
+  inset: -15px -4px;
+}
+.c-dispatch small.why {
+  display: block;
+  font-size: 12px;
+  color: #b3ad8b;
+  margin-top: 2px;
+}
+/* Design review 14 Nov, problems 1-2 (owner approved the mockup): the bar wears the colour of the side that must act now, says so,
+   asks to pass the device when that side changes, and carries the big choices as its buttons */
+#ui .c-bar.b.actor {
+  border-top: 4px solid var(--actor) !important;
+}
+.c-bar.b.german,
+.passstrip.german {
+  --actor: #c3c7cc;
+}
+.c-bar.b.allied,
+.passstrip.allied {
+  --actor: #a8c46a;
+}
+.c-bar.b.axis,
+.passstrip.axis {
+  --actor: #c3c7cc;
+}
+.c-bar.b.israeli,
+.passstrip.israeli {
+  --actor: #4fb3e3;
+}
+.c-bar.b.syrian,
+.passstrip.syrian {
+  --actor: #7fbf5c;
+}
+.c-prompt .whotag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 8px;
+  margin-right: 6px;
+  background: var(--actor);
+  color: #10120c;
+  font: 700 12px var(--sfd);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  vertical-align: 1px;
+}
+.c-prompt .whotag::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10120c;
+}
+.passstrip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 12px;
+  background: var(--actor);
+  color: #10120c;
+  font: 700 15px var(--sfd);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.passstrip small {
+  font: 500 12px var(--sf);
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.8;
+}
+#ui .c-bar.b .go.choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.05;
+  min-width: 200px;
+  padding: 4px 16px;
+}
+#ui .c-bar.b .go.choice span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+#ui .c-bar.b .go.choice small {
+  font: 500 12.5px var(--sfd);
+  letter-spacing: 0.02em;
+  text-transform: none;
+  opacity: 0.92;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+#ui .c-bar.b .go.choice.alt {
+  background: #1a1d14;
+  box-shadow: inset 0 0 0 2px var(--red, #d1432f);
+}
+@media (max-width: 700px) {
+  #ui .c-bar.b:has(.choice) {
+    grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) 44px !important;
+    grid-template-rows: auto auto 52px !important;
+  }
+  #ui .c-bar.b:has(.choice) .dchips,
+  #ui .c-bar.b:has(.choice) .c-prompt {
+    grid-column: 1 / 5 !important;
+  }
+  #ui .c-bar.b .go.choice {
+    grid-column: 2 !important;
+    min-width: 0;
+    padding: 2px 4px;
+  }
+  #ui .c-bar.b .go.choice.alt {
+    grid-column: 3 !important;
+  }
+  #ui .c-bar.b:has(.choice) .guidebtn {
+    grid-column: 4 !important;
+  }
+}
+.mapbubble .choosebelow {
+  font: 600 12px var(--sfd);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  white-space: nowrap;
+}
+/* a card's choices by name (Sicily: the division to release): a wrapping list, the name beside a small picture, at least 44 px high */
+.chitbar .cbchips {
+  flex-wrap: wrap;
+  overflow: visible;
+  gap: 6px;
+}
+.chitbar .cbchips .pc {
+  width: auto;
+  flex: 1 1 150px;
+  display: flex;
+  align-items: center;
+  justify-items: start;
+  gap: 8px;
+  min-height: 44px;
+  padding: 4px 8px;
+  text-align: left;
+}
+.chitbar .cbchips .pc .b3 {
+  --s: 26px !important;
+  margin: 0 !important;
+  flex: none;
+}
+.chitbar .cbchips .pc img {
+  width: 30px;
+  height: 30px;
+  flex: none;
+}
+.chitbar .cbchips .pc small {
+  font: 600 13px var(--sfd);
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+  color: var(--ink);
+}
+.chitbar {
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+}
+@media (max-width: 700px) {
+  .chitbar {
+    max-height: calc(100% - 118px); /* clear of the Map button above it */
+  }
+}
+.c-prompt .runnote {
+  color: #b3ad8b;
+}
+.c-prompt .runnote i {
+  font-style: normal;
+  color: var(--ink);
+}
+#ui .c-bar.b .go.choice small:empty {
+  display: none;
+}
+@media (max-width: 700px) {
+  #ui .c-bar.b:has(.choice) {
+    grid-template-rows: auto auto minmax(52px, auto) !important;
+  }
+}
+/* Design review, problem 8: a message never covers the control it is about. With the table in view it is a line in the bar,
+   above the instruction; it floats only over an open window (where the bar is hidden) */
+#ui .c-prompt .toast.barmsg {
+  position: static !important;
+  transform: none !important;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 0 6px;
+  padding: 5px 10px;
+  box-shadow: none;
+  z-index: auto;
+  font-size: 13px;
+  line-height: 1.3;
+}
+/* Design review, problem 4: the explanations switch says what it is ("Explain: full / short") */
+#ui .c-bar.b .guidebtn .gl {
+  font: 600 12px var(--sfd);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+#ui .c-bar.b .guidebtn .gl b {
+  color: var(--gold);
+  font-weight: 600;
+}
+@media (min-width: 701px) {
+  #ui .c-bar.b .guidebtn {
+    width: auto !important;
+    padding: 0 10px !important;
+    gap: 6px;
+  }
+}
+@media (max-width: 700px) {
+  #ui .c-bar.b .guidebtn {
+    flex-direction: column;
+    gap: 0;
+  }
+  #ui .c-bar.b .guidebtn .ic {
+    width: 16px;
+    height: 16px;
+  }
+  #ui .c-bar.b .guidebtn .gl {
+    font-size: 0;
+  }
+  #ui .c-bar.b .guidebtn .gl b {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    color: var(--ink);
+  }
+}
+/* Design review, problems 4-5: every card carries its kind above it (never over its name); phone battle tools are labelled,
+   Cancel stands apart, the header says which battle of how many */
+#ui .card2 {
+  position: relative;
+}
+#ui .card2 .ckind {
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: -15px;
+  bottom: auto;
+  transform: translateX(-50%);
+  padding: 0 5px;
+  background: #0b0d08e6;
+  border: 1px solid #8d906588;
+  color: var(--ink);
+  font: 600 11px/14px var(--sfd);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+#ui .c-hand {
+  padding-top: 24px !important;
+  overflow-y: visible;
+}
+@media (max-width: 700px) {
+  #ui .c-hand,
+  #ui .stage:has(.c-table) ~ .dock .c-hand {
+    height: 92px !important;
+    padding-top: 22px !important;
+  }
+  #ui .handtab button.ico .bl {
+    display: inline !important;
+    font-size: 12px;
+  }
+  #ui .handtab button.danger {
+    margin-right: auto;
+  }
+  #ui .stage:has(.c-table) ~ .dock .handtab {
+    justify-content: flex-end;
+    gap: 4px !important;
+  }
+  #ui .c-table .cnt {
+    display: inline-block !important;
+    font-size: 11px;
+  }
+}
+/* the newcomer's card: once, on a first table with no lesson finished */
+.newcard {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 40;
+  width: min(420px, calc(100% - 24px));
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  background: #0b0d08f5;
+  border: 1px solid var(--gold);
+  box-shadow: 0 8px 24px #000a;
+}
+.newcard > b {
+  font: 700 18px var(--sfd);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.newcard span {
+  line-height: 1.4;
+}
+.newcard .row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.newcard .row button {
+  flex: 1;
+  min-height: 44px;
+}
+#ui .c-hand,
+#ui .stage:has(.c-table) ~ .dock .c-hand {
+  box-sizing: border-box;
+}
+/* Design review, problem 6: zoomed far out, objectives and the areas the instruction names keep a small name beside their marks */
+#tags.far .atag.keep:not(.hov) .nm {
+  display: inline !important;
+  font-size: 12px;
+  padding: 0 4px;
+  background: #0b0d08b3;
+  color: var(--ink);
+}

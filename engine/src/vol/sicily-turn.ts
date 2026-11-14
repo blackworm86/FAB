@@ -1,7 +1,21 @@
 // FAB Vol. II, Sicily: what each phase opens (ports, the At Sea box, Italian morale, the draws), supply by nation (14.9), victory (19.x) and the final result.
 import { areas as mapAreas, connection, edgeKey } from '../map';
 import { AIRFIELDS, BOX, MESSINA, MUTUAL, isBox, isLandingBox, isPortBox, portBoxes, type Nation } from '../sicily/map';
-import { blocks, chit, contested, dropReserve, eliminate, inSupply, other, say, unitsIn, type Game, type Side, type Unit } from '../game';
+import {
+  airSup,
+  blocks,
+  chit,
+  contested,
+  dropReserve,
+  eliminate,
+  inSupply,
+  other,
+  say,
+  unitsIn,
+  type Game,
+  type Side,
+  type Unit,
+} from '../game';
 import { onDeployEnd } from './sicily-setup';
 import { inBoxes, syncPortBoxes, toSea } from './sicily-moves';
 import { battleAllowed, nameOf, nation, need, regular, SCEN, state } from './sicily';
@@ -72,9 +86,11 @@ export function onPhase(g: Game, phase: string, when: 'start' | 'mid' | 'end') {
         c.mission = undefined;
       } // 16.33: to the Supply Phase of the same player turn
   }
-  if (phase === 'supply' && when === 'end' && g.airSupply) {
-    chit(g, g.airSupply.id).box = 'used';
+  if (phase === 'supply' && when === 'end') {
+    for (const s of airSup(g)) chit(g, s.id).box = 'used';
     g.airSupply = null;
+    g.airSupplies = [];
+    state(g).airPrev = undefined;
   } // 16.34: to the Used Box at the end of that Supply Phase
   if (when === 'end') afterChange(g);
 }

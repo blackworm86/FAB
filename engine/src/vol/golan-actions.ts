@@ -206,6 +206,7 @@ export function finishRecon(g: Game, c: Chit) {
 export function placeRaid(g: Game, chitId: string, a: number) {
   needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['commando']);
+  need(g.phasing === 'syrian', 'a commando raid is made in the Syrian Admin Phase (16.11a, 4.2b)');
   need(
     !isAssembly(a) && g.control[a] === 'israeli' && vacant(g, a) && neighbors(a).some((n) => blocks(g, n, 'syrian').some(regular)),
     'a vacant Israeli-controlled area next to a Syrian-occupied area',
@@ -496,7 +497,7 @@ export function answerJamming(g: Game, b: Battle, counterChitId?: string) {
   }
   for (const u of fighters(g, b.area, def, false).filter((x) => !x.garrison)) {
     const die = rollDie(g),
-      mod = counterChitId ? 2 : 0,
+      mod = counterChitId && !u.unsupplied ? 2 : 0, // 9.34d: a friendly event does not help unsupplied units
       hit = die + mod <= 5;
     b.rolls.push({ who: `${u.name}: jamming`, sn: 5, dice: [die + mod], hits: hit ? 1 : 0, kind: 'morale' });
     if (hit) u.disorder = 1;
@@ -511,6 +512,13 @@ export function playCounterbattery(g: Game, b: Battle, chitId: string) {
   const side = takeEvent(g, b, chit(g, chitId), 'event_counterbattery');
   battleState(b).counterbattery[side] = chitId;
   say(g, 'Counterbattery strike prepared (17.34)', side);
+}
+/** 17.34: which enemy artillery asset of this battle the Counterbattery strike goes for (the player's choice; otherwise the first). */
+export function setCounterbatteryTarget(g: Game, b: Battle, side: Side, assetId: string) {
+  const B = battleState(b);
+  need(!!B.counterbattery[side], 'no Counterbattery prepared');
+  need(b.assets[other(side)].includes(assetId) && isArty(chit(g, assetId)), 'an enemy artillery asset in this battle');
+  (B.cbTarget ??= {})[side] = assetId;
 }
 /** 8.23: the units that may reinforce the Defender from an adjacent uncontested area (not into a battle held by assets alone, 4.35, except Lt. Zvika, 17.23). */
 export function reinforceOptions(g: Game, b: Battle) {

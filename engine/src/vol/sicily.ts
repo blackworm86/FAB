@@ -18,7 +18,7 @@ import { allowanceOf } from '../sicily/move';
 import { type Chit } from '../chits';
 import { type Quality } from '../combat';
 import { registerHooks, type Volume } from '../volumes';
-import { chit, contested, type Game, type Side, type Unit } from '../game';
+import { airSup, chit, contested, type Game, type Side, type Unit } from '../game';
 export { MESSINA, ETNA, isBox, isLandingBox, isPortBox, boxId, BOX, landingBoxes, portBoxes, LANDING_ORDER } from '../sicily/map';
 import { afterDeploy, newSicilyGame } from './sicily-setup';
 export * from './sicily-setup';
@@ -89,7 +89,7 @@ export interface SicilyState {
   sunrise: boolean;
   sunriseZoneA: number[];
   airPrev?: Record<string, 0 | 1 | 2>;
-  airNoMore?: number;
+  airNoMore?: string[]; // 16.31: "<phase>:<area>" of Air Supply missions a dogfight cancelled (no replacement)
   airCancelled?: number[]; // 16.31: what an Air Supply changed (undone by a dogfight), no replacement after a dogfight
 }
 export const state = (g: Game) => g.vol as unknown as SicilyState;
@@ -208,8 +208,11 @@ export const gone = (c: Chit) => {
 
 registerHooks('sicily', {
   adminBoth: (g) =>
-    Object.values(g.interdicted).some((id) =>
-      g.chits.some((c) => c.kind === 'air_mission' && c.box === 'available' && c.side !== chit(g, id).side),
+    g.chits.some(
+      (m) =>
+        m.mission === 'interdiction' &&
+        m.box === 'map' &&
+        g.chits.some((c) => c.kind === 'air_mission' && c.box === 'available' && c.side !== m.side),
     ), // 16.31: the other side may answer an interdiction with a dogfight at once
   pendingSide: (g) => {
     const p = state(g).moralePick;
@@ -238,7 +241,7 @@ registerHooks('sicily', {
   sources,
   supplyStep,
   unitSupply,
-  supplyFree: (g, side, a) => g.airSupply?.area === a && g.airSupply.side === side,
+  supplyFree: (g, side, a) => airSup(g).some((s) => s.area === a && s.side === side),
   alwaysSupplied: (_g, u) => isLandingBox(u.area!) || !!u.garrison,
   victory: sicilyVictory,
   finalResult,

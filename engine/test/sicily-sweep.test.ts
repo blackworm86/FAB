@@ -161,4 +161,143 @@ describe('Sicily asset and event sweep', () => {
     nav.box = 'available';
     expect(E.canAssign(g, b, 'allied', nav) ?? '').not.toMatch(/9\.34a/);
   });
+  it('14.51 (owner: the rulebook): a port may be damaged while its area is contested', () => {
+    const g = newSicilyGame(21);
+    clear(g, 57);
+    unit(g, 'IT05').area = 57;
+    unit(g, 'US03').area = 57;
+    g.control[57] = 'axis';
+    g.phase = 'admin';
+    g.phasing = 'axis';
+    g.done = [];
+    E.chit(g, 'ITC06').box = 'available';
+    expect(E.contested(g, 57)).toBe(true);
+    S.portWork(g, 'ITC06', 'P3');
+    expect(S.state(g).portDamage.P3).toBeGreaterThan(0);
+  });
+  it('16.33 (owner: the rulebook): both sides may interdict the same area, and each slows only the enemy', () => {
+    const g = newSicilyGame(22);
+    g.phase = 'admin';
+    g.phasing = 'allied';
+    g.done = [];
+    S.airInterdiction(g, air(g, 'allied'), 21);
+    g.done = ['allied'];
+    S.airInterdiction(g, air(g, 'axis'), 21);
+    expect(g.chits.filter((c) => c.mission === 'interdiction' && c.area === 21).length).toBe(2);
+  });
+  it('16.34 (owner: the rulebook): several Air Supply missions, one area each', () => {
+    const g = newSicilyGame(23);
+    for (const [id, a] of [
+      ['US03', 30],
+      ['US04', 28],
+    ] as const) {
+      clear(g, a);
+      Object.assign(unit(g, id), { area: a, unsupplied: true, disorder: 0 });
+      g.control[a] = 'allied';
+    }
+    g.phase = 'supply';
+    g.phasing = 'allied';
+    S.airSupply(g, air(g, 'allied'), 30);
+    S.airSupply(g, air(g, 'allied', 1), 28);
+    expect(E.airSup(g).length).toBe(2);
+    S.dogfightAirSupply(g, air(g, 'axis'), 28);
+    expect(E.airSup(g).map((m) => m.area)).toEqual([30]);
+  });
+  it('6.22 (owner: the rulebook): with US and British units together air support fires only as artillery', () => {
+    const g = newSicilyGame(24);
+    clear(g, 19);
+    clear(g, 20);
+    unit(g, 'US03').area = 19;
+    unit(g, 'BR03').area = 19;
+    unit(g, 'IT05').area = 19;
+    unit(g, 'IT05').untried = false;
+    g.control[19] = 'axis';
+    g.phase = 'combat';
+    g.phasing = 'allied';
+    g.contestedAtMoveStart = [19];
+    g.fought = [];
+    const b = E.startBattle(g, 19);
+    if (b.defSA) E.passSA(g, b);
+    const id = air(g, 'allied');
+    expect(E.canAssign(g, b, 'allied', E.chit(g, id), 'support')).toMatch(/6\.22/);
+    expect(E.canAssign(g, b, 'allied', E.chit(g, id), 'arty')).toBeNull();
+  });
+  it('14.61: any unreleased division may be released, wherever its blocks are; a single-use Special Action only for its own army', () => {
+    const g = newSicilyGame(25);
+    g.phase = 'admin';
+    g.phasing = 'allied';
+    g.done = [];
+    const div = g.units.find((u) => u.side === 'allied' && u.division === 'us_1st_inf')!.division!;
+    for (const u of g.units) if (u.division === div) u.area = null; // none on the map
+    const br = g.chits.find((c) => c.kind === 'special_action_event' && c.side === 'allied' && c.ech === 'br_8th_army')!;
+    br.box = 'available';
+    expect(() => S.releaseDivision(g, div, br.id)).toThrow(/own army/);
+    for (const c of g.chits) if (c.kind === 'sa_block' && c.side === 'allied') c.box = 'available';
+    S.releaseDivision(g, div);
+    expect(S.state(g).released).toContain(div);
+  });
+  it('6.6: with every adjoining friendly area full the defender retreats past them, and the choice can be made (owner report, 14 Nov)', () => {
+    const g = newSicilyGame(3);
+    Object.assign(g, { turn: 3, phase: 'combat', phasing: 'axis', fought: [], battle: null });
+    for (const u of g.units) if (u.area != null && !S.isBox(u.area) && !u.garrison) u.area = null;
+    for (const a of E.areas.keys()) if (!S.isBox(a)) g.control[a] = 'allied';
+    const brit = g.units.filter((u) => u.id.startsWith('BR') && !u.garrison && u.id !== 'BR07');
+    let k = 0;
+    for (const n of E.neighbors(13).filter((x) => !S.isBox(x)))
+      for (let j = 0; j < 2; j++) Object.assign(brit[k++], { area: n, str: 2, box: undefined, untried: false });
+    Object.assign(unit(g, 'BR07'), { area: 13, str: 2, disorder: 0, untried: false, box: undefined });
+    for (const id of ['GE02', 'GE03']) Object.assign(unit(g, id), { area: 13, str: 3, disorder: 0, box: undefined });
+    g.contestedAtMoveStart = [13];
+    const b = E.startBattle(g, 13);
+    if (b.defSA) E.passSA(g, b);
+    E.setReady(g, b, 'axis');
+    E.setReady(g, b, 'allied');
+    g.force = [10, 10, 10, 10, 10, 10, 1, 1, 9, 9, 9, 9, 9, 9];
+    E.beginCombat(g, b);
+    for (let i = 0; i < 30 && b.stage !== 'defChoice'; i++) E.roll_step(g, b);
+    expect(E.retreatBlocked(g, b)).toEqual([]); // it can retreat, though not next door
+    E.defenderChoice(g, b, true);
+    expect(b.stage).toBe('retreat');
+    const opts = E.retreatOptions(g, b);
+    expect(opts.length).toBeGreaterThan(1);
+    expect(opts.every((a) => !E.neighbors(13).includes(a))).toBe(true); // all two areas away
+    const paths = E.retreatPaths(g, 13, 'allied', unit(g, 'BR07'));
+    for (const o of opts) {
+      const way = paths.get(o)!;
+      expect(way.length).toBe(paths.get(opts[0])!.length); // ties for nearest are all offered
+      for (const mid of way.slice(1, -1)) {
+        expect(g.control[mid]).toBe('allied'); // only through friendly, uncontested (full) areas
+        expect(E.unitsIn(g, mid, 'axis').length).toBe(0);
+      }
+    }
+    const via = paths.get(opts[0])![1];
+    const g2 = structuredClone(g);
+    Object.assign(g2.units.find((u) => u.id === 'GE03')!, { area: via }); // that full area becomes contested: no way through it
+    expect(
+      [
+        ...E.retreatPaths(
+          g2,
+          13,
+          'allied',
+          g2.units.find((u) => u.id === 'BR07'),
+        ).values(),
+      ].every((w) => !w.includes(via)),
+    ).toBe(true);
+    E.chooseRetreat(g, b, opts[0]);
+    expect(unit(g, 'BR07').area).toBe(opts[0]);
+    expect(b.stage).toBe('done');
+  });
+  it('6.6: retreatBlocked names the defenders with nowhere to go (they would lose a step instead)', () => {
+    const g = newSicilyGame(3);
+    Object.assign(g, { turn: 3, phase: 'combat', phasing: 'axis', fought: [], battle: null });
+    for (const u of g.units) if (u.area != null && !S.isBox(u.area) && !u.garrison) u.area = null;
+    for (const n of E.neighbors(14)) if (!S.isBox(n)) g.control[n] = 'axis';
+    Object.assign(unit(g, 'BR07'), { area: 14, str: 2, disorder: 0, untried: false, box: undefined });
+    Object.assign(unit(g, 'GE02'), { area: 14, str: 3, disorder: 0, box: undefined });
+    g.control[14] = 'allied';
+    g.contestedAtMoveStart = [14];
+    for (const lb of S.landingBoxes) if (lb.area === 14) delete S.state(g).beachheads[lb.id];
+    const b = E.startBattle(g, 14);
+    expect(E.retreatBlocked(g, b).map((u) => u.id)).toEqual(['BR07']);
+  });
 });

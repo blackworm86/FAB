@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import * as E from '../../engine/src';
 import * as SBU from './sandbox-ui';
 import { online, SANDBOX, TUTORIAL } from './online';
+import { panelCtx } from './unit-card';
+import { STEP_NAME } from './home';
 import { ico } from './icons';
 import { esc, nm } from './util';
 import { STAGE_NAME } from './table-text';
@@ -33,7 +35,7 @@ import {
   tgt,
 } from './flow';
 import { airPick, heldBad, pickSA, setEndHidden } from './choices';
-import { center, reinforcing, setGoal } from './map-input';
+import { center, optsFor, reinforcing, setGoal } from './map-input';
 import { btArmor, skipNow } from './map-marks';
 import { endRoll, rollStage, rollView, setHandSide } from './rolls';
 import { lastFight, render, setLastFight, showAreas } from './main';
@@ -82,6 +84,47 @@ export function topBar(vp = '') {
 export const COARSE = matchMedia('(pointer: coarse)').matches;
 /** The verb matches the device: tap on touch screens, click with a mouse. */
 export const verb = (h: string) => (COARSE ? h : h.replace(/\bTap\b/g, 'Click').replace(/\btap\b/g, 'click'));
+let runKey = '',
+  runList: { phase: E.Phase; to: E.Phase }[] = [];
+/** The steps after this one in which nothing can be done, up to the first step with something to decide: no block of the acting side can move,
+ *  no battle is open, no supply roll waits, no panel asks anything, and the side stays one this device plays. Never past the player turn. */
+export function emptyRun(): typeof runList {
+  const k = `${g.turn}${g.phasing}${g.phase}${g.log.length}${hist.length}${online.devSeat}`;
+  if (k === runKey) return runList;
+  runKey = k;
+  runList = [];
+  if (g.battle || g.over || TUTORIAL || ['deploy', 'reinforcement', 'admin'].includes(g.phase)) return runList;
+  const c = structuredClone(g),
+    run: E.Phase[] = [];
+  let to: E.Phase | null = null;
+  try {
+    for (let n = 0; n < 6 && !to; n++) {
+      E.endPhase(c);
+      if (c.over || c.battle || c.turn !== g.turn || c.phasing !== g.phasing) {
+        to = run.pop() ?? null; // the last empty step ends the player turn: that press stays its own
+        break;
+      }
+      const who = E.actorOf(c),
+        busy =
+          ['reinforcement', 'admin', 'deploy'].includes(c.phase) ||
+          who === 'both' ||
+          !mine(who) ||
+          (['combat', 'btCombat'].includes(c.phase)
+            ? E.contestedAreas(c).some((a) => !c.fought.includes(a))
+            : c.phase === 'supply'
+              ? !!c.supplyPending
+              : c.units.some((u) => u.side === who && u.area != null && !u.garrison && E.moveOptions(c, u.id).length)) ||
+          !!c.pendingArrivals?.length ||
+          !!VOL.panel(c, panelCtx());
+      if (busy) to = c.phase;
+      else run.push(c.phase);
+    }
+    if (to) runList = run.map((phase) => ({ phase, to: to! }));
+  } catch {
+    runList = [];
+  }
+  return runList;
+}
 export function prompt() {
   if (heldBad)
     return `<span class="turnchip tc-go">Rules check</span> <b>Decide above:</b> restore the last legal position for both players, or accept the other player's change.`;
@@ -89,12 +132,29 @@ export function prompt() {
     online.active && !online.both() && online.mySide() && !g.over
       ? `<span class="turnchip ${allowed() ? 'tc-go' : 'tc-wait'}" title="You play the ${nm(online.mySide()!)}">${allowed() ? 'your move' : 'waiting'}</span> ` /* the sides are named in the top bar; the chip says only whether you act now */
       : '';
-  return chip + verb(promptText());
+  const run = primary()?.label.includes(' · go to ') ? emptyRun() : [];
+  return (
+    chip +
+    verb(promptText()) +
+    (run.length
+      ? ` <span class="runnote">Nothing to do in ${run.map((r) => `<i>${STEP_NAME[r.phase]}</i>`).join(', ')}: one press goes to <i>${STEP_NAME[run[0].to]}</i>.</span>`
+      : '')
+  );
 }
+/** Has this browser finished at least one lesson of any course? */
+export const lessonDone = () => {
+  try {
+    return Object.keys(localStorage).some((k) => /^fab-tut:.*:done$/.test(k) && !!localStorage.getItem(k));
+  } catch {
+    return true;
+  }
+};
 /** Explanations: full for learning, short for experienced players (Menu > Settings, or the guide button in the bottom bar). `gx` = explanation only, `gs` = short form only. */
 export let guide: 'full' | 'short' = (() => {
   try {
-    return localStorage.getItem('fab-guide') === 'full' ? 'full' : 'short';
+    const v = localStorage.getItem('fab-guide');
+    if (v === 'full' || v === 'short') return v; // the player's own choice
+    return lessonDone() ? 'short' : 'full'; // a newcomer gets the full explanations until a lesson is finished (design review, problem 4)
   } catch {
     return 'short';
   }
@@ -117,12 +177,44 @@ function stakes(b: E.Battle) {
   if (!fl.length) return ((p) => `<b>Nothing can fire.</b>${p && !p.dis ? ` Press <b>${esc(p.label)}</b>.` : ''}`)(primary()); // say what moves the battle on (playtest C5)
   const dice = fl.reduce((a, f) => a + f.dice, 0),
     sns = [...new Set(fl.map((f) => f.sn))].sort((x, y) => x - y);
-  return `<b>${nm(sd)} ${esc(STAGE_NAME[b.stage].toLowerCase())}:</b> ${dice} ${dice === 1 ? 'die' : 'dice'} · hit on ${sns.length === 1 ? `${sns[0]} or less` : `${sns[0]}–${sns.at(-1)} or less`}${gx(` · at ${E.unitsIn(g, b.area, other(sd)).length} ${nm(other(sd))} block${E.unitsIn(g, b.area, other(sd)).length === 1 ? '' : 's'}`)}`;
+  return `<b>${nm(sd)} ${esc(STAGE_NAME[b.stage].toLowerCase())}:</b> ${dice} ${dice === 1 ? 'die' : 'dice'} · hit on ${sns.at(-1)! < 1 ? 'a 1 only' : sns.length === 1 || sns[0] < 1 ? `${sns.at(-1)} or less` : `${sns[0]}–${sns.at(-1)} or less`}${gx(` · at ${E.unitsIn(g, b.area, other(sd)).length} ${nm(other(sd))} block${E.unitsIn(g, b.area, other(sd)).length === 1 ? '' : 's'}`)}`;
+}
+/** The blocks of the side acting now that can move in this step (the same test as the green areas). */
+const movers = () => {
+  const who = actorNow();
+  return g.units.filter((u) => u.side === who && u.area != null && !u.garrison && E.moveOptions(g, u.id).length);
+};
+/** Why the selected block shows no green area: the line never asks for a tap that cannot be made. */
+function cannotMove(id: string) {
+  const u = g.units.find((x) => x.id === id)!;
+  if (u.side !== actorNow()) return `<b>${esc(u.name)}:</b> an enemy block. Tap one of your own to move it.`;
+  const why = u.garrison
+    ? 'it never moves'
+    : u.moved
+      ? 'it has already moved this turn'
+      : g.phase === 'movement' && u.reserve
+        ? 'it holds a reserve marker and moves in a later step'
+        : g.phase !== 'movement' && !u.reserve && !u.exploit
+          ? 'only reserve and exploiting blocks move in this step'
+          : u.disorder
+            ? 'it is disordered'
+            : 'no area it may enter now';
+  return `<b>${esc(u.name)} cannot move:</b> ${why}. Tap another block.`;
 }
 function promptText() {
   const b = g.battle;
   if (rollView?.pos) return gx('<b>Read the dice:</b> green hits, salmon misses. Then continue.', '<b>Read the dice,</b> then continue.');
   if (areaPick) return `<b>${esc(areaPick.label)}</b>, or tap elsewhere to cancel.`;
+  if (endArmed && g.game === 'sicily' && g.phase === 'movement') {
+    const sea = g.units.filter(
+      (u) =>
+        u.side === g.phasing &&
+        u.area != null &&
+        (E.sicily.isLandingBox(u.area) || (g.phasing === 'allied' && E.sicily.isPortBox(u.area) && !u.reserve)),
+    ).length;
+    if (sea)
+      return `<b>Ending now:</b> ${sea} block${sea > 1 ? 's' : ''} still on the beaches ${sea > 1 ? 'go' : 'goes'} back to sea and ${sea > 1 ? 'try' : 'tries'} to land again next turn (14.24b).`; // playtest 2, A7
+  }
   if (reinforcing && b) return '<b>Tap a glowing neighbouring block</b> to bring it in, or tap the map to cancel.';
   if (airPick?.step === 'unit' && b) return '<b>Air Mission +2:</b> tap one of your blocks in the battle.';
   if (online.active && !allowed() && !g.over)
@@ -134,7 +226,10 @@ function promptText() {
       setEndHidden(false);
     })}">Result</button>`;
   if (g.pendingBlow) return `<b>${nm(other(g.units.find((x) => x.id === g.pendingBlow!.unit)!.side))}</b>: attempt to blow the bridge?`;
-  if (b?.stage === 'retreat') return '<b>Choose the retreat area.</b>';
+  if (b?.stage === 'retreat') {
+    const o = E.retreatOptions(g, b);
+    return `<b>Choose the retreat area:</b> ${o.length <= 3 ? o.map((a) => esc(a === E.SEA ? 'the sea' : areaName(a))).join(' or ') : `${o.length} areas`}, lit on the map.${gx(' The blocks go to the nearest friendly area with room (6.6).')}`;
+  }
   if (b && b.stage === 'setup' && b.attPointDone) return '<b>Point units designated.</b> Blocks are revealed…';
   if (b)
     return b.stage === 'setup'
@@ -172,16 +267,19 @@ function promptText() {
       return selChit && tgt?.hint
         ? `<b>${esc(tgt.hint)}</b>${tgt.areas.size + tgt.units.size > 0 ? ` · ${tgt.areas.size + tgt.units.size} lit` : ''}`
         : E.boxOf(g, E.adminActor(g), 'available').length
-          ? `<b>${esc(nm(E.adminActor(g)))}: tap a card</b>${gx(g.done?.includes(g.phasing) ? ' to play it if you wish, then end the step.' : ` to play it if you wish, then Done: the ${nm(other(g.phasing))} player acts next (4.2).`)}`
+          ? `<b>${esc(nm(E.adminActor(g)))}: tap a card</b>${gx(g.done?.includes(g.phasing) ? ' to play it if you wish, then end the step.' : ` to play it if you wish, then Done: the ${nm(other(g.phasing))} player acts next (4.2).`, ' if you wish, or Done.')}`
           : `<b>${esc(nm(E.adminActor(g)))}: no cards to play.</b>${gx(g.done?.includes(g.phasing) ? ' End the step.' : ` Press Done: the ${nm(other(g.phasing))} player acts next (4.2).`)}`;
     case 'movement':
       if (selUnit && g.moving?.id === selUnit)
         return `<b>${E.allowance(g, g.units.find((x) => x.id === selUnit)!) - (g.units.find((x) => x.id === selUnit)!.spent ?? 0)} MP left.</b>${gx(" Tap a green area to go on, or <b>Stop here</b>. Choosing another block ends this one's move.", ' Go on, or Stop here.')}`;
+      if (selUnit && !optsFor(selUnit).length) return cannotMove(selUnit);
+      if (!selUnit && !movers().length) return '<b>No block can move.</b> End the step.';
       return selUnit
         ? `Tap a <b>green</b> area${gx(' to move there. <b>Brass</b>: must stop there. Wrong move? <b>Undo</b>.', ' · <b>brass</b> = stop')}`
         : `<b>Tap one of your blocks</b>${gx(' to move it, or <b>Can move</b> to go through them.', ' to move it.')}`;
     case 'strategic':
-      return '<b>Tap a reserve block</b>, then a green area.';
+      if (selUnit && !optsFor(selUnit).length) return cannotMove(selUnit);
+      return movers().length ? '<b>Tap a reserve block</b>, then a green area.' : '<b>No reserve block can move.</b> End the step.';
     case 'combat':
     case 'btCombat':
       if (g.phase === 'btCombat' && !m && E.contestedAreas(g).some((a) => !g.fought.includes(a) && !E.newlyContested(g).includes(a)))
@@ -190,15 +288,22 @@ function promptText() {
           '<b>Breakthrough combat:</b> brass = costs a Special Action',
         );
       if (dropsLeft())
-        return `<b>Drop your airborne unit${dropsLeft() > 1 ? 's' : ''} first:</b> choose the drop zone in the panel on the map (14.27a).`;
+        return g.units.some((u) => u.box === 'airborne_assault' && u.side === g.phasing && !E.sicily.airDropTargets(g, u.id).length)
+          ? `<b>An airborne unit has no drop zone:</b> remove it in the panel on the map; it is lost (14.27a).`
+          : `<b>Drop your airborne unit${dropsLeft() > 1 ? 's' : ''} first:</b> choose the drop zone in the panel on the map (14.27a).`; /* playtest 2, item 16 */
       return m
         ? `<b>Tap a red area</b>${gx(' to fight there, or press <b>Next battle</b>.', ' or Next battle.')}`
         : fightable().length
           ? '<b>Tap a contested area</b> to fight, or end the step.'
           : 'No battles left.';
     case 'reaction':
-      return `<b>${nm(other(g.phasing))} reserves</b> may react: select a reserve block.`;
+      if (selUnit && !optsFor(selUnit).length) return cannotMove(selUnit);
+      return movers().length
+        ? `<b>${nm(other(g.phasing))} reserves</b> may react: select a reserve block.`
+        : `<b>${nm(other(g.phasing))}: no reserve block can react.</b> End the step.`;
     case 'btMove':
+      if (selUnit && !optsFor(selUnit).length) return cannotMove(selUnit);
+      if (!movers().length && !btArmor().length) return '<b>No block can move in Breakthrough.</b> End the step.';
       return btArmor().length
         ? gx(
             '<b>Breakthrough movement.</b> Reserve and exploiting blocks may move; armor that has not moved can move one area for a Special Action (brass tags).',
@@ -225,6 +330,13 @@ function setupPrompt(b: E.Battle): string {
     return pt
       ? `<b>${nm(who)}: point unit ${esc(pt)}.</b> Tap another block to change it, or Begin combat.${gx(' The defender has designated his (6.24).')}`
       : `<b>${nm(who)}: tap a block to make it your point unit</b>, then Begin combat.${gx(' The defender has designated his (6.24).')}`;
+  if (!att && (b.vol as { defLocked?: boolean } | undefined)?.defLocked)
+    return `<b>${nm(who)} defends, jammed:</b> all defending units are disordered, so no artillery, air, SAM or battle assets (17.33).${pt ? '' : ' Pick your point unit,'} then Done.`; // playtest 2, item 5
+  // the line is built from what is possible now (design review, problem 3): no playable card, no "tap a card"
+  if (!E.boxOf(g, who, 'available').some((c) => VOL.battleCard(c) && !VOL.battleUse(g, b, c)))
+    return att
+      ? `<b>${nm(who)} attacks: no card to add.</b> Press <b>${esc(primary()?.label ?? 'Assets done')}</b>.${gx(' The defender answers after you (6.22); you pick your point unit last.')}`
+      : `<b>${nm(who)} defends: no card to add.</b>${gx(` Tap a block to change the point unit${pt ? ` (now ${esc(pt)})` : ''}, or press Done.`, pt ? ` Point unit ${esc(pt)}: press Done.` : ' Pick your point unit, then Done.')}`;
   return att
     ? `<b>${nm(who)} attacks: tap a card to add it.</b>${gx(' The defender answers after you (6.22); you pick your point unit last.')}`
     : `<b>${nm(who)} defends: tap a card to add it</b>${gx(`, and a block to change the point unit${pt ? ` (now ${esc(pt)})` : ''}. The attacker's assets are on the table (6.23).`, pt ? ` · point unit ${esc(pt)}` : ' and pick your point unit.')}`;
@@ -362,11 +474,13 @@ export function primary(): { label: string; fn: () => void; dis?: boolean } | nu
       dis: wait || !!g.recover.length || !!g.artyPick,
     };
   }
+  const run = emptyRun();
   return {
-    label: endLabel(),
+    label: run.length ? `${endLabel()} · go to ${STEP_NAME[run.at(-1)!.to]}` : endLabel(),
     fn: () =>
       act(() => {
         E.endPhase(g);
+        for (const r of run) if (g.phase === r.phase) E.endPhase(g); // one press passes the steps with nothing to do (owner, 14 Nov); each is named on the button's line
         setSelUnit(null);
         setPreviewArea(null);
         setSelChit(null);

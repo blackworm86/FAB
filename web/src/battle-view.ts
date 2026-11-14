@@ -9,7 +9,7 @@ import { reg, ubtn, btn, chip } from './ui-kit';
 import { fxRow } from './fx';
 import { RULE } from './rules-text';
 import { areaName, P1, P2, VOL } from './page';
-import { g } from './game-state';
+import { areaPick, g } from './game-state';
 import { CONTROL_COL, faceDown, hex6, MAPC, seen, setSupEnemy, supEnemy, supplySide, TDN_COL, tint, ZONE_COL } from './map-paint';
 import { battleFx, fightable, mine, other, POOL, rollFx, selArr } from './flow';
 import { pickSA } from './choices';
@@ -26,6 +26,7 @@ import { cutOffCount, modChips, refresh, relayer } from './main';
 let volFolded = innerWidth <= 700,
   volFoldKey = '';
 export function volPanel() {
+  if (areaPick) return ''; // picking an area on the map: the panel steps aside so the lit areas show (the instruction line says what to tap and how to cancel)
   const html = VOL.panel(g, panelCtx());
   if (!html) return '';
   const k = `${g.turn}${g.phasing}${g.phase}`;
@@ -203,7 +204,7 @@ function rollRecord(b: E.Battle, open = false) {
     .reverse()
     .map(
       (r) =>
-        `<div class="rr"><span class="who">${((sd) => (sd ? `<b class="rside ${sd}">${VOL.tag[sd]}</b> ` : ''))(rollSide(r.who))}${esc(r.who)}</span><span class="sn">SN ${r.sn}</span>${faces(r.dice, r.sn)}<b class="${r.hits ? 'hit' : 'miss'}">${r.kind === 'morale' ? (r.hits ? 'pass' : 'fail') : `${r.hits} hit${r.hits === 1 ? '' : 's'}`}</b></div>`,
+        `<div class="rr"><span class="who">${((sd) => (sd ? `<b class="rside ${sd}">${VOL.tag[sd]}</b> ` : ''))(rollSide(r.who))}${esc(r.who)}</span><span class="sn">SN ${r.sn}</span>${faces(r.dice, r.sn, /: jamming$/.test(r.who))}${/: jamming$/.test(r.who) ? `<b class="${r.hits ? 'miss' : 'hit'}">${r.hits ? 'disordered' : 'holds'}</b>` : `<b class="${r.hits ? 'hit' : 'miss'}">${r.kind === 'morale' ? (r.hits ? 'pass' : 'fail') : `${r.hits} hit${r.hits === 1 ? '' : 's'}`}</b>`}</div>`,
     )
     .join('');
   return `<details class="rrec" ${open ? 'open' : ''}><summary>${ico('dice')} Dice so far <small>${b.rolls.length} roll${b.rolls.length === 1 ? '' : 's'}</small></summary>${rows}</details>`;
@@ -213,10 +214,11 @@ export function ledger() {
   if ((!b || g.pendingBlow) && !rollView?.check) return '';
   if (rollView) {
     const rv = rollView,
-      hits = rv.groups.reduce((a, x) => a + x.hits, 0);
+      hits = rv.groups.reduce((a, x) => a + x.hits, 0),
+      jam = /^Jamming/.test(rv.title); // read from the defender's side: a die of 5 or less disorders the unit (playtest 2, item 3)
     return `<div class="c-ledger tight" data-ui="${reg(() => {
       if (rollView?.pos) endRoll();
-    })}" title="Tap to continue"><div class="lh"><h3>${esc(rv.title)}</h3><b class="tot ${hits ? 'hit' : 'miss'}">${rv.pos ? (rv.morale ? `${hits} of ${rv.groups.length} pass` : `${hits} hit${hits === 1 ? '' : 's'}`) : '…'}</b></div>${rv.remote && !rv.pos ? `<p class="hint">${ico('dice')} The other player is rolling…</p>` : ''}${rv.pos ? rollFx.map(fxRow).join('') : ''}${rv.groups.map((x) => `<div class="ln2"><span class="who">${esc(x.label)}</span><span class="sn">SN ${x.sn}</span>${rv.pos ? faces(x.dice, x.sn) : `<span class="cnt">${x.dice.length}${ico('dice')}</span>`}<b class="${x.hits ? 'hit' : 'miss'}">${x.hits}</b>${x.parts.length ? `<span class="chips2">${modChips(x.parts)}</span>` : ''}</div>`).join('')}
+    })}" title="Tap to continue"><div class="lh"><h3>${esc(rv.title)}</h3><b class="tot ${(jam ? hits === rv.groups.length : hits) ? 'hit' : 'miss'}">${rv.pos ? (jam ? (rv.groups.length - hits ? `${rv.groups.length - hits} disordered` : 'all hold') : rv.morale ? `${hits} of ${rv.groups.length} pass` : `${hits} hit${hits === 1 ? '' : 's'}`) : '…'}</b></div>${rv.remote && !rv.pos ? `<p class="hint">${ico('dice')} The other player is rolling…</p>` : ''}${rv.pos ? rollFx.map(fxRow).join('') : ''}${rv.groups.map((x) => `<div class="ln2"><span class="who">${esc(x.label)}</span><span class="sn">SN ${x.sn}</span>${rv.pos ? faces(x.dice, x.sn, jam) : `<span class="cnt">${x.dice.length}${ico('dice')}</span>`}<b class="${x.hits ? 'hit' : 'miss'}">${jam ? (x.hits ? 'holds' : 'disordered') : x.hits}</b>${x.parts.length ? `<span class="chips2">${modChips(x.parts)}</span>` : ''}</div>`).join('')}
       </div>`;
   }
   if (!b || g.pendingBlow) return '';

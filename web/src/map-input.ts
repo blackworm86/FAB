@@ -188,7 +188,7 @@ export function click(e: PointerEvent) {
         pk();
         return refresh();
       }
-      if (area != null && (tg.areas.size || tg.units.size || tg.any)) {
+      if (area != null && (tg.areas.size || tg.units.size || tg.pick.size || tg.any)) {
         say(tg.hint || 'That is not a target for this chit: tap a glowing area or block.');
         return;
       } // a tap that does nothing says why

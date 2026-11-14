@@ -217,11 +217,22 @@ export function settle() {
         ])
           L = Math.max(L, REL!.h(o.position.x + dx, o.position.z + dz));
         L += 0.02;
-      } // the highest ground under the whole counter or block, so the relief never swallows it
+        for (const f of REL!.floats)
+          if (f.at && o.position.x >= f.at.x0 && o.position.x <= f.at.x1 && o.position.z >= f.at.z0 && o.position.z <= f.at.z1)
+            L = Math.max(L, f.at.y + 0.01);
+      } // the highest ground under the whole counter or block, so the relief never swallows it; on a hovering box (a beachhead), on the box
       const prev = (o.userData.lift as number | undefined) ?? 0;
       if (L !== prev) {
         o.position.y += L - prev;
         o.userData.lift = L;
       }
+      const onTile = on && REL!.floats.some((f) => f.at && f.at.y + 0.01 === o.userData.lift); // standing on a hovering box (a beachhead): flat on it, not draped on the ground
+      o.traverse((x) => {
+        if (!x.userData.drape) return;
+        const pa = (x as THREE.Mesh).geometry.getAttribute('position') as THREE.BufferAttribute;
+        for (let k = 0; k < pa.count; k++)
+          pa.setZ(k, on && !onTile ? REL!.h(o.position.x + pa.getX(k), o.position.z - pa.getY(k)) + 0.04 - o.position.y - x.position.y : 0);
+        pa.needsUpdate = true;
+      }); // a figure's ring and disc are wider than the ground sampled above: each point of them sits on the relief under it
     }
 }

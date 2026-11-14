@@ -6,7 +6,7 @@ import { esc, nm } from './util';
 import { btn } from './ui-kit';
 import { type Tgt } from './chit-play';
 import { $, areaName, LAB, MAP, MH, MW, S, toWorld, VOL } from './page';
-import { g, selArea, selUnit } from './game-state';
+import { areaPick, g, selArea, selUnit } from './game-state';
 import { board, cam, canvas, scene } from './scene';
 import { diorama, REL, setFocusOn, show3d } from './map3d';
 import { markers, overlays, pieces, table } from './piece-kit';
@@ -60,11 +60,27 @@ export function syncAreaTags() {
     tagEls.set(a.id, d);
   }
 }
+let namedKey = '',
+  named = new Set<number>();
+/** The areas the current instruction or main button names: the battles to fight, the retreat areas, the areas to pick. */
+function namedAreas() {
+  const k = `${g.turn}${g.phasing}${g.phase}${g.log.length}${g.battle?.stage}${areaPick ? [...areaPick.areas].join() : ''}`;
+  if (k !== namedKey) {
+    namedKey = k;
+    named = new Set([
+      ...(g.phase === 'combat' || g.phase === 'btCombat' ? E.mustFight(g) : []),
+      ...(g.battle?.stage === 'retreat' ? E.retreatOptions(g, g.battle) : []),
+      ...(areaPick ? areaPick.areas : []),
+    ]);
+  }
+  return named;
+}
 function placeAreaTags() {
   const layer = $('#tags');
   if (labelMode === 'off' || !tagEls.size) return;
-  layer.style.display = g.battle ? 'none' : '';
-  if (g.battle) return; // the battle has the screen
+  const inBattle = !!g.battle && g.battle.stage !== 'retreat'; // choosing where to retreat: the names are needed
+  layer.style.display = inBattle ? 'none' : '';
+  if (inBattle) return; // the battle has the screen
   const r = canvas.getBoundingClientRect(),
     v = new THREE.Vector3(),
     under = new Map<number, number>();
@@ -95,11 +111,13 @@ function placeAreaTags() {
     const sx = (v.x * 0.5 + 0.5) * r.width,
       by = under.get(id),
       sy = by != null ? by + 15 : (-v.y * 0.5 + 0.5) * r.height; // a busy area: just under its lowest piece
-    const hov = id === tagHover || id === selArea;
+    const hov = id === tagHover || id === selArea,
+      keep = far && !hov && (d.classList.contains('vp') || namedAreas().has(id)); // objectives and the areas the instruction names keep their name at every zoom (design review, problem 6)
     const pin = id === inView,
       px = pin ? Math.min(r.width - 90, Math.max(90, sx)) : sx,
       py = pin ? Math.min(r.height - 30, Math.max(30, sy)) : sy;
-    d.style.display = (v.z < 1 || pin) && (!far || hov || d.classList.contains('vp')) ? '' : 'none';
+    d.style.display = (v.z < 1 || pin) && (!far || hov || keep) ? '' : 'none';
+    d.classList.toggle('keep', keep);
     d.style.transform = `translate(${px.toFixed(1)}px, ${py.toFixed(1)}px) translate(-50%, -50%)`;
     d.classList.toggle('hov', hov);
   }
@@ -350,12 +368,91 @@ export function decisionBubble(): string {
   }
   if (b.stage === 'attFirst')
     return `<div class="mapbubble" ${at}><b>${b.pending} hit${b.pending > 1 ? 's' : ''}</b><span>Tap the point unit or an asset to take the first loss</span></div>`;
+  const hint = '<span class="choosebelow">Choose in the bar below ↓</span>'; // the choices are in the bar, under the thumb (design review, problem 2)
   if (b.stage === 'attChoice')
-    return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b><span class="fwnote">${b.pending + 1} hits rolled, 1 already taken: ${b.pending} left</span><div class="row">${btn(`${ico('back')}<span>Abort<small>all disordered, no losses</small></span>`, () => E.attackerChoice(g, g.battle!, true), 'ab', false, 'Abort: all attackers disordered, no losses')}${btn(`${ico('minus')}<span>Take losses<small>lose ${b.pending} step${b.pending > 1 ? 's' : ''}, fight on</small></span>`, () => E.attackerChoice(g, g.battle!, false), 'ab', false, 'Continue and take the step losses')}</div></div>`;
+    return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b><span class="fwnote">${b.pending + 1} hits rolled, 1 already taken: ${b.pending} left</span>${hint}</div>`;
   if (b.stage !== 'defChoice') return '';
-  const arty = b.pendingKind === 'arty',
-    fw = g.log.slice(-4).some((l) => / field works absorb 1 hit$/.test(l)); // the ledger shows the hits rolled; field works took one before the choice
-  return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b>${fw ? `<span class="fwnote">${b.pending + 1} rolled − 1 absorbed by field works</span>` : ''}<div class="row">${btn(`${ico('minus')}<span>Take losses<small>lose ${b.pending} step${b.pending > 1 ? 's' : ''}, hold the area</small></span>`, () => E.defenderChoice(g, g.battle!, false), 'ab', false, 'Stand and take the step losses')}${btn(`${ico(arty ? 'disorder' : 'back')}<span>${arty ? 'Disorder<small>1 hit fewer, all disordered</small>' : 'Retreat<small>1 hit fewer, leave disordered</small>'}</span>`, () => E.defenderChoice(g, g.battle!, true), 'ab', false, arty ? 'Disorder all defenders to absorb 1 hit' : 'Retreat (absorbs 1 hit, units disordered)')}</div></div>`;
+  const fw = g.log.slice(-4).some((l) => / field works absorb 1 hit$/.test(l)); // the ledger shows the hits rolled; field works took one before the choice
+  return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b>${fw ? `<span class="fwnote">${b.pending + 1} rolled − 1 absorbed by field works</span>` : ''}${hint}</div>`;
+}
+/** A retreat destination by name: an area, or the sea (Sicily 14.28). */
+export const retName = (a: number) => (a === E.SEA ? 'sea' : areaName(a));
+/** The big choice of a battle step (take the hits or abort / retreat): the bar shows these as its buttons when the main button has nothing to do. */
+export function barChoices(): { label: string; sub: string; title: string; fn: () => void }[] {
+  const b = g.battle;
+  if (!b || rollView || !allowed()) return [];
+  const n = b.pending,
+    st = `${n} step${n > 1 ? 's' : ''}`;
+  if (b.stage === 'attChoice')
+    return [
+      {
+        label: 'Take losses',
+        sub: `lose ${st}, fight on`,
+        title: 'Continue and take the step losses',
+        fn: () => E.attackerChoice(g, g.battle!, false),
+      },
+      {
+        label: 'Abort',
+        sub: 'all disordered, no losses',
+        title: 'Abort: all attackers disordered, no losses',
+        fn: () => E.attackerChoice(g, g.battle!, true),
+      },
+    ];
+  if (b.stage === 'retreat') {
+    const o = E.retreatOptions(g, b);
+    return o.length && o.length <= 2
+      ? o.map((a) => ({
+          label: `Retreat to ${retName(a)}`,
+          sub: '',
+          title: `Retreat to ${retName(a)}`,
+          fn: () => E.chooseRetreat(g, g.battle!, a),
+        }))
+      : []; // more than two: the lit areas on the map are the choice
+  }
+  if (b.stage !== 'defChoice') return [];
+  const arty = b.pendingKind === 'arty';
+  let where = ''; // where a retreat would lead, before it is chosen (owner, 14 Nov: it looked as if there was nowhere to go)
+  if (!arty)
+    try {
+      const t = structuredClone(g),
+        ids = E.unitsIn(g, b.area, other(b.attacker)).map((u) => u.id);
+      E.defenderChoice(t, t.battle!, true);
+      const o =
+        t.battle?.stage === 'retreat'
+          ? E.retreatOptions(t, t.battle)
+          : [...new Set(t.units.filter((u) => ids.includes(u.id) && u.area != null && u.area !== b.area).map((u) => u.area!))];
+      const stuck = E.retreatBlocked(g, b); // 6.6: a unit with nowhere to go loses a step instead; Retreat stays a legal choice
+      where = stuck.length
+        ? ` · no retreat area: ${stuck.map((u) => u.name).join(', ')} lose${stuck.length > 1 ? '' : 's'} a step instead`
+        : o.length === 1
+          ? ` · to ${retName(o[0])}`
+          : o.length
+            ? ` · ${o.length} areas to choose`
+            : '';
+    } catch {
+      /* the engine says why when it is pressed */
+    }
+  return [
+    {
+      label: 'Take losses',
+      sub: `lose ${st}, hold the area`,
+      title: 'Stand and take the step losses',
+      fn: () => E.defenderChoice(g, g.battle!, false),
+    },
+    arty
+      ? {
+          label: 'Disorder',
+          sub: '1 hit fewer, all disordered',
+          title: 'Disorder all defenders to absorb 1 hit',
+          fn: () => E.defenderChoice(g, g.battle!, true),
+        }
+      : {
+          label: 'Retreat',
+          sub: `1 hit fewer${where || ', leave disordered'}`,
+          title: 'Retreat (absorbs 1 hit, units disordered)',
+          fn: () => E.defenderChoice(g, g.battle!, true),
+        },
+  ];
 }
 /** Who can move now: a green arrow over every block that has somewhere to go; the side's other blocks get a grey dash. Hidden once a block is picked or a battle opens. */
 let moveMarks: { el: HTMLElement; unit: string }[] = [];
@@ -408,7 +505,7 @@ const haloMat = [
 const glowMat = new THREE.MeshBasicMaterial({
   color: 0xc8e86a,
   transparent: true,
-  opacity: 0.45,
+  opacity: 0.9,
   depthWrite: false,
   side: THREE.DoubleSide,
   stencilWrite: true,
@@ -484,7 +581,9 @@ export function syncMoveMarks() {
     const circ = (base as THREE.Object3D).userData.r as number | undefined; // a figure: the glow inside its circle (owner, 14 Nov)
     if (circ) {
       const kk = ((base as THREE.Object3D).userData.k as number | undefined) ?? 0.14;
-      halos.add(drapeHalo(new THREE.CircleGeometry(circ - kk, 56), c, y, glowMat));
+      const gl = drapeHalo(new THREE.RingGeometry(Math.max(0.05, circ - kk - 0.34), circ - kk, 56), c, y, glowMat); // a band inside the ring: the middle shows the formation colour
+      gl.renderOrder = 5;
+      halos.add(gl);
       continue;
     }
     (
