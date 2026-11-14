@@ -35,7 +35,7 @@ import {
   tgt,
 } from './flow';
 import { airPick, heldBad, pickSA, setEndHidden } from './choices';
-import { center, reinforcing, setGoal } from './map-input';
+import { center, optsFor, reinforcing, setGoal } from './map-input';
 import { btArmor, skipNow } from './map-marks';
 import { endRoll, rollStage, rollView, setHandSide } from './rolls';
 import { lastFight, render, setLastFight, showAreas } from './main';
@@ -169,6 +169,28 @@ function stakes(b: E.Battle) {
     sns = [...new Set(fl.map((f) => f.sn))].sort((x, y) => x - y);
   return `<b>${nm(sd)} ${esc(STAGE_NAME[b.stage].toLowerCase())}:</b> ${dice} ${dice === 1 ? 'die' : 'dice'} · hit on ${sns.at(-1)! < 1 ? 'a 1 only' : sns.length === 1 || sns[0] < 1 ? `${sns.at(-1)} or less` : `${sns[0]}–${sns.at(-1)} or less`}${gx(` · at ${E.unitsIn(g, b.area, other(sd)).length} ${nm(other(sd))} block${E.unitsIn(g, b.area, other(sd)).length === 1 ? '' : 's'}`)}`;
 }
+/** The blocks of the side acting now that can move in this step (the same test as the green areas). */
+const movers = () => {
+  const who = actorNow();
+  return g.units.filter((u) => u.side === who && u.area != null && !u.garrison && E.moveOptions(g, u.id).length);
+};
+/** Why the selected block shows no green area: the line never asks for a tap that cannot be made. */
+function cannotMove(id: string) {
+  const u = g.units.find((x) => x.id === id)!;
+  if (u.side !== actorNow()) return `<b>${esc(u.name)}:</b> an enemy block. Tap one of your own to move it.`;
+  const why = u.garrison
+    ? 'it never moves'
+    : u.moved
+      ? 'it has already moved this turn'
+      : g.phase === 'movement' && u.reserve
+        ? 'it holds a reserve marker and moves in a later step'
+        : g.phase !== 'movement' && !u.reserve && !u.exploit
+          ? 'only reserve and exploiting blocks move in this step'
+          : u.disorder
+            ? 'it is disordered'
+            : 'no area it may enter now';
+  return `<b>${esc(u.name)} cannot move:</b> ${why}. Tap another block.`;
+}
 function promptText() {
   const b = g.battle;
   if (rollView?.pos) return gx('<b>Read the dice:</b> green hits, salmon misses. Then continue.', '<b>Read the dice,</b> then continue.');
@@ -240,11 +262,14 @@ function promptText() {
     case 'movement':
       if (selUnit && g.moving?.id === selUnit)
         return `<b>${E.allowance(g, g.units.find((x) => x.id === selUnit)!) - (g.units.find((x) => x.id === selUnit)!.spent ?? 0)} MP left.</b>${gx(" Tap a green area to go on, or <b>Stop here</b>. Choosing another block ends this one's move.", ' Go on, or Stop here.')}`;
+      if (selUnit && !optsFor(selUnit).length) return cannotMove(selUnit);
+      if (!selUnit && !movers().length) return '<b>No block can move.</b> End the step.';
       return selUnit
         ? `Tap a <b>green</b> area${gx(' to move there. <b>Brass</b>: must stop there. Wrong move? <b>Undo</b>.', ' · <b>brass</b> = stop')}`
         : `<b>Tap one of your blocks</b>${gx(' to move it, or <b>Can move</b> to go through them.', ' to move it.')}`;
     case 'strategic':
-      return '<b>Tap a reserve block</b>, then a green area.';
+      if (selUnit && !optsFor(selUnit).length) return cannotMove(selUnit);
+      return movers().length ? '<b>Tap a reserve block</b>, then a green area.' : '<b>No reserve block can move.</b> End the step.';
     case 'combat':
     case 'btCombat':
       if (g.phase === 'btCombat' && !m && E.contestedAreas(g).some((a) => !g.fought.includes(a) && !E.newlyContested(g).includes(a)))
@@ -262,8 +287,13 @@ function promptText() {
           ? '<b>Tap a contested area</b> to fight, or end the step.'
           : 'No battles left.';
     case 'reaction':
-      return `<b>${nm(other(g.phasing))} reserves</b> may react: select a reserve block.`;
+      if (selUnit && !optsFor(selUnit).length) return cannotMove(selUnit);
+      return movers().length
+        ? `<b>${nm(other(g.phasing))} reserves</b> may react: select a reserve block.`
+        : `<b>${nm(other(g.phasing))}: no reserve block can react.</b> End the step.`;
     case 'btMove':
+      if (selUnit && !optsFor(selUnit).length) return cannotMove(selUnit);
+      if (!movers().length && !btArmor().length) return '<b>No block can move in Breakthrough.</b> End the step.';
       return btArmor().length
         ? gx(
             '<b>Breakthrough movement.</b> Reserve and exploiting blocks may move; armor that has not moved can move one area for a Special Action (brass tags).',
@@ -292,6 +322,11 @@ function setupPrompt(b: E.Battle): string {
       : `<b>${nm(who)}: tap a block to make it your point unit</b>, then Begin combat.${gx(' The defender has designated his (6.24).')}`;
   if (!att && (b.vol as { defLocked?: boolean } | undefined)?.defLocked)
     return `<b>${nm(who)} defends, jammed:</b> all defending units are disordered, so no artillery, air, SAM or battle assets (17.33).${pt ? '' : ' Pick your point unit,'} then Done.`; // playtest 2, item 5
+  // the line is built from what is possible now (design review, problem 3): no playable card, no "tap a card"
+  if (!E.boxOf(g, who, 'available').some((c) => VOL.battleCard(c) && !VOL.battleUse(g, b, c)))
+    return att
+      ? `<b>${nm(who)} attacks: no card to add.</b> Press <b>${esc(primary()?.label ?? 'Assets done')}</b>.${gx(' The defender answers after you (6.22); you pick your point unit last.')}`
+      : `<b>${nm(who)} defends: no card to add.</b>${gx(` Tap a block to change the point unit${pt ? ` (now ${esc(pt)})` : ''}, or press Done.`, pt ? ` Point unit ${esc(pt)}: press Done.` : ' Pick your point unit, then Done.')}`;
   return att
     ? `<b>${nm(who)} attacks: tap a card to add it.</b>${gx(' The defender answers after you (6.22); you pick your point unit last.')}`
     : `<b>${nm(who)} defends: tap a card to add it</b>${gx(`, and a block to change the point unit${pt ? ` (now ${esc(pt)})` : ''}. The attacker's assets are on the table (6.23).`, pt ? ` · point unit ${esc(pt)}` : ' and pick your point unit.')}`;
