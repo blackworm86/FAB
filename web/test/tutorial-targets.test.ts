@@ -10,7 +10,7 @@ const ui = files
   .filter((f) => !f.startsWith('tutorial'))
   .map((f) => readFileSync(join(SRC, f), 'utf8'))
   .join('\n');
-const lessons = files.filter((f) => /^tutorial-(bulge|golan|sicily)\.ts$/.test(f));
+const lessons = files.filter((f) => /^tutorial-(bulge|golan|sicily|basics)(-new)?\.ts$/.test(f));
 const selectors = (src: string) => [...src.matchAll(/(?:el: |q\()'([.[][^']*)'/g)].map((m) => m[1]);
 
 describe('tutorial targets', () => {

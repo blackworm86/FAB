@@ -1,5 +1,5 @@
 import { chromium, devices } from 'playwright';
-// Phone screenshots of every step of every step of a course. COURSE=<id> OUT=<folder>/ node e2e/_tutshots.mjs
+// Phone screenshots of every step of a course. COURSE=<id> OUT=<folder>/ node e2e/_tutshots.mjs
 const out = process.env.OUT;
 const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const ctx = await b.newContext({ ...devices['iPhone 13'], deviceScaleFactor: 1 });
