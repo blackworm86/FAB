@@ -82,6 +82,10 @@ For a player who knows the series (with the same "learn the basics first" link).
 3. The lesson walker (`node web/e2e/tutorials.mjs`) walks every course to its end, and a person times each one; any lesson over 3 minutes is cut.
 4. The old courses are removed once the new ones pass.
 
+## Progress
+
+- 14 November: The Bulge lessons 1–3 (Your first move, What a move costs, Your first battle) built in `web/src/tutorial-basics.ts`, at the address `?tutorial=bulge-basics` (not on the home page yet; the old course stays until the new one is complete). 16 steps in all; every step played by the tests and walked in a browser, phone screenshots checked. Lesson 3 follows the book: the attack is aborted (Play Book 23.5); taking losses and winning come in lesson 5 (Weiswampach). Waiting for the owner to try them on his phone before lessons 4–8 are written.
+
 ## Decisions for the owner
 
 1. Is the list of lessons right, and is anything in "left out" something you want taught?
