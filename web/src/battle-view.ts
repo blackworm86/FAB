@@ -9,7 +9,7 @@ import { reg, ubtn, btn, chip } from './ui-kit';
 import { fxRow } from './fx';
 import { RULE } from './rules-text';
 import { areaName, P1, P2, VOL } from './page';
-import { g } from './game-state';
+import { areaPick, g } from './game-state';
 import { CONTROL_COL, faceDown, hex6, MAPC, seen, setSupEnemy, supEnemy, supplySide, TDN_COL, tint, ZONE_COL } from './map-paint';
 import { battleFx, fightable, mine, other, POOL, rollFx, selArr } from './flow';
 import { pickSA } from './choices';
@@ -26,6 +26,7 @@ import { cutOffCount, modChips, refresh, relayer } from './main';
 let volFolded = innerWidth <= 700,
   volFoldKey = '';
 export function volPanel() {
+  if (areaPick) return ''; // picking an area on the map: the panel steps aside so the lit areas show (the instruction line says what to tap and how to cancel)
   const html = VOL.panel(g, panelCtx());
   if (!html) return '';
   const k = `${g.turn}${g.phasing}${g.phase}`;

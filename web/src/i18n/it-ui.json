@@ -316,6 +316,8 @@
     "That is not a legal entry area for this block": "Non è un'area d'ingresso valida per questo blocco",
     "Legend": "Legenda",
     "Instructions": "Istruzioni",
+    "An airborne unit has no drop zone:": "Un'unità aviotrasportata non ha zona di lancio:",
+    "remove it in the panel on the map; it is lost (14.27a).": "rimuovila nel pannello sulla mappa; è perduta (14.27a).",
     "No attacker left in good order": "Nessun attaccante rimasto in buon ordine",
     "British 8th Army": "8ª Armata britannica",
     "US 7th Army": "7ª Armata USA",

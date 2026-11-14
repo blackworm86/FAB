@@ -190,7 +190,9 @@ function promptText() {
           '<b>Breakthrough combat:</b> brass = costs a Special Action',
         );
       if (dropsLeft())
-        return `<b>Drop your airborne unit${dropsLeft() > 1 ? 's' : ''} first:</b> choose the drop zone in the panel on the map (14.27a).`;
+        return g.units.some((u) => u.box === 'airborne_assault' && u.side === g.phasing && !E.sicily.airDropTargets(g, u.id).length)
+          ? `<b>An airborne unit has no drop zone:</b> remove it in the panel on the map; it is lost (14.27a).`
+          : `<b>Drop your airborne unit${dropsLeft() > 1 ? 's' : ''} first:</b> choose the drop zone in the panel on the map (14.27a).`; /* playtest 2, item 16 */
       return m
         ? `<b>Tap a red area</b>${gx(' to fight there, or press <b>Next battle</b>.', ' or Next battle.')}`
         : fightable().length
