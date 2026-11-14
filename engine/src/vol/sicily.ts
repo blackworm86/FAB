@@ -40,6 +40,7 @@ import { afterDraw, extraDraws, finalResult, onPhase, sicilyVictory, sources, su
 export * from './sicily-turn';
 import {
   adjustFire,
+  battleState,
   assault,
   beforeBegin,
   beforeFire,
@@ -207,6 +208,10 @@ export const gone = (c: Chit) => {
 };
 
 registerHooks('sicily', {
+  noAttackerWhy: (_g, b) =>
+    battleState(b).moraleStop
+      ? 'No attacker left in good order: the Italian morale checks at the reveal disordered every attacker (15.3b, 17.21; disordered units may not attack, 6.2)'
+      : undefined,
   adminBoth: (g) =>
     g.chits.some(
       (m) =>

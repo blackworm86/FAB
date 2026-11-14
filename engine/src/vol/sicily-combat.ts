@@ -9,6 +9,7 @@ import {
   chit,
   contested,
   eliminate,
+  fighters,
   inSupply,
   moraleCheck,
   other,
@@ -32,6 +33,8 @@ export interface SicilyBattle {
   flank?: boolean;
   noAir: Partial<Record<Side, boolean>>;
   airborne?: string;
+  untried?: string[]; // 15.3d: the untried units this round revealed (they become tried if they survive it, wherever they end up)
+  moraleStop?: boolean; // 6.2: the morale checks at the reveal (15.3b, 17.21) disordered every attacker
 }
 export const battleState = (b: Battle) => (b.vol ??= { noAir: {} }) as unknown as SicilyBattle;
 export const sicilySn = (s: Shooter, t: Target, c: Setting) => successNumber(s, t, c);
@@ -135,10 +138,15 @@ export function onBattle(g: Game, b: Battle, when: 'begin' | 'end') {
       B.airborne = ab.id;
       say(g, `${ab.name} leads the airborne assault (14.27a)`);
     }
+    B.untried = unitsIn(g, b.area, 'axis')
+      .filter((u) => u.untried)
+      .map((u) => u.id);
+    const before = fighters(g, b.area, b.attacker, true).length;
     italianMorale(g, b);
+    B.moraleStop = b.attacker === 'axis' && before > 0 && !fighters(g, b.area, 'axis', true).length;
   }
   if (when === 'end') {
-    for (const u of unitsIn(g, b.area, 'axis'))
+    for (const u of g.units.filter((x) => x.untried && x.str > 0 && x.area != null && (x.area === b.area || B.untried?.includes(x.id))))
       if (u.untried) {
         u.untried = false;
         say(g, `${u.name} is now a tried unit (15.3d)`);
