@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import * as E from '../../engine/src';
 import * as SBU from './sandbox-ui';
 import { online, SANDBOX, TUTORIAL } from './online';
+import { panelCtx } from './unit-card';
+import { STEP_NAME } from './home';
 import { ico } from './icons';
 import { esc, nm } from './util';
 import { STAGE_NAME } from './table-text';
@@ -82,6 +84,47 @@ export function topBar(vp = '') {
 export const COARSE = matchMedia('(pointer: coarse)').matches;
 /** The verb matches the device: tap on touch screens, click with a mouse. */
 export const verb = (h: string) => (COARSE ? h : h.replace(/\bTap\b/g, 'Click').replace(/\btap\b/g, 'click'));
+let runKey = '',
+  runList: { phase: E.Phase; to: E.Phase }[] = [];
+/** The steps after this one in which nothing can be done, up to the first step with something to decide: no block of the acting side can move,
+ *  no battle is open, no supply roll waits, no panel asks anything, and the side stays one this device plays. Never past the player turn. */
+export function emptyRun(): typeof runList {
+  const k = `${g.turn}${g.phasing}${g.phase}${g.log.length}${hist.length}${online.devSeat}`;
+  if (k === runKey) return runList;
+  runKey = k;
+  runList = [];
+  if (g.battle || g.over || TUTORIAL || ['deploy', 'reinforcement', 'admin'].includes(g.phase)) return runList;
+  const c = structuredClone(g),
+    run: E.Phase[] = [];
+  let to: E.Phase | null = null;
+  try {
+    for (let n = 0; n < 6 && !to; n++) {
+      E.endPhase(c);
+      if (c.over || c.battle || c.turn !== g.turn || c.phasing !== g.phasing) {
+        to = run.pop() ?? null; // the last empty step ends the player turn: that press stays its own
+        break;
+      }
+      const who = E.actorOf(c),
+        busy =
+          ['reinforcement', 'admin', 'deploy'].includes(c.phase) ||
+          who === 'both' ||
+          !mine(who) ||
+          (['combat', 'btCombat'].includes(c.phase)
+            ? E.contestedAreas(c).some((a) => !c.fought.includes(a))
+            : c.phase === 'supply'
+              ? !!c.supplyPending
+              : c.units.some((u) => u.side === who && u.area != null && !u.garrison && E.moveOptions(c, u.id).length)) ||
+          !!c.pendingArrivals?.length ||
+          !!VOL.panel(c, panelCtx());
+      if (busy) to = c.phase;
+      else run.push(c.phase);
+    }
+    if (to) runList = run.map((phase) => ({ phase, to: to! }));
+  } catch {
+    runList = [];
+  }
+  return runList;
+}
 export function prompt() {
   if (heldBad)
     return `<span class="turnchip tc-go">Rules check</span> <b>Decide above:</b> restore the last legal position for both players, or accept the other player's change.`;
@@ -89,7 +132,14 @@ export function prompt() {
     online.active && !online.both() && online.mySide() && !g.over
       ? `<span class="turnchip ${allowed() ? 'tc-go' : 'tc-wait'}" title="You play the ${nm(online.mySide()!)}">${allowed() ? 'your move' : 'waiting'}</span> ` /* the sides are named in the top bar; the chip says only whether you act now */
       : '';
-  return chip + verb(promptText());
+  const run = primary()?.label.includes(' · go to ') ? emptyRun() : [];
+  return (
+    chip +
+    verb(promptText()) +
+    (run.length
+      ? ` <span class="runnote">Nothing to do in ${run.map((r) => `<i>${STEP_NAME[r.phase]}</i>`).join(', ')}: one press goes to <i>${STEP_NAME[run[0].to]}</i>.</span>`
+      : '')
+  );
 }
 /** Explanations: full for learning, short for experienced players (Menu > Settings, or the guide button in the bottom bar). `gx` = explanation only, `gs` = short form only. */
 export let guide: 'full' | 'short' = (() => {
@@ -376,11 +426,13 @@ export function primary(): { label: string; fn: () => void; dis?: boolean } | nu
       dis: wait || !!g.recover.length || !!g.artyPick,
     };
   }
+  const run = emptyRun();
   return {
-    label: endLabel(),
+    label: run.length ? `${endLabel()} · go to ${STEP_NAME[run.at(-1)!.to]}` : endLabel(),
     fn: () =>
       act(() => {
         E.endPhase(g);
+        for (const r of run) if (g.phase === r.phase) E.endPhase(g); // one press passes the steps with nothing to do (owner, 14 Nov); each is named on the button's line
         setSelUnit(null);
         setPreviewArea(null);
         setSelChit(null);

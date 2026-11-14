@@ -417,3 +417,10 @@
     max-height: calc(100% - 118px); /* clear of the Map button above it */
   }
 }
+.c-prompt .runnote {
+  color: #b3ad8b;
+}
+.c-prompt .runnote i {
+  font-style: normal;
+  color: var(--ink);
+}
