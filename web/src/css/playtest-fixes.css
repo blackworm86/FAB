@@ -216,3 +216,19 @@
 .mapdock.menuopen .dockrow > .laysw:not(.labsw) > b {
   grid-column: 1 / -1;
 }
+/* the note shown while the page reloads into a newly published version */
+.updnote {
+  position: fixed;
+  left: 50%;
+  top: 72px;
+  transform: translateX(-50%);
+  z-index: 200;
+  padding: 10px 16px;
+  background: #12150e;
+  color: var(--ink);
+  border: 1px solid var(--gold);
+  font: 600 14px var(--sfd);
+  letter-spacing: 0.06em;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+}

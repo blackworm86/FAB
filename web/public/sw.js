@@ -9,7 +9,7 @@ self.addEventListener('activate', (e) => e.waitUntil((async () => {
 })()));
 self.addEventListener('fetch', (e) => {
   const req = e.request, url = new URL(req.url);
-  if (req.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (req.method !== 'GET' || url.origin !== self.location.origin || url.searchParams.has('fresh')) return; // ?fresh: the page asking the server whether a new version is out
   if (req.mode === 'navigate') {
     e.respondWith((async () => {
       try { const res = await fetch(req); const c = await caches.open(CACHE); c.put('./', res.clone()); return res; }

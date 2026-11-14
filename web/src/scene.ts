@@ -1,5 +1,6 @@
 // The three.js scene: renderer, camera object, light, the board and its printed-map texture.
 import * as THREE from 'three';
+import { checkUpdate } from './update';
 import { tr } from './i18n';
 import { esc, flipSvg } from './util';
 import { $, MH, MW, S, VOL } from './page';
@@ -77,6 +78,7 @@ const svgUrl = (t: string) => URL.createObjectURL(new Blob([t], { type: 'image/s
 export const baseImg = new Image(),
   linesImg = new Image();
 baseImg.onload = linesImg.onload = () => paintBoard();
+baseImg.onerror = linesImg.onerror = () => void checkUpdate(); // a blank map after the site changed: reload into the new version
 const flipped = new Map<HTMLImageElement, HTMLImageElement>();
 for (const [im, src] of [
   [baseImg, VOL.art.base],

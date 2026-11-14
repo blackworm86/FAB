@@ -3,8 +3,10 @@
 import { HAS_TABLE, SANDBOX, TUTORIAL, DEV_FAKE, LAB } from './online';
 import { setupInstall } from './install';
 import { loadLang } from './i18n';
+import { watchUpdates } from './update';
 
 setupInstall();
+watchUpdates();
 // The old computer opponent's games, removed from the site: cleared from this browser's storage (a no-op once they are gone).
 try {
   for (const k of Object.keys(localStorage)) if (/^fab-(solo|cpu)|^fab-journal:fab-(solo|cpu)/.test(k)) localStorage.removeItem(k);
