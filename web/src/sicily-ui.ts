@@ -363,7 +363,7 @@ export function sicilyPanel(g: Game, ctx: PanelCtx): string {
     for (const u of g.units.filter((x) => x.box === 'airborne_assault' && x.side === 'allied')) {
       const t = S.airDropTargets(g, u.id);
       out.push(
-        `<div class="volpanel"><b>${ctx.ico('air_mission')} ${esc(u.name)}: airborne assault (14.27a)</b><span>${t.length ? 'Drop into an area next to at least two areas holding its own army, before any battle. Against defenders it is a River Assault that cannot be aborted.' : 'No drop zone is open: the unit is lost.'}</span><div class="row">${t.length ? ctx.ubtn('Choose the drop zone', () => ctx.pickArea(`${u.name}: tap the drop zone`, t, (a) => S.airDrop(live(), u.id, a)), 'primary') : ctx.btn('Remove the unit', () => S.airDrop(live(), u.id, null), 'primary')}</div></div>`,
+        `<div class="volpanel"><b>${ctx.ico('air_mission')} ${esc(u.name)}: airborne assault (14.27a)</b><span>${t.length ? 'Drop into an area next to at least two areas holding its own army, before any battle. Against defenders it is a River Assault that cannot be aborted.' : 'No drop zone is open: the unit is lost.'}</span><div class="row">${t.length ? ctx.ubtn('Choose the drop zone', () => ctx.pickArea(`${u.name}: tap the drop zone`, t, (a) => S.airDrop(live(), u.id, a)), 'primary') : ctx.btn(`Remove ${esc(u.name)} (no drop zone)`, () => S.airDrop(live(), u.id, null), 'primary')}</div></div>`,
       );
     }
   }
@@ -399,14 +399,30 @@ export function sicilyPanel(g: Game, ctx: PanelCtx): string {
           `<div class="volpanel"><b>${ctx.ico('air_mission')} Dogfight (16.31)</b><span>${nm(sd)}: cancel the enemy air support over this battle with your own ${esc(mine.name)}; both are used, and neither side flies more here.</span><div class="row">${ctx.btn('Dogfight', () => S.dogfight(live(), live().battle!, mine.id), 'primary')}</div></div>`,
         );
     }
+    const navAll = b.assets[b.attacker].map((id) => E.chit(g, id)).filter((x) => x.kind === 'naval_support'),
+      defFw = g.fieldWorks.includes(b.area) && (g.fwOwner[b.area] ?? E.other(b.attacker)) === E.other(b.attacker);
+    if (ctx.mine(b.attacker) && navAll.length) {
+      // 16.21: say which use each naval asset has, and let the attacker choose where both are possible (owner, 14 Nov)
+      const key = `${b.area}`,
+        on = defFw ? V.navalShock[key] : undefined,
+        set = (id: string | null) => () => S.setNavalShock(live(), live().battle!, id);
+      out.push(
+        `<div class="volpanel"><b>${ctx.ico('wave')} Naval support: ${defFw ? 'Shock and Awe or artillery' : 'fires as artillery'} (16.21)</b><span>${
+          !defFw
+            ? 'No defending field works here, so it fires as artillery.'
+            : on
+              ? `Now: ${navAll.length > 1 ? 'one naval asset' : esc(E.chit(g, on).name)} removes the field works as the first act of the battle, instead of firing${navAll.length > 1 ? '; the other naval support fires as artillery' : ''}.`
+              : `Now: ${navAll.length > 1 ? 'all fire' : 'it fires'} as artillery. Or one naval asset removes the defending field works first, instead of firing.`
+        }</span>${
+          defFw
+            ? `<div class="row">${ctx.btn('Remove the field works', set(on ?? navAll[0].id), on ? 'on' : '')}${ctx.btn('Fire as artillery', set(null), on ? '' : 'on')}</div>`
+            : ''
+        }</div>`,
+      );
+    }
     if (ctx.mine(b.attacker) && g.fieldWorks.includes(b.area)) {
       const key = `${b.area}`,
-        nav = b.assets[b.attacker].map((id) => E.chit(g, id)).filter((x) => x.kind === 'naval_support'),
         rng = b.assets[b.attacker].map((id) => E.chit(g, id)).filter((x) => x.subtype === 'ranger' || x.subtype === 'commando');
-      if (nav.length)
-        out.push(
-          `<div class="volpanel"><b>${ctx.ico('wave')} Shock and Awe (16.21)</b><span>One naval support asset removes the defending field works instead of firing.</span><div class="row">${nav.map((x) => ctx.btn(esc(x.name), () => S.setNavalShock(live(), live().battle!, V.navalShock[key] === x.id ? null : x.id), V.navalShock[key] === x.id ? 'on' : '')).join('')}</div></div>`,
-        );
       if (rng.length)
         out.push(
           `<div class="volpanel"><b>${ctx.ico('infantry_asset')} Rangers (16.22)</b><span>A Ranger or Commando asset removes the field works instead of rolling, if the attack goes on and it survives the defensive fire.</span><div class="row">${rng.map((x) => ctx.btn(esc(x.name), () => S.setRangerFw(live(), live().battle!, V.rangerFw[key] === x.id ? null : x.id), V.rangerFw[key] === x.id ? 'on' : '')).join('')}</div></div>`,

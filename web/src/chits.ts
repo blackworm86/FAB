@@ -304,7 +304,7 @@ export function chitSvg(c: Chit | Counter): string {
     return `${ring ? `<circle cx="${cx}" cy="${cy}" r="10.5" fill="${ring}"/>` : ''}<circle cx="${cx}" cy="${cy}" r="${ring ? 8 : 7.5}" fill="${f}"/>`;
   };
   const unit = (sym: string, fill = ech, bg?: string[]) =>
-    `${open(side, (c.ech === 'br_xxx' ? BRIT : bg) as never)}${turn(t, 14, 36, 33)}${dot(CX, 17)}${square(fill)}${sym}${txt(name, CX, 143, 23, { anchor: 'middle', max: 104 })}</svg>`;
+    `${open(side, (c.ech === 'br_xxx' ? BRIT : bg) as never)}${turn(t, 14, 36, 33)}${dot(CX, 17)}${square(fill)}${sym}${txt(name, CX, 150, 33, { anchor: 'middle', max: 136 })}</svg>`;
   if (k === 'artillery') return unit(`<circle cx="${CX}" cy="${CY}" r="7.3" fill="${INK}"/>`);
   if (k === 'rocket_artillery')
     return unit(
@@ -324,7 +324,7 @@ export function chitSvg(c: Chit | Counter): string {
         ? `<path d="M${CX - 24} ${CY + 8}C${CX - 17} ${CY - 1} ${CX - 8} ${CY - 2} ${CX - 2} ${CY + 6}L${CX} ${CY + 18}L${CX + 2} ${CY + 6}C${CX + 8} ${CY - 2} ${CX + 17} ${CY - 1} ${CX + 24} ${CY + 8}" fill="none" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>`
         : '';
     const extra = name.startsWith('v.d.') ? `${txt('31', 14, 66, 17)}${txt('52', 14, 86, 17)}` : '';
-    return `${open(side, bg as never)}${turn(t, 14, 36, 33)}${extra}${dot(CX, 17)}${square(ech)}${x}${b}${txt(name, CX, 143, 23, { anchor: 'middle', max: 104 })}</svg>`;
+    return `${open(side, bg as never)}${turn(t, 14, 36, 33)}${extra}${dot(CX, 17)}${square(ech)}${x}${b}${txt(name, CX, 150, 33, { anchor: 'middle', max: 136 })}</svg>`;
   }
   if (k === 'task_force') return garrisonChit('Task Force', `${t}-*`, false);
   if (k === 'garrison')

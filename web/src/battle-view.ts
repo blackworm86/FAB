@@ -160,6 +160,7 @@ export function battleTable() {
   const L = E.areas.get(b.area)!,
     att = b.attacker,
     setup = b.stage === 'setup';
+  const shock = VOL.id === 'sicily' ? E.sicily.state(g).navalShock[`${b.area}`] : undefined; // 16.21: the naval asset chosen to remove the field works
   const side = (s: E.Side) => {
     const us = E.unitsIn(g, b.area, s),
       lim = VOL.limits(g, b, s),
@@ -168,7 +169,7 @@ export function battleTable() {
     const arty = ids.filter((c) => E.isArty(c)).length + airs.filter((a) => a.mode === 'arty').length,
       rest = ids.length - ids.filter((c) => E.isArty(c)).length;
     return `<div class="bside ${s} ${mine(s) ? 'mine' : 'theirs'}"><h4 title="${nm(s)} ${s === att ? 'attacking' : 'defending'}"><span class="tag">${VOL.tag[s]}</span><small class="role">${s === att ? 'attacks' : 'defends'}</small>${online.active && !online.both() ? `<small>${mine(s) ? 'you' : 'foe'}</small>` : ''}</h4>
-      ${arty || setup ? `<span class="chp" title="Artillery assigned">${ico('artillery')}${arty}/${lim.arty}<small>arty</small></span>` : ''}${rest || setup ? `<span class="chp" title="Battle assets and events">${ico('armor_asset')}${rest}<small>assets</small></span>` : ''}
+      ${arty || setup ? `<span class="chp" title="Artillery assigned">${ico('artillery')}${arty}/${lim.arty}<small>arty</small></span>` : ''}${rest || setup ? `<span class="chp" title="Battle assets and events">${ico('armor_asset')}${rest}<small>assets</small></span>` : ''}${s === att && shock ? `<span class="chp" title="Shock and Awe (16.21): ${esc(E.chit(g, shock).name)} removes the defending field works first, instead of firing">${ico('wave')}<small>Shock and Awe</small></span>` : ''}
       </div>`;
   };
   const saRow = (() => {

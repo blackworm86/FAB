@@ -14,7 +14,7 @@ import { STEP_NAME, homeUrl, tutUrl, share, dropMatch, rulesHtml } from './home'
 import { showRules, RULES_GAMES } from './rules-link';
 import { coursesOf } from './tutorial-script';
 import { LAB_SIDE, lab, labClear, labDownload, recordKey } from './lab';
-import { MAP, MH, MW, P1, P2, toWorld, VOL } from './page';
+import { MAP, MH, MW, P1, P2, S, toWorld, VOL } from './page';
 import { g, newOpts, save, setG, setSelArea, setSelChit, setSelUnit } from './game-state';
 import { cam, canvas } from './scene';
 import { map3d, setMap3d } from './map3d';
@@ -127,11 +127,8 @@ export function homeGoal() {
     x1 = Math.max(...ids.map((p) => p.x)),
     z0 = Math.min(...ids.map((p) => p.z)),
     z1 = Math.max(...ids.map((p) => p.z));
-  return {
-    t: new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2),
-    dist: Math.min(95, Math.max(7, Math.max(x1 - x0, (z1 - z0) * 1.3) * (innerWidth < 700 ? 1.7 : 1.12) + 3)), // the whole sheet, even past the hand-zoom limit
-    pitch: 1.0,
-  };
+  const c = [new THREE.Vector3(x0, 0, z0), new THREE.Vector3(x1, 0, z0), new THREE.Vector3(x0, 0, z1), new THREE.Vector3(x1, 0, z1)];
+  return fit(c, Math.max(x1 - x0, (z1 - z0) * 1.3) * (innerWidth < 700 ? 1.2 : 0.9), 1.0, (d) => Math.min(220, Math.max(7, d))); // the whole sheet, clear of the bars, even past the hand-zoom limit (re-test: the landing boxes sat under the bottom bar)
 }
 export function frameSide(sd: E.Side) {
   const ids = MAP.areas.filter((a) => g.control[a.id] === sd && (!g.inPlay || g.inPlay.includes(a.id))).map((a) => center(a.id));
@@ -168,23 +165,28 @@ function freeRect() {
   f.t = best.t;
   f.b = best.b;
   // the narrow ones (Map button, a side panel) take their side of that band
-  for (const b of boxes.filter((x) => !wide(x) && x.bottom > f.t && x.top < f.b)) {
-    if (b.left + b.right > f.l + f.r) f.r = Math.min(f.r, b.left - 8);
-    else f.l = Math.max(f.l, b.right + 8);
+  for (const b of boxes.filter((x) => !wide(x) && x.bottom > f.t && x.top < f.b && x.right > f.l && x.left < f.r)) {
+    const side = b.left + b.right > f.l + f.r ? f.r - b.left + 8 : b.right + 8 - f.l,
+      end = b.top + b.bottom > f.t + f.b ? f.b - b.top + 8 : b.bottom + 8 - f.t; // or its end of the band, when that leaves more map (a corner button)
+    if (side * (f.b - f.t) <= end * (f.r - f.l)) {
+      if (b.left + b.right > f.l + f.r) f.r = Math.min(f.r, b.left - 8);
+      else f.l = Math.max(f.l, b.right + 8);
+    } else if (b.top + b.bottom > f.t + f.b) f.b = Math.min(f.b, b.top - 8);
+    else f.t = Math.max(f.t, b.bottom + 8);
   }
   return f;
 }
 const ray = new THREE.Raycaster(),
   ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 /** Where the areas land on screen with the camera aimed at t from distance d (the live camera is not moved). */
-function shot(t: THREE.Vector3, d: number, ids: number[], pt = pitch) {
+function shot(t: THREE.Vector3, d: number, ids: (number | THREE.Vector3)[], pt = pitch) {
   const c = cam.clone(),
     r = canvas.getBoundingClientRect();
   c.position.set(t.x + d * Math.sin(yaw) * Math.cos(pt), d * Math.sin(pt), t.z + d * Math.cos(yaw) * Math.cos(pt));
   c.lookAt(t);
   c.updateMatrixWorld();
   const px = ids.map((a) => {
-    const v = center(a).clone().project(c);
+    const v = (typeof a === 'number' ? center(a) : a).clone().project(c);
     return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height };
   });
   /** The point of the table under a screen pixel. */
@@ -201,36 +203,60 @@ export const onScreen = (a: number) => ((v) => inside(shot(v.t, v.d, [a], v.pt).
 /** Bring areas into view when any of them is hidden: the camera frames them all in the part of the screen no panel covers, no closer than now. */
 export function showAreas(ids: number[]) {
   if (!ids.length) return;
-  const f = freeRect();
   const v = aim();
-  if (shot(v.t, v.d, ids, v.pt).px.every((p) => inside(p, f))) return;
-  const ps = ids.map(center),
+  if (shot(v.t, v.d, ids, v.pt).px.every((p) => inside(p, freeRect()))) return;
+  const r = fit(ids.map(center), v.d, v.pt, lock ? clampDist : (d) => Math.min(innerWidth < 700 ? 90 : 72, Math.max(7, d))), // a phone may go further out than by hand, to fit them all
+    h = lock ? null : homeGoal();
+  setGoal(h && r.dist >= h.dist * 0.75 ? h : onSheet(r, ids)); // nearly the whole sheet anyway: frame all of it, centred (re-test: Sicily's beaches left a bare band under the map)
+}
+/** Slide the view back over the sheet where an edge of the free screen shows bare table, as long as the areas stay in view (re-test: Sicily's beaches framed with a brown band below). */
+function onSheet(v: { t: THREE.Vector3; dist: number; pitch: number }, ids: number[]) {
+  const f = freeRect(),
+    hx = MW / (2 * S),
+    hz = MH / (2 * S),
+    { at } = shot(v.t, v.dist, [], v.pitch);
+  for (const [x, y] of [
+    [(f.l + f.r) / 2, f.b],
+    [(f.l + f.r) / 2, f.t],
+    [f.l, (f.t + f.b) / 2],
+    [f.r, (f.t + f.b) / 2],
+  ]) {
+    const p = at(x, y);
+    if (!p) continue;
+    const t = v.t.clone().add(new THREE.Vector3(Math.max(-hx, Math.min(hx, p.x)) - p.x, 0, Math.max(-hz, Math.min(hz, p.z)) - p.z));
+    if (shot(t, v.dist, ids, v.pitch).px.every((q) => inside(q, f))) v = { ...v, t };
+  }
+  return v;
+}
+/** The camera that frames these points in the part of the screen no panel covers, no closer than d0. */
+function fit(ps: THREE.Vector3[], d0: number, pt: number, cap: (d: number) => number) {
+  const f = freeRect(),
     t = new THREE.Vector3(
       (Math.min(...ps.map((p) => p.x)) + Math.max(...ps.map((p) => p.x))) / 2,
       0,
       (Math.min(...ps.map((p) => p.z)) + Math.max(...ps.map((p) => p.z))) / 2,
     );
-  let d = v.d;
-  for (let k = 0; k < 6; k++) {
-    const { px, at } = shot(t, d, ids, v.pt),
+  let d = d0;
+  for (let k = 0; k < 8; k++) {
+    const { px, at } = shot(t, d, ps, pt),
       x0 = Math.min(...px.map((p) => p.x)),
       x1 = Math.max(...px.map((p) => p.x)),
       y0 = Math.min(...px.map((p) => p.y)),
       y1 = Math.max(...px.map((p) => p.y));
     const grow = Math.max((x1 - x0) / (f.r - f.l), (y1 - y0) / (f.b - f.t));
-    if (grow > 1) d = lock ? clampDist(d * grow * 1.05) : Math.min(innerWidth < 700 ? 90 : 72, Math.max(7, d * grow * 1.05)); // too wide or tall for the free part: step back (a phone may go further out than by hand, to fit them all)
+    if (grow > 1) d = cap(d * grow * 1.05); // too wide or tall for the free part: step back
     const a = at((x0 + x1) / 2, (y0 + y1) / 2),
       b = at((f.l + f.r) / 2, (f.t + f.b) / 2);
-    if (a && b) t.add(a.sub(b)); // the middle of the areas onto the middle of the free part
+    if (a && b) t.add(a.sub(b)); // the middle of the points onto the middle of the free part
     if (grow <= 1 && px.every((p) => inside(p, f))) break;
   }
-  setGoal({ t, dist: d, pitch: v.pt });
+  return { t, dist: d, pitch: pt };
 }
 export const cutOffCount = (sd: E.Side) => MAP.areas.filter((a) => g.control[a.id] === sd && !supOk(sd, a.id)).length;
 const resetBtn = () =>
   ubtn(`${ico('home')}<span>Reset view</span>`, () => {
-    setGoal(homeGoal());
     setYaw(viewRot());
+    setGoal(homeGoal());
   });
 function layersHtml() {
   const map = VOL.art.relief

@@ -65,8 +65,8 @@ function pieceKey(): [string, string][] {
       'Lime halo: can still move, build field works or go into reserve this step (Skip in its card sets it aside)',
     ],
     [
-      '<svg viewBox="0 0 22 22" width="22" height="22" aria-hidden="true"><circle cx="11" cy="11" r="10" fill="#e7b04a"/><circle cx="11" cy="11" r="4.3" fill="none" stroke="#1a1608" stroke-width="2.2"/><path d="M11 3.5v3M11 15.5v3M3.5 11h3M15.5 11h3" stroke="#1a1608" stroke-width="2.2" stroke-linecap="round"/></svg>',
-      'Gold target: the point unit of the battle',
+      '<svg viewBox="0 0 26 22" width="26" height="22" aria-hidden="true"><rect x="3" y="3" width="20" height="16" fill="none" stroke="#e7b04a" stroke-width="4"/></svg>',
+      'Thick gold border: the point unit of the battle',
     ],
     [img('DIS', '#8a1f1f'), 'Disordered'],
     [img('REC', '#a8741a'), 'Recovering from disorder'],
@@ -171,8 +171,9 @@ export function mapDock() {
       },
       !hasLegend(VOL.id),
     )}${tool('rotate', 'Rotate', rotateQuarter)}${tool('home', 'Reset view', () => {
-      setGoal(homeGoal());
+      mapMenu = false; // the panel closes first, so the whole sheet is framed in the screen it leaves (re-test)
       setYaw(viewRot());
+      setTimeout(() => setGoal(homeGoal()), 60);
     })}</div></div></div>`;
   }
   return `<div class="mapdock"><div class="dockrow"><button class="mapmenu-btn" aria-expanded="false" aria-label="Map layers: ${cur}" data-ui="${reg(

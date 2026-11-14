@@ -180,7 +180,7 @@ function drawPointMarks(b: E.Battle) {
     const o = pieces.children.find((x) => x.userData.unit === uid);
     const u = g.units.find((x) => x.id === uid);
     if (!o || !u || !seen(u)) continue;
-    void sd; // owner, 14 Nov: the small target gave way to the POINT tag above the unit and a thick gold border (drawPieces) // a back corner of the block, clear of its pips and symbol d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
+    void sd; // owner, 14 Nov: the point unit is marked only by a thick gold border on the table (drawPieces) // a back corner of the block, clear of its pips and symbol d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
   }
 }
 export function drawPieces() {
@@ -400,7 +400,6 @@ export function drawPieces() {
       pieces.add(m);
       const tags: [string, string][] = [];
       const top = t ? (m.userData.top as number) + 0.55 : flat ? 0.85 : 1.66;
-      if (point) tags.push(['POINT', '#e7b04a']); // the point unit, named above it in both blocks and figures
       if (u.disorder && !u.garrison) tags.push([u.disorder === 1 ? 'DIS' : 'REC', u.disorder === 1 ? '#8a1f1f' : '#a8741a']);
       if (u.rec) {
         if (u.rec <= 3) for (let k = 0; k < u.rec; k++) tags.push(['REC', '#a8741a']);

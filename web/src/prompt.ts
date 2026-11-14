@@ -234,7 +234,9 @@ function promptText() {
   if (b && b.stage === 'setup' && b.attPointDone) return '<b>Point units designated.</b> Blocks are revealed…';
   if (b)
     return b.stage === 'setup'
-      ? ((w) => (w ? `<b>Not yet:</b> ${esc(w)}.` : setupPrompt(b)))(setupBlock(b, E.setupSide(g, b)))
+      ? ((w) => (w ? (w === VOL.blocksBegin(g) ? `<b>${esc(w)}.</b>` : `<b>Not yet:</b> ${esc(w)}.`) : setupPrompt(b)))(
+          setupBlock(b, E.setupSide(g, b)),
+        ) // a volume's own step (a SAM answer) is an instruction, not a refusal (re-test)
       : b.stage === 'done'
         ? (() => {
             const left = fightable().filter((x) => x !== b.area).length;
@@ -260,7 +262,7 @@ function promptText() {
         ? ids.some((id) => VOL.placeOptions(g, id).length)
           ? `<b>Set-up:</b> drag a block from the tray to a lit area, or use the panel.` /* the count is on the main button */
           : '<b>Set-up:</b> first make the choice in the panel on the map, then place the blocks.' /* Sicily: the landing plan before the invasion units */
-        : ((w) => (w ? `<b>Not yet:</b> ${esc(w)}.` : `<b>Set-up done:</b> press <b>${esc(endLabel())}</b>.`))(deployBlock());
+        : ((w) => (w ? `<b>Next:</b> ${esc(w)}.` : `<b>Set-up done:</b> press <b>${esc(endLabel())}</b>.`))(deployBlock());
     }
     case 'reinforcement':
       return '<b>Pick a new block</b>, then a lit entry area.';

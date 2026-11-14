@@ -433,7 +433,7 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
               !own,
             )
           : ''
-      }${ctx.btn('Let it fly', () => G.declineSam(g), '', !own)}</div></div>`,
+      }${ctx.btn('Let it fly', () => G.declineSam(g), 'primary', !own)}</div></div>`,
     );
   }
   if (b && b.stage === 'setup') {
@@ -519,7 +519,7 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
         ends = [...new Set(keys.flat())];
       const second = (a: number) => keys.filter((k) => k.includes(a)).map((k) => (k[0] === a ? k[1] : k[0]));
       out.push(
-        `<div class="volpanel"><b>${ctx.ico('warn')} Minefields (14.02)</b><span>${mines} still to lay, on any boundary but the AT ditch, escarpment, river, Mt Hermon or rugged ones; no area may have two mined boundaries.</span><div class="row">${ctx.ubtn('Lay a minefield', () => ctx.pickArea('Minefield: first area', ends, (a) => ctx.pickArea(`Minefield from ${ctx.areaName(a)}: the area across the boundary`, second(a), (b) => G.placeMinefield(live(), a, b))), sp ? '' : 'primary')}${ctx.btn('Lay the other minefields for me', () => G.autoMinefields(live()))}</div></div>`,
+        `<div class="volpanel"><b>${ctx.ico('warn')} Minefields (14.02)</b><span>${mines} still to lay.<span class="gx"> Not on the AT ditch, escarpment, river, Mt Hermon or rugged boundaries; never two in one area.</span></span><div class="row">${ctx.ubtn('Lay a minefield', () => ctx.pickArea('Minefield: first area', ends, (a) => ctx.pickArea(`Minefield from ${ctx.areaName(a)}: the area across the boundary`, second(a), (b) => G.placeMinefield(live(), a, b))), sp ? '' : 'primary')}${ctx.btn('Lay the rest for me', () => G.autoMinefields(live()))}</div></div>`,
       );
     }
   }
@@ -586,7 +586,7 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
 /** Why combat cannot begin yet, or null. */
 export const golanBlocksBegin = (g: Game) =>
   G.state(g).samTarget
-    ? 'Syria must answer the Israeli air mission first (fire a SAM or let it fly)'
+    ? 'Syria answers the Israeli air mission: fire a SAM or let it fly (16.12)'
     : g.battle && G.battleState(g.battle).ew?.pending
       ? 'The Defender must answer the jamming first'
       : null;

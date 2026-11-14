@@ -359,7 +359,10 @@
   #ui .c-bar.b .go.choice {
     grid-column: 2 !important;
     min-width: 0;
-    padding: 2px 4px;
+    padding: 2px 8px; /* re-test: a Retreat subtitle ran to the button's edge */
+  }
+  #ui .c-bar.b .go.choice small {
+    text-wrap: balance;
   }
   #ui .c-bar.b .go.choice.alt {
     grid-column: 3 !important;
@@ -710,6 +713,26 @@
 #ui .dock:has(.passstrip) .arrtray {
   visibility: hidden;
 }
+/* re-test: the hidden hand says so, instead of an empty grey gap that looked broken; the bar's buttons wait for the tap too */
+#ui .dock .c-hand {
+  position: relative;
+}
+#ui .dock .c-hand .veil {
+  visibility: visible;
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  font: 700 14px var(--sfd);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: #0b0d08e6;
+}
+#ui .dock:has(.passstrip) .c-bar .go {
+  visibility: hidden;
+}
 /* playtest 3, item 4: a battle result or dice list longer than its space says so (fade and ▾, as the set-up panels) */
 #ui .dock .c-ledger.more {
   -webkit-mask-image: linear-gradient(#000 calc(100% - 36px), #0006);
@@ -718,13 +741,20 @@
 #ui .dock .c-ledger {
   position: relative;
 }
-#ui .dock .c-ledger.more::after {
+/* re-test: the chip sits on the line between the list and the bar, never on a row of dice */
+#ui .dock .c-ledger.more {
+  padding-bottom: 14px;
+}
+#ui .dock:has(.c-ledger.more) > .c-bar {
+  position: relative;
+}
+#ui .dock:has(.c-ledger.more) > .c-bar::before {
   content: '▾ more';
-  position: sticky;
-  bottom: 0;
-  display: block;
-  width: fit-content;
-  margin: -24px auto 0;
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
   padding: 0 12px;
   font: 700 13px/22px var(--sfd);
   letter-spacing: 0.08em;
