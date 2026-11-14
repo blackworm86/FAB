@@ -395,7 +395,7 @@ export function initTutorial(h: TutHost, course: Course) {
     }
     ev.stopPropagation();
     ev.preventDefault();
-    if (ev.type === 'click') h.toast(menu ? 'Close the lesson list first.' : `${hint(s)}.`);
+    if (ev.type === 'click') h.toast(menu ? 'Close the lesson list first.' : `${tr(hint(s))}.`);
   }
   for (const ty of ['pointerdown', 'mousedown', 'touchstart', 'click', 'dblclick'])
     window.addEventListener(ty, guard, { capture: true, passive: false });
@@ -503,7 +503,7 @@ export function initTutorial(h: TutHost, course: Course) {
             ? { area: t.area }
             : null;
       if (!ok) {
-        h.toast(`${hint(s)}.`);
+        h.toast(`${tr(hint(s))}.`);
         return false;
       }
       if (s.tap) {
