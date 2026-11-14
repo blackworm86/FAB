@@ -193,3 +193,9 @@
     top: 64px;
   }
 } /* a message never lands on the set-up panel's own buttons */
+/* C7: each roll in the record names its side */
+.rrec .rr .rside {
+  font: 700 11px var(--sfd);
+  letter-spacing: 0.08em;
+  margin-right: 2px;
+}
