@@ -404,6 +404,20 @@ const haloMat = [
   new THREE.MeshBasicMaterial({ color: 0xc8e86a, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide }),
   new THREE.MeshBasicMaterial({ color: 0xc8e86a, transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide }),
 ];
+/** A figure's 'can act' glow: a disc filling its circle; each spot is painted once (stencil), so overlapping discs make one even blob (owner, 14 Nov). */
+const glowMat = new THREE.MeshBasicMaterial({
+  color: 0xc8e86a,
+  transparent: true,
+  opacity: 0.45,
+  depthWrite: false,
+  side: THREE.DoubleSide,
+  stencilWrite: true,
+  stencilRef: 0x80,
+  stencilFuncMask: 0x80,
+  stencilWriteMask: 0x80,
+  stencilFunc: THREE.NotEqualStencilFunc,
+  stencilZPass: THREE.ReplaceStencilOp,
+});
 /** A flat halo shape laid on the ground round (c): on the 3D relief every vertex sits just above the terrain under it, so hills and woods never hide it. */
 function drapeHalo(geo: THREE.BufferGeometry, c: THREE.Vector3, y: number, mat: THREE.Material) {
   const pos = geo.getAttribute('position') as THREE.BufferAttribute;
@@ -467,16 +481,10 @@ export function syncMoveMarks() {
       sh.quadraticCurveTo(-x, -z, -x + r, -z);
       return sh;
     };
-    const circ = (base as THREE.Object3D).userData.r as number | undefined; // a figure: a round halo matching its circle
+    const circ = (base as THREE.Object3D).userData.r as number | undefined; // a figure: the glow inside its circle (owner, 14 Nov)
     if (circ) {
-      (
-        [
-          [0.06, 0.24, 0],
-          [0.24, 0.55, 1],
-        ] as const
-      ).forEach(([a, b, k]) => {
-        halos.add(drapeHalo(new THREE.RingGeometry(circ + a, circ + b, 56), c, y, haloMat[k]));
-      });
+      const kk = ((base as THREE.Object3D).userData.k as number | undefined) ?? 0.14;
+      halos.add(drapeHalo(new THREE.CircleGeometry(circ - kk, 56), c, y, glowMat));
       continue;
     }
     (

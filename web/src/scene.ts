@@ -17,7 +17,7 @@ canvas.addEventListener('blur', () => {
   setKbArea(null);
   paintAreas();
 });
-export const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+export const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, stencil: true }); // stencil: overlapping figure circles merge into one outline
 renderer.setPixelRatio(Math.min(2, devicePixelRatio));
 renderer.shadowMap.enabled = true;
 export const scene = new THREE.Scene();
