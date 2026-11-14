@@ -135,8 +135,8 @@ export function sicilyTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): T
                   fn: run((x) => S.portWork(x, id, p)),
                 });
             t.hint = t.buttons.length
-              ? 'One damage level per Admin Phase; the port must be yours, supplied and uncontested'
-              : 'No port can be worked on now (yours, supplied, uncontested; the Allies need a unit of the right army there)';
+              ? 'One damage level per Admin Phase; the port must be yours and supplied (contested is allowed)'
+              : 'No port can be worked on now (yours and supplied; the Allies need a unit of the right army there)';
           },
         },
       ]);
@@ -402,26 +402,28 @@ export function sicilyPanel(g: Game, ctx: PanelCtx): string {
     if (S.battleState(b).flank)
       out.push(`<div class="volpanel"><small>A flanking invasion: the Allies may commit only air and naval support (17.22).</small></div>`);
   }
-  if (g.phase === 'supply' && !g.airSupply)
+  if (g.phase === 'supply')
     for (const sd of E.sidesOf(g)) {
       // 16.34: either player, in any Supply Phase
       if (!ctx.mine(sd)) continue;
       const air = g.chits.find((x) => x.kind === 'air_mission' && x.side === sd && x.box === 'available');
       const need = [
         ...new Set(g.units.filter((u) => u.side === sd && u.area != null && u.unsupplied && !S.isBox(u.area)).map((u) => u.area!)),
-      ];
+      ].filter((a) => works(g, (x) => S.airSupply(x, air?.id ?? '', a))); // one mission per area; several missions allowed (16.34)
       if (air && need.length)
         out.push(
-          `<div class="volpanel"><b>${ctx.ico('air_mission')} ${esc(nm(sd))} air supply (16.34)</b><span>One unsupplied area gets no morale checks this Supply Phase and its units may recover.</span><div class="row">${ctx.ubtn('Choose the area', () => ctx.pickArea('Air supply: tap the area', need, (a) => S.airSupply(live(), air.id, a)), 'primary')}</div></div>`,
+          `<div class="volpanel"><b>${ctx.ico('air_mission')} ${esc(nm(sd))} air supply (16.34)</b><span>Each mission: one unsupplied area gets no morale checks this Supply Phase and its units may recover.</span><div class="row">${ctx.ubtn('Choose the area', () => ctx.pickArea('Air supply: tap the area', need, (a) => S.airSupply(live(), air.id, a)), 'primary')}</div></div>`,
         );
     }
-  if (g.phase === 'supply' && g.airSupply && ctx.mine(E.other(g.airSupply.side))) {
-    const air = g.chits.find((x) => x.kind === 'air_mission' && x.side !== g.airSupply!.side && x.box === 'available');
-    if (air)
-      out.push(
-        `<div class="volpanel"><b>${ctx.ico('air_mission')} Dogfight (16.31)</b><span>Cancel the enemy Air Supply mission over ${esc(ctx.areaName(g.airSupply.area))} with ${esc(air.name)}.</span><div class="row">${ctx.btn('Dogfight', () => S.dogfightAirSupply(live(), air.id))}</div></div>`,
-      );
-  }
+  if (g.phase === 'supply')
+    for (const m of E.airSup(g)) {
+      if (!ctx.mine(E.other(m.side))) continue;
+      const air = g.chits.find((x) => x.kind === 'air_mission' && x.side !== m.side && x.box === 'available');
+      if (air)
+        out.push(
+          `<div class="volpanel"><b>${ctx.ico('air_mission')} Dogfight (16.31)</b><span>Cancel the enemy Air Supply mission over ${esc(ctx.areaName(m.area))} with ${esc(air.name)}.</span><div class="row">${ctx.btn('Dogfight', () => S.dogfightAirSupply(live(), air.id, m.area))}</div></div>`,
+        );
+    }
   return out.length ? `<div class="volstack">${out.join('')}</div>` : '';
 }
 /** Why combat cannot begin yet, or null. */

@@ -24,7 +24,7 @@ import { NAF, nafakhStaff } from './golan-scenarios';
 export * from './golan-scenarios';
 import { afterMove, beforeMove, golanReach, interdictedBy, keepAssigned, stratStep } from './golan-moves';
 export * from './golan-moves';
-import { finalResult, golanVictory, onPhase, reinforce, resolveDugman, sources, supplyStep } from './golan-turn';
+import { finalResult, golanVictory, onPhase, reinforce, resolveDugman, samReduction, sources, supplyStep } from './golan-turn';
 export * from './golan-turn';
 import {
   adjustFire,
@@ -98,6 +98,7 @@ export interface GolanState {
 export interface GolanBattle {
   event: Partial<Record<Side, string>>;
   counterbattery: Partial<Record<Side, string>>;
+  cbTarget?: Partial<Record<Side, string>>; // 17.34: the enemy artillery asset the Counterbattery player picked
   ew?: { pending: boolean };
   defLocked?: boolean;
   engBridge?: string;
@@ -216,6 +217,7 @@ export const SUGGESTED = SETUPS.badr.strongpoints!.suggested_historical;
 export const specialActions = (g: Game, side: Side) => saAvailable(g, side);
 
 registerHooks('golan73', {
+  beforeRecycle: (g, side) => samReduction(g, side), // 16.12: after 4.1a
   seenBy: (g, u, side) => {
     const i = state(g).intel;
     return !!i && i.side === side && u.side !== side && u.area === i.area;

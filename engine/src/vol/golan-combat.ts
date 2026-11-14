@@ -193,7 +193,8 @@ export function afterFire(g: Game, b: Battle, side: Side, kind: 'arty' | 'ground
   const enemy = other(side);
   if (!B.counterbattery[enemy]) return;
   B.counterbattery[enemy] = undefined;
-  const target = b.assets[side].map((id) => chit(g, id)).find(isArty);
+  const arts = b.assets[side].map((id) => chit(g, id)).filter(isArty),
+    target = arts.find((c) => c.id === B.cbTarget?.[enemy]) ?? arts[0]; // 17.34: the Counterbattery player's pick
   if (!target) return;
   const die = rollDie(g);
   b.rolls.push({ who: 'Counterbattery (17.34)', sn: 5, dice: [die], hits: die <= 5 ? 1 : 0, kind: 'morale' });

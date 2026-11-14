@@ -1,7 +1,21 @@
 // FAB Vol. II, Sicily: the player actions that exist only in this volume. Air support in the Admin and Supply Phases (16.3x), ports (14.51), the Axis staff (14.63), the events (17.x: Patton, Tactical Extract, Fading Morale, the flanking invasion), reserves (14.7).
 import { BOX, boxByCode, isBox, isLandingBox, within, area as sarea } from '../sicily/map';
 import { isArty, isBattleAsset, type Chit } from '../chits';
-import { buildFieldWorks, chit, contested, needAdmin, say, saAvailable, supplied, unitsIn, type Game, type Side, type Unit } from '../game';
+import {
+  airSup,
+  buildFieldWorks,
+  chit,
+  contested,
+  inSupply,
+  needAdmin,
+  say,
+  saAvailable,
+  supplied,
+  unitsIn,
+  type Game,
+  type Side,
+  type Unit,
+} from '../game';
 import { untriedFree } from './sicily-moves';
 import { avail, gone, nameOf, nation, need, regular, state, unit, used } from './sicily';
 
@@ -9,67 +23,80 @@ import { avail, gone, nameOf, nation, need, regular, state, unit, used } from '.
 export function airInterdiction(g: Game, chitId: string, a: number) {
   needAdmin(g, chit(g, chitId).side);
   const c = avail(g, chitId, ['air_mission']);
-  need(!isBox(a) && !g.interdicted[a], 'a land area not already interdicted');
+  need(
+    !isBox(a) && !g.chits.some((x) => x.mission === 'interdiction' && x.box === 'map' && x.area === a && x.side === c.side),
+    'a land area you do not interdict yet (16.33)',
+  );
   need(!state(g).airCancelled?.includes(a), 'the dogfight cancelled the interdiction here: no replacement (16.31)');
   c.box = 'map';
   c.area = a;
   c.mission = 'interdiction';
-  g.interdicted[a] = c.id;
+  g.interdicted[a] ??= c.id; // the map marker; both sides may interdict one area (16.33)
   say(g, `Air interdiction over ${nameOf(a)} (16.33)`, c.side);
 }
 export function dogfightInterdiction(g: Game, chitId: string, a: number) {
   needAdmin(g); // 16.31: an answer to the enemy mission, whichever part of the Admin Phase it is
   const c = avail(g, chitId, ['air_mission']),
-    id = g.interdicted[a];
-  need(id && chit(g, id).side !== c.side, 'no enemy interdiction there');
-  const t = chit(g, id!);
-  used(t);
-  t.mission = undefined;
-  delete g.interdicted[a];
+    t = g.chits.find((x) => x.mission === 'interdiction' && x.box === 'map' && x.area === a && x.side !== c.side);
+  need(t, 'no enemy interdiction there');
+  used(t!);
+  t!.mission = undefined;
+  const rest = g.chits.find((x) => x.mission === 'interdiction' && x.box === 'map' && x.area === a);
+  if (rest) g.interdicted[a] = rest.id;
+  else delete g.interdicted[a];
   (state(g).airCancelled ??= []).push(a);
   used(c);
   say(g, `Dogfight: the interdiction over ${nameOf(a)} is cancelled (16.31)`, c.side);
 }
+const phaseKey = (g: Game, a: number) => `${g.turn * 10 + (g.phasing === 'allied' ? 1 : 2)}:${a}`;
+/** 16.34: one unsupplied area per mission; each side may fly as many missions as it has air support assets. */
 export function airSupply(g: Game, chitId: string, a: number) {
   need(g.phase === 'supply', 'in the Supply Phase');
-  const c = avail(g, chitId, ['air_mission']);
+  const c = avail(g, chitId, ['air_mission']),
+    V = state(g);
   need(
     unitsIn(g, a, c.side).some((u) => u.unsupplied),
     'one of your unsupplied areas',
   );
-  need(!g.airSupply, 'one Air Supply mission at a time');
+  need(!airSup(g).some((s) => s.area === a && s.side === c.side), 'that area already has your Air Supply mission');
   need(
-    state(g).airNoMore !== g.turn * 10 + (g.phasing === 'allied' ? 1 : 2),
-    'the dogfight cancelled the Air Supply mission: no replacement this Supply Phase (16.31)',
+    !V.airNoMore?.includes(phaseKey(g, a)),
+    'the dogfight cancelled the Air Supply mission here: no replacement this Supply Phase (16.31)',
   );
   c.box = 'map';
   c.area = a;
   c.mission = 'supply';
-  g.airSupply = { area: a, side: c.side, id: c.id, stamp: g.turn };
-  const V = state(g);
-  V.airPrev = {};
+  (g.airSupplies ??= []).push({ area: a, side: c.side, id: c.id, stamp: g.turn });
+  V.airPrev ??= {};
   for (const u of unitsIn(g, a, c.side))
     if (u.unsupplied && u.disorder) {
       V.airPrev[u.id] = u.disorder;
       u.disorder = u.disorder === 2 ? 0 : 2;
-    } // either player's mission; supplied units were already adjusted   // 16.34 (2): the marker stays, but no morale check (supplyChecks) and the 9.35 adjustment is allowed
+    } // 16.34 (2): the marker stays, but no morale check (supplyChecks) and the 9.35 adjustment is allowed; supplied units were already adjusted
   say(g, `Air supply over ${nameOf(a)} (16.34)`, c.side);
 }
-export function dogfightAirSupply(g: Game, chitId: string) {
-  need(g.phase === 'supply' && !!g.airSupply, 'no Air Supply mission to cancel');
-  const c = avail(g, chitId, ['air_mission']);
-  need(c.side !== g.airSupply!.side, 'your own mission');
-  const t = chit(g, g.airSupply!.id),
+/** 16.31: cancel one enemy Air Supply mission (the one over `area`, or the first). */
+export function dogfightAirSupply(g: Game, chitId: string, area?: number) {
+  need(g.phase === 'supply', 'in the Supply Phase');
+  const c = avail(g, chitId, ['air_mission']),
+    m = airSup(g).find((s) => s.side !== c.side && (area == null || s.area === area));
+  need(m, 'no enemy Air Supply mission to cancel');
+  const t = chit(g, m!.id),
     V = state(g);
-  for (const u of unitsIn(g, g.airSupply!.area, t.side)) if (V.airPrev?.[u.id] != null) u.disorder = V.airPrev[u.id]; // 16.31: undo the recovery; the unsupplied marker never came off
-  V.airPrev = undefined;
-  V.airNoMore = g.turn * 10 + (g.phasing === 'allied' ? 1 : 2);
+  for (const u of unitsIn(g, m!.area, t.side))
+    if (V.airPrev?.[u.id] != null) {
+      u.disorder = V.airPrev[u.id];
+      delete V.airPrev[u.id];
+    } // undo the recovery; the unsupplied marker never came off
+  (V.airNoMore ??= []).push(phaseKey(g, m!.area));
   used(t);
   t.mission = undefined;
-  g.airSupply = null;
+  g.airSupplies = (g.airSupplies ?? []).filter((s) => s.id !== m!.id);
+  if (g.airSupply?.id === m!.id) g.airSupply = null;
   used(c);
-  say(g, 'Dogfight: the Air Supply mission is cancelled (16.31)', c.side);
+  say(g, `Dogfight: the Air Supply mission over ${nameOf(m!.area)} is cancelled (16.31)`, c.side);
 }
+
 /* ---------- ports (14.51) ---------- */
 export function portWork(g: Game, chitId: string, port: string) {
   needAdmin(g, chit(g, chitId).side);
@@ -78,7 +105,10 @@ export function portWork(g: Game, chitId: string, port: string) {
     p = boxByCode(port);
   need(p && p.kind === 'port' && port !== 'P4', 'Syracuse, Catania or Palermo (Messina cannot be damaged, 14.51)');
   need(!V.portWorked.includes(port), 'one level per port per Admin Phase');
-  need(supplied(g, c.side, p.area), 'the port must be friendly-controlled, uncontested and in supply');
+  need(
+    g.control[p.area] === c.side && inSupply(g, c.side, p.area) && !airSup(g).some((s) => s.area === p.area && s.side === c.side),
+    'the port must be friendly-controlled and in supply (14.51; contested is allowed)',
+  );
   if (c.side === 'axis') {
     need(V.portDamage[port] < 2, 'already damaged twice');
     V.portDamage[port]++;
