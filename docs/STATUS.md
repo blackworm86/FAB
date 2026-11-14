@@ -101,6 +101,7 @@ A very busy week: about 160 changes reached `main` from four sessions working at
 2. **Playtest the computer opponent** (`?lab=german`, `?lab=allied`) and say whether it is good enough to move to levels.
 3. **Rule questions** from the asset and event sweep (`docs/AUDIT-2026-11.md` §5), and your marks on the checklist page.
 4. **Publish `database.rules.json`** on the site (Admin > Update rules): still pending since 10 November.
+4b. **Design review** (14 November): `docs/design-review-2026-11-14/README.md`, score 26/40, four main causes. Waiting for you: which problem the interface session mocks up first, and whether one button may pass a run of empty steps.
 5. Interface leftovers in HANDOVER §4.4 (3D cut-off stripes; re-testing Sicily, Golan and online battles).
 6. Optional: push notices with the app closed (`docs/DEPLOY.md` §7), "for later".
 
