@@ -397,17 +397,48 @@ function pips(n: number, qs: string[]) {
   s.renderOrder = 3;
   return s;
 }
-/** A thin circle round the figure's footprint (w along x, d along z), in the side's colour, brass when selected. */
-function ring(w: number, d: number, color: THREE.ColorRepresentation, selected: boolean) {
+/** Each side's bit in the stencil buffer: a figure's inner disc hides its own side's ring lines under it, so overlapping circles read as one outline. */
+const SIDE_BIT = new Map<string, number>();
+const sideBit = (side: string) => SIDE_BIT.get(side) ?? (SIDE_BIT.set(side, 1 << Math.min(6, SIDE_BIT.size)), SIDE_BIT.get(side)!);
+/** A circle round the figure's footprint (w along x, d along z), in the side's colour, brass when selected; where circles of one side overlap only their outer outline shows. */
+function ring(w: number, d: number, color: THREE.ColorRepresentation, selected: boolean, side: string) {
   const r = (Math.hypot(w, d) / 2) * 0.82,
-    k = selected ? 0.12 : 0.07; // owner, 11 Nov: a thin circle round every figure, not its footprint's outline
+    k = selected ? 0.2 : 0.14, // owner, 14 Nov: thicker, easier to see in 3D
+    bit = sideBit(side);
   const g = new THREE.Group(),
-    m = new THREE.Mesh(new THREE.RingGeometry(r - k, r, 56), new THREE.MeshBasicMaterial({ color: selected ? 0xe7b04a : color }));
-  m.rotation.x = -Math.PI / 2;
-  m.position.y = 0.03;
-  g.add(m);
+    m = new THREE.Mesh(
+      new THREE.RingGeometry(r - k, r, 56),
+      new THREE.MeshBasicMaterial({
+        color: selected ? 0xe7b04a : color,
+        stencilWrite: true,
+        stencilRef: bit,
+        stencilFuncMask: bit,
+        stencilWriteMask: 0,
+        stencilFunc: THREE.NotEqualStencilFunc,
+      }),
+    ),
+    hole = new THREE.Mesh(
+      new THREE.CircleGeometry(r - k, 56),
+      new THREE.MeshBasicMaterial({
+        colorWrite: false,
+        depthWrite: false,
+        stencilWrite: true,
+        stencilRef: bit,
+        stencilWriteMask: bit,
+        stencilFunc: THREE.AlwaysStencilFunc,
+        stencilZPass: THREE.ReplaceStencilOp,
+      }),
+    );
+  for (const x of [m, hole]) {
+    x.rotation.x = -Math.PI / 2;
+    x.position.y = 0.03;
+    g.add(x);
+  }
+  hole.renderOrder = 1;
+  m.renderOrder = 2; // the holes first, then the lines outside every hole
   g.userData.base = true;
   g.userData.r = r; // main.ts sizes the act-now halo on it
+  g.userData.k = k;
   return g;
 }
 /** A unit drawn as its figure, centred on the group's origin (the spot the block would take). */
@@ -429,7 +460,7 @@ export function troopGroup(
   g.add(f);
   const across = Math.abs(Math.sin(yaw)) > 0.5,
     sz = t.size.clone().multiplyScalar(zoom); // facing east or west: the figure's length lies along x
-  g.add(ring((across ? sz.z : sz.x) + 0.3, (across ? sz.x : sz.z) + 0.3, color, selected));
+  g.add(ring((across ? sz.z : sz.x) + 0.3, (across ? sz.x : sz.z) + 0.3, color, selected, side));
   const s = pips(n, qs);
   s.position.y = sz.y + 0.35;
   g.add(s);
