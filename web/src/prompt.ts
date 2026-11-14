@@ -112,7 +112,7 @@ export const gx = (long: string, short = '') => `${short ? `<span class="gs">${s
 function stakes(b: E.Battle) {
   const sd = b.stage === 'attArty' || b.stage === 'offFire' ? b.attacker : other(b.attacker),
     fl = E.fireList(g, b, sd, b.stage.endsWith('Arty') ? 'arty' : 'ground');
-  if (!fl.length) return 'Nothing can fire.';
+  if (!fl.length) return ((p) => `<b>Nothing can fire.</b>${p && !p.dis ? ` Press <b>${esc(p.label)}</b>.` : ''}`)(primary()); // say what moves the battle on (playtest C5)
   const dice = fl.reduce((a, f) => a + f.dice, 0),
     sns = [...new Set(fl.map((f) => f.sn))].sort((x, y) => x - y);
   return `<b>${nm(sd)} ${esc(STAGE_NAME[b.stage].toLowerCase())}:</b> ${dice} ${dice === 1 ? 'die' : 'dice'} · hit on ${sns.length === 1 ? `${sns[0]} or less` : `${sns[0]}–${sns.at(-1)} or less`}${gx(` · at ${E.unitsIn(g, b.area, other(sd)).length} ${nm(other(sd))} block${E.unitsIn(g, b.area, other(sd)).length === 1 ? '' : 's'}`)}`;
