@@ -201,7 +201,7 @@
 }
 /* the phone's score chip also shows Cold Shoulder's area-count verdict ("Allied ahead") */
 @media (max-width: 700px) {
-  .c-bar.t .vps .vlab.net {
+  .c-bar.t .vps:not(:has(.nets)) .vlab.net {
     display: inline !important;
     font-size: 12px;
     white-space: nowrap;
