@@ -233,7 +233,7 @@ function layersHtml() {
   const map = VOL.art.relief
     ? srow(
         'Map',
-        VOL.art.reliefName,
+        map3d ? VOL.art.reliefName : 'The printed board, flat', // what is on now (playtest 2, item 14)
         `<span class="seg">${chip('2D', !map3d, () => setMap3d(false), 'The printed board, flat')}${chip('3D', map3d, () => setMap3d(true), VOL.art.reliefName)}</span>`,
       )
     : '';
