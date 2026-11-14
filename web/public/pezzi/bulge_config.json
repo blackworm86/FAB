@@ -1,39 +1,4 @@
 {
- "bulge_british_inf": {
-  "scelta": 0,
-  "figure": {
-   "bulge_british_inf_0.glb": {
-    "gradi": 5.0,
-    "dx": 0.0,
-    "dz": 0.0
-   },
-   "bulge_british_inf_1.glb": {
-    "gradi": 0.0,
-    "dx": 0.0,
-    "dz": 0.0
-   },
-   "bulge_british_inf_2.glb": {
-    "gradi": 0.0,
-    "dx": 0.0,
-    "dz": 0.0
-   }
-  }
- },
- "bulge_british_armor": {
-  "scelta": 0,
-  "figure": {
-   "bulge_british_armor_0.glb": {
-    "gradi": 0.0,
-    "dx": 0.0,
-    "dz": 0.0
-   },
-   "bulge_british_armor_1.glb": {
-    "gradi": 0.0,
-    "dx": 0.0,
-    "dz": 0.0
-   }
-  }
- },
  "bulge_german_armor": {
   "scelta": null,
   "figure": {
@@ -44,10 +9,10 @@
    }
   }
  },
- "bulge_us_armor": {
+ "bulge_german_mech": {
   "scelta": null,
   "figure": {
-   "bulge_us_armor_0.glb": {
+   "bulge_german_mech_0.glb": {
     "gradi": 90.0,
     "dx": 0.0,
     "dz": 0.0
@@ -64,10 +29,20 @@
    }
   }
  },
- "bulge_german_mech": {
+ "bulge_us_armor": {
   "scelta": null,
   "figure": {
-   "bulge_german_mech_0.glb": {
+   "bulge_us_armor_0.glb": {
+    "gradi": 90.0,
+    "dx": 0.0,
+    "dz": 0.0
+   }
+  }
+ },
+ "bulge_british_armor": {
+  "scelta": null,
+  "figure": {
+   "bulge_british_armor_0.glb": {
     "gradi": 90.0,
     "dx": 0.0,
     "dz": 0.0

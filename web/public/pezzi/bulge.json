@@ -60,16 +60,13 @@
   },
   "bulge_british_inf": {
    "figure": [
-    "bulge_british_inf_0.glb",
-    "bulge_british_inf_1.glb",
-    "bulge_british_inf_2.glb"
+    "bulge_british_inf_0.glb"
    ],
    "veicolo": false
   },
   "bulge_british_armor": {
    "figure": [
-    "bulge_british_armor_0.glb",
-    "bulge_british_armor_1.glb"
+    "bulge_british_armor_0.glb"
    ],
    "veicolo": true,
    "lunghezza": 5.9
