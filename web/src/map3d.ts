@@ -1,6 +1,7 @@
 // The 3D map (View > Map): the relief with its woods and towns, switching between it and the flat board, settling pieces on the ground.
 import * as THREE from 'three';
 import { loadRelief, type Relief } from './relief';
+import { checkUpdate } from './update';
 import { LAB, MAP, MH, MW, S, VOL } from './page';
 import { boardCv, boardFile, boardTex, PHONE, renderer, scene, sun } from './scene';
 import { fades, markers, paintAreas, paintBoard, pieces, refresh, route, say, table } from './main';
@@ -167,7 +168,9 @@ export function setMap3d(on: boolean) {
         .catch(() => {
           relLoading = false;
           map3d = false;
-          say('The 3D map could not be loaded. Check your connection and try again.');
+          void checkUpdate().then((u) => {
+            if (!u) say('The 3D map could not be loaded. Check your connection and try again.');
+          }); // a new version of the site: reload instead of failing
         });
     }
     return;

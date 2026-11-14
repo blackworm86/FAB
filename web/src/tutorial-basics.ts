@@ -171,7 +171,7 @@ const L_PREPARE: Lesson = {
       title: 'Fresh troops',
       text: 'The 12th VG lost a step in yesterday’s fighting. A replacement event gives it back: <b>tap Non-Elite Infantry Replacement</b>. Its colour matches the 6th Panzer Army, like the 12th VG: a chit only helps its own army.',
       target: { el: ['.card2[data-chit="L17.0"]', '.handtab button'], label: 'Replacement card' },
-      done: (g, q) => q('.chitbar', 'Non-Elite') || U(g, '12 VG').str === 3,
+      done: (g, q) => q('.chitbar', 'lite') || U(g, '12 VG').str === 3,
     },
     {
       title: 'Back to strength',
