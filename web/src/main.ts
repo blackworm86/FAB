@@ -287,6 +287,7 @@ function startOver(x: E.Game) {
   setRollFx([]);
   setTgtKey('');
   setInBattle(false);
+  setLastPhase(''); // the new game's first step is framed like an opening, even when it is the same step as the old game's
   setNote('');
   setAreaPick(null);
   setRestartAsk(false);

@@ -23,7 +23,7 @@ import { paintAreas, paintBoard, saveLayers, supOk, viewRot } from './map-paint'
 import { dist, pitch, setYaw, target, yaw } from './camera';
 import { hist, say, setNote, setSelArr, setToast, setToastInfo } from './flow';
 import { followFoe, setFollowFoe } from './choices';
-import { center, clampDist, setGoal, setInBattle } from './map-input';
+import { center, clampDist, goal, setGoal, setInBattle } from './map-input';
 import { badgeList, setBadges, syncBadges } from './routes';
 import { menuTab, modal, restartAsk, setMenuTab, setModal, setRestartAsk } from './rolls';
 import { COARSE, guide, setGuide } from './prompt';
@@ -162,10 +162,10 @@ function freeRect() {
 const ray = new THREE.Raycaster(),
   ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 /** Where the areas land on screen with the camera aimed at t from distance d (the live camera is not moved). */
-function shot(t: THREE.Vector3, d: number, ids: number[]) {
+function shot(t: THREE.Vector3, d: number, ids: number[], pt = pitch) {
   const c = cam.clone(),
     r = canvas.getBoundingClientRect();
-  c.position.set(t.x + d * Math.sin(yaw) * Math.cos(pitch), d * Math.sin(pitch), t.z + d * Math.cos(yaw) * Math.cos(pitch));
+  c.position.set(t.x + d * Math.sin(yaw) * Math.cos(pt), d * Math.sin(pt), t.z + d * Math.cos(yaw) * Math.cos(pt));
   c.lookAt(t);
   c.updateMatrixWorld();
   const px = ids.map((a) => {
@@ -180,21 +180,24 @@ function shot(t: THREE.Vector3, d: number, ids: number[]) {
   return { px, at };
 }
 const inside = (p: { x: number; y: number }, f: ReturnType<typeof freeRect>) => p.x >= f.l && p.x <= f.r && p.y >= f.t && p.y <= f.b;
-export const onScreen = (a: number) => inside(shot(target, dist, [a]).px[0], freeRect());
+/** Where the camera is going (a slide under way) or, still, where it is. */
+const aim = () => ({ t: goal?.t ?? target, d: goal?.dist ?? dist, pt: goal?.pitch ?? pitch });
+export const onScreen = (a: number) => ((v) => inside(shot(v.t, v.d, [a], v.pt).px[0], freeRect()))(aim());
 /** Bring areas into view when any of them is hidden: the camera frames them all in the part of the screen no panel covers, no closer than now. */
 export function showAreas(ids: number[]) {
   if (!ids.length) return;
   const f = freeRect();
-  if (shot(target, dist, ids).px.every((p) => inside(p, f))) return;
+  const v = aim();
+  if (shot(v.t, v.d, ids, v.pt).px.every((p) => inside(p, f))) return;
   const ps = ids.map(center),
     t = new THREE.Vector3(
       (Math.min(...ps.map((p) => p.x)) + Math.max(...ps.map((p) => p.x))) / 2,
       0,
       (Math.min(...ps.map((p) => p.z)) + Math.max(...ps.map((p) => p.z))) / 2,
     );
-  let d = dist;
+  let d = v.d;
   for (let k = 0; k < 6; k++) {
-    const { px, at } = shot(t, d, ids),
+    const { px, at } = shot(t, d, ids, v.pt),
       x0 = Math.min(...px.map((p) => p.x)),
       x1 = Math.max(...px.map((p) => p.x)),
       y0 = Math.min(...px.map((p) => p.y)),
@@ -206,7 +209,7 @@ export function showAreas(ids: number[]) {
     if (a && b) t.add(a.sub(b)); // the middle of the areas onto the middle of the free part
     if (grow <= 1 && px.every((p) => inside(p, f))) break;
   }
-  setGoal({ t, dist: d, pitch });
+  setGoal({ t, dist: d, pitch: v.pt });
 }
 export const cutOffCount = (sd: E.Side) => MAP.areas.filter((a) => g.control[a.id] === sd && !supOk(sd, a.id)).length;
 const resetBtn = () =>
