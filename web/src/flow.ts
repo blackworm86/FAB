@@ -170,7 +170,7 @@ export const endLabel = () =>
       ? 'End reinforcement'
       : g.phase === 'deploy'
         ? ((left) => {
-            const n = left.filter((u) => u.side === g.phasing).length;
+            const n = left.filter((u) => u.side === setupSide()).length;
             return n ? `Place ${n} more first` : left.length ? 'Finish the panel first' : 'End set-up';
           })(
             VOL.pendingPlace(g)
@@ -255,6 +255,8 @@ export const placing = (s: E.Side) =>
       (E.golan.setupReserves(g, s).all && E.golan.reservesLeft(g, s) > 0) ||
       (s === 'syrian' && E.golan.alowdaRaidAreas(g).length > 0))) ||
   (g.game === 'sicily' && s === 'allied' && !E.sicily.state(g).plan);
+/** The side placing its pieces in the set-up now (Sicily: the Allies land after the Axis garrisons, while the Axis stays the phasing side). */
+export const setupSide = () => (g.phase === 'deploy' && !placing(g.phasing) && placing(other(g.phasing)) ? other(g.phasing) : g.phasing);
 export let labActing = false; // the experimental computer's own action (lab.ts)
 export const setLabActing = <T extends typeof labActing>(v: T): T => ((labActing = v), v);
 /** Your own roll is on the table (rolls.ts tells): against the computer you may always clear it, even when the next step is the computer's. */
