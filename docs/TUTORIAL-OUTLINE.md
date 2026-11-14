@@ -84,7 +84,12 @@ For a player who knows the series (with the same "learn the basics first" link).
 
 ## Progress
 
-- 14 November: The Bulge lessons 1–3 (Your first move, What a move costs, Your first battle) built in `web/src/tutorial-basics.ts`, at the address `?tutorial=bulge-basics` (not on the home page yet; the old course stays until the new one is complete). 16 steps in all; every step played by the tests and walked in a browser, phone screenshots checked. Lesson 3 follows the book: the attack is aborted (Play Book 23.5); taking losses and winning come in lesson 5 (Weiswampach). Waiting for the owner to try them on his phone before lessons 4–8 are written.
+- 14 November, first try: The Bulge lessons 1–3 built. The owner's verdict: the wording was too dry and impersonal, it did not explain the mechanics, the course started without saying what the player is fighting for, and the order of the lessons was not convincing.
+- 14 November, revised and approved: open with the goal; the lessons follow the order of one German turn, as the Play Book's section 23 tells it; a coach's voice that says what happens, why, and what it means for your plan. The Bulge course is now **"Your first turn", 9 lessons, about 22 minutes**, in `web/src/tutorial-basics.ts` at `?tutorial=bulge-basics`:
+  1. December 1944 (the goal, the score, the shape of a turn) · 2. Prepare: your chits (23.2) · 3. Move (23.3) · 4. The long road: strategic movement, seen from the Allied side (23.4) · 5. Fight (23.5, St. Vith) · 6. Win a battle: artillery and exploitation (23.6, Weiswampach) · 7. Break through (23.7) · 8. Supply (23.8, KG Peiper) · 9. The end of the day: the victory check and the first game (23.10).
+  - Every step is played by the tests, the claims on the cards were checked against the engine, the course was walked in a browser (59 steps, every target found) and photographed on a phone.
+  - Not on the home page yet; the old course stays until the owner approves the new one. Not translated into Italian yet. Not timed by a person yet.
+- Next: the owner tries it on his phone; then the Golan and Sicily "what's new" courses in the same voice.
 
 ## Decisions for the owner
 
