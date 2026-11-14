@@ -393,8 +393,18 @@ export function canMove(): string[] {
 /** The next item after the current one, round and round. */
 export const nextOf = <T>(list: T[], cur: T | null) => list[(list.indexOf(cur as T) + 1) % list.length];
 /** Ending a step while blocks can still move takes a second press: the button first says how many are left (a stray tap or Enter never ends a phase). */
-export let endArmed = false,
-  endArmT = 0;
+export let endArmed = false;
+/* it stays armed until pressed again or until any other click (owner, 13 Nov: nothing happens by itself) */
+document.addEventListener(
+  'click',
+  (e) => {
+    if (endArmed && !(e.target as Element).closest?.('.c-bar.b .go')) {
+      endArmed = false;
+      setTimeout(render);
+    }
+  },
+  true,
+);
 let goLabel = '',
   goSince = 0;
 export function guardEnd(p: { label: string; fn: () => void }) {
@@ -414,16 +424,10 @@ function guardEnd0(p: { label: string; fn: () => void }) {
   if (!p.label.startsWith('End') || !canMove().length || endArmed)
     return () => {
       endArmed = false;
-      clearTimeout(endArmT);
       p.fn();
     };
   return () => {
     endArmed = true;
     render();
-    clearTimeout(endArmT);
-    endArmT = window.setTimeout(() => {
-      endArmed = false;
-      render();
-    }, 4000);
   };
 }
