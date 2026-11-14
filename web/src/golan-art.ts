@@ -333,7 +333,7 @@ export const STRIPE: Record<string, string> = {
 const BOXFILL: Record<string, string> = { '36th_armored': '#b4b088', '240th_armored': '#dfd2c1', '146th_armored': '#b4d9ec' };
 const boxFill = (u: GUnit) =>
   u.side === 'israeli' ? (BOXFILL[u.division ?? ''] ?? BOXFILL['36th_armored']) : u.division ? '#fcf9ce' : '#f8d64e';
-const stripeOf = (u: GUnit) => (u.side === 'israeli' ? STRIPE[u.brigade ?? ''] : STRIPE[u.division ?? '']);
+export const stripeOf = (u: GUnit) => (u.side === 'israeli' ? STRIPE[u.brigade ?? ''] : STRIPE[u.division ?? '']);
 /** The name as printed on the sticker: the recon battalions and the paratroopers carry just their number. */
 const printed = (u: GUnit) => u.name.replace(/ (Recon|Para)$/, '');
 const tankSil = (x: number, y: number, s: number, rot: number, fill: string) =>

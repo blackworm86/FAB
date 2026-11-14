@@ -223,5 +223,12 @@ export function settle() {
         o.position.y += L - prev;
         o.userData.lift = L;
       }
+      o.traverse((x) => {
+        if (!x.userData.drape) return;
+        const pa = (x as THREE.Mesh).geometry.getAttribute('position') as THREE.BufferAttribute;
+        for (let k = 0; k < pa.count; k++)
+          pa.setZ(k, on ? REL!.h(o.position.x + pa.getX(k), o.position.z - pa.getY(k)) + 0.04 - o.position.y - x.position.y : 0);
+        pa.needsUpdate = true;
+      }); // a figure's ring and disc are wider than the ground sampled above: each point of them sits on the relief under it
     }
 }

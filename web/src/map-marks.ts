@@ -408,7 +408,7 @@ const haloMat = [
 const glowMat = new THREE.MeshBasicMaterial({
   color: 0xc8e86a,
   transparent: true,
-  opacity: 0.45,
+  opacity: 0.9,
   depthWrite: false,
   side: THREE.DoubleSide,
   stencilWrite: true,
@@ -484,7 +484,7 @@ export function syncMoveMarks() {
     const circ = (base as THREE.Object3D).userData.r as number | undefined; // a figure: the glow inside its circle (owner, 14 Nov)
     if (circ) {
       const kk = ((base as THREE.Object3D).userData.k as number | undefined) ?? 0.14;
-      halos.add(drapeHalo(new THREE.CircleGeometry(circ - kk, 56), c, y, glowMat));
+      halos.add(drapeHalo(new THREE.RingGeometry(Math.max(0.05, circ - kk - 0.34), circ - kk, 56), c, y, glowMat)); // a band inside the ring: the middle shows the formation colour
       continue;
     }
     (

@@ -401,9 +401,17 @@ function pips(n: number, qs: string[]) {
 const SIDE_BIT = new Map<string, number>();
 const sideBit = (side: string) => SIDE_BIT.get(side) ?? (SIDE_BIT.set(side, 1 << Math.min(6, SIDE_BIT.size)), SIDE_BIT.get(side)!);
 /** A circle round the figure's footprint (w along x, d along z), in the side's colour, brass when selected; where circles of one side overlap only their outer outline shows. */
-function ring(w: number, d: number, color: THREE.ColorRepresentation, selected: boolean, side: string) {
+function ring(
+  w: number,
+  d: number,
+  color: THREE.ColorRepresentation,
+  selected: boolean,
+  side: string,
+  fill: string | null,
+  point: boolean,
+) {
   const r = (Math.hypot(w, d) / 2) * 0.82,
-    k = selected ? 0.2 : 0.14, // owner, 14 Nov: thicker, easier to see in 3D
+    k = point ? 0.32 : selected ? 0.2 : 0.14, // owner, 14 Nov: thicker, easier to see in 3D; the point unit's is thicker still
     bit = sideBit(side);
   const g = new THREE.Group(),
     m = new THREE.Mesh(
@@ -432,8 +440,20 @@ function ring(w: number, d: number, color: THREE.ColorRepresentation, selected: 
   for (const x of [m, hole]) {
     x.rotation.x = -Math.PI / 2;
     x.position.y = 0.03;
+    x.userData.drape = true; // laid on the 3D relief vertex by vertex (map3d.ts)
     g.add(x);
   }
+  if (fill) {
+    const f = new THREE.Mesh(
+      new THREE.CircleGeometry(r - k, 56),
+      new THREE.MeshBasicMaterial({ color: fill, transparent: true, opacity: 0.62, depthWrite: false }),
+    );
+    f.rotation.x = -Math.PI / 2;
+    f.position.y = 0.025;
+    f.renderOrder = -1; // under the 'can act' glow
+    f.userData.drape = true;
+    g.add(f);
+  } // the formation colour of the block (command, division or brigade), on the figure's ground disc
   hole.renderOrder = 1;
   m.renderOrder = 2; // the holes first, then the lines outside every hole
   g.userData.base = true;
@@ -452,6 +472,8 @@ export function troopGroup(
   qs: string[],
   selected: boolean,
   yaw = yawOf(side),
+  fill: string | null = null,
+  point = false,
 ) {
   const g = new THREE.Group(),
     f = t.figs[variant(unitId, t.figs.length)].clone(true);
@@ -460,7 +482,7 @@ export function troopGroup(
   g.add(f);
   const across = Math.abs(Math.sin(yaw)) > 0.5,
     sz = t.size.clone().multiplyScalar(zoom); // facing east or west: the figure's length lies along x
-  g.add(ring((across ? sz.z : sz.x) + 0.3, (across ? sz.x : sz.z) + 0.3, color, selected, side));
+  g.add(ring((across ? sz.z : sz.x) + 0.3, (across ? sz.x : sz.z) + 0.3, color, selected, side, fill, point));
   const s = pips(n, qs);
   s.position.y = sz.y + 0.35;
   g.add(s);

@@ -15,9 +15,9 @@ import sicilyLabels from '../../data/sicily/labels.json';
 import sicilyArt from '../../data/sicily/map_art.json';
 import sicilyUnits from '../../data/sicily/units.json';
 import sicilyCounters from '../../data/sicily/counters.json';
-import { labelSvg, BULGE_WOOD } from './art';
+import { labelSvg, BULGE_WOOD, BOX } from './art';
 import { chitSvg, garrisonChit, mapMarkerSvg, saBlockSvg } from './chits';
-import { golanChitSvg, golanBlockSvg, GOLAN_WOOD, type GCounter, type GUnit } from './golan-art';
+import { golanChitSvg, golanBlockSvg, GOLAN_WOOD, stripeOf, type GCounter, type GUnit } from './golan-art';
 import { sicilyChitSvg, sicilyBlockSvg, SICILY_WOOD, type SCounter, type SUnit } from './sicily-art';
 import { sicilyTargets, sicilyPanel, sicilyBlocksBegin, sicilyBattleCard, SICILY_BOXES } from './sicily-ui';
 import { targetsFor as bulgeTargets, type Tgt, type TgtCtx } from './chit-play';
@@ -70,6 +70,8 @@ export interface VolView {
   scenarios: ScenarioInfo[];
   defaultOpts: Partial<E.Opts>;
   unitSvg: (u: E.Unit, g: E.Game) => string;
+  /** The colour that tells the unit's formation on its block (The Bulge: its command's unit box; Golan, Sicily: its division or brigade stripe), shown in figure mode. */
+  formation: (u: E.Unit) => string | null;
   chitSvg: (c: E.Chit) => string;
   /** CSS class of a block's wood: its side, or 'british' for The Bulge's British blocks. */
   cssSide: (u: E.Unit) => string;
@@ -151,6 +153,7 @@ function bulge(): VolView {
     scenarios: info.scenarios,
     defaultOpts: { scenario: 'tournament', fuel: true },
     unitSvg: (u, g) => (u.garrison ? garrisonArt(u, g) : labelSvg(u)),
+    formation: (u) => BOX[u.ech ?? ''] ?? null,
     chitSvg: (c) => chitSvg(c),
     cssSide: (u) => (u.side === 'german' ? 'german' : BRIT.has(u.name) ? 'british' : 'allied'),
     ruleArt: bulgeRuleArt,
@@ -296,6 +299,10 @@ function golan(): VolView {
     features: { fuel: false, zones: false, optional: true, tutorial: true },
     scenarios: info.scenarios,
     defaultOpts: { scenario: 'badr', fuel: false },
+    formation: (u) => {
+      const raw = RAW_UNITS.get(u.id);
+      return raw ? (stripeOf({ ...raw, division: u.division ?? raw.division }) ?? null) : null;
+    },
     unitSvg: (u, g) => (u.garrison && u.chitId ? chitArt(E.chit(g, u.chitId)) : unitArt(u)),
     chitSvg: chitArt,
     cssSide: (u) => u.side,
@@ -449,6 +456,7 @@ function sicily(): VolView {
     features: { fuel: false, zones: false, optional: true, tutorial: true },
     scenarios: info.scenarios,
     defaultOpts: { scenario: 'tournament', fuel: false },
+    formation: (u) => RAW_UNITS.get(u.id)?.colours?.stripe ?? null,
     unitSvg: (u, g) => (u.garrison && u.chitId ? chitArt(E.chit(g, u.chitId)) : unitArt(u)),
     chitSvg: chitArt,
     cssSide: (u) => u.nation ?? (u.side === 'axis' ? 'german' : 'us'),

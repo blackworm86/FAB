@@ -180,11 +180,7 @@ function drawPointMarks(b: E.Battle) {
     const o = pieces.children.find((x) => x.userData.unit === uid);
     const u = g.units.find((x) => x.id === uid);
     if (!o || !u || !seen(u)) continue;
-    const d = discSprite('point', 0.26),
-      c = farSide() ? -1 : 1;
-    d.position.set(o.position.x + 0.58 * c, o.position.y > 0.6 ? 1.95 : 0.9, o.position.z - 0.58 * c);
-    d.userData.anchor = uid;
-    markers.add(d); // a back corner of the block, clear of its pips and symbol d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
+    void sd; // owner, 14 Nov: the small target gave way to the POINT tag above the unit and a thick gold border (drawPieces) // a back corner of the block, clear of its pips and symbol d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
   }
 }
 export function drawPieces() {
@@ -327,7 +323,8 @@ export function drawPieces() {
     order.forEach((u, n) => {
       const hid = faceDown(u),
         t = troops && !hid ? troopOf(u.id) : null,
-        sel = u.id === selUnit || (!!g.battle && !hid && (u.id === g.battle.attPoint || u.id === g.battle.defPoint));
+        point = !!g.battle && !hid && g.battle.area === a.id && (u.id === g.battle.attPoint || u.id === g.battle.defPoint),
+        sel = u.id === selUnit || point;
       // facing: heading() (the way it last moved; in a contested area toward the other side; in a battle close-up row against row)
       const m = t
           ? troopGroup(
@@ -339,6 +336,8 @@ export function drawPieces() {
               u.q.length ? u.q : ['veteran'],
               sel,
               heading(u, a.id, cont, g.battle?.area === a.id),
+              VOL.formation(u),
+              point,
             )
           : block(u, hid),
         p = lay.spots[n];
@@ -375,9 +374,33 @@ export function drawPieces() {
         );
         m.add(o);
       }
+      if (point && !t) {
+        const sz = new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3()),
+          rect = (w: number, d: number) => {
+            const sh = new THREE.Shape();
+            sh.moveTo(-w / 2, -d / 2);
+            sh.lineTo(w / 2, -d / 2);
+            sh.lineTo(w / 2, d / 2);
+            sh.lineTo(-w / 2, d / 2);
+            return sh;
+          },
+          frame = rect(sz.x + 0.7, sz.z + 0.7);
+        frame.holes.push(
+          new THREE.Path(
+            rect(sz.x + 0.18, sz.z + 0.18)
+              .getPoints()
+              .reverse(),
+          ),
+        );
+        const f = new THREE.Mesh(new THREE.ShapeGeometry(frame), new THREE.MeshBasicMaterial({ color: 0xe7b04a, side: THREE.DoubleSide }));
+        f.rotation.x = -Math.PI / 2;
+        f.position.set(p.x, 0.05, p.z);
+        markers.add(f);
+      } // the point unit: a thick gold border on the table round its block
       pieces.add(m);
       const tags: [string, string][] = [];
       const top = t ? (m.userData.top as number) + 0.55 : flat ? 0.85 : 1.66;
+      if (point) tags.push(['POINT', '#e7b04a']); // the point unit, named above it in both blocks and figures
       if (u.disorder && !u.garrison) tags.push([u.disorder === 1 ? 'DIS' : 'REC', u.disorder === 1 ? '#8a1f1f' : '#a8741a']);
       if (u.rec) {
         if (u.rec <= 3) for (let k = 0; k < u.rec; k++) tags.push(['REC', '#a8741a']);
