@@ -109,6 +109,8 @@ export interface Volume {
   retreatOk?: (g: Game, u: Unit, from: number, to: number) => boolean;
   /** 6.42c (2016): an asset the Exclusive Rules do not allow to retreat; when its side retreats it is destroyed, counting as a hit. */
   noRetreat?: (g: Game, u: Unit) => boolean;
+  /** Why the attack ended with no attacker in good order, when the volume knows better (Sicily: the Italian morale checks at the reveal). */
+  noAttackerWhy?: (g: Game, b: Battle) => string | undefined;
   retreatPrefer?: (g: Game, u: Unit, from: number, opts: number[]) => number[];
   onRetreat?: (g: Game, u: Unit, from: number, to: number) => void;
   sources: (g: Game, side: Side) => Set<number>;
