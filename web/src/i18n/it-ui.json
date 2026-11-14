@@ -3498,7 +3498,15 @@
   "brass = needs SA": "ottone = serve un'AS",
   "Map:": "Mappa:",
   "to play it, then end the step.": "per giocarla, poi termina il passo.",
-  "Not yet:": "Non ancora:"
+  "Not yet:": "Non ancora:",
+  "to play it if you wish, then end the step.": "per giocarla, se vuoi, poi termina il passo.",
+  "End the step.": "Termina il passo.",
+  "Set-up done:": "Schieramento completato:",
+  "to fight there, or press": "per combattere lì, oppure premi",
+  "Next battle": "Prossima battaglia",
+  "or Next battle.": "o Prossima battaglia.",
+  "Tap a red area": "Tocca un'area rossa",
+  "press": "premi"
  },
  "patterns": [
   [
@@ -9300,6 +9308,18 @@
   [
    "Chits each side draws this turn \\((.+) / (.+)\\)",
    "Pedine che ogni parte pesca in questo turno ($1 / $2)"
+  ],
+  [
+   "(.+): no cards to play\\.",
+   "$1: nessuna carta da giocare."
+  ],
+  [
+   "to play it if you wish, then Done: the (.+) player acts next \\(4\\.2\\)\\.",
+   "per giocarla, se vuoi, poi Fatto: tocca al giocatore $1 (4.2)."
+  ],
+  [
+   "Press Done: the (.+) player acts next \\(4\\.2\\)\\.",
+   "Premi Fatto: tocca al giocatore $1 (4.2)."
   ]
  ],
  "html": {}

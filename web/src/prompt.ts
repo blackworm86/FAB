@@ -159,14 +159,19 @@ function promptText() {
       }).length;
       return n
         ? `<b>Set-up:</b> drag a block from the tray to a lit area, or use the panel.` /* the count is on the main button */
-        : '<b>Set-up:</b> finish the steps in the panel on the map, then end the set-up.';
+        : ((p) =>
+            p && !p.dis
+              ? `<b>Set-up done:</b> press <b>${esc(p.label)}</b>.`
+              : '<b>Set-up:</b> finish the steps in the panel on the map, then end the set-up.')(primary());
     }
     case 'reinforcement':
       return '<b>Pick a new block</b>, then a lit entry area.';
     case 'admin':
       return selChit && tgt?.hint
         ? `<b>${esc(tgt.hint)}</b>${tgt.areas.size + tgt.units.size > 0 ? ` · ${tgt.areas.size + tgt.units.size} lit` : ''}`
-        : `<b>${esc(nm(E.adminActor(g)))}: tap a card</b>${gx(g.done?.includes(g.phasing) ? ' to play it, then end the step.' : ` to play it, then Done: the ${nm(other(g.phasing))} player acts next (4.2).`)}`;
+        : E.boxOf(g, E.adminActor(g), 'available').length
+          ? `<b>${esc(nm(E.adminActor(g)))}: tap a card</b>${gx(g.done?.includes(g.phasing) ? ' to play it if you wish, then end the step.' : ` to play it if you wish, then Done: the ${nm(other(g.phasing))} player acts next (4.2).`)}`
+          : `<b>${esc(nm(E.adminActor(g)))}: no cards to play.</b>${gx(g.done?.includes(g.phasing) ? ' End the step.' : ` Press Done: the ${nm(other(g.phasing))} player acts next (4.2).`)}`;
     case 'movement':
       if (selUnit && g.moving?.id === selUnit)
         return `<b>${E.allowance(g, g.units.find((x) => x.id === selUnit)!) - (g.units.find((x) => x.id === selUnit)!.spent ?? 0)} MP left.</b>${gx(" Tap a green area to go on, or <b>Stop here</b>. Choosing another block ends this one's move.", ' Go on, or Stop here.')}`;
@@ -185,7 +190,7 @@ function promptText() {
       if (dropsLeft())
         return `<b>Drop your airborne unit${dropsLeft() > 1 ? 's' : ''} first:</b> choose the drop zone in the panel on the map (14.27a).`;
       return m
-        ? '<b>Tap a red area.</b>'
+        ? `<b>Tap a red area</b>${gx(' to fight there, or press <b>Next battle</b>.', ' or Next battle.')}`
         : fightable().length
           ? '<b>Tap a contested area</b> to fight, or end the step.'
           : 'No battles left.';
