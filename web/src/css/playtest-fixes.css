@@ -144,3 +144,20 @@
     padding-inline: 8px !important;
   }
 }
+/* B5: every phone control is at least 44 px to the finger */
+@media (max-width: 700px) {
+  #ui .c-bar.t .vps {
+    height: 44px !important;
+  }
+  #ui .stage:has(.c-table) ~ .dock .handtab button,
+  #ui .handtab button {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+  #ui .mapbubble button.ab {
+    min-height: 44px;
+  }
+  #ui .sbfab {
+    min-width: 44px;
+  }
+}
