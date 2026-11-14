@@ -552,7 +552,7 @@ export let ctlKey = '',
 export const setTgtKey = <T extends typeof tgtKey>(v: T): T => ((tgtKey = v), v);
 /** A first table with no lesson finished: one card offers the lesson of this game, or to just play (design review, problem 4). Shown once. */
 function newcomerCard() {
-  if (TUT || SANDBOX || g.over || lessonDone()) return '';
+  if (TUT || SANDBOX || DEV || g.over || lessonDone()) return ''; // a real first visit only: never on test links (?dev=1)
   try {
     if (localStorage.getItem('fab-newcomer')) return '';
   } catch {

@@ -587,3 +587,9 @@
     line-height: 1.3;
   }
 }
+/* phones: while a panel asks something (set-up, dogfight, a card's choices) the log's news stays in the Log, never over the panel's buttons */
+@media (max-width: 700px) {
+  #ui .stage:has(.volstack, .chitbar) .feed {
+    display: none;
+  }
+}
