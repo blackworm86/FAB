@@ -55,6 +55,13 @@ TIPI = {
     "sicily_italian_inf": (1, 0, 0, 1.8, "tutte"), "sicily_italian_mountain_inf": (1, 0, 0, 1.8, "tutte"), "sicily_italian_garrison": (1, 0, 0, 1.8, "tutte"),
     "sicily_italian_motorized_inf": (1, 0, 90, 2.5, "tutte"),                                                # autocarro
 }
+# lunghezza reale dello scafo in metri: il gioco misura così i veicoli (Meshy li fa tozzi e alti, la sola altezza li rimpicciolisce)
+LUNGHEZZA = {
+    "bulge_british_armor": 5.9, "bulge_german_armor": 6.87, "bulge_german_mech": 5.98, "bulge_us_armor": 5.9, "bulge_us_cavalry": 5.0,     # Firefly, Panther, Sd.Kfz.251, Sherman, M8 Greyhound
+    "golan73_israeli_armor": 7.8, "golan73_israeli_ghost": 7.8, "golan73_israeli_mech": 6.2,                                             # Centurion, finto Centurion, M3
+    "golan73_syrian_armor": 6.45, "golan73_syrian_mech": 6.74, "golan73_syrian_recon": 5.75,                                              # T-55, BMP-1, BRDM-2
+    "sicily_british_armor": 5.9, "sicily_us_armor": 5.9, "sicily_german_mech": 5.92, "sicily_italian_motorized_inf": 6.2,                # Sherman, Sherman, Panzer IV, Fiat 626
+}
 VEICOLI = ("armor", "cavalry", "mech", "recon", "motorized", "ghost")
 veicolo = lambda tipo: any(v in tipo for v in VEICOLI)
 
@@ -168,7 +175,7 @@ def main():
             continue
         esistenti = sorted(out.glob(f"{tipo}_*.glb"))
         if sorgente(tipo).parent.name == "definitivi" and esistenti:      # niente modello nuovo da Meshy: le figure già nel gioco restano
-            indice["tipi"][tipo] = {"figure": [f.name for f in esistenti], "veicolo": veicolo(tipo)}
+            indice["tipi"][tipo] = {"figure": [f.name for f in esistenti], "veicolo": veicolo(tipo), **({"lunghezza": LUNGHEZZA[tipo]} if tipo in LUNGHEZZA else {})}
             for b in tipi[tipo]["blocchi"]:
                 indice["blocchi"][b] = tipo
             print(f"{tipo}: nessun modello nuovo in ai_grezzi, tengo le figure attuali"); continue
@@ -196,7 +203,7 @@ def main():
             p = out / f"{tipo}_{len(files)}.glb"; p.write_bytes(trimesh.Scene(m).export(file_type="glb")); files.append(p.name)
             ripara_figura.ripara(p, lato=min(TEXTURE, max(m.visual.material.baseColorTexture.size)) if getattr(m.visual.material, "baseColorTexture", None) else TEXTURE)   # buchi chiusi, texture senza righe scure
             print(f"{p.name:32} {len(m.faces):5} triangoli  {np.round(m.extents, 2).tolist()}")
-        indice["tipi"][tipo] = {"figure": files, "veicolo": veicolo(tipo)}
+        indice["tipi"][tipo] = {"figure": files, "veicolo": veicolo(tipo), **({"lunghezza": LUNGHEZZA[tipo]} if tipo in LUNGHEZZA else {})}
         for b in tipi[tipo]["blocchi"]:
             indice["blocchi"][b] = tipo
     (out / f"{a.volume}.json").write_text(json.dumps(indice, indent=1), encoding="utf-8")

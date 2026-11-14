@@ -4,10 +4,11 @@ import type { Course, G } from './tutorial-kit';
 import { BULGE_COURSE } from './tutorial-bulge';
 import { GOLAN_COURSE, GOLAN_NEW_COURSE } from './tutorial-golan';
 import { SICILY_COURSE, SICILY_NEW_COURSE } from './tutorial-sicily';
+import { BASICS_COURSE } from './tutorial-basics';
 export type { Course, Lesson, Step, Target } from './tutorial-kit';
 export { U } from './tutorial-kit';
 
-export const COURSES: Course[] = [BULGE_COURSE, GOLAN_COURSE, GOLAN_NEW_COURSE, SICILY_COURSE, SICILY_NEW_COURSE];
+export const COURSES: Course[] = [BULGE_COURSE, GOLAN_COURSE, GOLAN_NEW_COURSE, SICILY_COURSE, SICILY_NEW_COURSE, BASICS_COURSE]; // the new short course (tutorial-basics.ts) is reached only by its address until it replaces the old one
 export const courseFor = (id: string | null | undefined) => COURSES.find((c) => c.id === id) ?? COURSES[0];
 export { coursesOf } from './tutorial-list';
 

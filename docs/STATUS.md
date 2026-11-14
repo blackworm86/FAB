@@ -50,7 +50,7 @@ A very busy week: about 160 changes reached `main` from four sessions working at
 
 ## Decisions waiting for you
 
-0. **Tutorial**: to be cancelled and rebuilt (your decision, 13 November). When, and whether the present lessons come off the site in the meantime, is still to be said.
+0. **Tutorial**: to be cancelled and rebuilt (your decision, 13 November). The outlines are written (14 November): `docs/TUTORIAL-OUTLINE.md`, three courses, about 42 minutes in all. Waiting for your approval, and whether the present lessons stay on the site meanwhile.
 
 1. ~~Figures~~ Answered 13 November: kept, to be polished after the streamlining work.
 2. **Playtest the computer opponent** (`?lab=german`, `?lab=allied`) and say whether it is good enough to move to levels.
@@ -125,7 +125,14 @@ Goal: keep the design, split the few oversized files by moving code, no rewrite 
 
 - `npm run check:size` (at the repository root, also a CI check) fails when a source file (`.ts`, `.mjs`, `.css`) is over **1,000 lines**. Six files already over have a ceiling of their size, so they may not grow: `vol/golan.ts` (2,450), `vol/sicily.ts` (1,791), the sweep fuzz test, the Golan and Bulge lessons (to be rebuilt anyway), `css/battle-strip.css`. Tested: it passes now and fails on a 1,002-line file.
 - **The streamlining plan is finished.** Overall result: `main.ts` 7,338 → 711 lines in 22 modules, `game.ts` 3,666 → 503 in 10 modules, `style.css` 10,578 → 28 files, code formatted by Prettier, pictures, a rules fingerprint and a byte-identical stylesheet as proof nothing changed.
-- Still open from it, if wanted: split `vol/golan.ts` and `vol/sicily.ts` the same way (since 13 November evening they have a seeded-game fingerprint too: sixteen games in `engine/test/fingerprint-golan-sicily.txt`, part of the engine tests; checked: it fails when the rules change, passes when they do not), and merge each screen's CSS into one place.
+- Still open from it, if wanted: merge each screen's CSS into one place. (`vol/golan.ts` and `vol/sicily.ts` were split on 14 November, see below.)
+
+### After the plan: Golan and Sicily split too (14 November)
+
+- `engine/src/vol/golan.ts` went from 2,450 to about 290 lines (seven files beside it: set-up, the two smaller scenarios, moves, turn, combat, optional rules, player actions) and `vol/sicily.ts` from 1,799 to about 290 (five files: set-up, moves, turn, combat, player actions). Same tool, twelve commits, the 419 engine tests after each, including the sixteen-game fingerprint made for this the evening before.
+- Checked at the end: `npm run verify -- --browser` (all eleven checks), the production build opened for all three games, and nothing the table or the tests use has gone (the same names under `E.golan` and `E.sicily`; 71 and 62 internal helpers are now also visible there and should not be relied on).
+- No engine file is over 550 lines now; the size guard's exceptions for these two files are removed.
+- The rules session must merge `origin/main` before touching Golan or Sicily; a change held against the old files has to be redone in the new one.
 
 ## Proposals for other files (for you to approve; this session does not change them)
 

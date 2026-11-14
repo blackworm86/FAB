@@ -15,6 +15,7 @@ import {
   playReplacement,
   regimentAreas,
   endPhase,
+  assetLimits,
   actorOf,
   setDone,
   roadblock,
@@ -208,5 +209,22 @@ describe('Bulge asset and event sweep', () => {
     expect(actorOf(g)).toBe('allied');
     expect(() => playGreifBridge(g, 'R15.0', 14, 15)).toThrow(/4\.2b/);
     expect(() => roadblock(g, 'L63.0', 60, false)).not.toThrow(/4\.2/);
+  });
+  it('16.23 (owner, 14 Nov): a lone US garrison counts as a defended roadblock: no extra US artillery asset', () => {
+    const g = fresh(13);
+    const gar = U(g, 'Garrison Bastogne'),
+      ge = U(g, '2 Pz');
+    clear(g, 47);
+    gar.area = 47;
+    ge.area = 47;
+    g.control[47] = 'allied';
+    g.phase = 'combat';
+    g.phasing = 'german';
+    g.contestedAtMoveStart = [];
+    g.fought = [];
+    const b = startBattle(g, 47);
+    expect(assetLimits(g, b, 'allied').arty).toBe(1);
+    U(g, '101').area = 47; // with a US unit there the extra asset is back
+    expect(assetLimits(g, b, 'allied').arty).toBe(2);
   });
 });

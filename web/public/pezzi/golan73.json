@@ -10,13 +10,15 @@
    "figure": [
     "golan73_israeli_armor_0.glb"
    ],
-   "veicolo": true
+   "veicolo": true,
+   "lunghezza": 7.8
   },
   "golan73_israeli_mech": {
    "figure": [
     "golan73_israeli_mech_0.glb"
    ],
-   "veicolo": true
+   "veicolo": true,
+   "lunghezza": 6.2
   },
   "golan73_israeli_airborne": {
    "figure": [
@@ -28,7 +30,8 @@
    "figure": [
     "golan73_israeli_ghost_0.glb"
    ],
-   "veicolo": true
+   "veicolo": true,
+   "lunghezza": 7.8
   },
   "golan73_syrian_inf": {
    "figure": [
@@ -40,19 +43,22 @@
    "figure": [
     "golan73_syrian_recon_0.glb"
    ],
-   "veicolo": true
+   "veicolo": true,
+   "lunghezza": 5.75
   },
   "golan73_syrian_armor": {
    "figure": [
     "golan73_syrian_armor_0.glb"
    ],
-   "veicolo": true
+   "veicolo": true,
+   "lunghezza": 6.45
   },
   "golan73_syrian_mech": {
    "figure": [
     "golan73_syrian_mech_0.glb"
    ],
-   "veicolo": true
+   "veicolo": true,
+   "lunghezza": 6.74
   },
   "golan73_syrian_airborne": {
    "figure": [
