@@ -161,3 +161,11 @@
     min-width: 44px;
   }
 }
+/* B6: the TDN "−1" on area labels reads at 13 px */
+.atag .sw b {
+  min-width: 19px;
+  height: 19px;
+  right: -10px;
+  top: -9px;
+  font: 700 13px/17px var(--sfd);
+}
