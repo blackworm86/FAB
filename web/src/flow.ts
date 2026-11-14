@@ -163,6 +163,17 @@ export const dropsLeft = () =>
   VOL.id === 'sicily' && g.phase === 'combat' && !g.battle && (g.vol as { dropPending?: boolean } | undefined)?.dropPending
     ? g.units.filter((u) => u.box === 'airborne_assault' && u.side === g.phasing).length
     : 0;
+/** Why the set-up cannot end yet, in the engine's own words (Golan: minefields still to lay), or null. */
+export const deployBlock = () => {
+  if (g.phase !== 'deploy') return null;
+  try {
+    E.endPhase(structuredClone(g));
+    return null;
+  } catch (e) {
+    const m = (e as Error).message;
+    return m ? m[0].toUpperCase() + m.slice(1) : null;
+  }
+};
 export const endLabel = () =>
   dropsLeft()
     ? 'Drop the airborne first'
@@ -171,7 +182,7 @@ export const endLabel = () =>
       : g.phase === 'deploy'
         ? ((left) => {
             const n = left.filter((u) => u.side === setupSide()).length;
-            return n ? `Place ${n} more first` : left.length ? 'Finish the panel first' : 'End set-up';
+            return n ? `Place ${n} more first` : left.length || deployBlock() ? 'Finish the panel first' : 'End set-up';
           })(
             VOL.pendingPlace(g)
               .map((id) => g.units.find((x) => x.id === id)!)

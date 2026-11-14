@@ -26,6 +26,7 @@ import {
   PHASES,
   placing,
   setupSide,
+  deployBlock,
   say,
   setBattleFx,
   setRollFx,
@@ -154,16 +155,16 @@ function promptText() {
   const m = E.mustFight(g).length;
   switch (g.phase) {
     case 'deploy': {
-      const n = VOL.pendingPlace(g).filter((id) => {
-        const u = g.units.find((x) => x.id === id)!;
-        return mine(u.side) && u.side === setupSide();
-      }).length;
+      const ids = VOL.pendingPlace(g).filter((id) => {
+          const u = g.units.find((x) => x.id === id)!;
+          return mine(u.side) && u.side === setupSide();
+        }),
+        n = ids.length;
       return n
-        ? `<b>Set-up:</b> drag a block from the tray to a lit area, or use the panel.` /* the count is on the main button */
-        : ((p) =>
-            p && !p.dis
-              ? `<b>Set-up done:</b> press <b>${esc(p.label)}</b>.`
-              : '<b>Set-up:</b> finish the steps in the panel on the map, then end the set-up.')(primary());
+        ? ids.some((id) => VOL.placeOptions(g, id).length)
+          ? `<b>Set-up:</b> drag a block from the tray to a lit area, or use the panel.` /* the count is on the main button */
+          : '<b>Set-up:</b> first make the choice in the panel on the map, then place the blocks.' /* Sicily: the landing plan before the invasion units */
+        : ((w) => (w ? `<b>Not yet:</b> ${esc(w)}.` : `<b>Set-up done:</b> press <b>${esc(endLabel())}</b>.`))(deployBlock());
     }
     case 'reinforcement':
       return '<b>Pick a new block</b>, then a lit entry area.';
@@ -377,7 +378,7 @@ export function primary(): { label: string; fn: () => void; dis?: boolean } | nu
       !!g.recover.length ||
       !!g.artyPick ||
       (g.phase === 'supply' && !!g.supplyPending) ||
-      (g.phase === 'deploy' && VOL.pendingPlace(g).some((id) => mine(g.units.find((u) => u.id === id)!.side))),
+      (g.phase === 'deploy' && (VOL.pendingPlace(g).some((id) => mine(g.units.find((u) => u.id === id)!.side)) || !!deployBlock())),
   };
 }
 /* ---------- the actions dock: shortcuts with counts, labelled undo ---------- */
