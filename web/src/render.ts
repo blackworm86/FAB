@@ -312,6 +312,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
     edge();
     row.addEventListener('scroll', edge, { passive: true });
   });
+  ui.querySelector<HTMLElement>('.chitbar .cbchips')?.scrollIntoView({ block: 'end' }); // a card's named choices are what the player came for: in view, whatever the panel's height
   ui.querySelectorAll<HTMLElement>('.volstack').forEach((st) => {
     // a set-up panel taller than its space fades at the bottom with a ▾, so it reads as "more below" (playtest B7)
     const edge = () => st.classList.toggle('more', st.scrollTop + st.clientHeight < st.scrollHeight - 2);

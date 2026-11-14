@@ -79,6 +79,27 @@ export function sicilyTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): T
       );
     t.hint = t.units.size ? hint : 'No block qualifies right now';
   };
+  /** 14.61: the divisions this counter may release, one button each: a division is released as a whole, wherever its blocks are (at sea, in the Airborne Assault box, not yet arrived). */
+  const divisions = (brigade?: string) => {
+    const seen = new Set<string>();
+    for (const u of g.units.filter((x) => x.side === 'allied' && x.division)) {
+      if (seen.has(u.division!)) continue;
+      seen.add(u.division!);
+      if (works(g, (x) => S.releaseDivision(x, u.division!, id, brigade)))
+        t.chips.push({
+          label: `${u.name} · ${u.nation === 'british' ? '8th Army' : '7th Army'}`,
+          img: ctx.face(u),
+          fn: run((x) => S.releaseDivision(x, u.division!, id, brigade)),
+        });
+    }
+    t.hint = t.chips.length
+      ? brigade
+        ? 'Choose the British division to release; the brigade goes with it'
+        : 'Choose the division to release from its army boundaries'
+      : c.kind === 'special_action_event'
+        ? 'No division to release: this Special Action releases only a division of its own army, not yet released (14.61)'
+        : 'No division left to release (14.61)';
+  };
   const modes = (list: { id: string; icon: string; label: string; apply: () => void }[]) => {
     for (const m of list) t.modes.push({ id: m.id, icon: m.icon, label: m.label });
     let mode = ctx.mode;
@@ -231,11 +252,7 @@ export function sicilyTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): T
           id: 'release',
           icon: 'next',
           label: 'Release a division (14.61)',
-          apply: () =>
-            units((x, uid) => {
-              const u = x.units.find((v) => v.id === uid)!;
-              S.releaseDivision(x, u.division!, id);
-            }, 'Tap a block of the division to release from its army boundaries'),
+          apply: () => divisions(),
         });
       if (side === 'allied')
         for (const br of ['br_1st_cdn_arm', 'br_4th_arm', 'br_231st'].filter(
@@ -245,11 +262,7 @@ export function sicilyTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): T
             id: `rel-${br}`,
             icon: 'next',
             label: `Release a British division with the ${g.units.find((u) => u.division === br)!.name} (14.61)`,
-            apply: () =>
-              units((x, uid) => {
-                const u = x.units.find((v) => v.id === uid)!;
-                S.releaseDivision(x, u.division!, id, br);
-              }, 'Tap a block of the British division to release; the brigade goes with it'),
+            apply: () => divisions(br),
           });
       modes(list);
       break;

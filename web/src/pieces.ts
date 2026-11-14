@@ -425,6 +425,21 @@ export function drawPieces() {
       });
     });
   }
+  for (const [box, [bx, by, bw, bh]] of Object.entries(VOL.art.holdBoxes ?? {})) {
+    // blocks waiting in a holding box printed on the map (Sicily: At Sea, Airborne Assault) stand on their box, in rows
+    const us = g.units.filter((u) => u.area == null && u.box === box),
+      cols = Math.max(1, Math.min(us.length, Math.ceil(Math.sqrt(us.length * (bw / bh))))),
+      rws = Math.ceil(us.length / cols);
+    us.forEach((u, i) => {
+      const m = block(u, faceDown(u)),
+        p = toWorld(bx + ((i % cols) + 0.5) * (bw / cols), by + (Math.floor(i / cols) + 0.5) * (bh / rws));
+      m.position.x = p.x;
+      m.position.z = p.z;
+      m.userData.unit = u.id;
+      m.userData.hidden = faceDown(u);
+      pieces.add(m);
+    });
+  }
   if (g.battle) drawPointMarks(g.battle);
   if (!g.battle && (g.phase === 'combat' || g.phase === 'btCombat')) {
     const must = new Set(E.mustFight(g)); // each battle area gets its own edge, so neighbouring battles never merge into one patch

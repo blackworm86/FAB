@@ -63,6 +63,8 @@ export interface VolView {
     entryDark: (side: E.Side) => boolean;
     /** Off-map boxes printed only on a scenario's own sheet: drawn, and clickable, only while that scenario's play area includes them. */
     sheetBoxes?: { id: number; name: string; side: E.Side; x: number; y: number; w: number; h: number }[];
+    /** Holding boxes printed on the map whose blocks have no area (Sicily: At Sea, Airborne Assault): the box name and its free part, in map pixels. */
+    holdBoxes?: Record<string, [number, number, number, number]>;
   };
   features: { fuel: boolean; zones: boolean; optional: boolean; tutorial: boolean };
   /** A piece named by the rules reference (tools/rules/icons-<game>.json), drawn with this game's art. */
@@ -451,6 +453,7 @@ function sicily(): VolView {
       vpIcons: { german: './icons/vp-german.svg', allied: './icons/vp-allied.svg', mutual: './icons/vp-mutual.svg' },
       relief: './sicily/',
       reliefName: 'Sicily in relief, from the Etna to the western capes, with contour lines, groves and woods',
+      holdBoxes: { at_sea: [46, 1020, 170, 146], airborne_assault: [236, 1020, 150, 146] },
       entryDark: () => false,
     },
     features: { fuel: false, zones: false, optional: true, tutorial: true },
