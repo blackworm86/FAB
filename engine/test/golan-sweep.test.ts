@@ -1,6 +1,6 @@
 // Golan '73: the asset and event sweep of November 2026 (one test per fix).
 import { describe, expect, it } from 'vitest';
-import { startBattle, unitsIn, visibleTo, golan, type Game } from '../src';
+import { startBattle, unitsIn, visibleTo, passSA, defenderReinforceSA, golan, type Game } from '../src';
 import { CUR } from '../src/volumes';
 import { newGolanGame, unit, chit, give } from './golan-helpers';
 
@@ -92,5 +92,23 @@ describe('Golan asset and event sweep', () => {
       .find((x) => g.control[x] === 'israeli' && x < 100)!;
     expect(golan.state(g).kingHassan).toBe(true);
     expect(CUR.moveOk!(g, m, isr)).toBe(false);
+  });
+  it("17.33 / 6.21: jamming waits for the Defender's Special Action choice, and closes it", () => {
+    const g = newGolanGame(39);
+    for (const u of unitsIn(g, 27)) if (u.id !== 'I30') u.area = null;
+    for (const u of unitsIn(g, 26)) u.area = null;
+    unit(g, 'S01').area = 27;
+    Object.assign(unit(g, 'I05'), { area: 26, disorder: 0, unsupplied: false });
+    g.phase = 'combat';
+    g.phasing = 'syrian';
+    g.contestedAtMoveStart = [27];
+    give(g, 'IC14');
+    const ew = give(g, 'SC16');
+    const b = startBattle(g, 27);
+    expect(b.defSA).toBe(true);
+    expect(() => golan.playJamming(g, b, ew)).toThrow(/6\.21/);
+    passSA(g, b);
+    golan.playJamming(g, b, ew);
+    expect(() => defenderReinforceSA(g, b, 'I05', 'IC14')).toThrow(/6\.21/);
   });
 });

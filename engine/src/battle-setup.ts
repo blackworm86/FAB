@@ -125,7 +125,8 @@ const orderSide = (b: Battle): Side => {
     r = b.ready ?? [];
   return b.defSA ? def : r.length === 2 ? b.attacker : r.includes(b.attacker) ? def : b.attacker;
 };
-export const attackerBegun = (b: Battle) => !!b.ready?.includes(b.attacker) || b.assets[b.attacker].length > 0 || !!b.air[b.attacker];
+export const attackerBegun = (b: Battle) =>
+  !!b.ready?.includes(b.attacker) || b.assets[b.attacker].length > 0 || !!b.air[b.attacker] || !!b.locked; // locked: an event (Golan jamming) or Special Action was already played
 /** 6.21: the Defender goes on without a Special Action. */
 export function passSA(g: Game, b: Battle) {
   if (b.stage !== 'setup' || !b.defSA) throw new Error('no Special Action decision pending');
