@@ -218,11 +218,14 @@ function setupPrompt(b: E.Battle): string {
     return `<b>${nm(who)}</b> ${b.defSA ? 'decides on a Special Action…' : last ? 'designates the point unit…' : 'assigns assets…'}`;
   if (b.defSA)
     return `<b>${nm(who)}: Special Action?</b>${gx(' Reinforce or retreat before the attacker commits his assets (6.21), or go on without.')}`;
+  const pt = g.units.find((u) => u.id === (att ? b.attPoint : b.defPoint))?.name; // the point unit already chosen is named, so a tap shows it registered (playtest C9)
   if (last)
-    return `<b>${nm(who)}: tap a block to make it your point unit</b>, then Begin combat.${gx(' The defender has designated his (6.24).')}`;
+    return pt
+      ? `<b>${nm(who)}: point unit ${esc(pt)}.</b> Tap another block to change it, or Begin combat.${gx(' The defender has designated his (6.24).')}`
+      : `<b>${nm(who)}: tap a block to make it your point unit</b>, then Begin combat.${gx(' The defender has designated his (6.24).')}`;
   return att
     ? `<b>${nm(who)} attacks: tap a card to add it.</b>${gx(' The defender answers after you (6.22); you pick your point unit last.')}`
-    : `<b>${nm(who)} defends: tap a card to add it</b>${gx(", and a block to make it the point unit. The attacker's assets are on the table (6.23).", ' and pick your point unit.')}`;
+    : `<b>${nm(who)} defends: tap a card to add it</b>${gx(`, and a block to change the point unit${pt ? ` (now ${esc(pt)})` : ''}. The attacker's assets are on the table (6.23).`, pt ? ` · point unit ${esc(pt)}` : ' and pick your point unit.')}`;
 }
 export function primary(): { label: string; fn: () => void; dis?: boolean } | null {
   const b = g.battle;
