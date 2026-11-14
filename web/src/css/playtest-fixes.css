@@ -169,3 +169,27 @@
   top: -9px;
   font: 700 13px/17px var(--sfd);
 }
+/* B7: a set-up panel with more below says so */
+.volstack.more {
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 36px), #0006);
+  mask-image: linear-gradient(#000 calc(100% - 36px), #0006);
+}
+.volstack.more::after {
+  content: '▾';
+  position: sticky;
+  bottom: 0;
+  justify-self: center;
+  margin-top: -26px;
+  padding: 0 14px;
+  font: 700 20px/26px var(--sfd);
+  color: var(--gold);
+  background: #0b0d08;
+  border: 1px solid var(--gold);
+  pointer-events: none;
+}
+@media (min-width: 701px) {
+  #ui:has(.volstack) .toast {
+    bottom: auto;
+    top: 64px;
+  }
+} /* a message never lands on the set-up panel's own buttons */
