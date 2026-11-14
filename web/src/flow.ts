@@ -77,8 +77,8 @@ export function chitBar(c: E.Chit): string {
           `<button class="pc ${c.side}" data-do="${reg(x.fn)}" title="${esc(x.label)}">${x.img}<small>${esc(x.label)}</small></button>`,
       )
       .join('') ?? '';
-  if (infoFor !== c.id) {
-    infoFor = c.id;
+  if (infoFor !== c.id + tgtMode) {
+    infoFor = c.id + tgtMode; // each option of a chit decides again whether its rules fit beside what it lights
     infoOpen = guide === 'full' && !(innerWidth < 700 && !!tg && (tg.units.size > 0 || tg.areas.size > 0)); // a phone keeps the map for what the card lights up
   } // each chit opens with its rules folded (short mode) or shown (full mode)
   return `<div class="c-dispatch chitbar ${infoOpen ? 'open' : ''} ${tg && (tg.units.size || tg.areas.size) ? 'lights' : ''}"><div class="cbhead"><span class="cbimg">${chitPic(c)}</span><div class="cbt"><b>${esc(c.name)}</b><small>${tg?.hint ? gx(esc(tg.hint), esc(kind)) : esc(kind)}</small></div>

@@ -785,10 +785,15 @@ body:has(.mappanel) .sbfab {
   #ui:has(.chitbar.lights) .dock .handtab {
     display: none;
   }
+  #ui .chitbar.lights .cbt small {
+    display: none; /* the bar below says the same: the map keeps the room (phone check) */
+  }
   #ui .chitbar.lights .modes {
     flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, #000 82%, #0003); /* the row scrolls: its right end fades (phone check) */
+    mask-image: linear-gradient(to right, #000 82%, #0003);
   }
   #ui .chitbar.lights .modes .ico {
     flex: 0 0 auto;
@@ -799,4 +804,9 @@ body:has(.mappanel) .sbfab {
     overflow: hidden;
     text-overflow: ellipsis;
   }
+}
+
+/* dev links only: the sandbox button never sits on a card panel's close button (phone check) */
+body:has(#ui .chitbar) .sbfab {
+  display: none !important;
 }

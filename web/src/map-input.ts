@@ -17,6 +17,7 @@ import {
   setHoverArea,
   setPreviewArea,
   setSelArea,
+  setSelChit,
   setSelUnit,
   tut,
 } from './game-state';
@@ -181,7 +182,10 @@ export function click(e: PointerEvent) {
       const fnU = unit ? tg.units.get(unit) : undefined,
         fnA = area != null ? (tg.areas.get(area) ?? tg.any?.(area) ?? undefined) : undefined;
       if (fnU || fnA) {
-        return act((fnU ?? fnA)!);
+        return act(() => {
+          (fnU ?? fnA)!();
+          if (g.chits.find((x) => x.id === c0!.id)?.box !== 'available') setSelChit(null); // spent: its panel closes, the news line says what it did (phone check)
+        });
       }
       const pk = area != null ? tg.pick.get(area) : undefined;
       if (pk) {

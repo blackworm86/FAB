@@ -1,4 +1,5 @@
 // Drawing the screen: the whole interface from the game's state, wiring its buttons, keeping the view in step, and the refresh after every action.
+import type * as THREE from 'three';
 import { translateDom } from './i18n';
 import * as E from '../../engine/src';
 import { vpStrip, vpSheet, endPanel } from './score';
@@ -13,7 +14,7 @@ import { coursesOf } from './tutorial-list';
 import { clearDice } from './dice3d';
 import { linkRules } from './rules-link';
 import { LAB_SIDE, labStep } from './lab';
-import { $, areaName, P1, TUT, VOL } from './page';
+import { $, areaName, P1, toWorld, TUT, VOL } from './page';
 import { g, save, selArea, selChit, selUnit, setG, setPreviewArea, setSelArea, setSelChit, setSelUnit, showReplay } from './game-state';
 import { canvas } from './scene';
 import { drawPieces } from './pieces';
@@ -706,9 +707,13 @@ export function refresh() {
         fk = `${selChit}|${tgtMode}|${selArea}`;
       if (selChit && t && fk !== chitFramed) {
         chitFramed = fk;
-        const ids = [
+        const ids: (number | THREE.Vector3)[] = [
           ...new Set([...t.pick.keys(), ...t.areas.keys(), ...[...t.units.keys()].map((id) => g.units.find((u) => u.id === id)?.area)]),
         ].filter((a): a is number => a != null);
+        for (const id of t.units.keys()) {
+          const box = VOL.art.holdBoxes?.[g.units.find((u) => u.id === id)?.box ?? ''];
+          if (box) ids.push(toWorld(box[0] + box[2] / 2, box[1] + box[3] / 2));
+        } // a lit block waiting in a box drawn on the map (Sicily: At Sea) comes into view too (phone check)
         if (ids.length) setTimeout(() => showAreas(ids), 60); // once the panel is drawn: the areas the card can act on come into view, clear of it (playtest 2, item 9)
       }
       if (!selChit) chitFramed = '';

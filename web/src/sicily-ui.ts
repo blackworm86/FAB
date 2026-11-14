@@ -84,7 +84,7 @@ export function sicilyTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): T
   const divisions = (brigade?: string) => {
     const seen = new Set<string>(),
       onTable = (u: E.Unit) => u.area != null || u.box === 'at_sea' || u.box === 'airborne_assault'; // the boxes drawn on the map
-    let lit = 0;
+    const names: string[] = [];
     for (const u of g.units.filter((x) => x.side === 'allied' && x.division)) {
       if (seen.has(u.division!)) continue;
       seen.add(u.division!);
@@ -92,15 +92,15 @@ export function sicilyTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): T
       const go = run((x) => S.releaseDivision(x, u.division!, id, brigade)),
         blocks = g.units.filter((v) => v.division === u.division && onTable(v));
       for (const v of blocks) t.units.set(v.id, go);
-      lit += blocks.length ? 1 : 0;
+      if (blocks.length) names.push(u.name);
       if (!blocks.length)
         t.chips.push({ label: `${u.name} · ${u.nation === 'british' ? '8th Army' : '7th Army'}`, img: ctx.face(u), fn: go });
     }
     t.hint =
-      lit || t.chips.length
-        ? brigade
-          ? 'Tap a lit block: its British division is released, and the brigade with it (14.61)'
-          : 'Tap a lit block: its whole division is released and may cross army boundaries (14.61)'
+      names.length || t.chips.length
+        ? names.length
+          ? `Tap a lit block to release its ${brigade ? 'British division, with the brigade' : 'whole division'} (14.61): ${names.join(', ')}`
+          : 'Release a division not yet on the map with its button (14.61)'
         : c.kind === 'special_action_event'
           ? 'No division to release: this Special Action releases only a division of its own army, not yet released (14.61)'
           : 'No division left to release (14.61)';
@@ -109,7 +109,13 @@ export function sicilyTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): T
     for (const m of list) t.modes.push({ id: m.id, icon: m.icon, label: m.label });
     let mode = ctx.mode;
     if (!list.some((m) => m.id === mode)) {
-      mode = list[0]?.id ?? '';
+      const has = (m: (typeof list)[number]) => {
+        Object.assign(t, blank(), { modes: t.modes });
+        m.apply();
+        return t.units.size + t.areas.size + t.pick.size + t.chips.length + t.buttons.length > 0;
+      };
+      mode = (list.find(has) ?? list[0])?.id ?? ''; // the first option that can act now, not one that says nothing qualifies (phone check)
+      Object.assign(t, blank(), { modes: t.modes });
       ctx.setMode(mode);
     }
     list.find((m) => m.id === mode)?.apply();

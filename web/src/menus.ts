@@ -201,16 +201,21 @@ const inside = (p: { x: number; y: number }, f: ReturnType<typeof freeRect>) => 
 const aim = () => ({ t: goal?.t ?? target, d: goal?.dist ?? dist, pt: goal?.pitch ?? pitch });
 export const onScreen = (a: number) => ((v) => inside(shot(v.t, v.d, [a], v.pt).px[0], freeRect()))(aim());
 /** Bring areas into view when any of them is hidden: the camera frames them all in the part of the screen no panel covers, no closer than now. */
-export function showAreas(ids: number[]) {
+export function showAreas(ids: (number | THREE.Vector3)[]) {
   if (!ids.length) return;
   const v = aim();
   if (shot(v.t, v.d, ids, v.pt).px.every((p) => inside(p, freeRect()))) return;
-  const r = fit(ids.map(center), v.d, v.pt, lock ? clampDist : (d) => Math.min(innerWidth < 700 ? 90 : 72, Math.max(7, d))), // a phone may go further out than by hand, to fit them all
+  const r = fit(
+      ids.map((a) => (typeof a === 'number' ? center(a) : a)),
+      v.d,
+      v.pt,
+      lock ? clampDist : (d) => Math.min(innerWidth < 700 ? 90 : 72, Math.max(7, d)),
+    ), // a phone may go further out than by hand, to fit them all
     h = lock ? null : homeGoal();
   setGoal(h && r.dist >= h.dist * 0.75 ? h : onSheet(r, ids)); // nearly the whole sheet anyway: frame all of it, centred (re-test: Sicily's beaches left a bare band under the map)
 }
 /** Slide the view back over the sheet where an edge of the free screen shows bare table, as long as the areas stay in view (re-test: Sicily's beaches framed with a brown band below). */
-function onSheet(v: { t: THREE.Vector3; dist: number; pitch: number }, ids: number[]) {
+function onSheet(v: { t: THREE.Vector3; dist: number; pitch: number }, ids: (number | THREE.Vector3)[]) {
   const f = freeRect(),
     hx = MW / (2 * S),
     hz = MH / (2 * S),

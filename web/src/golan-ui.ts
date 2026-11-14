@@ -82,7 +82,13 @@ export function golanTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): Tg
     for (const m of list) t.modes.push({ id: m.id, icon: m.icon, label: m.label });
     let mode = ctx.mode;
     if (!list.some((m) => m.id === mode)) {
-      mode = list[0]?.id ?? '';
+      const has = (m: (typeof list)[number]) => {
+        Object.assign(t, blank(), { modes: t.modes });
+        m.apply();
+        return t.units.size + t.areas.size + t.pick.size + t.chips.length + t.buttons.length > 0;
+      };
+      mode = (list.find(has) ?? list[0])?.id ?? ''; // the first option that can act now, not one that says nothing qualifies (phone check)
+      Object.assign(t, blank(), { modes: t.modes });
       ctx.setMode(mode);
     }
     list.find((m) => m.id === mode)?.apply();
