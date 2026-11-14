@@ -2,7 +2,46 @@
 
 Kept by the project-management session (`docs/PARALLEL.md` §4). It reads `main`, the docs and the commit messages; it changes no game code. Updated after each review.
 
-**Last review: Friday 13 November 2026, 10:00 UTC** (`main` at `bed5cca`).
+**Last review: Saturday 14 November 2026, about 12:00 UTC.**
+
+## Summary, 14 November 2026 (read this first)
+
+**Where the project stands.** Three games (The Bulge, Sicily, Golan '73) are playable hot seat and online, on phone and desktop, in English and Italian, with 3D relief maps, blocks (default) and 3D figures, a sandbox for your tests, a replay viewer, the rules reader and, since today, three short tutorials. The code was reorganised on 13–14 November into small themed files (table 7,300 lines → 22 modules, rules engine 3,666 lines → 10 modules, Golan and Sicily rules and the stylesheet split too) with no change in behaviour; `npm run verify` runs eleven checks in one table, and CI fails an unformatted push or an oversized file.
+
+**Done since 13 November morning**
+- *Plan and method:* the streamlining plan (7 steps) finished; fifteen helpers in `.claude/agents/`, the gates, session notes, the owner's manual (`docs/MANUAL.md`), the plan of action (`docs/ROADMAP.md`).
+- *Safety net:* a picture check (`npm run shots`), a rules fingerprint (The Bulge in `bot/`, Golan and Sicily in the engine tests), the load check, the lesson walker.
+- *Two playtests* (13 and 14 November, ten runs): nothing crashed; the first report's problems were largely fixed by the interface session within a day (second report, section A); one Italian lesson bug found and fixed.
+- *Tutorial rebuilt:* The Bulge "Your first turn" (9 lessons, about 22 min), Golan "what's new" (6, about 13), Sicily "what's new" (7, about 13); old courses removed; all in Italian.
+- *Rules:* Admin Phase order, 16.23, the Golan EW fixes; the asset and event sweep of all three games.
+- *Interface (other session):* the playtest items B1–B8, A1–A3, A6, C1–C11; reload after a site update; English left in Italian translated; "tocca agli Alleati"; owner's mockups for figure colours and the point-unit marker.
+- *Figures:* the owner's new models (sets 2 to 4) in the game; blocks stay the default.
+
+**In progress / waiting**
+- Interface session: the second playtest report (Engineer chit with no target, Sicily drop-zone panel, Golan hand overflow, Golan EW screens, coach card covering panels).
+- Rules session: six new questions from the second playtest; **waiting for you: Sicily 16.32** (one air support asset per side, or two as Example 15 shows?). About 15 older rule questions remain (`docs/AUDIT-2026-11.md` §5).
+- Computer opponent: idle since 13 November, **waiting for your playtest** of `?lab=german` / `?lab=allied`; stage 6 (three levels, phone speed) follows.
+- 3D figures: its session note is out of date (your models are in); the polish continues.
+
+**Decisions and actions only you can take**
+1. Answer the Sicily 16.32 question (in the rules session).
+2. Play a few turns against the computer opponent.
+3. Publish `database.rules.json` (Admin > Update rules): pending since 10 November.
+4. Try the three new lessons on your phone and say what to change.
+5. Optional: push notices with the app closed (`docs/DEPLOY.md` §7).
+
+**Risks**
+- The Bulge's early phases (Prepare, Move, strategic movement) and its battles with artillery and a retreat are still thinly playtested; online play, tablets, landscape and the 3D figures were not part of either playtest.
+- The lessons were checked by tests, a script walk and a helper in Italian, but not yet timed or played end to end by a person.
+- Sessions push to `main` many times a day; an open page used to show blank maps after an update (fixed today by a reload).
+- The rules engine is protected by tests and fingerprints, but random play does not reach every rule.
+
+**Next steps (proposed)**
+1. Interface and rules sessions work through the second playtest report.
+2. Third playtest, narrow goals (one per helper): The Bulge Combat with artillery and a retreat, an Axis attack in Sicily, Golan on a phone, the lessons played by hand.
+3. Computer opponent stage 6 after your playtest.
+4. Figures polish; interface leftovers (3D cut-off stripes, CSS merged per screen).
+5. Version 1 checklist (`docs/ROADMAP.md` §1) item by item.
 
 **How to run the project** (who does what, what to type, which model for which work): `docs/MANUAL.md`.
 

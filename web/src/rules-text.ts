@@ -401,7 +401,7 @@ Combat: a battle asset (one die, infantry class; allowed on Mt Hermon). Attackin
   'golan:event_ew': [
     'Electronic Warfare (17.33)',
     `Played in a battle as your one event (6.22, 6.23), in one of two ways:
-• Command disruption (Attacker only): with the Attacker's assets, before the Defender assigns any. Each defending unit (not garrisons or other standing assets) rolls one die: 5 or less, it is disordered at once. If every defending unit is disordered, the Defender may assign no artillery, air support, battle asset or SAM in this battle.
+• Command disruption (Attacker only): with the Attacker's assets, before the Defender assigns any. Each defending unit, strongpoints included (15.6), but not garrisons or other standing assets, rolls one die: 5 or less, it is disordered at once. If every defending unit is disordered, the Defender may assign no artillery, air support, battle asset or SAM in this battle.
 • Countermeasures (Defender only): the immediate answer to a command disruption, +2 to each of those rolls. It is the Defender's one event.
 • The battle cannot start until the Defender has rolled.`,
   ],

@@ -279,7 +279,10 @@ export function openReplay(c: ReplayCtx) {
     q('.rp-dice').replaceChildren(
       ...(st.pub.dice ?? []).map(([who, sn, ds]) => {
         const r = h('div', 'dr');
-        r.append(h('span', 'who', `${who} · hits on ${sn} or less`), ...ds.map((d) => h('span', `die ${d <= sn ? 'h' : 'm'}`, String(d))));
+        r.append(
+          h('span', 'who', `${who} · hits on ${sn < 1 ? 'a 1 only' : `${sn} or less`}`),
+          ...ds.map((d) => h('span', `die ${d === 1 || (d !== 10 && d <= sn) ? 'h' : 'm'}`, String(d))),
+        ); // a 1 always hits, a 10 always misses
         return r;
       }),
     );
