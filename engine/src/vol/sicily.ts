@@ -4,6 +4,11 @@
 // (14.51), reserve and strat-move limits (14.7, 14.8), supply (14.9), the motorized Livorno (15.1), divisional integrity (15.2), the
 // untried Italian garrisons (15.3), the asset rules (16.x: Italian battle assets, naval support, Rangers, air support, airfields, ports),
 // the events (17.x) and victory (19.x). Everything else — the turn sequence, battles, retreats, reserves — is the series engine.
+// This file keeps the volume's state, data and small helpers, and registers its hooks at the end. The rules themselves are in the
+// files listed below (sicily-setup, -moves, -turn, -combat, -actions), which were part of this file until November 2026: each
+// `export * from` line passes a file's names on, so the table and the tests go on using everything through this one. THE ORDER OF
+// THOSE LINES MATTERS: they load in that order, before this file's own code; a file may take from this one what it uses later,
+// inside its functions, but not a value it needs while loading (rule and tool: the top of ../game.ts, web/scripts/move-code.mjs).
 import unitsJson from '../../../data/sicily/units.json';
 import countersJson from '../../../data/sicily/counters.json';
 import setupsJson from '../../../data/sicily/setups.json';

@@ -3,6 +3,11 @@
 // ghosts 15.7, air assault 15.3, SAMs 16.12, commando raids 16.11, the Purple Line releases 15.2/15.4, supply 14.9, victory 19.x)
 // and the player actions that exist only in this volume (engineering 14.5, air missions 16.31, events 17.x, Special Action uses
 // 14.61, the alternate set-up). Everything else — the turn sequence, battles, retreats, reserves, arrivals — is the series engine.
+// This file keeps the volume's state, data and small helpers, and registers its hooks at the end. The rules themselves are in the
+// files listed below (golan-setup, -scenarios, -moves, -turn, -combat, -optional, -actions), which were part of this file until November 2026: each
+// `export * from` line passes a file's names on, so the table and the tests go on using everything through this one. THE ORDER OF
+// THOSE LINES MATTERS: they load in that order, before this file's own code; a file may take from this one what it uses later,
+// inside its functions, but not a value it needs while loading (rule and tool: the top of ../game.ts, web/scripts/move-code.mjs).
 import unitsJson from '../../../data/golan73/units.json';
 import countersJson from '../../../data/golan73/counters.json';
 import setupsJson from '../../../data/golan73/setups.json';
