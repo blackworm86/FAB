@@ -222,4 +222,18 @@ describe('Sicily asset and event sweep', () => {
     expect(E.canAssign(g, b, 'allied', E.chit(g, id), 'support')).toMatch(/6\.22/);
     expect(E.canAssign(g, b, 'allied', E.chit(g, id), 'arty')).toBeNull();
   });
+  it('14.61: any unreleased division may be released, wherever its blocks are; a single-use Special Action only for its own army', () => {
+    const g = newSicilyGame(25);
+    g.phase = 'admin';
+    g.phasing = 'allied';
+    g.done = [];
+    const div = g.units.find((u) => u.side === 'allied' && u.division === 'us_1st_inf')!.division!;
+    for (const u of g.units) if (u.division === div) u.area = null; // none on the map
+    const br = g.chits.find((c) => c.kind === 'special_action_event' && c.side === 'allied' && c.ech === 'br_8th_army')!;
+    br.box = 'available';
+    expect(() => S.releaseDivision(g, div, br.id)).toThrow(/own army/);
+    for (const c of g.chits) if (c.kind === 'sa_block' && c.side === 'allied') c.box = 'available';
+    S.releaseDivision(g, div);
+    expect(S.state(g).released).toContain(div);
+  });
 });
