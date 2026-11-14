@@ -6,7 +6,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 export type Troop = { figs: THREE.Object3D[]; size: THREE.Vector3 };
-type Index = { tipi: Record<string, { figure: string[]; veicolo: boolean }>; blocchi: Record<string, string> };
+type Index = { tipi: Record<string, { figure: string[]; veicolo: boolean; lunghezza?: number }>; blocchi: Record<string, string> };
 
 /** One scale for every figure on the map (figures are at 0.18 board units per metre): a Sherman is 1.6 long, about one block wide. */
 export const SCALE = 1.5;
@@ -49,7 +49,8 @@ export async function loadTroops(vol: string, base = './'): Promise<boolean> {
                 m.geometry = toCreasedNormals(m.geometry, THREE.MathUtils.degToRad(50));
               }
             }); // the files carry no normals, so every triangle was shaded flat (visible polygon edges): smooth shading, with a crease where the surface turns more than 50°   // double-sided: a hole left in a model shows its back, not the ground   // shared by every copy: never disposed with the board
-            const k = SCALE * (t.veicolo ? 1 : INFANTRY),
+            // a vehicle is sized by its real hull length (Meshy draws vehicles chunky and tall, so sizing by height made short ones tiny)
+            const k = SCALE * (t.veicolo ? (t.lunghezza ? (t.lunghezza * 0.18) / bodyLength(gl.scene) : 1) : INFANTRY),
               c = bodyCentre(gl.scene),
               root = new THREE.Group();
             const o = own?.figure?.[f] ?? {},
@@ -79,6 +80,43 @@ export async function loadTroops(vol: string, base = './'): Promise<boolean> {
   return troops.size > 0;
 }
 /** Centre of a figure's body on the ground: the surface-area centre, so a long gun barrel or a rifle does not pull it off. */
+/** Length of a vehicle's body along its longer ground axis: the span of 94% of its surface, so a thin gun barrel or aerial does not count. */
+export function bodyLength(o: THREE.Object3D) {
+  o.updateMatrixWorld(true);
+  const pts: [number, number, number][] = [],
+    a = new THREE.Vector3(),
+    b = new THREE.Vector3(),
+    d = new THREE.Vector3();
+  o.traverse((m) => {
+    const g = (m as THREE.Mesh).geometry as THREE.BufferGeometry | undefined;
+    if (!g || !(m as THREE.Mesh).isMesh) return;
+    const p = g.getAttribute('position'),
+      ix = g.index,
+      n = ix ? ix.count : p.count,
+      at = (i: number) => (ix ? ix.getX(i) : i);
+    for (let i = 0; i < n; i += 3) {
+      a.fromBufferAttribute(p, at(i)).applyMatrix4(m.matrixWorld);
+      b.fromBufferAttribute(p, at(i + 1)).applyMatrix4(m.matrixWorld);
+      d.fromBufferAttribute(p, at(i + 2)).applyMatrix4(m.matrixWorld);
+      const w = new THREE.Vector3().crossVectors(b.clone().sub(a), d.clone().sub(a)).length() / 2;
+      pts.push([(a.x + b.x + d.x) / 3, (a.z + b.z + d.z) / 3, w]);
+    }
+  });
+  const span = (k: 0 | 1) => {
+    const s = [...pts].sort((p, q) => p[k] - q[k]),
+      tot = s.reduce((x, p) => x + p[2], 0);
+    let acc = 0,
+      lo = 0,
+      hi = 0;
+    for (const p of s) {
+      acc += p[2];
+      if (!lo && acc >= 0.03 * tot) lo = p[k];
+      if (acc <= 0.97 * tot) hi = p[k];
+    }
+    return hi - lo;
+  };
+  return Math.max(span(0), span(1)) / 0.94 || 1;
+}
 function bodyCentre(o: THREE.Object3D) {
   o.updateMatrixWorld(true);
   const c = new THREE.Vector3(),
