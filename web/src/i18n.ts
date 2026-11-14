@@ -101,14 +101,23 @@ function trColon(s: string): string | null {
     t = c > 0 ? tr0(s.slice(c + 2)) : null;
   return t == null ? null : `${tr(s.slice(0, c))}: ${t}`;
 }
+/** A side's name as the Italian sentence needs it: "$1{a}" tocca ai Tedeschi, "$1{di}" in attesa dei Tedeschi, "$1{adj}" il giocatore tedesco. */
+const SIDE_FORMS: Record<string, Record<string, string>> = {
+  German: { a: 'ai Tedeschi', di: 'dei Tedeschi', adj: 'tedesco' },
+  Allied: { a: 'agli Alleati', di: 'degli Alleati', adj: 'alleato' },
+  Axis: { a: "all'Asse", di: "dell'Asse", adj: "dell'Asse" },
+  Israeli: { a: 'agli Israeliani', di: 'degli Israeliani', adj: 'israeliano' },
+  Syrian: { a: 'ai Siriani', di: 'dei Siriani', adj: 'siriano' },
+};
 function trPattern(s: string): string | null {
   for (const [re, out] of PATS) {
     const m = re.exec(s);
     if (m)
       return out
-        .replace(/\$(\d)/g, (_, i: string) => {
-          const v = m[+i] ?? '';
-          return v && v !== s ? tr(v) : v;
+        .replace(/\$(\d)(?:\{(\w+)\})?/g, (_, i: string, form?: string) => {
+          const v = m[+i] ?? '',
+            t = v && v !== s ? tr(v) : v;
+          return form ? (SIDE_FORMS[v]?.[form] ?? (form === 'adj' ? t : `${form} ${t}`)) : t;
         })
         .replace(/\b1 colpi\b/g, '1 colpo');
   } // one pattern serves 1 and many hits      // the pattern's variable parts are translated too when the dictionary knows them (a side, "last action")

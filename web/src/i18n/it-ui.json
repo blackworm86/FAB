@@ -3533,10 +3533,10 @@
     ["The airborne units must drop first \\(14\\.27a\\)\\.", "Prima devono lanciarsi le unità aviotrasportate (14.27a)."],
     ["The airborne assault in (.+) is fought first \\(14\\.27a\\)\\.", "L'assalto aviotrasportato a $1 si combatte per primo (14.27a)."],
     ["(.+): tap a card", "$1: tocca una carta"],
-    ["Done · (.+) acts", "Fatto · tocca a $1"],
-    ["to play it, then Done: the (.+) player acts next \\(4\\.2\\)\\.", "per giocarla, poi Fatto: tocca al giocatore $1 (4.2)."],
-    ["Turn (\\d+), (.+) player turn: (.+) \\(step (\\d) of 8\\)", "Turno $1, turno del giocatore $2: $3 (passo $4 di 8)"],
-    ["Turn (\\d+), (.+) player turn: (.+)", "Turno $1, turno del giocatore $2: $3"],
+    ["Done · (.+) acts", "Fatto · tocca $1{a}"],
+    ["to play it, then Done: the (.+) player acts next \\(4\\.2\\)\\.", "per giocarla, poi Fatto: tocca al giocatore $1{adj} (4.2)."],
+    ["Turn (\\d+), (.+) player turn: (.+) \\(step (\\d) of 8\\)", "Turno $1, turno del giocatore $2{adj}: $3 (passo $4 di 8)"],
+    ["Turn (\\d+), (.+) player turn: (.+)", "Turno $1, turno del giocatore $2{adj}: $3"],
     ["(.+) passes through (.+): now German-controlled \\(2\\.4\\)", "$1 attraversa $2: ora sotto controllo tedesco (2.4)"],
     ["(.+) passes through (.+): now Allied-controlled \\(2\\.4\\)", "$1 attraversa $2: ora sotto controllo alleato (2.4)"],
     ["(.+) passes through (.+): now Axis-controlled \\(2\\.4\\)", "$1 attraversa $2: ora sotto controllo dell'Asse (2.4)"],
@@ -3548,7 +3548,7 @@
     ["Allied Control Required \\((\\d)th Army only\\)", "Controllo alleato richiesto (solo $1ª Armata)"],
     ["Axis Control Required \\((\\d)th Army only\\)", "Controllo dell'Asse richiesto (solo $1ª Armata)"],
     ["\\((\\d)th Army only\\)", "(solo $1ª Armata)"],
-    ["Turn (\\d+) · (.+) player turn", "Turno $1 · turno del giocatore $2"],
+    ["Turn (\\d+) · (.+) player turn", "Turno $1 · turno del giocatore $2{adj}"],
     ["End anyway\\? (.+) can move", "Terminare comunque? $1 può muovere"],
     [" ?(.+?)\\.? Close it\\.", " $1. Chiudila."],
     [" ?(.+?)\\.? Close it: (\\d+) battles left\\.", " $1. Chiudila: restano $2 battaglie."],
@@ -3611,8 +3611,8 @@
     ["Axis reserves", "Riserve dell'Asse"],
     ["Roll (\\d+) supply checks?", "Tira $1 verifiche"],
     ["Roll 1 supply check", "Tira 1 verifica di rifornimento"],
-    ["Pass to (.+)", "Passa a $1"],
-    ["Waiting for (.+)", "In attesa di $1"],
+    ["Pass to (.+)", "Passa $1{a}"],
+    ["Waiting for (.+)", "In attesa $1{di}"],
     ["Undo: (.+)", "Annulla: $1"],
     ["Locked: (.+)", "Bloccato: $1"],
     ["(\\d+) chits, drawn at random", "$1 pedine, estratte a caso"],
@@ -4865,7 +4865,7 @@
     ],
     [
       "exploitation opportunity: axis may roll a morale check for (\\d+) armor-class unit\\(s\\) \\(6\\.8\\)",
-      "occasione di sfruttamento: l'Asse possono tirare una prova di morale per $1 unità corazzate (6.8)"
+      "occasione di sfruttamento: l'Asse può tirare una prova di morale per $1 unità corazzate (6.8)"
     ],
     ["german declines the exploitation opportunity", "i tedeschi rinunciano all'occasione di sfruttamento"],
     ["allied declines the exploitation opportunity", "gli Alleati rinunciano all'occasione di sfruttamento"],
@@ -5530,7 +5530,7 @@
     ["Close it: (\\d+) battles? left\\.", "Chiudila: restano $1 battaglie."],
     ["Close it\\.", "Chiudila."],
     ["Battle over\\.", "Battaglia finita."],
-    ["Filled: (.+) share of the expected hits · empty: (.+)", "Pieno: quota di $1 dei colpi attesi · vuoto: $2"],
+    ["Filled: (.+) share of the expected hits · empty: (.+)", "Pieno: quota $1{di} dei colpi attesi · vuoto: $2"],
     ["Map: (.+)", "Mappa: $1"],
     ["Map layers, legend and rotate: (.+)", "Livelli della mappa, legenda e rotazione: $1"],
     ["ARMY ZONE (\\d+)", "ZONA ARMATA $1"],
@@ -5540,9 +5540,9 @@
     ["(.+): no cards to play\\.", "$1: nessuna carta da giocare."],
     [
       "to play it if you wish, then Done: the (.+) player acts next \\(4\\.2\\)\\.",
-      "per giocarla, se vuoi, poi Fatto: tocca al giocatore $1 (4.2)."
+      "per giocarla, se vuoi, poi Fatto: tocca al giocatore $1{adj} (4.2)."
     ],
-    ["Press Done: the (.+) player acts next \\(4\\.2\\)\\.", "Premi Fatto: tocca al giocatore $1 (4.2)."],
+    ["Press Done: the (.+) player acts next \\(4\\.2\\)\\.", "Premi Fatto: tocca al giocatore $1{adj} (4.2)."],
     ["(.+): point unit (.+)\\.", "$1: unità di punta $2."],
     [
       ", and a block to change the point unit \\(now (.+)\\)\\. The attacker's assets are on the table \\(6\\.23\\)\\.",
