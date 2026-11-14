@@ -421,7 +421,21 @@ export function drawPieces() {
       const side = m.side ?? g.control[a.id],
         lane = cont ? (near(side) ? 1 : -1) : 1,
         size = CHIT;
-      const p = inArea(a.id, base.x + (i - (mine.length - 1) / 2) * 1.5, base.z + lane * 2.3, size / 2 + 0.25);
+      // figures stand anywhere in the area (along the attack), so a marker goes to the free spot nearest its own side's units
+      const own = troops
+        ? pieces.children.filter(
+            (o) =>
+              g.units.find((u) => u.id === o.userData.unit)?.side === side && g.units.find((u) => u.id === o.userData.unit)?.area === a.id,
+          )
+        : [];
+      const p = own.length
+        ? inArea(
+            a.id,
+            own.reduce((s, o) => s + o.position.x, 0) / own.length,
+            own.reduce((s, o) => s + o.position.z, 0) / own.length,
+            size / 2 + 0.25,
+          )
+        : inArea(a.id, base.x + (i - (mine.length - 1) / 2) * 1.5, base.z + lane * 2.3, size / 2 + 0.25);
       const k = tag(m.t, m.c, size);
       k.position.set(p.x, 0.02, p.z);
       k.userData.mark = `${m.t}:${a.id}`;
