@@ -56,3 +56,21 @@ Use these terms everywhere (interface and tutorials) so the game reads as one vo
 | Undo                                                                     | Annulla                                                                             |
 | Replay                                                                   | Replay                                                                              |
 | Your move                                                                | Tocca a te                                                                          |
+| turn steps: Prepare / Move / Fight / Breakthrough / Supply               | Prepara / Muovi / Combatti / Sfondamento / Rifornimenti ("il passo Muovi")          |
+| elite / veteran / green                                                  | élite / veterani / reclute                                                          |
+| coach (in the lessons)                                                   | istruttore                                                                          |
+| score track / turn pill / shortcut chips                                 | barra del punteggio / indicatore del turno / scorciatoie                            |
+| untried (unit, garrison)                                                 | non testato                                                                         |
+| anti-tank (AT) ditch / escarpment / rugged                               | fossato anticarro / scarpata / (terreno) aspro                                      |
+| crossing assault / beach assault / river assault                         | assalto di attraversamento / assalto alla spiaggia / assalto fluviale               |
+| airborne assault / air assault / drop zone                               | assalto aviotrasportato / assalto aereo / zona di lancio                            |
+| interdiction / dogfight                                                  | interdizione / duello aereo                                                         |
+| electronic warfare (EW) / countermeasures / counterbattery               | guerra elettronica (EW) / contromisure / controbatteria                             |
+| commando raid                                                            | raid dei commando                                                                   |
+| SAM barrier                                                              | barriera SAM                                                                        |
+| army zone / release (a division)                                         | zona d'armata / rilasciare (il rilascio)                                            |
+| airfield                                                                 | aeroporto                                                                           |
+| Purple Line, Fading Italian Morale, chit and asset names (Air Support)   | as printed, in English                                                              |
+| Sicily (the island) / Sicily (the game)                                  | Sicilia / Sicily                                                                    |
+
+Owner's decision (14 November 2026): **Purple Line** and the **chit names** (Greif Team Bridge, Air Support…) stay in English, as printed on the map and the counters.
