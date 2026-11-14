@@ -227,6 +227,8 @@ function setupPrompt(b: E.Battle): string {
     return pt
       ? `<b>${nm(who)}: point unit ${esc(pt)}.</b> Tap another block to change it, or Begin combat.${gx(' The defender has designated his (6.24).')}`
       : `<b>${nm(who)}: tap a block to make it your point unit</b>, then Begin combat.${gx(' The defender has designated his (6.24).')}`;
+  if (!att && (b.vol as { defLocked?: boolean } | undefined)?.defLocked)
+    return `<b>${nm(who)} defends, jammed:</b> all defending units are disordered, so no artillery, air, SAM or battle assets (17.33).${pt ? '' : ' Pick your point unit,'} then Done.`; // playtest 2, item 5
   return att
     ? `<b>${nm(who)} attacks: tap a card to add it.</b>${gx(' The defender answers after you (6.22); you pick your point unit last.')}`
     : `<b>${nm(who)} defends: tap a card to add it</b>${gx(`, and a block to change the point unit${pt ? ` (now ${esc(pt)})` : ''}. The attacker's assets are on the table (6.23).`, pt ? ` · point unit ${esc(pt)}` : ' and pick your point unit.')}`;

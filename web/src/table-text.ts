@@ -57,8 +57,15 @@ export const STAGE_NAME: Record<string, string> = {
 };
 /** Die faces as small tiles: green when the die succeeds against the Success Number (a 1 always does, a 10 never), salmon when it misses. */
 export const ok10 = (d: number, sn: number) => d === 1 || (d !== 10 && d <= sn);
-export const faces = (dice: number[], sn: number) =>
-  `<span class="faces">${dice.map((d) => `<i class="${ok10(d, sn) ? 'h' : 'm'}" title="${ok10(d, sn) ? 'hit' : 'miss'}" aria-label="${d}, ${ok10(d, sn) ? 'hit' : 'miss'}">${d}<s aria-hidden="true">${ico(ok10(d, sn) ? 'check' : 'close')}</s></i>`).join('')}</span>`;
+/** The die faces, green for a success; `against` reads them from the side that is rolled against (jamming: a low die disorders you). */
+export const faces = (dice: number[], sn: number, against = false) =>
+  `<span class="faces">${dice
+    .map((d) => {
+      const good = ok10(d, sn) !== against,
+        w = against ? (good ? 'holds' : 'disordered') : good ? 'hit' : 'miss';
+      return `<i class="${good ? 'h' : 'm'}" title="${w}" aria-label="${d}, ${w}">${d}<s aria-hidden="true">${ico(good ? 'check' : 'close')}</s></i>`;
+    })
+    .join('')}</span>`;
 /** A Success Number modifier as a small icon chip: the sign and size are the data, the full reason is the tooltip. */
 export const modIcon = (why: string) =>
   /base/i.test(why)
