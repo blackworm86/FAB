@@ -172,13 +172,26 @@ export function retreatOptions(g: Game, b: Battle): number[] {
   setPlayArea(g.inPlay);
   const r = b.retreat;
   if (!r) return [];
-  const u = g.units.find((x) => x.id === r.queue[0]); // the unit retreating now
-  const room = (n: number) => (u ? roomFor(g, u, n) : blocks(g, n, r.side).length < stackMax(g, n));
-  const opts = [...retreatPaths(g, b.area, r.side, u).keys()].filter(room);
-  let out = u && CUR.retreatPrefer ? CUR.retreatPrefer(g, u, b.area, opts) : opts;
-  if (!out.length && u && CUR.seaRetreat?.(g, u, b.area)) out = [SEA]; // Sicily 14.28: to sea when nothing else is open
+  return retreatAreasOf(
+    g,
+    b.area,
+    r.side,
+    g.units.find((x) => x.id === r.queue[0]),
+  ); // the unit retreating now
+}
+function retreatAreasOf(g: Game, from: number, side: Side, u: Unit | undefined): number[] {
+  const room = (n: number) => (u ? roomFor(g, u, n) : blocks(g, n, side).length < stackMax(g, n));
+  const opts = [...retreatPaths(g, from, side, u).keys()].filter(room);
+  let out = u && CUR.retreatPrefer ? CUR.retreatPrefer(g, u, from, opts) : opts;
+  if (!out.length && u && CUR.seaRetreat?.(g, u, from)) out = [SEA]; // Sicily 14.28: to sea when nothing else is open
   return out;
 }
+/** Before the Defender chooses (6.42c): the defending units that have nowhere to retreat now and would take a step loss instead (6.6), so the table can say so. */
+export const retreatBlocked = (g: Game, b: Battle): Unit[] => {
+  setPlayArea(g.inPlay);
+  const def = other(b.attacker);
+  return unitsIn(g, b.area, def).filter((u) => !u.garrison && !u.fort && !u.ghost && !retreatAreasOf(g, b.area, def, u).length);
+};
 /** A retreat destination that is not an area: the sea (Sicily's At Sea box, 14.28). */
 export const SEA = -1;
 /** The retreat routes from the battle area: each reachable destination and the way there (adjoining areas with room first; past full ones only when all are full). */
