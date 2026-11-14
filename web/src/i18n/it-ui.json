@@ -3510,7 +3510,11 @@
   "Press": "Premi",
   "Lay the other minefields for me": "Posa gli altri campi minati in automatico",
   "Tap another block to change it, or Begin combat.": "Tocca un altro blocco per cambiarla, o Inizia il combattimento.",
-  "Click another block to change it, or Begin combat.": "Clicca un altro blocco per cambiarla, o Inizia il combattimento."
+  "Click another block to change it, or Begin combat.": "Clicca un altro blocco per cambiarla, o Inizia il combattimento.",
+  "COSTS A SPECIAL ACTION": "COSTA UN'AZIONE SPECIALE",
+  "NO SPECIAL ACTION LEFT": "NESSUNA AZIONE SPECIALE RIMASTA",
+  "What the markers mean": "Cosa significano gli indicatori",
+  "brass = costs a Special Action": "ottone = costa un'Azione Speciale"
  },
  "patterns": [
   [

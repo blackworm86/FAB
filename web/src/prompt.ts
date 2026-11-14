@@ -185,7 +185,7 @@ function promptText() {
       if (g.phase === 'btCombat' && !m && E.contestedAreas(g).some((a) => !g.fought.includes(a) && !E.newlyContested(g).includes(a)))
         return gx(
           '<b>Breakthrough combat.</b> Newly contested areas are free; areas already contested before movement need a Special Action (brass tags).',
-          '<b>Breakthrough combat:</b> brass = needs SA',
+          '<b>Breakthrough combat:</b> brass = costs a Special Action',
         );
       if (dropsLeft())
         return `<b>Drop your airborne unit${dropsLeft() > 1 ? 's' : ''} first:</b> choose the drop zone in the panel on the map (14.27a).`;
