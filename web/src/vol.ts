@@ -456,7 +456,7 @@ function sicily(): VolView {
       holdBoxes: { at_sea: [46, 1020, 170, 146], airborne_assault: [236, 1020, 150, 146] },
       entryDark: () => false,
     },
-    features: { fuel: false, zones: false, optional: true, tutorial: true },
+    features: { fuel: false, zones: true, optional: true, tutorial: true },
     scenarios: info.scenarios,
     defaultOpts: { scenario: 'tournament', fuel: false },
     formation: (u) => RAW_UNITS.get(u.id)?.colours?.stripe ?? null,

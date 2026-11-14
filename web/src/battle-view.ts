@@ -10,7 +10,20 @@ import { fxRow } from './fx';
 import { RULE } from './rules-text';
 import { areaName, P1, P2, VOL } from './page';
 import { areaPick, g } from './game-state';
-import { CONTROL_COL, faceDown, hex6, MAPC, seen, setSupEnemy, supEnemy, supplySide, TDN_COL, tint, ZONE_COL } from './map-paint';
+import {
+  CONTROL_COL,
+  faceDown,
+  hex6,
+  MAPC,
+  seen,
+  setSupEnemy,
+  supEnemy,
+  supplySide,
+  SICILY_ZONE_COL,
+  TDN_COL,
+  tint,
+  ZONE_COL,
+} from './map-paint';
 import { battleFx, fightable, mine, other, POOL, rollFx, selArr } from './flow';
 import { pickSA } from './choices';
 import { reinforcing, setReinforcing } from './map-input';
@@ -274,11 +287,13 @@ export function legend() {
           ]
         : tint === 'tdn'
           ? TDN_COL.map((c, i) => [c, `TDN ${i}`, i ? `attackers −${i} to hit` : 'no modifier'])
-          : [
-              [ZONE_COL[5], 'Zone 5', '5th Panzer Army'],
-              [ZONE_COL[6], 'Zone 6', '6th Panzer Army'],
-              [ZONE_COL[7], 'Zone 7', '7th Army'],
-            ];
+          : VOL.id === 'sicily'
+            ? (['A', 'B', 'C', 'D'] as const).map((z) => [SICILY_ZONE_COL[z], `Zone ${z}`, 'army zone (14.3)'])
+            : [
+                [ZONE_COL[5], 'Zone 5', '5th Panzer Army'],
+                [ZONE_COL[6], 'Zone 6', '6th Panzer Army'],
+                [ZONE_COL[7], 'Zone 7', '7th Army'],
+              ];
   const whose =
     tint === 'supply'
       ? `<div class="chips">${chip('Yours', !supEnemy, () => {
