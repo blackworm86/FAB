@@ -1043,6 +1043,23 @@ describe('sweep fuzz: random legal play keeps every invariant', () => {
   }, 600_000);
 });
 
+// A fingerprint of the Golan '73 and Sicily rules (The Bulge's is bot/fingerprint.txt): the same seeded random games as the sweep above,
+// each reduced to a hash of its final state. A rule change that alters how any of these games goes shows as a changed line; when the
+// change is deliberate ("Rule fix: ..."), update the file in the same commit:  npx vitest run test/sweep-fuzz.test.ts -u
+// (It also changes if this file's random policy changes.)
+describe('rules fingerprint: Golan and Sicily', () => {
+  it('sixteen seeded games end as recorded in test/fingerprint-golan-sicily.txt', async () => {
+    const lines: string[] = [];
+    for (const game of ['golan73', 'sicily'] as const)
+      for (const scen of MIXES[game].scen)
+        for (const { opts, seed } of sweepGames(MIXES[game])) {
+          const r = play({ game, scenario: scen, opts, seed, light: true });
+          lines.push(`${game} ${scen} seed ${seed}: ${E.sha256(canon(r.g)).slice(0, 16)} turn ${r.g.turn} ${r.actions} actions`);
+        }
+    await expect(lines.join('\n') + '\n').toMatchFileSnapshot('./fingerprint-golan-sicily.txt');
+  }, 600_000);
+});
+
 if (ENV.FUZZ_DEBUG)
   describe('debug one game', () => {
     it('replays', () => {

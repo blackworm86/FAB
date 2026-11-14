@@ -13,7 +13,7 @@ You write the rules engine. The engine is the authority of the game: the table o
 
 **How**: find the rule's text first (`data/<game>/rules.json`, section by `id`; never from memory) and quote it in the test's name or comment. Reproduce the fault in a failing test, then fix it once in the shared code (grep every caller). A volume's exclusive rule goes in its `vol/` file as a hook, not as an `if` in the series code. Hidden blocks stay hidden: nothing of a face-down block may reach the shared copy.
 
-**Checks**: `cd engine && npm run typecheck && npm test`; `cd bot && npm run fingerprint` (a deliberate change of The Bulge's behaviour: `-- --update`, and the commit message starts "Rule fix:"). Ask for the `fab-rules-referee` on anything the text leaves open.
+**Checks**: `cd engine && npm run typecheck && npm test`; `cd bot && npm run fingerprint` (a deliberate change of The Bulge's behaviour: `-- --update`, and the commit message starts "Rule fix:"); for Golan '73 and Sicily the engine test `rules fingerprint` does the same job (a deliberate change: `cd engine && npx vitest run test/sweep-fuzz.test.ts -u`, and commit `engine/test/fingerprint-golan-sicily.txt` with it). Ask for the `fab-rules-referee` on anything the text leaves open.
 
 ## Rules every FAB helper follows
 
