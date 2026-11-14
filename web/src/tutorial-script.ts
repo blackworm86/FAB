@@ -1,26 +1,22 @@
-/** The tutorial courses: one per volume for a first game, and "what's new" courses for players who know an earlier volume.
- *  The lessons live in tutorial-bulge.ts, tutorial-golan.ts and tutorial-sicily.ts on the kit in tutorial-kit.ts; this file is the registry and the replay. */
+/** The tutorial courses (docs/TUTORIAL.md): The Bulge teaches the series in one turn; Golan '73 and Sicily teach only what is new.
+ *  The lessons live in tutorial-basics.ts, tutorial-golan-new.ts and tutorial-sicily-new.ts on the kit in tutorial-kit.ts; this file is the registry and the replay. */
 import type { Course, G } from './tutorial-kit';
-import { BULGE_COURSE } from './tutorial-bulge';
-import { GOLAN_COURSE, GOLAN_NEW_COURSE } from './tutorial-golan';
-import { SICILY_COURSE, SICILY_NEW_COURSE } from './tutorial-sicily';
 import { BASICS_COURSE } from './tutorial-basics';
 import { GOLAN_WHATS_NEW } from './tutorial-golan-new';
 import { SICILY_WHATS_NEW } from './tutorial-sicily-new';
 export type { Course, Lesson, Step, Target } from './tutorial-kit';
 export { U } from './tutorial-kit';
 
-export const COURSES: Course[] = [
-  BULGE_COURSE,
-  GOLAN_COURSE,
-  GOLAN_NEW_COURSE,
-  SICILY_COURSE,
-  SICILY_NEW_COURSE,
-  BASICS_COURSE,
-  GOLAN_WHATS_NEW,
-  SICILY_WHATS_NEW,
-]; // the new short course (tutorial-basics.ts) is reached only by its address until it replaces the old one
-export const courseFor = (id: string | null | undefined) => COURSES.find((c) => c.id === id) ?? COURSES[0];
+export const COURSES: Course[] = [BASICS_COURSE, GOLAN_WHATS_NEW, SICILY_WHATS_NEW];
+/** The courses before 14 November 2026 had other ids; their addresses (and saved bookmarks) open the new course of the same game. */
+const OLD: Record<string, string> = {
+  bulge: 'bulge-basics',
+  golan73: 'golan73-whats-new',
+  'golan73-new': 'golan73-whats-new',
+  sicily: 'sicily-whats-new',
+  'sicily-new': 'sicily-whats-new',
+};
+export const courseFor = (id: string | null | undefined) => COURSES.find((c) => c.id === (OLD[id ?? ''] ?? id)) ?? COURSES[0];
 export { coursesOf } from './tutorial-list';
 
 /** Play the first `upTo` steps of a lesson in engine terms (Back, and the tests). */

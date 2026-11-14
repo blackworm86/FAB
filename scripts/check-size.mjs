@@ -6,8 +6,6 @@ import { join } from 'node:path';
 const LIMIT = 1000;
 const CEILING = {
   'engine/test/sweep-fuzz.test.ts': 1350,
-  'web/src/tutorial-golan.ts': 1700, // the lessons are to be rebuilt (docs/STATUS.md)
-  'web/src/tutorial-bulge.ts': 1300,
   'web/src/css/battle-strip.css': 1050,
 };
 const ROOTS = [

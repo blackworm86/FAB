@@ -1,6 +1,6 @@
 /** Golan '73: what's new. The short course for a player who knows the series from The Bulge (docs/TUTORIAL-OUTLINE.md, in the voice of
  *  tutorial-basics.ts): who fights whom and what is different, then only the Golan's own rules, each on the Play Book's Example of Play
- *  (setups and dice from tutorial-golan.ts). Reached at ?tutorial=golan73-whats-new until it replaces the old course on the home page.
+ *  (setups and dice from the old Golan course). Address: ?tutorial=golan73-whats-new.
  *  Engine only (no DOM), so the tests play every step. */
 import * as E from '../../engine/src';
 import {

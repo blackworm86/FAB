@@ -1,7 +1,6 @@
 /** The Bulge basics: the short course that replaces the old Bulge course (docs/TUTORIAL-OUTLINE.md, approved 14 November 2026,
  *  revised the same day on the owner's word: open with the goal, follow the order of a turn, explain why in a coach's voice).
  *  "Your first turn": the Play Book's Examples of Play (23.1–23.10) as one story, each lesson the next thing that happens in a turn.
- *  Reached at ?tutorial=bulge-basics until it replaces the old course on the home page.
  *  Engine only (no DOM), so the tests play every step. */
 import * as E from '../../engine/src';
 import {
