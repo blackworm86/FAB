@@ -65,7 +65,7 @@ import { dockChips, undoBtn } from './dock';
 import { piecesSide, piecesTab, setInspectId, unitPic } from './pieces-window';
 import { dispatch, dragArrival, frameArrival } from './unit-card';
 import { mapDock } from './map-dock';
-import { battleTable, handCards, ledger, setRefusal, volPanel } from './battle-view';
+import { battleTable, handCards, ledger, panelFull, setRefusal, volPanel } from './battle-view';
 import { homeGoal, modalHtml, openingTarget, seatBar, showAreas } from './menus';
 import { camTouched, frameAt, fxBattle, lastPhase, openFrame, setFrameAt, setFxBattle, setLastPhase, setOpenFrame } from './main';
 
@@ -203,9 +203,28 @@ function renderInner() {
   const p = primary(),
     b = g.battle,
     actor = actorNow(),
-    chs = barChoices();
+    chs = barChoices(),
+    vpHtml = volPanel(),
+    cardHtml = b ? battleTable() : dispatch(),
+    picks =
+      chs.length || !allowed()
+        ? []
+        : panelPicks(
+            (panelFull.split('<div class="volpanel').find((x) => /class="[^"]*\bprimary\b/.test(x)) ?? '') +
+              (selUnit && !b ? cardHtml : ''),
+          ) /* the first panel with a decisive button: the step at hand */
+            .slice(0, p && !p.dis ? 1 : 2);
+  const mainBtn = () =>
+    !p || !allowed()
+      ? '<span class="gowait slot" aria-hidden="true"></span>'
+      : p.dis && /^Waiting/.test(p.label)
+        ? `<span class="gowait">${esc(p.label)}…</span>`
+        : p
+          ? `<button class="go ${g.moving && p.label.startsWith('End') ? 'quiet' : ''}" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>`
+          : '';
   if (actor !== 'both' && actor !== lastActor) {
-    if (lastActor && !TUT && mine(actor) && mine(other(actor))) passTo = actor; // one device, both sides: ask to pass it (design review, problem 1)
+    const handOver = !b || ['setup', 'attFirst', 'attChoice', 'defChoice', 'loss', 'retreat'].includes(b.stage); // the real hand-overs: not each alternating roll of a battle (owner, 14 Nov)
+    if (lastActor && handOver && !TUT && mine(actor) && mine(other(actor))) passTo = actor; // one device, both sides: ask to pass it (design review, problem 1)
     lastActor = actor;
   }
   const alert = g.pendingBlow
@@ -242,7 +261,7 @@ function renderInner() {
             },
           )}</div>`
         : ''
-    }${volPanel()}${mapDock()}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${SBU.hotCoverHtml()}${newcomerCard()}${saPickHtml()}${altPickHtml()}${airPickHtml()}${chatHtml()}${
+    }${vpHtml}${mapDock()}${cardHtml}${decisionBubble()}${feedHtml()}${SBU.hotCoverHtml()}${newcomerCard()}${saPickHtml()}${altPickHtml()}${airPickHtml()}${chatHtml()}${
       scoreOpen
         ? vpSheet(
             g,
@@ -285,7 +304,7 @@ function renderInner() {
               }),
           )
         : ''
-    }${toast && (modal || TUT) ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}${passHtml()}<div class="c-bar b ${actor !== 'both' && !g.over ? `actor ${actor}` : ''}"><div class="c-prompt" aria-live="polite">${toast && !modal && !TUT ? `<span class="toast barmsg${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</span>` : ''}${actor !== 'both' && !g.over ? `<span class="whotag">${esc(nm(actor))} decides</span> ` : ''}${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}<span class="gl">Explain: <b>${guide}</b></span></button>${undoBtn()}${chs.length ? chs.map((c, i) => btn(`<span>${esc(c.label)}<small>${esc(c.sub)}</small></span>`, c.fn, `go choice ${i ? 'alt' : ''}`, false, c.title)).join('') : !p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go ${g.moving && p.label.startsWith('End') ? 'quiet' : ''}" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` +
+    }${toast && (modal || TUT) ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}${passHtml()}<div class="c-bar b ${actor !== 'both' && !g.over ? `actor ${actor}` : ''}"><div class="c-prompt" aria-live="polite">${toast && !modal && !TUT ? `<span class="toast barmsg${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</span>` : ''}${actor !== 'both' && !g.over ? `<span class="whotag">${esc(nm(actor))} decides</span> ` : ''}${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}<span class="gl">Explain: <b>${guide}</b></span></button>${undoBtn()}${chs.length ? chs.map((c, i) => btn(`<span>${esc(c.label)}<small>${esc(c.sub)}</small></span>`, c.fn, `go choice ${i ? 'alt' : ''}`, false, c.title)).join('') : picks.length ? picks.map((x) => `<button class="go choice" ${x.attr}="${x.id}" title="${esc(x.text)}"><span>${esc(x.text)}</span></button>`).join('') + (p && !p.dis && allowed() ? mainBtn().replace('class="go ', 'class="go choice alt ') : '') : mainBtn()}${dockChips()}</div></div>` +
     modalHtml();
   const ui = $('#ui');
   {
@@ -558,6 +577,19 @@ function newcomerCard() {
   )}${ubtn('Just play', seen)}</div></div>`;
 }
 /** The side that must act now, and the side the device is to be passed to (until the first tap anywhere). */
+/** The decisive buttons of the set-up panel and the block card (their primary ones), so the bar can carry them under the thumb (design review, problem 2). */
+const panelPicks = (html: string) =>
+  [...html.matchAll(/<button class="([^"]*)" (data-do|data-ui)="([^"]+)"( disabled)?[^>]*>([\s\S]*?)<\/button>/g)]
+    .filter((m) => /\bprimary\b/.test(m[1]) && !m[4])
+    .map((m) => ({
+      attr: m[2],
+      id: m[3],
+      text: m[5]
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim(),
+    }))
+    .filter((x) => x.text);
 let lastActor: string | null = null,
   passTo: E.Side | null = null;
 const passHtml = () =>

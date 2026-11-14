@@ -25,9 +25,12 @@ import { cutOffCount, modChips, refresh, relayer } from './main';
 /** The volume's prompts (set-up, drops, evacuation…). On a phone they fold down to a handle so the map can have the screen; they open again on a tap. */
 let volFolded = innerWidth <= 700,
   volFoldKey = '';
+/** The set-up panel as built, folded or not. */
+export let panelFull = '';
 export function volPanel() {
-  if (areaPick) return ''; // picking an area on the map: the panel steps aside so the lit areas show (the instruction line says what to tap and how to cancel)
+  if (areaPick) return (panelFull = ''); // picking an area on the map: the panel steps aside so the lit areas show (the instruction line says what to tap and how to cancel)
   const html = VOL.panel(g, panelCtx());
+  panelFull = html; // the bar reads the panel's buttons even when the panel is folded on a phone
   if (!html) return '';
   const k = `${g.turn}${g.phasing}${g.phase}`;
   if (k !== volFoldKey) {

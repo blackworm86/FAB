@@ -576,3 +576,14 @@
   background: #0b0d08b3;
   color: var(--ink);
 }
+@media (min-width: 701px) {
+  #ui .c-bar.b:has(.choice) .c-prompt {
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4 !important;
+    max-height: none !important;
+    height: auto !important;
+    font-size: 12.5px;
+    line-height: 1.3;
+  }
+}
