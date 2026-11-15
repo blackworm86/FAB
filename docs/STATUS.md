@@ -118,6 +118,8 @@ Done and closed: tutorial rebuilt (three courses, Italian); `database.rules.json
 
 **Interaction system round 2 on main (43df7ab, 15 Nov):** every volume panel (SAM, jamming, dogfight, airborne, garrisons, landing plan…) in the tray above the bar; Cancel when picking an area; numbers on the step-loss pieces; hot-seat table side done. Next for the interface session: #18 mandatory point-unit choice, the centre sheets (Special Action, Air Mission, alternate use), then the area-labels mockup (#15–#17). Owner published the chat rules.
 
+**15 November, 18:40:** owner's issue log #1–#20 fixed except #3 (lost move online: cause found and fixed, 14 clean runs, waiting for 20). Done this afternoon: interaction system rounds 1–2 (tray above the bar, one asset switch, step losses as a list), mandatory point-unit choice (#18), new area labels On / No names / Off (#15–#17), block icons fixed (#20), brass "pick" glow, hot-seat (storage, table side, admin tools), one more audit finding closed (5 left). Checked by the project-management session in its own pictures: #19, #20, the brass glow, the point-unit list.
+
 ## Proposed priorities (15 November)
 
 1. **A full game of each volume by the owner** (desktop and phone), the real test after three days of fixes; the helpers only play narrow pieces.
