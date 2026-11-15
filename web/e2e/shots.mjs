@@ -129,8 +129,83 @@ for (const game of process.env.COMPARE === 'only' ? [] : GAMES)
     if (fought)
       for (let i = 0; i < 8; i++) {
         await shot(`battle-${i}`);
+        await page.evaluate(() => document.dispatchEvent(new PointerEvent('pointerdown'))); // the hand-over strip
+        await page.clock.fastForward(500); // the strip's redraw waits on a timer
+        await page.clock.runFor(250);
+        await fab(() => {
+          const F = window.__fab,
+            E = F.E,
+            g = structuredClone(F.g),
+            b = g.battle,
+            s = b && E.setupSide(g, b);
+          try {
+            if (b.stage === 'setup' && E.pointPending(g, b, s)) {
+              E.setPoint(g, b, s, E.pointChoices(g, b, s)[0]);
+              F.setGame(g);
+            }
+          } catch {}
+        }); // the point unit is the player's choice (6.24): the first one, set directly (a tap with the clock stopped is unreliable)
+        await page.clock.runFor(250);
         if (!(await click(page.locator('.c-bar button.go:not([disabled])')))) break;
       }
+    // the lists that show blocks and chits as small pictures (owner's issue #20: a broken block picture must show here):
+    // the point unit list, the step-loss list and the asset switch, each in a battle made up for it
+    for (const what of ['point-list', 'loss-list', 'asset-use']) {
+      const ok = await fab((what) => {
+        const F = window.__fab,
+          E = F.E,
+          g = structuredClone(F.g);
+        let at = null;
+        const live = g.units.filter((u) => u.area != null && u.area < 100 && !u.garrison && !u.fort && !u.ghost && !u.disorder);
+        for (const u of live) {
+          const to = E.neighbors(u.area).find((a) => g.units.some((x) => x.area === a && x.side !== u.side && !x.garrison));
+          if (to == null) continue;
+          for (const x of [u, live.find((y) => y.side === u.side && y !== u), live.find((y) => y.side !== u.side && y.area !== to)])
+            if (x) x.area = to; // two blocks a side: the lists have something to choose from
+          g.phase = 'combat';
+          g.phasing = u.side;
+          g.battle = null;
+          at = to;
+          break;
+        }
+        if (at == null) return false;
+        try {
+          E.startBattle(g, at);
+          const b = g.battle,
+            to = at;
+          if (b.defSA) E.passSA(g, b);
+          if (what === 'asset-use') {
+            if (!g.fieldWorks.includes(to)) g.fieldWorks.push(to);
+            const c = g.chits.find((c) => c.side === b.attacker && ['engineer', 'naval_support'].includes(c.kind));
+            if (!c) return false;
+            b.assets[b.attacker].push(c.id); // placed by hand: the picture needs the row, not a legal assignment
+          } else E.setReady(g, b, b.attacker);
+          if (what === 'loss-list') {
+            E.setPoint(g, b, E.other(b.attacker), E.pointChoices(g, b, E.other(b.attacker))[0]);
+            E.setReady(g, b, E.other(b.attacker));
+            E.setPoint(g, b, b.attacker, E.pointChoices(g, b, b.attacker)[0]);
+            E.setReady(g, b, b.attacker);
+            for (let i = 0; i < 40 && b.stage !== 'loss'; i++) {
+              if (b.stage === 'attChoice') E.attackerChoice(g, b, false);
+              else if (b.stage === 'defChoice') E.defenderChoice(g, b, false);
+              else if (b.stage === 'attFirst') E.chooseFirstLoss(g, b, b.attPoint);
+              else if (b.stage === 'retreat' || b.stage === 'done' || !g.battle) return false;
+              else E.roll_step(g, b);
+            }
+            if (b.stage !== 'loss') return false;
+            b.loss.left = Math.max(b.loss.left, 2);
+          }
+          F.setGame(g);
+          return true;
+        } catch {
+          return false;
+        }
+      }, what);
+      if (!ok) continue;
+      await page.evaluate(() => document.dispatchEvent(new PointerEvent('pointerdown'))); // the hand-over strip
+      await click(page.locator('.handtabs button', { hasText: /^In battle/ }));
+      await shot(what);
+    }
     // a block selected: its card and where it can go. Last, because the camera's glide to the block ends a hair differently
     // each run on the phone and would carry into every later picture.
     await fab(() => {

@@ -226,8 +226,7 @@
   padding: 6px 0;
   border-top: 1px solid var(--line);
 }
-#ui .usepic img,
-#ui .usepic .b3 {
+#ui .usepic > img {
   width: 48px;
   height: 48px;
 }
@@ -307,12 +306,12 @@
   width: 28px;
   height: 28px;
 }
-#ui .usec .usepic img {
+#ui .usec .usepic > img {
   width: 28px;
   height: 28px;
 }
 #ui .usec .usepic .b3 {
-  zoom: 0.32;
+  --s: 24px;
 }
 #ui .usec .usename {
   flex: 1 1 auto;
@@ -417,7 +416,7 @@
   overflow: hidden;
 }
 #ui .usepic .b3 {
-  zoom: 0.55;
+  --s: 40px;
 }
 /* interaction system, round 2: the volume panels (SAM, jamming, airborne, dogfight, set-up…) are the tray above the bar, never a floating side panel */
 #ui .dock > .volstack {
