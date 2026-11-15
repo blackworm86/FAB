@@ -134,7 +134,7 @@ describe('the app\'s own flows (as web/src/store-rtdb.ts writes them)', () => {
   });
 });
 
-describe('chat: the two players write, everyone signed in reads', () => {
+describe('chat: the two players write and read; watchers do not (owner, 15 November 2026)', () => {
   beforeEach(async () => { await admin((d) => set(ref(d, `games/${G}/seats/allied`), 'bob')); });
   const msg = (uid, side, text = 'hello') => ({ uid, side, name: uid, text, t: Date.now() });
   it('a seated player posts as themself and their own side', async () => {
@@ -144,8 +144,13 @@ describe('chat: the two players write, everyone signed in reads', () => {
     await assertFails(set(ref(user('bob'), `games/${G}/chat/m2`), msg('alice', 'german')));
     await assertFails(set(ref(user('bob'), `games/${G}/chat/m3`), msg('bob', 'german')));
   });
-  it('watchers and strangers read but cannot post', async () => {
-    await assertSucceeds(get(ref(guest(), `games/${G}/chat`)));
+  it('watchers and strangers neither read nor post; the players and an admin read', async () => {
+    await assertFails(get(ref(guest(), `games/${G}/chat`)));
+    await assertFails(get(ref(user('mallory'), `games/${G}/chat`)));
+    await assertSucceeds(get(ref(user('alice'), `games/${G}/chat`)));
+    await assertSucceeds(get(ref(user('bob'), `games/${G}/chat`)));
+    await admin((d) => set(ref(d, 'admins/root'), true));
+    await assertSucceeds(get(ref(user('root'), `games/${G}/chat`)));
     await assertFails(set(ref(user('mallory'), `games/${G}/chat/m4`), msg('mallory', 'allied')));
     await assertFails(set(ref(guest(), `games/${G}/chat/m5`), msg('guest', 'allied')));
   });

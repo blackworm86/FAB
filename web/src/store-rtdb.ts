@@ -245,19 +245,45 @@ export async function rtdbStore(table: string): Promise<Store | null> {
     async dropReveals(keys: string[]) {
       await rt.update(G('reveals'), Object.fromEntries(keys.map((k) => [ek(k), null])));
     },
+    /** Only the two players (and an admin) may read the chat (owner, 15 November 2026): the listener follows this account's seat, and asks again when refused right after sitting. */
     watchChat: (next) => {
-      rt.onValue(
-        rt.query(G('chat'), rt.limitToLast(100)),
+      let seats: Seats = {},
+        cur = '',
+        tries = 0,
+        stop: (() => void) | null = null;
+      const follow = () => {
+        const v = seatOf(seats) || (account.admin ? 'admin' : '');
+        if (v === cur) return;
+        cur = v;
+        stop?.();
+        stop = null;
+        if (!v) return next([]);
+        stop = rt.onValue(
+          rt.query(G('chat'), rt.limitToLast(100)),
+          (s) => {
+            const out: ChatMsg[] = [];
+            tries = 0;
+            s.forEach((c) => {
+              const v = c.val();
+              out.push({ id: c.key!, uid: v.uid, side: v.side, name: v.name, text: String(v.text ?? ''), t: v.t });
+            });
+            next(out);
+          },
+          () => {
+            next([]);
+            cur = '';
+            if (tries++ < 20) setTimeout(follow, 500);
+          },
+        );
+      };
+      watchSeatNodes(
         (s) => {
-          const out: ChatMsg[] = [];
-          s.forEach((c) => {
-            const v = c.val();
-            out.push({ id: c.key!, uid: v.uid, side: v.side, name: v.name, text: String(v.text ?? ''), t: v.t });
-          });
-          next(out);
+          seats = s;
+          follow();
         },
         () => next([]),
       );
+      listeners.push(() => follow());
     },
     async addJournal(part, d) {
       await rt.push(G(`journal/${part}`), { at: rt.serverTimestamp(), d });

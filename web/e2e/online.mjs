@@ -310,6 +310,16 @@ for (const game of GAMES) {
   };
   check(await settle('after sitting'), 'after sitting: the screens agree and hidden blocks stay hidden');
 
+  /* the chat: the second player, just seated, writes; the creator reads it (only the two players may) */
+  await B.page.locator('.chatbtn').first().click({ timeout: 15000 });
+  await B.page.fill('#chat-in', `hello ${game}`);
+  await B.page.press('#chat-in', 'Enter');
+  check(
+    await until(() => A.page.evaluate((t) => window.__fab.online.chat.some((m) => m.text === t), `hello ${game}`), 20000),
+    "the second player's chat line reaches the creator",
+  );
+  await B.page.locator('.chatbtn').first().click();
+
   /* Sicily starts with a set-up step: the quick set-up, each seat its own blocks (the Axis garrisons first, then the landing) */
   if (game === 'sicily') {
     const setUp = (E, g, me) => {
