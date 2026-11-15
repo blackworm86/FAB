@@ -148,19 +148,6 @@
     font-size: 12px;
   }
 }
-/* zoomed far out: a VP area shows only its VP marks; the area under the mouse (or selected) keeps its whole tag */
-#tags.far .atag:not(.hov) {
-  background: none;
-  border-color: transparent;
-  box-shadow: none;
-  opacity: 0.9;
-  padding: 0;
-  gap: 1px;
-}
-#tags.far .atag:not(.hov) .sw,
-#tags.far .atag:not(.hov) .nm {
-  display: none;
-}
 .sheet.menu > h3,
 .sheet.menu > .tabs {
   flex: none;
@@ -260,3 +247,14 @@ body:has(#ui .c-table) .sbfab {
 .tops > .c-bar.t {
   min-width: 0;
 } /* the bar never grows past the screen; its phase names shrink instead */
+/* No names (owner, 15 Nov): the symbol, its number and the objective marks; the name only on hover, tap (selected) or very close */
+#tags.nn .atag:not(.hov) .nm {
+  display: none;
+}
+#tags.nn.close .atag .nm {
+  display: inline;
+}
+#tags.nn .atag:not(.hov) {
+  padding: 0 2px;
+  gap: 3px;
+}
