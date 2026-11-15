@@ -177,24 +177,27 @@ const battleStep = (E, g, me) => {
 };
 /** A battle to fight: one of my blocks steps into a neighbouring area held by the enemy, in my Combat Phase. (A shortcut past the turn's earlier steps.) */
 const pickFight = (E, g, me) => {
-  for (const u of g.units) {
-    if (u.side !== me || u.area == null || u.garrison || u.fort || u.ghost || u.disorder) continue;
-    const to = E.neighbors(u.area).find(
-      (a) => g.units.some((x) => x.area === a && x.side !== me && !x.garrison) && !g.units.some((x) => x.area === a && x.side === me),
-    );
-    if (to == null) continue;
-    const keep = JSON.stringify(g);
-    try {
-      u.area = to;
-      g.phase = 'combat';
-      g.phasing = me;
-      g.battle = null;
-      E.startBattle(g, to);
-      return `battle in area ${to}`;
-    } catch {
-      Object.assign(g, JSON.parse(keep)); // this one cannot be fought: try the next block
+  for (const alone of [true, false]) // first an area none of my blocks is in; failing that, any enemy-held neighbour
+    for (const u of g.units) {
+      if (u.side !== me || u.area == null || u.garrison || u.fort || u.ghost || u.disorder) continue;
+      const to = E.neighbors(u.area).find(
+        (a) =>
+          g.units.some((x) => x.area === a && x.side !== me && !x.garrison) &&
+          !(alone && g.units.some((x) => x.area === a && x.side === me)),
+      );
+      if (to == null) continue;
+      const keep = JSON.stringify(g);
+      try {
+        u.area = to;
+        g.phase = 'combat';
+        g.phasing = me;
+        g.battle = null;
+        E.startBattle(g, to);
+        return `battle in area ${to}`;
+      } catch {
+        Object.assign(g, JSON.parse(keep)); // this one cannot be fought: try the next block
+      }
     }
-  }
   throw new Error('no battle to start');
 };
 
