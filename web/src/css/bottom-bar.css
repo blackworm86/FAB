@@ -363,3 +363,100 @@
 #ui .usepic .b3 {
   zoom: 0.55;
 }
+/* interaction system, round 2: the volume panels (SAM, jamming, airborne, dogfight, set-up…) are the tray above the bar, never a floating side panel */
+#ui .dock > .volstack {
+  position: relative;
+  inset: auto;
+  right: auto;
+  left: auto;
+  bottom: auto;
+  width: auto;
+  max-width: min(1100px, calc(100% - 16px));
+  margin: 0 auto 4px;
+  max-height: 40vh;
+  overflow: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+  pointer-events: auto;
+}
+#ui .dock > .volstack > .volpanel {
+  position: static;
+  flex: 1 1 300px;
+  max-width: 520px;
+  margin: 0;
+}
+@media (max-width: 700px) {
+  #ui .dock > .volstack {
+    max-height: 32vh;
+    max-width: none;
+    margin: 0 4px 4px;
+  }
+  #ui .dock > .volstack > .volpanel {
+    flex-basis: 100%;
+    max-width: none;
+  }
+}
+/* say it once: a panel button the bar already shows is not repeated in the tray */
+#ui .dock > .volstack [data-inbar] {
+  display: none;
+}
+#ui .lossnum {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 11;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--gold);
+  color: #1a1608;
+  font: 700 14px var(--sfd);
+  font-style: normal;
+  box-shadow: 0 2px 6px #000a;
+  pointer-events: none;
+}
+@media (max-width: 700px) {
+  #ui .losses .useshd small {
+    display: none;
+  }
+  #ui .losses {
+    max-height: 26vh;
+  }
+  #ui .lossrow {
+    min-height: 52px;
+  }
+}
+/* interaction system: the Special Action, Air Mission and alternate-use choices are the tray above the bar, not a sheet over the map */
+#ui .dock > .modal {
+  position: static;
+  inset: auto;
+  display: block;
+  background: none;
+  z-index: auto;
+  pointer-events: auto;
+}
+#ui .dock > .modal > .sheet {
+  width: auto;
+  max-width: min(1100px, calc(100% - 16px));
+  max-height: 40vh;
+  margin: 0 auto 4px;
+}
+@media (max-width: 700px) {
+  #ui .dock > .modal > .sheet {
+    max-width: none;
+    margin: 0 4px 4px;
+    max-height: 34vh;
+  }
+}
+@media (max-width: 700px) {
+  /* one tray at a time on a phone: a choice open above the bar puts the hand away */
+  #ui .dock:has(> .modal) .c-hand,
+  #ui .dock:has(> .modal) .handtabs,
+  #ui .dock:has(> .modal) .handtab {
+    display: none !important;
+  }
+}

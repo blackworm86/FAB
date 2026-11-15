@@ -549,8 +549,10 @@ if (GAMES.length === 3) {
     return to;
   };
   check(
-    await A.page.evaluate(() => !document.querySelector('.seatbar') && !document.querySelector('.chatbtn')),
-    'no seat bar, invite or chat on a game on this screen',
+    await A.page.evaluate(
+      () => !document.querySelector('.seatbar') && !document.querySelector('.chatbtn') && !document.querySelector('.admbtn'),
+    ),
+    'no seat bar, invite, chat or admin tools for a player on a game on this screen',
   );
   const first = await play(A.page, pass);
   check(

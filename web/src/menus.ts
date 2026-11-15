@@ -145,7 +145,7 @@ function freeRect() {
   const r = canvas.getBoundingClientRect(),
     f = { l: r.left + 16, t: r.top + 40, r: r.right - 16, b: r.bottom - 12 }; // room for the labels and MP badges drawn above an area's centre
   const panels =
-    '#ui .c-bar, #ui .mapdock .dockrow, #ui .mapdock .maptools, #ui .sbx, #ui .c-dispatch, #ui .c-ledger, #ui .volstack, #ui .arrtray, #ui .c-hand, #ui .handtab';
+    '#ui .c-bar, #ui .mapdock .dockrow, #ui .mapdock .maptools, #ui .sbx, #ui .c-dispatch, #ui .c-ledger, #ui .volstack, #ui .uses, #ui .arrtray, #ui .c-hand, #ui .handtab';
   const boxes = Array.from(document.querySelectorAll<HTMLElement>(panels))
     .filter((e) => e.offsetParent)
     .map((e) => e.getBoundingClientRect())

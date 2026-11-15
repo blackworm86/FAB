@@ -571,14 +571,6 @@
 #ui .stage:has(.c-table) ~ .dock .c-hand {
   box-sizing: border-box;
 }
-/* Design review, problem 6: zoomed far out, objectives and the areas the instruction names keep a small name beside their marks */
-#tags.far .atag.keep:not(.hov) .nm {
-  display: inline !important;
-  font-size: 12px;
-  padding: 0 4px;
-  background: #0b0d08b3;
-  color: var(--ink);
-}
 @media (min-width: 701px) {
   #ui .c-bar.b:has(.choice) .c-prompt {
     display: -webkit-box !important;

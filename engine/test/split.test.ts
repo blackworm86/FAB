@@ -11,7 +11,25 @@ import {
   endPhase,
   visibleTo,
 } from '../src';
-import { toPublic, compose, secretsOf, revealsIn, freshReveals, isPlaceholder, setReady, type Priv } from '../src';
+import {
+  toPublic,
+  compose,
+  secretsOf,
+  revealsIn,
+  freshReveals,
+  isPlaceholder,
+  setReady,
+  setPoint,
+  pointChoices,
+  pointPending,
+  type Priv,
+} from '../src';
+const ready = (g: Game, side: 'german' | 'allied') => {
+  const b = g.battle!;
+  if (pointPending(g, b, side) && (side !== b.attacker || b.ready?.length === 2))
+    setPoint(g, g.battle!, side, pointChoices(g, g.battle!, side)[0]); // 6.24
+  setReady(g, g.battle!, side);
+};
 describe('split hidden blocks (no server)', () => {
   const SG = 'salt-g',
     SA = 'salt-a';
@@ -100,9 +118,9 @@ describe('two seats play a split table', () => {
     play(ger, al, (g) => {
       startBattle(g, area);
     });
-    play(ger, al, (g) => setReady(g, g.battle!, 'german'));
-    play(al, ger, (g) => setReady(g, g.battle!, 'allied'));
-    play(ger, al, (g) => setReady(g, g.battle!, 'german')); // 6.24 the Attacker's point unit, last
+    play(ger, al, (g) => ready(g, 'german'));
+    play(al, ger, (g) => ready(g, 'allied'));
+    play(ger, al, (g) => ready(g, 'german')); // 6.24 the Attacker's point unit, last
     play(al, ger, () => undefined); // the Defender's browser sees it and publishes its blocks
     // both point units designated: each side's blocks in the area are published, then the attacker begins combat on a game where all of them are known
     play(ger, al, (g) => {
@@ -143,7 +161,7 @@ describe('two seats play a split table', () => {
     play(al, ger, (g) => {
       setReady(g, g.battle!, 'allied');
     });
-    play(ger, al, (g) => setReady(g, g.battle!, 'german'));
+    play(ger, al, (g) => ready(g, 'german'));
     play(al, ger, () => undefined); // 6.24 the Attacker's point unit; the Defender's browser publishes
     const later = ger.open(JSON.parse(pub) as Game),
       now = later.units.find((u) => u.id === id)!;

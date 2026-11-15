@@ -55,11 +55,11 @@ const tintOf = (id: number) =>
 export const hex6 = (n: number) => '#' + n.toString(16).padStart(6, '0');
 /** What is printed on the map, and how. */
 const layers = { numbers: true, tdn: true, vp: true, names: true }; // the printed labels gave way to the area tags (labelMode); entry letters stay on the board
-/** Area tags: on, see-through (the one under the mouse in full) or off; the player's choice, kept on this device. */
-export let labelMode: 'on' | 'tr' | 'off' = (() => {
+/** Area labels: on (symbol, number, name), no names (symbol and number; the name on hover, tap or very close) or off; kept on this device (owner, 15 Nov). */
+export let labelMode: 'on' | 'nn' | 'off' = (() => {
     try {
       const v = localStorage.getItem('fab-labels');
-      return v === 'tr' || v === 'off' ? v : 'on';
+      return v === 'off' ? 'off' : v === 'nn' || v === 'tr' ? 'nn' : 'on'; // 'tr' (the old Dim) becomes No names
     } catch {
       return 'on';
     }

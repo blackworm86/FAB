@@ -1,5 +1,6 @@
 // Marks drawn over the map: area tags, the selected area in focus, leader lines and decision bubbles, the act-now halos and Skip, option tags, and where the badges sit.
 import * as THREE from 'three';
+import { lossPieces } from './asset-uses';
 import * as E from '../../engine/src';
 import { ico } from './icons';
 import { esc, nm } from './util';
@@ -29,9 +30,9 @@ const TDN_SHAPE = [
 const tagEls = new Map<number, HTMLElement>();
 export let tagKey = '',
   tagPpu = 0;
-/** Zoom, as screen pixels per map unit: below FAR only VP areas (and the one under the mouse) keep a tag; above NEAR the tags turn solid (Labels: On). */
-const TAG_FAR = innerWidth < 700 ? 16 : 25,
-  TAG_NEAR = 50; // a phone opens about 20: names in see-through, not just the VP marks      // the desktop opening view (about 35) is see-through; a phone opens about 20, far
+/** Zoom, as screen pixels per map unit: above NEAR the labels turn solid; above CLOSE (very close) No names shows the names too. */
+const TAG_NEAR = 50,
+  TAG_CLOSE = 90;
 export function syncAreaTags() {
   const key = `${labelMode}|${g.inPlay?.join() ?? ''}`;
   if (key === tagKey) return;
@@ -55,7 +56,7 @@ export function syncAreaTags() {
     ];
     const d = document.createElement('div');
     d.className = `atag t${t}${vps.length ? ' vp' : ''}`;
-    d.innerHTML = `<span class="sw"><svg viewBox="0 0 24 24" aria-hidden="true">${TDN_SHAPE[t]}<text x="12" y="${t === 3 ? 9.6 : 12}" class="${a.id >= 100 ? 'n3' : a.id >= 10 ? 'n2' : ''}">${a.id}</text></svg>${t ? `<b>−${t}</b>` : ''}</span><span class="nm">${esc(areaName(a.id))}</span>${vps.map((src) => `<img alt="" src="${src}">`).join('')}`;
+    d.innerHTML = `<span class="sw"><svg viewBox="0 0 24 24" aria-hidden="true">${TDN_SHAPE[t]}<text x="12" y="${t === 3 ? 9.6 : 12}" class="${a.id >= 100 ? 'n3' : a.id >= 10 ? 'n2' : ''}">${a.id}</text></svg></span><span class="nm">${esc(areaName(a.id))}</span>${vps.map((src) => `<img alt="" src="${src}">`).join('')}`;
     layer.appendChild(d);
     tagEls.set(a.id, d);
   }
@@ -92,9 +93,8 @@ function placeAreaTags() {
         .project(cam);
     tagPpu = Math.hypot((b.x - a.x) * r.width, (b.y - a.y) * r.height) / 2;
   }
-  const far = tagPpu < TAG_FAR;
-  layer.classList.toggle('solid', labelMode === 'on' && tagPpu >= TAG_NEAR);
-  layer.classList.toggle('far', far); // far: VP marks only
+  layer.classList.toggle('solid', tagPpu >= TAG_NEAR);
+  layer.classList.toggle('close', tagPpu >= TAG_CLOSE); // very close: No names shows the names too
   let inView: number | null = null;
   if (tagPpu >= TAG_NEAR) {
     ray.setFromCamera(new THREE.Vector2(0, 0), cam);
@@ -111,13 +111,11 @@ function placeAreaTags() {
     const sx = (v.x * 0.5 + 0.5) * r.width,
       by = under.get(id),
       sy = by != null ? by + 15 : (-v.y * 0.5 + 0.5) * r.height; // a busy area: just under its lowest piece
-    const hov = id === tagHover || id === selArea,
-      keep = far && !hov && (d.classList.contains('vp') || namedAreas().has(id)); // objectives and the areas the instruction names keep their name at every zoom (design review, problem 6)
+    const hov = id === tagHover || id === selArea;
     const pin = id === inView,
       px = pin ? Math.min(r.width - 90, Math.max(90, sx)) : sx,
       py = pin ? Math.min(r.height - 30, Math.max(30, sy)) : sy;
-    d.style.display = (v.z < 1 || pin) && (!far || hov || keep) ? '' : 'none';
-    d.classList.toggle('keep', keep);
+    d.style.display = v.z < 1 || pin ? '' : 'none'; // every area keeps its label at every tilt and zoom (owner's issue #15)
     d.style.transform = `translate(${px.toFixed(1)}px, ${py.toFixed(1)}px) translate(-50%, -50%)`;
     d.classList.toggle('hov', hov);
   }
@@ -273,6 +271,12 @@ function placeBubbles() {
   const r = canvas.getBoundingClientRect(),
     v = new THREE.Vector3();
   let svg = '';
+  document.querySelectorAll<HTMLElement>('#ui .lossnum').forEach((e) => {
+    const p = pieceScreen(e.dataset.pc!),
+      pr = (e.offsetParent as HTMLElement | null)?.getBoundingClientRect() ?? r;
+    e.style.display = p ? '' : 'none';
+    if (p) e.style.transform = `translate(${p.x - pr.left + p.rad * 0.7}px, ${p.y - pr.top - p.rad * 0.7}px) translate(-50%, -50%)`;
+  }); // the numbers of the loss list, on the glowing pieces (interaction system)
   document.querySelectorAll<HTMLElement>('#ui .mapbubble').forEach((e) => {
     const a = +e.dataset.area!,
       pts = areaWorld(a).map((q) => {
@@ -350,7 +354,12 @@ export function decisionTargets(): Tgt | null {
 /** The choice the battle is waiting for, as a bubble over the deciding side's row. */
 export function decisionBubble(): string {
   const b = g.battle;
-  if (!b || rollView || !['attChoice', 'defChoice'].includes(b.stage)) return ''; // losses: the list above the bar, no bubble (interaction system)
+  if (b && !rollView && (b.stage === 'loss' || b.stage === 'attFirst') && allowed())
+    return lossPieces()
+      .filter((x) => x.ok)
+      .map((x, i) => `<i class="lossnum" data-pc="${x.id}">${i + 1}</i>`)
+      .join(''); // losses: the list above the bar; the same numbers on the map, no bubble (interaction system)
+  if (!b || rollView || !['attChoice', 'defChoice'].includes(b.stage)) return '';
   const who = b.stage === 'loss' && b.loss ? b.loss.side : b.stage === 'defChoice' ? other(b.attacker) : b.attacker;
   const tg =
     b.stage === 'loss'

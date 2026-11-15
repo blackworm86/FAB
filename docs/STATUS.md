@@ -116,6 +116,8 @@ Done and closed: tutorial rebuilt (three courses, Italian); `database.rules.json
 
 **Interaction system approved by the owner (15 November, afternoon):** `docs/interaction-audit.md` (8 rules, one tray above the bar, one "use in battle / use for X" switch, step losses as a numbered list). Building: field-works removers and step losses first, the other panels in a second round. Hot-seat storage and home entry built by the online session; table side with the interface session. Issue #3 reopened: a rare lost move when both players act at the same moment (online session, priority).
 
+**Interaction system round 2 on main (43df7ab, 15 Nov):** every volume panel (SAM, jamming, dogfight, airborne, garrisons, landing plan…) in the tray above the bar; Cancel when picking an area; numbers on the step-loss pieces; hot-seat table side done. Next for the interface session: #18 mandatory point-unit choice, the centre sheets (Special Action, Air Mission, alternate use), then the area-labels mockup (#15–#17). Owner published the chat rules.
+
 ## Proposed priorities (15 November)
 
 1. **A full game of each volume by the owner** (desktop and phone), the real test after three days of fixes; the helpers only play narrow pieces.

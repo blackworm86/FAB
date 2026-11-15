@@ -98,12 +98,12 @@ function rotateQuarter() {
   });
 }
 /** The area tags: on, dim (see-through) or off, kept on this device. */
-const LABEL_NAME = { on: 'On', tr: 'Dim', off: 'Off' };
+const LABEL_NAME = { on: 'On', nn: 'No names', off: 'Off' };
 export let mapMenu = false; // phones: the layers, legend and rotate fold into one Map button
 export const setMapMenu = <T extends typeof mapMenu>(v: T): T => ((mapMenu = v), v);
 export function mapDock() {
   if (g.battle) return ''; // the battle bar takes the top of the map
-  if (legendOpen && SANDBOX && SBU.st.sbOpen && innerWidth < 700) {
+  if (legendOpen && SBU.adminOn() && SBU.st.sbOpen && innerWidth < 700) {
     if (legendShownAt < SBU.st.sbOpenedAt) legendOpen = false;
     else SBU.closeSb();
   } // phones: the legend and the sandbox sheet never stack; the newer one wins
@@ -153,7 +153,7 @@ export function mapDock() {
           })}">${ico(icon)}<span>${label}</span></button>`,
       )
       .join('');
-    const seg = (['on', 'tr', 'off'] as const)
+    const seg = (['on', 'nn', 'off'] as const)
       .map(
         (m) =>
           `<button aria-pressed="${labelMode === m}" title="Area labels: ${LABEL_NAME[m]}" data-ui="${reg(() => setL(m))}">${LABEL_NAME[m]}</button>`,

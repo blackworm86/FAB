@@ -423,7 +423,7 @@ window.addEventListener('keydown', (e) => {
       setModal(null);
       setScoreOpen(false);
       render();
-    } else if (SANDBOX && SBU.st.sbOpen && !(e.target as HTMLElement | null)?.closest?.('input,textarea,select')) {
+    } else if (SBU.adminOn() && SBU.st.sbOpen && !(e.target as HTMLElement | null)?.closest?.('input,textarea,select')) {
       SBU.closeSb();
       render();
     } else if (b?.stage === 'setup' && !b.locked && mine(b.attacker) && allowed() && !b.assets[b.attacker].length && !b.ready?.length)

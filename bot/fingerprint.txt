@@ -1,12 +1,12 @@
-1 campaign 39e351ee84edc96e Sudden death victory: Allied (net 5) · 4 turns · 479 actions
-2 intro 89db3da5014ed6fe Allied Decisive Victory (uncontested Bastogne) · 3 turns · 149 actions
-3 cold 1cf77bd8f1114f13 German Victory (14 Zone 6 areas German) · 9 turns · 560 actions
-4 tournament 85bc91fc8d3b38e2 Sudden death victory: Allied (net 6) · 4 turns · 473 actions
-5 campaign 13618cc354f8b878 Sudden death victory: Allied (net 7) · 4 turns · 427 actions
-6 tournament 125af328d96007ec Allied Operational Victory · 5 turns · 641 actions
-7 campaign 57e55edbfa1de6f6 Sudden death victory: Allied (net 10) · 4 turns · 489 actions
-8 intro 18b798876c4da984 Allied Decisive Victory (uncontested Bastogne) · 3 turns · 196 actions
-9 cold 4bc4da4a0558b6f1 German Victory (13 Zone 6 areas German) · 9 turns · 569 actions
-10 tournament 3781724f568ecf80 Sudden death victory: Allied (net 8) · 4 turns · 461 actions
-11 campaign aee0922565f56587 Sudden death victory: Allied (net 7) · 4 turns · 356 actions
-12 tournament 33ef7a5e5b676911 Sudden death victory: Allied (net 6) · 4 turns · 406 actions
+1 campaign c76693a3e5623d7e Sudden death victory: Allied (net 6) · 4 turns · 428 actions
+2 intro d6fc8e7dc2c56aa7 Allied Decisive Victory (uncontested Bastogne) · 3 turns · 148 actions
+3 cold acb2e2d989f52824 Draw (10 Zone 6 areas German) · 9 turns · 509 actions
+4 tournament 80266760b0035b4a Sudden death victory: Allied (net 6) · 4 turns · 444 actions
+5 campaign 7ed19cf1c948a70b Sudden death victory: Allied (net 4) · 5 turns · 551 actions
+6 tournament e8c9637ad6c4136a Allied Operational Victory · 5 turns · 639 actions
+7 campaign ce01e0f12b8305a8 Sudden death victory: Allied (net 5) · 4 turns · 391 actions
+8 intro cb3247dde69048b5 German Decisive Victory (uncontested Bastogne) · 3 turns · 222 actions
+9 cold 34adf1de62325cde German Victory (14 Zone 6 areas German) · 9 turns · 590 actions
+10 tournament 1533c9f6a96263dc Sudden death victory: Allied (net 7) · 4 turns · 427 actions
+11 campaign 31a8b5b2bd63a693 Sudden death victory: Allied (net 5) · 4 turns · 491 actions
+12 tournament 6137e4558bf8d147 Sudden death victory: Allied (net 7) · 4 turns · 403 actions
