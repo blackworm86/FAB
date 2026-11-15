@@ -305,6 +305,15 @@ export function noteFx(a: ReturnType<typeof snap>, x: E.Game, fresh?: boolean) {
     pendingFx = d;
   } else showFx(d);
 } // after a roll the effects wait for the dice to settle
+/** Would the engine accept this action now? Tried on a copy, so a button is never shown active for a move the engine would refuse (owner's issue #13). */
+export const can = (f: (x: E.Game) => void) => {
+  try {
+    f(structuredClone(g));
+    return true;
+  } catch {
+    return false;
+  }
+};
 export function act(f: () => void, after = '') {
   if (!allowed()) return say(notYou());
   if (online.mode === 'remote' && !online.rev) return say('The game is still loading…');

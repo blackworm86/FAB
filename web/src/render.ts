@@ -22,6 +22,7 @@ import { paintAreas, paintBoard, tint, viewRot, viewSide } from './map-paint';
 import { dist, pitch, setYaw } from './camera';
 import {
   act,
+  can,
   allowed,
   fxLayer,
   hist,
@@ -601,15 +602,15 @@ function newcomerCard() {
 /** The battle can still be called off (6.21): a red-bordered square beside the main button (owner, 15 Nov, mockup v4). */
 const cancelSq = () => {
   const b = g.battle;
-  if (!b || b.stage !== 'setup' || !mine(b.attacker) || !allowed()) return '';
+  if (!b || !mine(b.attacker) || !allowed() || !can((x) => E.cancelBattle(x))) return ''; // only while the engine would accept it (owner's issue #13)
   return btn(
     `${ico('close')}<small class="sql">Call off</small>`,
     () => {
       E.cancelBattle(g);
     },
     'sq xcancel',
-    !!b.locked,
-    b.locked ? 'A Special Action was spent, so the battle must be fought' : 'Cancel the attack: every assigned asset goes back',
+    false,
+    'Cancel the attack: every assigned asset goes back',
   );
 };
 const panelPicks = (html: string) =>
