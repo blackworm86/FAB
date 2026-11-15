@@ -36,7 +36,19 @@ import {
   zoneOk,
 } from './sicily-moves';
 export * from './sicily-moves';
-import { afterDraw, extraDraws, finalResult, onPhase, sicilyVictory, sources, supplyStep, unitSupply } from './sicily-turn';
+import {
+  afterDraw,
+  extraDraws,
+  finalResult,
+  onPhase,
+  sicilyVictory,
+  sicilyVictoryRows,
+  sicilyVpAreas,
+  sicilyVpNote,
+  sources,
+  supplyStep,
+  unitSupply,
+} from './sicily-turn';
 export * from './sicily-turn';
 import {
   adjustFire,
@@ -208,6 +220,9 @@ export const gone = (c: Chit) => {
 };
 
 registerHooks('sicily', {
+  vpAreas: sicilyVpAreas,
+  victoryRows: sicilyVictoryRows,
+  vpNote: sicilyVpNote,
   noAttackerWhy: (_g, b) =>
     battleState(b).moraleStop
       ? 'No attacker left in good order: the Italian morale checks at the reveal disordered every attacker (15.3b, 17.21; disordered units may not attack, 6.2)'

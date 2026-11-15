@@ -11,18 +11,13 @@ const netText = (g: E.Game, n: number) => {
   return n > 0 ? `${N(p)} +${n}` : n < 0 ? `${N(q)} +${-n}` : 'even';
 };
 const track = (g: E.Game) => (g.track ?? E.VOLUME.track).slice(0, g.lastTurn);
-/** Areas worth points to `s` that it holds, with whether they count (in supply). */
-function objectives(g: E.Game, s: E.Side) {
-  return [...E.areas.values()]
-    .map((a) => ({ a, pts: (((a.vp as Record<string, number | boolean>)[s] as number) || 0) + (a.vp.mutual ? 1 : 0) }))
-    .filter(({ a, pts }) => pts > 0 && g.control[a.id] === s)
-    .map(({ a, pts }) => ({ name: a.name, id: a.id, pts, ok: E.inSupply(g, s, a.id) }));
-}
+/** Areas worth points to `s` that it holds, as the scenario counts them (the engine's list), with whether they count now. */
+const objectives = (g: E.Game, s: E.Side) => E.vpAreas(g, s).map((o) => ({ ...o, name: E.areas.get(o.id)?.name ?? `${o.id}` }));
 const objRows = (g: E.Game, s: E.Side) =>
   objectives(g, s)
     .map(
       (o) =>
-        `<div class="vrow ${o.ok ? '' : 'cut'}"><span>${esc(o.name)} (${o.id})${o.ok ? '' : ' · cut off'}</span><b>+${o.pts}</b></div>`,
+        `<div class="vrow ${o.ok ? '' : 'cut'}"><span>${esc(o.name)} (${o.id})${o.ok ? '' : ` · ${esc(o.why ?? 'cut off')}`}</span><b>+${o.pts}</b></div>`,
     )
     .join('') || '<p class="hint">None held.</p>';
 /** Big units of the other side destroyed by `s` (+1 VP each). */
@@ -76,9 +71,9 @@ export function vpStrip(g: E.Game, open: string) {
     <span class="vlab ge" title="${N(p)}: ${v[p]} VP">${T(p)}</span><span class="vlab net ${v.net > 0 ? 'ge' : v.net < 0 ? 'al' : ''}">${netText(g, v.net).toUpperCase()}</span><span class="vlab nets ${v.net > 0 ? 'ge' : v.net < 0 ? 'al' : ''}" aria-hidden="true">${v.net ? `${T(v.net > 0 ? p : q)} +${Math.abs(v.net)}` : 'EVEN'}</span></button>`; /* nets: the short form for a phone's top bar */
 }
 
-/** The scenario's victory table: The Bulge's own tables, the series 19.3 table for the other volumes. */
+/** The scenario's victory table: the volume's own (engine), else the series 19.3 table. */
 function victoryTable(g: E.Game): [string, string][] {
-  if (E.VOLUME.id === 'bulge') return E.victoryTable(g);
+  if (E.VOLUME.id === 'bulge' || E.VOLUME.victoryRows) return E.victoryTable(g);
   const [p, q] = sides(g);
   return [
     [`3+ ${N(p)} VP`, `${N(p)} Operational Victory`],
@@ -139,7 +134,7 @@ export function vpSheet(g: E.Game, face: (u: E.Unit) => string, close: string, i
     sd = track(g)[g.turn - 1]?.sd;
   return `<div class="modal"><div class="sheet vsheet"><h3>Victory points · turn ${g.turn} <button class="ico" data-ui="${close}" aria-label="Close">${icoClose}</button></h3>
     <div class="vhead"><div class="vtot"><span class="al">${v[q]}<small>${N(q).toUpperCase()}</small></span><i>:</i><span class="ge">${v[p]}<small>${N(p).toUpperCase()}</small></span></div>
-    <p class="vnote"><b>Net ${netText(g, v.net)}</b>${sd ? `sudden death this turn at ${N(p)} +${sd[0]} or ${N(q)} +${sd[1]}` : 'no sudden death this turn'} · areas count only when in supply (19.3).${g.opts.bridgeLimit ? ` German bridge repairs left: <b>${g.bridgesLeft ?? 6}</b> of 6 (18.1).` : ''}</p></div>
+    <p class="vnote"><b>Net ${netText(g, v.net)}</b>${sd ? `sudden death this turn at ${N(p)} +${sd[0]} or ${N(q)} +${sd[1]}` : 'no sudden death this turn'} · ${esc(E.vpNote(g))}.${g.opts.bridgeLimit ? ` German bridge repairs left: <b>${g.bridgesLeft ?? 6}</b> of 6 (18.1).` : ''}</p></div>
     ${columns(g, face, v)}<h4>Victory table · end of turn ${g.lastTurn}</h4>${vtable(g, v.net)}</div></div>`;
 }
 
