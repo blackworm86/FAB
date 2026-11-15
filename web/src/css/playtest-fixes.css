@@ -848,6 +848,8 @@ body:has(#ui .chitbar) .sbfab {
     right: calc(12px + min(470px, 36vw) / 2);
     transform: translateX(50%);
   }
+}
+
 /* the invite sheet's QR code (owner's issue #2): white card so cameras read it on the dark sheet */
 .invite-sheet .invqr {
   width: min(190px, 52vw);
