@@ -914,6 +914,7 @@ button.go .ic {
 .oobu small {
   font-size: 10px;
   line-height: 1.1;
+  overflow-wrap: anywhere; /* a long name wraps inside its column instead of running into the next */
 }
 .oobu .en {
   opacity: 0.7;

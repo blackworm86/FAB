@@ -28,7 +28,7 @@ const FIRE_GROUND = 'rolls with the ground units';
 /** The rows for the side deciding now; empty when no asset of this battle has a second use. */
 export function useRows(): UseRow[] {
   const b = g.battle;
-  if (!b) return [];
+  if (!b || b.stage !== 'setup') return []; // chosen in the assets step only (owner's issue #19)
   const att = b.attacker,
     def = E.other(att),
     fwHere = g.fieldWorks.includes(b.area) && (g.fwOwner[b.area] ?? def) === def,
@@ -153,20 +153,20 @@ export function useRows(): UseRow[] {
   if (remover) for (const r of out) if (r.fw && r !== remover && !r.uses[1].why) r.uses[1].why = `already removed by ${remover.name}`;
   return out;
 }
-/** The rows as the tray shows them: picture, name, one switch. */
+/** The rows as the tray shows them: one line per asset, picture, name, one switch; the timing and requirement only in the tooltip (owner's issue #19). */
 export function useRowsHtml(rows = useRows()): string {
   if (!rows.length) return '';
-  return `<div class="uses"><div class="useshd"><b>How your assets are used</b><small>${rows.some((r) => r.fw) ? 'one asset may remove the field works; the others fire' : 'tap the half you want'}</small></div>${rows
+  return `<div class="uses usec">${rows
     .map(
       (r) =>
-        `<div class="userow"><span class="usepic">${chitPic(E.chit(g, r.id))}</span><span class="usename"><b>${esc(r.name)}</b><small>${esc(r.kind)}</small></span><div class="useswitch" role="radiogroup" aria-label="${esc(r.name)}">${r.uses
+        `<div class="userow"><span class="usepic">${chitPic(E.chit(g, r.id))}</span><b class="usename" title="${esc(r.kind)}">${esc(r.name)}</b><div class="useswitch" role="radiogroup" aria-label="${esc(r.name)}">${r.uses
           .map(
             (u) =>
-              `<button role="radio" aria-checked="${u.on}" class="${u.on ? 'on' : ''}" ${u.why && !u.on ? 'disabled' : ''} data-ui="${reg(
+              `<button role="radio" aria-checked="${u.on}" class="${u.on ? 'on' : ''}" ${u.why && !u.on ? 'disabled' : ''} title="${esc(u.why && !u.on ? u.why : u.note)}" data-ui="${reg(
                 () => {
                   if (!u.on) act(() => u.fn(g));
                 },
-              )}"><b>${u.on ? '✓ ' : ''}${esc(u.label)}</b><small>${esc(u.why && !u.on ? u.why : u.note)}</small></button>`,
+              )}">${u.on ? '✓ ' : ''}${esc(u.label)}</button>`,
           )
           .join('')}</div></div>`,
     )

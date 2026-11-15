@@ -184,7 +184,7 @@ function drawPointMarks(b: E.Battle) {
   }
 }
 /** A piece to pick glows lime ("can do this"); a piece that may take a loss glows brass (interaction system: green only means "can move there"). */
-const tgtCol = () => (g.battle && (g.battle.stage === 'loss' || g.battle.stage === 'attFirst') ? 0xe7b04a : MAPC.ring);
+const tgtCol = () => 0xe7b04a; // pieces to pick one of glow brass everywhere (interaction system); lime green is only "can move"
 export function drawPieces() {
   disposeAll(pieces);
   disposeAll(markers);

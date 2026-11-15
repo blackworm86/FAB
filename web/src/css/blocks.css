@@ -1,24 +1,23 @@
-/* Real 3D blocks drawn in HTML (front label, right and top faces) */
-/* real 3D blocks in HTML: front label, right and top faces; --s is the block size */
+/* A block as a small picture (owner's issue #20): its flat face, whole, with a thin edge in the side's wood colour; one look in
+   every list, tray, card and window. --s is the block size. The 3D version clipped or squeezed the face in small boxes. */
 .b3 {
   --s: 64px;
-  --d: calc(var(--s) * 0.5);
+  --edge: #555a60;
   position: relative;
   display: block;
+  flex: none;
   width: var(--s);
   height: var(--s);
-  transform-style: preserve-3d;
-  transform: rotateX(-22deg) rotateY(-30deg);
-  margin: calc(var(--s) * 0.12) calc(var(--d) * 0.6) calc(var(--s) * 0.1) calc(var(--s) * 0.08);
+  margin: 0 calc(var(--s) * 0.1) calc(var(--s) * 0.1) 0;
+  background: var(--ge);
+  box-shadow: calc(var(--s) * 0.07) calc(var(--s) * 0.07) 0 var(--edge);
 }
 .b3 > i {
   position: absolute;
   display: block;
-  backface-visibility: hidden;
 }
 .b3 .f {
   inset: 0;
-  transform: translateZ(calc(var(--d) / 2));
   background: var(--ge);
 }
 .b3 .f img {
@@ -26,54 +25,22 @@
   height: 100%;
   display: block;
 }
-.b3 .r {
-  top: 0;
-  left: calc(var(--s) / 2 - var(--d) / 2);
-  width: var(--d);
-  height: var(--s);
-  transform: rotateY(90deg) translateZ(calc(var(--s) / 2));
-  background: #565a5e;
-}
+.b3 .r,
 .b3 .t {
-  left: 0;
-  top: calc(var(--s) / 2 - var(--d) / 2);
-  width: var(--s);
-  height: var(--d);
-  transform: rotateX(90deg) translateZ(calc(var(--s) / 2));
-  background: #8e9298;
+  display: none;
 }
-.b3.allied .r {
-  background: #4b6a33;
+.b3.allied,
+.b3.us {
+  --edge: #4b6a33;
 }
-.b3.allied .t {
-  background: #7f9a5a;
+.b3.british {
+  --edge: #2d4f86;
 }
-.b3.british .r {
-  background: #2d4f86;
-}
-.b3.british .t {
-  background: #5b82c0;
-}
-.b3.us .r {
-  background: #4b6a33;
-}
-.b3.us .t {
-  background: #7f9a5a;
-}
-.b3.italian .r {
-  background: #b84a12;
-}
-.b3.italian .t {
-  background: #f08a4a;
+.b3.italian {
+  --edge: #b84a12;
 }
 .b3.flat {
-  --d: calc(var(--s) * 0.12);
-}
-.b3.flat .r {
-  background: #8a8472;
-}
-.b3.flat .t {
-  background: #c9c3b0;
+  --edge: #8a8472;
 }
 .arr .b3 {
   --s: 76px;

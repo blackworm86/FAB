@@ -6,7 +6,7 @@ import { esc, nm } from './util';
 import { chitLabel } from './table-text';
 import { reg, chip } from './ui-kit';
 import { RULE, ruleHtml } from './rules-text';
-import { VOL } from './page';
+import { VOL, areaName } from './page';
 import { g } from './game-state';
 import { seen, viewSide } from './map-paint';
 import { chitImg, usableNow } from './cards';
@@ -137,7 +137,7 @@ export function piecesHtml() {
         cs = g.chits.filter((c) => c.side === sd && c.turn === t);
       if (!us.length && !cs.length) continue;
       rows.push(
-        `<div class="oob ${t === g.turn ? 'now' : t < g.turn ? 'past' : ''}"><h4>Turn ${t}${t === g.turn ? ' · now' : ''}</h4><div class="oobrow">${us.map((u) => `<div class="oobu" title="${esc(u.name)}">${unitPic(u)}<small>${esc(u.name)}</small><small class="en">${u.entry ? 'Entry ' + u.entry.join('/') : ''}</small></div>`).join('')}${cs
+        `<div class="oob ${t === g.turn ? 'now' : t < g.turn ? 'past' : ''}"><h4>Turn ${t}${t === g.turn ? ' · now' : ''}</h4><div class="oobrow">${us.map((u) => `<div class="oobu" title="${esc(u.name)}">${unitPic(u)}<small>${esc(u.name)}</small><small class="en">${u.entry ? 'Entry ' + u.entry.map((e) => (String(e).startsWith('#') ? areaName(+String(e).slice(1)) : String(e).replace(/_/g, ' '))).join('/') : ''}</small></div>`).join('')}${cs
           .map((c) =>
             pieceBtn(
               c,
