@@ -52,8 +52,11 @@ export interface StateDoc {
 export interface Store {
   uid: string;
   watchState(next: (d: StateDoc | null) => void, err: (e: string) => void): void;
-  setState(d: StateDoc): Promise<void>;
+  /** `base`: the shared game this browser's move started from. Only what the move changed from it is written, so a change of the other player that arrived meanwhile is never put back. */
+  setState(d: StateDoc, base?: string): Promise<void>;
   watchSeats(next: (s: Seats) => void, err: (e: string) => void): void;
+  /** Whether this device is connected to the database right now. */
+  watchConnected?(next: (on: boolean) => void): void;
   /** Take the seat for `side` (or give up every seat when null); resolves an error message, or '' on success. */
   sit(side: Side | null): Promise<string>;
   /** Each seat's private block details, and the details the other side may see (see engine/src/split.ts). */
@@ -158,8 +161,10 @@ let store: Store | null = null,
   lastPriv: Priv | null = null, // the store follows this account's seat: its last private document and the reveals, kept for a seat object made later
   lastReveals: Reveals = {},
   pubDoc: StateDoc | null = null,
-  lastJson = '';
+  lastJson = '',
+  base = ''; // the shared game the local one was last built from or saved as: a move is written as its difference from this
 let writing = false,
+  failures = 0,
   queued: Game | null = null,
   rebuildLater = false,
   had = false;
@@ -200,6 +205,7 @@ function rebuild() {
   if (!pubDoc) return;
   const sp = mySeat(),
     g0 = JSON.parse(pubDoc.json) as Game;
+  base = pubDoc.json;
   if (!sp) {
     onRemote(g0);
     return;
@@ -211,14 +217,16 @@ function rebuild() {
 }
 const savedLater = () => {
   writing = false;
-  if (rebuildLater) {
-    rebuildLater = false;
-    rebuild();
-  }
   if (queued) {
+    // our own waiting move first: it started from what we last saved, and what arrived meanwhile is shown after it (two-browser test: moves made at the same moment were lost)
     const q = queued;
     queued = null;
     void push(q);
+    if (writing) return; // (when there was nothing to send, what arrived is shown now)
+  }
+  if (rebuildLater) {
+    rebuildLater = false;
+    rebuild();
   }
 };
 
@@ -327,6 +335,12 @@ export async function startOnline(
     onChat(m);
     onChange();
   });
+  store.watchConnected?.((on) => {
+    // the dot follows the connection itself, not only the last save (owner's issue #3)
+    if (!on && had) online.sync = 'connecting: no connection to the game right now';
+    else if (on && online.sync.startsWith('connecting:')) online.sync = `connected ${new Date().toLocaleTimeString()}`;
+    onChange();
+  });
   store.watchState((d) => {
     if (!d) {
       if (had) onGone();
@@ -374,15 +388,22 @@ export async function push(g: Game) {
     pubDoc = { rev: online.rev, json: out.pub, by: online.uid };
     online.sync = 'saving';
     onChange();
-    await store.setState(pubDoc);
+    await store.setState(pubDoc, base || undefined);
+    base = out.pub;
     if (out.gone?.length) await store.dropReveals(out.gone); // a block hidden again: its old reveal goes
     online.sync = `saved ${new Date().toLocaleTimeString()}`;
+    failures = 0;
     onChange();
   } catch (e) {
     const m = String((e as { message?: string })?.message ?? e);
     online.sync = 'NOT SAVED: ' + m;
     notify('Not saved: ' + m);
     fail(m);
+    lastJson = ''; // it did not go: do not take it for sent
+    if (failures++ < 5)
+      setTimeout(() => {
+        if (!writing && !queued && online.sync.startsWith('NOT SAVED')) void push(g);
+      }, 3000); // try again by itself (a refusal right after sitting passes); a newer move carries this one anyway
   }
   clearTimeout(dog);
   savedLater();

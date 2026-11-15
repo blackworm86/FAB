@@ -89,6 +89,7 @@ export function share(
   el.innerHTML = `<div class="sheet slim" role="dialog" aria-label="Invite a player"><h3>Invite a player <button class="ico" data-k="x" aria-label="Close">${ico('close')}</button></h3>
     <p class="hint">Send the link, or read out the code: it goes in the box Invite link or code on the FAB home page.</p>
     <div class="invcode" aria-label="Game code">${esc(id)}</div>
+    <div class="invqr" role="img" aria-label="QR code of the invite link"></div>
     <div class="row"><button class="primary" data-k="copy">Copy the link</button>${'share' in navigator ? '<button data-k="share">Share…</button>' : ''}</div>
     <p class="hint invurl">${esc(url)}</p></div>`;
   el.addEventListener('click', async (e) => {
@@ -105,6 +106,12 @@ export function share(
   });
   document.body.append(el);
   translateDom(el);
+  void import('qrcode-generator').then(({ default: qr }) => {
+    const q = qr(0, 'M'); // the link as a QR code, for a phone next to this screen (owner's issue #2); black on white so every camera reads it
+    q.addData(url);
+    q.make();
+    el.querySelector('.invqr')!.innerHTML = q.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+  });
 }
 export async function dropMatch(m: { id: string; title: string; owner: string }) {
   const own = m.owner === online.uid || online.admin;
