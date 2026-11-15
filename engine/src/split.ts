@@ -258,7 +258,8 @@ export class SplitSeat {
     const b = g.battle;
     if (b && b.stage === 'setup' && b.attPointDone) want = { ...want, ...revealsIn(g, this.side, b.area, this.priv) };
     for (const u of g.units)
-      if (u.side === this.side && u.up != null && u.up === u.area) want[aliasOf(this.priv, u.id)] = { id: u.id, ...secretOf(u) }; // blocks that are face-up (a battle, or entering a face-up area) are shown to the other side
+      if (u.side === this.side && u.up != null && u.up === u.area && visibleTo(g, u, other(this.side)))
+        want[aliasOf(this.priv, u.id)] = { id: u.id, ...secretOf(u) }; // blocks that are face-up (a battle, or entering a face-up area) are shown to the other side, as long as the rules show them: once the enemy has left the area they are face-down again and the reveal is withdrawn
     if (g.revealed && g.units.find((u) => u.id === g.revealed)?.side === this.side)
       want = { ...want, ...revealOf(g, g.revealed, this.priv) };
     for (const u of g.units)

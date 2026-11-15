@@ -300,13 +300,19 @@ export function auditChange(prev: Game, next: Game, writer: Side | null): string
     out.push('Dice already rolled in this battle were changed.');
   const actor = actorOf(prev);
   const hid = (u?: Unit) => !!u && u.name === 'Hidden block',
-    bare = (g: Game, o: Game) =>
-      JSON.stringify({
+    bare = (g: Game, o: Game) => {
+      let j = JSON.stringify({
         ...g,
         log: [],
+        checks: [],
         revealed: null,
         units: g.units.map((u, i) => (hid(u) || hid(o.units[i]) ? { side: u.side, area: u.area } : u)),
-      }); // a hidden block re-coded or hidden again is not a move
+      });
+      g.units.forEach((u, i) => {
+        if (hid(u) || hid(o.units[i])) j = j.split(JSON.stringify(u.id)).join(`"#${i}"`); // its name elsewhere in the game too (a battle's record): the owner hides a block again whenever the rules do, also out of turn
+      });
+      return j;
+    }; // a hidden block re-coded or hidden again is not a move
   if (writer && actor !== 'both' && actor !== writer && bare(next, prev) !== bare(prev, next))
     out.push(
       `The ${CUR.sideName[writer] ?? writer} player changed the game while it was the ${CUR.sideName[actor] ?? actor} player's turn to act.`,
