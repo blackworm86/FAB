@@ -188,6 +188,7 @@ export async function rtdbStore(table: string): Promise<Store | null> {
     watchPriv: (next: (p: Priv | null) => void) => {
       let seats: Seats = {},
         cur = '',
+        tries = 0,
         stop: (() => void) | null = null;
       const follow = () => {
         const v = seatOf(seats);
@@ -200,9 +201,14 @@ export async function rtdbStore(table: string): Promise<Store | null> {
           G(`priv/${v}`),
           (s) => {
             const p = s.val() as { salt: string; secrets?: Record<string, string> } | null;
+            tries = 0;
             next(p ? { salt: p.salt, secrets: dec(p.secrets) } : null);
           },
-          () => next(null),
+          () => {
+            next(null);
+            cur = ''; // refused: right after sitting the server may not have the seat yet; ask again (online test: the second player's blocks stayed hidden)
+            if (tries++ < 20) setTimeout(follow, 500);
+          },
         );
       };
       watchSeatNodes(

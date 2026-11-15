@@ -810,3 +810,14 @@ body:has(.mappanel) .sbfab {
 body:has(#ui .chitbar) .sbfab {
   display: none !important;
 }
+
+/* online test: the seat and rules-check notices never sit on the battle header or the Map layers button */
+#ui .stage:has(.c-table) > .seatbar {
+  top: auto;
+  bottom: 12px;
+}
+@media (max-width: 700px) {
+  #ui .stage:not(:has(.c-table)) > .seatbar {
+    top: 60px;
+  }
+}

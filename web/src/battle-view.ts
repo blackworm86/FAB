@@ -208,9 +208,11 @@ function engChoice(b: E.Battle): string {
     !b.assets[b.attacker].some((id) => E.chit(g, id).kind === 'engineer') ||
     !g.fieldWorks.includes(b.area) ||
     (g.fwOwner[b.area] ?? other(b.attacker)) === b.attacker ||
-    !['setup', 'attArty', 'defArty', 'defFire', 'offFire'].includes(b.stage)
+    !['setup', 'attArty', 'defArty', 'defFire', 'offFire'].includes(b.stage) ||
+    !mine(b.attacker) ||
+    (b.stage === 'setup' && !!b.ready?.includes(b.attacker))
   )
-    return '';
+    return ''; // only the attacker sees it, while it is the attacker's step (online test: it showed on both screens, dead on one)
   const own = mine(b.attacker),
     pickB = (on: boolean, label: string) =>
       `<button class="${b.engFw === on ? 'on' : ''}" ${own ? `data-do="${reg(() => E.setEngFw(g, g.battle!, on))}"` : 'disabled'} aria-pressed="${b.engFw === on}">${label}</button>`;
