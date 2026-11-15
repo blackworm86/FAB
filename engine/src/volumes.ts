@@ -124,6 +124,8 @@ export interface Volume {
   vpNote?: (g: Game) => string;
   /** False when the scenario does not score destroyed large units (Sicily Sunrise Bridge, 22.17). */
   bigUnits?: (g: Game) => boolean;
+  /** False when the volume forbids this unit any action now (Sicily 15.3a: one untried garrison per Movement Phase). */
+  mayAct?: (g: Game, u: Unit) => boolean;
   finalResult: (g: Game, net: number) => string;
   /** Called at the start of the named phase (after the series set it up) and at its end (before the series moves on). */
   onPhase?: (g: Game, phase: string, when: 'start' | 'mid' | 'end') => void;

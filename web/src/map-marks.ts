@@ -459,6 +459,7 @@ let moveMarks: { el: HTMLElement; unit: string }[] = [];
 /** Other things a block can do this step: build field works (4.33-style fortify) or take a reserve marker. */
 export const fwOk = (u: E.Unit) =>
   ['movement', 'reaction', 'btMove'].includes(g.phase) &&
+  E.mayAct(g, u) && // the volume's own limits (Sicily 15.3a: one untried garrison per Movement Phase)
   !u.garrison &&
   !u.moved &&
   u.area != null &&

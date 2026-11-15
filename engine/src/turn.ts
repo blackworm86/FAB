@@ -326,3 +326,6 @@ export function vpAreas(g: Game, side: Side): { id: number; pts: number; ok: boo
     .map(({ a, pts }) => ({ id: a.id, pts, ok: inSupply(g, side, a.id), why: 'cut off' }));
 }
 export const vpNote = (g: Game) => CUR.vpNote?.(g) ?? 'areas count only when in supply (19.1)';
+
+/** May this unit act now (move, dig in, take a reserve marker), as far as the volume's own limits go? */
+export const mayAct = (g: Game, u: Unit) => CUR.mayAct?.(g, u) ?? true;

@@ -13,7 +13,7 @@ import { g, hoverArea, previewArea, selChit, selUnit, setAreaPick, setPreviewAre
 import { canvas } from './scene';
 import { noSup, paintAreas, seen } from './map-paint';
 import { dist, pick, pitch } from './camera';
-import { act, arrive, chitBar, mine, say, selArr, setSelArr } from './flow';
+import { act, arrive, can as engineAccepts, chitBar, mine, say, selArr, setSelArr } from './flow';
 import { arrOpts, pickSA } from './choices';
 import { center, confirmMove, fuelLeft, optsFor, setGoal } from './map-input';
 import { badgeList, setBadges, syncBadges } from './routes';
@@ -222,7 +222,7 @@ export function dispatch() {
               'Nothing to do for this unit in this step: no halo, left out of Can move',
             )
           : ''
-      }${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve', () => E.setReserve(g, u.id, false)) : btn('Reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u), reserveWhy(u)) + (E.canReserve(g, u) || !reserveWhy(u) ? '' : `<small class="why">${esc(reserveWhy(u))}</small>`)) : ''}${fw ? btn('Fortify', () => VOL.fieldWorks(g, u.id)) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn('Activate (SA)', () => pickSA(u.side, u.ech, (sa) => E.activateBreakthrough(g, u.id, sa)), '', !E.saAvailable(g, u.side, u.ech).length) : ''}${E.peiperCan(g, u) ? btn(`${u.peiperFull ? ico('check') : ''}KG Peiper: full move (18.3)`, () => E.setPeiperFull(g, u.id, !u.peiperFull), u.peiperFull ? 'primary' : '', false, "Once per game, up to turn 3: this exploitation move uses Peiper's full movement allowance instead of one area") : ''}</div></div>`;
+      }${g.phase === 'movement' && u.side === g.phasing ? (u.reserve ? btn('Remove reserve', () => E.setReserve(g, u.id, false), '', !engineAccepts((x) => E.setReserve(x, u.id, false))) : btn('Reserve', () => E.setReserve(g, u.id, true), '', !E.canReserve(g, u), reserveWhy(u)) + (E.canReserve(g, u) || !reserveWhy(u) ? '' : `<small class="why">${esc(reserveWhy(u))}</small>`)) : ''}${fw && engineAccepts((x) => VOL.fieldWorks(x, u.id)) ? btn('Fortify', () => VOL.fieldWorks(g, u.id)) : ''}${g.phase === 'btMove' && u.side === g.phasing && u.cls === 'armor' && !u.exploit && !u.reserve && !u.moved ? btn('Activate (SA)', () => pickSA(u.side, u.ech, (sa) => E.activateBreakthrough(g, u.id, sa)), '', !E.saAvailable(g, u.side, u.ech).length) : ''}${E.peiperCan(g, u) ? btn(`${u.peiperFull ? ico('check') : ''}KG Peiper: full move (18.3)`, () => E.setPeiperFull(g, u.id, !u.peiperFull), u.peiperFull ? 'primary' : '', false, "Once per game, up to turn 3: this exploitation move uses Peiper's full movement allowance instead of one area") : ''}</div></div>`;
   }
   return '';
 }

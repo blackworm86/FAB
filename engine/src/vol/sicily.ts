@@ -33,6 +33,7 @@ import {
   sicilyReach,
   stratAllowed,
   stratStep,
+  untriedFree,
   zoneOk,
 } from './sicily-moves';
 export * from './sicily-moves';
@@ -224,6 +225,7 @@ registerHooks('sicily', {
   victoryRows: sicilyVictoryRows,
   vpNote: sicilyVpNote,
   bigUnits: (g) => !state(g).sunrise,
+  mayAct: untriedFree,
   noAttackerWhy: (_g, b) =>
     battleState(b).moraleStop
       ? 'No attacker left in good order: the Italian morale checks at the reveal disordered every attacker (15.3b, 17.21; disordered units may not attack, 6.2)'
