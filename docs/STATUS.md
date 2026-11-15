@@ -102,6 +102,8 @@ Nothing is blocked on the owner. Open choices, when he wants:
 
 Done and closed: tutorial rebuilt (three courses, Italian); `database.rules.json` published; 3D figures approved; design review fixes built; three playtests and two re-tests, all table findings fixed; every rule question answered.
 
+**Online test (15 November):** two browsers against local Firebase emulators (the real database untouched). **Online play is broken for the second player to sit:** they see their own blocks as hidden, so the first battle cannot reveal its blocks and the game stops; their first move after sitting is also silently lost. No hidden information leaked; the "who acts" bar works online; the "pass to the player" strip correctly does not appear. Passed to the interface session (owner of `online.ts` / `store-rtdb.ts`) with the steps to reproduce.
+
 ## Proposed priorities (15 November)
 
 1. **A full game of each volume by the owner** (desktop and phone), the real test after three days of fixes; the helpers only play narrow pieces.
