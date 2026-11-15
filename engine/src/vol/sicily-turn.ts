@@ -222,6 +222,49 @@ export function sicilyVictory(g: Game): Record<Side, number> & { net: number } {
   pts.axis += V.captured.length;
   return { ...pts, net: pts.allied - pts.axis };
 }
+/** The areas scoring for `side` now: Sunrise Bridge's own values (22.17, control alone), otherwise the map's symbols (19.1: held and in supply; the Allies also occupy). */
+export function sicilyVpAreas(g: Game, side: Side): { id: number; pts: number; ok: boolean; why?: string }[] {
+  if (state(g).sunrise)
+    return Object.entries(SCEN(g).victory.area_vp ?? {})
+      .filter(([a]) => g.control[+a] === side)
+      .map(([a, v]) => ({ id: +a, pts: v, ok: true }));
+  const out: { id: number; pts: number; ok: boolean; why?: string }[] = [];
+  for (const a of mapAreas.values()) {
+    if (isBox(a.id) || g.control[a.id] !== side) continue;
+    const pts = (side === 'allied' ? a.vp.allied : a.vp.german) + (a.vp.mutual ? 1 : 0);
+    if (!pts) continue;
+    const sup = inSupply(g, side, a.id),
+      occ = side !== 'allied' || unitsIn(g, a.id, 'allied').some(regular);
+    out.push({ id: a.id, pts, ok: sup && occ, why: !sup ? 'cut off' : 'no Allied unit there' });
+  }
+  return out;
+}
+/** The scenario's victory table (22.17, 22.28, 22.38). */
+export function sicilyVictoryRows(g: Game): [string, string][] {
+  if (state(g).sunrise)
+    return [
+      ['1+ Allied VP', 'Allied Victory'],
+      ['0', 'Draw'],
+      ['1+ Axis VP', 'Axis Victory'],
+    ];
+  if (SCEN(g).victory.axis_win_at != null)
+    return [
+      ['1+ Allied VP', 'Allied Victory'],
+      ['0–3 Axis VP', 'Allied Victory'],
+      ['4+ Axis VP', 'Axis Victory'],
+    ];
+  return [
+    ['4+ Allied VP', 'Allied Operational Victory'],
+    ['1–3 Allied VP', 'Allied Marginal Victory'],
+    ['0', 'Draw'],
+    ['1–3 Axis VP', 'Axis Marginal Victory'],
+    ['4+ Axis VP', 'Axis Operational Victory'],
+  ];
+}
+export const sicilyVpNote = (g: Game) =>
+  state(g).sunrise
+    ? 'Sunrise Bridge (22.17): each side scores the areas it controls, by the values on the scenario map; no large units; decided at the end of turn 4'
+    : 'areas count only when in supply, and Allied areas only when an Allied unit is there (19.1)';
 export function finalResult(g: Game, net: number) {
   const S = SCEN(g);
   if (state(g).sunrise)

@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { startBattle, unitsIn, visibleTo, passSA, defenderReinforceSA, reinforcementPhase, recoverAsset, golan, type Game } from '../src';
 import { CUR } from '../src/volumes';
+import * as E from '../src';
 import { newGolanGame, unit, chit, give } from './golan-helpers';
 
 const S = (g: Game) => golan.state(g);
@@ -198,5 +199,23 @@ describe('Golan asset and event sweep', () => {
     golan.afterFire(g, b, 'syrian', 'arty');
     expect(arts[1].box).toBe('future');
     expect(arts[0].box).toBe('map');
+  });
+  it('19.1 (issue #6): the scoring list adds up to the score; Syrian areas need a Syrian unit; Nafakh has its own table', () => {
+    const g = newGolanGame(46);
+    const v = E.victory(g);
+    expect(v.net).toBe(-6); // Badr starts at Israel +6 (errata)
+    for (const s of ['syrian', 'israeli'] as const)
+      expect(
+        E.vpAreas(g, s)
+          .filter((o) => o.ok)
+          .reduce((t, o) => t + o.pts, 0),
+      ).toBe(v[s]); // no big units destroyed yet
+    const syr = E.vpAreas(g, 'syrian').find((o) => !E.unitsIn(g, o.id, 'syrian').length);
+    if (syr) expect(syr.ok).toBe(false);
+    expect(E.victoryTable(g).map((r) => r[1])).toContain('Israeli Operational Victory');
+    E.useGame('golan73');
+    const n = E.newGame(1, { scenario: 'nafakh' } as never);
+    expect(E.victoryTable(n).map((r) => r[1])).toEqual(['Decisive Victory', 'Marginal Victory']);
+    expect(E.vpAreas(n, 'israeli')).toEqual([]);
   });
 });

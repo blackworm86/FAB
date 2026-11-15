@@ -8,7 +8,7 @@ import { endMove } from './moves';
 import { settleUp, setupSide } from './battle-setup';
 import { eliminate } from './fire';
 import { mustFight, retreatPaths } from './battle-end';
-import { rollSupply, supplyPhase } from './supply';
+import { inSupply, rollSupply, supplyPhase } from './supply';
 import { adminActor } from './admin';
 import {
   blocks,
@@ -212,6 +212,7 @@ function drawFor(g: Game) {
 }
 /** The scenario's victory table: [condition, result]; the end of the game picks the matching row. */
 export function victoryTable(g: Game): [string, string][] {
+  if (CUR.victoryRows) return CUR.victoryRows(g);
   if (g.opts.scenario === 'campaign')
     return [
       ['4+ German VP', 'German Operational Victory'],
@@ -315,3 +316,13 @@ export function auditChange(prev: Game, next: Game, writer: Side | null): string
 
 /** True when `next` is a restore: the other player's rules check put the game back to the last legal position. */
 export const isRestore = (prev: Game, next: Game) => !!next.restored && next.restored.t !== prev.restored?.t;
+
+/** The areas scoring for `side` now, as the volume's scenario counts them. */
+export function vpAreas(g: Game, side: Side): { id: number; pts: number; ok: boolean; why?: string }[] {
+  if (CUR.vpAreas) return CUR.vpAreas(g, side);
+  return [...areas.values()]
+    .map((a) => ({ a, pts: (((a.vp as Record<string, number | boolean>)[side] as number) || 0) + (a.vp.mutual ? 1 : 0) }))
+    .filter(({ a, pts }) => pts > 0 && g.control[a.id] === side)
+    .map(({ a, pts }) => ({ id: a.id, pts, ok: inSupply(g, side, a.id), why: 'cut off' }));
+}
+export const vpNote = (g: Game) => CUR.vpNote?.(g) ?? 'areas count only when in supply (19.1)';

@@ -350,4 +350,38 @@ describe('Sicily asset and event sweep', () => {
     expect(b.stage).toBe('done');
     expect(b.result).toMatch(/Italian morale checks at the reveal disordered every attacker/);
   });
+  it('22.17 Sunrise Bridge (owner issue #6): each side scores the areas it controls by the scenario values; the table lists them', () => {
+    E.useGame('sicily');
+    const g = E.newGame(1, { scenario: 'sunrise_bridge' } as never);
+    const v0 = E.victory(g);
+    expect(v0.axis).toBe(20); // all 13 scoring areas start Axis-controlled (22.13)
+    expect(v0.allied).toBe(0);
+    expect(E.vpAreas(g, 'axis').reduce((t, o) => t + o.pts, 0)).toBe(20);
+    g.control[26] = 'allied';
+    g.control[25] = 'allied';
+    g.control[16] = 'allied';
+    const v1 = E.victory(g);
+    expect([v1.allied, v1.axis, v1.net]).toEqual([9, 11, -2]); // Catania 4 + 25: 3 + 16: 2
+    expect(
+      E.vpAreas(g, 'allied')
+        .map((o) => o.id)
+        .sort(),
+    ).toEqual([16, 25, 26]);
+    expect(E.victoryTable(g).map((r) => r[1])).toEqual(['Allied Victory', 'Draw', 'Axis Victory']);
+    expect(E.vpNote(g)).toMatch(/22\.17/);
+  });
+  it('22.28 / 22.38: the Tournament and Campaign victory tables', () => {
+    E.useGame('sicily');
+    const t = E.newGame(1, { scenario: 'tournament' } as never);
+    expect(E.victoryTable(t)).toContainEqual(['4+ Axis VP', 'Axis Victory']);
+    expect(E.victoryTable(t)).toContainEqual(['0–3 Axis VP', 'Allied Victory']);
+    const c = E.newGame(1, { scenario: 'campaign' } as never);
+    expect(E.victoryTable(c).map((r) => r[1])).toEqual([
+      'Allied Operational Victory',
+      'Allied Marginal Victory',
+      'Draw',
+      'Axis Marginal Victory',
+      'Axis Operational Victory',
+    ]);
+  });
 });

@@ -10,19 +10,16 @@ const netText = (g: E.Game, n: number) => {
   const [p, q] = sides(g);
   return n > 0 ? `${N(p)} +${n}` : n < 0 ? `${N(q)} +${-n}` : 'even';
 };
-const track = (g: E.Game) => (g.track ?? E.VOLUME.track).slice(0, g.lastTurn);
-/** Areas worth points to `s` that it holds, with whether they count (in supply). */
-function objectives(g: E.Game, s: E.Side) {
-  return [...E.areas.values()]
-    .map((a) => ({ a, pts: (((a.vp as Record<string, number | boolean>)[s] as number) || 0) + (a.vp.mutual ? 1 : 0) }))
-    .filter(({ a, pts }) => pts > 0 && g.control[a.id] === s)
-    .map(({ a, pts }) => ({ name: a.name, id: a.id, pts, ok: E.inSupply(g, s, a.id) }));
-}
+const track = (g: E.Game) => (g.track ?? E.VOLUME.track).slice(0, g.lastTurn).map((t, i) => (i + 1 < g.lastTurn ? t : { ...t, sd: null })); // no sudden death on the last turn: the victory table decides
+/** Scenarios decided by who holds one area, not by VP: Nuts! (24.3) and the Battle for Nafakh (22.47). */
+const placeWin = (g: E.Game) => g.opts.scenario === 'intro' || g.opts.scenario === 'nafakh';
+/** Areas worth points to `s` that it holds, as the scenario counts them (the engine's list), with whether they count now. */
+const objectives = (g: E.Game, s: E.Side) => E.vpAreas(g, s).map((o) => ({ ...o, name: E.areas.get(o.id)?.name ?? `${o.id}` }));
 const objRows = (g: E.Game, s: E.Side) =>
   objectives(g, s)
     .map(
       (o) =>
-        `<div class="vrow ${o.ok ? '' : 'cut'}"><span>${esc(o.name)} (${o.id})${o.ok ? '' : ' · cut off'}</span><b>+${o.pts}</b></div>`,
+        `<div class="vrow ${o.ok ? '' : 'cut'}"><span>${esc(o.name)} (${o.id})${o.ok ? '' : ` · ${esc(o.why ?? 'cut off')}`}</span><b>+${o.pts}</b></div>`,
     )
     .join('') || '<p class="hint">None held.</p>';
 /** Big units of the other side destroyed by `s` (+1 VP each). */
@@ -57,7 +54,7 @@ function coldStrip(g: E.Game, open: string) {
     <span class="vlab ge">GE ${n}</span><span class="vlab net">${(n >= 11 ? 'German ahead' : n === 10 ? 'level' : 'Allied ahead').toUpperCase()}</span></button>`;
 }
 export function vpStrip(g: E.Game, open: string) {
-  if (g.opts.scenario === 'intro') return ''; // Nuts! is decided in Bastogne, not by VP
+  if (placeWin(g)) return ''; // decided in one area, not by VP
   if (cold(g)) return coldStrip(g, open);
   const [p, q] = sides(g),
     v = E.victory(g),
@@ -76,18 +73,8 @@ export function vpStrip(g: E.Game, open: string) {
     <span class="vlab ge" title="${N(p)}: ${v[p]} VP">${T(p)}</span><span class="vlab net ${v.net > 0 ? 'ge' : v.net < 0 ? 'al' : ''}">${netText(g, v.net).toUpperCase()}</span><span class="vlab nets ${v.net > 0 ? 'ge' : v.net < 0 ? 'al' : ''}" aria-hidden="true">${v.net ? `${T(v.net > 0 ? p : q)} +${Math.abs(v.net)}` : 'EVEN'}</span></button>`; /* nets: the short form for a phone's top bar */
 }
 
-/** The scenario's victory table: The Bulge's own tables, the series 19.3 table for the other volumes. */
-function victoryTable(g: E.Game): [string, string][] {
-  if (E.VOLUME.id === 'bulge') return E.victoryTable(g);
-  const [p, q] = sides(g);
-  return [
-    [`3+ ${N(p)} VP`, `${N(p)} Operational Victory`],
-    [`1–2 ${N(p)} VP`, `${N(p)} Marginal Victory`],
-    ['0', 'Draw'],
-    [`1–2 ${N(q)} VP`, `${N(q)} Marginal Victory`],
-    [`3+ ${N(q)} VP`, `${N(q)} Operational Victory`],
-  ];
-}
+/** The scenario's victory table, from the engine (each volume's own). */
+const victoryTable = (g: E.Game): [string, string][] => E.victoryTable(g);
 function tableRows(g: E.Game, hit: string | null) {
   return `<div class="vtab">${victoryTable(g)
     .map(([a, b]) => `<div class="${hit?.includes(b) ? 'on' : ''}">${esc(a)} = ${esc(b)}</div>`)
@@ -111,7 +98,7 @@ function columns(g: E.Game, face: (u: E.Unit) => string, v: Record<string, numbe
     const objs = objectives(g, s),
       k = kills(g, s, face),
       none = !objs.length && k.startsWith('<small');
-    return `<div><h4 class="vh"><span class="${s === p ? 'ge' : 'al'}">${N(s)}</span><em>${v[s]} VP</em></h4>${none ? `<p class="hint">No areas held · no big units destroyed.</p>` : `<div class="vareas">${objRows(g, s)}</div>${k.startsWith('<small') ? `<div class="vrow"><span>${N(o)} big units destroyed (+1 each)</span><b>0</b></div>` : `<h4>${N(o)} big units destroyed (+1 each)</h4><div class="vkills">${k}</div>`}`}</div>`;
+    return `<div><h4 class="vh"><span class="${s === p ? 'ge' : 'al'}">${N(s)}</span><em>${v[s]} VP</em></h4>${none ? `<p class="hint">No areas held · no big units destroyed.</p>` : `<div class="vareas">${objRows(g, s)}</div>${E.VOLUME.bigUnits?.(g) === false ? '' : k.startsWith('<small') ? `<div class="vrow"><span>${N(o)} big units destroyed (+1 each)</span><b>0</b></div>` : `<h4>${N(o)} big units destroyed (+1 each)</h4><div class="vkills">${k}</div>`}`}</div>`;
   };
   return `<div class="vcols">${side(p, q)}${side(q, p)}</div>`;
 }
@@ -139,7 +126,7 @@ export function vpSheet(g: E.Game, face: (u: E.Unit) => string, close: string, i
     sd = track(g)[g.turn - 1]?.sd;
   return `<div class="modal"><div class="sheet vsheet"><h3>Victory points · turn ${g.turn} <button class="ico" data-ui="${close}" aria-label="Close">${icoClose}</button></h3>
     <div class="vhead"><div class="vtot"><span class="al">${v[q]}<small>${N(q).toUpperCase()}</small></span><i>:</i><span class="ge">${v[p]}<small>${N(p).toUpperCase()}</small></span></div>
-    <p class="vnote"><b>Net ${netText(g, v.net)}</b>${sd ? `sudden death this turn at ${N(p)} +${sd[0]} or ${N(q)} +${sd[1]}` : 'no sudden death this turn'} · areas count only when in supply (19.3).${g.opts.bridgeLimit ? ` German bridge repairs left: <b>${g.bridgesLeft ?? 6}</b> of 6 (18.1).` : ''}</p></div>
+    <p class="vnote"><b>Net ${netText(g, v.net)}</b>${sd ? `sudden death this turn at ${N(p)} +${sd[0]} or ${N(q)} +${sd[1]}` : 'no sudden death this turn'} · ${esc(E.vpNote(g))}.${g.opts.bridgeLimit ? ` German bridge repairs left: <b>${g.bridgesLeft ?? 6}</b> of 6 (18.1).` : ''}</p></div>
     ${columns(g, face, v)}<h4>Victory table · end of turn ${g.lastTurn}</h4>${vtable(g, v.net)}</div></div>`;
 }
 
@@ -177,8 +164,8 @@ export function endPanel(g: E.Game, face: (u: E.Unit) => string, actions: string
         '',
       )}<text x="${W - 4}" y="12" fill="#d1432f" font-size="9" text-anchor="end">red: sudden death this turn</text><text x="4" y="12" fill="#c9ccd2" font-size="9">${cold(g) ? 'German 11+ ↑' : `${N(p)} ↑`}</text><text x="4" y="${H - 2}" fill="#b8d27a" font-size="9">${cold(g) ? 'Allied ≤9 ↓' : `${N(q)} ↓`}</text></svg>`;
   return `<div class="vend"><div class="vin"><div class="vban"><small>END OF GAME · ${sudden ? `SUDDEN DEATH, TURN ${g.turn}` : `TURN ${g.turn}`}</small><h1 class="${title.includes(N(p)) ? 'ge' : title.includes(N(q)) ? 'al' : ''}">${esc(title.toUpperCase())}</h1>
-      <p>${cold(g) ? `The Germans control ${E.coldAreas(g)} of ${(g.inPlay ?? []).length} Zone 6 areas` : g.opts.scenario === 'intro' ? 'Nuts! is decided in Bastogne (24.3)' : `Final score: ${N(p)} ${v[p]}, ${N(q)} ${v[q]} · net ${netText(g, v.net)}`}</p></div>
+      <p>${cold(g) ? `The Germans control ${E.coldAreas(g)} of ${(g.inPlay ?? []).length} Zone 6 areas` : placeWin(g) ? (g.opts.scenario === 'intro' ? 'Nuts! is decided in Bastogne (24.3)' : 'The Battle for Nafakh is decided in Nafakh (22.47)') : `Final score: ${N(p)} ${v[p]}, ${N(q)} ${v[q]} · net ${netText(g, v.net)}`}</p></div>
     <div class="vcards"><div><small>Turns</small><b>${g.turn}</b></div><div><small>Battles</small><b>${g.battles ?? '–'}</b></div><div><small>Big units lost</small><b><span class="ge">${T(p)} ${lost(p)}</span> · <span class="al">${T(q)} ${lost(q)}</span></b></div></div>
-    ${g.opts.scenario === 'intro' ? '' : cold(g) ? `<h4>German Zone 6 areas by turn</h4>${chart}<h4>Zone 6 areas the Germans control</h4>${heldNames(g)}` : `<h4>Net VP by turn</h4>${chart}${columns(g, face, v)}`}<h4>Victory table</h4>${tableRows(g, g.over ?? null)}
+    ${placeWin(g) ? '' : cold(g) ? `<h4>German Zone 6 areas by turn</h4>${chart}<h4>Zone 6 areas the Germans control</h4>${heldNames(g)}` : `<h4>Net VP by turn</h4>${chart}${columns(g, face, v)}`}<h4>Victory table</h4>${tableRows(g, g.over ?? null)}
     <div class="vbtns">${actions}</div></div></div>`;
 }

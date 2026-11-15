@@ -400,7 +400,7 @@ function pips(n: number, qs: string[]) {
   }
   const s = new THREE.Sprite(m);
   s.scale.set(0.3 * max, 0.3, 1);
-  s.renderOrder = 3;
+  s.renderOrder = 8; // above every disc fill (4), glow (5) and sprite (6): a unit's pips are never covered by a figure's disc
   return s;
 }
 /** Each side's bit in the stencil buffer: a figure's inner disc hides its own side's ring lines under it, so overlapping circles read as one outline. */

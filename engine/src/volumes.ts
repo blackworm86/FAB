@@ -117,6 +117,13 @@ export interface Volume {
   supplyStep?: (g: Game, side: Side, from: number, to: number, first: boolean) => boolean;
   alwaysSupplied?: (g: Game, u: Unit) => boolean;
   victory: (g: Game) => Record<Side, number> & { net: number };
+  /** The areas scoring for `side` now, as the scenario counts them (ok: counted now). Default: the map's VP symbols, held and in supply. */
+  vpAreas?: (g: Game, side: Side) => { id: number; pts: number; ok: boolean; why?: string }[];
+  /** The scenario's victory table [condition, result], and a one-line note on how areas count. */
+  victoryRows?: (g: Game) => [string, string][];
+  vpNote?: (g: Game) => string;
+  /** False when the scenario does not score destroyed large units (Sicily Sunrise Bridge, 22.17). */
+  bigUnits?: (g: Game) => boolean;
   finalResult: (g: Game, net: number) => string;
   /** Called at the start of the named phase (after the series set it up) and at its end (before the series moves on). */
   onPhase?: (g: Game, phase: string, when: 'start' | 'mid' | 'end') => void;
