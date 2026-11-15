@@ -323,7 +323,7 @@ export function drawPieces() {
     order.forEach((u, n) => {
       const hid = faceDown(u),
         t = troops && !hid ? troopOf(u.id) : null,
-        point = !!g.battle && !hid && g.battle.area === a.id && (u.id === g.battle.attPoint || u.id === g.battle.defPoint),
+        point = !!g.battle && (u.id === g.battle.attPoint || u.id === g.battle.defPoint), // wherever it stands (a beach assault attacks from its landing box) and face down too: the border is the only point mark (owner's issue #11)
         sel = u.id === selUnit || point;
       // facing: heading() (the way it last moved; in a contested area toward the other side; in a battle close-up row against row)
       const m = t
