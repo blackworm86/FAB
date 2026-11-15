@@ -27,6 +27,21 @@ export function supplyStep(g: Game, side: Side, a: number, n: number, first: boo
   if (side === 'syrian' && state(g).minefields.includes(key)) return false;
   return true;
 }
+/** 19.1: the areas scoring for `side` now (ok: counted); one list for the score and the table's sheet. */
+export function golanVpAreas(g: Game, side: Side): { id: number; pts: number; ok: boolean; why?: string }[] {
+  if (isNafakh(g)) return [];
+  const out: { id: number; pts: number; ok: boolean; why?: string }[] = [];
+  for (const a of areas.values()) {
+    if (isAssembly(a.id) || g.control[a.id] !== side) continue;
+    const mutual = a.vp.mutual ? 1 : 0,
+      pts = side === 'syrian' ? a.vp.syrian + mutual : mutual + ((isAlOwda(g) ? VP_EAST.has(a.id) : garea(a.id).syria) ? 1 : 0); // 20.38: Al-Owda counts east of its VP Line
+    if (!pts) continue;
+    const sup = inSupply(g, side, a.id),
+      occ = side !== 'syrian' || unitsIn(g, a.id, 'syrian').some(regular);
+    out.push({ id: a.id, pts, ok: sup && occ, why: !sup ? 'cut off' : 'no Syrian unit there' });
+  }
+  return out;
+}
 /** 19.1–19.2: Syria scores its objective areas (held, supplied and occupied) and the mutual stars; Israel the mutual stars and each supplied area it holds in Syria; one point per large enemy unit destroyed. */
 export function golanVictory(g: Game): Record<Side, number> & { net: number } {
   if (isNafakh(g)) {
@@ -39,13 +54,7 @@ export function golanVictory(g: Game): Record<Side, number> & { net: number } {
     const u = g.units.find((x) => x.id === id)!;
     pts[other(u.side)]++;
   }
-  for (const a of areas.values()) {
-    if (isAssembly(a.id)) continue;
-    const ctl = g.control[a.id];
-    if (!ctl || !inSupply(g, ctl, a.id)) continue;
-    if (ctl === 'syrian' && unitsIn(g, a.id, 'syrian').some(regular)) pts.syrian += a.vp.syrian + (a.vp.mutual ? 1 : 0);
-    if (ctl === 'israeli') pts.israeli += (a.vp.mutual ? 1 : 0) + ((isAlOwda(g) ? VP_EAST.has(a.id) : garea(a.id).syria) ? 1 : 0); // 20.38: Al-Owda counts east of its Israeli VP Line, not the Purple Line
-  }
+  for (const s of ['syrian', 'israeli'] as Side[]) for (const o of golanVpAreas(g, s)) if (o.ok) pts[s] += o.pts;
   pts.israeli += Math.max(0, (state(g).chem ?? 0) - 1); // chemical warfare after the first use
   return { ...pts, net: pts.syrian - pts.israeli };
 }
