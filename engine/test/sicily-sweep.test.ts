@@ -384,4 +384,21 @@ describe('Sicily asset and event sweep', () => {
       'Axis Operational Victory',
     ]);
   });
+  it('15.3a (owner issue #12): once one untried garrison has acted, the others have no moves, no field works and no reserve', () => {
+    const g = newSicilyGame(41);
+    Object.assign(g, { phase: 'movement', phasing: 'axis', contestedAtMoveStart: [] });
+    const un = g.units.filter(
+      (u) => u.untried && u.side === 'axis' && u.area != null && !E.contested(g, u.area) && E.moveOptions(g, u.id).length,
+    );
+    expect(un.length).toBeGreaterThan(1);
+    const [a, b] = un;
+    expect(E.mayAct(g, b)).toBe(true);
+    const o = E.moveOptions(g, a.id)[0];
+    E.move(g, a.id, o.area);
+    E.endMove(g);
+    expect(E.moveOptions(g, b.id)).toEqual([]);
+    expect(E.mayAct(g, b)).toBe(false);
+    expect(E.canReserve(g, b)).toBe(false);
+    expect(() => S.unitFieldWorks(g, b.id)).toThrow(/15\.3a/);
+  });
 });

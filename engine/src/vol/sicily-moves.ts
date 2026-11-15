@@ -116,6 +116,7 @@ function moveCtx(g: Game): SMoveCtx {
   };
 }
 export function sicilyReach(g: Game, u: Unit, one: boolean): Opt[] {
+  if (!untriedFree(g, u)) return []; // 15.3a: another untried garrison already acted this Movement Phase
   const V = state(g),
     a = u.area!;
   const opt = (r: { area: number; cost: number; path: number[]; mustStop: boolean }): Opt => ({
