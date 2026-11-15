@@ -166,7 +166,7 @@ export function useRowsHtml(rows = useRows()): string {
                 () => {
                   if (!u.on) act(() => u.fn(g));
                 },
-              )}">${u.on ? '✓ ' : ''}${esc(u.label)}</button>`,
+              )}">${u.on ? '<i aria-hidden="true">✓</i> ' : ''}<span>${esc(u.label)}</span></button>`,
           )
           .join('')}</div></div>`,
     )
