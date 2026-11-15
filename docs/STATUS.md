@@ -108,6 +108,8 @@ Done and closed: tutorial rebuilt (three courses, Italian); `database.rules.json
 
 **Owner's rulings, 15 November (Golan, Al-Owda):** the VP reference map is in the owner's issue log (#7, a scan: reference only, never committed) for the rules session to check the start value against; destroyed big units do not score (areas only, 20.38 as printed); no victory levels: the side ahead on points wins, 0 is a draw. Later the same day: Israel starts at 3 as printed (20.37; the VP-Line areas count only when they change hands), and the optional chemical-warfare VP still counts in Al-Owda. Sicily/Golan scenario VP tables fixed (issue #6).
 
+**15 November, late morning:** owner's issue log (`https://claude.ai/artifact/JTDbn21WgUp4GfidLzvfGq`) #3–#13 fixed; #1 (home page, mockup approved) and the code field of #2 being built by the online session; #14 (end of game: New game and Replay do not work) urgent with the interface session. The online session's full test found a rare regression from its own conflict fix (one screen can lag a step until the next change; the database stays right): fix being tested. Its audit found two things to fix before games with strangers (game data running as script on the other screen; a seated player opening the replay mid-game): next after the regression.
+
 ## Proposed priorities (15 November)
 
 1. **A full game of each volume by the owner** (desktop and phone), the real test after three days of fixes; the helpers only play narrow pieces.
