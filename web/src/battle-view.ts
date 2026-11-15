@@ -30,6 +30,7 @@ import { reinforcing, setReinforcing } from './map-input';
 import { endRoll, handSide, rollView, setHandSide, type RollView } from './rolls';
 import { card, fan, handInspect, handStyle, setHandInspect, usableNow } from './cards';
 import { gx } from './prompt';
+import { useRows, useRowsHtml } from './asset-uses';
 import { chitPic } from './pieces-window';
 import { panelCtx, svgUri } from './unit-card';
 import { b3, sideOfUnit, unitFace } from './map-dock';
@@ -86,7 +87,8 @@ function cardTip() {
   return `<div class="cardtip">${chitPic(c)}<div><b>${esc(c.name)} <small>${esc(t)}</small></b><span>${esc(d.split('\n')[0])}</span>${why ? `<em>Cannot join: ${esc(why)}</em>` : '<em class="ok">Can join this battle</em>'}</div></div>`;
 }
 let handAll = false,
-  handView: 'ok' | 'bad' | 'foe' = 'ok'; // the battle hand's three tabs (owner, 15 Nov, mockup v4)
+  handView: 'ok' | 'bad' | 'foe' | 'use' = 'ok', // the battle hand's tabs (owner, 15 Nov, mockup v4; In battle: interaction system)
+  usesSeen = 0; // how many asset-use rows there were: a new one opens the In battle tab
 /** Sicily 15.3b: say what the reveal roll of an untried garrison is, while it is read (playtest 3). */
 const untriedNote = (rv: RollView) =>
   rv.groups
@@ -108,20 +110,26 @@ export function handCards() {
       bad = cs.filter((c) => VOL.battleUse(g, b, c)),
       foe = mineSides.length === 1 ? other(mineSides[0]) : null,
       theirs = foe ? E.boxOf(g, foe, 'available').filter((c) => VOL.battleCard(c)) : [];
-    if (!cs.length && !theirs.length) return ''; // nothing to show: no empty tray
-    const view = handView === 'bad' && !bad.length ? 'ok' : handView === 'foe' && !foe ? 'ok' : handView;
+    const rows = useRows();
+    if (rows.length > usesSeen) handView = 'use'; // an asset with a second use just joined: show how it is used
+    usesSeen = rows.length;
+    if (!cs.length && !theirs.length && !rows.length) return ''; // nothing to show: no empty tray
+    const view =
+      handView === 'bad' && !bad.length ? 'ok' : handView === 'foe' && !foe ? 'ok' : handView === 'use' && !rows.length ? 'ok' : handView;
     const tab = (k: typeof handView, label: string, n: number, title: string) =>
       `<button class="${view === k ? 'on' : ''}" aria-pressed="${view === k}" title="${esc(title)}" data-ui="${reg(() => {
         handView = k;
         setHandInspect(null);
       })}">${label} <b>${n}</b></button>`;
     const shown =
-      view === 'foe'
-        ? theirs.map((c) => card(c, 0, "The other player's card: you can only look", true))
-        : view === 'bad'
-          ? bad.map((c) => card(c, 0, VOL.battleUse(g, b, c), true))
-          : ok.map((c) => card(c, 0, null, true));
-    return `<div class="handtabs" role="group" aria-label="Cards">${tab('ok', mineSides.length === 1 ? `${nm(mineSides[0])} · usable` : 'Usable', ok.length, 'The cards you can add to this battle')}${bad.length ? tab('bad', 'Not usable now', bad.length, 'Your cards that cannot join this battle, and why') : ''}${foe ? tab('foe', `${nm(foe)} hand`, theirs.length, 'What the other player has at its disposal') : ''}</div>${handInspect ? cardTip() : ''}<div class="c-hand" ${handStyle(shown.length)}>${fan(shown)}</div>`;
+      view === 'use'
+        ? []
+        : view === 'foe'
+          ? theirs.map((c) => card(c, 0, "The other player's card: you can only look", true))
+          : view === 'bad'
+            ? bad.map((c) => card(c, 0, VOL.battleUse(g, b, c), true))
+            : ok.map((c) => card(c, 0, null, true));
+    return `<div class="handtabs" role="group" aria-label="Cards">${tab('ok', mineSides.length === 1 ? `${nm(mineSides[0])} · usable` : 'Usable', ok.length, 'The cards you can add to this battle')}${bad.length ? tab('bad', 'Not usable now', bad.length, 'Your cards that cannot join this battle, and why') : ''}${rows.length ? tab('use', 'In battle', rows.length, 'How your assets are used in this battle') : ''}${foe ? tab('foe', `${nm(foe)} hand`, theirs.length, 'What the other player has at its disposal') : ''}</div>${view === 'use' ? useRowsHtml(rows) : `${handInspect ? cardTip() : ''}<div class="c-hand" ${handStyle(shown.length)}>${fan(shown)}</div>`}`;
   }
   if (g.phase !== 'admin') return '';
   const own = online.active && !online.both() ? online.mySide() : null,
@@ -152,7 +160,6 @@ export function battleTable() {
   const L = E.areas.get(b.area)!,
     att = b.attacker,
     setup = b.stage === 'setup';
-  const shock = VOL.id === 'sicily' ? E.sicily.state(g).navalShock[`${b.area}`] : undefined; // 16.21: the naval asset chosen to remove the field works
   const side = (s: E.Side) => {
     const us = E.unitsIn(g, b.area, s),
       lim = VOL.limits(g, b, s),
@@ -161,7 +168,7 @@ export function battleTable() {
     const arty = ids.filter((c) => E.isArty(c)).length + airs.filter((a) => a.mode === 'arty').length,
       rest = ids.length - ids.filter((c) => E.isArty(c)).length;
     return `<div class="bside ${s} ${mine(s) ? 'mine' : 'theirs'}"><h4 title="${nm(s)} ${s === att ? 'attacking' : 'defending'}"><span class="tag">${VOL.tag[s]}</span><small class="role">${s === att ? 'attacks' : 'defends'}</small>${online.active && !online.both() ? `<small>${mine(s) ? 'you' : 'foe'}</small>` : ''}</h4>
-      ${arty || setup ? `<span class="chp" title="Artillery assigned">${ico('artillery')}${arty}/${lim.arty}<small>arty</small></span>` : ''}${rest || setup ? `<span class="chp" title="Battle assets and events">${ico('armor_asset')}${rest}<small>assets</small></span>` : ''}${s === att && shock ? `<span class="chp" title="Shock and Awe (16.21): ${esc(E.chit(g, shock).name)} removes the defending field works first, instead of firing">${ico('wave')}<small>Shock and Awe</small></span>` : ''}
+      ${arty || setup ? `<span class="chp" title="Artillery assigned">${ico('artillery')}${arty}/${lim.arty}<small>arty</small></span>` : ''}${rest || setup ? `<span class="chp" title="Battle assets and events">${ico('armor_asset')}${rest}<small>assets</small></span>` : ''}
       </div>`;
   };
   const saRow = (() => {
@@ -192,23 +199,7 @@ export function battleTable() {
     ge = stats(b, P1),
     tot = al.mean + ge.mean || 1;
   return `<div class="c-table slim ${rollView ? 'rolling' : ''}">${side(P2)}<div class="bmid"><div class="c-title">${g.fought.length + fightable().length > 1 ? `<small class="cnt" title="Battle ${g.fought.includes(b.area) ? g.fought.indexOf(b.area) + 1 : g.fought.length + 1} of ${g.fought.length + fightable().length}">Battle ${g.fought.includes(b.area) ? g.fought.indexOf(b.area) + 1 : Math.min(g.fought.length + 1, g.fought.length + fightable().length)}/${g.fought.length + fightable().length}</small>` : ''}${b.bt ? '<small class="cnt" title="Breakthrough combat">BT</small>' : ''}<b>${esc(L.name)}</b><span class="chp" title="Terrain defence number ${L.tdn}: attackers −${L.tdn} to hit">${ico('tree')}${L.tdn}</span>${g.fieldWorks.includes(b.area) ? `<span class="chp" title="Field works">${ico('gear')}</span>` : ''}${b.riverAssault ? `<span class="chp" title="River assault">${ico('wave')}</span>` : ''}</div>
-    <div class="c-vs">${b.stage === 'done' ? '' : covered ? '<div class="big">?<span>:</span>?</div>' : `<small class="vlbl">expected hits</small><div class="big" title="Expected hits per combat round: ${nm(P2)} : ${nm(P1)}"><small class="xs al">${VOL.tag[P2]}</small>${al.mean.toFixed(1)}<span>:</span>${ge.mean.toFixed(1)}<small class="xs ge">${VOL.tag[P1]}</small></div>${gx('<small class="xcap">expected hits per round</small>')}<div class="gauge" title="${esc(`Filled: ${nm(P2)} share of the expected hits · empty: ${nm(P1)}`)}"><i style="width:${(al.mean / tot) * 100}%"></i></div>`}</div></div>${side(P1)}${saRow}${setup ? engChoice(b) : ''}${setup && refusal ? `<div class="refuse">${ico('xbold')}<span><b>Not allowed:</b> ${esc(refusal)}</span></div>` : ''}</div>`;
-}
-/** 6.33: an attacking engineer in a battle with enemy field works either fires or removes them; two plain buttons, chosen at set-up (or before offensive fire). */
-function engChoice(b: E.Battle): string {
-  if (
-    !b.assets[b.attacker].some((id) => E.chit(g, id).kind === 'engineer') ||
-    !g.fieldWorks.includes(b.area) ||
-    (g.fwOwner[b.area] ?? other(b.attacker)) === b.attacker ||
-    !['setup', 'attArty', 'defArty', 'defFire', 'offFire'].includes(b.stage) ||
-    !mine(b.attacker) ||
-    (b.stage === 'setup' && !!b.ready?.includes(b.attacker))
-  )
-    return ''; // only the attacker sees it, while it is the attacker's step (online test: it showed on both screens, dead on one)
-  const own = mine(b.attacker),
-    pickB = (on: boolean, label: string) =>
-      `<button class="${b.engFw === on ? 'on' : ''}" ${own ? `data-do="${reg(() => E.setEngFw(g, g.battle!, on))}"` : 'disabled'} aria-pressed="${b.engFw === on}">${label}</button>`;
-  return `<div class="engch"><b>Engineer (6.33)</b>${gx(' · the defenders sit in field works. If the engineer survives artillery and defensive fire, it can remove them just before your units fire (no −1 then), instead of firing itself. Choose before offensive fire:', ' vs FW:')}<div class="row">${pickB(false, gx('Fire with the ground units', 'Fire'))}${pickB(true, gx('Remove the field works', 'Remove FW'))}</div></div>`;
+    <div class="c-vs">${b.stage === 'done' ? '' : covered ? '<div class="big">?<span>:</span>?</div>' : `<small class="vlbl">expected hits</small><div class="big" title="Expected hits per combat round: ${nm(P2)} : ${nm(P1)}"><small class="xs al">${VOL.tag[P2]}</small>${al.mean.toFixed(1)}<span>:</span>${ge.mean.toFixed(1)}<small class="xs ge">${VOL.tag[P1]}</small></div>${gx('<small class="xcap">expected hits per round</small>')}<div class="gauge" title="${esc(`Filled: ${nm(P2)} share of the expected hits · empty: ${nm(P1)}`)}"><i style="width:${(al.mean / tot) * 100}%"></i></div>`}</div></div>${side(P1)}${saRow}${setup && refusal ? `<div class="refuse">${ico('xbold')}<span><b>Not allowed:</b> ${esc(refusal)}</span></div>` : ''}</div>`;
 }
 export let refusal = '',
   saOpen = false; // the last refused battle chit, shown in the set-up panel
@@ -270,7 +261,7 @@ export function ledger() {
             `<div class="fl"><span class="who">${esc(f.who)}</span><span class="cnt" title="${f.dice} dice to roll">${f.dice}${ico('dice')}</span><b class="sn">SN ${f.sn}</b><span class="chips2">${modChips(f.parts)}</span></div>`,
         )
         .join('') || '<p class="hint">Nothing can fire.</p>';
-    return `<div class="c-ledger tight"><div class="lh"><h3 class="${sd}">${nm(sd)} ${esc(STAGE_NAME[b.stage].toLowerCase())}</h3></div>${b.stage === 'offFire' && engChoice(b) ? engChoice(b) : ''}${lines}${mineStep ? '' : `<p class="hint">Waiting for the ${nm(sd)} player to roll…</p>`}${rollRecord(b)}</div>`;
+    return `<div class="c-ledger tight"><div class="lh"><h3 class="${sd}">${nm(sd)} ${esc(STAGE_NAME[b.stage].toLowerCase())}</h3></div>${b.stage !== 'setup' ? useRowsHtml() : ''}${lines}${mineStep ? '' : `<p class="hint">Waiting for the ${nm(sd)} player to roll…</p>`}${rollRecord(b)}</div>`;
   }
   return '';
 }

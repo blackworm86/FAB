@@ -161,7 +161,7 @@ function drawBattleTable(b: E.Battle) {
       if (tgt?.units.has(id)) {
         const ring = new THREE.Mesh(
           new THREE.RingGeometry(1.0, 1.25, 40),
-          new THREE.MeshBasicMaterial({ color: MAPC.ring, side: THREE.DoubleSide }),
+          new THREE.MeshBasicMaterial({ color: tgtCol(), side: THREE.DoubleSide }),
         );
         ring.rotation.x = -Math.PI / 2;
         ring.position.set(x, 0.14, z);
@@ -183,6 +183,8 @@ function drawPointMarks(b: E.Battle) {
     void sd; // owner, 14 Nov: the point unit is marked only by a thick gold border on the table (drawPieces) // a back corner of the block, clear of its pips and symbol d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
   }
 }
+/** A piece to pick glows lime ("can do this"); a piece that may take a loss glows brass (interaction system: green only means "can move there"). */
+const tgtCol = () => (g.battle && (g.battle.stage === 'loss' || g.battle.stage === 'attFirst') ? 0xe7b04a : MAPC.ring);
 export function drawPieces() {
   disposeAll(pieces);
   disposeAll(markers);
@@ -353,14 +355,14 @@ export function drawPieces() {
       if (tgt?.units.has(u.id)) {
         const ring = new THREE.Mesh(
           new THREE.RingGeometry(1.15, 1.45, 40),
-          new THREE.MeshBasicMaterial({ color: MAPC.ring, transparent: true, opacity: 0.95, side: THREE.DoubleSide }),
+          new THREE.MeshBasicMaterial({ color: tgtCol(), transparent: true, opacity: 0.95, side: THREE.DoubleSide }),
         );
         ring.rotation.x = -Math.PI / 2;
         ring.position.set(p.x, 0.09, p.z);
         markers.add(ring);
         const glow = new THREE.Mesh(
           new THREE.CircleGeometry(1.15, 40),
-          new THREE.MeshBasicMaterial({ color: MAPC.ring, transparent: true, opacity: 0.28 }),
+          new THREE.MeshBasicMaterial({ color: tgtCol(), transparent: true, opacity: 0.28 }),
         );
         glow.rotation.x = -Math.PI / 2;
         glow.position.set(p.x, 0.085, p.z);
@@ -441,7 +443,7 @@ export function drawPieces() {
       if (tgt?.units.has(u.id)) {
         const ring = new THREE.Mesh(
           new THREE.RingGeometry(1.15, 1.45, 40),
-          new THREE.MeshBasicMaterial({ color: MAPC.ring, transparent: true, opacity: 0.95, side: THREE.DoubleSide }),
+          new THREE.MeshBasicMaterial({ color: tgtCol(), transparent: true, opacity: 0.95, side: THREE.DoubleSide }),
         );
         ring.rotation.x = -Math.PI / 2;
         ring.position.set(p.x, 0.09, p.z);

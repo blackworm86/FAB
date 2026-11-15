@@ -107,7 +107,7 @@ export function record(own: boolean, gm: E.Game = g) {
   if (online.mode === 'remote') {
     const me = online.mySide();
     if (!me) return rec.seen(gm);
-    const u = JSON.stringify(unitsOf(gm, me)),
+    const u = JSON.stringify(unitsOf(gm, online.hotseat ? null : me)), // hot-seat: one record holds both sides' blocks
       mine = () => {
         if (u !== rec.units) {
           rec.units = u;
@@ -171,7 +171,7 @@ export async function showReplay() {
 /** This player's move handed the move to the opponent: the push relay tells them, even with their app closed (4.3 step 2). */
 function handOver() {
   const me = online.mySide();
-  if (online.mode !== 'remote' || !me) return;
+  if (online.mode !== 'remote' || !me || online.hotseat) return; // hot-seat: nobody elsewhere to tell
   const now = turnOf(g, other(me));
   if (oppTurn === false && now) void pushNotify(TABLE, auth.token);
   oppTurn = now;
