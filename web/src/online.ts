@@ -155,6 +155,8 @@ export const online = {
 
 let store: Store | null = null,
   seat: SplitSeat | null = null,
+  lastPriv: Priv | null = null, // the store follows this account's seat: its last private document and the reveals, kept for a seat object made later
+  lastReveals: Reveals = {},
   pubDoc: StateDoc | null = null,
   lastJson = '';
 let writing = false,
@@ -181,7 +183,11 @@ const fail = (e: string) => {
 const mySeat = () => {
   const side = online.mySide();
   if (!side) return (seat = null);
-  if (!seat || seat.side !== side) seat = new SplitSeat(side);
+  if (!seat || seat.side !== side) {
+    seat = new SplitSeat(side);
+    seat.priv = lastPriv; // what arrived before this browser knew its seat (online test: the second player's blocks stayed hidden, its first move was lost)
+    seat.reveals = lastReveals;
+  }
   return seat;
 };
 
@@ -285,8 +291,14 @@ export async function startOnline(
     online.seats = s;
     onChange();
     rebuild();
+    if (queued && mySeat()?.priv) {
+      const q = queued;
+      queued = null;
+      void push(q);
+    } // a move kept while the seat was not yet known goes out now
   }, fail);
   store.watchPriv((p) => {
+    lastPriv = p;
     const sp = mySeat();
     if (sp) sp.priv = p;
     rebuild();
@@ -297,6 +309,7 @@ export async function startOnline(
     }
   });
   store.watchReveals((r) => {
+    lastReveals = r;
     const sp = mySeat();
     if (sp) sp.reveals = r;
     rebuild();

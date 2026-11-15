@@ -35,7 +35,7 @@ export function feedHtml(): string {
   feedLen = n;
   const now = Date.now();
   feed = feed.filter((f) => now - f.t < 9000).slice(-3);
-  if (g.battle) return ''; // the battle has its own report
+  if (g.battle || g.phase === 'deploy') return ''; // the battle has its own report; set-up placements show on the map (and covered it in Golan)
   if (feed.length)
     setTimeout(() => {
       if (feed.some((f) => Date.now() - f.t >= 9000)) render();

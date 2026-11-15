@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import * as E from '../../engine/src';
 import { troopOf, troopGroup, radius as troopR, arrange, yawOf } from './troops';
-import { borderAngle, borderMid, cellsOf, first, MAP, near, P1, pole, POLE, toWorld, VOL } from './page';
+import { borderAngle, borderMid, cellsOf, first, MAP, near, P1, pole, POLE, S, toWorld, VOL } from './page';
 import { g, selUnit } from './game-state';
 import {
   block,
@@ -180,7 +180,7 @@ function drawPointMarks(b: E.Battle) {
     const o = pieces.children.find((x) => x.userData.unit === uid);
     const u = g.units.find((x) => x.id === uid);
     if (!o || !u || !seen(u)) continue;
-    void sd; // owner, 14 Nov: the small target gave way to the POINT tag above the unit and a thick gold border (drawPieces) // a back corner of the block, clear of its pips and symbol d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
+    void sd; // owner, 14 Nov: the point unit is marked only by a thick gold border on the table (drawPieces) // a back corner of the block, clear of its pips and symbol d.userData.anchor = uid; markers.add(d);                  // on top of the block, so it is always inside the area
   }
 }
 export function drawPieces() {
@@ -400,7 +400,6 @@ export function drawPieces() {
       pieces.add(m);
       const tags: [string, string][] = [];
       const top = t ? (m.userData.top as number) + 0.55 : flat ? 0.85 : 1.66;
-      if (point) tags.push(['POINT', '#e7b04a']); // the point unit, named above it in both blocks and figures
       if (u.disorder && !u.garrison) tags.push([u.disorder === 1 ? 'DIS' : 'REC', u.disorder === 1 ? '#8a1f1f' : '#a8741a']);
       if (u.rec) {
         if (u.rec <= 3) for (let k = 0; k < u.rec; k++) tags.push(['REC', '#a8741a']);
@@ -435,9 +434,20 @@ export function drawPieces() {
         p = toWorld(bx + ((i % cols) + 0.5) * (bw / cols), by + (Math.floor(i / cols) + 0.5) * (bh / rws));
       m.position.x = p.x;
       m.position.z = p.z;
+      m.scale.setScalar(Math.min(1, (0.9 * Math.min(bw / cols, bh / rws)) / (1.6 * S))); // a full box: smaller blocks in rows, never a heap spilling out (playtest 3, item 5)
       m.userData.unit = u.id;
       m.userData.hidden = faceDown(u);
       pieces.add(m);
+      if (tgt?.units.has(u.id)) {
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(1.15, 1.45, 40),
+          new THREE.MeshBasicMaterial({ color: MAPC.ring, transparent: true, opacity: 0.95, side: THREE.DoubleSide }),
+        );
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.set(p.x, 0.09, p.z);
+        ring.scale.setScalar(m.scale.x);
+        markers.add(ring);
+      } // a block in a box can be a target too (Sicily: releasing its division)
     });
   }
   if (g.battle) drawPointMarks(g.battle);

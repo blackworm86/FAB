@@ -1,8 +1,8 @@
-# rules · 14 Nov 2026, 16:20
+# rules · 14 Nov 2026, night
 
-Doing: nothing in hand. Sicily retreat report (owner, 14 Nov) checked: not an engine stop; the retreat past full areas follows 6.6 (tests in sicily-sweep). New engine helper E.retreatBlocked(g, b) for the table.
+Doing: nothing in hand. Playtest 3 rule questions answered (all four match the rulebook); a test added for the Bulge artillery going to Used after its battle.
 Next: nothing open on the rules. For the interface session: frame and name the retreat areas when they are not next to the battle; say when Retreat would cost a step (retreatBlocked).
 Waiting for the owner: nothing.
-Last checked: npm run verify: all passed, 14 Nov 16:20.
+Last checked: npm run verify all passed, 14 Nov evening (playtest 3 answers).
 Files in hand: none
 Notes: for the computer-opponent session: in the Admin Phase the engine now turns the phasing side's endPhase into "Done" (hand over) and the other side's setDone into the end of the phase, so the bot's current end() works unchanged. actorOf(g) in the Admin Phase is now one side (E.adminActor), 'both' only while a Sicily dogfight may answer an interdiction.

@@ -359,7 +359,10 @@
   #ui .c-bar.b .go.choice {
     grid-column: 2 !important;
     min-width: 0;
-    padding: 2px 4px;
+    padding: 2px 8px; /* re-test: a Retreat subtitle ran to the button's edge */
+  }
+  #ui .c-bar.b .go.choice small {
+    text-wrap: balance;
   }
   #ui .c-bar.b .go.choice.alt {
     grid-column: 3 !important;
@@ -575,4 +578,246 @@
   padding: 0 4px;
   background: #0b0d08b3;
   color: var(--ink);
+}
+@media (min-width: 701px) {
+  #ui .c-bar.b:has(.choice) .c-prompt {
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4 !important;
+    max-height: none !important;
+    height: auto !important;
+    font-size: 12.5px;
+    line-height: 1.3;
+  }
+}
+/* phones: while a panel asks something (set-up, dogfight, a card's choices) the log's news stays in the Log, never over the panel's buttons */
+@media (max-width: 700px) {
+  #ui .stage:has(.volstack, .chitbar) .feed {
+    display: none;
+  }
+}
+/* Map layers panel (owner approved the mockup, 14 Nov): three groups, every button of a group the same size */
+.mapdock .mappanel {
+  display: grid;
+  gap: 10px;
+  width: 360px;
+  padding: 10px;
+  background: #0b0d08f5;
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 20px #000a;
+}
+.mappanel .mphd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.mappanel .mphd b {
+  font: 700 16px var(--sfd);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.mappanel .mphd b span {
+  color: var(--gold);
+}
+.mappanel .mphd button {
+  width: 40px;
+  min-height: 40px;
+}
+.mappanel .mpgl {
+  font: 700 11px var(--sfd);
+  letter-spacing: 0.16em;
+  color: #9a9c7c;
+  text-transform: uppercase;
+  margin-bottom: -4px;
+}
+.mappanel .mtiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  grid-auto-flow: column;
+  gap: 6px;
+}
+.mappanel .mtiles button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 58px;
+  padding: 4px 2px;
+  font: 600 12.5px var(--sfd);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.mappanel .mtiles button[aria-pressed='true'],
+.mappanel .mseg button[aria-pressed='true'] {
+  background: var(--gold);
+  color: #10120c;
+  border-color: var(--gold);
+}
+.mappanel .mseg {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.mappanel .mseg button {
+  min-height: 44px;
+  font: 600 13px var(--sfd);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.mappanel .mseg button + button {
+  border-left: 0;
+}
+.mappanel .mtools {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.mappanel .mtools button {
+  min-height: 44px;
+  justify-content: center;
+  gap: 6px;
+  font: 600 12.5px var(--sfd);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  min-width: 0;
+  padding-inline: 4px;
+}
+.mappanel .mtools button .ic {
+  flex: none;
+}
+.mappanel .legend,
+.mappanel > div:not([class]) {
+  position: static !important;
+  margin: 0 !important;
+}
+@media (max-width: 700px) {
+  .mapdock .mappanel {
+    width: calc(100vw - 16px);
+  }
+}
+/* playtest 3, items 2 and 9: while the device is being passed, the hand stays hidden from the other player; the strip floats
+   above the dock (nothing below it moves when it goes, so a tap never lands on a control that jumped into place) */
+#ui .dock {
+  position: relative;
+}
+#ui .dock .passstrip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  z-index: 50;
+}
+#ui .dock:has(.passstrip) .c-hand,
+#ui .dock:has(.passstrip) .handtab,
+#ui .dock:has(.passstrip) .arrtray {
+  visibility: hidden;
+}
+/* re-test: the hidden hand says so, instead of an empty grey gap that looked broken; the bar's buttons wait for the tap too */
+#ui .dock .c-hand {
+  position: relative;
+}
+#ui .dock .c-hand .veil {
+  visibility: visible;
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  font: 700 14px var(--sfd);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: #0b0d08e6;
+}
+#ui .dock:has(.passstrip) .c-bar .go {
+  visibility: hidden;
+}
+/* playtest 3, item 4: a battle result or dice list longer than its space says so (fade and ▾, as the set-up panels) */
+#ui .dock .c-ledger.more {
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 36px), #0006);
+  mask-image: linear-gradient(#000 calc(100% - 36px), #0006);
+}
+#ui .dock .c-ledger {
+  position: relative;
+}
+/* re-test: the chip sits on the line between the list and the bar, never on a row of dice */
+#ui .dock .c-ledger.more {
+  padding-bottom: 14px;
+}
+#ui .dock:has(.c-ledger.more) > .c-bar {
+  position: relative;
+}
+#ui .dock:has(.c-ledger.more) > .c-bar::before {
+  content: '▾ more';
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  padding: 0 12px;
+  font: 700 13px/22px var(--sfd);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: #0b0d08;
+  border: 1px solid var(--gold);
+  pointer-events: none;
+}
+@media (max-width: 700px) {
+  #ui .dock .c-ledger {
+    max-height: 46vh !important;
+  }
+}
+/* playtest 3, item 6: the sandbox button never sits on the open Map layers panel */
+body:has(.mappanel) .sbfab {
+  display: none !important;
+}
+
+/* playtest 3: the leader lines and rings go under the interface, so they never cross the bubble's words */
+#leaders {
+  z-index: 7;
+}
+
+/* owner, 14 Nov: a card that lights blocks or areas on the map gives the phone's screen to the map (Sicily release on the map) */
+@media (max-width: 700px) {
+  #ui:has(.chitbar.lights) .dock .c-hand,
+  #ui:has(.chitbar.lights) .dock .handtab {
+    display: none;
+  }
+  #ui .chitbar.lights .cbt small {
+    display: none; /* the bar below says the same: the map keeps the room (phone check) */
+  }
+  #ui .chitbar.lights .modes {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, #000 82%, #0003); /* the row scrolls: its right end fades (phone check) */
+    mask-image: linear-gradient(to right, #000 82%, #0003);
+  }
+  #ui .chitbar.lights .modes .ico {
+    flex: 0 0 auto;
+    max-width: 78%;
+  }
+  #ui .chitbar.lights .modes .ico span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* dev links only: the sandbox button never sits on a card panel's close button (phone check) */
+body:has(#ui .chitbar) .sbfab {
+  display: none !important;
+}
+
+/* online test: the seat and rules-check notices never sit on the battle header or the Map layers button */
+#ui .stage:has(.c-table) > .seatbar {
+  top: auto;
+  bottom: 12px;
+}
+@media (max-width: 700px) {
+  #ui .stage:not(:has(.c-table)) > .seatbar {
+    top: 60px;
+  }
 }

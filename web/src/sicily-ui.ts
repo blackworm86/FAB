@@ -79,32 +79,43 @@ export function sicilyTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): T
       );
     t.hint = t.units.size ? hint : 'No block qualifies right now';
   };
-  /** 14.61: the divisions this counter may release, one button each: a division is released as a whole, wherever its blocks are (at sea, in the Airborne Assault box, not yet arrived). */
+  /** 14.61: the divisions this counter may release light up on the map, every block of each (on the map, At Sea, Airborne Assault); a tap on any of them
+   *  releases its division (owner, 14 Nov). A division with no block on the table yet keeps a named button. */
   const divisions = (brigade?: string) => {
-    const seen = new Set<string>();
+    const seen = new Set<string>(),
+      onTable = (u: E.Unit) => u.area != null || u.box === 'at_sea' || u.box === 'airborne_assault'; // the boxes drawn on the map
+    const names: string[] = [];
     for (const u of g.units.filter((x) => x.side === 'allied' && x.division)) {
       if (seen.has(u.division!)) continue;
       seen.add(u.division!);
-      if (works(g, (x) => S.releaseDivision(x, u.division!, id, brigade)))
-        t.chips.push({
-          label: `${u.name} · ${u.nation === 'british' ? '8th Army' : '7th Army'}`,
-          img: ctx.face(u),
-          fn: run((x) => S.releaseDivision(x, u.division!, id, brigade)),
-        });
+      if (!works(g, (x) => S.releaseDivision(x, u.division!, id, brigade))) continue;
+      const go = run((x) => S.releaseDivision(x, u.division!, id, brigade)),
+        blocks = g.units.filter((v) => v.division === u.division && onTable(v));
+      for (const v of blocks) t.units.set(v.id, go);
+      if (blocks.length) names.push(u.name);
+      if (!blocks.length)
+        t.chips.push({ label: `${u.name} · ${u.nation === 'british' ? '8th Army' : '7th Army'}`, img: ctx.face(u), fn: go });
     }
-    t.hint = t.chips.length
-      ? brigade
-        ? 'Choose the British division to release; the brigade goes with it'
-        : 'Choose the division to release from its army boundaries'
-      : c.kind === 'special_action_event'
-        ? 'No division to release: this Special Action releases only a division of its own army, not yet released (14.61)'
-        : 'No division left to release (14.61)';
+    t.hint =
+      names.length || t.chips.length
+        ? names.length
+          ? `Tap a lit block to release its ${brigade ? 'British division, with the brigade' : 'whole division'} (14.61): ${names.join(', ')}`
+          : 'Release a division not yet on the map with its button (14.61)'
+        : c.kind === 'special_action_event'
+          ? 'No division to release: this Special Action releases only a division of its own army, not yet released (14.61)'
+          : 'No division left to release (14.61)';
   };
   const modes = (list: { id: string; icon: string; label: string; apply: () => void }[]) => {
     for (const m of list) t.modes.push({ id: m.id, icon: m.icon, label: m.label });
     let mode = ctx.mode;
     if (!list.some((m) => m.id === mode)) {
-      mode = list[0]?.id ?? '';
+      const has = (m: (typeof list)[number]) => {
+        Object.assign(t, blank(), { modes: t.modes });
+        m.apply();
+        return t.units.size + t.areas.size + t.pick.size + t.chips.length + t.buttons.length > 0;
+      };
+      mode = (list.find(has) ?? list[0])?.id ?? ''; // the first option that can act now, not one that says nothing qualifies (phone check)
+      Object.assign(t, blank(), { modes: t.modes });
       ctx.setMode(mode);
     }
     list.find((m) => m.id === mode)?.apply();
@@ -363,7 +374,7 @@ export function sicilyPanel(g: Game, ctx: PanelCtx): string {
     for (const u of g.units.filter((x) => x.box === 'airborne_assault' && x.side === 'allied')) {
       const t = S.airDropTargets(g, u.id);
       out.push(
-        `<div class="volpanel"><b>${ctx.ico('air_mission')} ${esc(u.name)}: airborne assault (14.27a)</b><span>${t.length ? 'Drop into an area next to at least two areas holding its own army, before any battle. Against defenders it is a River Assault that cannot be aborted.' : 'No drop zone is open: the unit is lost.'}</span><div class="row">${t.length ? ctx.ubtn('Choose the drop zone', () => ctx.pickArea(`${u.name}: tap the drop zone`, t, (a) => S.airDrop(live(), u.id, a)), 'primary') : ctx.btn('Remove the unit', () => S.airDrop(live(), u.id, null), 'primary')}</div></div>`,
+        `<div class="volpanel"><b>${ctx.ico('air_mission')} ${esc(u.name)}: airborne assault (14.27a)</b><span>${t.length ? 'Drop into an area next to at least two areas holding its own army, before any battle. Against defenders it is a River Assault that cannot be aborted.' : 'No drop zone is open: the unit is lost.'}</span><div class="row">${t.length ? ctx.ubtn('Choose the drop zone', () => ctx.pickArea(`${u.name}: tap the drop zone`, t, (a) => S.airDrop(live(), u.id, a)), 'primary') : ctx.btn(`Remove ${esc(u.name)} (no drop zone)`, () => S.airDrop(live(), u.id, null), 'primary')}</div></div>`,
       );
     }
   }
@@ -399,14 +410,30 @@ export function sicilyPanel(g: Game, ctx: PanelCtx): string {
           `<div class="volpanel"><b>${ctx.ico('air_mission')} Dogfight (16.31)</b><span>${nm(sd)}: cancel the enemy air support over this battle with your own ${esc(mine.name)}; both are used, and neither side flies more here.</span><div class="row">${ctx.btn('Dogfight', () => S.dogfight(live(), live().battle!, mine.id), 'primary')}</div></div>`,
         );
     }
+    const navAll = b.assets[b.attacker].map((id) => E.chit(g, id)).filter((x) => x.kind === 'naval_support'),
+      defFw = g.fieldWorks.includes(b.area) && (g.fwOwner[b.area] ?? E.other(b.attacker)) === E.other(b.attacker);
+    if (ctx.mine(b.attacker) && navAll.length) {
+      // 16.21: say which use each naval asset has, and let the attacker choose where both are possible (owner, 14 Nov)
+      const key = `${b.area}`,
+        on = defFw ? V.navalShock[key] : undefined,
+        set = (id: string | null) => () => S.setNavalShock(live(), live().battle!, id);
+      out.push(
+        `<div class="volpanel"><b>${ctx.ico('wave')} Naval support: ${defFw ? 'Shock and Awe or artillery' : 'fires as artillery'} (16.21)</b><span>${
+          !defFw
+            ? 'No defending field works here, so it fires as artillery.'
+            : on
+              ? `Now: ${navAll.length > 1 ? 'one naval asset' : esc(E.chit(g, on).name)} removes the field works as the first act of the battle, instead of firing${navAll.length > 1 ? '; the other naval support fires as artillery' : ''}.`
+              : `Now: ${navAll.length > 1 ? 'all fire' : 'it fires'} as artillery. Or one naval asset removes the defending field works first, instead of firing.`
+        }</span>${
+          defFw
+            ? `<div class="row">${ctx.btn('Remove the field works', set(on ?? navAll[0].id), on ? 'on' : '')}${ctx.btn('Fire as artillery', set(null), on ? '' : 'on')}</div>`
+            : ''
+        }</div>`,
+      );
+    }
     if (ctx.mine(b.attacker) && g.fieldWorks.includes(b.area)) {
       const key = `${b.area}`,
-        nav = b.assets[b.attacker].map((id) => E.chit(g, id)).filter((x) => x.kind === 'naval_support'),
         rng = b.assets[b.attacker].map((id) => E.chit(g, id)).filter((x) => x.subtype === 'ranger' || x.subtype === 'commando');
-      if (nav.length)
-        out.push(
-          `<div class="volpanel"><b>${ctx.ico('wave')} Shock and Awe (16.21)</b><span>One naval support asset removes the defending field works instead of firing.</span><div class="row">${nav.map((x) => ctx.btn(esc(x.name), () => S.setNavalShock(live(), live().battle!, V.navalShock[key] === x.id ? null : x.id), V.navalShock[key] === x.id ? 'on' : '')).join('')}</div></div>`,
-        );
       if (rng.length)
         out.push(
           `<div class="volpanel"><b>${ctx.ico('infantry_asset')} Rangers (16.22)</b><span>A Ranger or Commando asset removes the field works instead of rolling, if the attack goes on and it survives the defensive fire.</span><div class="row">${rng.map((x) => ctx.btn(esc(x.name), () => S.setRangerFw(live(), live().battle!, V.rangerFw[key] === x.id ? null : x.id), V.rangerFw[key] === x.id ? 'on' : '')).join('')}</div></div>`,

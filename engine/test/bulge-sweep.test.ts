@@ -16,6 +16,19 @@ import {
   regimentAreas,
   endPhase,
   assetLimits,
+  mustFight,
+  assign,
+  beginCombat,
+  roll_step,
+  chooseFirstLoss,
+  attackerChoice,
+  defenderChoice,
+  chooseLoss,
+  lossOptions,
+  chooseRetreat,
+  retreatOptions,
+  declineExploit,
+  closeBattle,
   actorOf,
   setDone,
   roadblock,
@@ -226,5 +239,32 @@ describe('Bulge asset and event sweep', () => {
     expect(assetLimits(g, b, 'allied').arty).toBe(1);
     U(g, '101').area = 47; // with a US unit there the extra asset is back
     expect(assetLimits(g, b, 'allied').arty).toBe(2);
+  });
+  it('an artillery asset used in one battle goes to the Used Box and cannot fight again in the same Combat Phase (playtest 3)', () => {
+    useGame('bulge');
+    const g = newGame(1, { scenario: 'tournament' } as never);
+    const [a1, a2] = mustFight(g);
+    const c = chit(g, 'L15.0'); // 405th
+    c.box = 'available';
+    const b = startBattle(g, a1);
+    if (b.defSA) passSA(g, b);
+    assign(g, b, c.id);
+    setReady(g, b, 'german');
+    setReady(g, b, 'allied');
+    beginCombat(g, b);
+    for (let i = 0; i < 60 && b.stage !== 'done'; i++) {
+      if (b.stage === 'attFirst') chooseFirstLoss(g, b, b.attPoint);
+      else if (b.stage === 'attChoice') attackerChoice(g, b, false);
+      else if (b.stage === 'defChoice') defenderChoice(g, b, false);
+      else if (b.stage === 'loss') chooseLoss(g, b, lossOptions(g, b)[0]);
+      else if (b.stage === 'retreat') chooseRetreat(g, b, retreatOptions(g, b)[0]);
+      else if (b.stage === 'exploit') declineExploit(g, b);
+      else roll_step(g, b);
+    }
+    closeBattle(g);
+    expect(c.box).toBe('used');
+    const b2 = startBattle(g, a2);
+    if (b2.defSA) passSA(g, b2);
+    expect(canAssign(g, b2, 'german', c)).toMatch(/Available Box/);
   });
 });

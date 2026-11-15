@@ -716,6 +716,7 @@ export function placeBadges() {
     /* a label tag sits on its own area, not shifted like the move badges */ let sx = (v.x * 0.5 + 0.5) * r.width,
       sy = (-v.y * 0.5 + 0.5) * r.height;
     const sy0 = sy;
+    d.style.display = v.z < 1 ? '' : 'none'; // shown before it is measured: a hidden badge measures 0 wide and was clamped half off the edge (re-test)
     const keep = selUnit && /\b(ok|stop|fuel)\b/.test(d.className),
       hw = d.offsetWidth / 2 + 6,
       hh = d.offsetHeight / 2 + 6,
@@ -726,7 +727,6 @@ export function placeBadges() {
       sy = Math.min(r.height - hh, Math.max(top, sy));
       d.classList.toggle('edge', out || sy !== sy0);
     } // a destination off screen keeps its tag at the edge, so no "no supply" warning is missed
-    d.style.display = v.z < 1 ? '' : 'none';
     d.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -50%)`;
   }
   placeAreaTags();

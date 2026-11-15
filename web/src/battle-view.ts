@@ -10,11 +10,24 @@ import { fxRow } from './fx';
 import { RULE } from './rules-text';
 import { areaName, P1, P2, VOL } from './page';
 import { areaPick, g } from './game-state';
-import { CONTROL_COL, faceDown, hex6, MAPC, seen, setSupEnemy, supEnemy, supplySide, TDN_COL, tint, ZONE_COL } from './map-paint';
+import {
+  CONTROL_COL,
+  faceDown,
+  hex6,
+  MAPC,
+  seen,
+  setSupEnemy,
+  supEnemy,
+  supplySide,
+  SICILY_ZONE_COL,
+  TDN_COL,
+  tint,
+  ZONE_COL,
+} from './map-paint';
 import { battleFx, fightable, mine, other, POOL, rollFx, selArr } from './flow';
 import { pickSA } from './choices';
 import { reinforcing, setReinforcing } from './map-input';
-import { endRoll, handSide, rollView, setHandSide } from './rolls';
+import { endRoll, handSide, rollView, setHandSide, type RollView } from './rolls';
 import { autoFill, card, fan, handInfo, handInspect, handStyle, setHandInfo, setHandInspect, usableNow } from './cards';
 import { gx } from './prompt';
 import { chitPic } from './pieces-window';
@@ -25,9 +38,12 @@ import { cutOffCount, modChips, refresh, relayer } from './main';
 /** The volume's prompts (set-up, drops, evacuation…). On a phone they fold down to a handle so the map can have the screen; they open again on a tap. */
 let volFolded = innerWidth <= 700,
   volFoldKey = '';
+/** The set-up panel as built, folded or not. */
+export let panelFull = '';
 export function volPanel() {
-  if (areaPick) return ''; // picking an area on the map: the panel steps aside so the lit areas show (the instruction line says what to tap and how to cancel)
+  if (areaPick) return (panelFull = ''); // picking an area on the map: the panel steps aside so the lit areas show (the instruction line says what to tap and how to cancel)
   const html = VOL.panel(g, panelCtx());
+  panelFull = html; // the bar reads the panel's buttons even when the panel is folded on a phone
   if (!html) return '';
   const k = `${g.turn}${g.phasing}${g.phase}`;
   if (k !== volFoldKey) {
@@ -70,6 +86,15 @@ function cardTip() {
   return `<div class="cardtip">${chitPic(c)}<div><b>${esc(c.name)} <small>${esc(t)}</small></b><span>${esc(d.split('\n')[0])}</span>${why ? `<em>Cannot join: ${esc(why)}</em>` : '<em class="ok">Can join this battle</em>'}</div></div>`;
 }
 let handAll = false;
+/** Sicily 15.3b: say what the reveal roll of an untried garrison is, while it is read (playtest 3). */
+const untriedNote = (rv: RollView) =>
+  rv.groups
+    .filter((x) => /: untried unit revealed \(15\.3b\)$/.test(x.label))
+    .map((x) => {
+      const u = g.units.find((v) => v.name === x.label.split(':')[0]);
+      return `<p class="hint gx">${esc(x.label.split(':')[0])} is revealed (15.3b): a morale check before defensive fire, SN ${x.sn}${u && E.quality(u) === 'green' && x.sn === 3 ? ' (5, −2 green)' : ''}. Rolls of 1–${x.sn} pass; higher, it is disordered.</p>`;
+    })
+    .join('');
 export function handCards() {
   const b = g.battle;
   if (!b && (g.phase === 'reinforcement' || g.phase === 'deploy')) return tray();
@@ -110,6 +135,7 @@ export function handCards() {
   const own = online.active && !online.both() ? online.mySide() : null,
     s = handSide ?? own ?? (g.battle && !mine(g.phasing) ? other(g.phasing) : g.phase === 'admin' ? E.adminActor(g) : g.phasing), // 4.2c: the hand of the side acting now
     cs = [...E.boxOf(g, s, 'available')].sort((x, y) => x.kind.localeCompare(y.kind) || x.name.localeCompare(y.name));
+  if (!cs.length && handSide == null) return ''; // an empty hand chip only floated over the map (playtest 3)
   const live = cs.filter((c) => usableNow(c)),
     rest = cs.filter((c) => !usableNow(c)),
     shown = handAll || !live.length ? [...live, ...rest] : live; // the cards you can play now first; the rest on request
@@ -134,6 +160,7 @@ export function battleTable() {
   const L = E.areas.get(b.area)!,
     att = b.attacker,
     setup = b.stage === 'setup';
+  const shock = VOL.id === 'sicily' ? E.sicily.state(g).navalShock[`${b.area}`] : undefined; // 16.21: the naval asset chosen to remove the field works
   const side = (s: E.Side) => {
     const us = E.unitsIn(g, b.area, s),
       lim = VOL.limits(g, b, s),
@@ -142,7 +169,7 @@ export function battleTable() {
     const arty = ids.filter((c) => E.isArty(c)).length + airs.filter((a) => a.mode === 'arty').length,
       rest = ids.length - ids.filter((c) => E.isArty(c)).length;
     return `<div class="bside ${s} ${mine(s) ? 'mine' : 'theirs'}"><h4 title="${nm(s)} ${s === att ? 'attacking' : 'defending'}"><span class="tag">${VOL.tag[s]}</span><small class="role">${s === att ? 'attacks' : 'defends'}</small>${online.active && !online.both() ? `<small>${mine(s) ? 'you' : 'foe'}</small>` : ''}</h4>
-      ${arty || setup ? `<span class="chp" title="Artillery assigned">${ico('artillery')}${arty}/${lim.arty}<small>arty</small></span>` : ''}${rest || setup ? `<span class="chp" title="Battle assets and events">${ico('armor_asset')}${rest}<small>assets</small></span>` : ''}
+      ${arty || setup ? `<span class="chp" title="Artillery assigned">${ico('artillery')}${arty}/${lim.arty}<small>arty</small></span>` : ''}${rest || setup ? `<span class="chp" title="Battle assets and events">${ico('armor_asset')}${rest}<small>assets</small></span>` : ''}${s === att && shock ? `<span class="chp" title="Shock and Awe (16.21): ${esc(E.chit(g, shock).name)} removes the defending field works first, instead of firing">${ico('wave')}<small>Shock and Awe</small></span>` : ''}
       </div>`;
   };
   const saRow = (() => {
@@ -181,9 +208,11 @@ function engChoice(b: E.Battle): string {
     !b.assets[b.attacker].some((id) => E.chit(g, id).kind === 'engineer') ||
     !g.fieldWorks.includes(b.area) ||
     (g.fwOwner[b.area] ?? other(b.attacker)) === b.attacker ||
-    !['setup', 'attArty', 'defArty', 'defFire', 'offFire'].includes(b.stage)
+    !['setup', 'attArty', 'defArty', 'defFire', 'offFire'].includes(b.stage) ||
+    !mine(b.attacker) ||
+    (b.stage === 'setup' && !!b.ready?.includes(b.attacker))
   )
-    return '';
+    return ''; // only the attacker sees it, while it is the attacker's step (online test: it showed on both screens, dead on one)
   const own = mine(b.attacker),
     pickB = (on: boolean, label: string) =>
       `<button class="${b.engFw === on ? 'on' : ''}" ${own ? `data-do="${reg(() => E.setEngFw(g, g.battle!, on))}"` : 'disabled'} aria-pressed="${b.engFw === on}">${label}</button>`;
@@ -218,7 +247,7 @@ export function ledger() {
       jam = /^Jamming/.test(rv.title); // read from the defender's side: a die of 5 or less disorders the unit (playtest 2, item 3)
     return `<div class="c-ledger tight" data-ui="${reg(() => {
       if (rollView?.pos) endRoll();
-    })}" title="Tap to continue"><div class="lh"><h3>${esc(rv.title)}</h3><b class="tot ${(jam ? hits === rv.groups.length : hits) ? 'hit' : 'miss'}">${rv.pos ? (jam ? (rv.groups.length - hits ? `${rv.groups.length - hits} disordered` : 'all hold') : rv.morale ? `${hits} of ${rv.groups.length} pass` : `${hits} hit${hits === 1 ? '' : 's'}`) : '…'}</b></div>${rv.remote && !rv.pos ? `<p class="hint">${ico('dice')} The other player is rolling…</p>` : ''}${rv.pos ? rollFx.map(fxRow).join('') : ''}${rv.groups.map((x) => `<div class="ln2"><span class="who">${esc(x.label)}</span><span class="sn">SN ${x.sn}</span>${rv.pos ? faces(x.dice, x.sn, jam) : `<span class="cnt">${x.dice.length}${ico('dice')}</span>`}<b class="${x.hits ? 'hit' : 'miss'}">${jam ? (x.hits ? 'holds' : 'disordered') : x.hits}</b>${x.parts.length ? `<span class="chips2">${modChips(x.parts)}</span>` : ''}</div>`).join('')}
+    })}" title="Tap to continue"><div class="lh"><h3>${esc(rv.title)}</h3><b class="tot ${(jam ? hits === rv.groups.length : hits) ? 'hit' : 'miss'}">${rv.pos ? (jam ? (rv.groups.length - hits ? `${rv.groups.length - hits} disordered` : 'all hold') : rv.morale ? `${hits} of ${rv.groups.length} pass` : `${hits} hit${hits === 1 ? '' : 's'}`) : '…'}</b></div>${rv.remote && !rv.pos ? `<p class="hint">${ico('dice')} The other player is rolling…</p>` : ''}${rv.pos ? rollFx.map(fxRow).join('') : ''}${untriedNote(rv)}${rv.groups.map((x) => `<div class="ln2"><span class="who">${esc(x.label)}</span><span class="sn">SN ${x.sn}</span>${rv.pos ? faces(x.dice, x.sn, jam) : `<span class="cnt">${x.dice.length}${ico('dice')}</span>`}<b class="${x.hits ? 'hit' : 'miss'}">${jam ? (x.hits ? 'holds' : 'disordered') : x.hits}</b>${x.parts.length ? `<span class="chips2">${modChips(x.parts)}</span>` : ''}</div>`).join('')}
       </div>`;
   }
   if (!b || g.pendingBlow) return '';
@@ -231,7 +260,7 @@ export function ledger() {
       ${mineStep ? `<div class="row">${btn('Decline (stay hidden)', () => E.declineExploit(g, b), '', false, '6.8: you may decline the opportunity and keep the blocks hidden')}</div>` : `<p class="hint">Waiting for the ${nm(b.attacker)} player to roll.</p>`}</div>`;
   }
   if (b.stage === 'done')
-    return `<div class="c-ledger tight aar"><div class="lh"><h3>Battle over · ${esc(areaName(b.area))}</h3></div><p class="resline">${esc(b.result ?? '')}</p>${battleFx.length ? `<div class="aarfx">${battleFx.map(fxRow).join('')}</div>` : '<p class="hint">No losses on either side.</p>'}${rollRecord(b, true)}</div>`;
+    return `<div class="c-ledger tight aar"><div class="lh"><h3>Battle over · ${esc(areaName(b.area))}</h3></div><p class="resline">${esc(b.result ?? '')}</p>${g.log.slice(-30).some((l) => l.endsWith(`A Ghost is revealed in ${areaName(b.area)} and removed (15.7)`)) ? '<p class="hint gx">The ghost was removed when it was revealed (15.7): no die did it.</p>' : ''}${battleFx.length ? `<div class="aarfx">${battleFx.map(fxRow).join('')}</div>` : '<p class="hint">No losses on either side.</p>'}${rollRecord(b, true)}</div>`;
   if (b.stage.endsWith('Choice')) {
     const sd = b.stage === 'attChoice' ? b.attacker : other(b.attacker); // the bubble on the table holds the choice; the report keeps the dice that caused it
     return `<div class="c-ledger tight"><div class="lh"><h3 class="${sd}">${nm(sd)} ${b.pending} hit${b.pending === 1 ? '' : 's'} to take</h3></div>${rollRecord(b, true)}</div>`;
@@ -271,11 +300,13 @@ export function legend() {
           ]
         : tint === 'tdn'
           ? TDN_COL.map((c, i) => [c, `TDN ${i}`, i ? `attackers −${i} to hit` : 'no modifier'])
-          : [
-              [ZONE_COL[5], 'Zone 5', '5th Panzer Army'],
-              [ZONE_COL[6], 'Zone 6', '6th Panzer Army'],
-              [ZONE_COL[7], 'Zone 7', '7th Army'],
-            ];
+          : VOL.id === 'sicily'
+            ? (['A', 'B', 'C', 'D'] as const).map((z) => [SICILY_ZONE_COL[z], `Zone ${z}`, ''])
+            : [
+                [ZONE_COL[5], 'Zone 5', '5th Panzer Army'],
+                [ZONE_COL[6], 'Zone 6', '6th Panzer Army'],
+                [ZONE_COL[7], 'Zone 7', '7th Army'],
+              ];
   const whose =
     tint === 'supply'
       ? `<div class="chips">${chip('Yours', !supEnemy, () => {

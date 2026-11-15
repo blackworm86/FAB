@@ -19,7 +19,7 @@ import { center, confirmMove, fuelLeft, optsFor, setGoal } from './map-input';
 import { badgeList, setBadges, syncBadges } from './routes';
 import { canAct, skipNow, skipped } from './map-marks';
 import { rollView } from './rolls';
-import { gx } from './prompt';
+import { COARSE, gx } from './prompt';
 import { recoverSel } from './dock';
 import { pieceBtn, unitPic } from './pieces-window';
 import { legendOpen, legendShownAt, refresh, setLegendOpen, setLegendShownAt, showAreas } from './main';
@@ -152,7 +152,7 @@ export function dispatch() {
         'primary',
       )}</div>`;
     else if (optsFor(u.id).length)
-      route = `<p class="hint gx">${optsFor(u.id).length} destination(s). Hover or click a highlighted area.</p>`;
+      route = `<p class="hint gx">${optsFor(u.id).length} destination(s). ${COARSE ? 'Tap' : 'Hover or click'} a highlighted area.</p>`;
     const can = ['movement', 'reaction', 'btMove'].includes(g.phase) && !u.garrison && !u.moved && g.moving?.id !== u.id;
     const mv = g.moving?.id === u.id ? E.allowance(g, u) : 0,
       left = mv ? Math.max(0, mv - (u.spent ?? 0)) : 0;

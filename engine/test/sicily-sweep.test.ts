@@ -300,4 +300,88 @@ describe('Sicily asset and event sweep', () => {
     const b = E.startBattle(g, 14);
     expect(E.retreatBlocked(g, b).map((u) => u.id)).toEqual(['BR07']);
   });
+  it('15.3d: an untried unit that survives the round that revealed it becomes tried, even after retreating out (owner report, 14 Nov)', () => {
+    const g = newSicilyGame(31);
+    Object.assign(g, { turn: 3, phase: 'combat', phasing: 'allied', fought: [], battle: null });
+    const it = g.units.find((u) => u.untried && u.side === 'axis' && u.area != null)!;
+    const a = it.area!;
+    for (const u of g.units) if (u.area === a && u.id !== it.id) u.area = null;
+    const out = E.neighbors(a).find((n) => !S.isBox(n))!;
+    for (const u of g.units) if (u.area === out) u.area = null;
+    g.control[out] = 'axis';
+    Object.assign(it, { str: Math.max(2, it.str), disorder: 0 });
+    Object.assign(unit(g, 'US03'), { area: a, str: 3, disorder: 0, box: undefined });
+    g.contestedAtMoveStart = [a];
+    const b = E.startBattle(g, a);
+    if (b.defSA) E.passSA(g, b);
+    E.setReady(g, b, 'allied');
+    E.setReady(g, b, 'axis');
+    g.force = [1, 10, 10, 10, 10, 10, 10, 10, 10];
+    E.beginCombat(g, b); // revealed: its untried check passes
+    expect(it.untried).toBe(true);
+    it.area = out; // as after a retreat out of the battle
+    for (let i = 0; i < 40 && b.stage !== 'done'; i++) {
+      if (b.stage === 'defChoice') E.defenderChoice(g, b, true);
+      else if (b.stage === 'retreat') E.chooseRetreat(g, b, E.retreatOptions(g, b)[0]);
+      else if (b.stage === 'attChoice') E.attackerChoice(g, b, false);
+      else if (b.stage === 'attFirst') E.chooseFirstLoss(g, b, b.attPoint);
+      else if (b.stage === 'loss') E.chooseLoss(g, b, E.lossOptions(g, b)[0]);
+      else E.roll_step(g, b);
+    }
+    E.closeBattle(g);
+    expect(it.area).toBe(out);
+    expect(it.untried).toBe(false); // tried now, shown face up like any Italian block
+  });
+  it('6.2 / 17.21e: an Italian attack ends when the morale checks at the reveal disorder every attacker, and says why', () => {
+    const g = newSicilyGame(32);
+    Object.assign(g, { turn: 4, phase: 'combat', phasing: 'axis', fought: [], battle: null });
+    S.state(g).morale = 2; // level 2: every tried Italian unit in the combat is disordered
+    clear(g, 19);
+    Object.assign(unit(g, 'IT05'), { area: 19, str: 3, disorder: 0, untried: false });
+    Object.assign(unit(g, 'US03'), { area: 19, str: 3, disorder: 0, box: undefined });
+    g.control[19] = 'allied';
+    g.contestedAtMoveStart = [19];
+    const b = E.startBattle(g, 19);
+    if (b.defSA) E.passSA(g, b);
+    E.setReady(g, b, 'axis');
+    E.setReady(g, b, 'allied');
+    E.beginCombat(g, b);
+    expect(unit(g, 'IT05').disorder).toBe(1);
+    expect(b.stage).toBe('done');
+    expect(b.result).toMatch(/Italian morale checks at the reveal disordered every attacker/);
+  });
+  it('22.17 Sunrise Bridge (owner issue #6): each side scores the areas it controls by the scenario values; the table lists them', () => {
+    E.useGame('sicily');
+    const g = E.newGame(1, { scenario: 'sunrise_bridge' } as never);
+    const v0 = E.victory(g);
+    expect(v0.axis).toBe(20); // all 13 scoring areas start Axis-controlled (22.13)
+    expect(v0.allied).toBe(0);
+    expect(E.vpAreas(g, 'axis').reduce((t, o) => t + o.pts, 0)).toBe(20);
+    g.control[26] = 'allied';
+    g.control[25] = 'allied';
+    g.control[16] = 'allied';
+    const v1 = E.victory(g);
+    expect([v1.allied, v1.axis, v1.net]).toEqual([9, 11, -2]); // Catania 4 + 25: 3 + 16: 2
+    expect(
+      E.vpAreas(g, 'allied')
+        .map((o) => o.id)
+        .sort(),
+    ).toEqual([16, 25, 26]);
+    expect(E.victoryTable(g).map((r) => r[1])).toEqual(['Allied Victory', 'Draw', 'Axis Victory']);
+    expect(E.vpNote(g)).toMatch(/22\.17/);
+  });
+  it('22.28 / 22.38: the Tournament and Campaign victory tables', () => {
+    E.useGame('sicily');
+    const t = E.newGame(1, { scenario: 'tournament' } as never);
+    expect(E.victoryTable(t)).toContainEqual(['4+ Axis VP', 'Axis Victory']);
+    expect(E.victoryTable(t)).toContainEqual(['0–3 Axis VP', 'Allied Victory']);
+    const c = E.newGame(1, { scenario: 'campaign' } as never);
+    expect(E.victoryTable(c).map((r) => r[1])).toEqual([
+      'Allied Operational Victory',
+      'Allied Marginal Victory',
+      'Draw',
+      'Axis Marginal Victory',
+      'Axis Operational Victory',
+    ]);
+  });
 });

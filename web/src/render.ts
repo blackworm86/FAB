@@ -1,4 +1,5 @@
 // Drawing the screen: the whole interface from the game's state, wiring its buttons, keeping the view in step, and the refresh after every action.
+import type * as THREE from 'three';
 import { translateDom } from './i18n';
 import * as E from '../../engine/src';
 import { vpStrip, vpSheet, endPanel } from './score';
@@ -13,7 +14,7 @@ import { coursesOf } from './tutorial-list';
 import { clearDice } from './dice3d';
 import { linkRules } from './rules-link';
 import { LAB_SIDE, labStep } from './lab';
-import { $, areaName, P1, TUT, VOL } from './page';
+import { $, areaName, P1, toWorld, TUT, VOL } from './page';
 import { g, save, selArea, selChit, selUnit, setG, setPreviewArea, setSelArea, setSelChit, setSelUnit, showReplay } from './game-state';
 import { canvas } from './scene';
 import { drawPieces } from './pieces';
@@ -42,8 +43,10 @@ import {
   actorNow,
 } from './flow';
 import {
+  airPick,
   airPickHtml,
   altPickHtml,
+  setAirPick,
   auditWarn,
   endHidden,
   feedHtml,
@@ -65,7 +68,7 @@ import { dockChips, undoBtn } from './dock';
 import { piecesSide, piecesTab, setInspectId, unitPic } from './pieces-window';
 import { dispatch, dragArrival, frameArrival } from './unit-card';
 import { mapDock } from './map-dock';
-import { battleTable, handCards, ledger, setRefusal, volPanel } from './battle-view';
+import { battleTable, handCards, ledger, panelFull, setRefusal, volPanel } from './battle-view';
 import { homeGoal, modalHtml, openingTarget, seatBar, showAreas } from './menus';
 import { camTouched, frameAt, fxBattle, lastPhase, openFrame, setFrameAt, setFxBattle, setLastPhase, setOpenFrame } from './main';
 
@@ -184,6 +187,7 @@ export function render() {
 function renderInner() {
   if (document.activeElement?.closest?.('.authform')) return; // do not wipe what is being typed
   resetActs();
+  if (airPick && (g.battle?.stage !== 'setup' || g.chits.find((c) => c.id === airPick!.id)?.box !== 'available')) setAirPick(null); // the air card was placed or the battle moved on: its prompt goes (playtest 3, item 1)
   if (!g.battle || g.battle.stage !== 'setup') setRefusal('');
   canvas.style.display = inGame() ? '' : 'none';
   if (!inGame()) return; // the home page is home.ts; this page only plays a table
@@ -202,10 +206,32 @@ function renderInner() {
   if (rollView && !g.battle && !rollView.check) endRoll(); // dice left on screen after the battle is over
   const p = primary(),
     b = g.battle,
+    rolling = rollView
+      ? (rollView.side ?? g.units.find((u) => rollView!.groups.some((x) => x.label.split(':')[0] === u.name))?.side ?? null) // whose dice are on screen (playtest 3, item 3)
+      : null,
     actor = actorNow(),
-    chs = barChoices();
+    chs = barChoices(),
+    vpHtml = volPanel(),
+    cardHtml = b ? battleTable() : dispatch(),
+    picks =
+      chs.length || !allowed()
+        ? []
+        : panelPicks(
+            (!p || p.dis ? (panelFull.split('<div class="volpanel').find((x) => /class="[^"]*\bprimary\b/.test(x)) ?? '') : '') + // the panel's button only when the main one has nothing to do (playtest 3, item 7)
+              (selUnit && !b ? cardHtml : ''),
+          ) /* the first panel with a decisive button: the step at hand */
+            .slice(0, p && !p.dis ? 1 : 2);
+  const mainBtn = () =>
+    !p || !allowed()
+      ? '<span class="gowait slot" aria-hidden="true"></span>'
+      : p.dis && /^Waiting/.test(p.label)
+        ? `<span class="gowait">${esc(p.label)}…</span>`
+        : p
+          ? `<button class="go ${g.moving && p.label.startsWith('End') ? 'quiet' : ''}" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>`
+          : '';
   if (actor !== 'both' && actor !== lastActor) {
-    if (lastActor && !TUT && mine(actor) && mine(other(actor))) passTo = actor; // one device, both sides: ask to pass it (design review, problem 1)
+    const handOver = !b || ['setup', 'attFirst', 'attChoice', 'defChoice', 'loss', 'retreat'].includes(b.stage); // the real hand-overs: not each alternating roll of a battle (owner, 14 Nov)
+    if (lastActor && handOver && !TUT && mine(actor) && mine(other(actor))) passTo = actor; // one device, both sides: ask to pass it (design review, problem 1)
     lastActor = actor;
   }
   const alert = g.pendingBlow
@@ -242,7 +268,7 @@ function renderInner() {
             },
           )}</div>`
         : ''
-    }${volPanel()}${mapDock()}${b ? battleTable() : dispatch()}${decisionBubble()}${feedHtml()}${SBU.hotCoverHtml()}${newcomerCard()}${saPickHtml()}${altPickHtml()}${airPickHtml()}${chatHtml()}${
+    }${vpHtml}${mapDock()}${cardHtml}${decisionBubble()}${feedHtml()}${SBU.hotCoverHtml()}${newcomerCard()}${saPickHtml()}${altPickHtml()}${airPickHtml()}${chatHtml()}${
       scoreOpen
         ? vpSheet(
             g,
@@ -285,7 +311,7 @@ function renderInner() {
               }),
           )
         : ''
-    }${toast && (modal || TUT) ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${dockMain}${passHtml()}<div class="c-bar b ${actor !== 'both' && !g.over ? `actor ${actor}` : ''}"><div class="c-prompt" aria-live="polite">${toast && !modal && !TUT ? `<span class="toast barmsg${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</span>` : ''}${actor !== 'both' && !g.over ? `<span class="whotag">${esc(nm(actor))} decides</span> ` : ''}${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}<span class="gl">Explain: <b>${guide}</b></span></button>${undoBtn()}${chs.length ? chs.map((c, i) => btn(`<span>${esc(c.label)}<small>${esc(c.sub)}</small></span>`, c.fn, `go choice ${i ? 'alt' : ''}`, false, c.title)).join('') : !p || !allowed() ? '<span class="gowait slot" aria-hidden="true"></span>' : p.dis && /^Waiting/.test(p.label) ? `<span class="gowait">${esc(p.label)}…</span>` : p ? `<button class="go ${g.moving && p.label.startsWith('End') ? 'quiet' : ''}" data-do="${reg(guardEnd(p))}" ${p.dis || !allowed() ? 'disabled' : ''} ${allowed() ? '' : `title="${esc(notYou())}"`}>${endArmed && p.label.startsWith('End') ? `End anyway? ${canMove().length} can move` : p.label}${ico(p.label.startsWith('Ready') ? 'check' : p.label.startsWith('Roll') ? 'dice' : 'next')}</button>` : ''}${dockChips()}</div></div>` +
+    }${toast && (modal || TUT) ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${passTo ? dockMain.replace(/<div class="c-hand"[^>]*>/, '$&<div class="veil">Cards hidden until you tap</div>') : dockMain}${passHtml()}<div class="c-bar b ${rolling ? `actor ${rolling}` : actor !== 'both' && !g.over ? `actor ${actor}` : ''}"><div class="c-prompt" aria-live="polite">${toast && !modal && !TUT ? `<span class="toast barmsg${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</span>` : ''}${rolling ? `<span class="whotag">${esc(nm(rolling))} rolls</span> ` : actor !== 'both' && !g.over ? `<span class="whotag">${esc(nm(actor))} decides</span> ` : ''}${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}<span class="gl">Explain: <b>${guide}</b></span></button>${undoBtn()}${chs.length ? chs.map((c, i) => btn(`<span>${esc(c.label)}<small>${esc(c.sub)}</small></span>`, c.fn, `go choice ${i ? 'alt' : ''}`, false, c.title)).join('') : picks.length ? picks.map((x, i) => `<button class="go choice ${i ? 'alt' : ''}" ${x.attr}="${x.id}" title="${esc(x.text)}"><span>${esc(x.text)}</span></button>`).join('') + (p && !p.dis && allowed() ? mainBtn().replace('class="go ', 'class="go choice alt ') : '') : mainBtn()}${dockChips()}</div></div>` +
     modalHtml();
   const ui = $('#ui');
   {
@@ -314,7 +340,11 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
     row.addEventListener('scroll', edge, { passive: true });
   });
   ui.querySelector<HTMLElement>('.chitbar .cbchips')?.scrollIntoView({ block: 'end' }); // a card's named choices are what the player came for: in view, whatever the panel's height
-  ui.querySelectorAll<HTMLElement>('.volstack').forEach((st) => {
+  {
+    const on = ui.querySelector<HTMLElement>('.chitbar.lights .modes .on'); // a phone's single row of options shows the chosen one
+    if (on?.parentElement) on.parentElement.scrollLeft = on.offsetLeft - on.parentElement.offsetLeft - 8;
+  }
+  ui.querySelectorAll<HTMLElement>('.volstack, .dock .c-ledger').forEach((st) => {
     // a set-up panel taller than its space fades at the bottom with a ▾, so it reads as "more below" (playtest B7)
     const edge = () => st.classList.toggle('more', st.scrollTop + st.clientHeight < st.scrollHeight - 2);
     edge();
@@ -533,7 +563,7 @@ export let ctlKey = '',
 export const setTgtKey = <T extends typeof tgtKey>(v: T): T => ((tgtKey = v), v);
 /** A first table with no lesson finished: one card offers the lesson of this game, or to just play (design review, problem 4). Shown once. */
 function newcomerCard() {
-  if (TUT || SANDBOX || g.over || lessonDone()) return '';
+  if (TUT || SANDBOX || DEV || g.over || lessonDone()) return ''; // a real first visit only: never on test links (?dev=1)
   try {
     if (localStorage.getItem('fab-newcomer')) return '';
   } catch {
@@ -558,6 +588,19 @@ function newcomerCard() {
   )}${ubtn('Just play', seen)}</div></div>`;
 }
 /** The side that must act now, and the side the device is to be passed to (until the first tap anywhere). */
+/** The decisive buttons of the set-up panel and the block card (their primary ones), so the bar can carry them under the thumb (design review, problem 2). */
+const panelPicks = (html: string) =>
+  [...html.matchAll(/<button class="([^"]*)" (data-do|data-ui)="([^"]+)"( disabled)?[^>]*>([\s\S]*?)<\/button>/g)]
+    .filter((m) => /\bprimary\b/.test(m[1]) && !m[4])
+    .map((m) => ({
+      attr: m[2],
+      id: m[3],
+      text: m[5]
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim(),
+    }))
+    .filter((x) => x.text);
 let lastActor: string | null = null,
   passTo: E.Side | null = null;
 const passHtml = () =>
@@ -664,9 +707,13 @@ export function refresh() {
         fk = `${selChit}|${tgtMode}|${selArea}`;
       if (selChit && t && fk !== chitFramed) {
         chitFramed = fk;
-        const ids = [
+        const ids: (number | THREE.Vector3)[] = [
           ...new Set([...t.pick.keys(), ...t.areas.keys(), ...[...t.units.keys()].map((id) => g.units.find((u) => u.id === id)?.area)]),
         ].filter((a): a is number => a != null);
+        for (const id of t.units.keys()) {
+          const box = VOL.art.holdBoxes?.[g.units.find((u) => u.id === id)?.box ?? ''];
+          if (box) ids.push(toWorld(box[0] + box[2] / 2, box[1] + box[3] / 2));
+        } // a lit block waiting in a box drawn on the map (Sicily: At Sea) comes into view too (phone check)
         if (ids.length) setTimeout(() => showAreas(ids), 60); // once the panel is drawn: the areas the card can act on come into view, clear of it (playtest 2, item 9)
       }
       if (!selChit) chitFramed = '';

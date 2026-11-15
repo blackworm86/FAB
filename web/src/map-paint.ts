@@ -5,7 +5,7 @@ import { noSupplyTargets } from './supply-plan';
 import { online } from './online';
 import { drawEntry, drawRestricted, setLabelFace } from './board-art';
 import { labHuman } from './lab';
-import { MAP, P1, S, toWorld, VOL } from './page';
+import { MAP, P1, POLE, S, toWorld, VOL } from './page';
 import { areaPick, g, hoverArea, previewArea, selArea, selUnit } from './game-state';
 import { applyArt, baseImg, BOARD_K, boardCv, boardTex, canvas, facing, linesImg, pixels, scene, vpIcons } from './scene';
 import { map3d, REL, relPixels, setMap3d, setMap3dValue, show3d, tintData, tintTex, WOOD_BASE } from './map3d';
@@ -23,7 +23,9 @@ export let tint: 'off' | 'tdn' | 'zones' | 'control' | 'supply' = (() => {
 })();
 export const setTint = <T extends typeof tint>(v: T): T => ((tint = v), v);
 export const TDN_COL = [0xf4e3a4, 0xc9a24f, 0x8a8f86, 0x4a5028],
-  ZONE_COL: Record<number, number> = { 5: 0x3a3f46, 6: 0x951b81, 7: 0x009fe3 }; // the TDN colours are the printed TDN markers'
+  ZONE_COL: Record<number, number> = { 5: 0x3a3f46, 6: 0x951b81, 7: 0x009fe3 },
+  /** Sicily's army zones, in the colours of their landing boxes (owner, 14 Nov): A light green, B blue, C grey, D dark green. Messina (B and C) takes B. */
+  SICILY_ZONE_COL: Record<string, number> = { A: 0x7cc35a, B: 0x2a7fc8, C: 0x8a8f94, D: 0x1f6f3f }; // the TDN colours are the printed TDN markers'
 /** Map overlays (DESIGN.md › Map overlays): one meaning per colour. Reach green, stop brass, must-fight red, optional fight brass, selection brass, supply in the side's colour. */
 /** How strong the lime of "you can move there" is: Sicily's yellow-green map needs it stronger to stand out. */
 const REACH_O = VOL.id === 'sicily' ? 0.62 : 0.4;
@@ -47,7 +49,9 @@ const tintOf = (id: number) =>
       ? E.contested(g, id)
         ? CONTROL_COL.contested
         : CONTROL_COL[g.control[id] ?? P1]
-      : ZONE_COL[E.areas.get(id)!.zone];
+      : VOL.id === 'sicily'
+        ? SICILY_ZONE_COL[E.sicily.zonesAt(g, id)[0]]
+        : ZONE_COL[E.areas.get(id)!.zone];
 export const hex6 = (n: number) => '#' + n.toString(16).padStart(6, '0');
 /** What is printed on the map, and how. */
 const layers = { numbers: true, tdn: true, vp: true, names: true }; // the printed labels gave way to the area tags (labelMode); entry letters stay on the board
@@ -144,7 +148,9 @@ export function paintBoard() {
       c.beginPath();
       a.polygon.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
       c.closePath();
-      c.fillStyle = hex6(tintOf(a.id));
+      const col = tintOf(a.id);
+      if (col == null) continue; // a place with no zone (an off-map box) stays uncoloured
+      c.fillStyle = hex6(col);
       c.fill();
     }
     c.restore();
@@ -170,6 +176,26 @@ export function paintBoard() {
     }
     c.restore();
   } else c.drawImage(pixels(facing(linesImg)), 0, 0, boardCv.width, boardCv.height);
+  if (VOL.id === 'sicily' && tint === 'zones') {
+    // each zone's letter, large, in the middle of its areas (the mean of their label points)
+    c.save();
+    c.scale(k, k);
+    c.font = '700 64px "Saira Condensed", Arial Narrow, sans-serif';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.lineWidth = 6;
+    c.strokeStyle = '#ffffffcc';
+    for (const z of Object.keys(SICILY_ZONE_COL)) {
+      const ps = MAP.areas.filter((a) => shownArea(a.id) && E.sicily.zonesAt(g, a.id)[0] === z).map((a) => POLE.get(a.id)!);
+      if (!ps.length) continue;
+      const x = ps.reduce((t, p) => t + p[0], 0) / ps.length,
+        y = ps.reduce((t, p) => t + p[1], 0) / ps.length;
+      c.fillStyle = hex6(SICILY_ZONE_COL[z]);
+      c.strokeText(`ZONE ${z}`, x, y);
+      c.fillText(`ZONE ${z}`, x, y);
+    }
+    c.restore();
+  }
   if (VOL.art.zones && tint === 'zones') {
     // the three German army zones, when coloured: a dashed line in the zone's colour just inside it (the board prints the army boundaries)
     c.save();
@@ -418,8 +444,8 @@ export function paintAreas() {
       o = 0.34;
     }
     if (id === (previewArea ?? hoverArea) && r) {
-      c = MAPC.preview;
-      o = 0.5;
+      c = VOL.id === 'sicily' ? 0xffc21a : MAPC.preview;
+      o = VOL.id === 'sicily' ? 0.85 : 0.5; // Sicily's tan-and-lime map hid a pale lit destination: a strong gold instead (playtest 3 and its re-test)
     }
     if (id === selArea && !selUnit) {
       c = MAPC.sel;

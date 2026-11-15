@@ -193,7 +193,7 @@ export function tag(text: string, bg: string, size = 1.1) {
     x.strokeStyle = '#fff';
     x.lineWidth = 8;
     x.strokeRect(4, 4, 120, 120);
-    x.fillStyle = bg === '#e7b04a' ? '#1a1608' : '#fff'; // dark letters on the gold POINT tag
+    x.fillStyle = bg === '#e7b04a' ? '#1a1608' : '#fff'; // dark letters on a gold tag
     x.font = `bold ${text.length > 4 ? 40 : text.length > 2 ? 46 : 60}px Arial Narrow, Arial, sans-serif`;
     x.textAlign = 'center';
     x.textBaseline = 'middle';

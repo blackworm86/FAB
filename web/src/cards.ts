@@ -57,27 +57,29 @@ export const card = (c: E.Chit, r = 0, why: string | null = null) =>
   `<div tabindex="0" role="button" class="card2 ${c.side} ${c.kind === 'sa_block' ? 'wood' : ''} ${why ? 'bad' : usableNow(c) ? 'live' : ''} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" style="--r:${r}deg" title="${esc(why ?? c.name + (ARMY_NAME[c.ech] ? ' · ' + ARMY_NAME[c.ech] : ''))}" aria-label="${esc(c.name)}">${chitPic(c)}${kindWord(c) ? `<span class="ckind">${kindWord(c)}</span>` : ''}</div>`; /* phones have no hover title: the kind is written on the card */
 /** What kind of card it is, in one word above it: a newcomer cannot read "9th" or "402nd" (design review, problems 4 and 5). */
 export const kindWord = (c: E.Chit) =>
-  E.isArty(c)
-    ? 'Artillery'
-    : /air/.test(c.kind)
-      ? 'Air'
-      : c.kind === 'sam'
-        ? 'SAM'
-        : c.kind === 'engineer'
-          ? 'Engineer'
-          : c.kind.startsWith('replacement') || c.kind.startsWith('rebuild')
-            ? 'Replacement'
-            : c.kind === 'sa_block' || c.kind === 'special_action_event'
-              ? 'Special action'
-              : c.kind === 'fuel'
-                ? 'Fuel'
-                : c.kind === 'command_staff'
-                  ? 'Staff'
-                  : c.kind.startsWith('event')
-                    ? 'Event'
-                    : E.isBattleAsset(c)
-                      ? 'Asset'
-                      : '';
+  c.kind === 'naval_support'
+    ? 'Naval' // Sicily 16.21: fires as artillery or, as Shock and Awe, removes the field works
+    : E.isArty(c)
+      ? 'Artillery'
+      : /air/.test(c.kind)
+        ? 'Air'
+        : c.kind === 'sam'
+          ? 'SAM'
+          : c.kind === 'engineer'
+            ? 'Engineer'
+            : c.kind.startsWith('replacement') || c.kind.startsWith('rebuild')
+              ? 'Replacement'
+              : c.kind === 'sa_block' || c.kind === 'special_action_event'
+                ? 'Special action'
+                : c.kind === 'fuel'
+                  ? 'Fuel'
+                  : c.kind === 'command_staff'
+                    ? 'Staff'
+                    : c.kind.startsWith('event')
+                      ? 'Event'
+                      : E.isBattleAsset(c)
+                        ? 'Asset'
+                        : '';
 /** How much neighbouring cards overlap so the whole hand fits: each card keeps at least 34 px (46 on phones) visible, and the hand scrolls when even that does not fit. */
 const overlapFor = (n: number) => {
   const cw = innerWidth >= 900 ? 72 : 62,

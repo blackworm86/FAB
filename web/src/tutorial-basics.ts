@@ -719,8 +719,8 @@ const L_SUPPLY: Lesson = {
     {
       title: 'See your supply',
       text: '<b>Tap Map layers, then Supply.</b> Your supplied areas take your colour; areas cut off are striped.',
-      target: { el: ['.laysw button[title^="Supply"]', '.mapmenu-btn'], label: 'Supply in the Map list' },
-      done: (_g, q) => q('.laysw button[aria-pressed="true"][title^="Supply"]'),
+      target: { el: ['.mtiles button[title^="Supply"]', '.mapmenu-btn'], label: 'Supply in the Map list' },
+      done: (_g, q) => q('.mtiles button[aria-pressed="true"][title^="Supply"]'),
     },
     tapUnit('1SS(-)', 'Safe', '<b>Tap the 1st SS in Malmedy.</b> Its panel shows its line, back through Ligneuville to your entry area.', {
       rule: '9.31 Supply paths',

@@ -177,7 +177,7 @@ function stakes(b: E.Battle) {
   if (!fl.length) return ((p) => `<b>Nothing can fire.</b>${p && !p.dis ? ` Press <b>${esc(p.label)}</b>.` : ''}`)(primary()); // say what moves the battle on (playtest C5)
   const dice = fl.reduce((a, f) => a + f.dice, 0),
     sns = [...new Set(fl.map((f) => f.sn))].sort((x, y) => x - y);
-  return `<b>${nm(sd)} ${esc(STAGE_NAME[b.stage].toLowerCase())}:</b> ${dice} ${dice === 1 ? 'die' : 'dice'} · hit on ${sns.at(-1)! < 1 ? 'a 1 only' : sns.length === 1 || sns[0] < 1 ? `${sns.at(-1)} or less` : `${sns[0]}–${sns.at(-1)} or less`}${gx(` · at ${E.unitsIn(g, b.area, other(sd)).length} ${nm(other(sd))} block${E.unitsIn(g, b.area, other(sd)).length === 1 ? '' : 's'}`)}`;
+  return `<b>${nm(sd)} ${esc(STAGE_NAME[b.stage].toLowerCase())}:</b> ${dice} ${dice === 1 ? 'die' : 'dice'} · ${sns.length === 1 ? `hit on ${sns[0] < 1 ? 'a 1 only' : `${sns[0]} or less`}` : fl.map((f) => `${esc(f.who)} hits on ${f.sn < 1 ? 'a 1 only' : `${f.sn} or less`}`).join(', ')}${gx(` · at ${E.unitsIn(g, b.area, other(sd)).length} ${nm(other(sd))} block${E.unitsIn(g, b.area, other(sd)).length === 1 ? '' : 's'}`)}`;
 }
 /** The blocks of the side acting now that can move in this step (the same test as the green areas). */
 const movers = () => {
@@ -216,7 +216,8 @@ function promptText() {
       return `<b>Ending now:</b> ${sea} block${sea > 1 ? 's' : ''} still on the beaches ${sea > 1 ? 'go' : 'goes'} back to sea and ${sea > 1 ? 'try' : 'tries'} to land again next turn (14.24b).`; // playtest 2, A7
   }
   if (reinforcing && b) return '<b>Tap a glowing neighbouring block</b> to bring it in, or tap the map to cancel.';
-  if (airPick?.step === 'unit' && b) return '<b>Air Mission +2:</b> tap one of your blocks in the battle.';
+  if (airPick?.step === 'unit' && b)
+    return `<b>Air Mission +${VOL.id === 'golan73' && airPick.side === 'syrian' ? 1 : 2}:</b> tap one of your blocks in the battle.`; // Golan 16.31a: +2 Israeli, +1 Syrian
   if (online.active && !allowed() && !g.over)
     return online.mySide() == null
       ? '<b>Watching.</b> Take a seat in the menu.'
@@ -233,7 +234,9 @@ function promptText() {
   if (b && b.stage === 'setup' && b.attPointDone) return '<b>Point units designated.</b> Blocks are revealed…';
   if (b)
     return b.stage === 'setup'
-      ? ((w) => (w ? `<b>Not yet:</b> ${esc(w)}.` : setupPrompt(b)))(setupBlock(b, E.setupSide(g, b)))
+      ? ((w) => (w ? (w === VOL.blocksBegin(g) ? `<b>${esc(w)}.</b>` : `<b>Not yet:</b> ${esc(w)}.`) : setupPrompt(b)))(
+          setupBlock(b, E.setupSide(g, b)),
+        ) // a volume's own step (a SAM answer) is an instruction, not a refusal (re-test)
       : b.stage === 'done'
         ? (() => {
             const left = fightable().filter((x) => x !== b.area).length;
@@ -259,7 +262,7 @@ function promptText() {
         ? ids.some((id) => VOL.placeOptions(g, id).length)
           ? `<b>Set-up:</b> drag a block from the tray to a lit area, or use the panel.` /* the count is on the main button */
           : '<b>Set-up:</b> first make the choice in the panel on the map, then place the blocks.' /* Sicily: the landing plan before the invasion units */
-        : ((w) => (w ? `<b>Not yet:</b> ${esc(w)}.` : `<b>Set-up done:</b> press <b>${esc(endLabel())}</b>.`))(deployBlock());
+        : ((w) => (w ? `<b>Next:</b> ${esc(w)}.` : `<b>Set-up done:</b> press <b>${esc(endLabel())}</b>.`))(deployBlock());
     }
     case 'reinforcement':
       return '<b>Pick a new block</b>, then a lit entry area.';

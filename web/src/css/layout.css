@@ -290,17 +290,6 @@
   gap: 2px;
   font-style: normal;
 }
-.blk.pt::after {
-  content: 'POINT';
-  position: absolute;
-  top: -9px;
-  left: 50%;
-  transform: translateX(-50%);
-  font: 700 9px var(--sf);
-  background: var(--gold);
-  color: #1a1608;
-  padding: 0 5px;
-}
 .slot {
   width: 118px;
   min-height: 66px;

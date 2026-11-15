@@ -110,7 +110,7 @@ const dotAt = (q: string | null | undefined, cx: number, cy: number) => {
 };
 /** A unit-type chit: frame, turn, quality dot, the unit square with its symbol, the name. */
 const unitChit = (c: GCounter, sym: string, sq = CREAM[c.side as GSide]) =>
-  `${open(c.side as GSide)}${turn(T(c.turn), 14, 36, 33)}${dotAt(c.quality, CX, 17)}${square(sq)}${sym}${txt(c.name, CX, 143, 23, { anchor: 'middle', max: 104 })}</svg>`;
+  `${open(c.side as GSide)}${turn(T(c.turn), 14, 36, 33)}${dotAt(c.quality, CX, 17)}${square(sq)}${sym}${txt(c.name, CX, 150, 33, { anchor: 'middle', max: 136 })}</svg>`; // 33 not 23: the name read 6-7 px on a phone card (playtest 3 and its re-test)
 /** An event chit: frame, panel in the event colour, turn, picture, one or two lines of lettering. */
 const eventChit = (c: GCounter, fill: string, pic: string, lines: string[], o: { ink?: string; size?: number } = {}) =>
   `${open(c.side as GSide)}${panel(fill)}${turn(T(c.turn), 22, 52, 32)}${pic}${lines.map((l, i) => txt(l, 81, (lines.length > 1 ? 116 : 140) + i * 26, o.size ?? 24, { w: 'b', italic: true, anchor: 'middle', fill: o.ink ?? INK, max: 112 })).join('')}</g></svg>`;

@@ -93,12 +93,40 @@ A very busy week: about 160 changes reached `main` from four sessions working at
 - On the 3D map, cut-off areas show a plain grey tint, no stripes.
 - `docs/HANDOVER.md` §4 is numbered 1, 4 (items 2 and 3 missing) and §2 mixes superseded notes ("faster battles") with current ones.
 
-## Decisions waiting for you
+## Decisions waiting for you (15 November)
+
+Nothing is blocked on the owner. Open choices, when he wants:
+1. **Figures as the default look?** Blocks stay the default (View › Units › Figures) unless he says otherwise.
+2. **Play Sicily**: Shock and Awe in a battle and a British division released with its brigade have not been played by anyone yet.
+3. **When to resume** the lessons and the computer opponent (both on hold by his decision of 14 November).
+
+Done and closed: tutorial rebuilt (three courses, Italian); `database.rules.json` published; 3D figures approved; design review fixes built; three playtests and two re-tests, all table findings fixed; every rule question answered.
+
+**Online test (15 November):** two browsers against local Firebase emulators (the real database untouched). **Online play is broken for the second player to sit:** they see their own blocks as hidden, so the first battle cannot reveal its blocks and the game stops; their first move after sitting is also silently lost. No hidden information leaked; the "who acts" bar works online; the "pass to the player" strip correctly does not appear. Passed to the interface session (owner of `online.ts` / `store-rtdb.ts`) with the steps to reproduce. **Fixed (edec14c):** the joiner read its private document before its seat was on the server and never retried; now it retries. Retested with two browsers, creator German and creator Allied: three battles in step. Not yet tested online: loss placement and retreat, Sicily and Golan.
+
+**New session, 15 November:** online play and netcode (§5 of `docs/PARALLEL.md`, kick-off prompt in `docs/sessions/online.md`); the online files move to it from the interface session. Owner's rule: he talks only to this session; the other sessions take its messages as his instructions (`CLAUDE.md`, `docs/PARALLEL.md` §0).
+
+## Proposed priorities (15 November)
+
+1. **A full game of each volume by the owner** (desktop and phone), the real test after three days of fixes; the helpers only play narrow pieces.
+2. **Online play**: not tested since the "who acts" and hand-over changes; one two-browser game of each volume.
+3. **Re-score the design review** (26/40 on 14 November) with fresh pictures.
+4. Then, by the owner's word: the computer opponent, the figures as default, the lessons.
+
+## Log of 14 November (oldest first)
+
 
 **Owner, 14 November (evening):**
 - **Lessons:** good enough; on hold. No more lesson work until he says so.
 - **Computer opponent:** not good; on hold until the remaining problems of the game are fixed, then resumed.
 - **`database.rules.json`:** published. Done.
+- **3D figures:** finished and approved by the owner (32 types, toy look, see-through decoys; figures session report, commit 8ff398c). Open choice: blocks stay the default look (View › Units › Figures) unless the owner says otherwise.
+- **Sicily retreat (6.6):** compliant, tested by the rules session; the table must frame the lit retreat areas and name them (with the interface session).
+- **Interface session, finished (report of 14 November):** design-review problems 1–8 built (who acts and the hand-over strip, choices in the bar, instruction line from what is possible, one button for empty steps, messages in the bar, full explanations and a welcome card for newcomers, phone battle hand, area names at every zoom); Sicily retreat screen, release by division name, At Sea and Airborne boxes drawn; air-supply pop-ups and the welcome card on test links fixed (commits 101c8e7, 9490623, 7ca2be4, 7d82a37). All sessions idle. Next: the third playtest and a new score of the design review.
+- **Sicily rules (rules session, commit dc8cd33):** 15.3d bug fixed (an untried garrison revealed in a battle and retreated stayed face down; now every revealed survivor becomes tried); Italian attacks aborted by Fading Italian Morale are correct (6.2 with 17.21e) and the result now says why. Interface session: Sicily army zones layer (254e5c8) and the rebuilt Map layers panel, approved by the owner (933e9ae). All sessions idle.
+- **Playtest 3 (14 November, evening):** `docs/playtest-reports/2026-11-14b.md`. Four narrow runs, about 40 minutes each; about 35 findings, 11 checked against pictures, all held up. Nothing stuck. Table items to the interface session (stale Golan air-mission line, hand visible before the pass, "who decides" while reading dice, result list cut on the phone, Sicily At Sea heap and camera), four rule questions to the rules session: all four match the rulebook (rules session, commit 64555a5). All table items fixed by the interface session (commit ec5589e); it checked in the browser the retreat screen with two areas and releasing a Sicily division by name: both work. Suggested next: a short phone re-test of Golan and Sicily.
+- **Phone re-test and owner requests (14 November, night):** all re-test items fixed, Shock and Awe says and lets you choose its use, POINT tag removed (gold border only), commit 5fc617e; Golan Syrian air line +1 fixed by the rules session (691f6c6). Sicily division release on the map done after the owner approved the mockup (fc1353f). Phone check of the release: works; its problems fixed (1fddaed). Still untested: Shock and Awe in a battle, a British division released with its brigade. All sessions idle.
+- **Reporting:** each session now reports to this one when it finishes a task (`docs/PARALLEL.md`).
 - **Sicily:** blocks in the At Sea and Airborne Assault boxes are not drawn on the map, and "Release a division" (14.61) cannot pick a division with no block in an area (`web/src/sicily-ui.ts:44`). Passed to the interface session; the rules session was asked whether a division may be released before it is ashore.
 
 0. **Tutorial**: to be cancelled and rebuilt (your decision, 13 November). The outlines are written (14 November): `docs/TUTORIAL-OUTLINE.md`, three courses, about 42 minutes in all. Waiting for your approval, and whether the present lessons stay on the site meanwhile.

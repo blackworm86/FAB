@@ -82,7 +82,13 @@ export function golanTargets(get: () => Game, c: E.Chit | null, ctx: TgtCtx): Tg
     for (const m of list) t.modes.push({ id: m.id, icon: m.icon, label: m.label });
     let mode = ctx.mode;
     if (!list.some((m) => m.id === mode)) {
-      mode = list[0]?.id ?? '';
+      const has = (m: (typeof list)[number]) => {
+        Object.assign(t, blank(), { modes: t.modes });
+        m.apply();
+        return t.units.size + t.areas.size + t.pick.size + t.chips.length + t.buttons.length > 0;
+      };
+      mode = (list.find(has) ?? list[0])?.id ?? ''; // the first option that can act now, not one that says nothing qualifies (phone check)
+      Object.assign(t, blank(), { modes: t.modes });
       ctx.setMode(mode);
     }
     list.find((m) => m.id === mode)?.apply();
@@ -433,7 +439,7 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
               !own,
             )
           : ''
-      }${ctx.btn('Let it fly', () => G.declineSam(g), '', !own)}</div></div>`,
+      }${ctx.btn('Let it fly', () => G.declineSam(g), 'primary', !own)}</div></div>`,
     );
   }
   if (b && b.stage === 'setup') {
@@ -512,14 +518,14 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
       mines = V.minesLeft ?? 0;
     if (sp)
       out.push(
-        `<div class="volpanel"><b>${ctx.ico('lock')} Strongpoints and ghosts (15.7)</b><span>${sp} to place face-down, one in each area next to the Purple Line: drag them from the tray, or place them all at once.</span><div class="row">${ctx.btn('Shuffle face-down', () => G.autoStrongpoints(live(), 'shuffle'), 'primary', false, 'Random, as most players do (errata)')}${ctx.btn('Historical placement', () => G.autoStrongpoints(live(), 'historical'), '', false, "The errata's rough historical set-up")}</div></div>`,
+        `<div class="volpanel"><b>${ctx.ico('lock')} Strongpoints and ghosts (15.7)</b><span>${sp} to place face-down, one in each area next to the Purple Line: drag them from the tray, or place them all at once.</span><div class="row">${ctx.btn(`Shuffle all ${sp} face-down`, () => G.autoStrongpoints(live(), 'shuffle'), 'primary', false, 'Places every one at random, as most players do (errata)')}${ctx.btn('Historical placement', () => G.autoStrongpoints(live(), 'historical'), '', false, "Places every one as in the errata's rough historical set-up")}</div></div>`,
       );
     if (mines) {
       const keys = G.minefieldOptions(g).map((k) => k.split('-').map(Number)),
         ends = [...new Set(keys.flat())];
       const second = (a: number) => keys.filter((k) => k.includes(a)).map((k) => (k[0] === a ? k[1] : k[0]));
       out.push(
-        `<div class="volpanel"><b>${ctx.ico('warn')} Minefields (14.02)</b><span>${mines} still to lay, on any boundary but the AT ditch, escarpment, river, Mt Hermon or rugged ones; no area may have two mined boundaries.</span><div class="row">${ctx.ubtn('Lay a minefield', () => ctx.pickArea('Minefield: first area', ends, (a) => ctx.pickArea(`Minefield from ${ctx.areaName(a)}: the area across the boundary`, second(a), (b) => G.placeMinefield(live(), a, b))), sp ? '' : 'primary')}${ctx.btn('Lay the other minefields for me', () => G.autoMinefields(live()))}</div></div>`,
+        `<div class="volpanel"><b>${ctx.ico('warn')} Minefields (14.02)</b><span>${mines} still to lay.<span class="gx"> Not on the AT ditch, escarpment, river, Mt Hermon or rugged boundaries; never two in one area.</span></span><div class="row">${ctx.ubtn('Lay a minefield', () => ctx.pickArea('Minefield: first area', ends, (a) => ctx.pickArea(`Minefield from ${ctx.areaName(a)}: the area across the boundary`, second(a), (b) => G.placeMinefield(live(), a, b))), sp ? '' : 'primary')}${ctx.btn('Lay the rest for me', () => G.autoMinefields(live()))}</div></div>`,
       );
     }
   }
@@ -586,7 +592,7 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
 /** Why combat cannot begin yet, or null. */
 export const golanBlocksBegin = (g: Game) =>
   G.state(g).samTarget
-    ? 'Syria must answer the Israeli air mission first (fire a SAM or let it fly)'
+    ? 'Syria answers the Israeli air mission: fire a SAM or let it fly (16.12)'
     : g.battle && G.battleState(g.battle).ew?.pending
       ? 'The Defender must answer the jamming first'
       : null;
