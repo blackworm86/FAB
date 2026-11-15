@@ -221,6 +221,9 @@ async function player(name, size) {
   });
   await page.goto(BASE, { waitUntil: 'domcontentloaded', timeout: 180000 });
   await page.waitForSelector('#a-mail', { timeout: 120000 });
+  check(!(await page.locator('#a-name').isVisible()), `${name}: the Sign in tab hides the name field`);
+  await page.click('.signin [data-tab="reg"]'); // registering is on the Create account tab
+  check(await page.locator('#a-name').isVisible(), `${name}: the Create account tab shows the name field`);
   await page.fill('#a-name', name);
   await page.fill('#a-mail', `${name.toLowerCase()}${stamp}@fab.test`);
   await page.fill('#a-pass', 'secret1');
@@ -259,9 +262,9 @@ for (const game of GAMES) {
 
   /* Bruno types the code on the home page and takes the free seat */
   await B.page.goto(BASE, { waitUntil: 'domcontentloaded' });
-  await B.page.waitForSelector('#join');
-  await B.page.fill('#join', id);
-  await B.page.locator('[title="Join a game with an invite"], button:has-text("Join")').first().click();
+  await B.page.waitForSelector('.codebar #join'); // the invitation line under the title
+  await B.page.fill('.codebar #join', id);
+  await B.page.locator('.codebar button').click();
   check(await table(B.page).then(() => true, () => false), 'the code opens the table for the second player'); // prettier-ignore
   check(
     await until(() => B.page.evaluate((v) => window.__fab.game().game === v || (v === 'bulge' && !window.__fab.game().game), game)),

@@ -132,7 +132,7 @@ for (const game of GAMES)
     check(!errors.length, `no errors in the page${errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''}`);
     await page.close();
   }
-// the home page of a production build (HOME_URL=http://localhost:5300/, vite preview): it shows the shelf and the learn card without the 3D table
+// the home page of a production build (HOME_URL=http://localhost:5300/, vite preview): it shows the shelf and the learn line without the 3D table
 if (process.env.HOME_URL)
   for (const [size, opts] of Object.entries(SIZES)) {
     console.log(`home · ${size}`);
@@ -141,18 +141,18 @@ if (process.env.HOME_URL)
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto(process.env.HOME_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
     check(
-      await page.waitForSelector('.homepage .tutcard', { timeout: 60000 }).then(
+      await page.waitForSelector('.homepage .learnrow', { timeout: 60000 }).then(
         () => true,
         () => false,
       ),
-      'the home page shows the learn card',
+      'the home page shows the learn line',
     );
     await page.waitForTimeout(1000);
     check(
       await page.evaluate(() => !window.__fab && getComputedStyle(document.getElementById('gl')).display === 'none'),
       'the 3D table is not loaded',
     );
-    await page.locator('.tutcard button', { hasText: 'Open' }).click();
+    await page.locator('.learnrow button', { hasText: 'Rules reference' }).click();
     check(
       await page.waitForSelector('#rules', { timeout: 20000 }).then(
         () => true,
