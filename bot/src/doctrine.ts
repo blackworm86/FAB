@@ -101,6 +101,8 @@ export function score(
         a.args[2] !== 'support'
         ? 2
         : null;
+    case 'setPoint': // 6.24: a point unit must be chosen when a side has two or more; the strongest leads
+      return 0.5 + unit(a.args[2]).str / 100;
     case 'setReady':
       return 1;
     case 'autoLosses':
