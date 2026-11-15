@@ -373,6 +373,7 @@ for (const game of GAMES) {
         continue;
       }
       const who = a.actor === a.me ? A : b.actor === b.me ? B : null;
+      if (!who && a.same !== b.same && (await settle(`battle ${n + 1}, the combat begins`))) continue; // the attacker's screen began the combat a moment ago: the other catches up
       if (!who) {
         ok = check(
           false,
