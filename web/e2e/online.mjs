@@ -373,6 +373,7 @@ for (const game of GAMES) {
         continue;
       }
       const who = a.actor === a.me ? A : b.actor === b.me ? B : null;
+      if (!who && a.same !== b.same && (await settle(`battle ${n + 1}, the combat begins`))) continue; // the attacker's screen began the combat a moment ago: the other catches up
       if (!who) {
         ok = check(
           false,
@@ -395,16 +396,17 @@ for (const game of GAMES) {
   }
   check(ok && fought >= 2, `${fought} battles fought to the end from both seats, the screens agreeing after every step`);
 
-  /* both players move at the same moment, several times in a row (a step both sides work in): every move of both must stay */
-  {
+  /* both players move at the same moment, several times in a row (a step both sides work in): every move of both must stay.  BURSTS=20: this check alone, that many times */
+  for (let round = 0; round < (Number(process.env.BURSTS) || 1); round++) {
     const v = await look(A.page),
       mover = v.actor === v.me || v.actor === 'both' ? A : B;
-    await play(mover.page, (E, g) => {
-      g.turn++;
-      g.phase = 'reinforcement'; // both sides act here
-      g.phasing = E.sidesOf(g)[0];
-      g.battle = null;
-    });
+    if (round === 0)
+      await play(mover.page, (E, g) => {
+        g.turn++;
+        g.phase = 'reinforcement'; // both sides act here
+        g.phasing = E.sidesOf(g)[0];
+        g.battle = null;
+      });
     await settle('a step for both sides');
     /** Four of my blocks step to a neighbouring area with no enemy, one save each, a moment apart: later ones leave while an earlier save is still on its way. */
     const burst = (p) =>
@@ -415,11 +417,12 @@ for (const game of GAMES) {
           want = {};
         for (let k = 0; k < 4; k++) {
           const g = structuredClone(F.settled()),
-            u = g.units.find(
+            can = g.units.filter(
               (x) =>
                 x.side === me && x.area != null && !x.garrison && !x.fort && !(x.id in want) &&
                 E.neighbors(x.area).some((a) => !g.units.some((y) => y.area === a && y.side !== me)),
-            ); // prettier-ignore
+            ), // prettier-ignore
+            u = (k ? can.find((x) => x.up != null) : null) ?? can[0]; // after the first, blocks a battle has shown: moving one hides it again, the hardest case for a save that has to wait
           if (!u) break;
           u.area = E.neighbors(u.area).find((a) => !g.units.some((y) => y.area === a && y.side !== me));
           want[u.id] = u.area;
@@ -460,25 +463,33 @@ for (const game of GAMES) {
   /* the second player loses the connection, moves, and comes back while the creator moved too: nothing is lost, and the dot tells the truth */
   {
     const dot = (p) => p.evaluate(() => document.querySelector('.syncdot')?.className.replace('syncdot', '').trim() ?? 'none'),
-      step = (p) =>
-        play(p.page, (E, g, me) => {
-          const u = g.units.find(
-            (x) => x.side === me && x.area != null && !x.garrison && !x.fort && E.neighbors(x.area).some((a) => !g.units.some((y) => y.area === a && y.side !== me)),
+      step = (p, skip = []) =>
+        play(
+          p.page,
+          (E, g, me, skip) => {
+            const u = g.units.find(
+            (x) => x.side === me && !skip.includes(x.id) && x.area != null && !x.garrison && !x.fort && E.neighbors(x.area).some((a) => !g.units.some((y) => y.area === a && y.side !== me)),
           ); // prettier-ignore
-          u.area = E.neighbors(u.area).find((a) => !g.units.some((y) => y.area === a && y.side !== me));
-          return [u.id, u.area];
-        }),
+            u.area = E.neighbors(u.area).find((a) => !g.units.some((y) => y.area === a && y.side !== me));
+            return [u.id, u.area];
+          },
+          skip,
+        ),
       at = (p, [id, a]) => p.page.evaluate(([i, x]) => window.__fab.settled().units.find((u) => u.id === i)?.area === x, [id, a]);
     check((await dot(A.page)) === 'ok' && (await dot(B.page)) === 'ok', 'both connection dots are green');
     await B.page.context().setOffline(true);
     check(await until(async () => (await dot(B.page)) !== 'ok', 90000), 'without a connection the dot is no longer green');
+    // three moves offline: the second while the first is still unsent, the third after the page has given up waiting ("saving is taking too long", 10 s)
     const mb = await step(B),
+      mb2 = await step(B, [mb[0]]),
       ma = await step(A);
-    await sleep(1500);
+    await sleep(11500);
+    const mb3 = await step(B, [mb[0], mb2[0]]);
+    await sleep(500);
     await B.page.context().setOffline(false);
     const agreed = await settle('after the connection came back');
     check(
-      agreed && (await at(A, ma)) && (await at(B, mb)),
+      agreed && (await at(A, ma)) && (await at(B, mb)) && (await at(B, mb2)) && (await at(B, mb3)),
       'moves made while one player was offline are all there when the connection is back',
     );
     check(await until(async () => (await dot(A.page)) === 'ok' && (await dot(B.page)) === 'ok', 30000), 'both dots are green again');
