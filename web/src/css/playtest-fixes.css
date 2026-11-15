@@ -739,9 +739,6 @@
   -webkit-mask-image: linear-gradient(#000 calc(100% - 36px), #0006);
   mask-image: linear-gradient(#000 calc(100% - 36px), #0006);
 }
-#ui .dock .c-ledger {
-  position: relative;
-}
 /* re-test: the chip sits on the line between the list and the bar, never on a row of dice */
 #ui .dock .c-ledger.more {
   padding-bottom: 14px;
@@ -842,4 +839,13 @@ body:has(#ui .chitbar) .sbfab {
 .invite-sheet .invurl {
   overflow-wrap: anywhere;
   user-select: all;
+}
+
+/* owner, 15 Nov: on wide screens the battle report is the panel at the right just above the bottom bar (menu.css); its 'more' chip sits under it */
+@media (min-width: 1000px) {
+  #ui .dock:has(.c-ledger.more) > .c-bar::before {
+    left: auto;
+    right: calc(12px + min(470px, 36vw) / 2);
+    transform: translateX(50%);
+  }
 }
