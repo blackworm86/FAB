@@ -1,6 +1,6 @@
 # Online play: how it works, and where it can go wrong
 
-Written by the online play session, 15 November 2026, from reading the code (`web/src/online.ts`, `web/src/store-rtdb.ts`, `engine/src/split.ts`, `engine/src/fields.ts`, `database.rules.json`, and the places in the table that call them). Section 6 lists what looks wrong; those points are **read from the code, not yet reproduced**: the two-browser test (`web/e2e/online.mjs`, next step) is there to confirm or clear each one.
+Written by the online play session, 15 November 2026, from reading the code (`web/src/online.ts`, `web/src/store-rtdb.ts`, `engine/src/split.ts`, `engine/src/fields.ts`, `database.rules.json`, and the places in the table that call them). Section 6 lists the faults: first the ones the two-browser test (`web/e2e/online.mjs`, section 7) found and that are fixed, then the ones **read from the code and not yet reproduced**.
 
 Background: `docs/ARCHITECTURE.md` §2–§5 and `docs/DEPLOY.md` §5.
 
@@ -76,7 +76,19 @@ What is not, in order of how much it matters:
 
 Not leaks: guests can read the shared game, the seats, reveals and chat (all public by the rules of the game); the push relay never sees game data.
 
-## 6. Suspected faults (to reproduce with the two-browser test)
+## 6. Faults
+
+### Found by the two-browser test and fixed (15 November 2026)
+
+- **A player's own block turned into a blank after a battle, for good.** When a shown block is hidden again it gets a new code, and its owner's private record counts which code is current. That count was never saved to the database (only in the two-tab development table, which is why nobody saw it). From then on the owner's own browser no longer recognised the block: it showed as "Hidden block", and at the next save its real details were overwritten. Very likely the owner's "figures staying blocks" and part of "losses and retreats online". Fixed in `store-rtdb.ts` (the count is saved and read back).
+- **A slow start turned a shared table into a local one.** If the database was not reached within 15 seconds (a slow phone, a busy device), the page gave up and showed a table that lives only in that browser, at the invitation's address, with nothing saying so: a strong candidate for "the test table" of issue #2. Now a page opened with a game code keeps waiting and says "Still connecting to the game…". *Still open*: when online play cannot start at all, a page with a game code must show that plainly instead of a playable local table.
+
+### Seen in the test, not fixed yet
+
+- Right after sitting, the joiner's first entry in the replay record is refused (the database does not know the seat yet, same cause as the private record in `edec14c`): one replay step of that seat's blocks is missing.
+- A block that fought stays readable by the other side while it stands where it was shown, even after the enemy has left the area and the rules turn it face-down again (the honest screen draws it face-down; the data is there). The reveal is withdrawn only when the block moves. Low: it is what a player with a good memory knows.
+
+### Read from the code, not yet reproduced
 
 1. **A move can undo the other player's simultaneous change** ("the two screens conflict", owner's issue #3). While a save is running, arriving changes wait. A second move made in that window is worked out on a game that lacks the other player's change, yet it is compared with the latest received shared game, so the difference written includes "putting back" the other player's values. Also after a connection loss: moves made offline are sent later and overwrite whatever the other player changed in the same values meanwhile.
 2. **The red dot can stay red** (issue #3). After a refused or failed save, the browser already believes the shared copy was sent; nothing retries, and the dot stays red until the next save succeeds or something arrives. The changes are not lost for good (the next move carries them), but the other player waits for them.
@@ -89,4 +101,6 @@ Not leaks: guests can read the shared game, the seats, reveals and chat (all pub
 
 - `tools/rules-test` (needs Java): the database rules, with the app's own create / sit / move / leave writes.
 - `engine/test/split.test.ts`, `audit.test.ts`: hidden blocks and the Rules check, with two seats played in one process (no network).
-- No test yet drives two real browsers through a shared game: that is step 2 (`web/e2e/online.mjs`).
+- **`cd web && npm run online`** (`web/e2e/online.mjs`, needs Java and `npm ci` in `tools/rules-test`; it starts and stops its own emulators and dev server, never the real project): two accounts, one desktop and one phone screen, register on the home page; for each volume one creates a game, the other types the code and sits; they fight battles from both seats (set-up, point units, dice, hit choices, losses, retreats) and the second player reloads. After every step it checks that the two screens show the same game, that nothing is unsaved or held back by the Rules check, and that no hidden block of one seat is on the other screen or in the stored game. The turn's steps before combat are skipped with a shortcut (the seat to act jumps to its Combat Phase), so reinforcements, movement and supply online are **not** covered yet.
+
+The players' chits are open information by the rules (assets and events are face-up), so there is no hidden "hand" to protect: only blocks.

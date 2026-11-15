@@ -653,6 +653,7 @@ if (import.meta.env.DEV || DEV_FAKE || SANDBOX || TUTORIAL)
         return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height };
       },
       game: () => g,
+      settled: () => heldNext ?? g, // the game once the dice on screen have landed (the two-browser online test compares this)
       setGame: (x: E.Game) => {
         setG(x);
         hist.clear();

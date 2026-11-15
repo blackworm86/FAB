@@ -1,0 +1,374 @@
+// Two-browser online test: two accounts on the local Firebase emulators (never the real project) create and join a game of each volume,
+// the second player sits and moves, they fight battles from both seats, and after every step the two screens must agree and neither
+// may hold the other's hidden blocks. Run:  cd web && npm run online   (needs Java and `npm ci` in tools/rules-test; about two minutes).
+//   GAMES=bulge  one volume only.  It starts and stops its own emulators and dev server (ports 9099, 9000, 5198).
+import { chromium } from 'playwright';
+import { spawn } from 'node:child_process';
+import { mkdtempSync, copyFileSync, writeFileSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+
+const ROOT = resolve(import.meta.dirname, '../..'),
+  FIREBASE = join(ROOT, 'tools/rules-test/node_modules/.bin/firebase'),
+  PORT = 5198,
+  BASE = `http://localhost:${PORT}/`,
+  DB = 'http://127.0.0.1:9000',
+  NS = 'demo-fab-default-rtdb';
+const GAMES = process.env.GAMES?.split(',') ?? ['bulge', 'sicily', 'golan73'];
+/** Which seat the creator takes: the joiner is second to sit either way, once in each seat key. */
+const CREATOR_SEAT = { bulge: 0, sicily: 1, golan73: 0 };
+const BATTLES = 6; // battles fought per game at most: until a hit choice and a retreat were both seen
+if (!existsSync(FIREBASE)) {
+  console.log('The Firebase emulator is not installed: run `npm ci` in tools/rules-test (needs Java).');
+  process.exit(1);
+}
+
+let failed = 0;
+const check = (ok, what) => {
+  if (!ok) failed++;
+  console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${what}`);
+  return ok;
+};
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const until = async (f, ms = 20000, every = 250) => {
+  for (const end = Date.now() + ms; Date.now() < end; await sleep(every)) {
+    const v = await f().catch(() => null);
+    if (v) return v;
+  }
+  return null;
+};
+const up = (url) =>
+  until(
+    () =>
+      fetch(url).then(
+        () => true,
+        () => false,
+      ),
+    120000,
+    1000,
+  );
+
+/* ---- the emulators and the dev server ---- */
+const procs = [];
+const start = (cmd, args, opts) => {
+  const p = spawn(cmd, args, { stdio: 'ignore', detached: true, ...opts });
+  procs.push(p);
+};
+const stop = () => {
+  for (const p of procs)
+    try {
+      process.kill(-p.pid);
+    } catch {
+      /* already gone */
+    }
+};
+process.on('exit', stop);
+{
+  const dir = mkdtempSync(join(tmpdir(), 'fab-emu-'));
+  copyFileSync(join(ROOT, 'database.rules.json'), join(dir, 'database.rules.json'));
+  writeFileSync(
+    join(dir, 'firebase.json'),
+    JSON.stringify({
+      database: { rules: 'database.rules.json' },
+      emulators: { auth: { host: '127.0.0.1', port: 9099 }, database: { host: '127.0.0.1', port: 9000 }, ui: { enabled: false } },
+    }),
+  );
+  start(FIREBASE, ['emulators:start', '--only', 'auth,database', '--project', 'demo-fab'], { cwd: dir });
+  start('npx', ['vite', '--port', String(PORT), '--strictPort'], {
+    cwd: join(ROOT, 'web'),
+    env: {
+      ...process.env,
+      VITE_FIREBASE_API_KEY: 'demo-key',
+      VITE_FIREBASE_PROJECT_ID: 'demo-fab',
+      VITE_FIREBASE_DATABASE_URL: `${DB}?ns=${NS}`,
+      VITE_FIREBASE_EMULATOR: '127.0.0.1',
+    },
+  });
+  if (!(await up(`${DB}/.json?ns=${NS}`)) || !(await up('http://127.0.0.1:9099/')) || !(await up(BASE))) {
+    console.log('The emulators or the dev server did not start (are ports 9000, 9099 or 5198 taken? is Java installed?).');
+    process.exit(1);
+  }
+}
+/** The database as stored, read past the rules (the emulator's owner token). */
+const raw = (path) => fetch(`${DB}/${path}.json?ns=${NS}`, { headers: { Authorization: 'Bearer owner' } }).then((r) => r.json());
+
+/* ---- what runs inside a page ---- */
+const table = (p) => p.waitForFunction(() => window.__fab && document.querySelector('.c-bar.b'), null, { timeout: 180000 });
+/** This seat's picture of the game, reduced to what both seats must agree on, and its own blocks the other may not see. */
+const look = (p) =>
+  p.evaluate(() => {
+    const F = window.__fab,
+      E = F.E,
+      g = F.settled(),
+      me = F.online.mySide(),
+      foe = E.sidesOf(g).find((s) => s !== me),
+      b = g.battle;
+    return {
+      me,
+      rev: F.online.rev,
+      sync: F.online.sync,
+      actor: E.actorOf(g),
+      stage: b?.stage ?? null,
+      pointDone: !!b?.attPointDone,
+      ownHidden: g.units.filter((u) => u.side === me && u.name === 'Hidden block').length,
+      foeHidden: g.units.filter((u) => u.side !== me && u.name === 'Hidden block').length,
+      /** my blocks the other side may not see now: their real ids must be nowhere on the other screen or in the shared game.
+       *  (A block still standing where a battle showed it keeps its reveal until it moves: docs/ONLINE.md §5.) */
+      secret: g.units.filter((u) => u.side === me && !E.visibleTo(g, u, foe) && !(u.up != null && u.up === u.area)).map((u) => u.id),
+      json: JSON.stringify(g),
+      held: !!document.querySelector('.seatbar.audit'),
+      same: JSON.stringify({
+        t: g.turn,
+        ph: g.phase,
+        side: g.phasing,
+        over: g.over ?? null,
+        rolls: g.rolls,
+        battle: b && { area: b.area, stage: b.stage, att: b.attacker, dice: b.rolls.map((r) => r.dice), pending: b.pending ?? null },
+        units: g.units.map((u) => [u.side, u.area ?? null, u.box ?? null]),
+        chits: g.chits.map((c) => [c.id, c.box, c.area ?? null]),
+        control: g.control,
+      }),
+    };
+  });
+/** Change the game with the rules engine on this seat's own copy, and save it the way a tap does. Returns what the function returns, or the error. */
+const play = (p, f, arg) =>
+  p.evaluate(
+    ([src, a]) => {
+      const F = window.__fab,
+        g = structuredClone(F.settled());
+      try {
+        const r = new Function('E', 'g', 'me', 'a', `return (${src})(E, g, me, a)`)(F.E, g, F.online.mySide(), a);
+        F.setGame(g);
+        return r ?? 'ok';
+      } catch (e) {
+        return '!' + (e?.message ?? e);
+      }
+    },
+    [f.toString(), arg],
+  );
+/** One step of a battle, by the seat that has to act. */
+const battleStep = (E, g, me) => {
+  const b = g.battle,
+    st = b.stage;
+  if (st === 'setup') {
+    if (b.defSA) return E.passSA(g, b), 'no Special Action';
+    const att = me === b.attacker,
+      pt = () => {
+        const u = E.fighters(g, b.area, me, att).find((x) => !x.garrison && !x.ghost && !(att && x.disorder));
+        if (u) E.setPoint(g, b, me, u.id);
+      };
+    if (att && !b.ready?.includes(me)) return E.setReady(g, b, me), 'attacker assets done';
+    pt();
+    return E.setReady(g, b, me), 'point unit';
+  }
+  if (st === 'done') return E.closeBattle(g), 'closed';
+  if (st === 'attChoice') return E.attackerChoice(g, b, false), 'choice';
+  if (st === 'defChoice') return E.defenderChoice(g, b, true), 'choice';
+  if (st === 'attFirst') return E.chooseFirstLoss(g, b, b.attPoint), 'choice';
+  if (st === 'retreat') return E.chooseRetreat(g, b, E.retreatOptions(g, b)[0]), 'retreat';
+  if (st === 'exploit') return E.declineExploit(g, b), 'no exploitation';
+  return E.roll_step(g, b), st;
+};
+/** A battle to fight: one of my blocks steps into a neighbouring area held by the enemy, in my Combat Phase. (A shortcut past the turn's earlier steps.) */
+const pickFight = (E, g, me) => {
+  for (const u of g.units) {
+    if (u.side !== me || u.area == null || u.garrison || u.fort || u.ghost || u.disorder) continue;
+    const to = E.neighbors(u.area).find(
+      (a) => g.units.some((x) => x.area === a && x.side !== me && !x.garrison) && !g.units.some((x) => x.area === a && x.side === me),
+    );
+    if (to == null) continue;
+    const keep = JSON.stringify(g);
+    try {
+      u.area = to;
+      g.phase = 'combat';
+      g.phasing = me;
+      g.battle = null;
+      E.startBattle(g, to);
+      return `battle in area ${to}`;
+    } catch {
+      Object.assign(g, JSON.parse(keep)); // this one cannot be fought: try the next block
+    }
+  }
+  throw new Error('no battle to start');
+};
+
+/** The seat that has to act gives the turn to the other, straight to its Combat Phase (a shortcut the Rules check accepts: time goes forward). */
+const handOver = (E, g, me) => {
+  const [p1, p2] = E.sidesOf(g),
+    to = me === p1 ? p2 : p1;
+  if (to === p1) g.turn++;
+  g.phase = 'combat';
+  g.phasing = to;
+  g.battle = null;
+};
+
+/* ---- the test ---- */
+const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const stamp = Date.now();
+async function player(name, size) {
+  const page = await (await browser.newContext({ ...size, reducedMotion: 'reduce' })).newPage(), // quick dice: the software 3D here is slow
+    errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => {
+    if (m.type() === 'error' && !/favicon|Failed to load resource|permission_denied/i.test(m.text())) errors.push(m.text());
+  });
+  await page.goto(BASE, { waitUntil: 'domcontentloaded', timeout: 180000 });
+  await page.waitForSelector('#a-mail', { timeout: 120000 });
+  await page.fill('#a-name', name);
+  await page.fill('#a-mail', `${name.toLowerCase()}${stamp}@fab.test`);
+  await page.fill('#a-pass', 'secret1');
+  await page.click('[data-auth="reg"]');
+  await page.waitForSelector('[data-auth="out"]', { timeout: 60000 });
+  return { name, page, errors };
+}
+const A = await player('Anna', { viewport: { width: 1380, height: 860 } }),
+  B = await player('Bruno', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 }); // one desktop, one phone
+let hitChoice = 0,
+  retreats = 0;
+
+for (const game of GAMES) {
+  console.log(`\n${game}`);
+  /* Anna creates the game on the home page */
+  await A.page.goto(BASE, { waitUntil: 'domcontentloaded' });
+  await A.page.waitForSelector('.shelf .cover');
+  await A.page.locator('.shelf .cover').nth(['bulge', 'sicily', 'golan73'].indexOf(game)).click();
+  await A.page.locator('[title="Start a new game"], [aria-label="Start a new game"]').first().click();
+  await A.page.locator('.tiles .tile').nth(CREATOR_SEAT[game]).click();
+  await A.page.locator('button', { hasText: 'Create game' }).click();
+  await A.page.waitForURL(/[?&]table=/, { timeout: 60000 });
+  const id = new URL(A.page.url()).searchParams.get('table');
+  check(!!id && (await table(A.page).then(() => true, () => false)), `the creator's table opens (code ${id})`); // prettier-ignore
+  check(await until(async () => (await look(A.page)).rev > 0), 'the creator receives the shared game');
+
+  /* Bruno types the code on the home page and takes the free seat */
+  await B.page.goto(BASE, { waitUntil: 'domcontentloaded' });
+  await B.page.waitForSelector('#join');
+  await B.page.fill('#join', id);
+  await B.page.locator('[title="Join a game with an invite"], button:has-text("Join")').first().click();
+  check(await table(B.page).then(() => true, () => false), 'the code opens the table for the second player'); // prettier-ignore
+  check(
+    await until(() => B.page.evaluate((v) => window.__fab.game().game === v || (v === 'bulge' && !window.__fab.game().game), game)),
+    'it is the same volume, not another table',
+  );
+  await B.page.locator('.seatbar button.primary').first().click({ timeout: 30000 });
+  check(await until(async () => (await look(B.page)).me), 'the second player is seated');
+
+  /* own blocks visible without a reload (the fault fixed in commit edec14c: the second seat's blocks stayed hidden) */
+  const a0 = await look(A.page);
+  check(await until(async () => (await look(B.page)).ownHidden === 0, 15000), 'the second player sees all of its own blocks (no reload)');
+  check(a0.ownHidden === 0, 'the creator sees all of its own blocks');
+
+  const settle = async (what) => {
+    // both screens show the same game, nothing is being saved or held back, and no hidden block of one seat is on the other screen or in the stored game
+    let a, b, leaks;
+    const t0 = Date.now(),
+      found = (ids, text) => ids.filter((x) => text.includes(JSON.stringify(x)));
+    const done = await until(async () => {
+      [a, b] = [await look(A.page), await look(B.page)];
+      const st = await raw(`games/${id}/state`),
+        stored = [st.f, st.units, st.chits].flatMap((o) => Object.values(o ?? {})).join('\n'); // each value is itself a piece of JSON text
+      leaks = [
+        [`on ${B.name}'s screen`, found(a.secret, b.json)],
+        [`on ${A.name}'s screen`, found(b.secret, a.json)],
+        ['in the stored game', found([...a.secret, ...b.secret], stored)],
+      ].filter((x) => x[1].length);
+      return a.same === b.same && !/saving/.test(a.sync + b.sync) && !leaks.length && !a.held && !b.held;
+    }, 30000);
+    if (done) return true;
+    if (a.same !== b.same) {
+      check(false, `${what}: the two screens agree`);
+      const x = JSON.parse(a.same),
+        y = JSON.parse(b.same);
+      for (const k of Object.keys(x))
+        if (JSON.stringify(x[k]) !== JSON.stringify(y[k]))
+          console.log(`       ${k}: ${A.name} ${JSON.stringify(x[k]).slice(0, 160)} | ${B.name} ${JSON.stringify(y[k]).slice(0, 160)}`);
+    }
+    if (/saving|NOT SAVED/.test(a.sync + b.sync)) check(false, `${what}: saved (${A.name} "${a.sync}", ${B.name} "${b.sync}")`);
+    if (a.held || b.held) check(false, `${what}: no change held back by the Rules check`);
+    for (const [where, ids] of leaks) check(false, `${what}: hidden blocks stay hidden (${ids.slice(0, 4).join(', ')} ${where})`);
+    return false;
+  };
+  check(await settle('after sitting'), 'after sitting: the screens agree and hidden blocks stay hidden');
+
+  /* Sicily starts with a set-up step: the quick set-up, each seat its own blocks (the Axis garrisons first, then the landing) */
+  if (game === 'sicily') {
+    const setUp = (E, g, me) => {
+      if (g.phase !== 'deploy') return 'no set-up';
+      if (me === E.sidesOf(g)[1]) return E.sicily.autoGarrisons(g), 'garrisons';
+      E.sicily.autoDeploy(g);
+      E.endPhase(g);
+    };
+    for (const p of CREATOR_SEAT.sicily ? [A, B] : [B, A]) {
+      const r = await play(p.page, setUp);
+      check(!String(r).startsWith('!'), `${p.name} sets up${String(r).startsWith('!') ? ': ' + r : ''}`);
+      await settle('after the set-up');
+    }
+  }
+  check((await look(A.page)).foeHidden > 0 && (await look(B.page)).foeHidden > 0, "each player sees the other's blocks face down");
+
+  /* battles: the second player attacks first (its first move was lost before edec14c), then they alternate */
+  let ok = true,
+    fought = 0;
+  for (let n = 0; n < BATTLES && ok && (n < 2 || !hitChoice || !retreats); n++) {
+    const att = n % 2 ? A : B,
+      def = att === A ? B : A,
+      v = await look(att.page);
+    if (v.actor !== v.me && v.actor !== 'both') {
+      await play(def.page, handOver);
+      await settle('the turn is handed over');
+    }
+    const r = await play(att.page, pickFight);
+    if (String(r).startsWith('!')) {
+      if (fought < 2) ok = check(false, `${att.name} starts a battle: ${r}`);
+      break; // nothing left to attack: enough once both seats have fought
+    }
+    ok = await settle(`battle ${n + 1} begins`);
+    if (n === 0) check(ok, "the second player's first move arrives on the creator's screen");
+    for (let k = 0; k < 120 && ok; k++) {
+      const [a, b] = [await look(A.page), await look(B.page)];
+      if (!a.stage && !b.stage) break; // the battle is closed
+      if (a.stage === 'setup' && a.pointDone) {
+        // both point units are chosen: each browser publishes its blocks there and the attacker's starts the combat by itself
+        ok = !!(await until(async () => (await look(A.page)).stage !== 'setup' && (await look(B.page)).stage !== 'setup', 20000));
+        if (!ok) check(false, `battle ${n + 1}: the combat starts once both point units are chosen`);
+        continue;
+      }
+      const who = a.actor === a.me ? A : b.actor === b.me ? B : null;
+      if (!who) {
+        ok = check(false, `battle ${n + 1}: somebody has to act (stage ${a.stage}, to act: ${a.actor})`);
+        break;
+      }
+      const st = a.stage,
+        did = await play(who.page, battleStep);
+      if (String(did).startsWith('!')) {
+        ok = check(false, `battle ${n + 1}, ${st}: ${who.name} ${did}`);
+        break;
+      }
+      if (did === 'choice') hitChoice++;
+      if (did === 'retreat') retreats++;
+      ok = await settle(`battle ${n + 1}, ${st}`);
+    }
+    if (ok) fought++;
+  }
+  check(ok && fought >= 2, `${fought} battles fought to the end from both seats, the screens agreeing after every step`);
+
+  /* a reload: the page builds the same game again from the database */
+  const before = (await look(B.page)).same;
+  await B.page.reload({ waitUntil: 'domcontentloaded' });
+  await table(B.page);
+  check(
+    await until(async () => (await look(B.page)).same === before && (await look(B.page)).ownHidden === 0),
+    'after a reload the second player has the same game and its own blocks',
+  );
+  check(await settle('after the reload'), 'after the reload: the screens agree and hidden blocks stay hidden');
+}
+if (GAMES.length === 3) {
+  check(hitChoice > 0, `a hit choice was played (${hitChoice})`);
+  check(retreats > 0, `a retreat was played (${retreats})`);
+}
+for (const p of [A, B])
+  check(!p.errors.length, `no errors on ${p.name}'s page${p.errors.length ? ': ' + p.errors.slice(0, 3).join(' | ') : ''}`);
+await browser.close();
+stop();
+console.log(failed ? `\n${failed} check(s) failed` : '\nall checks passed');
+process.exit(failed ? 1 : 0);

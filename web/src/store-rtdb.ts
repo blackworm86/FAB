@@ -106,6 +106,7 @@ export async function rtdbStore(table: string): Promise<Store | null> {
   const enc = <T>(o: Record<string, T>) => Object.fromEntries(Object.entries(o).map(([k, v]) => [ek(k), JSON.stringify(v)]));
   const dec = <T>(o: Record<string, string> | null | undefined) =>
     Object.fromEntries(Object.entries(o ?? {}).map(([k, v]) => [dk(k), JSON.parse(v) as T]));
+  const keys = <T>(o: Record<string, T>, f: (k: string) => string) => Object.fromEntries(Object.entries(o).map(([k, v]) => [f(k), v]));
   const seatOf = (s: Seats): Side | '' =>
     account.uid && s.german === account.uid ? 'german' : account.uid && s.allied === account.uid ? 'allied' : '';
   /** The seats of this game, from the two nodes that hold them. */
@@ -200,9 +201,9 @@ export async function rtdbStore(table: string): Promise<Store | null> {
         stop = rt.onValue(
           G(`priv/${v}`),
           (s) => {
-            const p = s.val() as { salt: string; secrets?: Record<string, string> } | null;
+            const p = s.val() as { salt: string; secrets?: Record<string, string>; epoch?: Record<string, number> } | null;
             tries = 0;
-            next(p ? { salt: p.salt, secrets: dec(p.secrets) } : null);
+            next(p ? { salt: p.salt, secrets: dec(p.secrets), ...(p.epoch ? { epoch: keys(p.epoch, dk) } : {}) } : null);
           },
           () => {
             next(null);
@@ -223,7 +224,8 @@ export async function rtdbStore(table: string): Promise<Store | null> {
     async setPriv(p: Priv) {
       const s = (await rt.get(G('seats'))).val() ?? {},
         v = seatOf(s);
-      if (v) await rt.set(G(`priv/${v}`), { salt: p.salt, secrets: enc(p.secrets) });
+      // the epochs too: without them a block hidden again after a battle came back as a blank on its owner's own screen, and its details were lost at the next save (two-browser online test)
+      if (v) await rt.set(G(`priv/${v}`), { salt: p.salt, secrets: enc(p.secrets), epoch: keys(p.epoch ?? {}, ek) });
     },
     watchReveals: (next: (r: Reveals) => void) => {
       rt.onValue(

@@ -240,12 +240,20 @@ export async function startOnline(
   try {
     const fake = DEV ? params.get('fake') : null,
       make = async () => (fake === 'german' || fake === 'allied' ? (await import('./store-fake')).fakeStore(fake) : rtdbStore(TABLE));
+    const made = make();
     store = await Promise.race([
-      make(),
+      made,
       new Promise<never>((_, no) =>
         setTimeout(() => no(new Error('Could not reach the game database. Check the database address and your connection.')), 15000),
       ),
-    ]);
+    ]).catch(async (e) => {
+      if (!HAS_TABLE || fake) throw e;
+      online.error = 'Still connecting to the game… check your connection.'; // a shared table never turns into a local one because the device is slow (two-browser test: a reload under load took 16 s)
+      changed();
+      const s = await made;
+      online.error = '';
+      return s;
+    });
     if (store && (fake === 'german' || fake === 'allied')) online.devSeat = seatSide(fake); // a stand-in store plays one seat per tab
   } catch (e) {
     online.error = String(e);
