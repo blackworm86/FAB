@@ -64,8 +64,8 @@ export function golanVictory(g: Game): Record<Side, number> & { net: number } {
   } // 22.47: the score is the strength in Nafakh
   const pts: Record<Side, number> = { syrian: 0, israeli: 0 };
   for (const s of ['syrian', 'israeli'] as Side[]) for (const o of golanVpAreas(g, s)) if (o.ok) pts[s] += o.pts;
-  if (isAlOwda(g)) return { ...pts, net: pts.syrian - pts.israeli }; // 20.38 (owner, 15 Nov): areas only, no large units
-  for (const id of g.elimLarge) {
+  for (const id of isAlOwda(g) ? [] : g.elimLarge) {
+    // 20.38 (owner, 15 Nov): no large units in Al-Owda; the optional chemical-warfare VP still counts
     const u = g.units.find((x) => x.id === id)!;
     pts[other(u.side)]++;
   }

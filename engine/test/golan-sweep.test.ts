@@ -233,6 +233,8 @@ describe('Golan asset and event sweep', () => {
     const before = E.victory(g).israeli;
     g.elimLarge.push(g.units.find((u) => u.side === 'syrian' && u.max >= 3)!.id);
     expect(E.victory(g).israeli).toBe(before); // a destroyed big unit scores nothing here
+    golan.state(g).chem = 3; // three chemical attacks (optional 18.7): their VP still count (owner, 15 Nov)
+    expect(E.victory(g).israeli).toBe(before + 2);
     expect(E.victoryTable(g)).toEqual([
       ['1+ Syrian VP', 'Syrian Victory'],
       ['0', 'Draw'],
