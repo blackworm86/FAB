@@ -112,6 +112,8 @@ Done and closed: tutorial rebuilt (three courses, Italian); `database.rules.json
 
 **Database rules published by the owner on 15 November (afternoon):** the version with the replay record opening only on a real result (online audit fix 2). A first paste the same day was the previous version (the site was still rebuilding); the second, from the file on `main`, is the right one.
 
+**15 November, afternoon:** all 14 problems of the owner's issue log fixed (retest #1–#3). New owner task: the sandbox reworked and split into a hot-seat mode for players plus admin tools for the owner; the interface session writes a plan and mockup first (`docs/sandbox-hotseat-plan.md`). Still open: six lower-risk online security gaps (`docs/ONLINE.md` §5), losses/retreats and Sicily/Golan online untested, the design-review re-score, full games played to the end.
+
 ## Proposed priorities (15 November)
 
 1. **A full game of each volume by the owner** (desktop and phone), the real test after three days of fixes; the helpers only play narrow pieces.
