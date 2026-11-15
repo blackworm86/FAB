@@ -4,8 +4,8 @@ golan73 badr_alt seed 1: b4af839983288a30 turn 4 1065 actions
 golan73 badr_alt seed 2: 2b7d537e2e9d5152 turn 4 1085 actions
 golan73 nafakh seed 1: ad289c9567ac588b turn 4 995 actions
 golan73 nafakh seed 2: a4de212b99760c2d turn 4 955 actions
-golan73 alowda seed 1: ec9990b9fca35750 turn 6 1710 actions
-golan73 alowda seed 2: ba0dcc0202c5ced1 turn 6 1746 actions
+golan73 alowda seed 1: 69c59065d466deb3 turn 6 1710 actions
+golan73 alowda seed 2: 21413ea77e8cf9a3 turn 6 1746 actions
 sicily sunrise_bridge seed 1: fa7b663a48548996 turn 4 1041 actions
 sicily sunrise_bridge seed 2: f953f95d748b485f turn 4 1004 actions
 sicily tournament seed 1: f30638703d11d2bf turn 5 1547 actions

@@ -232,7 +232,7 @@ registerHooks('golan73', {
     isNafakh(g)
       ? 'Battle for Nafakh (22.47): no VP; the score is the strength in Nafakh'
       : isAlOwda(g)
-        ? 'scored at the end of turn 6 (20.38), areas only: in supply, Syrian ones only with a Syrian unit there; Israel scores each area east of the VP Line; the side ahead wins, level is a draw'
+        ? 'scored at the end of turn 6 (20.38), areas only: in supply, Syrian ones only with a Syrian unit there; Israel starts at 3 (its three stars, 20.37); an area behind the VP Line scores when it changes hands: Syria scores one it takes, Israel one it takes beyond the Purple Line; the side ahead wins, level is a draw'
         : 'areas count only when in supply, and Syrian areas only when a Syrian unit is there (19.1)',
   bigUnits: (g) => !isAlOwda(g), // 20.38: Al-Owda scores areas only
   victoryRows: (g) =>
