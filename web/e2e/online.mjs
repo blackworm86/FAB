@@ -397,7 +397,6 @@ for (const game of GAMES) {
 
   /* both players move at the same moment, several times in a row (a step both sides work in): every move of both must stay.  BURSTS=20: this check alone, that many times */
   for (let round = 0; round < (Number(process.env.BURSTS) || 1); round++) {
-    for (const p of [A, B]) await p.page.evaluate(() => (window.__fabTrace = []));
     const v = await look(A.page),
       mover = v.actor === v.me || v.actor === 'both' ? A : B;
     if (round === 0)
@@ -452,12 +451,7 @@ for (const game of GAMES) {
         console.log(`       ${p.name}'s move ${i} of ${Object.keys(w).length} lost: ${id} should be in area ${a}, is in ${now}`);
     }
     const lost = (await kept(A.page, wa)) + (await kept(B.page, wb)),
-      traces = lost ? await Promise.all([A, B].map((p) => p.page.evaluate(() => window.__fabTrace))) : [];
-    traces
-      .flatMap((t, i) => t.map(([at, m]) => [at, `${[A, B][i].name}: ${m}`]))
-      .sort((x, y) => x[0] - y[0])
-      .forEach(([at, m]) => console.log(`         ${at % 100000} ${m}`));
-    const n = Object.keys(wa).length + Object.keys(wb).length;
+      n = Object.keys(wa).length + Object.keys(wb).length;
     check(
       agreed && n >= 4 && !lost,
       `both players move at the same moment: all ${n} moves stay on both screens${lost ? ` (${lost} lost)` : ''}`,
@@ -467,25 +461,33 @@ for (const game of GAMES) {
   /* the second player loses the connection, moves, and comes back while the creator moved too: nothing is lost, and the dot tells the truth */
   {
     const dot = (p) => p.evaluate(() => document.querySelector('.syncdot')?.className.replace('syncdot', '').trim() ?? 'none'),
-      step = (p) =>
-        play(p.page, (E, g, me) => {
-          const u = g.units.find(
-            (x) => x.side === me && x.area != null && !x.garrison && !x.fort && E.neighbors(x.area).some((a) => !g.units.some((y) => y.area === a && y.side !== me)),
+      step = (p, skip = []) =>
+        play(
+          p.page,
+          (E, g, me, skip) => {
+            const u = g.units.find(
+            (x) => x.side === me && !skip.includes(x.id) && x.area != null && !x.garrison && !x.fort && E.neighbors(x.area).some((a) => !g.units.some((y) => y.area === a && y.side !== me)),
           ); // prettier-ignore
-          u.area = E.neighbors(u.area).find((a) => !g.units.some((y) => y.area === a && y.side !== me));
-          return [u.id, u.area];
-        }),
+            u.area = E.neighbors(u.area).find((a) => !g.units.some((y) => y.area === a && y.side !== me));
+            return [u.id, u.area];
+          },
+          skip,
+        ),
       at = (p, [id, a]) => p.page.evaluate(([i, x]) => window.__fab.settled().units.find((u) => u.id === i)?.area === x, [id, a]);
     check((await dot(A.page)) === 'ok' && (await dot(B.page)) === 'ok', 'both connection dots are green');
     await B.page.context().setOffline(true);
     check(await until(async () => (await dot(B.page)) !== 'ok', 90000), 'without a connection the dot is no longer green');
+    // three moves offline: the second while the first is still unsent, the third after the page has given up waiting ("saving is taking too long", 10 s)
     const mb = await step(B),
+      mb2 = await step(B, [mb[0]]),
       ma = await step(A);
-    await sleep(1500);
+    await sleep(11500);
+    const mb3 = await step(B, [mb[0], mb2[0]]);
+    await sleep(500);
     await B.page.context().setOffline(false);
     const agreed = await settle('after the connection came back');
     check(
-      agreed && (await at(A, ma)) && (await at(B, mb)),
+      agreed && (await at(A, ma)) && (await at(B, mb)) && (await at(B, mb2)) && (await at(B, mb3)),
       'moves made while one player was offline are all there when the connection is back',
     );
     check(await until(async () => (await dot(A.page)) === 'ok' && (await dot(B.page)) === 'ok', 30000), 'both dots are green again');

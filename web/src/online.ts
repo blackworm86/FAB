@@ -186,11 +186,6 @@ let onChange: () => void = () => {},
   onRemote: (g: Game) => void = () => {},
   notify: (m: string) => void = () => {},
   onGone: () => void = () => {};
-const trace = (m: string) => (globalThis as { __fabTrace?: [number, string][] }).__fabTrace?.push([Date.now(), m]); // TRACE (temporary)
-const sig = (j: string) => {
-  const g = JSON.parse(j) as Game;
-  return g.units.map((u) => u.area ?? '-').join(',');
-};
 const fail = (e: string) => {
   online.error = e;
   onChange();
@@ -208,16 +203,14 @@ const mySeat = () => {
 
 /** Rebuild the game this seat plays on from the shared copy, its private details and the reveals. */
 function rebuild() {
-  if (writing) {
+  if (writing || queued) {
     rebuildLater = true;
-    trace('rebuild deferred');
     return;
-  } // a save is in flight: apply what arrived as soon as it ends
+  } // a save is in flight, or a move of ours still waits to go: showing what arrived now would drop it from this screen, and the next move would then leave without it: apply what arrived as soon as it ends
   if (!pubDoc) return;
   const sp = mySeat(),
     g0 = JSON.parse(pubDoc.json) as Game;
   base = pubDoc.json;
-  trace('rebuild ' + sig(pubDoc.json));
   if (!sp) {
     onRemote(g0);
     return;
@@ -366,7 +359,6 @@ export async function startOnline(
     online.rev = Math.max(online.rev, d.rev);
     online.lastBy = d.by ?? '';
     pubDoc = d;
-    trace('arrived ' + (d.json === lastJson ? 'same' : sig(d.json)));
     if (d.json === lastJson) return;
     lastJson = d.json;
     rebuild();
@@ -387,16 +379,13 @@ export async function push(g: Game) {
   if (out.pub === lastJson || out.pub === base) return; // nothing of ours to send; and what has just arrived must not be taken for sent (two-browser test: one screen stayed in a battle's set-up)
   if (writing) {
     queued = g;
-    trace('push queued ' + sig(out.pub));
     return;
   }
-  trace('push write ' + sig(out.pub) + ' from ' + (base ? sig(base) : ''));
   writing = true;
   const dog = setTimeout(() => {
     if (writing) {
-      writing = false;
       notify('Saving is taking too long. Check your connection.');
-      rebuild();
+      savedLater(); // go on: a waiting move first, then what arrived
     }
   }, 10000);
   try {
