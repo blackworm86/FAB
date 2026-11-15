@@ -103,7 +103,7 @@ export let mapMenu = false; // phones: the layers, legend and rotate fold into o
 export const setMapMenu = <T extends typeof mapMenu>(v: T): T => ((mapMenu = v), v);
 export function mapDock() {
   if (g.battle) return ''; // the battle bar takes the top of the map
-  if (legendOpen && SANDBOX && SBU.st.sbOpen && innerWidth < 700) {
+  if (legendOpen && SBU.adminOn() && SBU.st.sbOpen && innerWidth < 700) {
     if (legendShownAt < SBU.st.sbOpenedAt) legendOpen = false;
     else SBU.closeSb();
   } // phones: the legend and the sandbox sheet never stack; the newer one wins

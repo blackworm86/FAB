@@ -37,8 +37,6 @@ import { b3, sideOfUnit, unitFace } from './map-dock';
 import { cutOffCount, modChips, refresh, relayer } from './main';
 
 /** The volume's prompts (set-up, drops, evacuation…). On a phone they fold down to a handle so the map can have the screen; they open again on a tap. */
-let volFolded = innerWidth <= 700,
-  volFoldKey = '';
 /** The set-up panel as built, folded or not. */
 export let panelFull = '';
 export function volPanel() {
@@ -46,18 +44,7 @@ export function volPanel() {
   const html = VOL.panel(g, panelCtx());
   panelFull = html; // the bar reads the panel's buttons even when the panel is folded on a phone
   if (!html) return '';
-  const k = `${g.turn}${g.phasing}${g.phase}`;
-  if (k !== volFoldKey) {
-    volFoldKey = k;
-    volFolded = innerWidth <= 700;
-  } // phones: each step starts folded, the map first; a tap on the handle opens the prompts
-  if (!html.includes('class="volstack"') || innerWidth > 700) return html;
-  const n = (html.match(/class="volpanel"/g) ?? []).length,
-    title = /<b>(?:<svg[\s\S]*?<\/svg>)?\s*([^<(]+)/.exec(html)?.[1]?.trim() ?? 'Instructions';
-  const fold = `<button class="volfold" aria-expanded="${!volFolded}" data-ui="${reg(() => {
-    volFolded = !volFolded;
-  })}">${ico(volFolded ? 'next' : 'close')}<span>${volFolded ? esc(title) + (n > 1 ? ` +${n - 1}` : '') : 'Hide'}</span></button>`;
-  return volFolded ? `<div class="volstack folded">${fold}</div>` : html.replace('<div class="volstack">', `<div class="volstack">${fold}`);
+  return html; // the tray above the bar (interaction system): it scrolls on a phone, nothing folds or floats
 }
 function tray() {
   const ids = g.phase === 'deploy' ? VOL.pendingPlace(g) : g.pendingArrivals,

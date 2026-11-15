@@ -277,7 +277,7 @@ function renderInner() {
         }),
       ),
     )}</div>` +
-    `<div class="stage">${SANDBOX && SBU.st.sbOpen ? SBU.sandboxPanel() : ''}${seatBar()}${heldBad ? heldBadBar() : ''}${
+    `<div class="stage">${SBU.adminOn() && SBU.st.sbOpen ? SBU.sandboxPanel() : ''}${seatBar()}${heldBad ? heldBadBar() : ''}${
       auditWarn.length
         ? `<div class="seatbar err audit"><span>${ico('warn')} <b>Rules check:</b> ${auditWarn.map(esc).join(' ')}</span>${ubtn(
             'OK',
@@ -286,7 +286,7 @@ function renderInner() {
             },
           )}</div>`
         : ''
-    }${vpHtml}${mapDock()}${cardHtml}${decisionBubble()}${feedHtml()}${SBU.hotCoverHtml()}${newcomerCard()}${saPickHtml()}${altPickHtml()}${airPickHtml()}${chatHtml()}${
+    }${mapDock()}${cardHtml}${decisionBubble()}${feedHtml()}${SBU.hotCoverHtml()}${newcomerCard()}${saPickHtml()}${altPickHtml()}${airPickHtml()}${chatHtml()}${
       scoreOpen
         ? vpSheet(
             g,
@@ -329,7 +329,7 @@ function renderInner() {
               }),
           )
         : ''
-    }${toast && (modal || TUT) ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${passTo ? dockMain.replace(/<div class="c-hand"[^>]*>/, '$&<div class="veil">Cards hidden until you tap</div>') : dockMain}${passHtml()}<div class="c-bar b ${rolling ? `actor ${rolling}` : actor !== 'both' && !g.over ? `actor ${actor}` : ''}"><div class="c-prompt" aria-live="polite">${toast && !modal && !TUT ? `<span class="toast barmsg${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</span>` : ''}${rolling ? `<span class="whotag">${esc(nm(rolling))} rolls</span> ` : actor !== 'both' && !g.over ? `<span class="whotag">${esc(nm(actor))} decides</span> ` : ''}${prompt()}</div>${dockChips()}<div class="bacts">${undoBtn()}${cancelSq()}${chs.length ? chs.map((c, i) => btn(`<span>${esc(c.label)}<small>${esc(c.sub)}</small></span>`, c.fn, `go choice ${i ? 'alt' : ''}`, false, c.title)).join('') : picks.length ? picks.map((x, i) => `<button class="go choice ${i ? 'alt' : ''}" ${x.attr}="${x.id}" title="${esc(x.text)}"><span>${esc(x.text)}</span></button>`).join('') + (p && !p.dis && allowed() ? mainBtn().replace('class="go ', 'class="go choice alt ') : '') : mainBtn()}<button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}<span class="gl">Explain: <b>${guide}</b></span><small class="sql">${guide === 'full' ? 'Full' : 'Short'}</small></button></div></div></div>` +
+    }${toast && (modal || TUT) ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${picks.reduce((h, x) => h.replace(`${x.attr}="${x.id}"`, `${x.attr}="${x.id}" data-inbar`), vpHtml)}${passTo ? dockMain.replace(/<div class="c-hand"[^>]*>/, '$&<div class="veil">Cards hidden until you tap</div>') : dockMain}${passHtml()}<div class="c-bar b ${rolling ? `actor ${rolling}` : actor !== 'both' && !g.over ? `actor ${actor}` : ''}"><div class="c-prompt" aria-live="polite">${toast && !modal && !TUT ? `<span class="toast barmsg${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</span>` : ''}${rolling ? `<span class="whotag">${esc(nm(rolling))} rolls</span> ` : actor !== 'both' && !g.over ? `<span class="whotag">${esc(nm(actor))} decides</span> ` : ''}${prompt()}</div>${dockChips()}<div class="bacts">${undoBtn()}${cancelSq()}${chs.length ? chs.map((c, i) => btn(`<span>${esc(c.label)}<small>${esc(c.sub)}</small></span>`, c.fn, `go choice ${i ? 'alt' : ''}`, false, c.title)).join('') : picks.length ? picks.map((x, i) => `<button class="go choice ${i ? 'alt' : ''}" ${x.attr}="${x.id}" title="${esc(x.text)}"><span>${esc(x.text)}</span></button>`).join('') + (p && !p.dis && allowed() ? mainBtn().replace('class="go ', 'class="go choice alt ') : '') : mainBtn()}<button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}<span class="gl">Explain: <b>${guide}</b></span><small class="sql">${guide === 'full' ? 'Full' : 'Short'}</small></button></div></div></div>` +
     modalHtml();
   const ui = $('#ui');
   {
@@ -618,6 +618,16 @@ function newcomerCard() {
 /** The decisive buttons of the set-up panel and the block card (their primary ones), so the bar can carry them under the thumb (design review, problem 2). */
 /** The battle can still be called off (6.21): a red-bordered square beside the main button (owner, 15 Nov, mockup v4). */
 const cancelSq = () => {
+  if (areaPick)
+    return btn(
+      `${ico('close')}<small class="sql">Cancel</small>`,
+      () => {
+        setAreaPick(null);
+      },
+      'sq xcancel',
+      false,
+      'Cancel this choice on the map',
+    ); // picking an area on the map can always be cancelled from the bar (interaction system)
   const b = g.battle;
   if (!b || !mine(b.attacker) || !allowed() || !can((x) => E.cancelBattle(x))) return ''; // only while the engine would accept it (owner's issue #13)
   return btn(

@@ -1,5 +1,6 @@
 // Marks drawn over the map: area tags, the selected area in focus, leader lines and decision bubbles, the act-now halos and Skip, option tags, and where the badges sit.
 import * as THREE from 'three';
+import { lossPieces } from './asset-uses';
 import * as E from '../../engine/src';
 import { ico } from './icons';
 import { esc, nm } from './util';
@@ -273,6 +274,12 @@ function placeBubbles() {
   const r = canvas.getBoundingClientRect(),
     v = new THREE.Vector3();
   let svg = '';
+  document.querySelectorAll<HTMLElement>('#ui .lossnum').forEach((e) => {
+    const p = pieceScreen(e.dataset.pc!),
+      pr = (e.offsetParent as HTMLElement | null)?.getBoundingClientRect() ?? r;
+    e.style.display = p ? '' : 'none';
+    if (p) e.style.transform = `translate(${p.x - pr.left + p.rad * 0.7}px, ${p.y - pr.top - p.rad * 0.7}px) translate(-50%, -50%)`;
+  }); // the numbers of the loss list, on the glowing pieces (interaction system)
   document.querySelectorAll<HTMLElement>('#ui .mapbubble').forEach((e) => {
     const a = +e.dataset.area!,
       pts = areaWorld(a).map((q) => {
@@ -350,7 +357,12 @@ export function decisionTargets(): Tgt | null {
 /** The choice the battle is waiting for, as a bubble over the deciding side's row. */
 export function decisionBubble(): string {
   const b = g.battle;
-  if (!b || rollView || !['attChoice', 'defChoice'].includes(b.stage)) return ''; // losses: the list above the bar, no bubble (interaction system)
+  if (b && !rollView && (b.stage === 'loss' || b.stage === 'attFirst') && allowed())
+    return lossPieces()
+      .filter((x) => x.ok)
+      .map((x, i) => `<i class="lossnum" data-pc="${x.id}">${i + 1}</i>`)
+      .join(''); // losses: the list above the bar; the same numbers on the map, no bubble (interaction system)
+  if (!b || rollView || !['attChoice', 'defChoice'].includes(b.stage)) return '';
   const who = b.stage === 'loss' && b.loss ? b.loss.side : b.stage === 'defChoice' ? other(b.attacker) : b.attacker;
   const tg =
     b.stage === 'loss'

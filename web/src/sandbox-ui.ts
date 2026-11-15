@@ -188,6 +188,8 @@ const openSb = (v: boolean) => {
   }
 };
 export const closeSb = () => openSb(false);
+/** Where the admin tools exist: the owner's test table, and a game on this screen played by an admin account; never for players or on a two-player online table. */
+export const adminOn = () => SANDBOX || (online.hotseat && online.admin);
 /** The admin tools' only control on the playing screen: a wrench in the top bar (owner, 15 Nov: no floating button over the map). */
 export function adminBtn() {
   return `<button class="ico admbtn ${st.sbOpen ? 'on' : ''}" data-ui="${reg(() => openSb(!st.sbOpen))}" title="Admin tools" aria-label="Admin tools" aria-pressed="${st.sbOpen}">${ico('gear')}<span class="bl">Admin</span></button>`;
