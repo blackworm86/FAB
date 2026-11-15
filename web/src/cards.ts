@@ -53,8 +53,8 @@ export function usableNow(c: E.Chit): boolean {
   }
   return liveSet.has(c.id);
 }
-export const card = (c: E.Chit, r = 0, why: string | null = null) =>
-  `<div tabindex="0" role="button" class="card2 ${c.side} ${c.kind === 'sa_block' ? 'wood' : ''} ${why ? 'bad' : usableNow(c) ? 'live' : ''} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" style="--r:${r}deg" title="${esc(why ?? c.name + (ARMY_NAME[c.ech] ? ' · ' + ARMY_NAME[c.ech] : ''))}" aria-label="${esc(c.name)}">${chitPic(c)}${kindWord(c) ? `<span class="ckind">${kindWord(c)}</span>` : ''}</div>`; /* phones have no hover title: the kind is written on the card */
+export const card = (c: E.Chit, r = 0, why: string | null = null, info = false) =>
+  `<div tabindex="0" role="button" class="card2 ${c.side} ${c.kind === 'sa_block' ? 'wood' : ''} ${why ? 'bad' : usableNow(c) ? 'live' : ''} ${c.id === selChit ? 'sel' : ''}" data-chit="${c.id}" style="--r:${r}deg" title="${esc(why ?? c.name + (ARMY_NAME[c.ech] ? ' · ' + ARMY_NAME[c.ech] : ''))}" aria-label="${esc(c.name)}">${chitPic(c)}${kindWord(c) ? `<span class="ckind">${kindWord(c)}</span>` : ''}${info ? `<span class="cinfo" data-cinfo="${c.id}" role="button" tabindex="0" title="What it does" aria-label="What it does">i</span>` : ''}</div>`; /* phones have no hover title: the kind is written on the card */
 /** What kind of card it is, in one word above it: a newcomer cannot read "9th" or "402nd" (design review, problems 4 and 5). */
 export const kindWord = (c: E.Chit) =>
   c.kind === 'naval_support'
@@ -107,19 +107,13 @@ export function chitTargets(c: E.Chit): number[] {
 export let lastPointer = 'mouse';
 export const setLastPointer = <T extends typeof lastPointer>(v: T): T => ((lastPointer = v), v);
 /** Touch: a card is tapped, never dragged (so the hand can scroll). In a battle it files itself; an event or asset with map targets lights them and waits for a tap on one. */
-export let handInfo = false,
-  handInspect: string | null = null;
+export let handInspect: string | null = null; // the card whose rules are open (its (i), owner 15 Nov)
 export const setHandInspect = <T extends typeof handInspect>(v: T): T => ((handInspect = v), v);
-export const setHandInfo = <T extends typeof handInfo>(v: T): T => ((handInfo = v), v);
 export function tapCard(id: string) {
   const c = E.chit(g, id),
     b = g.battle;
   if (b) {
     if (b.stage !== 'setup') return;
-    if (handInfo) {
-      handInspect = handInspect === id ? null : id;
-      return render();
-    }
     if (!mine(c.side)) return say("Those are the other player's assets.");
     const why = VOL.battleUse(g, b, c);
     if (why) {
@@ -237,11 +231,6 @@ export function drag(ev: PointerEvent, el: HTMLElement) {
         say('That chit cannot be played there');
       }
       refresh();
-      return;
-    }
-    if (b?.stage === 'setup' && handInfo && !ghost) {
-      handInspect = handInspect === id ? null : id;
-      render();
       return;
     }
     if (!b || b.stage !== 'setup') {

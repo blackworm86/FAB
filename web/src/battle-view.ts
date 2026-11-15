@@ -28,7 +28,7 @@ import { battleFx, fightable, mine, other, POOL, rollFx, selArr } from './flow';
 import { pickSA } from './choices';
 import { reinforcing, setReinforcing } from './map-input';
 import { endRoll, handSide, rollView, setHandSide, type RollView } from './rolls';
-import { card, fan, handInfo, handInspect, handStyle, setHandInfo, setHandInspect, usableNow } from './cards';
+import { card, fan, handInspect, handStyle, setHandInspect, usableNow } from './cards';
 import { gx } from './prompt';
 import { chitPic } from './pieces-window';
 import { panelCtx, svgUri } from './unit-card';
@@ -85,7 +85,8 @@ function cardTip() {
     why = VOL.battleUse(g, b, c);
   return `<div class="cardtip">${chitPic(c)}<div><b>${esc(c.name)} <small>${esc(t)}</small></b><span>${esc(d.split('\n')[0])}</span>${why ? `<em>Cannot join: ${esc(why)}</em>` : '<em class="ok">Can join this battle</em>'}</div></div>`;
 }
-let handAll = false;
+let handAll = false,
+  handView: 'ok' | 'bad' | 'foe' = 'ok'; // the battle hand's three tabs (owner, 15 Nov, mockup v4)
 /** Sicily 15.3b: say what the reveal roll of an untried garrison is, while it is read (playtest 3). */
 const untriedNote = (rv: RollView) =>
   rv.groups
@@ -100,36 +101,27 @@ export function handCards() {
   if (!b && (g.phase === 'reinforcement' || g.phase === 'deploy')) return tray();
   if (b) {
     if (b.stage !== 'setup') return '';
-    const cs = ([b.attacker, other(b.attacker)] as E.Side[])
-      .filter((sd) => mine(sd) && !b.ready?.includes(sd))
-      .sort() /* a side that confirmed its set-up no longer sees its cards */
-      .flatMap((s) => E.boxOf(g, s, 'available').filter((c) => VOL.battleCard(c)));
-    const ok = cs.filter((c) => !VOL.battleUse(g, b, c));
-    const bad = cs.filter((c) => VOL.battleUse(g, b, c)),
-      canCancel = mine(b.attacker); /* the attacker may call the battle off until combat begins (unless a Special Action locked it) */
-    if (!cs.length && !canCancel) return ''; // the defender with no card: no empty tray
-    return `<div class="handtab">${
-      canCancel
-        ? btn(
-            `${ico('close')}<span class="bl">Cancel</span>`,
-            () => {
-              E.cancelBattle(g);
-            },
-            'ico danger',
-            !!b.locked,
-            b.locked ? 'A Special Action was spent, so the battle must be fought' : 'Withdraw the attack and return every assigned asset',
-          )
-        : ''
-    }${
-      ok.length && bad.length
-        ? `<button data-ui="${reg(() => {
-            handAll = !handAll;
-          })}" aria-pressed="${handAll}">${handAll ? `Playable only (${ok.length})` : `Show all`}</button>`
-        : ''
-    }<button class="ico ${handInfo ? 'on' : ''}" data-ui="${reg(() => {
-      setHandInfo(!handInfo);
-      if (!handInfo) setHandInspect(null);
-    })}" aria-pressed="${handInfo}" title="Rules: tap a card to read what it does instead of adding it" aria-label="Rules">${ico('book')}<span class="bl">Rules</span></button></div>${handInfo ? cardTip() : ''}<div class="c-hand" ${handStyle(handAll || !ok.length ? ok.length + bad.length : ok.length)}>${fan([...ok.map((c) => card(c)), ...(handAll || !ok.length ? bad.map((c) => card(c, 0, VOL.battleUse(g, b, c))) : [])])}</div>`;
+    const mine0 = ([b.attacker, other(b.attacker)] as E.Side[]).filter((sd) => mine(sd) && !b.ready?.includes(sd)), // a side that confirmed its set-up no longer sees its cards
+      mineSides = mine0.length === 2 ? [E.setupSide(g, b)] : mine0; // one screen for both: the side setting up now; the other's cards under their own tab
+    const cs = mineSides.flatMap((s) => E.boxOf(g, s, 'available').filter((c) => VOL.battleCard(c)));
+    const ok = cs.filter((c) => !VOL.battleUse(g, b, c)),
+      bad = cs.filter((c) => VOL.battleUse(g, b, c)),
+      foe = mineSides.length === 1 ? other(mineSides[0]) : null,
+      theirs = foe ? E.boxOf(g, foe, 'available').filter((c) => VOL.battleCard(c)) : [];
+    if (!cs.length && !theirs.length) return ''; // nothing to show: no empty tray
+    const view = handView === 'bad' && !bad.length ? 'ok' : handView === 'foe' && !foe ? 'ok' : handView;
+    const tab = (k: typeof handView, label: string, n: number, title: string) =>
+      `<button class="${view === k ? 'on' : ''}" aria-pressed="${view === k}" title="${esc(title)}" data-ui="${reg(() => {
+        handView = k;
+        setHandInspect(null);
+      })}">${label} <b>${n}</b></button>`;
+    const shown =
+      view === 'foe'
+        ? theirs.map((c) => card(c, 0, "The other player's card: you can only look", true))
+        : view === 'bad'
+          ? bad.map((c) => card(c, 0, VOL.battleUse(g, b, c), true))
+          : ok.map((c) => card(c, 0, null, true));
+    return `<div class="handtabs" role="group" aria-label="Cards">${tab('ok', mineSides.length === 1 ? `${nm(mineSides[0])} · usable` : 'Usable', ok.length, 'The cards you can add to this battle')}${bad.length ? tab('bad', 'Not usable now', bad.length, 'Your cards that cannot join this battle, and why') : ''}${foe ? tab('foe', `${nm(foe)} hand`, theirs.length, 'What the other player has at its disposal') : ''}</div>${handInspect ? cardTip() : ''}<div class="c-hand" ${handStyle(shown.length)}>${fan(shown)}</div>`;
   }
   if (g.phase !== 'admin') return '';
   const own = online.active && !online.both() ? online.mySide() : null,

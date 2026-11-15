@@ -730,7 +730,8 @@
   color: var(--ink);
   background: #0b0d08e6;
 }
-#ui .dock:has(.passstrip) .c-bar .go {
+#ui .dock:has(.passstrip) .c-bar .go,
+#ui .dock:has(.passstrip) .c-bar .xcancel {
   visibility: hidden;
 }
 /* playtest 3, item 4: a battle result or dice list longer than its space says so (fade and ▾, as the set-up panels) */
