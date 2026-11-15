@@ -367,7 +367,11 @@ export function fitBattleView() {
     clear = r.height;
   if (g.battle) {
     const top = document.querySelector('#ui .c-table')?.getBoundingClientRect(),
-      low = Array.from(document.querySelectorAll('#ui .dock > .c-ledger, #ui .dock .c-hand, #ui .dock .handtab, #ui .dock .handtabs, #ui .dock .uses, #ui .c-bar.b'))
+      low = Array.from(
+        document.querySelectorAll(
+          '#ui .dock > .c-ledger, #ui .dock .c-hand, #ui .dock .handtab, #ui .dock .handtabs, #ui .dock .uses, #ui .c-bar.b',
+        ),
+      )
         .map((e) => e.getBoundingClientRect())
         .filter((q) => q.height && q.left < r.left + r.width / 2 && q.right > r.left + r.width / 2);
     const tc = top ? Math.max(0, top.bottom - r.top) : 0,
