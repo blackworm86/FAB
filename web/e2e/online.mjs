@@ -1,7 +1,7 @@
 // Two-browser online test: two accounts on the local Firebase emulators (never the real project) create and join a game of each volume,
 // the second player sits and moves, they fight battles from both seats, and after every step the two screens must agree and neither
 // may hold the other's hidden blocks. Run:  cd web && npm run online   (needs Java and `npm ci` in tools/rules-test; about two minutes).
-//   GAMES=bulge  one volume only.  It starts and stops its own emulators and dev server (ports 9099, 9000, 5198).
+//   GAMES=bulge  one volume only.  SWAP=1  the creator on the phone.  SHOTS=<folder>  a picture of the invitation.  It starts and stops its own emulators and dev server (ports 9099, 9000, 5198).
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { mkdtempSync, copyFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -92,6 +92,11 @@ process.on('exit', stop);
 /** The database as stored, read past the rules (the emulator's owner token). */
 const raw = (path) => fetch(`${DB}/${path}.json?ns=${NS}`, { headers: { Authorization: 'Bearer owner' } }).then((r) => r.json());
 
+/** A tap on the home page, which redraws itself while games and accounts load: try again if the button was replaced under the pointer. */
+const tap = async (loc) => {
+  if (!(await until(() => loc.click({ timeout: 4000 }).then(() => true), 60000))) throw new Error(`could not tap ${loc}`);
+};
+
 /* ---- what runs inside a page ---- */
 const table = (p) => p.waitForFunction(() => window.__fab && document.querySelector('.c-bar.b'), null, { timeout: 180000 });
 /** This seat's picture of the game, reduced to what both seats must agree on, and its own blocks the other may not see. */
@@ -122,6 +127,7 @@ const look = (p) =>
         ph: g.phase,
         side: g.phasing,
         over: g.over ?? null,
+        toAct: E.actorOf(g),
         rolls: g.rolls,
         battle: b && { area: b.area, stage: b.stage, att: b.attacker, dice: b.rolls.map((r) => r.dice), pending: b.pending ?? null },
         units: g.units.map((u) => [u.side, u.area ?? null, u.box ?? null]),
@@ -210,7 +216,8 @@ async function player(name, size) {
     errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => {
-    if (m.type() === 'error' && !/favicon|Failed to load resource|permission_denied/i.test(m.text())) errors.push(m.text());
+    if (m.type() === 'error' && !/favicon|Failed to load resource|permission_denied|ERR_INTERNET_DISCONNECTED/i.test(m.text()))
+      errors.push(m.text());
   });
   await page.goto(BASE, { waitUntil: 'domcontentloaded', timeout: 180000 });
   await page.waitForSelector('#a-mail', { timeout: 120000 });
@@ -221,8 +228,10 @@ async function player(name, size) {
   await page.waitForSelector('[data-auth="out"]', { timeout: 60000 });
   return { name, page, errors };
 }
-const A = await player('Anna', { viewport: { width: 1380, height: 860 } }),
-  B = await player('Bruno', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 }); // one desktop, one phone
+const DESK = { viewport: { width: 1380, height: 860 } },
+  PHONE = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 };
+const A = await player('Anna', process.env.SWAP ? PHONE : DESK), // one desktop, one phone; SWAP=1: the creator is on the phone
+  B = await player('Bruno', process.env.SWAP ? DESK : PHONE);
 let hitChoice = 0,
   retreats = 0;
 
@@ -230,15 +239,23 @@ for (const game of GAMES) {
   console.log(`\n${game}`);
   /* Anna creates the game on the home page */
   await A.page.goto(BASE, { waitUntil: 'domcontentloaded' });
-  await A.page.waitForSelector('.shelf .cover');
-  await A.page.locator('.shelf .cover').nth(['bulge', 'sicily', 'golan73'].indexOf(game)).click();
-  await A.page.locator('[title="Start a new game"], [aria-label="Start a new game"]').first().click();
-  await A.page.locator('.tiles .tile').nth(CREATOR_SEAT[game]).click();
-  await A.page.locator('button', { hasText: 'Create game' }).click();
+  await tap(A.page.locator(`button[aria-label^="${{ bulge: 'The Bulge', sicily: 'Sicily', golan73: 'Golan' }[game]}"]:visible`).first()); // the box on a desktop, its spine on a phone
+  await tap(A.page.locator('[title="Start a new game"], [aria-label="Start a new game"]').first());
+  await tap(A.page.locator('.tiles .tile').nth(CREATOR_SEAT[game]));
+  await tap(A.page.locator('button', { hasText: 'Create game' }));
   await A.page.waitForURL(/[?&]table=/, { timeout: 60000 });
   const id = new URL(A.page.url()).searchParams.get('table');
   check(!!id && (await table(A.page).then(() => true, () => false)), `the creator's table opens (code ${id})`); // prettier-ignore
   check(await until(async () => (await look(A.page)).rev > 0), 'the creator receives the shared game');
+  /* the invitation: the code written large and the link as a QR code (owner's issue #2) */
+  await A.page.locator('.seatbar button.primary').first().click({ timeout: 30000 });
+  check(
+    (await until(() => A.page.locator('.invite-sheet .invqr svg').count(), 15000)) &&
+      (await A.page.locator('.invite-sheet .invcode').textContent()) === id,
+    'the invitation shows the game code and a QR code',
+  );
+  if (process.env.SHOTS) await A.page.screenshot({ path: join(process.env.SHOTS, `invite-${game}.png`) });
+  await A.page.locator('.invite-sheet [data-k="x"]').click();
 
   /* Bruno types the code on the home page and takes the free seat */
   await B.page.goto(BASE, { waitUntil: 'domcontentloaded' });
@@ -335,7 +352,11 @@ for (const game of GAMES) {
       }
       const who = a.actor === a.me ? A : b.actor === b.me ? B : null;
       if (!who) {
-        ok = check(false, `battle ${n + 1}: somebody has to act (stage ${a.stage}, to act: ${a.actor})`);
+        ok = check(
+          false,
+          `battle ${n + 1}: somebody has to act (stage ${a.stage}; to act, on ${A.name}'s screen: ${a.actor}, on ${B.name}'s: ${b.actor})`,
+        );
+        for (const v of [a, b]) console.log('      ', v.me, v.sync, JSON.stringify(JSON.parse(v.json).battle).slice(0, 400));
         break;
       }
       const st = a.stage,
@@ -351,6 +372,81 @@ for (const game of GAMES) {
     if (ok) fought++;
   }
   check(ok && fought >= 2, `${fought} battles fought to the end from both seats, the screens agreeing after every step`);
+
+  /* both players move at the same moment, several times in a row (a step both sides work in): every move of both must stay */
+  {
+    const v = await look(A.page),
+      mover = v.actor === v.me || v.actor === 'both' ? A : B;
+    await play(mover.page, (E, g) => {
+      g.turn++;
+      g.phase = 'reinforcement'; // both sides act here
+      g.phasing = E.sidesOf(g)[0];
+      g.battle = null;
+    });
+    await settle('a step for both sides');
+    /** Four of my blocks step to a neighbouring area with no enemy, one save each, a moment apart: later ones leave while an earlier save is still on its way. */
+    const burst = (p) =>
+      p.evaluate(async () => {
+        const F = window.__fab,
+          E = F.E,
+          me = F.online.mySide(),
+          want = {};
+        for (let k = 0; k < 4; k++) {
+          const g = structuredClone(F.settled()),
+            u = g.units.find(
+              (x) =>
+                x.side === me && x.area != null && !x.garrison && !x.fort && !(x.id in want) &&
+                E.neighbors(x.area).some((a) => !g.units.some((y) => y.area === a && y.side !== me)),
+            ); // prettier-ignore
+          if (!u) break;
+          u.area = E.neighbors(u.area).find((a) => !g.units.some((y) => y.area === a && y.side !== me));
+          want[u.id] = u.area;
+          F.setGame(g);
+          await new Promise((r) => setTimeout(r, 120));
+        }
+        return want;
+      });
+    const [wa, wb] = await Promise.all([burst(A.page), burst(B.page)]);
+    const agreed = await settle('both moved at once');
+    const kept = (p, want) =>
+      p.evaluate(
+        (w) => Object.entries(w).filter(([id, a]) => window.__fab.settled().units.find((u) => u.id === id)?.area !== a).length,
+        want,
+      );
+    const lost = (await kept(A.page, wa)) + (await kept(B.page, wb)),
+      n = Object.keys(wa).length + Object.keys(wb).length;
+    check(
+      agreed && n >= 4 && !lost,
+      `both players move at the same moment: all ${n} moves stay on both screens${lost ? ` (${lost} lost)` : ''}`,
+    );
+  }
+
+  /* the second player loses the connection, moves, and comes back while the creator moved too: nothing is lost, and the dot tells the truth */
+  {
+    const dot = (p) => p.evaluate(() => document.querySelector('.syncdot')?.className.replace('syncdot', '').trim() ?? 'none'),
+      step = (p) =>
+        play(p.page, (E, g, me) => {
+          const u = g.units.find(
+            (x) => x.side === me && x.area != null && !x.garrison && !x.fort && E.neighbors(x.area).some((a) => !g.units.some((y) => y.area === a && y.side !== me)),
+          ); // prettier-ignore
+          u.area = E.neighbors(u.area).find((a) => !g.units.some((y) => y.area === a && y.side !== me));
+          return [u.id, u.area];
+        }),
+      at = (p, [id, a]) => p.page.evaluate(([i, x]) => window.__fab.settled().units.find((u) => u.id === i)?.area === x, [id, a]);
+    check((await dot(A.page)) === 'ok' && (await dot(B.page)) === 'ok', 'both connection dots are green');
+    await B.page.context().setOffline(true);
+    check(await until(async () => (await dot(B.page)) !== 'ok', 90000), 'without a connection the dot is no longer green');
+    const mb = await step(B),
+      ma = await step(A);
+    await sleep(1500);
+    await B.page.context().setOffline(false);
+    const agreed = await settle('after the connection came back');
+    check(
+      agreed && (await at(A, ma)) && (await at(B, mb)),
+      'moves made while one player was offline are all there when the connection is back',
+    );
+    check(await until(async () => (await dot(A.page)) === 'ok' && (await dot(B.page)) === 'ok', 30000), 'both dots are green again');
+  }
 
   /* a reload: the page builds the same game again from the database */
   const before = (await look(B.page)).same;

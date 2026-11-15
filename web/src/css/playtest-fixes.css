@@ -849,3 +849,15 @@ body:has(#ui .chitbar) .sbfab {
     transform: translateX(50%);
   }
 }
+
+/* the invite sheet's QR code (owner's issue #2): white card so cameras read it on the dark sheet */
+.invite-sheet .invqr {
+  width: min(190px, 52vw);
+  margin: 10px auto;
+  background: #fff;
+  border-radius: 6px;
+  line-height: 0;
+}
+.invite-sheet .invqr:empty {
+  display: none;
+}

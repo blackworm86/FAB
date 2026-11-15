@@ -163,13 +163,14 @@ export async function rtdbStore(table: string): Promise<Store | null> {
       );
     },
     /** Write only what changed; the server counts the revision. */
-    async setState(d: StateDoc) {
+    async setState(d: StateDoc, base?: string) {
       const tree = toTree(JSON.parse(d.json) as Game),
-        diff = diffTree(lastTree, tree);
+        from = base ? toTree(JSON.parse(base) as Game) : lastTree, // what the move started from, not the newest arrival: the other player's change in between is left alone
+        diff = diffTree(from, tree);
       if (!Object.keys(diff).length) return;
       const logKey = 'f/log',
         mine = diff[logKey],
-        before: string[] = lastTree?.f.log ? JSON.parse(lastTree.f.log) : [];
+        before: string[] = from?.f.log ? JSON.parse(from.f.log) : [];
       delete diff[logKey];
       if (Object.keys(diff).length) await rt.update(G('state'), { ...diff, rev: rt.increment(1), by: account.uid });
       if (mine) {
@@ -186,6 +187,9 @@ export async function rtdbStore(table: string): Promise<Store | null> {
       }
     },
     watchSeats: watchSeatNodes,
+    watchConnected: (next) => {
+      rt.onValue(R('.info/connected'), (s) => next(!!s.val()));
+    },
     watchPriv: (next: (p: Priv | null) => void) => {
       let seats: Seats = {},
         cur = '',
