@@ -8,7 +8,7 @@ import { chitRuleKey } from './vol';
 import { online, setDevSeat, SANDBOX } from './online';
 import type { History } from './history';
 import { GAMES } from './games';
-import { srow, swtch } from './ui-kit';
+import { chip, srow, swtch } from './ui-kit';
 
 /** What the sandbox needs from main: the game and selection (read and written), and the shared screen helpers. */
 export interface SbCtx {
@@ -95,9 +95,16 @@ let sbJump: { turn: number; side: E.Side; phase: E.Phase };
 let sbNotes = SB.loadNotes();
 /** A sandbox edit: no turn or seat checks, no automatic phase skipping, still undoable. */
 export function sbx(f: () => void) {
-  const r = hist.run(M.g, f);
+  let warn: string[] = [];
+  const r = hist.run(M.g, () => {
+    f();
+    const p = E.playable(M.g);
+    if (p.refuse.length) throw new Error(`Not done: ${p.refuse.join(' ')}`); // the engine could not go on from there (rules session's check)
+    warn = p.warn;
+  });
   M.g = r.game;
   if (r.error) say(r.error.message);
+  else if (warn.length) say(`Done, but unusual: ${warn.join(' ')}`);
   save();
   refresh();
 }
@@ -181,9 +188,9 @@ const openSb = (v: boolean) => {
   }
 };
 export const closeSb = () => openSb(false);
-/** The sandbox's only control on the playing screen: a small floating button at the left edge, clear of the bars and the map's middle. */
-export function sandboxFab() {
-  return `<button class="sbfab" data-ui="${reg(() => openSb(true))}" title="Sandbox tools (admin testing)" aria-label="Open the sandbox tools">${ico('wand')}<span>Sandbox</span></button>`;
+/** The admin tools' only control on the playing screen: a wrench in the top bar (owner, 15 Nov: no floating button over the map). */
+export function adminBtn() {
+  return `<button class="ico admbtn ${st.sbOpen ? 'on' : ''}" data-ui="${reg(() => openSb(!st.sbOpen))}" title="Admin tools" aria-label="Admin tools" aria-pressed="${st.sbOpen}">${ico('gear')}<span class="bl">Admin</span></button>`;
 }
 /** Which game and scenario the sandbox runs: another game reloads the page on that game's own sandbox table. */
 function sbHead() {
@@ -205,7 +212,7 @@ function sbHead() {
       if (v !== cur) sbReset({ scenario: v as E.Opts['scenario'] });
     },
   );
-  return `<div class="sbhead"><b>Sandbox</b>${gameSel}${scenSel}${ubtn(`${ico('undo')}<span>Reset</span>`, () => sbReset({ scenario: M.g.opts.scenario }), 'sbreset', false, 'A new game of this scenario from its first turn')}${ubtn(ico('close'), () => openSb(false), 'ico', false, 'Hide the sandbox tools')}</div>${resetAskHtml()}`;
+  return `<div class="sbhead"><b>Admin tools</b>${gameSel}${scenSel}${ubtn(`${ico('undo')}<span>Reset</span>`, () => sbReset({ scenario: M.g.opts.scenario }), 'sbreset', false, 'A new game of this scenario from its first turn')}${ubtn(ico('close'), () => openSb(false), 'ico', false, 'Hide the sandbox tools')}</div>${resetAskHtml()}`;
 }
 function sbTarget(): SB.Target {
   const u = M.selUnit ? M.g.units.find((x) => x.id === M.selUnit) : null;
@@ -230,15 +237,6 @@ function sbTurn() {
     }
     render();
   };
-  const queue = () => {
-    const v = (($('#sb-dice') as HTMLInputElement)?.value ?? '')
-      .split(/[^0-9]+/)
-      .filter(Boolean)
-      .map(Number)
-      .map((x) => (x === 0 ? 10 : x))
-      .filter((x) => x >= 1 && x <= 10);
-    M.g.force = [...(M.g.force ?? []), ...v];
-  };
   return `<h4>Jump to</h4><div class="sbjump">${sbSel(turns, String(sbJump.turn), (v) => {
     sbJump.turn = +v;
   })}${sbSel(
@@ -252,25 +250,9 @@ function sbTurn() {
   })}${sbtn('Go', () => SB.jump(M.g, sbJump.turn, sbJump.side, sbJump.phase), 'primary', 'Start of that phase: battles, moves and per-phase marks cleared')}</div>
     <h4>Play</h4>${srow('Hot seat', 'two players on this screen, a cover between turns', swtch(st.sbHot, hot, 'Hot seat'))}
     ${srow(
-      'Next dice',
-      M.g.force?.length ? `queued: ${M.g.force.join(' ')}` : 'none queued: rolls come from the seed',
-      `<input id="sb-dice" class="sbdice" placeholder="1 1 9" aria-label="Next die results">${sbtn('Queue', queue)}${
-        M.g.force?.length
-          ? sbtn(
-              ico('close'),
-              () => {
-                M.g.force = [];
-              },
-              'ico',
-              'Clear the queued dice',
-            )
-          : ''
-      }`,
-    )}
-    ${srow(
-      'Map',
-      'every block off the map',
-      sbtn(`${ico('trash')}<span>Clear map</span>`, () => SB.clearMap(M.g)),
+      'Look as',
+      'whose hidden blocks and cards this screen shows',
+      `<span class="seg">${(['both', ...E.VOLUME.sides, 'watch'] as const).map((x) => chip(x === 'both' ? 'Both' : x === 'watch' ? 'Watcher' : nm(x as E.Side), online.devSeat === x, () => setDevSeat(x))).join('')}</span>`,
     )}${M.optional ? `<h4>Optional rules for the next Reset</h4>${M.optChooser(st.rules)}` : ''}`;
 }
 /* The piece library: every block and chit with its printed art, a search box and filters. */
@@ -525,6 +507,33 @@ function sbDetail() {
   }
   return `<p class="hint">${matchMedia('(pointer: coarse)').matches ? 'Tap' : 'Click'} a piece below or a block or area on the map.</p>`;
 }
+function sbDice() {
+  const queue = () => {
+    const v = (($('#sb-dice') as HTMLInputElement)?.value ?? '')
+      .split(/[^0-9]+/)
+      .filter(Boolean)
+      .map(Number)
+      .map((x) => (x === 0 ? 10 : x))
+      .filter((x) => x >= 1 && x <= 10);
+    M.g.force = [...(M.g.force ?? []), ...v];
+  };
+  return `${srow(
+    'Next dice',
+    M.g.force?.length ? `queued: ${M.g.force.join(' ')}` : 'none queued: rolls come from the seed',
+    `<input id="sb-dice" class="sbdice" placeholder="1 1 9" aria-label="Next die results">${sbtn('Queue', queue)}${
+      M.g.force?.length
+        ? sbtn(
+            ico('close'),
+            () => {
+              M.g.force = [];
+            },
+            'ico',
+            'Clear the queued dice',
+          )
+        : ''
+    }`,
+  )}`;
+}
 function sbPieces() {
   return `${sbDetail()}${sbLibrary()}`;
 }
@@ -591,8 +600,8 @@ function sbNotesHtml() {
       .join('')}</div>`;
 }
 export function sandboxPanel() {
-  const tabs = ['Pieces', 'Turn', 'Notes'],
-    body = sbTab === 'Pieces' ? sbPieces() : sbTab === 'Notes' ? sbNotesHtml() : sbTurn();
+  const tabs = ['Turn', 'Pieces', 'Dice', 'Notes'],
+    body = sbTab === 'Pieces' ? sbPieces() : sbTab === 'Notes' ? sbNotesHtml() : sbTab === 'Dice' ? sbDice() : sbTurn();
   return `<div class="sbx">${sbHead()}<div class="tabs">${tabs
     .map(
       (t) =>
