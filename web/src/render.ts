@@ -62,7 +62,7 @@ import { reinforceTargets, reinforcing, setGoal, syncBattleCam } from './map-inp
 import { badgeList, drawRoute, setBadges, syncBadges } from './routes';
 import { barChoices, decisionBubble, decisionTargets, syncAreaTags, syncMoveMarks, syncTags } from './map-marks';
 import { endRoll, heldNext, menuTab, modal, rollStage, rollView, setModal } from './rolls';
-import { chitTargets, drag, lastPointer, setLastPointer, tapCard } from './cards';
+import { chitTargets, drag, handInspect, lastPointer, setHandInspect, setLastPointer, tapCard } from './cards';
 import { canMove, endArmed, guardEnd, guide, lessonDone, primary, prompt, setGuide, topBar } from './prompt';
 import { dockChips, undoBtn } from './dock';
 import { piecesSide, piecesTab, setInspectId, unitPic } from './pieces-window';
@@ -311,7 +311,7 @@ function renderInner() {
               }),
           )
         : ''
-    }${toast && (modal || TUT) ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${passTo ? dockMain.replace(/<div class="c-hand"[^>]*>/, '$&<div class="veil">Cards hidden until you tap</div>') : dockMain}${passHtml()}<div class="c-bar b ${rolling ? `actor ${rolling}` : actor !== 'both' && !g.over ? `actor ${actor}` : ''}"><div class="c-prompt" aria-live="polite">${toast && !modal && !TUT ? `<span class="toast barmsg${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</span>` : ''}${rolling ? `<span class="whotag">${esc(nm(rolling))} rolls</span> ` : actor !== 'both' && !g.over ? `<span class="whotag">${esc(nm(actor))} decides</span> ` : ''}${prompt()}</div><button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}<span class="gl">Explain: <b>${guide}</b></span></button>${undoBtn()}${chs.length ? chs.map((c, i) => btn(`<span>${esc(c.label)}<small>${esc(c.sub)}</small></span>`, c.fn, `go choice ${i ? 'alt' : ''}`, false, c.title)).join('') : picks.length ? picks.map((x, i) => `<button class="go choice ${i ? 'alt' : ''}" ${x.attr}="${x.id}" title="${esc(x.text)}"><span>${esc(x.text)}</span></button>`).join('') + (p && !p.dis && allowed() ? mainBtn().replace('class="go ', 'class="go choice alt ') : '') : mainBtn()}${dockChips()}</div></div>` +
+    }${toast && (modal || TUT) ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : ''}</div><div class="dock">${passTo ? dockMain.replace(/<div class="c-hand"[^>]*>/, '$&<div class="veil">Cards hidden until you tap</div>') : dockMain}${passHtml()}<div class="c-bar b ${rolling ? `actor ${rolling}` : actor !== 'both' && !g.over ? `actor ${actor}` : ''}"><div class="c-prompt" aria-live="polite">${toast && !modal && !TUT ? `<span class="toast barmsg${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</span>` : ''}${rolling ? `<span class="whotag">${esc(nm(rolling))} rolls</span> ` : actor !== 'both' && !g.over ? `<span class="whotag">${esc(nm(actor))} decides</span> ` : ''}${prompt()}</div>${dockChips()}<div class="bacts">${undoBtn()}${cancelSq()}${chs.length ? chs.map((c, i) => btn(`<span>${esc(c.label)}<small>${esc(c.sub)}</small></span>`, c.fn, `go choice ${i ? 'alt' : ''}`, false, c.title)).join('') : picks.length ? picks.map((x, i) => `<button class="go choice ${i ? 'alt' : ''}" ${x.attr}="${x.id}" title="${esc(x.text)}"><span>${esc(x.text)}</span></button>`).join('') + (p && !p.dis && allowed() ? mainBtn().replace('class="go ', 'class="go choice alt ') : '') : mainBtn()}<button class="ico guidebtn ${guide === 'full' ? 'on' : ''}" data-ui="${reg(() => setGuide(guide === 'full' ? 'short' : 'full'))}" title="${guide === 'full' ? 'Hide the explanations (short prompts)' : 'Show the explanations of each option'}" aria-label="Explanations" aria-pressed="${guide === 'full'}">${ico('info')}<span class="gl">Explain: <b>${guide}</b></span><small class="sql">${guide === 'full' ? 'Full' : 'Short'}</small></button></div></div></div>` +
     modalHtml();
   const ui = $('#ui');
   {
@@ -483,6 +483,10 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
       (e.onkeydown = (ev) => {
         if (ev.key !== 'Enter' && ev.key !== ' ') return;
         ev.preventDefault();
+        if ((ev.target as HTMLElement).closest('.cinfo')) {
+          setHandInspect(handInspect === e.dataset.chit ? null : e.dataset.chit!);
+          return render();
+        }
         const id = e.dataset.chit,
           b2 = g.battle;
         if (e.classList.contains('card2') && id) {
@@ -501,6 +505,7 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
   ui.querySelectorAll<HTMLElement>('.card2').forEach(
     (e) =>
       (e.onpointerdown = (ev) => {
+        if ((ev.target as HTMLElement).closest('.cinfo')) return; // its (i): read, never drag or play
         setLastPointer(ev.pointerType);
         if (ev.pointerType === 'touch') return;
         if (ev.pointerType === 'mouse') ev.preventDefault();
@@ -509,7 +514,11 @@ function bind(ui: HTMLElement, keepH = 0, keepA = 0) {
   );
   ui.querySelectorAll<HTMLElement>('.card2').forEach(
     (e) =>
-      (e.onclick = () => {
+      (e.onclick = (ev) => {
+        if ((ev.target as HTMLElement).closest('.cinfo')) {
+          setHandInspect(handInspect === e.dataset.chit ? null : e.dataset.chit!);
+          return render();
+        } // the card's (i) opens its rules; the card itself plays it (owner, 15 Nov)
         if (lastPointer === 'touch') return tapCard(e.dataset.chit!);
         if (!g.battle) {
           setSelChit(selChit === e.dataset.chit ? null : e.dataset.chit!);
@@ -589,6 +598,20 @@ function newcomerCard() {
 }
 /** The side that must act now, and the side the device is to be passed to (until the first tap anywhere). */
 /** The decisive buttons of the set-up panel and the block card (their primary ones), so the bar can carry them under the thumb (design review, problem 2). */
+/** The battle can still be called off (6.21): a red-bordered square beside the main button (owner, 15 Nov, mockup v4). */
+const cancelSq = () => {
+  const b = g.battle;
+  if (!b || b.stage !== 'setup' || !mine(b.attacker) || !allowed()) return '';
+  return btn(
+    `${ico('close')}<small class="sql">Call off</small>`,
+    () => {
+      E.cancelBattle(g);
+    },
+    'sq xcancel',
+    !!b.locked,
+    b.locked ? 'A Special Action was spent, so the battle must be fought' : 'Cancel the attack: every assigned asset goes back',
+  );
+};
 const panelPicks = (html: string) =>
   [...html.matchAll(/<button class="([^"]*)" (data-do|data-ui)="([^"]+)"( disabled)?[^>]*>([\s\S]*?)<\/button>/g)]
     .filter((m) => /\bprimary\b/.test(m[1]) && !m[4])

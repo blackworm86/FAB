@@ -4,7 +4,17 @@ import { ENTRY, REAR, isAssembly, area as garea } from '../golan/map';
 import { type Chit } from '../chits';
 import { inSupply, other, rollDie, say, sidesOf, unitsIn, type Game, type Side } from '../game';
 import { reservesLeft, setupReserves } from './golan-setup';
-import { alowdaCommandos, alowdaDraw, alowdaRaidAreas, NAF, nafakhResult, nafakhStaff, strengthIn, VP_EAST } from './golan-scenarios';
+import {
+  alowdaCommandos,
+  alowdaDraw,
+  alowdaRaidAreas,
+  NAF,
+  nafakhResult,
+  nafakhStaff,
+  strengthIn,
+  ALO_STARS,
+  VP_EAST,
+} from './golan-scenarios';
 import { isAlOwda, isNafakh, regular, state } from './golan';
 
 /* ================= supply (9.31, 14.93–14.95) and victory (19.x) ================= */
@@ -27,6 +37,24 @@ export function supplyStep(g: Game, side: Side, a: number, n: number, first: boo
   if (side === 'syrian' && state(g).minefields.includes(key)) return false;
   return true;
 }
+/** 19.1: the areas scoring for `side` now (ok: counted); one list for the score and the table's sheet. */
+export function golanVpAreas(g: Game, side: Side): { id: number; pts: number; ok: boolean; why?: string }[] {
+  if (isNafakh(g)) return [];
+  const out: { id: number; pts: number; ok: boolean; why?: string }[] = [];
+  for (const a of areas.values()) {
+    if (isAssembly(a.id) || g.control[a.id] !== side) continue;
+    const mutual = (isAlOwda(g) ? ALO_STARS.has(a.id) : a.vp.mutual) ? 1 : 0, // 20.38: Al-Owda's own three stars
+      // Al-Owda (20.37/20.38, owner 15 Nov): the VP Line areas count only when they change hands from the start (west of the Purple Line
+      // they start Israeli, 20.33): Syria scores one it takes, Israel one it takes beyond the Purple Line; so Israel starts at 3, its three stars
+      line = isAlOwda(g) && VP_EAST.has(a.id) && (side === 'syrian') !== garea(a.id).syria ? 1 : 0,
+      pts = side === 'syrian' ? a.vp.syrian + mutual + line : mutual + (isAlOwda(g) ? line : garea(a.id).syria ? 1 : 0);
+    if (!pts) continue;
+    const sup = inSupply(g, side, a.id),
+      occ = side !== 'syrian' || unitsIn(g, a.id, 'syrian').some(regular);
+    out.push({ id: a.id, pts, ok: sup && occ, why: !sup ? 'cut off' : 'no Syrian unit there' });
+  }
+  return out;
+}
 /** 19.1–19.2: Syria scores its objective areas (held, supplied and occupied) and the mutual stars; Israel the mutual stars and each supplied area it holds in Syria; one point per large enemy unit destroyed. */
 export function golanVictory(g: Game): Record<Side, number> & { net: number } {
   if (isNafakh(g)) {
@@ -35,16 +63,11 @@ export function golanVictory(g: Game): Record<Side, number> & { net: number } {
     return { syrian: s, israeli: i, net: s - i };
   } // 22.47: the score is the strength in Nafakh
   const pts: Record<Side, number> = { syrian: 0, israeli: 0 };
-  for (const id of g.elimLarge) {
+  for (const s of ['syrian', 'israeli'] as Side[]) for (const o of golanVpAreas(g, s)) if (o.ok) pts[s] += o.pts;
+  for (const id of isAlOwda(g) ? [] : g.elimLarge) {
+    // 20.38 (owner, 15 Nov): no large units in Al-Owda; the optional chemical-warfare VP still counts
     const u = g.units.find((x) => x.id === id)!;
     pts[other(u.side)]++;
-  }
-  for (const a of areas.values()) {
-    if (isAssembly(a.id)) continue;
-    const ctl = g.control[a.id];
-    if (!ctl || !inSupply(g, ctl, a.id)) continue;
-    if (ctl === 'syrian' && unitsIn(g, a.id, 'syrian').some(regular)) pts.syrian += a.vp.syrian + (a.vp.mutual ? 1 : 0);
-    if (ctl === 'israeli') pts.israeli += (a.vp.mutual ? 1 : 0) + ((isAlOwda(g) ? VP_EAST.has(a.id) : garea(a.id).syria) ? 1 : 0); // 20.38: Al-Owda counts east of its Israeli VP Line, not the Purple Line
   }
   pts.israeli += Math.max(0, (state(g).chem ?? 0) - 1); // chemical warfare after the first use
   return { ...pts, net: pts.syrian - pts.israeli };
@@ -54,7 +77,9 @@ export const finalResult = (g: Game, net: number) =>
     ? nafakhResult(g)
     : net === 0
       ? 'Draw (0 net VP)'
-      : `${net > 0 ? 'Syrian' : 'Israeli'} ${Math.abs(net) >= 3 ? 'Operational' : 'Marginal'} Victory (${Math.abs(net)} net VP)`;
+      : isAlOwda(g)
+        ? `${net > 0 ? 'Syrian' : 'Israeli'} Victory (${Math.abs(net)} net VP, 20.38)` // owner, 15 Nov: no levels, the side ahead wins
+        : `${net > 0 ? 'Syrian' : 'Israeli'} ${Math.abs(net) >= 3 ? 'Operational' : 'Marginal'} Victory (${Math.abs(net)} net VP)`;
 /** 14.17: west of the Jordan = Gadot, Kfar Hanasi and Almagor. The rule book prints "areas 6, 7, 8"; the map numbers them 6, 9, 10 (docs/NOTES.md). */
 export const WEST_OF_JORDAN = [6, 9, 10];
 /** 19.5: a supplied Syrian unit west of the Jordan at the end of an Israeli player turn. */

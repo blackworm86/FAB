@@ -73,8 +73,8 @@ let creating = false;
 } // the tutorial's last buttons open a new game (game:scenario)
 export const inviteLink = (id: string) => `${location.origin}${location.pathname}?table=${id}`;
 export const homeUrl = () => location.pathname;
-/** Share an invite: the system share sheet, or the link copied. */
-export async function share(
+/** The invite sheet: the game code written large (to read out or type on the home page), the link to copy or share (owner's issue #2). */
+export function share(
   id: string,
   title: string,
   say: (t: string) => void = (t) => {
@@ -82,16 +82,29 @@ export async function share(
     render();
   },
 ) {
-  const url = inviteLink(id);
-  try {
-    if (navigator.share) await navigator.share({ title: `FAB · ${title}`, text: 'Join my game of FAB', url });
-    else {
-      await navigator.clipboard.writeText(url);
-      say('Invite link copied');
+  document.querySelector('.invite-sheet')?.remove();
+  const url = inviteLink(id),
+    el = document.createElement('div');
+  el.className = 'modal invite-sheet';
+  el.innerHTML = `<div class="sheet slim" role="dialog" aria-label="Invite a player"><h3>Invite a player <button class="ico" data-k="x" aria-label="Close">${ico('close')}</button></h3>
+    <p class="hint">Send the link, or read out the code: it goes in the box Invite link or code on the FAB home page.</p>
+    <div class="invcode" aria-label="Game code">${esc(id)}</div>
+    <div class="row"><button class="primary" data-k="copy">Copy the link</button>${'share' in navigator ? '<button data-k="share">Share…</button>' : ''}</div>
+    <p class="hint invurl">${esc(url)}</p></div>`;
+  el.addEventListener('click', async (e) => {
+    const k = (e.target as HTMLElement).closest<HTMLElement>('[data-k]')?.dataset.k;
+    if (e.target === el || k === 'x') return el.remove();
+    try {
+      if (k === 'copy') {
+        await navigator.clipboard.writeText(url);
+        say('Invite link copied');
+      } else if (k === 'share') await navigator.share({ title: `FAB · ${title}`, text: 'Join my game of FAB', url });
+    } catch {
+      say(url);
     }
-  } catch {
-    say(url);
-  }
+  });
+  document.body.append(el);
+  translateDom(el);
 }
 export async function dropMatch(m: { id: string; title: string; owner: string }) {
   const own = m.owner === online.uid || online.admin;
@@ -135,7 +148,7 @@ function joinByCode(v: string) {
     homeMsg = 'Paste the invite link or the game code.';
     return render();
   }
-  location.href = `${homeUrl()}?table=${m}`;
+  location.href = `${homeUrl()}?table=${m}`; // only the code: the game it belongs to comes from the database (main.ts reloads as that game)
 }
 const stateOf = (m: Match) => (m.germanName && m.alliedName ? 'In play' : 'Waiting for an opponent');
 /** The first screen: never on top of a game. Signed out it is just the sign-in; signed in it is your games, a new game and a way to join one. */

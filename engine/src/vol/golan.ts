@@ -24,7 +24,17 @@ import { NAF, nafakhStaff } from './golan-scenarios';
 export * from './golan-scenarios';
 import { afterMove, beforeMove, golanReach, interdictedBy, keepAssigned, stratStep } from './golan-moves';
 export * from './golan-moves';
-import { finalResult, golanVictory, onPhase, reinforce, resolveDugman, samReduction, sources, supplyStep } from './golan-turn';
+import {
+  finalResult,
+  golanVictory,
+  golanVpAreas,
+  onPhase,
+  reinforce,
+  resolveDugman,
+  samReduction,
+  sources,
+  supplyStep,
+} from './golan-turn';
 export * from './golan-turn';
 import {
   adjustFire,
@@ -217,6 +227,33 @@ export const SUGGESTED = SETUPS.badr.strongpoints!.suggested_historical;
 export const specialActions = (g: Game, side: Side) => saAvailable(g, side);
 
 registerHooks('golan73', {
+  vpAreas: golanVpAreas,
+  vpNote: (g) =>
+    isNafakh(g)
+      ? 'Battle for Nafakh (22.47): no VP; the score is the strength in Nafakh'
+      : isAlOwda(g)
+        ? 'scored at the end of turn 6 (20.38), areas only (plus the optional chemical-warfare VP): in supply, Syrian ones only with a Syrian unit there; Israel starts at 3 (its three stars, 20.37); an area behind the VP Line scores when it changes hands: Syria scores one it takes, Israel one it takes beyond the Purple Line; the side ahead wins, level is a draw'
+        : 'areas count only when in supply, and Syrian areas only when a Syrian unit is there (19.1)',
+  bigUnits: (g) => !isAlOwda(g), // 20.38: Al-Owda scores areas only
+  victoryRows: (g) =>
+    isAlOwda(g)
+      ? [
+          ['1+ Syrian VP', 'Syrian Victory'],
+          ['0', 'Draw'],
+          ['1+ Israeli VP', 'Israeli Victory'],
+        ]
+      : isNafakh(g)
+        ? [
+            ['Uncontested control of Nafakh', 'Decisive Victory'],
+            ['More strength points in Nafakh (tie: Israel)', 'Marginal Victory'],
+          ]
+        : [
+            ['3+ Syrian VP', 'Syrian Operational Victory'],
+            ['1–2 Syrian VP', 'Syrian Marginal Victory'],
+            ['0', 'Draw'],
+            ['1–2 Israeli VP', 'Israeli Marginal Victory'],
+            ['3+ Israeli VP', 'Israeli Operational Victory'],
+          ],
   beforeRecycle: (g, side) => samReduction(g, side), // 16.12: after 4.1a
   seenBy: (g, u, side) => {
     const i = state(g).intel;

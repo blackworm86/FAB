@@ -122,6 +122,8 @@ export interface Volume {
   /** The scenario's victory table [condition, result], and a one-line note on how areas count. */
   victoryRows?: (g: Game) => [string, string][];
   vpNote?: (g: Game) => string;
+  /** False when the scenario does not score destroyed large units (Sicily Sunrise Bridge, 22.17). */
+  bigUnits?: (g: Game) => boolean;
   finalResult: (g: Game, net: number) => string;
   /** Called at the start of the named phase (after the series set it up) and at its end (before the series moves on). */
   onPhase?: (g: Game, phase: string, when: 'start' | 'mid' | 'end') => void;

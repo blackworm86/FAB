@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { startBattle, unitsIn, visibleTo, passSA, defenderReinforceSA, reinforcementPhase, recoverAsset, golan, type Game } from '../src';
 import { CUR } from '../src/volumes';
+import * as E from '../src';
 import { newGolanGame, unit, chit, give } from './golan-helpers';
 
 const S = (g: Game) => golan.state(g);
@@ -198,5 +199,48 @@ describe('Golan asset and event sweep', () => {
     golan.afterFire(g, b, 'syrian', 'arty');
     expect(arts[1].box).toBe('future');
     expect(arts[0].box).toBe('map');
+  });
+  it('19.1 (issue #6): the scoring list adds up to the score; Syrian areas need a Syrian unit; Nafakh has its own table', () => {
+    const g = newGolanGame(46);
+    const v = E.victory(g);
+    expect(v.net).toBe(-6); // Badr starts at Israel +6 (errata)
+    for (const s of ['syrian', 'israeli'] as const)
+      expect(
+        E.vpAreas(g, s)
+          .filter((o) => o.ok)
+          .reduce((t, o) => t + o.pts, 0),
+      ).toBe(v[s]); // no big units destroyed yet
+    const syr = E.vpAreas(g, 'syrian').find((o) => !E.unitsIn(g, o.id, 'syrian').length);
+    if (syr) expect(syr.ok).toBe(false);
+    expect(E.victoryTable(g).map((r) => r[1])).toContain('Israeli Operational Victory');
+    E.useGame('golan73');
+    const n = E.newGame(1, { scenario: 'nafakh' } as never);
+    expect(E.victoryTable(n).map((r) => r[1])).toEqual(['Decisive Victory', 'Marginal Victory']);
+    expect(E.vpAreas(n, 'israeli')).toEqual([]);
+  });
+  it('20.38 (owner issue #7): Al-Owda scores its reference map: three battlefield stars, the five Jordan crossings, the VP Line areas when they change hands', () => {
+    E.useGame('golan73');
+    const g = E.newGame(1, { scenario: 'alowda' } as never);
+    const isr = E.vpAreas(g, 'israeli');
+    expect(isr.map((o) => o.id).sort((a, b) => a - b)).toEqual([30, 46, 57]); // the three stars (Nafakh and Booster carry none here)
+    expect(E.victory(g)).toMatchObject({ israeli: 3, syrian: 0 }); // 20.37 (owner, 15 Nov): Israel starts at 3
+    g.control[65] = 'israeli'; // an area beyond the Purple Line taken by Israel
+    expect(E.vpAreas(g, 'israeli').find((o) => o.id === 65)?.pts).toBe(1);
+  });
+  it('20.38 (owner, 15 Nov): Al-Owda scores areas only, and the side ahead wins with no levels', () => {
+    E.useGame('golan73');
+    const g = E.newGame(1, { scenario: 'alowda' } as never);
+    const before = E.victory(g).israeli;
+    g.elimLarge.push(g.units.find((u) => u.side === 'syrian' && u.max >= 3)!.id);
+    expect(E.victory(g).israeli).toBe(before); // a destroyed big unit scores nothing here
+    golan.state(g).chem = 3; // three chemical attacks (optional 18.7): their VP still count (owner, 15 Nov)
+    expect(E.victory(g).israeli).toBe(before + 2);
+    expect(E.victoryTable(g)).toEqual([
+      ['1+ Syrian VP', 'Syrian Victory'],
+      ['0', 'Draw'],
+      ['1+ Israeli VP', 'Israeli Victory'],
+    ]);
+    expect(golan.finalResult(g, -7)).toBe('Israeli Victory (7 net VP, 20.38)');
+    expect(golan.finalResult(g, 0)).toMatch(/Draw/);
   });
 });

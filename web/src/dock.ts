@@ -198,9 +198,9 @@ export function undoBtn(): string {
   const can = hist.length > 0,
     txt = can ? `Undo: ${hist.label || 'last action'}` : '';
   if (!can && hist.lock)
-    return `<button class="dundo idle locked" disabled title="${esc(`Undo not possible: ${hist.lock}`)}" aria-label="${esc(`Undo not possible: ${hist.lock}`)}">${ico('undo')}<span></span></button>`; // nothing to undo: a quiet greyed button, the reason in its tooltip, no "Locked" label in the bar
+    return `<button class="dundo idle locked" disabled title="${esc(`Undo not possible: ${hist.lock}`)}" aria-label="${esc(`Undo not possible: ${hist.lock}`)}">${ico('undo')}<span></span><small class="sql">Undo</small></button>`; // nothing to undo: a quiet greyed button, the reason in its tooltip, no "Locked" label in the bar
   if (!txt)
-    return `<button class="dundo idle" disabled aria-label="Nothing to undo" title="Nothing to undo" tabindex="-1">${ico('undo')}<span></span></button>`; // always in place, so nothing shifts
-  return `<button class="dundo" ${can ? `data-undo` : 'disabled'} title="${esc(can ? txt + ' (Ctrl+Z)' : 'Undo is locked once dice are rolled or something hidden is shown')}">${ico(can ? 'undo' : 'lock')}<span>${esc(txt)}</span></button>`;
+    return `<button class="dundo idle" disabled aria-label="Nothing to undo" title="Nothing to undo" tabindex="-1">${ico('undo')}<span></span><small class="sql">Undo</small></button>`; // always in place, so nothing shifts
+  return `<button class="dundo" ${can ? `data-undo` : 'disabled'} title="${esc(can ? txt + ' (Ctrl+Z)' : 'Undo is locked once dice are rolled or something hidden is shown')}">${ico(can ? 'undo' : 'lock')}<span>${esc(txt)}</span><small class="sql">Undo</small></button>`;
 }
 export const recoverSel: Record<string, string | null> = {};

@@ -97,14 +97,14 @@ export function wantTroops() {
   if (!troopsAsked) {
     troopsAsked = true;
     setStudio(renderer);
+    const again = () => setTimeout(() => ((troopsAsked = false), refresh()), 8000); // the figures could not load (offline, a dropped file): ask again in a while, not never (owner's issue #3)
     void loadTroops(VOL.id)
       .then((ok) => {
         troopsReady = ok;
         if (ok) refresh();
+        else again();
       })
-      .catch(() => {
-        /* no figures: blocks stay */
-      });
+      .catch(again);
   }
   return troopsReady;
 }

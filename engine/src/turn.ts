@@ -325,4 +325,4 @@ export function vpAreas(g: Game, side: Side): { id: number; pts: number; ok: boo
     .filter(({ a, pts }) => pts > 0 && g.control[a.id] === side)
     .map(({ a, pts }) => ({ id: a.id, pts, ok: inSupply(g, side, a.id), why: 'cut off' }));
 }
-export const vpNote = (g: Game) => CUR.vpNote?.(g) ?? 'areas count only when in supply (19.3)';
+export const vpNote = (g: Game) => CUR.vpNote?.(g) ?? 'areas count only when in supply (19.1)';

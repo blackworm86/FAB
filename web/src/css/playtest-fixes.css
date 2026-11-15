@@ -730,7 +730,8 @@
   color: var(--ink);
   background: #0b0d08e6;
 }
-#ui .dock:has(.passstrip) .c-bar .go {
+#ui .dock:has(.passstrip) .c-bar .go,
+#ui .dock:has(.passstrip) .c-bar .xcancel {
   visibility: hidden;
 }
 /* playtest 3, item 4: a battle result or dice list longer than its space says so (fade and ▾, as the set-up panels) */
@@ -820,4 +821,25 @@ body:has(#ui .chitbar) .sbfab {
   #ui .stage:not(:has(.c-table)) > .seatbar {
     top: 60px;
   }
+}
+
+/* owner's issue #2: the invite sheet, with the game code written large */
+.invite-sheet {
+  position: fixed;
+  z-index: 200;
+}
+.invite-sheet .invcode {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font: 700 clamp(28px, 8vw, 44px) / 1.1 var(--sfd);
+  letter-spacing: 0.14em;
+  text-align: center;
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+.invite-sheet .invurl {
+  overflow-wrap: anywhere;
+  user-select: all;
 }

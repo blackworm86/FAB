@@ -185,6 +185,7 @@ type AlOwda = {
   out_of_play: { units: string[] };
   track: Record<string, Record<Side, [number, number]>>;
   vp_line_east: number[];
+  battlefield_importance: number[];
   israeli: SideCard & {
     air_support_holding: string[];
     garrisons: number[];
@@ -202,6 +203,8 @@ type AlOwda = {
 };
 export const ALO = (setupsJson as unknown as Record<string, AlOwda>).alowda;
 export const VP_EAST = new Set(ALO.vp_line_east);
+/** 20.38: the Areas of Battlefield Importance the Al-Owda Reference Map marks (it replaces the main map's six stars). */
+export const ALO_STARS = new Set(ALO.battlefield_importance);
 export function alowdaSetup(g: Game): Game {
   g.opts = { scenario: 'alowda', fuel: false };
   g.lastTurn = ALO.turns;
