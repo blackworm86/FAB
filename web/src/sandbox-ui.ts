@@ -95,9 +95,16 @@ let sbJump: { turn: number; side: E.Side; phase: E.Phase };
 let sbNotes = SB.loadNotes();
 /** A sandbox edit: no turn or seat checks, no automatic phase skipping, still undoable. */
 export function sbx(f: () => void) {
-  const r = hist.run(M.g, f);
+  let warn: string[] = [];
+  const r = hist.run(M.g, () => {
+    f();
+    const p = E.playable(M.g);
+    if (p.refuse.length) throw new Error(`Not done: ${p.refuse.join(' ')}`); // the engine could not go on from there (rules session's check)
+    warn = p.warn;
+  });
   M.g = r.game;
   if (r.error) say(r.error.message);
+  else if (warn.length) say(`Done, but unusual: ${warn.join(' ')}`);
   save();
   refresh();
 }
