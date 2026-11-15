@@ -329,3 +329,88 @@ export const vpNote = (g: Game) => CUR.vpNote?.(g) ?? 'areas count only when in 
 
 /** May this unit act now (move, dig in, take a reserve marker), as far as the volume's own limits go? */
 export const mayAct = (g: Game, u: Unit) => CUR.mayAct?.(g, u) ?? true;
+
+/** For the owner's admin tools (free edits of a game): can the engine go on from this position?
+ *  `refuse`: positions the rules engine cannot continue from or would mis-handle (undo the edit); `warn`: legal for the engine but
+ *  unusual (over-stacked, control not matching the blocks, a battle asset no longer in its box), worth a confirmation. Empty = fine. */
+export function playable(g: Game): { refuse: string[]; warn: string[] } {
+  const refuse: string[] = [],
+    warn: string[] = [],
+    nm = (u: Unit) => `${u.name} (${u.id})`,
+    where = (a: number) => areas.get(a)?.name ?? `area ${a}`;
+  if (!Number.isInteger(g.turn) || g.turn < 1 || g.turn > g.lastTurn) refuse.push(`turn ${g.turn} is outside the game (1-${g.lastTurn})`);
+  if (!['deploy', ...PHASE_ORDER].includes(g.phase)) refuse.push(`unknown phase ${g.phase}`);
+  if (!sidesOf(g).includes(g.phasing)) refuse.push(`unknown phasing side ${g.phasing}`);
+  const seen = new Set<string>();
+  for (const u of g.units) {
+    if (seen.has(u.id)) refuse.push(`two blocks share the id ${u.id}`);
+    seen.add(u.id);
+    if (![0, 1, 2].includes(u.disorder)) refuse.push(`${nm(u)}: disorder must be none, disordered or recovering`);
+    if (!Number.isInteger(u.str) || u.str < 0 || u.str > u.max) refuse.push(`${nm(u)}: ${u.str} steps (0-${u.max})`);
+    if (u.area == null) continue;
+    if (!areas.has(u.area)) refuse.push(`${nm(u)} is in an unknown area ${u.area}`);
+    else if (g.inPlay && !g.inPlay.includes(u.area)) refuse.push(`${nm(u)} is in ${where(u.area)}, outside the area of play`);
+    if (u.str < 1) refuse.push(`${nm(u)} is on the map with no step left: eliminate it instead`);
+    if (u.box) refuse.push(`${nm(u)} is both on the map and in the ${u.box} box`);
+  }
+  for (const s of sidesOf(g))
+    for (const [k, v] of Object.entries(g.markers[s] ?? {})) if (v < 0) refuse.push(`${s} reserve markers ${k}: ${v}`);
+  if (g.moving) {
+    const u = g.units.find((x) => x.id === g.moving!.id);
+    if (!u || u.area == null) refuse.push('a block is half-way through a move but is not on the map: end the move first');
+  }
+  if (g.pendingBlow && !g.units.some((x) => x.id === g.pendingBlow!.unit && x.area != null))
+    refuse.push('a bridge-blowing attempt waits for a block that is not on the map');
+  const b = g.battle;
+  if (b) {
+    const def = sidesOf(g).find((s) => s !== b.attacker)!;
+    if (!['combat', 'btCombat'].includes(g.phase) && !CUR.battleAllowed?.(g, b.area))
+      refuse.push(`a battle is open in the ${g.phase} phase`);
+    if (b.stage !== 'done') {
+      const att = unitsIn(g, b.area, b.attacker),
+        dfd = unitsIn(g, b.area, def);
+      if (!att.length) refuse.push(`the battle in ${where(b.area)} has no attacking block left`);
+      if (!dfd.length && !b.assets[def].length) refuse.push(`the battle in ${where(b.area)} has no defender left`);
+      for (const [p, s] of [
+        [b.attPoint, b.attacker],
+        [b.defPoint, def],
+      ] as const)
+        if (p && b.stage !== 'setup' && !unitsIn(g, b.area, s).some((u) => u.id === p) && !b.assets[s].includes(p))
+          refuse.push(`the ${s} point unit of the battle in ${where(b.area)} is no longer there`);
+    }
+    for (const s of sidesOf(g))
+      for (const id of b.assets[s] ?? []) {
+        const c = g.chits.find((x) => x.id === id);
+        if (!c) refuse.push(`the battle uses a chit ${id} that does not exist`);
+        else if (c.box !== 'map') refuse.push(`${c.name} is assigned to the battle but sits in the ${c.box} box`);
+      }
+  }
+  for (const a of areas.keys()) {
+    if (g.inPlay && !g.inPlay.includes(a)) continue;
+    for (const s of sidesOf(g)) {
+      const n = unitsIn(g, a, s).filter((u) => !u.garrison).length;
+      if (n > stackMax(g, a))
+        warn.push(`${where(a)}: ${n} ${s} blocks, over the stacking limit (the end of the phase will push the extra out, 6.6)`);
+    }
+    const here = sidesOf(g).filter((s) => unitsIn(g, a, s).length);
+    if (here.length === 1 && g.control[a] && g.control[a] !== here[0])
+      warn.push(`${where(a)} is held by ${g.control[a]} but only ${here[0]} blocks are there`);
+  }
+  for (const c of g.chits)
+    if (
+      c.box === 'map' &&
+      !c.area &&
+      !b?.assets[c.side]?.includes(c.id) &&
+      !Object.values(g.interdicted).includes(c.id) &&
+      !Object.values(g.greif ?? {}).includes(c.id) &&
+      !g.units.some((u) => u.chitId === c.id && u.area != null) &&
+      !c.mission
+    )
+      warn.push(`${c.name} (${c.id}) is marked as on the map but is not in use there`);
+  const v = CUR.playable?.(g);
+  if (v) {
+    refuse.push(...v.refuse);
+    warn.push(...v.warn);
+  }
+  return { refuse, warn };
+}
