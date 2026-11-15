@@ -1,6 +1,6 @@
 // 20.3 Operation Al-Owda, from its rules and the Al-Owda Setup Cards: six turns on the whole map but Mt Hermon.
 import { describe, expect, it } from 'vitest';
-import { endPhase, victory, golan, type Game } from '../src';
+import { endPhase, victory, vpAreas, golan, type Game } from '../src';
 import { newGolanGame, unit, chit, playOut, runTo } from './golan-helpers';
 
 const alowda = (seed = 4): Game => newGolanGame(seed, 'alowda' as 'badr');
@@ -91,7 +91,7 @@ describe('Operation Al-Owda (20.3)', () => {
   });
   it('20.37 the "3 VPs marked" are the marker\'s start (as Badr), not a bonus; no sudden death; plays out to a result', () => {
     const g = alowda();
-    expect(victory(g).israeli).toBe(23); // the counted areas only (the owner's ruling, 9 Nov 2026): 20 east of the VP Line + the reference map's 3 stars (15 Nov)
+    expect(victory(g).israeli).toBe(3); // 20.37 (owner, 15 Nov): Israel starts at 3, its three stars; the VP Line areas count when they change hands
     placeAll(g);
     endPhase(g);
     expect(g.phase).toBe('movement');
@@ -151,19 +151,18 @@ describe('Operation Al-Owda (20.3)', () => {
     ]);
     expect(g.track!.every((r) => r.sd == null)).toBe(true);
   });
-  it('20.38: Israel scores the areas it holds east of the Israeli VP Line (Tel Saki 27 counts, Yonatan 26 does not)', () => {
+  it('20.38 (owner, 15 Nov): a VP Line area scores for Syria when Syria takes it (Tel Saki 27 counts, Yonatan 26 does not)', () => {
     const g = alowda();
     placeAll(g);
     endPhase(g);
-    const score = () => victory(g).israeli;
-    for (const a of [26, 27]) {
-      g.units = g.units.filter((u) => u.area !== a);
+    const syr = g.units.filter((u) => u.side === 'syrian' && u.area != null && !u.garrison);
+    for (const [k, a] of [26, 27].entries()) {
+      g.units = g.units.filter((u) => u.area !== a || u.side === 'syrian');
       g.control[a] = 'syrian';
+      syr[k].area = a;
     }
-    const base = score();
-    g.control[26] = 'israeli';
-    expect(score()).toBe(base); // west of the line
-    g.control[27] = 'israeli';
-    expect(score()).toBe(base + 1); // east of it
+    const ids = vpAreas(g, 'syrian').map((o) => o.id);
+    expect(ids).toContain(27); // east of the line, taken from Israel
+    expect(ids).not.toContain(26); // west of it
   });
 });

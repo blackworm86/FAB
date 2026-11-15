@@ -218,19 +218,14 @@ describe('Golan asset and event sweep', () => {
     expect(E.victoryTable(n).map((r) => r[1])).toEqual(['Decisive Victory', 'Marginal Victory']);
     expect(E.vpAreas(n, 'israeli')).toEqual([]);
   });
-  it('20.38 (owner issue #7): Al-Owda scores its reference map: three battlefield stars, the five Jordan crossings, Israel each area east of the VP Line', () => {
+  it('20.38 (owner issue #7): Al-Owda scores its reference map: three battlefield stars, the five Jordan crossings, the VP Line areas when they change hands', () => {
     E.useGame('golan73');
     const g = E.newGame(1, { scenario: 'alowda' } as never);
     const isr = E.vpAreas(g, 'israeli');
-    expect(
-      isr
-        .filter((o) => o.pts === 2)
-        .map((o) => o.id)
-        .sort((a, b) => a - b),
-    ).toEqual([30, 46, 57]); // star + east of the line
-    expect(isr.some((o) => o.id === 42)).toBe(false); // Nafakh: west of the line, and no Al-Owda star
-    expect(isr.find((o) => o.id === 50)?.pts).toBe(1); // Booster: east of the line only
-    expect(E.victory(g).israeli).toBe(23); // 20 areas east of the line, all Israeli at the start (20.33), + 3 stars
+    expect(isr.map((o) => o.id).sort((a, b) => a - b)).toEqual([30, 46, 57]); // the three stars (Nafakh and Booster carry none here)
+    expect(E.victory(g)).toMatchObject({ israeli: 3, syrian: 0 }); // 20.37 (owner, 15 Nov): Israel starts at 3
+    g.control[65] = 'israeli'; // an area beyond the Purple Line taken by Israel
+    expect(E.vpAreas(g, 'israeli').find((o) => o.id === 65)?.pts).toBe(1);
   });
   it('20.38 (owner, 15 Nov): Al-Owda scores areas only, and the side ahead wins with no levels', () => {
     E.useGame('golan73');
@@ -238,6 +233,8 @@ describe('Golan asset and event sweep', () => {
     const before = E.victory(g).israeli;
     g.elimLarge.push(g.units.find((u) => u.side === 'syrian' && u.max >= 3)!.id);
     expect(E.victory(g).israeli).toBe(before); // a destroyed big unit scores nothing here
+    golan.state(g).chem = 3; // three chemical attacks (optional 18.7): their VP still count (owner, 15 Nov)
+    expect(E.victory(g).israeli).toBe(before + 2);
     expect(E.victoryTable(g)).toEqual([
       ['1+ Syrian VP', 'Syrian Victory'],
       ['0', 'Draw'],

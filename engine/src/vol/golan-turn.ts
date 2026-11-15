@@ -44,7 +44,10 @@ export function golanVpAreas(g: Game, side: Side): { id: number; pts: number; ok
   for (const a of areas.values()) {
     if (isAssembly(a.id) || g.control[a.id] !== side) continue;
     const mutual = (isAlOwda(g) ? ALO_STARS.has(a.id) : a.vp.mutual) ? 1 : 0, // 20.38: Al-Owda's own three stars
-      pts = side === 'syrian' ? a.vp.syrian + mutual : mutual + ((isAlOwda(g) ? VP_EAST.has(a.id) : garea(a.id).syria) ? 1 : 0); // 20.38: Al-Owda counts east of its VP Line
+      // Al-Owda (20.37/20.38, owner 15 Nov): the VP Line areas count only when they change hands from the start (west of the Purple Line
+      // they start Israeli, 20.33): Syria scores one it takes, Israel one it takes beyond the Purple Line; so Israel starts at 3, its three stars
+      line = isAlOwda(g) && VP_EAST.has(a.id) && (side === 'syrian') !== garea(a.id).syria ? 1 : 0,
+      pts = side === 'syrian' ? a.vp.syrian + mutual + line : mutual + (isAlOwda(g) ? line : garea(a.id).syria ? 1 : 0);
     if (!pts) continue;
     const sup = inSupply(g, side, a.id),
       occ = side !== 'syrian' || unitsIn(g, a.id, 'syrian').some(regular);
@@ -61,8 +64,8 @@ export function golanVictory(g: Game): Record<Side, number> & { net: number } {
   } // 22.47: the score is the strength in Nafakh
   const pts: Record<Side, number> = { syrian: 0, israeli: 0 };
   for (const s of ['syrian', 'israeli'] as Side[]) for (const o of golanVpAreas(g, s)) if (o.ok) pts[s] += o.pts;
-  if (isAlOwda(g)) return { ...pts, net: pts.syrian - pts.israeli }; // 20.38 (owner, 15 Nov): areas only, no large units
-  for (const id of g.elimLarge) {
+  for (const id of isAlOwda(g) ? [] : g.elimLarge) {
+    // 20.38 (owner, 15 Nov): no large units in Al-Owda; the optional chemical-warfare VP still counts
     const u = g.units.find((x) => x.id === id)!;
     pts[other(u.side)]++;
   }
