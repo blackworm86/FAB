@@ -130,7 +130,7 @@
   flex: none;
 }
 .c-bar.t .c-stat {
-  margin-left: 0;
+  margin-left: auto; /* right-aligned also when a scenario has no VP bar to fill the middle (Nuts!, Nafakh: owner's issue #21) */
   flex: none;
 }
 @media (max-width: 1300px) and (min-width: 701px) {
