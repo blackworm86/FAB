@@ -140,8 +140,8 @@ async function createGame() {
   E.useGame(info.id);
   const json = JSON.stringify(E.newGame(undefined, opts)); // the new game is of the chosen volume
   const id = await lobby.create(
-    { game: form.game, title, opts },
-    form.side ? (form.side === info.sides[0] ? 'german' : 'allied') : null,
+    { game: form.game, title, opts, ...(form.side === 'hotseat' ? { hotseat: true } : {}) },
+    form.side === 'hotseat' ? 'german' : form.side ? (form.side === info.sides[0] ? 'german' : 'allied') : null,
     json,
   );
   if (id.startsWith('!')) {
@@ -158,7 +158,7 @@ function joinByCode(v: string) {
   }
   location.href = `${homeUrl()}?table=${m}`; // only the code: the game it belongs to comes from the database (main.ts reloads as that game)
 }
-const stateOf = (m: Match) => (m.germanName && m.alliedName ? 'In play' : 'Waiting for an opponent');
+const stateOf = (m: Match) => (m.hotseat ? 'This screen' : m.germanName && m.alliedName ? 'In play' : 'Waiting for an opponent');
 /** The first screen: never on top of a game. Signed out it is just the sign-in; signed in it is your games, a new game and a way to join one. */
 export const tutUrl = (course: string) => `${homeUrl()}?tutorial=${course}`;
 /** Learn to play and the rules reference of a volume: one thin line of two quiet buttons (one per course). Works offline. */
@@ -263,7 +263,7 @@ function homeHtml() {
         (m, mi) =>
           `<div class="matchrow ${m.myMove ? 'yours' : ''}"><button class="open" data-do="${reg(() => {
             location.href = tableUrl(m.id, m.game ?? 'bulge');
-          })}"><b>${esc(m.title)}${m.myMove ? '<span class="stampy">Your move</span>' : ''}</b><small class="seats"><span class="st ${m.germanName && m.alliedName ? 'live' : 'wait'}" aria-hidden="true"></span><small class="stw">${esc(stateOf(m))}</small><b>${info!.tag[info!.sides[0]]}</b> ${esc(m.germanName || '—')} <b>${info!.tag[info!.sides[1]]}</b> ${esc(m.alliedName || '—')}</small><small class="mrules">${SCEN_NAME[(m.opts as Partial<E.Opts> | undefined)?.scenario ?? 'tournament'] ?? ''}${(m.opts as Partial<E.Opts> | undefined)?.fuel === false ? ' · no fuel rule' : ''}${
+          })}"><b>${esc(m.title)}${m.myMove ? '<span class="stampy">Your move</span>' : ''}</b><small class="seats"><span class="st ${m.hotseat || (m.germanName && m.alliedName) ? 'live' : 'wait'}" aria-hidden="true"></span><small class="stw">${esc(stateOf(m))}</small>${m.hotseat ? '' : `<b>${info!.tag[info!.sides[0]]}</b> ${esc(m.germanName || '—')} <b>${info!.tag[info!.sides[1]]}</b> ${esc(m.alliedName || '—')}`}</small><small class="mrules">${SCEN_NAME[(m.opts as Partial<E.Opts> | undefined)?.scenario ?? 'tournament'] ?? ''}${(m.opts as Partial<E.Opts> | undefined)?.fuel === false ? ' · no fuel rule' : ''}${
             optOn(m.opts as Partial<E.Opts>, m.game ?? 'bulge').length
               ? ` · optional ${optOn(m.opts as Partial<E.Opts>, m.game ?? 'bulge')
                   .map((r) => r.rule)
@@ -281,15 +281,19 @@ function homeHtml() {
                   'Watch the replay of this finished game',
                 )
               : ''
+          }${
+            m.hotseat
+              ? ''
+              : btn(
+                  m.germanName && m.alliedName ? ico('share') : `${ico('share')}Invite`, // an empty seat: the button says what it is for
+                  () => {
+                    void share(m.id, m.title);
+                  },
+                  m.germanName && m.alliedName ? 'ico' : 'word',
+                  false,
+                  'Invite a player',
+                )
           }${btn(
-            m.germanName && m.alliedName ? ico('share') : `${ico('share')}Invite`, // an empty seat: the button says what it is for
-            () => {
-              void share(m.id, m.title);
-            },
-            m.germanName && m.alliedName ? 'ico' : 'word',
-            false,
-            'Invite a player',
-          )}${btn(
             `${ico('trash')}`,
             () => {
               void dropMatch(m);
@@ -323,7 +327,7 @@ function homeHtml() {
       <div class="authform"><input placeholder="Name (optional)" value="${esc(form.title)}" data-sel="${regv((x) => {
         form.title = x;
       })}"></div>
-      <div class="tiles">${info!.sides.map((sd) => tile(sd, info!.sideName[sd], info!.tag[sd])).join('')}${tile('', 'Later', '?')}</div>
+      <div class="tiles">${info!.sides.map((sd) => tile(sd, info!.sideName[sd], info!.tag[sd])).join('')}${tile('', 'Later', '?')}${tile('hotseat', 'Play on this screen', '2')}</div>
       <div class="chips"><div class="scens">${info!.scenarios
         .filter((sc) => !sc.testing)
         .map((sc) =>

@@ -353,6 +353,18 @@ export async function rtdbStore(table: string): Promise<Store | null> {
         P = (p: string) => `games/${id}/${p}`,
         created = Date.now();
       try {
+        if (m.hotseat) {
+          // two players on one screen: one account in one seat, the whole game stored as it is (no private records, nobody to hide from)
+          await rt.update(R('/'), {
+            [P('meta')]: { title: m.title, game: m.game, opts: m.opts, owner: uid, created, hotseat: true },
+            [P(`members/${uid}`)]: true,
+            [P('seats/german')]: uid,
+            [`users/${uid}/games/${id}`]: { title: m.title, game: m.game, created },
+          });
+          await rt.set(R(P('seatNames/german')), name);
+          await rt.set(R(P('state')), { ...toTree(JSON.parse(stateJson) as Game), rev: 1, by: uid });
+          return id;
+        }
         const sp = initSplit(JSON.parse(stateJson) as Game, rnd(24), rnd(24)); // the salts hide the block ids: secure random, not Math.random     // hidden blocks: each seat keeps its own details
         await rt.update(R('/'), {
           [P('meta')]: { title: m.title, game: m.game, opts: m.opts, owner: uid, created, split: true },
@@ -370,6 +382,7 @@ export async function rtdbStore(table: string): Promise<Store | null> {
         return '!' + msg(e);
       }
     },
+    isHotseat: async () => (await rt.get(G('meta/hotseat'))).val() === true,
     async deleteMatch(id) {
       try {
         await rt.remove(R(`games/${id}`));
@@ -463,6 +476,7 @@ export async function rtdbStore(table: string): Promise<Store | null> {
               alliedName: r.names?.allied,
               created: Number(r.meta!.created ?? 0),
               ...move(r),
+              ...(r.meta!.hotseat ? { hotseat: true, myMove: !(move(r) as { over?: boolean }).over } : {}), // both sides are played here: it is always this account's move
             }))
             .sort((a, b) => b.created - a.created),
         );

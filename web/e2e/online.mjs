@@ -435,6 +435,20 @@ for (const game of GAMES) {
         (w) => Object.entries(w).filter(([id, a]) => window.__fab.settled().units.find((u) => u.id === id)?.area !== a).length,
         want,
       );
+    for (const [p, w] of [
+      [A, wa],
+      [B, wb],
+    ]) {
+      const d = await p.page.evaluate(
+        (w) =>
+          Object.entries(w)
+            .map(([id, a], i) => [i + 1, id, a, window.__fab.settled().units.find((u) => u.id === id)?.area])
+            .filter((x) => x[2] !== x[3]),
+        w,
+      );
+      for (const [i, id, a, now] of d)
+        console.log(`       ${p.name}'s move ${i} of ${Object.keys(w).length} lost: ${id} should be in area ${a}, is in ${now}`);
+    }
     const lost = (await kept(A.page, wa)) + (await kept(B.page, wb)),
       n = Object.keys(wa).length + Object.keys(wb).length;
     check(
@@ -497,6 +511,51 @@ if (GAMES.length === 3) {
   check(hitChoice > 0, `a hit choice was played (${hitChoice})`);
   check(retreats > 0, `a retreat was played (${retreats})`);
 }
+/* hot-seat: two players on one screen, saved online under one account (owner's decision, 15 November 2026) */
+{
+  console.log('\nhot-seat');
+  await A.page.goto(BASE, { waitUntil: 'domcontentloaded' });
+  await tap(A.page.locator('button[aria-label^="The Bulge"]:visible').first());
+  await tap(A.page.locator('[title="Start a new game"], [aria-label="Start a new game"]').first());
+  await tap(A.page.locator('.tiles .tile.hotseat'));
+  await tap(A.page.locator('button', { hasText: 'Create game' }));
+  await A.page.waitForURL(/[?&]table=/, { timeout: 60000 });
+  const id = new URL(A.page.url()).searchParams.get('table');
+  await table(A.page);
+  check(
+    await until(() => A.page.evaluate(() => window.__fab.online.rev > 0 && window.__fab.online.hotseat && window.__fab.online.both())),
+    'a game on this screen opens, and its one account plays both sides',
+  );
+  /** Whoever has to act hands the turn to the other side. */
+  const pass = (E, g) => {
+    const [p1, p2] = E.sidesOf(g),
+      a = E.actorOf(g),
+      to = (a === 'both' ? p1 : a) === p1 ? p2 : p1;
+    if (to === p1) g.turn++;
+    g.phase = 'combat';
+    g.phasing = to;
+    g.battle = null;
+    return to;
+  };
+  const first = await play(A.page, pass),
+    second = await play(A.page, pass);
+  check(
+    first !== second && !String(first).startsWith('!') && !String(second).startsWith('!'),
+    'both sides take their turn from the one screen',
+  );
+  check(await until(async () => /^saved/.test((await look(A.page)).sync), 20000), 'it is saved online');
+  const before = (await look(A.page)).same;
+  await A.page.reload({ waitUntil: 'domcontentloaded' });
+  await table(A.page);
+  check(
+    await until(async () => (await look(A.page)).same === before, 30000),
+    'reopened, it is the same game (as on another device of the same account)',
+  );
+  await A.page.goto(BASE, { waitUntil: 'domcontentloaded' });
+  check(await until(() => A.page.locator('.matchrow', { hasText: 'This screen' }).count(), 30000), 'the games list marks it "This screen"');
+  check((await raw(`games/${id}/priv`)) === null, 'no private block records are kept for it');
+}
+
 /* signing out on the home page works at once, without a reload (owner's issue #1) */
 await A.page.goto(BASE, { waitUntil: 'domcontentloaded' });
 await tap(A.page.locator('[data-auth="out"]').first());

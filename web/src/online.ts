@@ -21,6 +21,7 @@ export interface Match {
   germanName?: string;
   alliedName?: string;
   created: number;
+  /** two players on this one screen (the owner's hot-seat mode): one account plays both sides */ hotseat?: boolean;
   /** whose move it is: my move, turn and step, read from the shared state */ myMove?: boolean;
   /** the game is over (it can be replayed, 4.1) */ over?: boolean;
   turn?: number;
@@ -84,6 +85,8 @@ export interface Store {
   freeSeat(side: Side): Promise<string>;
   /** Create a game (its shared state, the creator's seat and the lobby record); resolves the new id, or an error starting with '!'. */
   createMatch(m: Omit<Match, 'id' | 'owner' | 'members' | 'created'>, side: Side | null, stateJson: string): Promise<string>;
+  /** Whether this table is a hot-seat game (see createMatch with `m.hotseat`). */
+  isHotseat?(): Promise<boolean>;
   /** The creator or an admin deletes the game for everyone; anyone else leaves it. Resolve '' or an error. */
   deleteMatch(id: string): Promise<string>;
   leaveMatch(id: string): Promise<string>;
@@ -135,6 +138,8 @@ export const online = {
   account: null as Account | null,
   admin: false,
   hasAccounts: false,
+  /** A hot-seat game: two players on this one screen, saved online under one account. The whole game is stored as it is (nobody to hide blocks from); its owner, in its one seat, acts for both sides. */
+  hotseat: false,
   mySide(): Side | null {
     if (this.devSwitch()) return this.devSeat !== 'both' && this.devSeat !== 'watch' ? this.devSeat : null;
     return this.seats.german === this.uid && this.uid
@@ -145,7 +150,7 @@ export const online = {
   },
   /** True when this client may act for whoever's turn it is (the development "both" seat). */
   both() {
-    return this.mode === 'off' || LAB || (this.devSwitch() && this.devSeat === 'both');
+    return this.mode === 'off' || LAB || (this.devSwitch() && this.devSeat === 'both') || (this.hotseat && this.mySide() != null);
   }, // the computer game (lab.ts) is a shared screen: lab.ts says which side is the computer's
   /** The seat switch exists only where no real opponent can be harmed: the sandbox, the two-tab fake store, a local development table. Never on a shared table, whatever the address says. */
   devSwitch() {
@@ -186,7 +191,7 @@ const fail = (e: string) => {
   onChange();
 };
 const mySeat = () => {
-  const side = online.mySide();
+  const side = online.hotseat ? null : online.mySide(); // a hot-seat game is not split: no seat object
   if (!side) return (seat = null);
   if (!seat || seat.side !== side) {
     seat = new SplitSeat(side);
@@ -303,6 +308,7 @@ export async function startOnline(
   sync(store.account());
   store.onAccount(sync);
   if (!HAS_TABLE && !DEV_FAKE) return; // the home page plays no table: nothing to watch (and nothing to be refused while signing out)
+  online.hotseat = !!(await store.isHotseat?.().catch(() => false));
   store.watchSeats((s) => {
     online.seats = s;
     onChange();
@@ -362,14 +368,14 @@ export async function startOnline(
 /** Write this seat's private details when they changed, then the shared game with this seat's hidden blocks hidden again. Quick bursts are coalesced into one write at a time. */
 export async function push(g: Game) {
   const sp = mySeat();
-  if (online.mode !== 'remote' || !store || !sp) return;
-  if (!sp.priv) {
+  if (online.mode !== 'remote' || !store || !(sp || (online.hotseat && online.mySide()))) return;
+  if (sp && !sp.priv) {
     online.sync = 'NOT SAVED: your private block details have not loaded';
     queued = g;
     notify('Your block details have not loaded yet. The move is kept and will be sent when they do.');
     return;
   }
-  const out = sp.save(g);
+  const out: ReturnType<SplitSeat['save']> = sp ? sp.save(g) : { pub: JSON.stringify(g) };
   if (out.pub === lastJson || out.pub === base) return; // nothing of ours to send; and what has just arrived must not be taken for sent (two-browser test: one screen stayed in a battle's set-up)
   if (writing) {
     queued = g;
