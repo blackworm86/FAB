@@ -104,7 +104,9 @@ export const isPlaceholder = (u: Unit) => u.name === 'Hidden block';
 /** The shared copy: every block nobody may see is renamed with an opaque id and blanked. `enemyAlias` maps the real ids of the other side's blocks we learned about (reveals) back to their aliases. */
 export function toPublic(g: Game, side: Side, salt: string | Pick<Priv, 'salt' | 'epoch'>, enemyAlias: Map<string, string>): string {
   const key = typeof salt === 'string' ? { salt } : salt;
-  const hidden = g.units.filter((u) => !visibleTo(g, u, 'spectator'));
+  // Each seat decides only how its OWN blocks stand in the shared copy. The other side's blocks go back in the form they arrived in (a code if they came as a code):
+  // deciding it here rewrote the other player's block with what this browser last knew of it, and undid a move made at the same moment (two-browser online test).
+  const hidden = g.units.filter((u) => (u.side === side ? !visibleTo(g, u, 'spectator') : enemyAlias.has(u.id)));
   const pairs: [string, string][] = [],
     names: string[] = [];
   for (const u of hidden) {
@@ -136,14 +138,14 @@ export function compose(pub: Game, priv: Priv | null, reveals: Reveals): { game:
       details.set(id, s);
       for (let e = (priv.epoch?.[id] ?? 0) - 1; e >= 0; e--) pairs.push([aliasOf({ salt: priv.salt, epoch: { [id]: e } }, id), id]); // the other seat may still write an older id it had not yet seen replaced
     }
+  const present = new Set(pub.units.map((u) => u.id));
   for (const [a, r] of Object.entries(reveals))
     if (!pairs.some(([x]) => x === a)) {
       pairs.push([a, r.id]);
       details.set(r.id, r);
-      enemyAlias.set(r.id, a);
+      if (present.has(a)) enemyAlias.set(r.id, a); // only a block that stands in the shared copy under this code: it is written back the same way
     }
-  const present = new Set(pub.units.map((u) => u.id)),
-    use = pairs.filter(([a]) => present.has(a));
+  const use = pairs.filter(([a]) => present.has(a));
   const game = JSON.parse(swap(JSON.stringify(pub), use)) as Game;
   for (const u of game.units) {
     const d = details.get(u.id);
