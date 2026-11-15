@@ -348,7 +348,7 @@ for (const game of GAMES) {
   /* battles: the second player attacks first (its first move was lost before edec14c), then they alternate */
   let ok = true,
     fought = 0;
-  for (let n = 0; n < (process.env.BURSTS ? 0 : BATTLES) && ok && (n < 2 || !hitChoice || !retreats); n++) {
+  for (let n = 0; n < BATTLES && ok && (n < 2 || !hitChoice || !retreats); n++) {
     const att = n % 2 ? A : B,
       def = att === A ? B : A,
       v = await look(att.page);
@@ -400,12 +400,13 @@ for (const game of GAMES) {
     for (const p of [A, B]) await p.page.evaluate(() => (window.__fabTrace = []));
     const v = await look(A.page),
       mover = v.actor === v.me || v.actor === 'both' ? A : B;
-    await play(mover.page, (E, g) => {
-      g.turn++;
-      g.phase = 'reinforcement'; // both sides act here
-      g.phasing = E.sidesOf(g)[0];
-      g.battle = null;
-    });
+    if (round === 0)
+      await play(mover.page, (E, g) => {
+        g.turn++;
+        g.phase = 'reinforcement'; // both sides act here
+        g.phasing = E.sidesOf(g)[0];
+        g.battle = null;
+      });
     await settle('a step for both sides');
     /** Four of my blocks step to a neighbouring area with no enemy, one save each, a moment apart: later ones leave while an earlier save is still on its way. */
     const burst = (p) =>
