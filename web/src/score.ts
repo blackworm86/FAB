@@ -53,8 +53,39 @@ function coldStrip(g: E.Game, open: string) {
     <span class="gauge"><span class="sd" style="left:${pos(0)}%"><span>10 = draw</span></span><span class="nd" style="left:${pos(n - 10)}%"></span></span>
     <span class="vlab ge">GE ${n}</span><span class="vlab net">${(n >= 11 ? 'German ahead' : n === 10 ? 'level' : 'Allied ahead').toUpperCase()}</span></button>`;
 }
+type PS = NonNullable<ReturnType<typeof E.placeStatus>>;
+/** Nuts! and Nafakh (owner's issue #21, approved mockup): who would win now, in the VP bar's place. */
+const until = (g: E.Game, st: PS) => `until T${g.turn + st.turnsLeft - 1}`;
+const num = (n: number) => (n < 0 ? `−${-n}` : `${n}`);
+const pen = (st: PS, s: E.Side) => (st.steps[s] ?? 0) - (st.total[s] ?? 0);
+const placeName = (st: PS) => E.areas.get(st.area)?.name ?? `${st.area}`;
+function placeStrip(g: E.Game, st: PS, open: string) {
+  const [p, q] = sides(g),
+    cl = (s: E.Side) => (s === p ? 'ge' : 'al'),
+    sc = (s: E.Side) => `${T(s)} ${st.steps[s] ?? 0}${pen(st, s) ? ` <s>−${pen(st, s)}</s> = ${num(st.total[s] ?? 0)}` : ''}`,
+    hold = st.contested ? 'contested' : st.held ? N(st.held) : 'nobody';
+  return `<button class="vps place" data-ui="${open}" title="Who would win if the game ended now: tap for the details" aria-label="${esc(`${N(st.leader)} ahead, ${st.level}, ${until(g, st)}`)}">
+    <span class="vlab k">${esc(placeName(st))}</span><span class="pchip ${st.contested ? 'cont' : st.held ? cl(st.held) : ''}"><i></i><span>${esc(hold)}</span></span><span class="psc"><span class="${cl(q)}">${sc(q)}</span> : <span class="${cl(p)}">${sc(p)}</span></span><span class="plead ${cl(st.leader)}"><span>${esc(N(st.leader))} ahead · ${st.level}</span></span><span class="pturn"><span>${until(g, st)} · ${st.turnsLeft} turn${st.turnsLeft === 1 ? '' : 's'} left</span></span><span class="vlab nets ${cl(st.leader)}" aria-hidden="true">${T(st.leader)} ${num(st.total[st.leader] ?? 0)}:${num(st.total[st.leader === p ? q : p] ?? 0)}</span></button>`;
+}
+function placeSheet(g: E.Game, st: PS, close: string, icoClose: string) {
+  const [p, q] = sides(g),
+    nuts = g.opts.scenario === 'intro',
+    keyer = p, // the side the key areas count against (Nuts!: the German)
+    row = (a: string, b: string, cls = '') => `<tr><td>${a}</td><td class="n ${cls}">${b}</td></tr>`;
+  return `<div class="modal"><div class="sheet vsheet psheet"><h3>${nuts ? 'Nuts!' : 'Battle for Nafakh'} · who wins now <button class="ico" data-ui="${close}" aria-label="Close">${icoClose}</button></h3>
+    <table>${row(esc(placeName(st)), esc(st.contested ? 'contested' : st.held ? `${N(st.held)}, uncontested` : 'nobody'))}</table>
+    <p class="vnote">Uncontested control at the end of turn ${g.turn + st.turnsLeft - 1} = Decisive Victory (${nuts ? '24.37' : '22.47'}).</p><hr><table>
+    ${[q, p].map((s) => row(`${N(s)} strength points in ${esc(placeName(st))}`, `${st.steps[s] ?? 0}`)).join('')}
+    ${st.keys.map((a) => row(`${esc(E.areas.get(a)?.name ?? `${a}`)} · ${st.keysHeld.includes(a) ? N(keyer) : `not ${N(keyer)}`}`, st.keysHeld.includes(a) ? '0' : '−2', st.keysHeld.includes(a) ? '' : 'x')).join('')}
+    ${st.keys.length ? row(`<b>${N(keyer)} total</b>`, num(st.total[keyer] ?? 0)) : ''}</table><hr>
+    <p><b class="${st.leader === p ? 'ge' : 'al'}">${N(st.leader)} ${st.level} Victory if the game ended now</b> (${st.level === 'Decisive' ? `uncontested control of ${esc(placeName(st))}` : `${num(st.total[st.leader] ?? 0)} to ${num(st.total[st.leader === p ? q : p] ?? 0)}; a tie goes to ${nuts ? 'the Allies' : 'Israel'}`})</p>
+    <p class="vnote">Decided at the end of turn ${g.turn + st.turnsLeft - 1} · now turn ${g.turn}, ${st.turnsLeft} turn${st.turnsLeft === 1 ? '' : 's'} left including this one</p></div></div>`;
+}
 export function vpStrip(g: E.Game, open: string) {
-  if (placeWin(g)) return ''; // decided in one area, not by VP
+  if (placeWin(g)) {
+    const st = E.placeStatus(g);
+    return st ? placeStrip(g, st, open) : '';
+  } // decided in one area, not by VP
   if (cold(g)) return coldStrip(g, open);
   const [p, q] = sides(g),
     v = E.victory(g),
@@ -114,6 +145,8 @@ function vtable(g: E.Game, net: number) {
 
 /** The breakdown sheet opened from the strip. */
 export function vpSheet(g: E.Game, face: (u: E.Unit) => string, close: string, icoClose: string) {
+  const st = placeWin(g) ? E.placeStatus(g) : undefined;
+  if (st) return placeSheet(g, st, close, icoClose);
   if (cold(g)) {
     const n = E.coldAreas(g);
     return `<div class="modal"><div class="sheet vsheet"><h3>Victory · turn ${g.turn} <button class="ico" data-ui="${close}" aria-label="Close">${icoClose}</button></h3>
