@@ -1,5 +1,6 @@
 // Every check in one go, with one table at the end:   npm run verify            (about four minutes)
 //   npm run verify -- --browser   also the load check in a real browser (starts and stops its own dev server)
+//   npm run verify -- --online    also the two-browser online test (local emulators; needs Java and `npm ci` in tools/rules-test)
 //   npm run verify -- --quick     without the engine's tests and the fingerprint (for a change outside engine/ and bot/)
 // Needs `npm ci` done once at the root and in engine/, web/ and bot/. Database rules tests are apart (they need Java).
 import { spawnSync, spawn } from 'node:child_process';
@@ -46,6 +47,7 @@ if (flags.has('--browser')) {
     /* already gone */
   }
 }
+if (flags.has('--online')) run('online play, two browsers (local emulators)', 'web', 'npm run online');
 console.log('\n' + rows.map((r) => r.join('  ')).join('\n'));
 const bad = rows.filter((r) => r[0] === 'FAIL').length;
 console.log(bad ? `\n${bad} check(s) failed` : '\nall checks passed');

@@ -25,7 +25,7 @@ Use these terms everywhere (interface and tutorials) so the game reads as one vo
 | point unit                                                               | unità di punta                                                                      |
 | attacker / defender                                                      | attaccante / difensore                                                              |
 | hit / hits                                                               | colpo / colpi                                                                       |
-| success number                                                           | numero di successo                                                                  |
+| success number (SN; short chip "SN 5")                                    | numero di successo (chip: "Successo 5")                                             |
 | morale check                                                             | prova di morale                                                                     |
 | abort (the attack)                                                       | interrompere l'attacco                                                              |
 | retreat                                                                  | ritirata (verb: ritirarsi)                                                          |
@@ -49,11 +49,12 @@ Use these terms everywhere (interface and tutorials) so the game reads as one vo
 | entry area                                                               | area d'ingresso                                                                     |
 | victory points (VP) / sudden death                                       | punti vittoria (PV) / vittoria immediata                                            |
 | German / Allied / Axis / Syrian / Israeli / British / American / Italian | tedesco / alleato / Asse / siriano / israeliano / britannico / americano / italiano |
-| seat (online)                                                            | posto                                                                               |
+| seat (online) / Seat button (dev side switch, top bar)                   | posto / Lato                                                                        |
 | sandbox                                                                  | sandbox                                                                             |
 | tutorial / lesson / course                                               | tutorial / lezione / corso                                                          |
 | Settings / Menu / Log / Players                                          | Impostazioni / Menu / Registro / Giocatori                                          |
-| Undo                                                                     | Annulla                                                                             |
+| Undo (never "Annulla", which is Cancel)                                  | Indietro ("Niente da disfare", "tocca per tornare indietro")                       |
+| Call off (the attack)                                                    | Ritira                                                                              |
 | Replay                                                                   | Replay                                                                              |
 | Your move                                                                | Tocca a te                                                                          |
 | turn steps: Prepare / Move / Fight / Breakthrough / Supply               | Prepara / Muovi / Combatti / Sfondamento / Rifornimenti ("il passo Muovi")          |

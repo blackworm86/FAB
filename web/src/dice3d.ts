@@ -108,6 +108,7 @@ function makeDie(col: keyof typeof DIE) {
 }
 
 let stop: (() => void) | null = null;
+const thrown = new WeakSet<HTMLCanvasElement>();
 export function clearDice() {
   stop?.();
   stop = null;
@@ -120,6 +121,12 @@ export function throwDice(
   done: (pos: { x: number; y: number; group: number; v: number }[]) => void,
 ) {
   clearDice();
+  if (thrown.has(cv)) {
+    const gl = cv.getContext('webgl2');
+    gl?.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl?.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+  } // the last throw's renderer left the canvas set to flip uploads: a new renderer's 3D textures warned in the console (owner, 15 Nov)
+  thrown.add(cv);
   const w = cv.clientWidth || 1280,
     h = cv.clientHeight || 720,
     r = new THREE.WebGLRenderer({ canvas: cv, alpha: true, antialias: true });
