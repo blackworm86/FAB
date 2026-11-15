@@ -40,6 +40,7 @@ describe('the computer sees only what a player in its seat sees', () => {
       s = seat('allied'),
       u = g.units.find((x) => x.side === 'german' && x.area != null && !E.visibleTo(g, x, 'spectator'))!;
     const before = s.view(g).units.find((x) => s.real(x.id) === u.id)!.id;
+    g.units.find((x) => x.side === 'allied' && x.area != null && !x.garrison)!.area = u.area; // a battle: an enemy block stands in the area (a face-up block is shown only while its area is contested)
     u.up = u.area ?? undefined;
     expect(s.view(g).units.find((x) => x.id === u.id)?.name).toBe(u.name);
     u.up = undefined;
