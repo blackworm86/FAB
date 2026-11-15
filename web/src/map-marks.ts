@@ -1,6 +1,6 @@
 // Marks drawn over the map: area tags, the selected area in focus, leader lines and decision bubbles, the act-now halos and Skip, option tags, and where the badges sit.
 import * as THREE from 'three';
-import { lossPieces } from './asset-uses';
+import { lossPieces, pointSide } from './asset-uses';
 import * as E from '../../engine/src';
 import { ico } from './icons';
 import { esc, nm } from './util';
@@ -328,8 +328,10 @@ function placeBubbles() {
 }
 /** The first loss of a failed attack (6.41a) is chosen on the table: the point unit or one battle asset lights up. */
 export function decisionTargets(): Tgt | null {
-  const b = g.battle;
-  if (!b || (b.stage !== 'attFirst' && b.stage !== 'loss') || !allowed()) return null;
+  const b = g.battle,
+    p0 = pointSide(),
+    ps = b && p0 && (p0 === b.attacker || E.pointPending(g, b, p0)) ? p0 : null; // as long as the point list is shown
+  if (!b || (((b.stage !== 'attFirst' && b.stage !== 'loss') || !allowed()) && !ps)) return null;
   const t: Tgt = {
     units: new Map(),
     areas: new Map(),
@@ -341,6 +343,11 @@ export function decisionTargets(): Tgt | null {
     any: null,
     hint: '',
   };
+  if (ps) {
+    for (const id of E.pointChoices(g, b, ps)) t.units.set(id, () => E.setPoint(g, g.battle!, ps, id));
+    t.hint = 'Tap a glowing block to make it your point unit (6.24)';
+    return t;
+  }
   if (b.stage === 'loss') {
     for (const id of E.lossOptions(g, b)) t.units.set(id, () => E.chooseLoss(g, g.battle!, id));
     t.hint = 'Tap a glowing block or asset to take the next step loss (6.43)';

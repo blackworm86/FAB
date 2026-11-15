@@ -38,7 +38,10 @@ const ready = (g: G) => {
   const b = g.battle;
   if (b?.stage !== 'setup') return;
   answer(g);
-  if (b.ready!.length < 2) E.setReady(g, b, E.other(b.attacker));
+  const d = E.other(b.attacker);
+  if (b.ready!.length >= 2) return;
+  if (E.pointPending(g, b, d)) E.setPoint(g, b, d, b.defPoint); // the coach keeps the book's point unit (6.24)
+  E.setReady(g, b, d);
 };
 const card = (id: string, label: string) => ({ el: [`.card2[data-chit="${id}"]`, '.handtab button'], label });
 const panelBtn = (text: string, label: string) => ({ el: ['.volpanel button', '.c-dispatch button', 'button'], text, label });

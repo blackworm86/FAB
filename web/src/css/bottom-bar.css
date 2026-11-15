@@ -347,6 +347,17 @@
   background: none;
   color: var(--mute, #9a9a88);
 }
+/* the point unit (6.24): no suggested row, the chosen one ticked */
+#ui .points .lossrow:first-child {
+  border: 1px solid var(--line);
+}
+#ui .points .lossrow.on {
+  border: 2px solid var(--gold);
+}
+#ui .points .lossrow:not(.on) .lossn {
+  background: none;
+  border: 2px solid var(--line);
+}
 @media (max-width: 700px) {
   #ui .lossrow {
     flex-basis: 100%;

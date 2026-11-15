@@ -32,7 +32,7 @@ import {
 } from './game-state';
 import { canvas } from './scene';
 import { drawPieces } from './pieces';
-import { lossTrayHtml } from './asset-uses';
+import { lossTrayHtml, pointTrayHtml } from './asset-uses';
 import { paintAreas, paintBoard, tint, viewRot, viewSide } from './map-paint';
 import { dist, pitch, setYaw } from './camera';
 import {
@@ -259,7 +259,7 @@ function renderInner() {
         return `<div class="c-ledger"><h3>${nm(other(u.side))}: bridge?</h3><p class="hint">${esc(u.name)} tries to cross into ${esc(areaName(path[path.length - 1]))}. Attempt to blow the bridge? It works on a roll of 1–5.</p><div class="row end">${btn('Let them cross', () => E.resolveBlow(g, false))}${btn('Attempt to blow it', () => E.resolveBlow(g, true), 'primary')}</div></div>`;
       })()
     : '';
-  const dockMain = (!rollView && allowed() ? lossTrayHtml() : '') || alert || ledger() || handCards(); // step losses: the list above the bar (interaction system)
+  const dockMain = (!rollView && allowed() ? lossTrayHtml() || (passTo ? '' : pointTrayHtml()) : '') || alert || ledger() || handCards(); // step losses: the list above the bar (interaction system)
   const keepD = document.querySelector<HTMLElement>('#ui .c-dispatch')?.scrollTop ?? 0; // a panel being read keeps its place when the screen updates
   const sheetKey = `${modal}:${menuTab}:${piecesTab}:${piecesSide}`,
     keepS = sheetKey === lastSheet ? (document.querySelector<HTMLElement>(SHEET_SCROLL)?.scrollTop ?? 0) : 0; // a menu keeps its place on every click; another menu or tab starts at the top
@@ -733,7 +733,7 @@ export function refresh() {
   } // the computer's dice are thrown on the table like a player's
   if (online.mode === 'remote') setTimeout(driveSplit, 0);
   {
-    const key = `${online.devSeat}|${online.holder}|${online.mySide()}|${g.battle?.attPoint}|${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`; // the dry runs behind the highlights are costly: redo them only when something they depend on changed
+    const key = `${online.devSeat}|${online.holder}|${online.mySide()}|${g.battle?.attPoint}|${g.battle?.defPoint}|${g.battle?.ready?.length}|${g.battle?.pointSet?.join()}|${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`; // the dry runs behind the highlights are costly: redo them only when something they depend on changed
     if (key !== tgtKey) {
       tgtKey = key;
       setTgt(

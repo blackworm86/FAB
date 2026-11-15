@@ -1,4 +1,5 @@
 // What the player is asked to do: the turn pill and top bar, the instruction line, the main button, and the helpers of the actions dock.
+import { pointSide } from './asset-uses';
 import * as THREE from 'three';
 import * as E from '../../engine/src';
 import * as SBU from './sandbox-ui';
@@ -238,9 +239,12 @@ function promptText() {
   if (b && b.stage === 'setup' && b.attPointDone) return '<b>Point units designated.</b> Blocks are revealed…';
   if (b)
     return b.stage === 'setup'
-      ? ((w) => (w ? (w === VOL.blocksBegin(g) ? `<b>${esc(w)}.</b>` : `<b>Not yet:</b> ${esc(w)}.`) : setupPrompt(b)))(
-          setupBlock(b, E.setupSide(g, b)),
-        ) // a volume's own step (a SAM answer) is an instruction, not a refusal (re-test)
+      ? ((w) =>
+          w && !(pointSide() && E.pointPending(g, b, pointSide()!))
+            ? w === VOL.blocksBegin(g)
+              ? `<b>${esc(w)}.</b>`
+              : `<b>Not yet:</b> ${esc(w)}.`
+            : setupPrompt(b))(setupBlock(b, E.setupSide(g, b))) // a volume's own step (a SAM answer) is an instruction, not a refusal (re-test)
       : b.stage === 'done'
         ? (() => {
             const left = fightable().filter((x) => x !== b.area).length;
@@ -333,6 +337,12 @@ function setupPrompt(b: E.Battle): string {
   if (b.defSA)
     return `<b>${nm(who)}: Special Action?</b>${gx(' Reinforce or retreat before the attacker commits his assets (6.21), or go on without.')}`;
   const pt = g.units.find((u) => u.id === (att ? b.attPoint : b.defPoint))?.name; // the point unit already chosen is named, so a tap shows it registered (playtest C9)
+  if ((last || !att) && E.pointPending(g, b, who))
+    return `<b>${nm(who)}: choose your point unit</b>${gx(` Tap a row below or a glowing block.${last ? ' The defender has designated his (6.24).' : E.boxOf(g, who, 'available').some((c) => VOL.battleCard(c) && !VOL.battleUse(g, b, c)) ? ' Then add cards and press Done.' : ' Then press Done.'}`)}`; // owner's issue #18: no default
+  if ((last || !att) && pt && E.pointChoices(g, b, who).length === 1 && !(b.vol as { defLocked?: boolean } | undefined)?.defLocked)
+    return last
+      ? `<b>${nm(who)}: ${esc(pt)} is your point unit</b>, the only one that can be. Begin combat.`
+      : `<b>${nm(who)} defends: ${esc(pt)} is your point unit</b>, the only one.${gx(E.boxOf(g, who, 'available').some((c) => VOL.battleCard(c) && !VOL.battleUse(g, b, c)) ? ' Tap a card to add it, then Done.' : ' No card to add: press Done.')}`;
   if (last)
     return pt
       ? `<b>${nm(who)}: point unit ${esc(pt)}.</b> Tap another block to change it, or Begin combat.${gx(' The defender has designated his (6.24).')}`
