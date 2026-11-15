@@ -102,7 +102,7 @@ export const TABLE = params.get('table') || 'main';
 export const HAS_TABLE = params.has('table'),
   DEV_FAKE = DEV && params.has('fake');
 /** The admin sandbox (`?sandbox`): a private test table in this browser; the account is only read to check that it is an admin. */
-export const SANDBOX = params.has('sandbox');
+export const SANDBOX = params.has('sandbox') && !params.has('table'); // a game code always opens its own shared game, never a test table (owner's issue #2)
 /** The experimental computer opponent (`?lab=german|allied`, lab.ts): a local game like the sandbox. */
 export const LAB = params.has('lab') && !SANDBOX && !params.has('table');
 /** The tutorial: a local game in this browser, nothing written online. */

@@ -72,37 +72,43 @@ export async function loadTroops(vol: string, base = './'): Promise<boolean> {
       const own = cfg[tipo],
         files = own?.scelta != null && t.figure[own.scelta] ? [t.figure[own.scelta]] : t.figure;
       const figs = await Promise.all(
-        files.map((f) =>
-          loader.loadAsync(`${base}pezzi/${f}`).then((gl) => {
-            gl.scene.traverse((o) => {
-              const m = o as THREE.Mesh;
-              if (m.isMesh) {
-                o.castShadow = true;
-                o.userData.shared = true;
-                const old = ([] as THREE.Material[]).concat(m.material)[0] as THREE.MeshStandardMaterial;
-                m.material = toyMaterial(old.map ?? null, tipo.endsWith('_ghost'));
-                if (old.vertexColors) (m.material as THREE.MeshPhysicalMaterial).vertexColors = true;
-                old.dispose();
-                if (tipo.endsWith('_ghost')) o.castShadow = false;
-                m.geometry = toCreasedNormals(m.geometry, THREE.MathUtils.degToRad(70));
-              }
-            }); // the files carry no normals, so every triangle was shaded flat (visible polygon edges): smooth shading, with a crease where the surface turns more than 50°   // double-sided: a hole left in a model shows its back, not the ground   // shared by every copy: never disposed with the board
-            // a vehicle is sized by its real hull length (Meshy draws vehicles chunky and tall, so sizing by height made short ones tiny)
-            const k = SCALE * (t.veicolo ? (t.lunghezza ? (t.lunghezza * 0.18) / bodyLength(gl.scene) : 1) : INFANTRY),
-              c = bodyCentre(gl.scene),
-              root = new THREE.Group();
-            const o = own?.figure?.[f] ?? {},
-              turn = new THREE.Group();
-            gl.scene.scale.setScalar(k);
-            gl.scene.position.set(-c.x * k, 0, -c.z * k);
-            turn.add(gl.scene); // the body (not a gun barrel or a rifle) sits on the origin
-            turn.rotation.y = THREE.MathUtils.degToRad(o.gradi ?? 0);
-            turn.position.set((o.dx ?? 0) * k, 0, (o.dz ?? 0) * k);
-            root.add(turn); // then the owner's turn and nudge
-            return root;
-          }),
+        files.map(
+          (f) =>
+            loader
+              .loadAsync(`${base}pezzi/${f}`)
+              .catch(() => loader.loadAsync(`${base}pezzi/${f}`)) // one more try: a slow connection dropped a file (owner's issue #3)
+              .then((gl) => {
+                gl.scene.traverse((o) => {
+                  const m = o as THREE.Mesh;
+                  if (m.isMesh) {
+                    o.castShadow = true;
+                    o.userData.shared = true;
+                    const old = ([] as THREE.Material[]).concat(m.material)[0] as THREE.MeshStandardMaterial;
+                    m.material = toyMaterial(old.map ?? null, tipo.endsWith('_ghost'));
+                    if (old.vertexColors) (m.material as THREE.MeshPhysicalMaterial).vertexColors = true;
+                    old.dispose();
+                    if (tipo.endsWith('_ghost')) o.castShadow = false;
+                    m.geometry = toCreasedNormals(m.geometry, THREE.MathUtils.degToRad(70));
+                  }
+                }); // the files carry no normals, so every triangle was shaded flat (visible polygon edges): smooth shading, with a crease where the surface turns more than 50°   // double-sided: a hole left in a model shows its back, not the ground   // shared by every copy: never disposed with the board
+                // a vehicle is sized by its real hull length (Meshy draws vehicles chunky and tall, so sizing by height made short ones tiny)
+                const k = SCALE * (t.veicolo ? (t.lunghezza ? (t.lunghezza * 0.18) / bodyLength(gl.scene) : 1) : INFANTRY),
+                  c = bodyCentre(gl.scene),
+                  root = new THREE.Group();
+                const o = own?.figure?.[f] ?? {},
+                  turn = new THREE.Group();
+                gl.scene.scale.setScalar(k);
+                gl.scene.position.set(-c.x * k, 0, -c.z * k);
+                turn.add(gl.scene); // the body (not a gun barrel or a rifle) sits on the origin
+                turn.rotation.y = THREE.MathUtils.degToRad(o.gradi ?? 0);
+                turn.position.set((o.dx ?? 0) * k, 0, (o.dz ?? 0) * k);
+                root.add(turn); // then the owner's turn and nudge
+                return root;
+              })
+              .catch(() => null), // a file that will not load: this type stays a block, the others still become figures
         ),
-      );
+      ).then((l) => l.filter((x): x is THREE.Group => !!x));
+      if (!figs.length) return;
       const bs = figs.map((f) => new THREE.Box3().setFromObject(f));
       troops.set(tipo, {
         figs,

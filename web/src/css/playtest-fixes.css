@@ -821,3 +821,24 @@ body:has(#ui .chitbar) .sbfab {
     top: 60px;
   }
 }
+
+/* owner's issue #2: the invite sheet, with the game code written large */
+.invite-sheet {
+  position: fixed;
+  z-index: 200;
+}
+.invite-sheet .invcode {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font: 700 clamp(28px, 8vw, 44px) / 1.1 var(--sfd);
+  letter-spacing: 0.14em;
+  text-align: center;
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+.invite-sheet .invurl {
+  overflow-wrap: anywhere;
+  user-select: all;
+}

@@ -28,7 +28,7 @@ import { battleFx, fightable, mine, other, POOL, rollFx, selArr } from './flow';
 import { pickSA } from './choices';
 import { reinforcing, setReinforcing } from './map-input';
 import { endRoll, handSide, rollView, setHandSide, type RollView } from './rolls';
-import { autoFill, card, fan, handInfo, handInspect, handStyle, setHandInfo, setHandInspect, usableNow } from './cards';
+import { card, fan, handInfo, handInspect, handStyle, setHandInfo, setHandInspect, usableNow } from './cards';
 import { gx } from './prompt';
 import { chitPic } from './pieces-window';
 import { panelCtx, svgUri } from './unit-card';
@@ -129,7 +129,7 @@ export function handCards() {
     }<button class="ico ${handInfo ? 'on' : ''}" data-ui="${reg(() => {
       setHandInfo(!handInfo);
       if (!handInfo) setHandInspect(null);
-    })}" aria-pressed="${handInfo}" title="Rules: tap a card to read what it does instead of adding it" aria-label="Rules">${ico('book')}<span class="bl">Rules</span></button>${ok.length ? btn(`${ico('wand')}<span class="bl">Auto-fill</span>`, () => autoFill(g.battle!), 'ico', false, 'Auto-fill: place every asset that can legally join, artillery first') : ''}</div>${handInfo ? cardTip() : ''}<div class="c-hand" ${handStyle(handAll || !ok.length ? ok.length + bad.length : ok.length)}>${fan([...ok.map((c) => card(c)), ...(handAll || !ok.length ? bad.map((c) => card(c, 0, VOL.battleUse(g, b, c))) : [])])}</div>`;
+    })}" aria-pressed="${handInfo}" title="Rules: tap a card to read what it does instead of adding it" aria-label="Rules">${ico('book')}<span class="bl">Rules</span></button></div>${handInfo ? cardTip() : ''}<div class="c-hand" ${handStyle(handAll || !ok.length ? ok.length + bad.length : ok.length)}>${fan([...ok.map((c) => card(c)), ...(handAll || !ok.length ? bad.map((c) => card(c, 0, VOL.battleUse(g, b, c))) : [])])}</div>`;
   }
   if (g.phase !== 'admin') return '';
   const own = online.active && !online.both() ? online.mySide() : null,

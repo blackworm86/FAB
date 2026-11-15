@@ -90,15 +90,6 @@ const overlapFor = (n: number) => {
 export const handStyle = (n: number) => `style="--ov:${overlapFor(n)}px"`;
 export const fan = (cs: string[]) =>
   cs.map((h, i) => h.replace('--r:0deg', `--r:${((i - (cs.length - 1) / 2) * Math.min(5, 40 / cs.length)).toFixed(1)}deg`)).join('');
-/** Place every asset that may legally join, artillery first, for both sides. */
-export function autoFill(b: E.Battle) {
-  const order = (c: E.Chit) => (E.isArty(c) ? 0 : c.kind === 'engineer' ? 2 : 1);
-  for (const c of g.chits
-    .filter((x) => x.box === 'available' && (E.isArty(x) || E.isBattleAsset(x)) && mine(x.side))
-    .sort((x, y) => order(x) - order(y))) {
-    if (!E.canAssign(g, b, c.side, c)) E.assign(g, b, c.id);
-  }
-}
 /** Where an event or asset chit can be played on the map (Admin Phase): the areas to light while it is dragged. */
 /** Where a dragged chit may be dropped: exactly the areas it can be used in (its zone, its rules), from the same dry runs as a tap. */
 export function chitTargets(c: E.Chit): number[] {

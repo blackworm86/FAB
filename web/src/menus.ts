@@ -284,7 +284,7 @@ function layersHtml() {
     FIG_VOLS.includes(VOL.id) && !TUTORIAL
       ? srow(
           'Units',
-          'on either map',
+          'on either map; hidden blocks stay blocks', // a figure would show what a hidden block is (owner's issue #3)
           `<span class="seg">${chip('Blocks', !troopsOn, () => setTroops(false), 'The wooden blocks')}${chip('Figures', troopsOn, () => setTroops(true), 'Soldiers and tanks, one per unit')}</span>`,
         )
       : '';
