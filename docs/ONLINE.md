@@ -44,7 +44,7 @@ Everything of one game is under `games/<id>`.
 ## 3. Creating and joining
 
 - **New game**: the creator's browser builds the whole game, shuffles the order of the blocks, makes both private records and the shared copy, and writes them. The creator sits in the chosen seat.
-- **Invitation**: a link `…?table=<id>` (share button), or the id typed in "Invite link or code" on the home page.
+- **Invitation**: a link `…?table=<id>` (share button), or the id typed in "Have an invitation?" on the home page.
 - **The joiner** opens the link as a guest (watching only), signs in (the site brings them back to the table), and sits. Sitting does, in order: the seat (refused if someone was faster), the name, membership and games list, then **new codes for that side's blocks** (the creator made the first key and could read the codes; the first to sit replaces it and rewrites the shared copy with the new codes in one write).
 - Right after sitting, the joiner's browser asks for its private record. The database may refuse for a moment (it does not yet know the seat): the browser asks again every half second, up to 20 times (the fix of commit `edec14c`). Until it arrives the joiner's own blocks look hidden, and a move made meanwhile is kept and sent afterwards.
 

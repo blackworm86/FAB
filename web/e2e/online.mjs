@@ -227,11 +227,17 @@ async function player(name, size) {
   check(!(await page.locator('#a-name').isVisible()), `${name}: the Sign in tab hides the name field`);
   await page.click('.signin [data-tab="reg"]'); // registering is on the Create account tab
   check(await page.locator('#a-name').isVisible(), `${name}: the Create account tab shows the name field`);
+  if (process.env.SHOTS) await page.screenshot({ path: join(process.env.SHOTS, `home-out-${name}.png`), fullPage: true });
   await page.fill('#a-name', name);
   await page.fill('#a-mail', `${name.toLowerCase()}${stamp}@fab.test`);
   await page.fill('#a-pass', 'secret1');
   await page.click('[data-auth="reg"]');
-  await page.waitForSelector('[data-auth="out"]', { timeout: 60000 });
+  if (!(await until(() => page.locator('[data-auth="out"]').count(), 60000))) {
+    if (process.env.SHOTS) await page.screenshot({ path: join(process.env.SHOTS, `home-stuck-${name}.png`), fullPage: true });
+    throw new Error(
+      `${name} could not create an account: ${(await page.locator('.homepage').innerText()).slice(0, 300)} | ${errors.join(' | ')}`,
+    );
+  }
   return { name, page, errors };
 }
 const DESK = { viewport: { width: 1380, height: 860 } },

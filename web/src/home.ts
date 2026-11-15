@@ -544,7 +544,7 @@ function render() {
     return;
   }
   waiting = false;
-  if (document.activeElement?.closest?.('.authform, .codebar')) return; // do not wipe what is being typed
+  if (document.activeElement?.matches?.('.authform input, .codebar input')) return; // do not wipe what is being typed (a field, not the button just tapped: the page must redraw once signed in)
   resetActs();
   const ui = $('#ui'),
     typed = ['join', 'a-name', 'a-mail', 'a-pass'].map(
