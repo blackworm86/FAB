@@ -430,3 +430,33 @@
     min-height: 52px;
   }
 }
+/* interaction system: the Special Action, Air Mission and alternate-use choices are the tray above the bar, not a sheet over the map */
+#ui .dock > .modal {
+  position: static;
+  inset: auto;
+  display: block;
+  background: none;
+  z-index: auto;
+  pointer-events: auto;
+}
+#ui .dock > .modal > .sheet {
+  width: auto;
+  max-width: min(1100px, calc(100% - 16px));
+  max-height: 40vh;
+  margin: 0 auto 4px;
+}
+@media (max-width: 700px) {
+  #ui .dock > .modal > .sheet {
+    max-width: none;
+    margin: 0 4px 4px;
+    max-height: 34vh;
+  }
+}
+@media (max-width: 700px) {
+  /* one tray at a time on a phone: a choice open above the bar puts the hand away */
+  #ui .dock:has(> .modal) .c-hand,
+  #ui .dock:has(> .modal) .handtabs,
+  #ui .dock:has(> .modal) .handtab {
+    display: none !important;
+  }
+}
