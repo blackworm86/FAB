@@ -32,6 +32,10 @@
   width: 21px;
   height: 21px;
   flex: none;
+  padding: 0; /* the menu's .sw switch (menu.css) gave it 2px: every symbol sat 2px low (owner, 15 Nov) */
+  min-width: 0;
+  border-radius: 0;
+  background: none;
 }
 .atag svg {
   width: 21px;
