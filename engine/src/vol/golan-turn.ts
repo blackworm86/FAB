@@ -60,11 +60,12 @@ export function golanVictory(g: Game): Record<Side, number> & { net: number } {
     return { syrian: s, israeli: i, net: s - i };
   } // 22.47: the score is the strength in Nafakh
   const pts: Record<Side, number> = { syrian: 0, israeli: 0 };
+  for (const s of ['syrian', 'israeli'] as Side[]) for (const o of golanVpAreas(g, s)) if (o.ok) pts[s] += o.pts;
+  if (isAlOwda(g)) return { ...pts, net: pts.syrian - pts.israeli }; // 20.38 (owner, 15 Nov): areas only, no large units
   for (const id of g.elimLarge) {
     const u = g.units.find((x) => x.id === id)!;
     pts[other(u.side)]++;
   }
-  for (const s of ['syrian', 'israeli'] as Side[]) for (const o of golanVpAreas(g, s)) if (o.ok) pts[s] += o.pts;
   pts.israeli += Math.max(0, (state(g).chem ?? 0) - 1); // chemical warfare after the first use
   return { ...pts, net: pts.syrian - pts.israeli };
 }
@@ -73,7 +74,9 @@ export const finalResult = (g: Game, net: number) =>
     ? nafakhResult(g)
     : net === 0
       ? 'Draw (0 net VP)'
-      : `${net > 0 ? 'Syrian' : 'Israeli'} ${Math.abs(net) >= 3 ? 'Operational' : 'Marginal'} Victory (${Math.abs(net)} net VP)`;
+      : isAlOwda(g)
+        ? `${net > 0 ? 'Syrian' : 'Israeli'} Victory (${Math.abs(net)} net VP, 20.38)` // owner, 15 Nov: no levels, the side ahead wins
+        : `${net > 0 ? 'Syrian' : 'Israeli'} ${Math.abs(net) >= 3 ? 'Operational' : 'Marginal'} Victory (${Math.abs(net)} net VP)`;
 /** 14.17: west of the Jordan = Gadot, Kfar Hanasi and Almagor. The rule book prints "areas 6, 7, 8"; the map numbers them 6, 9, 10 (docs/NOTES.md). */
 export const WEST_OF_JORDAN = [6, 9, 10];
 /** 19.5: a supplied Syrian unit west of the Jordan at the end of an Israeli player turn. */

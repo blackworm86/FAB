@@ -232,21 +232,28 @@ registerHooks('golan73', {
     isNafakh(g)
       ? 'Battle for Nafakh (22.47): no VP; the score is the strength in Nafakh'
       : isAlOwda(g)
-        ? 'scored at the end of turn 6 (20.38): areas count only when in supply, Syrian ones only with a Syrian unit there; Israel scores each area east of the VP Line'
+        ? 'scored at the end of turn 6 (20.38), areas only: in supply, Syrian ones only with a Syrian unit there; Israel scores each area east of the VP Line; the side ahead wins, level is a draw'
         : 'areas count only when in supply, and Syrian areas only when a Syrian unit is there (19.1)',
+  bigUnits: (g) => !isAlOwda(g), // 20.38: Al-Owda scores areas only
   victoryRows: (g) =>
-    isNafakh(g)
+    isAlOwda(g)
       ? [
-          ['Uncontested control of Nafakh', 'Decisive Victory'],
-          ['More strength points in Nafakh (tie: Israel)', 'Marginal Victory'],
-        ]
-      : [
-          ['3+ Syrian VP', 'Syrian Operational Victory'],
-          ['1–2 Syrian VP', 'Syrian Marginal Victory'],
+          ['1+ Syrian VP', 'Syrian Victory'],
           ['0', 'Draw'],
-          ['1–2 Israeli VP', 'Israeli Marginal Victory'],
-          ['3+ Israeli VP', 'Israeli Operational Victory'],
-        ],
+          ['1+ Israeli VP', 'Israeli Victory'],
+        ]
+      : isNafakh(g)
+        ? [
+            ['Uncontested control of Nafakh', 'Decisive Victory'],
+            ['More strength points in Nafakh (tie: Israel)', 'Marginal Victory'],
+          ]
+        : [
+            ['3+ Syrian VP', 'Syrian Operational Victory'],
+            ['1–2 Syrian VP', 'Syrian Marginal Victory'],
+            ['0', 'Draw'],
+            ['1–2 Israeli VP', 'Israeli Marginal Victory'],
+            ['3+ Israeli VP', 'Israeli Operational Victory'],
+          ],
   beforeRecycle: (g, side) => samReduction(g, side), // 16.12: after 4.1a
   seenBy: (g, u, side) => {
     const i = state(g).intel;

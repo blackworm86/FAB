@@ -232,4 +232,18 @@ describe('Golan asset and event sweep', () => {
     expect(isr.find((o) => o.id === 50)?.pts).toBe(1); // Booster: east of the line only
     expect(E.victory(g).israeli).toBe(23); // 20 areas east of the line, all Israeli at the start (20.33), + 3 stars
   });
+  it('20.38 (owner, 15 Nov): Al-Owda scores areas only, and the side ahead wins with no levels', () => {
+    E.useGame('golan73');
+    const g = E.newGame(1, { scenario: 'alowda' } as never);
+    const before = E.victory(g).israeli;
+    g.elimLarge.push(g.units.find((u) => u.side === 'syrian' && u.max >= 3)!.id);
+    expect(E.victory(g).israeli).toBe(before); // a destroyed big unit scores nothing here
+    expect(E.victoryTable(g)).toEqual([
+      ['1+ Syrian VP', 'Syrian Victory'],
+      ['0', 'Draw'],
+      ['1+ Israeli VP', 'Israeli Victory'],
+    ]);
+    expect(golan.finalResult(g, -7)).toBe('Israeli Victory (7 net VP, 20.38)');
+    expect(golan.finalResult(g, 0)).toMatch(/Draw/);
+  });
 });
