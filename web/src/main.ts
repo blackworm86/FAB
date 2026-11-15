@@ -27,7 +27,8 @@ import { snap, FX_SAMPLES } from './fx';
 import { initTouch } from './touch';
 import { throwDice } from './dice3d';
 import { initTutorial } from './tutorial';
-import { $, areaName, first, MAP, MH, MW, P1, P2, PARAMS, S, toWorld, TUT, VOL } from './page';
+import { $, areaName, first, KEY, MAP, MH, MW, P1, P2, PARAMS, S, toWorld, TUT, VOL } from './page';
+import { localJournal } from './journal';
 export * from './page';
 import {
   addressOpts,
@@ -86,7 +87,7 @@ import {
   setupSide,
 } from './flow';
 export * from './flow';
-import { auditWarn, followFoe, gotRemote, setAuditWarn, setGotRemote, setHeldBad, setScoreOpen } from './choices';
+import { auditWarn, followFoe, gotRemote, setAuditWarn, setEndHidden, setGotRemote, setHeldBad, setScoreOpen } from './choices';
 export * from './choices';
 import { center, clampDist, goal, lock, optsFor, setGoal, setInBattle, setReinforcing, syncBattleCam } from './map-input';
 export * from './map-input';
@@ -291,7 +292,9 @@ function startOver(x: E.Game) {
   setNote('');
   setAreaPick(null);
   setRestartAsk(false);
+  setEndHidden(false);
   fxLayer.clear();
+  localJournal.clear(KEY); // a new game, a new replay
   save();
   refresh();
 }

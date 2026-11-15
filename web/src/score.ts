@@ -98,7 +98,7 @@ function columns(g: E.Game, face: (u: E.Unit) => string, v: Record<string, numbe
     const objs = objectives(g, s),
       k = kills(g, s, face),
       none = !objs.length && k.startsWith('<small');
-    return `<div><h4 class="vh"><span class="${s === p ? 'ge' : 'al'}">${N(s)}</span><em>${v[s]} VP</em></h4>${none ? `<p class="hint">No areas held · no big units destroyed.</p>` : `<div class="vareas">${objRows(g, s)}</div>${E.VOLUME.bigUnits?.(g) === false ? '' : k.startsWith('<small') ? `<div class="vrow"><span>${N(o)} big units destroyed (+1 each)</span><b>0</b></div>` : `<h4>${N(o)} big units destroyed (+1 each)</h4><div class="vkills">${k}</div>`}`}</div>`;
+    return `<div><h4 class="vh"><span class="${s === p ? 'ge' : 'al'}">${N(s)}</span><em>${v[s]} VP</em></h4>${none ? `<p class="hint">No areas held${E.VOLUME.bigUnits?.(g) === false ? '' : ' · no big units destroyed'}.</p>` : `<div class="vareas">${objRows(g, s)}</div>${E.VOLUME.bigUnits?.(g) === false ? '' : k.startsWith('<small') ? `<div class="vrow"><span>${N(o)} big units destroyed (+1 each)</span><b>0</b></div>` : `<h4>${N(o)} big units destroyed (+1 each)</h4><div class="vkills">${k}</div>`}`}</div>`;
   };
   return `<div class="vcols">${side(p, q)}${side(q, p)}</div>`;
 }
@@ -165,7 +165,7 @@ export function endPanel(g: E.Game, face: (u: E.Unit) => string, actions: string
       )}<text x="${W - 4}" y="12" fill="#d1432f" font-size="9" text-anchor="end">red: sudden death this turn</text><text x="4" y="12" fill="#c9ccd2" font-size="9">${cold(g) ? 'German 11+ ↑' : `${N(p)} ↑`}</text><text x="4" y="${H - 2}" fill="#b8d27a" font-size="9">${cold(g) ? 'Allied ≤9 ↓' : `${N(q)} ↓`}</text></svg>`;
   return `<div class="vend"><div class="vin"><div class="vban"><small>END OF GAME · ${sudden ? `SUDDEN DEATH, TURN ${g.turn}` : `TURN ${g.turn}`}</small><h1 class="${title.includes(N(p)) ? 'ge' : title.includes(N(q)) ? 'al' : ''}">${esc(title.toUpperCase())}</h1>
       <p>${cold(g) ? `The Germans control ${E.coldAreas(g)} of ${(g.inPlay ?? []).length} Zone 6 areas` : placeWin(g) ? (g.opts.scenario === 'intro' ? 'Nuts! is decided in Bastogne (24.3)' : 'The Battle for Nafakh is decided in Nafakh (22.47)') : `Final score: ${N(p)} ${v[p]}, ${N(q)} ${v[q]} · net ${netText(g, v.net)}`}</p></div>
-    <div class="vcards"><div><small>Turns</small><b>${g.turn}</b></div><div><small>Battles</small><b>${g.battles ?? '–'}</b></div><div><small>Big units lost</small><b><span class="ge">${T(p)} ${lost(p)}</span> · <span class="al">${T(q)} ${lost(q)}</span></b></div></div>
+    <div class="vcards"><div><small>Turns</small><b>${g.turn}</b></div><div><small>Battles</small><b>${g.battles ?? '–'}</b></div>${E.VOLUME.bigUnits?.(g) === false ? '' : `<div><small>Big units lost</small><b><span class="ge">${T(p)} ${lost(p)}</span> · <span class="al">${T(q)} ${lost(q)}</span></b></div>`}</div>
     ${placeWin(g) ? '' : cold(g) ? `<h4>German Zone 6 areas by turn</h4>${chart}<h4>Zone 6 areas the Germans control</h4>${heldNames(g)}` : `<h4>Net VP by turn</h4>${chart}${columns(g, face, v)}`}<h4>Victory table</h4>${tableRows(g, g.over ?? null)}
     <div class="vbtns">${actions}</div></div></div>`;
 }

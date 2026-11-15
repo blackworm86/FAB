@@ -103,7 +103,7 @@ export let recLast = '',
   replayShown = false;
 export const setReplayShown = <T extends typeof replayShown>(v: T): T => ((replayShown = v), v);
 export function record(own: boolean, gm: E.Game = g) {
-  if (TUTORIAL || SANDBOX) return;
+  if (TUTORIAL) return; // the sandbox records too: a whole game played there has its replay (owner's issue #14)
   if (online.mode === 'remote') {
     const me = online.mySide();
     if (!me) return rec.seen(gm);
