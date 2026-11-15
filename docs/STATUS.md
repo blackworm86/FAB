@@ -93,7 +93,24 @@ A very busy week: about 160 changes reached `main` from four sessions working at
 - On the 3D map, cut-off areas show a plain grey tint, no stripes.
 - `docs/HANDOVER.md` §4 is numbered 1, 4 (items 2 and 3 missing) and §2 mixes superseded notes ("faster battles") with current ones.
 
-## Decisions waiting for you
+## Decisions waiting for you (15 November)
+
+Nothing is blocked on the owner. Open choices, when he wants:
+1. **Figures as the default look?** Blocks stay the default (View › Units › Figures) unless he says otherwise.
+2. **Play Sicily**: Shock and Awe in a battle and a British division released with its brigade have not been played by anyone yet.
+3. **When to resume** the lessons and the computer opponent (both on hold by his decision of 14 November).
+
+Done and closed: tutorial rebuilt (three courses, Italian); `database.rules.json` published; 3D figures approved; design review fixes built; three playtests and two re-tests, all table findings fixed; every rule question answered.
+
+## Proposed priorities (15 November)
+
+1. **A full game of each volume by the owner** (desktop and phone), the real test after three days of fixes; the helpers only play narrow pieces.
+2. **Online play**: not tested since the "who acts" and hand-over changes; one two-browser game of each volume.
+3. **Re-score the design review** (26/40 on 14 November) with fresh pictures.
+4. Then, by the owner's word: the computer opponent, the figures as default, the lessons.
+
+## Log of 14 November (oldest first)
+
 
 **Owner, 14 November (evening):**
 - **Lessons:** good enough; on hold. No more lesson work until he says so.
