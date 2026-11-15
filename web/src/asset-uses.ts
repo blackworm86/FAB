@@ -3,7 +3,7 @@
 // point unit (Golan 18.32) — is one row with the same switch in every game, the timing and requirement written under each half.
 import * as E from '../../engine/src';
 import { g } from './game-state';
-import { mine, act, can } from './flow';
+import { mine, act, can, allowed } from './flow';
 import { reg } from './ui-kit';
 import { esc } from './util';
 import { areaName, VOL } from './page';
@@ -217,5 +217,34 @@ export function lossTrayHtml(): string {
         ? `<button class="lossrow" data-ui="${reg(pick(r.id))}" data-loss="${r.id}"><span class="usepic">${r.pic}</span><span class="usename"><b>${esc(r.name)}</b><small>${esc(r.sub)}</small></span><i class="lossn">${++k}</i></button>`
         : `<button class="lossrow" disabled><span class="usepic">${r.pic}</span><span class="usename"><b>${esc(r.name)}</b><small>${esc(r.sub)}</small></span><i class="lossn">–</i></button>`,
     )
+    .join('')}</div></div>`;
+}
+
+/** 6.24 (owner's issue #18): the side that must designate its point unit now, on this screen; null otherwise. The Defender
+ *  designates during his set-up, the Attacker after it. With one possible unit the engine sets it, so there is no step. */
+export function pointSide(): E.Side | null {
+  const b = g.battle;
+  if (!b || b.stage !== 'setup' || b.defSA || !allowed()) return null;
+  const who = E.setupSide(g, b),
+    turn = who === b.attacker ? b.ready?.length === 2 && !b.attPointDone : !b.ready?.includes(who);
+  return turn && mine(who) && E.pointChoices(g, b, who).length > 1 ? who : null;
+}
+/** The point-unit step as big rows, one per unit that may be the point; the chosen one ticked. Mirrored on the map by glows. */
+export function pointTrayHtml(): string {
+  const b = g.battle,
+    side = pointSide();
+  if (!b || !side) return '';
+  const cur = E.pointPending(g, b, side) ? null : side === b.attacker ? b.attPoint : b.defPoint;
+  if (cur && side !== b.attacker) return ''; // the Defender's cards come back once he has chosen; a tap on a block still changes it
+  return `<div class="uses losses points"><div class="useshd"><b>Choose your point unit</b><small>it fights first and takes the first hit (6.24, 6.43)</small></div><div class="lossrows">${E.pointChoices(
+    g,
+    b,
+    side,
+  )
+    .map((id) => {
+      const u = g.units.find((x) => x.id === id)!,
+        on = id === cur;
+      return `<button class="lossrow${on ? ' on' : ''}" aria-pressed="${on}" data-ui="${reg(() => act(() => E.setPoint(g, g.battle!, side, id)))}" data-loss="${id}"><span class="usepic">${unitPic(u)}</span><span class="usename"><b>${esc(u.name)}</b><small>${u.str} step${u.str > 1 ? 's' : ''} · ${E.quality(u)}</small></span><i class="lossn">${on ? '✓' : ''}</i></button>`;
+    })
     .join('')}</div></div>`;
 }
