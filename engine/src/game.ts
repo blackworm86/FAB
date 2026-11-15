@@ -141,6 +141,8 @@ export interface Battle {
   attacker: Side;
   attPoint: string;
   defPoint: string;
+  /** The sides that designated their point unit themselves (setPoint); a side with two or more choices must, before setReady (issue #18). */
+  pointSet?: Side[];
   bt: boolean;
   riverAssault: boolean;
   stage:

@@ -231,6 +231,8 @@ export function setReady(g: Game, b: Battle, side: Side, on = true) {
     const w = notYourStep(g, b, side);
     if (w) throw new Error(w);
   }
+  const designates = side === b.attacker ? b.ready?.length === 2 : !b.ready?.includes(side); // 6.24: the Defender with his set-up, the Attacker after it
+  if (designates && pointPending(g, b, side)) throw new Error('choose your point unit first (6.24)');
   const r = (b.ready ??= []);
   if (!r.includes(side)) r.push(side);
   else if (side === b.attacker && r.length === 2) b.attPointDone = true;
@@ -269,7 +271,21 @@ export function setPoint(g: Game, b: Battle, side: Side, unitId: string) {
   }
   if (side === b.attacker) b.attPoint = unitId;
   else b.defPoint = unitId;
+  if (!(b.pointSet ??= []).includes(side)) b.pointSet.push(side);
 }
+/** 6.24: the units `side` may designate as its point unit in this battle (the owner's issue #18: with two or more, the player must choose). */
+export function pointChoices(g: Game, b: Battle, side: Side): string[] {
+  const pz = pz150In(g, b);
+  if (pz && pz.side === side) return [pz.id]; // 18.4: forced
+  const orig =
+    side !== b.attacker && b.reinforced && g.units.some((x) => x.id === b.defPoint && x.area === b.area && x.id !== b.reinforced);
+  return unitsIn(g, b.area, side)
+    .filter((u) => !u.garrison && !u.ghost && !(side === b.attacker && (u.disorder || u.fort)) && !(orig && u.id === b.reinforced))
+    .map((u) => u.id);
+}
+/** True while `side` still has to designate its point unit itself (two or more choices and no setPoint yet); with one choice it is set for it. */
+export const pointPending = (g: Game, b: Battle, side: Side) =>
+  b.stage === 'setup' && !b.pointSet?.includes(side) && pointChoices(g, b, side).length > 1;
 export function setEngFw(_g: Game, b: Battle, on: boolean) {
   if (!['setup', 'attArty', 'defArty', 'defFire', 'offFire'].includes(b.stage))
     throw new Error('too late: the field works are removed before offensive fire (6.33)');
