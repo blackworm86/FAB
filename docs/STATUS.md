@@ -104,7 +104,7 @@ Done and closed: tutorial rebuilt (three courses, Italian); `database.rules.json
 
 **Online test (15 November):** two browsers against local Firebase emulators (the real database untouched). **Online play is broken for the second player to sit:** they see their own blocks as hidden, so the first battle cannot reveal its blocks and the game stops; their first move after sitting is also silently lost. No hidden information leaked; the "who acts" bar works online; the "pass to the player" strip correctly does not appear. Passed to the interface session (owner of `online.ts` / `store-rtdb.ts`) with the steps to reproduce. **Fixed (edec14c):** the joiner read its private document before its seat was on the server and never retried; now it retries. Retested with two browsers, creator German and creator Allied: three battles in step. Not yet tested online: loss placement and retreat, Sicily and Golan.
 
-**New session, 15 November:** online play and netcode (§5 of `docs/PARALLEL.md`, kick-off prompt in `docs/sessions/online.md`); the online files move to it from the interface session. Owner's rule: he talks only to this session; the other sessions take its messages as his instructions (`CLAUDE.md`, `docs/PARALLEL.md` §0).
+**New session, 15 November:** online play and netcode (§5 of `docs/PARALLEL.md`, kick-off prompt in `docs/sessions/online.md`); the online files move to it from the interface session. Opened by the owner (session `session_01ME3JNTscwfDosX2YakvHt3`); step 1 done: `docs/ONLINE.md` (63e119e), with six suspected faults; next the two-browser test. Owner's rule: he talks only to this session; the other sessions take its messages as his instructions (`CLAUDE.md`, `docs/PARALLEL.md` §0).
 
 ## Proposed priorities (15 November)
 
