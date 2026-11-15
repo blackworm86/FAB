@@ -91,7 +91,7 @@ describe('Operation Al-Owda (20.3)', () => {
   });
   it('20.37 the "3 VPs marked" are the marker\'s start (as Badr), not a bonus; no sudden death; plays out to a result', () => {
     const g = alowda();
-    expect(victory(g).israeli).toBe(25); // the counted areas only (the owner's ruling, 9 Nov 2026)
+    expect(victory(g).israeli).toBe(23); // the counted areas only (the owner's ruling, 9 Nov 2026): 20 east of the VP Line + the reference map's 3 stars (15 Nov)
     placeAll(g);
     endPhase(g);
     expect(g.phase).toBe('movement');

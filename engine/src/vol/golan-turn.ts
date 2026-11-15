@@ -4,7 +4,17 @@ import { ENTRY, REAR, isAssembly, area as garea } from '../golan/map';
 import { type Chit } from '../chits';
 import { inSupply, other, rollDie, say, sidesOf, unitsIn, type Game, type Side } from '../game';
 import { reservesLeft, setupReserves } from './golan-setup';
-import { alowdaCommandos, alowdaDraw, alowdaRaidAreas, NAF, nafakhResult, nafakhStaff, strengthIn, VP_EAST } from './golan-scenarios';
+import {
+  alowdaCommandos,
+  alowdaDraw,
+  alowdaRaidAreas,
+  NAF,
+  nafakhResult,
+  nafakhStaff,
+  strengthIn,
+  ALO_STARS,
+  VP_EAST,
+} from './golan-scenarios';
 import { isAlOwda, isNafakh, regular, state } from './golan';
 
 /* ================= supply (9.31, 14.93–14.95) and victory (19.x) ================= */
@@ -33,7 +43,7 @@ export function golanVpAreas(g: Game, side: Side): { id: number; pts: number; ok
   const out: { id: number; pts: number; ok: boolean; why?: string }[] = [];
   for (const a of areas.values()) {
     if (isAssembly(a.id) || g.control[a.id] !== side) continue;
-    const mutual = a.vp.mutual ? 1 : 0,
+    const mutual = (isAlOwda(g) ? ALO_STARS.has(a.id) : a.vp.mutual) ? 1 : 0, // 20.38: Al-Owda's own three stars
       pts = side === 'syrian' ? a.vp.syrian + mutual : mutual + ((isAlOwda(g) ? VP_EAST.has(a.id) : garea(a.id).syria) ? 1 : 0); // 20.38: Al-Owda counts east of its VP Line
     if (!pts) continue;
     const sup = inSupply(g, side, a.id),

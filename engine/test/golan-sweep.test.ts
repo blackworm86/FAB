@@ -218,4 +218,18 @@ describe('Golan asset and event sweep', () => {
     expect(E.victoryTable(n).map((r) => r[1])).toEqual(['Decisive Victory', 'Marginal Victory']);
     expect(E.vpAreas(n, 'israeli')).toEqual([]);
   });
+  it('20.38 (owner issue #7): Al-Owda scores its reference map: three battlefield stars, the five Jordan crossings, Israel each area east of the VP Line', () => {
+    E.useGame('golan73');
+    const g = E.newGame(1, { scenario: 'alowda' } as never);
+    const isr = E.vpAreas(g, 'israeli');
+    expect(
+      isr
+        .filter((o) => o.pts === 2)
+        .map((o) => o.id)
+        .sort((a, b) => a - b),
+    ).toEqual([30, 46, 57]); // star + east of the line
+    expect(isr.some((o) => o.id === 42)).toBe(false); // Nafakh: west of the line, and no Al-Owda star
+    expect(isr.find((o) => o.id === 50)?.pts).toBe(1); // Booster: east of the line only
+    expect(E.victory(g).israeli).toBe(23); // 20 areas east of the line, all Israeli at the start (20.33), + 3 stars
+  });
 });

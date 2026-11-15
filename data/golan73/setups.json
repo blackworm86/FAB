@@ -1255,6 +1255,8 @@
       }
     },
     "track_note": "Al-Owda Turn Track (FAB_Golan_Al-Owda_Overlay_and_Screen.pdf): Admin Phase asset/event draws 1st/2nd per side; no sudden death (-/-)",
+    "battlefield_importance": [30, 46, 57],
+    "battlefield_importance_note": "20.38 and the Al-Owda Reference Map: the three areas it marks with the large yellow-star pentagon (Tel Faris, Tel Abu-Nida, Tel Hermonit); Booster and Nafakh keep only the main map's small icon there, and Mt Hermon is out of play (20.37)",
     "vp_line_east": [
       22,
       27,
