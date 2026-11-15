@@ -103,11 +103,11 @@ export function handCards() {
     if (!cs.length && !theirs.length && !rows.length) return ''; // nothing to show: no empty tray
     const view =
       handView === 'bad' && !bad.length ? 'ok' : handView === 'foe' && !foe ? 'ok' : handView === 'use' && !rows.length ? 'ok' : handView;
-    const tab = (k: typeof handView, label: string, n: number, title: string) =>
+    const tab = (k: typeof handView, label: string, n: number, title: string, short = label) =>
       `<button class="${view === k ? 'on' : ''}" aria-pressed="${view === k}" title="${esc(title)}" data-ui="${reg(() => {
         handView = k;
         setHandInspect(null);
-      })}">${label} <b>${n}</b></button>`;
+      })}"><span class="tl">${label}</span><span class="ts">${short}</span> <b>${n}</b></button>`; // a phone shows the short label: four tabs fit 390 px
     const shown =
       view === 'use'
         ? []
@@ -116,7 +116,7 @@ export function handCards() {
           : view === 'bad'
             ? bad.map((c) => card(c, 0, VOL.battleUse(g, b, c), true))
             : ok.map((c) => card(c, 0, null, true));
-    return `<div class="handtabs" role="group" aria-label="Cards">${tab('ok', mineSides.length === 1 ? `${nm(mineSides[0])} · usable` : 'Usable', ok.length, 'The cards you can add to this battle')}${bad.length ? tab('bad', 'Not usable now', bad.length, 'Your cards that cannot join this battle, and why') : ''}${rows.length ? tab('use', 'In battle', rows.length, 'How your assets are used in this battle') : ''}${foe ? tab('foe', `${nm(foe)} hand`, theirs.length, 'What the other player has at its disposal') : ''}</div>${view === 'use' ? useRowsHtml(rows) : `${handInspect ? cardTip() : ''}<div class="c-hand" ${handStyle(shown.length)}>${fan(shown)}</div>`}`;
+    return `<div class="handtabs" role="group" aria-label="Cards">${tab('ok', mineSides.length === 1 ? `${nm(mineSides[0])} · usable` : 'Usable', ok.length, 'The cards you can add to this battle', 'Usable')}${bad.length ? tab('bad', 'Not usable now', bad.length, 'Your cards that cannot join this battle, and why', 'Not now') : ''}${rows.length ? tab('use', 'In battle', rows.length, 'How your assets are used in this battle') : ''}${foe ? tab('foe', `${nm(foe)} hand`, theirs.length, 'What the other player has at its disposal', nm(foe)) : ''}</div>${view === 'use' ? useRowsHtml(rows) : `${handInspect ? cardTip() : ''}<div class="c-hand" ${handStyle(shown.length)}>${fan(shown)}</div>`}`;
   }
   if (g.phase !== 'admin') return '';
   const own = online.active && !online.both() ? online.mySide() : null,
