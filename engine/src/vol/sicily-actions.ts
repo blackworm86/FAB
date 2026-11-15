@@ -236,6 +236,7 @@ export function flankTargets(g: Game, chitId: string): number[] {
   );
 }
 export function playFlanking(g: Game, chitId: string, a: number) {
+  needAdmin(g, 'allied'); // 4.2b, and no pending Axis answer
   need(flankTargets(g, chitId).includes(a), 'not a legal flanking invasion (17.22)');
   const c = chit(g, chitId),
     V = state(g);

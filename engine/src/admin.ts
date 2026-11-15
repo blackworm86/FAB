@@ -60,6 +60,11 @@ export function spendSA(g: Game, side: Side, ech?: string | string[], why = 'Spe
 export const adminActor = (g: Game): Side => (g.done?.includes(g.phasing) ? other(g.phasing) : g.phasing);
 export const needAdmin = (g: Game, side?: Side) => {
   if (g.phase !== 'admin') throw new Error('only in the Admin Phase');
+  const waiting = CUR.pendingSide?.(g);
+  if (side && waiting && waiting !== side)
+    throw new Error(
+      'first the other player answers: a SAM fire (16.12), the Purple Line release (15.2) or the Italian morale picks (17.21c)',
+    );
   if (side && side !== adminActor(g))
     throw new Error(
       side === g.phasing ? 'your part of the Admin Phase is over (4.2b)' : 'the phasing player acts first; you act once he is done (4.2c)',

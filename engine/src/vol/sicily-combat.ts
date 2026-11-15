@@ -313,7 +313,7 @@ export const canAbort = (_g: Game, b: Battle) => (battleState(b).airborne ? 'an 
 export function beforeBegin(g: Game, b: Battle) {
   const V = state(g);
   need(!V.dropPending, 'place the airborne units first (14.27a)');
-  const first = V.airborneAreas.filter((a) => contested(g, a) && !g.fought.includes(a));
+  const first = V.airborneAreas.filter((a) => contested(g, a) && !g.fought.includes(a) && fighters(g, a, 'allied', true).length > 0); // an airborne area where no attacker is in good order cannot be fought (6.2): it does not block the others
   need(!first.length || first.includes(b.area), `the airborne assault in ${nameOf(first[0] ?? 0)} is fought first (14.27a)`);
   navalShockFirst(g, b);
 }

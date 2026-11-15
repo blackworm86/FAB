@@ -608,6 +608,8 @@ export function play(cfg: Cfg): Result {
           const us = E.unitsIn(g, a, att).filter((u) => !u.garrison && !u.ghost && !u.disorder);
           if (us.length) act(att, 'setPoint', () => E.setPoint(g, g.battle!, att, pick(us).id), false);
         }
+        if (E.pointPending(g, g.battle, w) && (w !== att || g.battle.ready?.length === 2))
+          act(w, 'setPoint', () => E.setPoint(g, g.battle!, w, pick(E.pointChoices(g, g.battle!, w))));
         act(w, 'setReady', () => E.setReady(g, g.battle!, w));
         continue;
       }
@@ -902,7 +904,9 @@ export function play(cfg: Cfg): Result {
             fb != null
               ? [fb]
               : cfg.game === 'sicily'
-                ? S.state(g).airborneAreas.filter((a) => E.contested(g, a) && !g.fought.includes(a))
+                ? S.state(g).airborneAreas.filter(
+                    (a) => E.contested(g, a) && !g.fought.includes(a) && E.fighters(g, a, 'allied', true).length > 0,
+                  )
                 : []; // 15.3 / 14.27a: fought first
         if (first.length) {
           fight(first[0]);
