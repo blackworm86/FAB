@@ -416,11 +416,12 @@ for (const game of GAMES) {
           want = {};
         for (let k = 0; k < 4; k++) {
           const g = structuredClone(F.settled()),
-            u = g.units.find(
+            can = g.units.filter(
               (x) =>
                 x.side === me && x.area != null && !x.garrison && !x.fort && !(x.id in want) &&
                 E.neighbors(x.area).some((a) => !g.units.some((y) => y.area === a && y.side !== me)),
-            ); // prettier-ignore
+            ), // prettier-ignore
+            u = (k ? can.find((x) => x.up != null) : null) ?? can[0]; // after the first, blocks a battle has shown: moving one hides it again, the hardest case for a save that has to wait
           if (!u) break;
           u.area = E.neighbors(u.area).find((a) => !g.units.some((y) => y.area === a && y.side !== me));
           want[u.id] = u.area;

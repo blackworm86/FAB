@@ -375,12 +375,12 @@ export async function push(g: Game) {
     notify('Your block details have not loaded yet. The move is kept and will be sent when they do.');
     return;
   }
-  const out: ReturnType<SplitSeat['save']> = sp ? sp.save(g) : { pub: JSON.stringify(g) };
-  if (out.pub === lastJson || out.pub === base) return; // nothing of ours to send; and what has just arrived must not be taken for sent (two-browser test: one screen stayed in a battle's set-up)
   if (writing) {
-    queued = g;
+    queued = g; // before anything is worked out for it: working it out re-hides shown blocks (a new code, a withdrawn reveal), and that must not be thrown away with a move that only waits
     return;
   }
+  const out: ReturnType<SplitSeat['save']> = sp ? sp.save(g) : { pub: JSON.stringify(g) };
+  if (out.pub === lastJson || out.pub === base) return; // nothing of ours to send
   writing = true;
   const dog = setTimeout(() => {
     if (writing) {
@@ -391,10 +391,10 @@ export async function push(g: Game) {
   try {
     if (out.priv) await store.setPriv(out.priv);
     lastJson = out.pub;
-    pubDoc = { rev: online.rev, json: out.pub, by: online.uid };
     online.sync = 'saving';
     onChange();
-    await store.setState(pubDoc, base || undefined);
+    // the newest game received (pubDoc) is left alone: our own copy must never take its place, or a save with nothing new in it shows this screen an older game (two-browser test: a screen went back to a battle's set-up; a move was lost)
+    await store.setState({ rev: online.rev, json: out.pub, by: online.uid }, base || undefined);
     base = out.pub;
     if (out.gone?.length) await store.dropReveals(out.gone); // a block hidden again: its old reveal goes
     online.sync = `saved ${new Date().toLocaleTimeString()}`;
