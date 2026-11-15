@@ -462,6 +462,10 @@ if (GAMES.length === 3) {
   check(hitChoice > 0, `a hit choice was played (${hitChoice})`);
   check(retreats > 0, `a retreat was played (${retreats})`);
 }
+/* signing out on the home page works at once, without a reload (owner's issue #1) */
+await A.page.goto(BASE, { waitUntil: 'domcontentloaded' });
+await tap(A.page.locator('[data-auth="out"]').first());
+check(await until(() => A.page.locator('#a-mail').count(), 20000), 'Sign out shows the sign-in form at once, without a reload');
 for (const p of [A, B])
   check(!p.errors.length, `no errors on ${p.name}'s page${p.errors.length ? ': ' + p.errors.slice(0, 3).join(' | ') : ''}`);
 await browser.close();

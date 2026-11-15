@@ -68,7 +68,7 @@ export async function rtdbStore(table: string): Promise<Store | null> {
     let first = true;
     A.onAuthStateChanged(auth, async (u) => {
       if (!u) {
-        if (first) A.signInAnonymously(auth).catch(bad);
+        A.signInAnonymously(auth).catch(first ? bad : () => undefined); // also after Sign out: the page becomes a guest's at once (owner's issue #1: the button seemed to do nothing until a reload)
         return;
       }
       account = await read(u);
