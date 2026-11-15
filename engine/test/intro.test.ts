@@ -69,5 +69,17 @@ describe('24.3 Introductory scenario "Nuts!"', () => {
     expect(E.introResult(g)).toBe('Allied Marginal Victory (German 1, Allied 2)');
     g.control[64] = 'german';
     expect(E.introResult(g)).toBe('German Marginal Victory (German 3, Allied 2)');
+    expect(E.placeStatus(g)).toMatchObject({
+      area: 47,
+      held: 'allied',
+      contested: true,
+      steps: { german: 3, allied: 2 },
+      keysHeld: [39, 36, 48, 63, 64],
+      total: { german: 3, allied: 2 },
+      leader: 'german',
+      level: 'Marginal',
+    });
+    g.control[39] = 'allied'; // Ettelbruck lost: German 3 − 2 = 1 against 2
+    expect(E.placeStatus(g)).toMatchObject({ total: { german: 1, allied: 2 }, leader: 'allied' });
   });
 });

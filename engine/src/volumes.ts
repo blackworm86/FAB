@@ -122,6 +122,8 @@ export interface Volume {
   /** The scenario's victory table [condition, result], and a one-line note on how areas count. */
   victoryRows?: (g: Game) => [string, string][];
   vpNote?: (g: Game) => string;
+  /** Scenarios decided by one place (Nuts! 24.37, Battle for Nafakh 22.47): how it would end if the game ended now. */
+  placeStatus?: (g: Game) => PlaceStatus | undefined;
   /** False when the scenario does not score destroyed large units (Sicily Sunrise Bridge, 22.17). */
   bigUnits?: (g: Game) => boolean;
   /** False when the volume forbids this unit any action now (Sicily 15.3a: one untried garrison per Movement Phase). */
@@ -409,3 +411,16 @@ export const useGame = (id: string) => {
   return v;
 };
 export const gameOf = (g: { game?: string }) => useGame(g.game ?? 'bulge');
+/** A place-decided scenario now: `steps` the strength points in the place; `total` after the penalties (Nuts!: the German loses 2 per key area in `keys` he does not hold, `keysHeld`); `leader` would win at `level` if the game ended now (a tie goes to the defender); `turnsLeft` counts the current turn. */
+export type PlaceStatus = {
+  area: number;
+  held: Side | null;
+  contested: boolean;
+  steps: Partial<Record<Side, number>>;
+  keys: number[];
+  keysHeld: number[];
+  total: Partial<Record<Side, number>>;
+  leader: Side;
+  level: 'Decisive' | 'Marginal';
+  turnsLeft: number;
+};

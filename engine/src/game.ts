@@ -23,6 +23,7 @@ import {
   bulgeBeforeRecycle,
   bulgeCanAssign,
   bulgeFinal,
+  introStatus,
   bulgeMarkerKey,
   bulgeMoraleSn,
   bulgeReach,
@@ -499,6 +500,7 @@ registerHooks('bulge', {
   noRetreat: (_g, u) => !!u.garrison && (u.id.startsWith('G') || u.id.startsWith('TF-')), // 16.21, 16.22: garrisons and task forces never retreat
   victory: seriesVictory,
   finalResult: bulgeFinal,
+  placeStatus: (g) => (g.opts.scenario === 'intro' ? introStatus(g) : undefined),
   onPhase: bulgeSupplyHook,
   beforeRecycle: bulgeBeforeRecycle,
   vpHist: (g, v) => (g.opts.scenario === 'cold' ? coldAreas(g) : v.net),

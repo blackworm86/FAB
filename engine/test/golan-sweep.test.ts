@@ -217,6 +217,10 @@ describe('Golan asset and event sweep', () => {
     const n = E.newGame(1, { scenario: 'nafakh' } as never);
     expect(E.victoryTable(n).map((r) => r[1])).toEqual(['Decisive Victory', 'Marginal Victory']);
     expect(E.vpAreas(n, 'israeli')).toEqual([]);
+    const st = E.placeStatus(n)!; // 22.47 (owner issue #21): the live status of Nafakh
+    expect(st).toMatchObject({ area: 42, keys: [], turnsLeft: n.lastTurn - n.turn + 1 });
+    expect(st.total).toEqual(st.steps);
+    expect(E.placeStatus(g)).toBeUndefined(); // a VP scenario
   });
   it('20.38 (owner issue #7): Al-Owda scores its reference map: three battlefield stars, the five Jordan crossings, the VP Line areas when they change hands', () => {
     E.useGame('golan73');
