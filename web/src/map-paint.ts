@@ -82,7 +82,7 @@ export const viewSide = (): E.Side =>
   labHuman() ?? (online.active && !online.both() && online.mySide() ? online.mySide()! : (tutView ?? VOL.bottom));
 export const farSide = () => viewSide() !== VOL.bottom;
 const fogSide = (): E.Side | 'spectator' | null =>
-  labHuman() ?? (online.active && !online.both() ? (online.mySide() ?? 'spectator') : null);
+  labHuman() ?? (online.hotseat ? (online.holder ?? g.phasing) : online.active && !online.both() ? (online.mySide() ?? 'spectator') : null); // hot-seat: only the side holding the screen sees its hidden blocks
 export const seen = (u: E.Unit) => E.visibleTo(g, u, fogSide());
 /** Sicily's untried garrisons (15.3) stand face down for both players, the owner too, until a battle reveals them. */
 export const faceDown = (u: E.Unit) => !seen(u) || (!!u.untried && u.up !== u.area);

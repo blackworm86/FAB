@@ -6,7 +6,7 @@ import { reg } from './ui-kit';
 
 let say: (t: string) => void = () => {},
   render: () => void = () => {};
-const chatOn = () => (online.mode === 'remote' && (online.mySide() != null || online.admin)) || DEV_FAKE; // the two players only (and an admin): watchers see no chat (owner, 15 November 2026)
+const chatOn = () => (online.mode === 'remote' && !online.hotseat && (online.mySide() != null || online.admin)) || DEV_FAKE; // the two players only (and an admin): watchers see no chat (owner, 15 November 2026)
 let chatOpen = false,
   chatDraft = '',
   chatSeen = (() => {

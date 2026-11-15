@@ -140,6 +140,8 @@ export const online = {
   hasAccounts: false,
   /** A hot-seat game: two players on this one screen, saved online under one account. The whole game is stored as it is (nobody to hide blocks from); its owner, in its one seat, acts for both sides. */
   hotseat: false,
+  /** Hot-seat: the side now holding the screen (its hidden blocks show), or 'spectator' while the device is being passed. */
+  holder: null as Side | 'spectator' | null,
   mySide(): Side | null {
     if (this.devSwitch()) return this.devSeat !== 'both' && this.devSeat !== 'watch' ? this.devSeat : null;
     return this.seats.german === this.uid && this.uid

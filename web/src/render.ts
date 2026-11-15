@@ -249,6 +249,7 @@ function renderInner() {
     const handOver = !b || ['setup', 'attFirst', 'attChoice', 'defChoice', 'loss', 'retreat'].includes(b.stage); // the real hand-overs: not each alternating roll of a battle (owner, 14 Nov)
     if (lastActor && handOver && !TUT && mine(actor) && mine(other(actor))) passTo = actor; // one device, both sides: ask to pass it (design review, problem 1)
     lastActor = actor;
+    if (online.hotseat) online.holder = passTo ? 'spectator' : actor; // while the device is passed, nobody's hidden blocks show
   }
   const alert = g.pendingBlow
     ? (() => {
@@ -650,8 +651,9 @@ document.addEventListener(
   'pointerdown',
   () => {
     if (passTo) {
+      if (online.hotseat) online.holder = passTo; // the new player has the screen: their hidden blocks show, the other's are covered
       passTo = null;
-      setTimeout(render);
+      setTimeout(online.hotseat ? refresh : render);
     }
   },
   true,
@@ -720,7 +722,7 @@ export function refresh() {
   } // the computer's dice are thrown on the table like a player's
   if (online.mode === 'remote') setTimeout(driveSplit, 0);
   {
-    const key = `${online.devSeat}|${online.mySide()}|${g.battle?.attPoint}|${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`; // the dry runs behind the highlights are costly: redo them only when something they depend on changed
+    const key = `${online.devSeat}|${online.holder}|${online.mySide()}|${g.battle?.attPoint}|${reinforcing}|${g.battle?.stage}|${g.battle?.pending}|${selChit}|${selArea}|${tgtMode}|${g.turn}${g.phase}|${g.log.length}|${g.rolls}`; // the dry runs behind the highlights are costly: redo them only when something they depend on changed
     if (key !== tgtKey) {
       tgtKey = key;
       setTgt(

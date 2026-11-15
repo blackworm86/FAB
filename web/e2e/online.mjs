@@ -537,8 +537,23 @@ if (GAMES.length === 3) {
     g.battle = null;
     return to;
   };
-  const first = await play(A.page, pass),
-    second = await play(A.page, pass);
+  check(
+    await A.page.evaluate(() => !document.querySelector('.seatbar') && !document.querySelector('.chatbtn')),
+    'no seat bar, invite or chat on a game on this screen',
+  );
+  const first = await play(A.page, pass);
+  check(
+    await until(() => A.page.evaluate(() => !!document.querySelector('.passstrip') && window.__fab.online.holder === 'spectator')),
+    "the other side's turn: the pass strip shows and nobody's hidden blocks are shown while the device is passed",
+  );
+  await A.page.mouse.click(5, 300);
+  check(
+    await until(() =>
+      A.page.evaluate(() => !document.querySelector('.passstrip') && window.__fab.online.holder === window.__fab.game().phasing),
+    ),
+    'after the tap the side now playing holds the screen',
+  );
+  const second = await play(A.page, pass);
   check(
     first !== second && !String(first).startsWith('!') && !String(second).startsWith('!'),
     'both sides take their turn from the one screen',

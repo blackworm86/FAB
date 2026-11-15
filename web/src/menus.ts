@@ -43,7 +43,7 @@ function rulesInUse(o: Partial<E.Opts>, extra = true): string {
 export function seatBar() {
   if (LAB_SIDE)
     return `<div class="seatbar" title="${esc(lab.reason)}"><span>${ico('info')} Computer: ${nm(LAB_SIDE)}${lab.thinking ? ' · thinking…' : ''}${lab.reason ? ` · <small>${esc(lab.reason.split(' (')[0].split(': judged')[0])}</small>` : ''}</span></div>`; // the full reason on hover: a phone keeps the map
-  if (online.mode !== 'remote' || !online.hasAccounts) return '';
+  if (online.mode !== 'remote' || !online.hasAccounts || online.hotseat) return ''; // hot-seat: both players are here, no seat to take or opponent to invite
   if (online.error)
     return `<div class="seatbar err"><span>${esc(online.error)}</span>${ubtn('OK', () => {
       online.error = '';
