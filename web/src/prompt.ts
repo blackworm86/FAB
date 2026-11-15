@@ -227,6 +227,10 @@ function promptText() {
       setEndHidden(false);
     })}">Result</button>`;
   if (g.pendingBlow) return `<b>${nm(other(g.units.find((x) => x.id === g.pendingBlow!.unit)!.side))}</b>: attempt to blow the bridge?`;
+  if (b && (b.stage === 'loss' || b.stage === 'attFirst') && allowed() && !rollView)
+    return b.stage === 'loss'
+      ? '<b>Who takes the loss?</b> Tap a row or a glowing piece, or take the suggested order.'
+      : '<b>Who takes the first loss?</b> Tap the point unit or one battle asset, in the list or on the map.';
   if (b?.stage === 'retreat') {
     const o = E.retreatOptions(g, b);
     return `<b>Choose the retreat area:</b> ${o.length <= 3 ? o.map((a) => esc(a === E.SEA ? 'the sea' : areaName(a))).join(' or ') : `${o.length} areas`}, lit on the map.${gx(' The blocks go to the nearest friendly area with room (6.6).')}`;
@@ -392,6 +396,7 @@ export function primary(): { label: string; fn: () => void; dis?: boolean } | nu
           }
         },
       };
+    if (b.stage === 'loss' && b.loss) return { label: 'Suggested order', fn: () => act(() => E.autoLosses(g, g.battle!)) }; // the rest in the suggested order: the first row first (interaction system)
     if (b.stage.endsWith('Choice') || b.stage === 'retreat' || b.stage === 'attFirst' || b.stage === 'loss') return null;
     return {
       label: innerWidth < 700 && !TUTORIAL ? 'Roll the dice' : `Roll ${STAGE_NAME[b.stage].toLowerCase()}`,

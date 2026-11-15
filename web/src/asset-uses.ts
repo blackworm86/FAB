@@ -7,7 +7,7 @@ import { mine, act, can } from './flow';
 import { reg } from './ui-kit';
 import { esc } from './util';
 import { areaName, VOL } from './page';
-import { chitPic } from './pieces-window';
+import { chitPic, unitPic } from './pieces-window';
 
 export interface Use {
   label: string;
@@ -171,4 +171,51 @@ export function useRowsHtml(rows = useRows()): string {
           .join('')}</div></div>`,
     )
     .join('')}</div>`;
+}
+
+/** Step losses (interaction system, worked example b): the pieces that may take the next loss as big numbered rows, the suggested
+ *  one first; the others greyed with the reason. Mirrored on the map by brass glows (pieces.ts). The red bar button takes them all. */
+export function lossPieces(): { id: string; name: string; sub: string; ok: boolean; pic: string }[] {
+  const b = g.battle;
+  if (!b || (b.stage !== 'loss' && b.stage !== 'attFirst')) return [];
+  const side = b.stage === 'loss' && b.loss ? b.loss.side : b.attacker,
+    okIds = b.stage === 'loss' ? E.lossOptions(g, b) : [b.attPoint, ...b.assets[b.attacker].filter((x) => E.isBattleAsset(E.chit(g, x)))],
+    all = [
+      ...E.unitsIn(g, b.area, side)
+        .filter((u) => !u.garrison)
+        .map((u) => u.id),
+      ...b.assets[side].filter((x) => E.isBattleAsset(E.chit(g, x))),
+    ],
+    rows = [...okIds, ...all.filter((id) => !okIds.includes(id))];
+  return rows.map((id) => {
+    const u = g.units.find((x) => x.id === id),
+      ok = okIds.includes(id);
+    return u
+      ? {
+          id,
+          name: u.name,
+          sub: ok
+            ? `${id === b.attPoint || id === b.defPoint ? 'point unit · ' : ''}${u.str} step${u.str > 1 ? 's' : ''} → ${u.str - 1 || 'eliminated'}`
+            : 'not yet: everyone takes one before anyone takes a second; the point unit takes the first block loss (6.43)',
+          ok,
+          pic: unitPic(u),
+        }
+      : { id, name: E.chit(g, id).name, sub: ok ? 'asset · removed if hit' : 'not yet (6.43)', ok, pic: chitPic(E.chit(g, id)) };
+  });
+}
+export function lossTrayHtml(): string {
+  const b = g.battle,
+    rows = lossPieces();
+  if (!b || !rows.length) return '';
+  const n = b.stage === 'loss' ? (b.loss?.left ?? 0) : b.pending,
+    first = b.stage === 'attFirst',
+    pick = (id: string) => () => act(() => (first ? E.chooseFirstLoss(g, g.battle!, id) : E.chooseLoss(g, g.battle!, id)));
+  let k = 0;
+  return `<div class="uses losses"><div class="useshd"><b>${first ? 'First loss of the failed attack' : `Step loss · ${n} to place`}</b><small>${first ? 'the point unit or one battle asset (6.41a)' : 'everyone takes one before anyone takes a second (6.43)'}</small></div><div class="lossrows">${rows
+    .map((r) =>
+      r.ok
+        ? `<button class="lossrow" data-ui="${reg(pick(r.id))}" data-loss="${r.id}"><span class="usepic">${r.pic}</span><span class="usename"><b>${esc(r.name)}</b><small>${esc(r.sub)}</small></span><i class="lossn">${++k}</i></button>`
+        : `<button class="lossrow" disabled><span class="usepic">${r.pic}</span><span class="usename"><b>${esc(r.name)}</b><small>${esc(r.sub)}</small></span><i class="lossn">–</i></button>`,
+    )
+    .join('')}</div></div>`;
 }

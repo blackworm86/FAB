@@ -350,7 +350,7 @@ export function decisionTargets(): Tgt | null {
 /** The choice the battle is waiting for, as a bubble over the deciding side's row. */
 export function decisionBubble(): string {
   const b = g.battle;
-  if (!b || rollView || !['attChoice', 'defChoice', 'attFirst', 'loss'].includes(b.stage)) return '';
+  if (!b || rollView || !['attChoice', 'defChoice'].includes(b.stage)) return ''; // losses: the list above the bar, no bubble (interaction system)
   const who = b.stage === 'loss' && b.loss ? b.loss.side : b.stage === 'defChoice' ? other(b.attacker) : b.attacker;
   const tg =
     b.stage === 'loss'
