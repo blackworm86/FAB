@@ -369,7 +369,7 @@ export async function push(g: Game) {
     return;
   }
   const out = sp.save(g);
-  if (out.pub === lastJson) return;
+  if (out.pub === lastJson || out.pub === base) return; // nothing of ours to send; and what has just arrived must not be taken for sent (two-browser test: one screen stayed in a battle's set-up)
   if (writing) {
     queued = g;
     return;
