@@ -455,3 +455,221 @@
   height: 100% !important;
   width: 100% !important;
 }
+
+/* home, 15 November 2026 (mockup docs/mockups/2026-11-15-home-signin.html): the invitation code under the title, sign-in with two tabs, Learn and Rules as one thin line */
+.hbar .who .nm {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.homein button.word {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: transparent;
+  font: 600 13px var(--sfd);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  min-height: 44px !important;
+}
+.codebar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 14px;
+  background: #12150ef0;
+  border: 1px solid var(--gold);
+}
+.codebar label {
+  font: 700 15px var(--sfd);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.homein .codebar input,
+.homein .signin input {
+  width: 100%;
+  min-height: 46px !important;
+  padding: 10px;
+  background: #0b0d08;
+  border: 1px solid var(--line);
+  font: 16px var(--sf); /* 16px: a phone does not zoom the page when the field is tapped */
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+}
+.codebar input::placeholder {
+  color: #8d9065;
+}
+.homein .codebar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 46px !important;
+}
+.homein .signcard {
+  padding: 0 14px 14px !important;
+}
+.signcard .tabs {
+  margin: 0 -14px 12px;
+}
+.signin .tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #2a2d20;
+}
+.signin .tabs button {
+  min-height: 48px !important;
+  font: 700 17px var(--sfd);
+  letter-spacing: 0.1em;
+  color: var(--line);
+}
+.signin .tabs button[aria-selected='true'] {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+.signin:not(.reg) .regonly,
+.signin.reg .inonly {
+  display: none !important;
+}
+.signin .wide {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px !important;
+}
+.signin .or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 8px;
+  font: 600 12px var(--sfd);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--line);
+}
+.signin .or::before,
+.signin .or::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid #2a2d20;
+}
+.signin .authform {
+  gap: 8px;
+  margin: 0;
+}
+.signin .authform label {
+  display: grid;
+  gap: 3px;
+  font: 600 12px var(--sfd);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--line);
+}
+.signin .authform .primary {
+  margin-top: 4px;
+}
+.signin .textlink {
+  justify-self: center;
+  min-height: 44px !important;
+  padding: 0 10px;
+  background: none;
+  border: 0;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: var(--ink);
+}
+.signcard > .hint {
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid #2a2d20;
+}
+.learnrow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.homein .learnrow button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 10px;
+  min-height: 48px !important;
+  text-align: left;
+  background: #12150ecc;
+  border-color: #3a3e2a;
+  color: var(--ink);
+}
+.homein .learnrow button:hover {
+  border-color: var(--gold);
+}
+.learnrow .ic {
+  color: var(--line);
+  flex: none;
+}
+.learnrow span {
+  display: grid;
+  min-width: 0;
+}
+.learnrow b {
+  font: 600 14px/1.15 var(--sfd);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.learnrow small {
+  font: 500 13px/1.3 var(--sfd); /* the narrow face: "9 lessons · 22 min" fits half a phone's width at a readable size */
+  letter-spacing: 0.04em;
+  color: var(--line);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.learnrow small em,
+.learnrow small i {
+  font-style: normal;
+}
+.learnrow small em {
+  color: var(--gold);
+}
+@media (max-width: 600px) {
+  .hbar .who .nm {
+    display: none;
+  }
+  .codebar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 8px;
+    padding: 8px 10px 10px;
+  }
+  .codebar label {
+    grid-column: 1 / -1;
+  }
+  .homein .lh h2 {
+    white-space: nowrap;
+  }
+  .homein .lh h2 .ic {
+    display: none;
+  }
+  .homein .lh .primary {
+    padding-inline: 10px;
+  }
+}
+.homein .lh .primary,
+.homein .matchrow .resume {
+  min-height: 44px !important;
+}
+@media (max-width: 600px) {
+  .homein {
+    padding-bottom: 64px !important; /* the language buttons sit over the foot of the page: the last line stays clear of them */
+  }
+}

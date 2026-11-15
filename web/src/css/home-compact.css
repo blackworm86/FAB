@@ -83,17 +83,6 @@
 .tile.on small {
   opacity: 1;
 }
-.joincard {
-  padding: 8px;
-}
-.joincard .row {
-  flex-wrap: nowrap;
-}
-.joincard .primary {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-}
 /* clearer icons: heavier line, a little larger */
 .ic {
   stroke-width: 2.1;
@@ -131,12 +120,6 @@ button .ic {
 }
 .st.live {
   background: #7ee08d;
-}
-.joincard .row {
-  flex-wrap: nowrap;
-}
-.joincard .primary {
-  flex: none;
 }
 .hbar > div:first-child {
   min-width: 0;

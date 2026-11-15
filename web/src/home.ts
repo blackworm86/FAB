@@ -35,7 +35,8 @@ let noticeMsg = '',
   matches: Match[] = [],
   modal: 'rules' | null = null,
   toast = '',
-  toastInfo = false;
+  toastInfo = false,
+  authTab: 'in' | 'reg' = 'in'; // the sign-in panel's tab, kept across redraws
 const form = {
   game: gameInfo(GAME_PARAM ?? '')?.ready ? GAME_PARAM! : 'bulge',
   title: '',
@@ -87,7 +88,7 @@ export function share(
     el = document.createElement('div');
   el.className = 'modal invite-sheet';
   el.innerHTML = `<div class="sheet slim" role="dialog" aria-label="Invite a player"><h3>Invite a player <button class="ico" data-k="x" aria-label="Close">${ico('close')}</button></h3>
-    <p class="hint">Send the link, or read out the code: it goes in the box Invite link or code on the FAB home page.</p>
+    <p class="hint">Send the link, or read out the code: it goes in the box Have an invitation? on the FAB home page.</p>
     <div class="invcode" aria-label="Game code">${esc(id)}</div>
     <div class="invqr" role="img" aria-label="QR code of the invite link"></div>
     <div class="row"><button class="primary" data-k="copy">Copy the link</button>${'share' in navigator ? '<button data-k="share">Share…</button>' : ''}</div>
@@ -160,12 +161,12 @@ function joinByCode(v: string) {
 const stateOf = (m: Match) => (m.germanName && m.alliedName ? 'In play' : 'Waiting for an opponent');
 /** The first screen: never on top of a game. Signed out it is just the sign-in; signed in it is your games, a new game and a way to join one. */
 export const tutUrl = (course: string) => `${homeUrl()}?tutorial=${course}`;
-/** The learn card of a volume: one row per course (the full course, and "what's new" for players of an earlier volume). Works offline. */
-const tutCard = (game: string) => {
+/** Learn to play and the rules reference of a volume: one thin line of two quiet buttons (one per course). Works offline. */
+const learnRow = (game: string) => {
   const cs = coursesOf(game);
   return !cs.length && !RULES_GAMES.includes(game)
     ? ''
-    : `<section class="card tutcard"><h2>${ico('info')} Learn to play</h2>${cs
+    : `<nav class="learnrow" aria-label="Learn to play">${cs
         .map((c) => {
           let at = 0;
           try {
@@ -173,30 +174,41 @@ const tutCard = (game: string) => {
           } catch {
             /* private mode */
           }
-          return `<div class="course"><div><b>${esc(c.title)}</b><small>${esc(c.sub)}</small><p class="hint">${esc(c.blurb)}</p></div>${ubtn(
-            `${ico('next')}<span>${at ? 'Resume' : 'Start'}</span>`,
+          return ubtn(
+            `${ico('flag')}<span><b>Learn to play</b><small>${at ? '<em>Resume</em> · ' : ''}<i>${parseInt(c.sub)} lessons · ${c.minutes} min</i></small></span>`,
             () => {
               location.href = tutUrl(c.id);
             },
-            cs[0] === c ? 'primary' : '',
+            '',
             false,
             `${c.title}: an interactive tutorial on the Play Book examples`,
-          )}</div>`;
+          );
         })
         .join('')}${
         RULES_GAMES.includes(game)
-          ? `<div class="course"><div><b>Rules reference</b><small>Every rule of the Series Rules and the Play Book, searchable, with the printed index</small></div>${ubtn(
-              `${ico('info')}<span>Open</span>`,
+          ? ubtn(
+              `${ico('book')}<span><b>Rules reference</b><small>Searchable</small></span>`,
               () => {
                 void openReader(game);
               },
               '',
               false,
               'Open the rules reference',
-            )}</div>`
+            )
           : ''
-      }</section>`;
+      }</nav>`;
 };
+/** The invitation code, one line under the title, signed in or not: a code opens its own game whatever battle is chosen. */
+const codeBar = () =>
+  `<div class="codebar"><label for="join">Have an invitation?</label><input id="join" placeholder="Code or link" autocomplete="off" autocapitalize="off" enterkeyhint="go">${ubtn(
+    `<span>Join</span>${ico('next')}`,
+    () => {
+      joinByCode(($('#join') as HTMLInputElement).value);
+    },
+    'primary',
+    false,
+    'Join a game with an invite',
+  )}</div>`;
 const WHEN: Record<string, string> = Object.fromEntries(GAMES.map((x) => [x.id, x.when]));
 /** The shelf: one box cover per FAB volume; tapping one shows that volume's tables (option A of the home mockup). */
 function shelfHtml() {
@@ -224,21 +236,15 @@ function homeHtml() {
     signed = !!a && !a.guest,
     info = gameInfo(form.game),
     ready = !!info?.ready;
-  const head = `<header><h1>Fast Action Battles</h1><p>Board-game battles with the series rules, played online.</p></header>${shelfHtml()}`,
-    learn = !ready ? soonCard(info!) : tutCard(form.game);
-  const newcomer = (() => {
-    try {
-      return !Object.keys(localStorage).some((k) => /^fab-(tutorial|demo2|sandbox)/.test(k));
-    } catch {
-      return false;
-    }
-  })(); // someone who never played sees Learn to play first
+  const head = `<header class="hbar"><div><h1>Fast Action Battles</h1><p>Board-game battles with the series rules, played online.</p></div></header>`,
+    learn = !ready ? soonCard(info!) : learnRow(form.game),
+    msgs = `${homeMsg ? `<p class="hint"><b>${esc(homeMsg)}</b></p>` : ''}${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}`; // right under the code line: next to the field or the sign-in they are about
   if (!online.ready)
-    return `<div class="homepage" style="background-image: radial-gradient(ellipse at 55% 35%, #0b0d0866 0%, #0b0d08d9 62%, #0b0d08 100%), url('./home-table.jpg')"><div class="homein">${head}<p class="hint">Connecting…</p></div></div>`;
+    return `<div class="homepage" style="background-image: radial-gradient(ellipse at 55% 35%, #0b0d0866 0%, #0b0d08d9 62%, #0b0d08 100%), url('./home-table.jpg')"><div class="homein">${head}${shelfHtml()}<p class="hint">Connecting…</p></div></div>`;
   if (online.mode !== 'remote' || !online.hasAccounts)
-    return `<div class="homepage" style="background-image: radial-gradient(ellipse at 55% 35%, #0b0d0866 0%, #0b0d08d9 62%, #0b0d08 100%), url('./home-table.jpg')"><div class="homein">${head}${newcomer ? learn : ''}<section class="card"><p class="hint">Online play is not set up on this site.${online.error ? ' ' + esc(online.error) : ''}</p></section>${newcomer ? '' : learn}</div></div>`;
+    return `<div class="homepage" style="background-image: radial-gradient(ellipse at 55% 35%, #0b0d0866 0%, #0b0d08d9 62%, #0b0d08 100%), url('./home-table.jpg')"><div class="homein">${head}${shelfHtml()}<section class="card"><p class="hint">Online play is not set up on this site.${online.error ? ' ' + esc(online.error) : ''}</p></section>${learn}</div></div>`;
   if (!signed)
-    return `<div class="homepage" style="background-image: radial-gradient(ellipse at 55% 35%, #0b0d0866 0%, #0b0d08d9 62%, #0b0d08 100%), url('./home-table.jpg')"><div class="homein">${head}<section class="card"><h2>Sign in</h2>${
+    return `<div class="homepage" style="background-image: radial-gradient(ellipse at 55% 35%, #0b0d0866 0%, #0b0d08d9 62%, #0b0d08 100%), url('./home-table.jpg')"><div class="homein">${head}${codeBar()}${msgs}<section class="card signcard" aria-label="Sign in">${accountHtml()}${
       (() => {
         try {
           return sessionStorage.getItem('fab-next');
@@ -248,7 +254,7 @@ function homeHtml() {
       })()
         ? '<p class="hint">You will go straight back to the game you were invited to.</p>'
         : '<p class="hint">To create a game or join one. Anyone can watch a game from its link.</p>'
-    }${accountHtml()}</section>${learn}${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}</div></div>`;
+    }</section>${shelfHtml()}${learn}</div></div>`;
   const mine =
     matches
       .filter((m) => (m.game ?? 'bulge') === form.game)
@@ -276,11 +282,11 @@ function homeHtml() {
                 )
               : ''
           }${btn(
-            `${ico('share')}`,
+            m.germanName && m.alliedName ? ico('share') : `${ico('share')}Invite`, // an empty seat: the button says what it is for
             () => {
               void share(m.id, m.title);
             },
-            'ico',
+            m.germanName && m.alliedName ? 'ico' : 'word',
             false,
             'Invite a player',
           )}${btn(
@@ -299,7 +305,7 @@ function homeHtml() {
               : ''
           }</div>`,
       )
-      .join('') || '<p class="hint">No games yet: tap New for an online table.</p>';
+      .join('') || '<p class="hint">No games yet: tap New game for an online table.</p>';
   const tile = (v: string, label: string, tag: string) =>
     `<button class="tile ${form.side === v ? 'on' : ''} ${v}" aria-pressed="${form.side === v}" data-ui="${reg(() => {
       form.side = v;
@@ -349,7 +355,7 @@ function homeHtml() {
       )}</div></div>`
     : '';
   return `<div class="homepage" style="background-image: radial-gradient(ellipse at 55% 35%, #0b0d0866 0%, #0b0d08d9 62%, #0b0d08 100%), url('./home-table.jpg')"><div class="homein">
-    <header class="hbar"><div><h1>Fast Action Battles</h1><p>Board-game battles with the series rules, played online.</p></div><div class="who"><span class="avatar" title="${esc(a!.name || a!.email)}">${esc((a!.name || a!.email || '?').slice(0, 1).toUpperCase())}</span>${
+    <header class="hbar"><div><h1>Fast Action Battles</h1></div><div class="who"><span class="avatar" aria-hidden="true">${esc((a!.name || a!.email || '?').slice(0, 1).toUpperCase())}</span><span class="nm notr">${esc(a!.name || a!.email)}</span>${
       online.admin
         ? ubtn(
             ico('wand'),
@@ -370,14 +376,14 @@ function homeHtml() {
             'Admin: update the database rules',
           )
         : ''
-    }<button class="ico" data-auth="out" title="Sign out" aria-label="Sign out">${ico('logout')}</button></div></header>
-    ${shelfHtml()}${
+    }<button class="word" data-auth="out">${ico('logout')}Sign out</button></div></header>
+    ${codeBar()}${msgs}${shelfHtml()}${
       ready
         ? `<section class="card"><div class="lh"><h2>${ico('users')} ${esc(info!.name)} · your games</h2>${
             creating
               ? ''
               : ubtn(
-                  `${ico('plus')}<span>New</span>`,
+                  `${ico('plus')}<span>New game</span>`,
                   () => {
                     creating = true;
                   },
@@ -388,16 +394,7 @@ function homeHtml() {
           }</div>${create}${mine}</section>`
         : ''
     }
-    ${learn}<section class="card joincard"><div class="row authform"><input id="join" class="grow" placeholder="Invite link or code" aria-label="Invite link or code">${ubtn(
-      `${ico('next')}<span>Join</span>`,
-      () => {
-        joinByCode(($('#join') as HTMLInputElement).value);
-      },
-      'primary',
-      false,
-      'Join a game with an invite',
-    )}</div></section>
-    ${homeMsg ? `<p class="hint"><b>${esc(homeMsg)}</b></p>` : ''}${online.error ? `<p class="hint"><b class="bad">${esc(online.error)}</b></p>` : ''}
+    ${learn}
   </div></div>`;
 }
 /** Sign-in panel (Firebase only): Google, or email and password; guests can watch but not play. */
@@ -421,9 +418,15 @@ export function accountHtml() {
           )
         : ''
     }</div>${noticeMsg ? `<p class="hint">${esc(noticeMsg)}</p>` : ''}`;
-  return `<div class="row"><button class="primary" data-auth="google">Continue with Google</button></div>
-    <div class="authform"><input id="a-name" placeholder="Name (to register)" autocomplete="name"><input id="a-mail" type="email" placeholder="Email" autocomplete="email"><input id="a-pass" type="password" placeholder="Password (6+ characters)" autocomplete="current-password"></div>
-    <div class="row"><button data-auth="in">Sign in</button><button data-auth="reg">Register</button><button data-auth="reset">Forgot password</button></div>`;
+  // two tabs over one form: the class `reg` shows the name field and swaps the main button, so what is typed stays (bindAuth switches it)
+  const tab = (k: 'in' | 'reg', t: string) => `<button role="tab" data-tab="${k}" aria-selected="${authTab === k}">${t}</button>`;
+  return `<div class="signin${authTab === 'reg' ? ' reg' : ''}"><div class="tabs" role="tablist">${tab('in', 'Sign in')}${tab('reg', 'Create account')}</div>
+    <button class="wide" data-auth="google">Continue with Google</button><div class="or">or with email</div>
+    <div class="authform"><label class="regonly">Your name in games (optional)<input id="a-name" autocomplete="name"></label>
+    <label>Email<input id="a-mail" type="email" autocomplete="email"></label>
+    <label><span class="inonly">Password</span><span class="regonly">Password (6+ characters)</span><input id="a-pass" type="password" autocomplete="${authTab === 'reg' ? 'new-password' : 'current-password'}" enterkeyhint="go"></label>
+    <button class="primary wide inonly" data-auth="in">Sign in</button><button class="primary wide regonly" data-auth="reg">Create account</button>
+    <button class="textlink inonly" data-auth="reset">Forgot password?</button></div></div>`;
 }
 /** The rules this version of the site expects (database.rules.json), as pretty text and as one line. */
 const rulesText = databaseRules;
@@ -490,6 +493,23 @@ export function bindAuth(ui: HTMLElement) {
         else if (k === 'reset') void auth.reset(v('a-mail'));
       }),
   );
+  ui.querySelectorAll<HTMLElement>('.signin [data-tab]').forEach(
+    (t) =>
+      (t.onclick = () => {
+        const box = t.closest('.signin')!;
+        authTab = t.dataset.tab as typeof authTab;
+        box.classList.toggle('reg', authTab === 'reg');
+        box.querySelectorAll('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === t)));
+        box.querySelector('#a-pass')!.setAttribute('autocomplete', authTab === 'reg' ? 'new-password' : 'current-password');
+      }),
+  );
+  const pass = ui.querySelector<HTMLElement>('.signin #a-pass');
+  if (pass)
+    pass.onkeydown = (e) => {
+      if (e.key !== 'Enter') return; // Enter presses the tab's main button
+      pass.blur(); // as a tap on the button does: the page may redraw, to show a wrong password
+      ui.querySelector<HTMLElement>(`.signin [data-auth="${authTab}"]`)?.click();
+    };
 }
 const notice = (t: string, ok: boolean) => {
   toast = t;
@@ -524,9 +544,12 @@ function render() {
     return;
   }
   waiting = false;
-  if (document.activeElement?.closest?.('.authform')) return; // do not wipe what is being typed
+  if (document.activeElement?.closest?.('.authform, .codebar')) return; // do not wipe what is being typed
   resetActs();
-  const ui = $('#ui');
+  const ui = $('#ui'),
+    typed = ['join', 'a-name', 'a-mail', 'a-pass'].map(
+      (id) => [id, (document.getElementById(id) as HTMLInputElement | null)?.value] as const,
+    ); // a redraw (a wrong password, a live update) keeps what was typed
   document.body.classList.toggle('caninstall', !!installKind()); // room at the foot of the page for the install button
   const keep = ui.querySelector<HTMLElement>('.homepage')?.scrollTop ?? 0; // picking a game or a live lobby update redraws the page: it keeps its place
   ui.innerHTML =
@@ -535,8 +558,21 @@ function render() {
     installHtml() +
     langHtml() +
     (toast ? `<div class="toast${toastInfo ? ' info' : ''}" role="status">${esc(toast)}</div>` : '');
+  for (const [id, v] of typed) {
+    const e = document.getElementById(id) as HTMLInputElement | null;
+    if (e && v) e.value = v;
+  }
   translateDom(ui);
   linkRules(ui);
+  {
+    const j = ui.querySelector<HTMLInputElement>('#join');
+    if (j)
+      j.onkeydown = (e) => {
+        if (e.key !== 'Enter') return; // Enter presses Join
+        j.blur(); // so the page may redraw, to say a code is wrong
+        joinByCode(j.value);
+      };
+  }
   {
     const h = ui.querySelector<HTMLElement>('.homepage');
     if (h) h.scrollTop = keep;
