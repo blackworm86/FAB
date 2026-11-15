@@ -110,6 +110,8 @@ Done and closed: tutorial rebuilt (three courses, Italian); `database.rules.json
 
 **15 November, late morning:** owner's issue log (`https://claude.ai/artifact/JTDbn21WgUp4GfidLzvfGq`) #3–#13 fixed; #1 (home page, mockup approved) and the code field of #2 being built by the online session; #14 (end of game: New game and Replay do not work) urgent with the interface session. The online session's full test found a rare regression from its own conflict fix (one screen can lag a step until the next change; the database stays right): fix being tested. Its audit found two things to fix before games with strangers (game data running as script on the other screen; a seated player opening the replay mid-game): next after the regression.
 
+**Database rules published by the owner on 15 November (afternoon):** the version with the replay record opening only on a real result (online audit fix 2). A first paste the same day was the previous version (the site was still rebuilding); the second, from the file on `main`, is the right one.
+
 ## Proposed priorities (15 November)
 
 1. **A full game of each volume by the owner** (desktop and phone), the real test after three days of fixes; the helpers only play narrow pieces.
