@@ -448,6 +448,19 @@ for (const game of GAMES) {
     check(await until(async () => (await dot(A.page)) === 'ok' && (await dot(B.page)) === 'ok', 30000), 'both dots are green again');
   }
 
+  /* game data cannot carry HTML to the other screen (audit): a tag written into the shared game arrives without its brackets */
+  {
+    const v = await look(B.page),
+      w = v.actor === v.me || v.actor === 'both' ? B : A,
+      o = w === A ? B : A;
+    await play(w.page, (E, g) => void g.log.push('<img src=x onerror="window.__pwned=1">'));
+    check(
+      (await until(() => o.page.evaluate(() => /img src=x/.test(JSON.stringify(window.__fab.settled().log))), 20000)) &&
+        (await o.page.evaluate(() => !/<img/.test(JSON.stringify(window.__fab.settled())) && !window.__pwned)),
+      'a tag written into the shared game reaches the other screen as plain text',
+    );
+  }
+
   /* a reload: the page builds the same game again from the database */
   const before = (await look(B.page)).same;
   await B.page.reload({ waitUntil: 'domcontentloaded' });

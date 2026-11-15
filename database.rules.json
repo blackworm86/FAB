@@ -104,7 +104,7 @@
           }
         },
         "journal": {
-          ".read": "auth != null && root.child('games').child($id).child('state/f/over').exists() && (root.child('games').child($id).child('members').child(auth.uid).exists() || root.child('admins').child(auth.uid).exists())",
+          ".read": "auth != null && root.child('games').child($id).child('state/f/over').isString() && root.child('games').child($id).child('state/f/over').val().beginsWith('\\\"') && root.child('games').child($id).child('state/f/over').val().length > 2 && (root.child('games').child($id).child('members').child(auth.uid).exists() || root.child('admins').child(auth.uid).exists())",
           "$part": {
             "$e": {
               ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && !data.exists() && newData.exists() && ($part === 'pub' ? (root.child('games').child($id).child('seats/german').val() === auth.uid || root.child('games').child($id).child('seats/allied').val() === auth.uid) : ($part === 'german' || $part === 'allied') && root.child('games').child($id).child('seats').child($part).val() === auth.uid)",

@@ -1,5 +1,6 @@
 import type { ChatMsg, Seats, Store, StateDoc, Account, Match } from './online';
 import { gameInfo } from './games';
+import { clean } from './store-clean';
 import {
   initSplit,
   rotateSalt,
@@ -157,7 +158,7 @@ export async function rtdbStore(table: string): Promise<Store | null> {
           }
           const v = s.val() as { rev?: number; by?: string; f?: Tree['f']; units?: Tree['units']; chits?: Tree['chits'] };
           lastTree = { f: v.f ?? {}, units: v.units ?? {}, chits: v.chits ?? {} };
-          next({ rev: v.rev ?? 0, json: JSON.stringify(fromTree(lastTree)), by: v.by });
+          next({ rev: v.rev ?? 0, json: JSON.stringify(clean(fromTree(lastTree))), by: v.by });
         },
         (e) => err(msg(e)),
       );
@@ -234,7 +235,7 @@ export async function rtdbStore(table: string): Promise<Store | null> {
     watchReveals: (next: (r: Reveals) => void) => {
       rt.onValue(
         G('reveals'),
-        (s) => next(dec(s.val())),
+        (s) => next(clean(dec(s.val()))),
         () => next({}),
       );
     },

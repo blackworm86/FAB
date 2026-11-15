@@ -180,6 +180,13 @@ describe('the replay journal (4.1): each seat records its own blocks; readable o
     await assertSucceeds(get(ref(user('bob'), `games/${G}/journal`)));
     await assertFails(get(ref(user('mallory'), `games/${G}/journal`)));
   });
+  it('a value that is not a result does not open it: a player cannot write "false" (both screens would go on playing) and read the other side\'s blocks', async () => {
+    for (const v of ['false', 'null', '0', '""']) {
+      await assertSucceeds(update(ref(user('alice'), `games/${G}/state`), { 'f/over': v, rev: 2, by: 'alice' }));
+      await assertFails(get(ref(user('alice'), `games/${G}/journal`)));
+      await assertFails(get(ref(user('alice'), `games/${G}/journal/allied`)));
+    }
+  });
   it('a player cannot hide "over" again after reading the journal (peek, then delete); an admin restarting the table can', async () => {
     await admin((d) => set(ref(d, `games/${G}/state/f/over`), '"German victory"'));
     await assertFails(remove(ref(user('alice'), `games/${G}/state/f/over`)));

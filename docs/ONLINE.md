@@ -76,6 +76,25 @@ What is not, in order of how much it matters:
 
 Not leaks: guests can read the shared game, the seats, reveals and chat (all public by the rules of the game); the push relay never sees game data.
 
+### The audit of 15 November 2026 (a reviewer helper; most points reproduced on the emulator)
+
+Between two honest friends the risk is low. Before games with strangers the first two mattered most; both are fixed.
+
+| # | What a cheat could do | State |
+|---|---|---|
+| 1 | Put a tag into game data (a block's type, an id) that ran as script on the other player's screen | **Fixed**: every text read from the database loses `<`, `>`, quotes (`web/src/store-clean.ts`); tested. More unescaped places in the page may exist: the cleaning is the guard |
+| 2 | Write "over = false" (both screens play on) and read the other side's blocks in the replay record | **Fixed in `database.rules.json`** (the record opens only on a real result text); tested. **The owner must publish the rules.** Writing a real result still opens it, but both screens then show the game as over |
+| 3 | Mark your face-down blocks "face-up" in the shared game, so that your own browser publishes them | Open. Fix: publish only where the rules show the block (area contested), in `engine/src/split.ts` with the rules session |
+| 4 | Switch the Rules check off: a write without the writer's id, or one marked "restore" | Open. Fix in the receiving code (`main.ts`): check every arrival that is not this browser's own last write; accept a restore only to a position held before |
+| 5 | Sit in an empty seat, read (or overwrite) that side's blocks, leave; a block keeps its place in the stored list all game | Open. Fix: a "table locked" flag set by the creator once both sit (a rule), and the joiner shuffles its blocks' places on sitting |
+| 6 | Delete or rewrite the other player's reveals; a false reveal of your block rewrites it on your screen | Open. Fix: the browser ignores reveals of its own blocks; reveals stored per seat (a rule) |
+| 7 | Break the other screen: an unknown volume name reloads it for ever; bad text stops the listener | Open. Fix: hold such a change back like any other bad change |
+| 8 | Any registered stranger fills the free database (large entries, no limits) until the site stops for all | Open. Fix: size limits in the rules; membership only when seated |
+| 9 | Guests read chat and account ids; a chat name can say "(admin)" | Open; question for the owner: should watchers read the chat? |
+| 10 | The push relay has no per-account limit | Open, low |
+
+Not fixable without a server: a seated player writing a false but plausible game (a wrong strength, a faked battle record).
+
 ## 6. Faults
 
 ### Found by the two-browser test and fixed (15 November 2026)
