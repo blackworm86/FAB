@@ -20,7 +20,7 @@ import { registerHooks, type Volume } from '../volumes';
 import { chit, other, quality, saAvailable, supplied, unitsIn, type Battle, type Game, type Side, type Unit } from '../game';
 import { afterDeploy, newGolanGame } from './golan-setup';
 export * from './golan-setup';
-import { NAF, nafakhStaff } from './golan-scenarios';
+import { NAF, nafakhStaff, nafakhStatus } from './golan-scenarios';
 export * from './golan-scenarios';
 import { afterMove, beforeMove, golanReach, interdictedBy, keepAssigned, stratStep } from './golan-moves';
 export * from './golan-moves';
@@ -228,6 +228,7 @@ export const specialActions = (g: Game, side: Side) => saAvailable(g, side);
 
 registerHooks('golan73', {
   vpAreas: golanVpAreas,
+  placeStatus: (g) => (isNafakh(g) ? nafakhStatus(g) : undefined),
   vpNote: (g) =>
     isNafakh(g)
       ? 'Battle for Nafakh (22.47): no VP; the score is the strength in Nafakh'

@@ -331,6 +331,8 @@ export function vpAreas(g: Game, side: Side): { id: number; pts: number; ok: boo
     .filter(({ a, pts }) => pts > 0 && g.control[a.id] === side)
     .map(({ a, pts }) => ({ id: a.id, pts, ok: inSupply(g, side, a.id), why: 'cut off' }));
 }
+/** Nuts! (24.37) and the Battle for Nafakh (22.47): the place that decides and who would win now; undefined in other scenarios. */
+export const placeStatus = (g: Game) => CUR.placeStatus?.(g);
 export const vpNote = (g: Game) => CUR.vpNote?.(g) ?? 'areas count only when in supply (19.1)';
 
 /** May this unit act now (move, dig in, take a reserve marker), as far as the volume's own limits go? */

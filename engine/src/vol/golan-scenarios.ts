@@ -2,6 +2,7 @@
 import setupsJson from '../../../data/golan73/setups.json';
 import { areas, edgeKey } from '../map';
 import { HERMON, NAF_NORTH, REAR, isAssembly } from '../golan/map';
+import type { PlaceStatus } from '../volumes';
 import { blocks, chit, contested, needAdmin, rngf, say, spendSA, unitsIn, type Game, type Side, type Unit } from '../game';
 import { asGarrison, isAlOwda, isNafakh, nameOf, need, regular, state, unit, vacant, WEST_OF_JORDAN } from './golan';
 
@@ -168,12 +169,31 @@ export const strengthIn = (g: Game, side: Side) =>
   unitsIn(g, 42, side)
     .filter(regular)
     .reduce((s, u) => s + u.str, 0);
+export function nafakhStatus(g: Game): PlaceStatus {
+  const area = 42,
+    held = g.control[area] ?? null,
+    c = contested(g, area),
+    steps = { syrian: strengthIn(g, 'syrian'), israeli: strengthIn(g, 'israeli') },
+    decisive = !c && !!held;
+  return {
+    area,
+    held,
+    contested: c,
+    steps,
+    keys: [],
+    keysHeld: [],
+    total: steps,
+    leader: decisive ? held! : steps.syrian > steps.israeli ? 'syrian' : 'israeli',
+    level: decisive ? 'Decisive' : 'Marginal',
+    turnsLeft: g.lastTurn - g.turn + 1,
+  };
+}
 export function nafakhResult(g: Game) {
-  const held = g.control[42],
-    clear = held && !contested(g, 42);
-  if (clear) return `${held === 'syrian' ? 'Syrian' : 'Israeli'} Decisive Victory: uncontested control of Nafakh (22.47)`;
-  const s = strengthIn(g, 'syrian'),
-    i = strengthIn(g, 'israeli');
+  const st = nafakhStatus(g);
+  if (st.level === 'Decisive')
+    return `${st.leader === 'syrian' ? 'Syrian' : 'Israeli'} Decisive Victory: uncontested control of Nafakh (22.47)`;
+  const s = st.steps.syrian!,
+    i = st.steps.israeli!;
   return `${s > i ? 'Syrian' : 'Israeli'} Marginal Victory: ${Math.max(s, i)} to ${Math.min(s, i)} strength points in Nafakh${s === i ? ', a tie goes to Israel' : ''} (22.47)`;
 }
 

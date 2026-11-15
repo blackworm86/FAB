@@ -3,7 +3,7 @@ import { areas, connection, allNeighbors, zoneOf } from '../map';
 import { moraleSn } from '../combat';
 import { reachable } from '../movement';
 import { isArty, isBattleAsset, ZONE, type Chit, type Side } from '../chits';
-import { CUR } from '../volumes';
+import { CUR, type PlaceStatus } from '../volumes';
 import { coldAreas, EDGE_INTRO } from './bulge-setup';
 import {
   airSup,
@@ -468,17 +468,38 @@ export function bulgeSupplyHook(g: Game, phase: string, when: string) {
 export const bulgeFinal = (g: Game, net: number) =>
   g.opts.scenario === 'intro' ? introResult(g) : g.opts.scenario === 'cold' ? coldResult(g) : finalResult(g, net);
 /** 24.37: uncontested control of Bastogne wins outright; otherwise strength points in Bastogne, the German losing 2 per key area he does not control. */
-export function introResult(g: Game) {
-  const b = 47,
-    c = contested(g, b);
-  if (!c && g.control[b]) return `${g.control[b] === 'german' ? 'German' : 'Allied'} Decisive Victory (uncontested Bastogne)`; // control decides, even with nobody left in the town
+export function introStatus(g: Game): PlaceStatus {
+  const area = 47,
+    held = g.control[area] ?? null,
+    c = contested(g, area),
+    keys = [39, 36, 48, 63, 64],
+    keysHeld = keys.filter((a) => g.control[a] === 'german');
   const pts = (s: Side) =>
-    unitsIn(g, b, s)
+    unitsIn(g, area, s)
       .filter((u) => !u.garrison)
       .reduce((t, u) => t + u.str, 0);
-  const ge = pts('german') - 2 * [39, 36, 48, 63, 64].filter((a) => g.control[a] !== 'german').length,
-    al = pts('allied');
-  return `${ge > al ? 'German' : 'Allied'} Marginal Victory (German ${ge}, Allied ${al})`;
+  const steps = { german: pts('german'), allied: pts('allied') },
+    total = { german: steps.german - 2 * (keys.length - keysHeld.length), allied: steps.allied };
+  const decisive = !c && !!held; // control decides, even with nobody left in the town
+  return {
+    area,
+    held,
+    contested: c,
+    steps,
+    keys,
+    keysHeld,
+    total,
+    leader: decisive ? held! : total.german > total.allied ? 'german' : 'allied',
+    level: decisive ? 'Decisive' : 'Marginal',
+    turnsLeft: g.lastTurn - g.turn + 1,
+  };
+}
+export function introResult(g: Game) {
+  const s = introStatus(g),
+    who = s.leader === 'german' ? 'German' : 'Allied';
+  return s.level === 'Decisive'
+    ? `${who} Decisive Victory (uncontested Bastogne)`
+    : `${who} Marginal Victory (German ${s.total.german}, Allied ${s.total.allied})`;
 }
 /** P.7 Cold Shoulder: German-controlled Zone 6 areas at the end of turn 9. */
 export function coldResult(g: Game) {
