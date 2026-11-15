@@ -330,7 +330,8 @@ export async function startOnline(
     if (sp) sp.reveals = r;
     rebuild();
   });
-  store.watchChat((m) => {
+  store.watchChat((raw) => {
+    const m = raw.map((x) => ({ ...x, side: seatSide(x.side) }));
     online.chat = m;
     onChat(m);
     onChange();
@@ -426,7 +427,7 @@ export async function sendChat(text: string) {
   const side = online.mySide(),
     t = text.trim().slice(0, 300);
   if (!store || (online.mode !== 'remote' && !DEV) || !side || !t) return 'Only the two players can write in the chat.';
-  return store.sendChat(side, t);
+  return store.sendChat(seatKey(side), t); // the database knows seats, not a volume's side names (two-browser test: chat was refused in Sicily and Golan)
 }
 export const setChatListener = (f: (m: ChatMsg[]) => void) => {
   onChat = f;
