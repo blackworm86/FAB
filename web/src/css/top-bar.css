@@ -416,3 +416,18 @@ body:has(#ui .c-table) .c-bar.t .vps {
     white-space: nowrap;
   }
 }
+/* narrow phones (360 px): tighter gaps and icon buttons, so the step name has room to be whole (playtest B1) */
+@media (max-width: 380px) {
+  .c-bar.t {
+    gap: 6px !important;
+  }
+  .c-bar.t .c-stat {
+    gap: 4px !important;
+  }
+  .c-bar.t > .ico,
+  .c-bar.t .c-stat > .ico {
+    min-width: 38px !important;
+    width: 38px !important;
+    padding: 4px 6px !important;
+  }
+}

@@ -152,6 +152,8 @@ export function render() {
     renderInner();
     translateDom($('#ui'));
     linkRules($('#ui'));
+    const stp = innerWidth <= 700 ? document.querySelector<HTMLElement>('#ui .phpill .stp') : null;
+    for (let f = 13; stp && f >= 10 && stp.scrollWidth > stp.clientWidth; f--) stp.style.fontSize = `${f}px`; // phone: a long step name (Italian COMBATTIMENTO) shrinks to fit its pill, never cut (playtest B1)
   } catch (e) {
     console.error(e);
     $('#ui').innerHTML =
