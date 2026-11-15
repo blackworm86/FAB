@@ -80,4 +80,18 @@ describe('referee-lite: checking what the other browser wrote', () => {
     expect(E.auditChange(g, next, 'allied').join()).toMatch(/Allied player changed the game while it was the German/);
     expect(E.auditChange(g, next, 'german')).toEqual([]);
   });
+  it('a block hidden again by its owner out of turn is no move, but a changed morale-check record is', () => {
+    const g = E.newGame(6);
+    g.phase = 'movement';
+    g.phasing = 'german';
+    const u = g.units.find((x) => x.side === 'allied' && x.area != null && !x.garrison)!;
+    g.checks = [{ who: u.name, sn: 5, die: 3, ok: true } as unknown as NonNullable<E.Game['checks']>[number]];
+    const hiddenAgain = JSON.parse(JSON.stringify(g).split(JSON.stringify(u.id)).join('"h0123"')) as E.Game;
+    Object.assign(hiddenAgain.units.find((x) => x.id === 'h0123')!, { name: 'Hidden block', str: 1, max: 1 });
+    hiddenAgain.checks![0].who = 'a hidden block';
+    expect(E.auditChange(g, hiddenAgain, 'allied')).toEqual([]);
+    const dice = structuredClone(g);
+    (dice.checks![0] as unknown as { die: number }).die = 9;
+    expect(E.auditChange(g, dice, 'allied').join()).toMatch(/Allied player changed the game/);
+  });
 });

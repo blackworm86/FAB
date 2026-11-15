@@ -304,7 +304,7 @@ export function auditChange(prev: Game, next: Game, writer: Side | null): string
       let j = JSON.stringify({
         ...g,
         log: [],
-        checks: [],
+        checks: g.checks?.map((c) => ({ ...c, who: '' })), // the unit's name is masked when its block is hidden; the dice stay compared
         revealed: null,
         units: g.units.map((u, i) => (hid(u) || hid(o.units[i]) ? { side: u.side, area: u.area } : u)),
       });

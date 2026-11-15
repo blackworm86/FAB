@@ -118,7 +118,9 @@ const look = (p) =>
       ownHidden: g.units.filter((u) => u.side === me && u.name === 'Hidden block').length,
       foeHidden: g.units.filter((u) => u.side !== me && u.name === 'Hidden block').length,
       /** my blocks the other side may not see now (also a block a battle showed, once the rules turn it face-down again): their real ids must be nowhere on the other screen or in the shared game */
-      secret: g.units.filter((u) => u.side === me && !E.visibleTo(g, u, foe)).map((u) => u.id),
+      secret: g.units
+        .filter((u) => u.side === me && !E.visibleTo(g, u, foe) && !(b && b.area === u.area && u.up === u.area))
+        .map((u) => u.id), // (blocks of an open battle stay shown until it closes)
       json: JSON.stringify(g),
       held: !!document.querySelector('.seatbar.audit'),
       same: JSON.stringify({
