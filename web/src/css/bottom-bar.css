@@ -191,3 +191,115 @@
 #ui .dock:has(.passstrip) .handtabs {
   visibility: hidden;
 }
+/* "How your assets are used" (interaction system, worked example a): one row per asset, one two-part switch, the same in every game */
+#ui .uses {
+  pointer-events: auto;
+  max-width: min(1100px, calc(100% - 16px));
+  margin: 0 auto;
+  padding: 8px 12px;
+  background: #0b0d08f2;
+  border: 1px solid var(--line);
+  max-height: 46vh;
+  overflow: auto;
+}
+#ui .useshd {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+#ui .useshd b {
+  font: 700 13px var(--sfd);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+#ui .useshd small {
+  color: var(--mute, #9a9a88);
+}
+#ui .userow {
+  display: grid;
+  grid-template-columns: 52px minmax(120px, 200px) 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+}
+#ui .usepic img,
+#ui .usepic .b3 {
+  width: 48px;
+  height: 48px;
+}
+#ui .usename {
+  display: grid;
+}
+#ui .usename b {
+  font: 700 14px var(--sfd);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+#ui .usename small {
+  color: var(--mute, #9a9a88);
+}
+#ui .useswitch {
+  display: flex;
+  border: 1px solid var(--line);
+}
+#ui .useswitch button {
+  flex: 1 1 0;
+  min-height: 48px;
+  padding: 6px 10px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  text-align: left;
+  background: #0b0d08;
+  color: var(--ink);
+  border: 0;
+  border-right: 1px solid var(--line);
+}
+#ui .useswitch button:last-child {
+  border-right: 0;
+}
+#ui .useswitch button b {
+  font: 700 12px var(--sfd);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+#ui .useswitch button small {
+  font-size: 11px;
+  color: var(--mute, #9a9a88);
+  line-height: 1.25;
+}
+#ui .useswitch button.on {
+  background: var(--gold);
+  color: #1a1608;
+}
+#ui .useswitch button.on small {
+  color: #3a2f12;
+}
+#ui .useswitch button:disabled {
+  opacity: 0.5;
+}
+@media (max-width: 700px) {
+  #ui .userow {
+    grid-template-columns: 48px 1fr;
+  }
+  #ui .useswitch {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 700px) {
+  #ui .uses {
+    max-height: 30vh;
+  }
+  #ui .handtabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+    max-width: calc(100% - 8px);
+  }
+  #ui .handtabs button {
+    flex: 0 0 auto;
+  }
+}

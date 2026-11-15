@@ -458,24 +458,7 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
       out.push(
         `<div class="volpanel"><b>${ctx.ico('warn')} Jamming (17.33)</b><span>${nm(def)}: each defending unit rolls, 5 or less disordered. Play your EW card for +2 to each roll, or roll without it.</span><div class="row">${ctx.btn('Roll without countermeasures', () => G.answerJamming(live(), b), 'primary', !ctx.mine(def))}</div></div>`,
       );
-    if (
-      b.attacker === 'syrian' &&
-      b.area < 100 &&
-      !G.isAssembly(b.area) &&
-      b.assets.syrian.some((id) => E.chit(g, id).kind === 'engineer')
-    ) {
-      const ditch = E.neighbors(b.area).filter(
-        (n) =>
-          n < 100 &&
-          E.connection(b.area, n)?.atDitch &&
-          !V.bridgedDitch.includes(E.edgeKey(b.area, n)) &&
-          works(g, (x) => G.setEngineerBridge(x, x.battle!, n)),
-      ); // only where the engine allows it (Israeli side of the Purple Line, markers left)
-      if (ditch.length)
-        out.push(
-          `<div class="volpanel"><b>${ctx.ico('engineer')} Engineer (14.51b)</b><span>Bridge the AT ditch instead of firing (if it survives both fire steps):</span><div class="row">${ditch.map((n) => ctx.btn(`towards ${esc(ctx.areaName(n))}`, () => G.setEngineerBridge(live(), b, B.engBridge === E.edgeKey(b.area, n) ? null : n), B.engBridge === E.edgeKey(b.area, n) ? 'on' : '', !ctx.mine('syrian'))).join('')}</div></div>`,
-        );
-    }
+    // the engineer bridging the ditch (14.51b): the battle hand's In battle tab (asset-uses.ts)
     for (const s of E.sidesOf(g))
       if (B.event[s]) out.push(`<div class="volpanel"><small>${nm(s)} event: ${esc(E.chit(g, B.event[s]!).name)}</small></div>`);
     const sw = ctx.mine('israeli') ? G.strongpointSwapOption(g) : null;
@@ -568,12 +551,6 @@ export function golanPanel(g: Game, ctx: PanelCtx): string {
     const chem = ctx.mine('syrian') ? G.chemicalOptions(g) : [],
       flank = ctx.mine('israeli') ? G.flankOptions(g) : [],
       zv = ctx.mine('israeli') ? G.zvikaOnMap(g) : undefined;
-    const dcs = ctx.mine('israeli') ? G.directSupportOptions(g) : [],
-      dcsOn = g.battle ? (G.battleState(g.battle).dcs ?? []) : [];
-    if (dcs.length)
-      out.push(
-        `<div class="volpanel"><b>${ctx.ico('next')} Direct combat support (optional 18.32)</b><span>An artillery asset may support instead of firing: +1 to your point unit for each.</span><div class="row">${dcs.map((id) => ctx.btn(`${esc(E.chit(g, id).name)}: ${dcsOn.includes(id) ? 'supporting' : 'firing'}`, () => G.setDirectSupport(live(), id, !dcsOn.includes(id)), dcsOn.includes(id) ? 'on' : '')).join('')}</div></div>`,
-      );
     if (chem.length)
       out.push(
         `<div class="volpanel"><b>${ctx.ico('warn')} Chemical warfare (optional)</b><span>Spend the reusable Special Action: one of your artillery fires +2 in this battle.${(G.state(g).chem ?? 0) ? ' Israel gains 1 VP for this use.' : ' The first use is free; each later one gives Israel 1 VP.'}</span><div class="row">${chem.map((id) => ctx.btn(esc(E.chit(g, id).name), () => G.playChemical(live(), id))).join('')}</div></div>`,
