@@ -84,6 +84,13 @@ export const localJournal = {
       return [];
     }
   },
+  clear(key: string) {
+    try {
+      localStorage.removeItem(`fab-journal:${key}`);
+    } catch {
+      /* storage off */
+    }
+  },
   add(key: string, pub: JPub, units: JUnits) {
     const j = this.read(key);
     if (pub.t === 1 && j.length && j.at(-1)!.pub.t > 1) j.length = 0; // a new game on the same table starts a new journal

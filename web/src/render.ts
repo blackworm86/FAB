@@ -15,7 +15,21 @@ import { clearDice } from './dice3d';
 import { linkRules } from './rules-link';
 import { LAB_SIDE, labStep } from './lab';
 import { $, areaName, P1, toWorld, TUT, VOL } from './page';
-import { g, save, selArea, selChit, selUnit, setG, setPreviewArea, setSelArea, setSelChit, setSelUnit, showReplay } from './game-state';
+import {
+  areaPick,
+  g,
+  save,
+  selArea,
+  selChit,
+  selUnit,
+  setAreaPick,
+  setG,
+  setPreviewArea,
+  setSelArea,
+  setSelChit,
+  setSelUnit,
+  showReplay,
+} from './game-state';
 import { canvas } from './scene';
 import { drawPieces } from './pieces';
 import { paintAreas, paintBoard, tint, viewRot, viewSide } from './map-paint';
@@ -188,6 +202,7 @@ export function render() {
 function renderInner() {
   if (document.activeElement?.closest?.('.authform')) return; // do not wipe what is being typed
   resetActs();
+  if (g.over && areaPick) setAreaPick(null); // the game is over: a map choice left open never hides the Result button (owner's issue #14)
   if (airPick && (g.battle?.stage !== 'setup' || g.chits.find((c) => c.id === airPick!.id)?.box !== 'available')) setAirPick(null); // the air card was placed or the battle moved on: its prompt goes (playtest 3, item 1)
   if (!g.battle || g.battle.stage !== 'setup') setRefusal('');
   canvas.style.display = inGame() ? '' : 'none';
@@ -215,7 +230,7 @@ function renderInner() {
     vpHtml = volPanel(),
     cardHtml = b ? battleTable() : dispatch(),
     picks =
-      chs.length || !allowed()
+      chs.length || !allowed() || g.over
         ? []
         : panelPicks(
             (!p || p.dis ? (panelFull.split('<div class="volpanel').find((x) => /class="[^"]*\bprimary\b/.test(x)) ?? '') : '') + // the panel's button only when the main one has nothing to do (playtest 3, item 7)
@@ -301,8 +316,8 @@ function renderInner() {
                 `${ico('plus')} New game`,
                 () => {
                   if (SANDBOX) {
+                    setEndHidden(true); // the end panel steps aside so the sandbox's start-again question shows (owner's issue #14)
                     SBU.sbReset({ ...g.opts });
-                    setEndHidden(false);
                   } else location.href = homeUrl();
                 },
                 'primary',
