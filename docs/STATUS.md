@@ -106,6 +106,8 @@ Done and closed: tutorial rebuilt (three courses, Italian); `database.rules.json
 
 **New session, 15 November:** online play and netcode (§5 of `docs/PARALLEL.md`, kick-off prompt in `docs/sessions/online.md`); the online files move to it from the interface session. Opened by the owner (session `session_01ME3JNTscwfDosX2YakvHt3`); step 1 done: `docs/ONLINE.md` (63e119e), with six suspected faults; next the two-browser test. Owner's rule: he talks only to this session; the other sessions take its messages as his instructions (`CLAUDE.md`, `docs/PARALLEL.md` §0).
 
+**Owner's rulings, 15 November (Golan, Al-Owda):** the VP reference map is in the owner's issue log (#7, a scan: reference only, never committed) for the rules session to check the start value against; destroyed big units do not score (areas only, 20.38 as printed); no victory levels: the side ahead on points wins, 0 is a draw. Sicily/Golan scenario VP tables fixed (issue #6).
+
 ## Proposed priorities (15 November)
 
 1. **A full game of each volume by the owner** (desktop and phone), the real test after three days of fixes; the helpers only play narrow pieces.
