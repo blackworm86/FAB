@@ -348,7 +348,7 @@ for (const game of GAMES) {
   /* battles: the second player attacks first (its first move was lost before edec14c), then they alternate */
   let ok = true,
     fought = 0;
-  for (let n = 0; n < BATTLES && ok && (n < 2 || !hitChoice || !retreats); n++) {
+  for (let n = 0; n < (process.env.BURSTS ? 0 : BATTLES) && ok && (n < 2 || !hitChoice || !retreats); n++) {
     const att = n % 2 ? A : B,
       def = att === A ? B : A,
       v = await look(att.page);
@@ -395,8 +395,9 @@ for (const game of GAMES) {
   }
   check(ok && fought >= 2, `${fought} battles fought to the end from both seats, the screens agreeing after every step`);
 
-  /* both players move at the same moment, several times in a row (a step both sides work in): every move of both must stay */
-  {
+  /* both players move at the same moment, several times in a row (a step both sides work in): every move of both must stay.  BURSTS=20: this check alone, that many times */
+  for (let round = 0; round < (Number(process.env.BURSTS) || 1); round++) {
+    for (const p of [A, B]) await p.page.evaluate(() => (window.__fabTrace = []));
     const v = await look(A.page),
       mover = v.actor === v.me || v.actor === 'both' ? A : B;
     await play(mover.page, (E, g) => {
@@ -450,7 +451,12 @@ for (const game of GAMES) {
         console.log(`       ${p.name}'s move ${i} of ${Object.keys(w).length} lost: ${id} should be in area ${a}, is in ${now}`);
     }
     const lost = (await kept(A.page, wa)) + (await kept(B.page, wb)),
-      n = Object.keys(wa).length + Object.keys(wb).length;
+      traces = lost ? await Promise.all([A, B].map((p) => p.page.evaluate(() => window.__fabTrace))) : [];
+    traces
+      .flatMap((t, i) => t.map(([at, m]) => [at, `${[A, B][i].name}: ${m}`]))
+      .sort((x, y) => x[0] - y[0])
+      .forEach(([at, m]) => console.log(`         ${at % 100000} ${m}`));
+    const n = Object.keys(wa).length + Object.keys(wb).length;
     check(
       agreed && n >= 4 && !lost,
       `both players move at the same moment: all ${n} moves stay on both screens${lost ? ` (${lost} lost)` : ''}`,
