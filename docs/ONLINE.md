@@ -90,7 +90,7 @@ Between two honest friends the risk is low. Before games with strangers the firs
 | 6 | Delete or rewrite the other player's reveals; a false reveal of your block rewrites it on your screen | Open. Fix: the browser ignores reveals of its own blocks; reveals stored per seat (a rule) |
 | 7 | Break the other screen: an unknown volume name reloads it for ever; bad text stops the listener | Open. Fix: hold such a change back like any other bad change |
 | 8 | Any registered stranger fills the free database (large entries, no limits) until the site stops for all | Open. Fix: size limits in the rules; membership only when seated |
-| 9 | Guests read chat and account ids; a chat name can say "(admin)" | Open; question for the owner: should watchers read the chat? |
+| 9 | Guests read chat and account ids; a chat name can say "(admin)" | Chat: **fixed**, the two players and admins only (owner's decision; rules published by him on 15 November). Open, low: seats and members' account ids are readable by any visitor; a chat name is free text |
 | 10 | The push relay has no per-account limit | Open, low |
 
 Not fixable without a server: a seated player writing a false but plausible game (a wrong strength, a faked battle record).
