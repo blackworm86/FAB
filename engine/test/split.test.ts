@@ -346,3 +346,21 @@ describe('withdrawing a reveal is not a move', () => {
     useGame('bulge');
   });
 });
+
+describe('a block the other seat put on the map', () => {
+  it('is written hidden again by its owner (the end of a reinforcement step places the blocks left in the tray)', () => {
+    const g = newGame(5);
+    g.phase = 'reinforcement';
+    const u = g.units.find((x) => x.side === 'allied' && x.area != null && !x.garrison)!,
+      seat = new SplitSeat('allied');
+    seat.priv = { salt: 'sa0', secrets: secretsOf(g, 'allied') };
+    const pub = JSON.parse(toPublic(g, 'allied', 'sa0', new Map())) as Game,
+      i = g.units.findIndex((x) => x.id === u.id);
+    expect(seat.exposed(pub)).toBe(false);
+    pub.units[i] = JSON.parse(JSON.stringify(u)); // the German browser's end of the step placed it, with its real name
+    expect(seat.exposed(pub)).toBe(true);
+    const out = JSON.parse(seat.save(seat.open(pub)).pub) as Game;
+    expect(out.units.some((x) => x.id === u.id)).toBe(false);
+    expect(seat.exposed(out)).toBe(false);
+  });
+});

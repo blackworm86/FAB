@@ -1,12 +1,13 @@
 // Two-browser online test: two accounts on the local Firebase emulators (never the real project) create and join a game of each volume,
-// the second player sits and moves, they fight battles from both seats, and after every step the two screens must agree and neither
-// may hold the other's hidden blocks. Run:  cd web && npm run online   (needs Java and `npm ci` in tools/rules-test; about two minutes).
-//   GAMES=bulge  one volume only.  SWAP=1  the creator on the phone.  SHOTS=<folder>  a picture of the invitation.  It starts and stops its own emulators and dev server (ports 9099, 9000, 5198).
+// the second player sits and moves, each seat plays the steps of a whole turn through the screen (online-turn.mjs: reinforcements, movement, battles, supply), they fight more battles from both seats, and after every step the two screens must agree and neither
+// may hold the other's hidden blocks. Run:  cd web && npm run online   (needs Java and `npm ci` in tools/rules-test; about 25 minutes for the three volumes).
+//   GAMES=bulge  one volume only.  HAND=n  battles of the turn played by hand (default 1).  TURN=only  just the turn part.  VERBOSE=1  every action.  SWAP=1  the creator on the phone.  SHOTS=<folder>  a picture of the invitation.  It starts and stops its own emulators and dev server (ports 9099, 9000, 5198).
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { mkdtempSync, copyFileSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { playTurn } from './online-turn.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..'),
   FIREBASE = join(ROOT, 'tools/rules-test/node_modules/.bin/firebase'),
@@ -147,7 +148,7 @@ const look = (p) =>
         toAct: E.actorOf(g),
         rolls: g.rolls,
         battle: b && { area: b.area, stage: b.stage, att: b.attacker, dice: b.rolls.map((r) => r.dice), pending: b.pending ?? null },
-        units: g.units.map((u) => [u.side, u.area ?? null, u.box ?? null]),
+        units: g.units.map((u) => [u.side, u.area ?? null, u.box ?? null, !!u.unsupplied]), // also the out-of-supply mark
         chits: g.chits.map((c) => [c.id, c.box, c.area ?? null]),
         control: g.control,
       }),
@@ -234,7 +235,15 @@ const stamp = Date.now();
 async function player(name, size) {
   const page = await (await browser.newContext({ ...size, reducedMotion: 'reduce' })).newPage(), // quick dice: the software 3D here is slow
     errors = [];
-  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('pageerror', (e) =>
+    errors.push(
+      `${e.message} [${where}] ${(e.stack ?? '')
+        .split('\n')
+        .slice(1, 4)
+        .map((x) => x.trim().replace(/\(.*\/(\w[^/]*)\)/, '($1)'))
+        .join(' < ')}`,
+    ),
+  );
   page.on('console', (m) => {
     if (m.type() === 'error' && !/favicon|Failed to load resource|permission_denied|ERR_INTERNET_DISCONNECTED/i.test(m.text()))
       errors.push(m.text());
@@ -264,11 +273,13 @@ const A = await player('Anna', process.env.SWAP ? PHONE : DESK), // one desktop,
 const keyA = await key(`anna${stamp}@fab.test`),
   keyB = await key(`bruno${stamp}@fab.test`),
   stranger = await key(`mallory${stamp}@fab.test`, true); // a third account with the link
-let hitChoice = 0,
+let where = 'sign-in',
+  hitChoice = 0,
   retreats = 0;
 
 for (const game of GAMES) {
   console.log(`\n${game}`);
+  where = game;
   /* Anna creates the game on the home page */
   await A.page.goto(BASE, { waitUntil: 'domcontentloaded' });
   await tap(A.page.locator(`button[aria-label^="${{ bulge: 'The Bulge', sicily: 'Sicily', golan73: 'Golan' }[game]}"]:visible`).first()); // the box on a desktop, its spine on a phone
@@ -403,6 +414,10 @@ for (const game of GAMES) {
     }
   }
   check((await look(A.page)).foeHidden > 0 && (await look(B.page)).foeHidden > 0, "each player sees the other's blocks face down");
+
+  /* the turn's steps, each seat on its own screen through the interface (online-turn.mjs): a whole turn, the battles its moves bring, and the next turn's reinforcements */
+  await playTurn({ A, B, game, settle, check, play, battleStep, sleep, until, seen: (x) => (x === 'choice' ? hitChoice++ : retreats++) });
+  if (process.env.TURN === 'only') continue; // while working on the turn part: without the checks below
 
   /* battles: the second player attacks first (its first move was lost before edec14c), then they alternate */
   let ok = true,
@@ -658,6 +673,7 @@ if (GAMES.length === 3) {
 /* hot-seat: two players on one screen, saved online under one account (owner's decision, 15 November 2026) */
 {
   console.log('\nhot-seat');
+  where = 'hot-seat';
   await A.page.goto(BASE, { waitUntil: 'domcontentloaded' });
   await tap(A.page.locator('button[aria-label^="The Bulge"]:visible').first());
   await tap(A.page.locator('[title="Start a new game"], [aria-label="Start a new game"]').first());

@@ -231,7 +231,7 @@ function rebuild() {
   const game = sp.open(g0);
   online.enemyAlias = sp.enemyAlias;
   onRemote(game);
-  if (sp.priv && sp.stale(game)) void push(game, false); // the other seat's move hid one of our revealed blocks: withdraw its reveal now, not at our next move
+  if (sp.priv && (sp.stale(game) || sp.exposed(g0))) void push(game, false); // the other seat's move hid one of our revealed blocks (withdraw its reveal now, not at our next move) or put one of ours on the map (hide it now)
 }
 const savedLater = () => {
   writing = false;
