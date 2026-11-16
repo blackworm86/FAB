@@ -139,6 +139,20 @@ function focusKey(el: Element | null) {
     label: el.getAttribute('aria-label') ?? '',
   };
 }
+/** Phone: a long step name (Italian COMBATTIMENTO) shrinks to fit its pill, never cut (playtest B1, design review 16 Nov). Run again
+ *  once the web fonts have loaded and on resize: measured with the fallback font it fitted, then the real one cut it. */
+function fitStep() {
+  const stp = innerWidth <= 700 ? document.querySelector<HTMLElement>('#ui .phpill .stp') : null;
+  if (!stp) return;
+  stp.style.fontSize = stp.style.letterSpacing = '';
+  for (let f = 13; f >= 9 && stp.scrollWidth > stp.clientWidth; f--) {
+    stp.style.fontSize = `${f}px`;
+    stp.style.letterSpacing = '0';
+  }
+}
+void document.fonts?.ready.then(fitStep);
+document.fonts?.addEventListener('loadingdone', fitStep);
+addEventListener('resize', fitStep);
 export function render() {
   if (pressing) {
     renderWaiting = true;
@@ -152,8 +166,8 @@ export function render() {
     renderInner();
     translateDom($('#ui'));
     linkRules($('#ui'));
-    const stp = innerWidth <= 700 ? document.querySelector<HTMLElement>('#ui .phpill .stp') : null;
-    for (let f = 13; stp && f >= 10 && stp.scrollWidth > stp.clientWidth; f--) stp.style.fontSize = `${f}px`; // phone: a long step name (Italian COMBATTIMENTO) shrinks to fit its pill, never cut (playtest B1)
+    fitStep();
+    if (g.battle) document.querySelectorAll<HTMLElement>('#ui .c-bar.b .bacts button').forEach((e) => (e.tabIndex = 1)); // keyboard: in a battle the bar's buttons come before the hand's cards (design review 16 Nov: 28-55 Tabs)
   } catch (e) {
     console.error(e);
     $('#ui').innerHTML =

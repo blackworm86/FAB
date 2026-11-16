@@ -571,3 +571,14 @@
     padding: 0 12px;
   }
 }
+/* phone hand: the card's (i) inside its bottom-left corner, 32 px, where the next card in the fan does not cover it (design review 16 Nov) */
+@media (max-width: 700px) {
+  #ui .card2 .cinfo {
+    left: 3px;
+    right: auto;
+    bottom: 3px;
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+}

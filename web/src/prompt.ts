@@ -138,7 +138,7 @@ export function prompt() {
     chip +
     verb(promptText()) +
     (run.length
-      ? ` <span class="runnote">Nothing to do in ${run.map((r) => `<i>${STEP_NAME[r.phase]}</i>`).join(', ')}: one press goes to <i>${STEP_NAME[run[0].to]}</i>.</span>`
+      ? ` <span class="runnote">${run.map((r) => `<i>${STEP_NAME[r.phase]}</i>`).join(run.length > 2 ? ', ' : ' and ')} ${run.length > 1 ? 'have' : 'has'} nothing for you: the red button goes straight on to <i>${STEP_NAME[run[0].to]}</i>.</span>` // plain words (design review 16 Nov: the old "Nothing to do in X, Y:" read garbled)
       : '')
   );
 }

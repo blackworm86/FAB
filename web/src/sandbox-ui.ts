@@ -1,4 +1,5 @@
 /** The admin sandbox's screen: tools panel, piece library, notes, hotseat cover. Moved out of main.ts; main hands over its state and helpers once (initSandboxUi). */
+import { LANG } from './i18n';
 import * as E from '../../engine/src';
 import * as SB from './sandbox';
 import { ico } from './icons';
@@ -192,7 +193,7 @@ export const closeSb = () => openSb(false);
 export const adminOn = () => SANDBOX || (online.hotseat && online.admin);
 /** The admin tools' only control on the playing screen: a wrench in the top bar (owner, 15 Nov: no floating button over the map). */
 export function adminBtn() {
-  return `<button class="ico admbtn ${st.sbOpen ? 'on' : ''}" data-ui="${reg(() => openSb(!st.sbOpen))}" title="Admin tools" aria-label="Admin tools" aria-pressed="${st.sbOpen}">${ico('gear')}<span class="bl">Admin</span></button>`;
+  return `<button class="ico admbtn ${st.sbOpen ? 'on' : ''}" data-ui="${reg(() => openSb(!st.sbOpen))}" title="Admin tools" aria-label="Admin tools" aria-pressed="${st.sbOpen}">${ico('gear')}<span class="bl notr">${LANG === 'it' ? 'Strumenti' : 'Admin'}</span></button>`; // its own word in Italian: "Amministrativa" is the Admin Phase (design review 16 Nov)
 }
 /** Which game and scenario the sandbox runs: another game reloads the page on that game's own sandbox table. */
 function sbHead() {
