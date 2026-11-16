@@ -511,16 +511,16 @@ export function canAct(u: E.Unit) {
   }
   return can || fwOk(u) || rsOk(u);
 }
-/** Units that can still act wear a lime halo on the ground (owner, 11 Nov: no marks floating over the pips). */
+/** Units that can still act wear an ivory halo on the ground (lime is only 'you can go there': design review 16 Nov) (owner, 11 Nov: no marks floating over the pips). */
 const halos = new THREE.Group();
 scene.add(halos);
 const haloMat = [
-  new THREE.MeshBasicMaterial({ color: 0xc8e86a, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide }),
-  new THREE.MeshBasicMaterial({ color: 0xc8e86a, transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide }),
+  new THREE.MeshBasicMaterial({ color: 0xfff1cc, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide }),
+  new THREE.MeshBasicMaterial({ color: 0xfff1cc, transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide }),
 ];
 /** A figure's 'can act' glow: a disc filling its circle; each spot is painted once (stencil), so overlapping discs make one even blob (owner, 14 Nov). */
 const glowMat = new THREE.MeshBasicMaterial({
-  color: 0xc8e86a,
+  color: 0xfff1cc,
   transparent: true,
   opacity: 0.9,
   depthWrite: false,

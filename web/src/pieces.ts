@@ -453,6 +453,22 @@ export function drawPieces() {
     });
   }
   if (g.battle) drawPointMarks(g.battle);
+  if (selUnit && !g.battle) {
+    for (const o of g.phase === 'strategic'
+      ? E.stratOptions(g, selUnit).map((area) => ({ area, mustStop: false }))
+      : E.moveOptions(g, selUnit))
+      markers.add(outlineRibbon(o.area, -0.22, 0.14, o.mustStop ? MAPC.stop : MAPC.reach)); // every area it can reach has an edge, not just a tint (design review 16 Nov)
+    const m = pieces.children.find((x) => x.userData.unit === selUnit);
+    if (m) {
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(1.15, 1.5, 40),
+        new THREE.MeshBasicMaterial({ color: 0xe7b04a, side: THREE.DoubleSide }),
+      );
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.set(m.position.x, 0.09, m.position.z);
+      markers.add(ring);
+    } // the selected block: its own brass ring
+  }
   if (!g.battle && (g.phase === 'combat' || g.phase === 'btCombat')) {
     const must = new Set(E.mustFight(g)); // each battle area gets its own edge, so neighbouring battles never merge into one patch
     for (const id of fightable())

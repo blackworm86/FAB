@@ -62,7 +62,7 @@ function pieceKey(): [string, string][] {
     ],
     [
       '<svg viewBox="0 0 26 22" width="26" height="22" aria-hidden="true"><circle cx="13" cy="11" r="8" fill="none" stroke="#c8e86a" stroke-width="2.6"/><circle cx="13" cy="11" r="10.4" fill="none" stroke="#c8e86a66" stroke-width="1.6"/></svg>',
-      'Lime halo: can still move, build field works or go into reserve this step (Skip in its card sets it aside)',
+      'Ivory halo: can still move, build field works or go into reserve this step (Skip in its card sets it aside)',
     ],
     [
       '<svg viewBox="0 0 26 22" width="26" height="22" aria-hidden="true"><rect x="3" y="3" width="20" height="16" fill="none" stroke="#e7b04a" stroke-width="4"/></svg>',
