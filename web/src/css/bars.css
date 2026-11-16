@@ -250,6 +250,10 @@
   .feed .fl2 {
     font-size: 11.5px;
     padding: 3px 8px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2; /* at most two short lines that fade, ending in … never a card over the map (design review 16 Nov; owner, 15 Nov) */
   }
 }
 .rdet {
@@ -423,5 +427,46 @@
     min-height: 36px;
     padding: 4px 12px;
     font-size: 13px;
+  }
+}
+/* phone: the move cost is a small plain number inside its green area, no pill; brass = must stop, a drop = fuel, ! = out of supply there (owner, 16 Nov) */
+@media (max-width: 700px) {
+  #badges .bdg.ok,
+  #badges .bdg.stop,
+  #badges .bdg.fuel,
+  #badges .bdg.ok.nosup,
+  #badges .bdg.nosup {
+    min-width: 0;
+    padding: 0 2px;
+    border: 0 !important;
+    border-radius: 0;
+    box-shadow: none;
+    background: none !important;
+    font-size: 17px;
+    letter-spacing: 0;
+    line-height: 1;
+    opacity: 1;
+  }
+  #badges .bdg.ok {
+    color: #14210a !important;
+    text-shadow:
+      0 0 2px #f1f8d4,
+      0 0 4px #f1f8d4,
+      0 0 6px #f1f8d4;
+  }
+  #badges .bdg.stop,
+  #badges .bdg.fuel {
+    color: #5a3600 !important;
+    text-shadow:
+      0 0 2px #ffe9b0,
+      0 0 4px #ffe9b0,
+      0 0 6px #ffe9b0;
+  }
+  #badges .bdg.nosup {
+    color: #8c1d0e !important;
+    text-shadow:
+      0 0 2px #fff,
+      0 0 4px #fff,
+      0 0 6px #fff;
   }
 }

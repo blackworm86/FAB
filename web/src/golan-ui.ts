@@ -371,6 +371,7 @@ export interface PanelCtx {
   /** The game as it is now (a remote write may have replaced the one the panel was drawn for). */ get: () => Game;
   mine: (s: E.Side) => boolean;
   face: (u: E.Unit) => string;
+  chit: (c: E.Chit) => string;
   pickArea: (label: string, areas: number[], run: (a: number) => void) => void;
   areaName: (a: number) => string;
   ico: (k: string) => string;

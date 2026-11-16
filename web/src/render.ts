@@ -139,6 +139,20 @@ function focusKey(el: Element | null) {
     label: el.getAttribute('aria-label') ?? '',
   };
 }
+/** Phone: a long step name (Italian COMBATTIMENTO) shrinks to fit its pill, never cut (playtest B1, design review 16 Nov). Run again
+ *  once the web fonts have loaded and on resize: measured with the fallback font it fitted, then the real one cut it. */
+function fitStep() {
+  const stp = innerWidth <= 700 ? document.querySelector<HTMLElement>('#ui .phpill .stp') : null;
+  if (!stp) return;
+  stp.style.fontSize = stp.style.letterSpacing = '';
+  for (let f = 13; f >= 9 && stp.scrollWidth > stp.clientWidth; f--) {
+    stp.style.fontSize = `${f}px`;
+    stp.style.letterSpacing = '0';
+  }
+}
+void document.fonts?.ready.then(fitStep);
+document.fonts?.addEventListener('loadingdone', fitStep);
+addEventListener('resize', fitStep);
 export function render() {
   if (pressing) {
     renderWaiting = true;
@@ -152,8 +166,8 @@ export function render() {
     renderInner();
     translateDom($('#ui'));
     linkRules($('#ui'));
-    const stp = innerWidth <= 700 ? document.querySelector<HTMLElement>('#ui .phpill .stp') : null;
-    for (let f = 13; stp && f >= 10 && stp.scrollWidth > stp.clientWidth; f--) stp.style.fontSize = `${f}px`; // phone: a long step name (Italian COMBATTIMENTO) shrinks to fit its pill, never cut (playtest B1)
+    fitStep();
+    if (g.battle) document.querySelectorAll<HTMLElement>('#ui .c-bar.b .bacts button').forEach((e) => (e.tabIndex = 1)); // keyboard: in a battle the bar's buttons come before the hand's cards (design review 16 Nov: 28-55 Tabs)
   } catch (e) {
     console.error(e);
     $('#ui').innerHTML =
@@ -673,7 +687,8 @@ document.addEventListener(
 );
 let playKey: string | null = null,
   chitFramed = '',
-  retreatFramed = '';
+  retreatFramed = '',
+  selFramed: string | null = null;
 export let lastFight: number | null = null;
 export const setLastFight = <T extends typeof lastFight>(v: T): T => ((lastFight = v), v);
 export function refresh() {
@@ -780,6 +795,15 @@ export function refresh() {
         setTimeout(() => showAreas(ids), 700); // after the battle view lets go: the block and every area it may retreat to, in view (owner, 14 Nov)
       }
       retreatFramed = rk;
+    }
+  }
+  if (selUnit !== selFramed) {
+    selFramed = selUnit;
+    const u = selUnit && !g.battle && innerWidth < 700 ? g.units.find((x) => x.id === selUnit) : null;
+    if (u?.area != null) {
+      const to = g.phase === 'strategic' ? [] : E.moveOptions(g, u.id).map((o) => o.area),
+        ids = [u.area, ...(to.length <= 10 ? to : [])]; // many destinations (Sicily's open roads): the block only, rather than the whole island at a glance
+      setTimeout(() => showAreas(ids), 60); // phone: once the block card is drawn, the block and its destinations in view above it (design review 16 Nov)
     }
   }
   if (tint === 'control') {

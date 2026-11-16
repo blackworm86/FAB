@@ -118,6 +118,17 @@ export function openingTarget() {
 }
 /** The opening view: the whole map, or a scenario's own sheet (its play area) framed from above. */
 export function homeGoal() {
+  const phone = innerWidth < 700,
+    held = MAP.areas.filter((a) => (!g.inPlay || g.inPlay.includes(a.id)) && g.units.some((u) => u.area === a.id));
+  if (phone && held.length >= 3) {
+    const ps = held.flatMap((a) => a.polygon.map(([x, y]) => toWorld(x, y))),
+      x0 = Math.min(...ps.map((p) => p.x)),
+      x1 = Math.max(...ps.map((p) => p.x)),
+      z0 = Math.min(...ps.map((p) => p.z)),
+      z1 = Math.max(...ps.map((p) => p.z)),
+      xc = (x0 + x1) / 2;
+    return fit([new THREE.Vector3(xc, 0, z0), new THREE.Vector3(xc, 0, z1)], (z1 - z0) * 1.2, 1.0, (d) => Math.min(90, Math.max(7, d)));
+  } // a phone opens on where the pieces are, filling the screen top to bottom (sides can be panned): no empty band, no labels piled up (design review 16 Nov)
   const ids = [
     ...MAP.areas.filter((a) => !g.inPlay || g.inPlay.includes(a.id)).flatMap((a) => a.polygon.map(([x, y]) => toWorld(x, y))),
     ...(g.inPlay ? [] : Object.values(VOL.art.holdBoxes ?? {}).flatMap(([x, y, w, h]) => [toWorld(x, y), toWorld(x + w, y + h)])),

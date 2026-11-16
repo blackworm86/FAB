@@ -1,6 +1,6 @@
 # figures · 14 Nov 2026
 Doing: nothing in hand; fixed issue #4 (pips under disc fills) on 15 Nov.
-Next: only what the owner asks (figures stay opt-in: blocks are the default look, View > Units > Figures).
+Next (LATER, owner 16 Nov, not started): size the figures automatically from each volume's map (fit the areas and stacks: never over an area edge or over each other, at every zoom) and remove the Small/Medium/Large/Huge option. Start with a short proposal and a mockup to the project-management session.
 Waiting for the owner: nothing.
 Last checked: web tests (77) and browser smoke test passed for all three volumes, 15 Nov 2026.
 Files in hand: none.

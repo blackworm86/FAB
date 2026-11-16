@@ -396,7 +396,7 @@ body:has(#ui .c-table) .c-bar.t .vps {
     container-type: inline-size; /* not on the phone: it would shrink the chip to nothing */
   }
 }
-@container (max-width: 600px) {
+@container (max-width: 380px) {
   .vps.place .k {
     display: none;
   }
@@ -430,4 +430,9 @@ body:has(#ui .c-table) .c-bar.t .vps {
     width: 38px !important;
     padding: 4px 6px !important;
   }
+}
+/* the score in words (design review 16 Nov): written in normal case so it translates, shown in capitals like the rest of the bar */
+.vps .vlab.net,
+.vps .vlab.nets {
+  text-transform: uppercase;
 }

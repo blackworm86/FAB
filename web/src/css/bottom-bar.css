@@ -533,3 +533,96 @@
     display: none !important;
   }
 }
+/* phone block card in one row (design review 16 Nov, problem 2): name, pips and the buttons; the destinations line, supply line and
+   rule text stay on desktop (the bar and the map already say them); the camera keeps the block and its destinations above it */
+@media (max-width: 700px) {
+  #ui .c-dispatch:has(> .pipsrow) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    padding: 6px 10px !important;
+    max-height: none !important;
+  }
+  #ui .c-dispatch:has(> .pipsrow) > h3 {
+    margin: 0 !important;
+    font-size: 16px !important;
+  }
+  #ui .c-dispatch:has(> .pipsrow) > .pipsrow {
+    margin: 0;
+  }
+  #ui .c-dispatch:has(> .pipsrow) > .pipsrow .linkbtn,
+  #ui .c-dispatch:has(> .pipsrow) > .rdet,
+  #ui .c-dispatch:has(> .pipsrow) > .sup,
+  #ui .c-dispatch:has(> .pipsrow) > p.hint.gx {
+    display: none;
+  }
+  #ui .c-dispatch:has(> .pipsrow) > .row {
+    flex: 1 0 100%;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    margin: 0;
+    overflow-x: auto;
+  }
+  #ui .c-dispatch:has(> .pipsrow) > .row > button {
+    flex: 0 0 auto;
+    min-height: 40px;
+    padding: 0 12px;
+  }
+}
+/* phone hand: the card's (i) small on its left edge under the "S", clear of the symbol and the name and never under the next card
+   (it overlaps a card's right side); an invisible 44 px tap area around it (design review 16 Nov) */
+@media (max-width: 700px) {
+  #ui .card2 .cinfo {
+    left: 1px;
+    right: auto;
+    top: 24px;
+    bottom: auto;
+    width: 22px;
+    height: 22px;
+    font-size: 12px;
+  }
+  #ui .card2 .cinfo::before {
+    content: '';
+    position: absolute;
+    inset: -11px;
+  }
+}
+/* a pick list inside a volume panel (Sicily's Fading Italian Morale): scrolls within a share of the screen, never over the hand and bar */
+#ui .volpanel .lossrows {
+  max-height: 30vh;
+  overflow-y: auto;
+}
+@media (max-width: 700px) {
+  #ui .volpanel .lossrows {
+    max-height: 22vh;
+  }
+  #ui .volpanel .lossrow {
+    min-height: 52px;
+  }
+}
+@media (max-width: 700px) {
+  #ui .dock:has(.volpanel.pick) .c-hand,
+  #ui .dock:has(.volpanel.pick) .handtabs,
+  #ui .dock:has(.volpanel.pick) .handtab {
+    display: none;
+  }
+}
+#ui .volpanel .lossn:empty {
+  display: none;
+}
+/* the pick list scrolls on its own: its tray is opaque, with no fade and no "more" mark over a row (PM check, 16 Nov) */
+#ui .dock > .volstack:has(.volpanel.pick) {
+  background: #0b0d08;
+  -webkit-mask-image: none;
+  mask-image: none;
+  overflow: visible;
+  max-height: none;
+}
+#ui .dock > .volstack:has(.volpanel.pick)::after {
+  display: none;
+}
+#ui .volpanel.pick {
+  background: #0b0d08;
+}

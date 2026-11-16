@@ -21,7 +21,7 @@ import { canAct, skipNow, skipped } from './map-marks';
 import { rollView } from './rolls';
 import { COARSE, gx } from './prompt';
 import { recoverSel } from './dock';
-import { pieceBtn, unitPic } from './pieces-window';
+import { chitPic, pieceBtn, unitPic } from './pieces-window';
 import { legendOpen, legendShownAt, refresh, setLegendOpen, setLegendShownAt, showAreas } from './main';
 
 /** What the volume's own prompts may use: buttons, who is mine, an area pick on the map. */
@@ -31,6 +31,7 @@ export const panelCtx = (): PanelCtx => ({
   ubtn,
   mine,
   face: (u) => unitPic(u),
+  chit: (c) => chitPic(c),
   areaName,
   ico,
   pickArea: (label, areas, run) => {

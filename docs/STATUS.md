@@ -124,6 +124,8 @@ Done and closed: tutorial rebuilt (three courses, Italian); `database.rules.json
 
 **Design review re-scored, 16 November:** 27/40 (was 26), `docs/design-review-2026-11-16/README.md`. Solved: who acts, choices in the bar. Worst now: destinations of a selected block not visible (The Bulge), the phone map crushed, the hit choice still floating.
 
+**16 November, owner:** database rules with the online audit fixes published (findings 4, 7 fixed; 5, 6, 8, 10 narrowed). 3D figures stay in the game for players. Later task (figures session, not started): replace the Small / Medium / Large / Huge size option with figures sized automatically to the map (to fit the areas and stacks of each volume and zoom).
+
 ## Proposed priorities (15 November)
 
 1. **A full game of each volume by the owner** (desktop and phone), the real test after three days of fixes; the helpers only play narrow pieces.

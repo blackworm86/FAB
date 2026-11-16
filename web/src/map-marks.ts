@@ -40,6 +40,7 @@ export function syncAreaTags() {
   const layer = $('#tags');
   layer.innerHTML = '';
   tagEls.clear();
+  tagW.clear();
   layer.className = labelMode;
   if (labelMode === 'off') return;
   for (const a of MAP.areas) {
@@ -105,6 +106,9 @@ function placeAreaTags() {
       const p = pieceScreen(u.id);
       if (p) under.set(u.area, Math.max(under.get(u.area) ?? -1e9, p.y - r.top + p.rad * 0.8));
     }
+  const tagShown: { id: number; d: HTMLElement; px: number; py: number }[] = [],
+    thin = innerWidth < 700 && tagPpu < TAG_NEAR, // phone, zoomed out: labels that would sit on another one step aside (design review 16 Nov)
+    shown: { id: number; d: HTMLElement; px: number; py: number; k: number }[] = [];
   for (const [id, d] of tagEls) {
     const c = center(id);
     v.set(c.x, show3d() ? REL!.h(c.x, c.z) : 0, c.z).project(cam);
@@ -118,8 +122,28 @@ function placeAreaTags() {
     d.style.display = v.z < 1 || pin ? '' : 'none'; // every area keeps its label at every tilt and zoom (owner's issue #15)
     d.style.transform = `translate(${px.toFixed(1)}px, ${py.toFixed(1)}px) translate(-50%, -50%)`;
     d.classList.toggle('hov', hov);
+    if (d.style.display === '') tagShown.push({ id, d, px, py });
+    if (thin && d.style.display === '') shown.push({ id, d, px, py, k: hov || pin ? 3 : by != null ? 2 : 1 });
+  }
+  if (innerWidth < 700 && badgeBoxes.length)
+    for (const t of tagShown) {
+      const w = tagW.get(t.id) ?? t.d.offsetWidth ?? 80,
+        q = { x0: t.px - w / 2, x1: t.px + w / 2, y0: t.py - 11, y1: t.py + 11 };
+      if (badgeBoxes.some((o) => q.x0 < o.x1 && q.x1 > o.x0 && q.y0 < o.y1 && q.y1 > o.y0)) t.d.style.display = 'none';
+    } // phone: a label under a move badge steps aside (the badge is what matters while a block is selected)
+  if (thin) {
+    const kept: { x0: number; x1: number; y0: number; y1: number }[] = [];
+    for (const t of shown.sort((a, b) => b.k - a.k)) {
+      let w = tagW.get(t.id);
+      if (w == null) tagW.set(t.id, (w = t.d.offsetWidth || 80)); // measured once: a label's width does not change while it is shown
+      const q = { x0: t.px - w / 2, x1: t.px + w / 2, y0: t.py - 11, y1: t.py + 11 };
+      if (t.k < 3 && kept.some((o) => q.x0 < o.x1 && q.x1 > o.x0 && q.y0 < o.y1 && q.y1 > o.y0)) t.d.style.display = 'none';
+      else kept.push(q);
+    }
   }
 }
+const tagW = new Map<number, number>();
+let badgeBoxes: { x0: number; x1: number; y0: number; y1: number }[] = [];
 canvas.addEventListener('pointermove', (e) => {
   if (labelMode === 'off' || e.buttons) return;
   const a = pick(e).area ?? null;
@@ -366,30 +390,7 @@ export function decisionBubble(): string {
       .filter((x) => x.ok)
       .map((x, i) => `<i class="lossnum" data-pc="${x.id}">${i + 1}</i>`)
       .join(''); // losses: the list above the bar; the same numbers on the map, no bubble (interaction system)
-  if (!b || rollView || !['attChoice', 'defChoice'].includes(b.stage)) return '';
-  const who = b.stage === 'loss' && b.loss ? b.loss.side : b.stage === 'defChoice' ? other(b.attacker) : b.attacker;
-  const tg =
-    b.stage === 'loss'
-      ? E.lossOptions(g, b)
-      : b.stage === 'attFirst'
-        ? [b.attPoint, ...b.assets[b.attacker].filter((x) => E.isBattleAsset(E.chit(g, x)))]
-        : E.unitsIn(g, b.area, who)
-            .map((u) => u.id)
-            .concat(b.assets[who].filter((x) => E.isBattleAsset(E.chit(g, x))));
-  const at = `data-area="${b.area}" data-tg="${tg.join(',')}"`; // placed off the area by placeBubbles, with a line to each block it is about
-  if (!allowed()) return `<div class="mapbubble wait" ${at}><b>${nm(who)} decides…</b></div>`;
-  if (b.stage === 'loss') {
-    const n = b.loss?.left ?? 0;
-    return `<div class="mapbubble" ${at}><b class="hits" title="${n} step loss${n > 1 ? 'es' : ''} to place">${n}<small>loss${n > 1 ? 'es' : ''}</small></b><span>Tap a glowing block or asset to take the next one</span><div class="row">${btn(`${ico('check')}<span>Suggested</span>`, () => E.autoLosses(g, g.battle!), '', false, 'Place the rest in the suggested order: battle assets first, then the point unit, then the weakest block')}</div></div>`;
-  }
-  if (b.stage === 'attFirst')
-    return `<div class="mapbubble" ${at}><b>${b.pending} hit${b.pending > 1 ? 's' : ''}</b><span>Tap the point unit or an asset to take the first loss</span></div>`;
-  const hint = '<span class="choosebelow">Choose in the bar below ↓</span>'; // the choices are in the bar, under the thumb (design review, problem 2)
-  if (b.stage === 'attChoice')
-    return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b><span class="fwnote">${b.pending + 1} hits rolled, 1 already taken: ${b.pending} left</span>${hint}</div>`;
-  if (b.stage !== 'defChoice') return '';
-  const fw = g.log.slice(-4).some((l) => / field works absorb 1 hit$/.test(l)); // the ledger shows the hits rolled; field works took one before the choice
-  return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b>${fw ? `<span class="fwnote">${b.pending + 1} rolled − 1 absorbed by field works</span>` : ''}${hint}</div>`;
+  return ''; // the hit choice: the count once in the report, the choices in the bar, no box on the map (design review 16 Nov, problem 3)
 }
 /** A retreat destination by name: an area, or the sea (Sicily 14.28). */
 export const retName = (a: number) => (a === E.SEA ? 'sea' : areaName(a));
@@ -720,7 +721,17 @@ export function placeBadges() {
   placeBubbles();
   const r = canvas.getBoundingClientRect(),
     v = new THREE.Vector3();
-  const dockBottom = (document.querySelector('#ui .mapdock')?.getBoundingClientRect().bottom ?? r.top) - r.top; // the Layer bar and map tools: move badges stay below them
+  badgeBoxes = [];
+  const pieceBoxes: { x0: number; x1: number; y0: number; y1: number }[] = [];
+  if (selUnit && innerWidth < 700)
+    for (const u of g.units) {
+      const ps = pieceScreen(u.id);
+      if (ps)
+        pieceBoxes.push({ x0: ps.x - r.left - ps.rad, x1: ps.x - r.left + ps.rad, y0: ps.y - r.top - ps.rad, y1: ps.y - r.top + ps.rad });
+    } // every block on the screen: a number never sits on one
+  const dockBottom = (document.querySelector('#ui .mapdock')?.getBoundingClientRect().bottom ?? r.top) - r.top, // the Layer bar and map tools: move badges stay below them
+    cardTop = innerWidth < 700 ? (document.querySelector('#ui .c-dispatch')?.getBoundingClientRect().top ?? r.bottom) - r.top : r.height, // and, on the phone, above the block card
+    placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
   for (const [k, d] of badgeEls) {
     const id = +k.replace(/^[LS]/, ''),
       p = d.classList.contains('lab')
@@ -738,10 +749,83 @@ export function placeBadges() {
       hw = d.offsetWidth / 2 + 6,
       hh = d.offsetHeight / 2 + 6,
       out = sx < hw || sx > r.width - hw || sy < hh || sy > r.height - hh;
-    if (keep) {
-      const top = Math.max(hh, dockBottom + hh);
+    if (keep && innerWidth < 700) {
+      // phone: a plain number inside its own area, under the area's pieces like the labels, never on a block or on another number; an area off the screen shows its number when the player pans to it (owner, 16 Nov)
+      let by = sy - 12;
+      for (const u of g.units)
+        if (u.area === id) {
+          const ps = pieceScreen(u.id);
+          if (ps) by = Math.max(by, ps.y - r.top + ps.rad * 0.8 + 38);
+        }
+      sy = by;
+      const dr = document.querySelector('#ui .mapdock')?.getBoundingClientRect(),
+        w = hw - 3,
+        h = hh - 3,
+        top = hh + 4,
+        bot = cardTop - hh - 4,
+        hit = (x: number, y: number) =>
+          badgeBoxes.some((o) => x - w < o.x1 && x + w > o.x0 && y - h < o.y1 && y + h > o.y0) ||
+          pieceBoxes.some((o) => x - w < o.x1 && x + w > o.x0 && y - h < o.y1 && y + h > o.y0);
+      let ok = !out && sx - hw >= 0 && sx + hw <= r.width;
+      if (ok) {
+        const y0 = sy,
+          x0 = sx;
+        ok = false;
+        for (const [dx, dy] of [
+          [0, 0],
+          [0, 2 * h],
+          [2 * w, 0],
+          [-2 * w, 0],
+          [0, 4 * h],
+          [2 * w, 2 * h],
+          [-2 * w, 2 * h],
+        ])
+          if (!hit(x0 + dx, y0 + dy)) {
+            sx = x0 + dx;
+            sy = y0 + dy;
+            ok = true;
+            break;
+          }
+      }
+      if (!ok || sy < top || sy > bot || (dr && sx - hw < dr.right - r.left && sy - hh < dockBottom)) {
+        d.style.display = 'none';
+        continue;
+      }
+      badgeBoxes.push({ x0: sx - w, x1: sx + w, y0: sy - h, y1: sy + h });
+      d.classList.remove('edge');
+    } else if (keep) {
+      const top = Math.max(hh, dockBottom + hh),
+        bot = Math.min(r.height, cardTop) - hh;
       sx = Math.min(r.width - hw, Math.max(hw, sx));
-      sy = Math.min(r.height - hh, Math.max(top, sy));
+      sy = Math.min(bot, Math.max(top, sy));
+      const w = hw - 4,
+        h = hh - 4,
+        hit = (x: number, y: number) => placed.some((o) => x - w < o.x1 && x + w > o.x0 && y - h < o.y1 && y + h > o.y0),
+        fits = (x: number, y: number) => y >= top && y <= bot && x >= hw && x <= r.width - hw && !hit(x, y);
+      let free = fits(sx, sy);
+      for (const [ex, ey] of [
+        [0, 1],
+        [0, -1],
+        [1, 0],
+        [-1, 0],
+        [0, 2],
+        [0, -2],
+        [1, 1],
+        [-1, 1],
+        [1, -1],
+        [-1, -1],
+      ])
+        if (!free && fits(sx + ex * 2 * w, sy + ey * 2 * h)) {
+          sx += ex * 2 * w;
+          sy += ey * 2 * h;
+          free = true;
+        } // neighbouring areas' badges sit side by side instead of piling up (design review 16 Nov, phone)
+      if (!free && innerWidth < 700) {
+        d.style.display = 'none';
+        continue;
+      } // phone: a destination with no room left for its badge is not drawn (its area is still green): badges never overlap
+      placed.push({ x0: sx - w, x1: sx + w, y0: sy - h, y1: sy + h });
+      badgeBoxes.push({ x0: sx - hw, x1: sx + hw, y0: sy - hh, y1: sy + hh });
       d.classList.toggle('edge', out || sy !== sy0);
     } // a destination off screen keeps its tag at the edge, so no "no supply" warning is missed
     d.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -50%)`;
