@@ -122,6 +122,8 @@ Done and closed: tutorial rebuilt (three courses, Italian); `database.rules.json
 
 **16 November, morning:** owner's issue log: all 21 fixed. Open: online audit findings 4–8 and 10 (5 low-risk gaps + push relay limit; online session, restarted), Sicily and Golan whole turns online untested, full games to the end not played since the fixes, design-review re-score pending; on hold: computer opponent, lessons, figures as default.
 
+**Design review re-scored, 16 November:** 27/40 (was 26), `docs/design-review-2026-11-16/README.md`. Solved: who acts, choices in the bar. Worst now: destinations of a selected block not visible (The Bulge), the phone map crushed, the hit choice still floating.
+
 ## Proposed priorities (15 November)
 
 1. **A full game of each volume by the owner** (desktop and phone), the real test after three days of fixes; the helpers only play narrow pieces.

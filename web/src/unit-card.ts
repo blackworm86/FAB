@@ -152,7 +152,9 @@ export function dispatch() {
         'primary',
       )}</div>`;
     else if (optsFor(u.id).length)
-      route = `<p class="hint gx">${optsFor(u.id).length} destination(s). ${COARSE ? 'Tap' : 'Hover or click'} a highlighted area.</p>`;
+      route = ((n) => `<p class="hint gx">${n} destination${n === 1 ? '' : 's'}. ${COARSE ? 'Tap' : 'Hover or click'} a green area.</p>`)(
+        optsFor(u.id).length,
+      );
     const can = ['movement', 'reaction', 'btMove'].includes(g.phase) && !u.garrison && !u.moved && g.moving?.id !== u.id;
     const mv = g.moving?.id === u.id ? E.allowance(g, u) : 0,
       left = mv ? Math.max(0, mv - (u.spent ?? 0)) : 0;

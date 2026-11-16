@@ -83,7 +83,14 @@ export function dockChips(): string {
   const out: string[] = [],
     c = (label: string, n: number | null, hot: boolean, fn: (() => void) | null, title = '') =>
       out.push(
-        `<button class="dchip ${hot ? 'hot' : ''}" ${fn ? `data-ui="${reg(fn)}"` : 'disabled'} title="${esc(title || label)}">${esc(label)}${n != null ? `<b>${n}</b>` : ''}</button>`,
+        `<button class="dchip ${hot ? 'hot' : ''}" ${
+          fn
+            ? `data-ui="${reg(() => {
+                fn();
+                refresh();
+              })}"`
+            : 'disabled'
+        } title="${esc(title || label)}">${esc(label)}${n != null ? `<b>${n}</b>` : ''}</button>`,
       );
   if (g.battle) return '';
   if (g.phase === 'admin' || g.phase === 'reinforcement') {
