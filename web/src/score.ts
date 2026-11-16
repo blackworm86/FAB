@@ -57,15 +57,13 @@ type PS = NonNullable<ReturnType<typeof E.placeStatus>>;
 /** Nuts! and Nafakh (owner's issue #21, approved mockup): who would win now, in the VP bar's place. */
 const until = (g: E.Game, st: PS) => `until T${g.turn + st.turnsLeft - 1}`;
 const num = (n: number) => (n < 0 ? `−${-n}` : `${n}`);
-const pen = (st: PS, s: E.Side) => (st.steps[s] ?? 0) - (st.total[s] ?? 0);
 const placeName = (st: PS) => E.areas.get(st.area)?.name ?? `${st.area}`;
 function placeStrip(g: E.Game, st: PS, open: string) {
   const [p, q] = sides(g),
     cl = (s: E.Side) => (s === p ? 'ge' : 'al'),
-    sc = (s: E.Side) => `${T(s)} ${st.steps[s] ?? 0}${pen(st, s) ? ` <s>−${pen(st, s)}</s> = ${num(st.total[s] ?? 0)}` : ''}`,
     hold = st.contested ? 'contested' : st.held ? N(st.held) : 'nobody';
   return `<button class="vps place" data-ui="${open}" title="Who would win if the game ended now: tap for the details" aria-label="${esc(`${N(st.leader)} ahead, ${st.level}, ${until(g, st)}`)}">
-    <span class="vlab k">${esc(placeName(st))}</span><span class="pchip ${st.contested ? 'cont' : st.held ? cl(st.held) : ''}"><i></i><span>${esc(hold)}</span></span><span class="psc"><span class="${cl(q)}">${sc(q)}</span> : <span class="${cl(p)}">${sc(p)}</span></span><span class="plead ${cl(st.leader)}"><span>${esc(N(st.leader))} ahead · ${st.level}</span></span><span class="pturn"><span>${until(g, st)} · ${st.turnsLeft} turn${st.turnsLeft === 1 ? '' : 's'} left</span></span><span class="vlab nets ${cl(st.leader)}" aria-hidden="true">${T(st.leader)} ${num(st.total[st.leader] ?? 0)}:${num(st.total[st.leader === p ? q : p] ?? 0)}</span></button>`;
+    <span class="vlab k">${esc(placeName(st))}</span><span class="pchip ${st.contested ? 'cont' : st.held ? cl(st.held) : ''}"><i></i><span>${esc(hold)}</span></span><span class="plead ${cl(st.leader)}"><span>${esc(N(st.leader))} ahead · ${st.level}</span></span><span class="pturn"><span>${until(g, st)} · ${st.turnsLeft} turn${st.turnsLeft === 1 ? '' : 's'} left</span></span><span class="vlab nets ${cl(st.leader)}" aria-hidden="true">${T(st.leader)} ahead</span></button>`; // words in the strip, the arithmetic in the window (design review 16 Nov)
 }
 function placeSheet(g: E.Game, st: PS, close: string, icoClose: string) {
   const [p, q] = sides(g),
@@ -101,7 +99,7 @@ export function vpStrip(g: E.Game, open: string) {
       .join('')}</span>
     <span class="vlab al" title="${N(q)}: ${v[q]} VP">${T(q)}</span>
     <span class="gauge"><span class="z"></span>${sd ? `<span class="sd" style="left:${pos(-sd[1])}%"><span>${T(q)} wins ${sd[1]}</span></span><span class="sd" style="left:${pos(sd[0])}%"><span>${T(p)} wins ${sd[0]}</span></span>` : ''}<span class="nd" style="left:${pos(v.net)}%"></span></span>
-    <span class="vlab ge" title="${N(p)}: ${v[p]} VP">${T(p)}</span><span class="vlab net ${v.net > 0 ? 'ge' : v.net < 0 ? 'al' : ''}">${netText(g, v.net).toUpperCase()}</span><span class="vlab nets ${v.net > 0 ? 'ge' : v.net < 0 ? 'al' : ''}" aria-hidden="true">${v.net ? `${T(v.net > 0 ? p : q)} +${Math.abs(v.net)}` : 'EVEN'}</span></button>`; /* nets: the short form for a phone's top bar */
+    <span class="vlab ge" title="${N(p)}: ${v[p]} VP">${T(p)}</span><span class="vlab net ${v.net > 0 ? 'ge' : v.net < 0 ? 'al' : ''}">${v.net ? `${N(v.net > 0 ? p : q)} lead by ${Math.abs(v.net)} VP` : 'Level'}</span><span class="vlab nets ${v.net > 0 ? 'ge' : v.net < 0 ? 'al' : ''}" aria-hidden="true">${v.net ? `${T(v.net > 0 ? p : q)} +${Math.abs(v.net)} VP` : 'Level'}</span></button>`; /* nets: the short form for a phone's top bar; words first, the sums in the window it opens (design review 16 Nov) */
 }
 
 /** The scenario's victory table, from the engine (each volume's own). */
