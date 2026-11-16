@@ -612,3 +612,17 @@
 #ui .volpanel .lossn:empty {
   display: none;
 }
+/* the pick list scrolls on its own: its tray is opaque, with no fade and no "more" mark over a row (PM check, 16 Nov) */
+#ui .dock > .volstack:has(.volpanel.pick) {
+  background: #0b0d08;
+  -webkit-mask-image: none;
+  mask-image: none;
+  overflow: visible;
+  max-height: none;
+}
+#ui .dock > .volstack:has(.volpanel.pick)::after {
+  display: none;
+}
+#ui .volpanel.pick {
+  background: #0b0d08;
+}

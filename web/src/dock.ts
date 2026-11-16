@@ -15,7 +15,7 @@ import { center, click, optsFor } from './map-input';
 import { btArmor, fwOk, rsOk } from './map-marks';
 import { handSide } from './rolls';
 import { usableNow } from './cards';
-import { canMove, lookAt, nextOf } from './prompt';
+import { canMove, lookAt, nextOf, moraleSide } from './prompt';
 import { refresh } from './main';
 
 /* ---------- the map from the keyboard: Tab onto the map, arrows between neighbouring areas, Enter selects or moves, N the next block that can move ---------- */
@@ -92,7 +92,7 @@ export function dockChips(): string {
             : 'disabled'
         } title="${esc(title || label)}">${esc(label)}${n != null ? `<b>${n}</b>` : ''}</button>`,
       );
-  if (g.battle) return '';
+  if (g.battle || moraleSide()) return ''; // a forced pick (Sicily 17.21c): nothing else can be done, so no chips
   if (g.phase === 'admin' || g.phase === 'reinforcement') {
     const own = online.active && !online.both() ? online.mySide() : null,
       hs = handSide ?? own ?? (g.phase === 'admin' ? E.adminActor(g) : g.phasing),

@@ -203,7 +203,7 @@ function cannotMove(id: string) {
   return `<b>${esc(u.name)} cannot move:</b> ${why}. Tap another block.`;
 }
 /** Sicily 17.21c: the side that must pick Italian assets to eliminate, as far as this screen is concerned. */
-const moraleSide = () => {
+export const moraleSide = () => {
   if (g.game !== 'sicily' || g.phase !== 'admin') return null;
   const m = E.sicily.state(g).moralePick;
   return m ? ((['axis', 'allied'] as const).find((s) => m[s] > 0 && mine(s) && !(s === 'allied' && m.axis)) ?? null) : null;
