@@ -673,7 +673,8 @@ document.addEventListener(
 );
 let playKey: string | null = null,
   chitFramed = '',
-  retreatFramed = '';
+  retreatFramed = '',
+  selFramed: string | null = null;
 export let lastFight: number | null = null;
 export const setLastFight = <T extends typeof lastFight>(v: T): T => ((lastFight = v), v);
 export function refresh() {
@@ -780,6 +781,15 @@ export function refresh() {
         setTimeout(() => showAreas(ids), 700); // after the battle view lets go: the block and every area it may retreat to, in view (owner, 14 Nov)
       }
       retreatFramed = rk;
+    }
+  }
+  if (selUnit !== selFramed) {
+    selFramed = selUnit;
+    const u = selUnit && !g.battle && innerWidth < 700 ? g.units.find((x) => x.id === selUnit) : null;
+    if (u?.area != null) {
+      const to = g.phase === 'strategic' ? [] : E.moveOptions(g, u.id).map((o) => o.area),
+        ids = [u.area, ...(to.length <= 10 ? to : [])]; // many destinations (Sicily's open roads): the block only, rather than the whole island at a glance
+      setTimeout(() => showAreas(ids), 60); // phone: once the block card is drawn, the block and its destinations in view above it (design review 16 Nov)
     }
   }
   if (tint === 'control') {

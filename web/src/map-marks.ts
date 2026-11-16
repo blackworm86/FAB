@@ -40,6 +40,7 @@ export function syncAreaTags() {
   const layer = $('#tags');
   layer.innerHTML = '';
   tagEls.clear();
+  tagW.clear();
   layer.className = labelMode;
   if (labelMode === 'off') return;
   for (const a of MAP.areas) {
@@ -105,6 +106,8 @@ function placeAreaTags() {
       const p = pieceScreen(u.id);
       if (p) under.set(u.area, Math.max(under.get(u.area) ?? -1e9, p.y - r.top + p.rad * 0.8));
     }
+  const thin = innerWidth < 700 && tagPpu < TAG_NEAR, // phone, zoomed out: labels that would sit on another one step aside (design review 16 Nov)
+    shown: { id: number; d: HTMLElement; px: number; py: number; k: number }[] = [];
   for (const [id, d] of tagEls) {
     const c = center(id);
     v.set(c.x, show3d() ? REL!.h(c.x, c.z) : 0, c.z).project(cam);
@@ -118,8 +121,20 @@ function placeAreaTags() {
     d.style.display = v.z < 1 || pin ? '' : 'none'; // every area keeps its label at every tilt and zoom (owner's issue #15)
     d.style.transform = `translate(${px.toFixed(1)}px, ${py.toFixed(1)}px) translate(-50%, -50%)`;
     d.classList.toggle('hov', hov);
+    if (thin && d.style.display === '') shown.push({ id, d, px, py, k: hov || pin ? 3 : by != null ? 2 : 1 });
+  }
+  if (thin) {
+    const kept: { x0: number; x1: number; y0: number; y1: number }[] = [];
+    for (const t of shown.sort((a, b) => b.k - a.k)) {
+      let w = tagW.get(t.id);
+      if (w == null) tagW.set(t.id, (w = t.d.offsetWidth || 80)); // measured once: a label's width does not change while it is shown
+      const q = { x0: t.px - w / 2, x1: t.px + w / 2, y0: t.py - 11, y1: t.py + 11 };
+      if (t.k < 3 && kept.some((o) => q.x0 < o.x1 && q.x1 > o.x0 && q.y0 < o.y1 && q.y1 > o.y0)) t.d.style.display = 'none';
+      else kept.push(q);
+    }
   }
 }
+const tagW = new Map<number, number>();
 canvas.addEventListener('pointermove', (e) => {
   if (labelMode === 'off' || e.buttons) return;
   const a = pick(e).area ?? null;
