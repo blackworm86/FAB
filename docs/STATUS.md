@@ -120,6 +120,8 @@ Done and closed: tutorial rebuilt (three courses, Italian); `database.rules.json
 
 **15 November, 18:40:** owner's issue log #1–#20 fixed except #3 (lost move online: cause found and fixed, 14 clean runs, waiting for 20). Done this afternoon: interaction system rounds 1–2 (tray above the bar, one asset switch, step losses as a list), mandatory point-unit choice (#18), new area labels On / No names / Off (#15–#17), block icons fixed (#20), brass "pick" glow, hot-seat (storage, table side, admin tools), one more audit finding closed (5 left). Checked by the project-management session in its own pictures: #19, #20, the brass glow, the point-unit list.
 
+**16 November, morning:** owner's issue log: all 21 fixed. Open: online audit findings 4–8 and 10 (5 low-risk gaps + push relay limit; online session, restarted), Sicily and Golan whole turns online untested, full games to the end not played since the fixes, design-review re-score pending; on hold: computer opponent, lessons, figures as default.
+
 ## Proposed priorities (15 November)
 
 1. **A full game of each volume by the owner** (desktop and phone), the real test after three days of fixes; the helpers only play narrow pieces.
