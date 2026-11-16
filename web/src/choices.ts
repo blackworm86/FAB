@@ -41,7 +41,7 @@ export function feedHtml(): string {
       if (feed.some((f) => Date.now() - f.t >= 9000)) render();
     }, 9100);
   return feed.length
-    ? `<div class="feed ${g.phase === 'admin' || g.phase === 'reinforcement' ? 'top' : ''}" aria-live="polite">${feed.map((f) => `<div class="fl2 ${f.side}" style="animation-delay:${-(now - f.t) / 1000}s">${sideTag(f.text)}</div>`).join('')}</div>`
+    ? `<div class="feed ${g.phase === 'admin' || g.phase === 'reinforcement' ? 'top' : ''}" aria-live="polite">${(innerWidth < 700 ? feed.slice(-1) : feed).map((f) => `<div class="fl2 ${f.side}" style="animation-delay:${-(now - f.t) / 1000}s">${sideTag(f.text)}</div>`).join('')}</div>`
     : '';
 }
 export let scoreOpen = false,

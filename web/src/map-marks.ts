@@ -712,7 +712,9 @@ export function placeBadges() {
   placeBubbles();
   const r = canvas.getBoundingClientRect(),
     v = new THREE.Vector3();
-  const dockBottom = (document.querySelector('#ui .mapdock')?.getBoundingClientRect().bottom ?? r.top) - r.top; // the Layer bar and map tools: move badges stay below them
+  const dockBottom = (document.querySelector('#ui .mapdock')?.getBoundingClientRect().bottom ?? r.top) - r.top, // the Layer bar and map tools: move badges stay below them
+    cardTop = innerWidth < 700 ? (document.querySelector('#ui .c-dispatch')?.getBoundingClientRect().top ?? r.bottom) - r.top : r.height, // and, on the phone, above the block card
+    placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
   for (const [k, d] of badgeEls) {
     const id = +k.replace(/^[LS]/, ''),
       p = d.classList.contains('lab')
@@ -731,9 +733,37 @@ export function placeBadges() {
       hh = d.offsetHeight / 2 + 6,
       out = sx < hw || sx > r.width - hw || sy < hh || sy > r.height - hh;
     if (keep) {
-      const top = Math.max(hh, dockBottom + hh);
+      const top = Math.max(hh, dockBottom + hh),
+        bot = Math.min(r.height, cardTop) - hh;
       sx = Math.min(r.width - hw, Math.max(hw, sx));
-      sy = Math.min(r.height - hh, Math.max(top, sy));
+      sy = Math.min(bot, Math.max(top, sy));
+      const w = hw - 4,
+        h = hh - 4,
+        hit = (x: number, y: number) => placed.some((o) => x - w < o.x1 && x + w > o.x0 && y - h < o.y1 && y + h > o.y0),
+        fits = (x: number, y: number) => y >= top && y <= bot && x >= hw && x <= r.width - hw && !hit(x, y);
+      let free = fits(sx, sy);
+      for (const [ex, ey] of [
+        [0, 1],
+        [0, -1],
+        [1, 0],
+        [-1, 0],
+        [0, 2],
+        [0, -2],
+        [1, 1],
+        [-1, 1],
+        [1, -1],
+        [-1, -1],
+      ])
+        if (!free && fits(sx + ex * 2 * w, sy + ey * 2 * h)) {
+          sx += ex * 2 * w;
+          sy += ey * 2 * h;
+          free = true;
+        } // neighbouring areas' badges sit side by side instead of piling up (design review 16 Nov, phone)
+      if (!free && out && innerWidth < 700) {
+        d.style.display = 'none';
+        continue;
+      } // phone: an off-screen destination with no room left at the edge is not drawn (its area is still green)
+      placed.push({ x0: sx - w, x1: sx + w, y0: sy - h, y1: sy + h });
       d.classList.toggle('edge', out || sy !== sy0);
     } // a destination off screen keeps its tag at the edge, so no "no supply" warning is missed
     d.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -50%)`;
