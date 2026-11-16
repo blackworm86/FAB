@@ -742,7 +742,18 @@ export function placeBadges() {
       hw = d.offsetWidth / 2 + 6,
       hh = d.offsetHeight / 2 + 6,
       out = sx < hw || sx > r.width - hw || sy < hh || sy > r.height - hh;
-    if (keep) {
+    if (keep && innerWidth < 700) {
+      // phone: a plain number in its own area, a little above the label; one whose area is off the screen sits at the nearest edge, so none is dropped (owner, 16 Nov)
+      sy -= 12;
+      const dr = document.querySelector('#ui .mapdock')?.getBoundingClientRect(),
+        top = hh + 4,
+        bot = cardTop - hh - 4;
+      sx = Math.min(r.width - hw, Math.max(hw, sx));
+      sy = Math.min(bot, Math.max(top, sy));
+      if (dr && sx - hw < dr.right - r.left && sy < dockBottom + hh) sy = dockBottom + hh; // not under the Layers and Deselect buttons
+      badgeBoxes.push({ x0: sx - hw, x1: sx + hw, y0: sy - hh, y1: sy + hh });
+      d.classList.toggle('edge', out);
+    } else if (keep) {
       const top = Math.max(hh, dockBottom + hh),
         bot = Math.min(r.height, cardTop) - hh;
       sx = Math.min(r.width - hw, Math.max(hw, sx));

@@ -298,7 +298,12 @@ export function badgeList(): Badge[] {
     for (const o of optsFor(selUnit))
       out.push({
         area: o.area,
-        text: g.phase === 'strategic' ? '' : `${o.cost} MP${noSup.has(o.area) ? ' · no supply' : ''}`,
+        text:
+          g.phase === 'strategic'
+            ? ''
+            : innerWidth < 700
+              ? `${o.cost}${noSup.has(o.area) ? '!' : ''}`
+              : `${o.cost} MP${noSup.has(o.area) ? ' · no supply' : ''}`, // phone: the cost as a small number in its area, ! = out of supply there (owner, 16 Nov)
         cls: (o.mustStop ? 'stop' : o.fuel && u.side === 'german' ? 'fuel' : 'ok') + (noSup.has(o.area) ? ' nosup' : ''),
       });
   }
