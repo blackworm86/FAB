@@ -13,8 +13,9 @@ import { loadGolanChitArt } from './golan-art';
 import { loadSicilyChitArt } from './sicily-art';
 import * as SB from './sandbox';
 import * as SBU from './sandbox-ui';
-import { online, startOnline, lobby, TABLE, HAS_TABLE, DEV_FAKE, SANDBOX, TUTORIAL, type Match } from './online';
+import { online, startOnline, lobby, heldBefore, keepLegal, TABLE, HAS_TABLE, DEV_FAKE, SANDBOX, TUTORIAL, type Match } from './online';
 import { ICONS, ico } from './icons';
+import { gameInfo } from './games';
 import { esc, nm } from './util';
 import { sheets } from './sheets';
 import { ABBR, STAGE_NAME } from './table-text';
@@ -475,15 +476,24 @@ void startOnline(
     const prevG = g,
       firstRemote = !gotRemote; // a roll still on screen is finished locally, never pushed back over what arrived
     if ((rg.game ?? 'bulge') !== VOL.id) {
-      const u = new URL(location.href);
-      u.searchParams.set('game', rg.game ?? 'bulge');
-      location.replace(u.href);
+      if (!gotRemote && gameInfo(rg.game ?? 'bulge')) {
+        const u = new URL(location.href);
+        u.searchParams.set('game', rg.game ?? 'bulge');
+        location.replace(u.href);
+        return;
+      } // a shared table of another game: this page is built for one game, so it reloads as that one
+      // a volume the app does not know, or one changed in the middle of a game, came from a modified browser (audit, finding 7: the page reloaded for ever): held back like any bad change
+      if (gotRemote) setHeldBad({ game: rg, why: ['The game was changed to another volume.'] });
+      else say('This game is of a volume this site does not know.');
+      setApplyingRemote(false);
+      render();
       return;
-    } // a shared table of another game: this page is built for one game, so it reloads as that one
+    }
     {
       const by = online.lastBy,
         w: E.Side | null = online.seats.german === by ? P1 : online.seats.allied === by ? P2 : null; // referee-lite: check what the other browser wrote
-      if (by && by !== online.uid && E.isRestore(prevG, rg)) {
+      if (by && by !== online.uid && E.isRestore(prevG, rg) && heldBefore(rg)) {
+        // only back to a position this browser held: the marker alone, on any position, used to switch the check off (audit, finding 4)
         setHeldBad(null);
         setAuditWarn(
           [
@@ -503,6 +513,7 @@ void startOnline(
       }
       setGotRemote(true);
       setHeldBad(null);
+      keepLegal(rg);
       record(false, rg);
       if (PARAMS.get('replay') && rg.over && !replayShown) {
         setReplayShown(true);

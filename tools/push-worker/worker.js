@@ -105,14 +105,16 @@ export default {
       // keep up to five devices per player
       const sub = body.sub;
       if (!pushHost(sub?.endpoint)) return json({ error: 'bad subscription' }, 400, origin);
-      const list = (await subsOf(env, uid)).filter((s) => s.endpoint !== sub.endpoint);
+      const list = await subsOf(env, uid);
+      if (list.some((s) => s.endpoint === sub.endpoint)) return json({ ok: true }, 200, origin); // already kept: no write (the free plan allows 1,000 a day, and the app subscribes again at every start)
       list.push({ endpoint: sub.endpoint });
       await env.SUBS.put(`u:${uid}`, JSON.stringify(list.slice(-5)));
       return json({ ok: true }, 200, origin);
     }
     if (path === '/unsubscribe') {
-      const list = (await subsOf(env, uid)).filter((s) => s.endpoint !== body.endpoint);
-      await env.SUBS.put(`u:${uid}`, JSON.stringify(list));
+      const all = await subsOf(env, uid),
+        list = all.filter((s) => s.endpoint !== body.endpoint);
+      if (list.length !== all.length) await env.SUBS.put(`u:${uid}`, JSON.stringify(list));
       return json({ ok: true }, 200, origin);
     }
     if (path === '/notify') {
@@ -125,8 +127,9 @@ export default {
       if (!to) return json({ error: 'you are not seated at this table' }, 403, origin);
       const gate = `t:${to}:${table}`;
       if (await env.SUBS.get(gate)) return json({ ok: true, throttled: true }, 200, origin); // one push per game a minute
-      await env.SUBS.put(gate, '1', { expirationTtl: 60 });
       const list = await subsOf(env, to);
+      if (!list.length) return json({ ok: true, sent: 0 }, 200, origin); // nobody to tell: nothing is written
+      await env.SUBS.put(gate, '1', { expirationTtl: 60 });
       let gone = false;
       await Promise.all(
         list.map(async (s) => {

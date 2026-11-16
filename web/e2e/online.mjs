@@ -92,6 +92,22 @@ process.on('exit', stop);
 /** The database as stored, read past the rules (the emulator's owner token). */
 const raw = (path) => fetch(`${DB}/${path}.json?ns=${NS}`, { headers: { Authorization: 'Bearer owner' } }).then((r) => r.json());
 
+/** An account's own key to the database, as a modified browser would use it: past the app, never past the database rules (the audit's checks). */
+const key = async (email, fresh) => {
+  const r = await fetch(
+    `http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:${fresh ? 'signUp' : 'signInWithPassword'}?key=demo-key`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email, password: 'secret1', returnSecureToken: true }),
+    },
+  ).then((x) => x.json());
+  return { uid: r.localId, token: r.idToken };
+};
+/** A write with that key; resolves true when the database took it. */
+const writeAs = (who, method, path, body) =>
+  fetch(`${DB}/${path}.json?ns=${NS}&auth=${who.token}`, { method, body: JSON.stringify(body) }).then((r) => r.ok);
+
 /** A tap on the home page, which redraws itself while games and accounts load: try again if the button was replaced under the pointer. */
 const tap = async (loc) => {
   if (!(await until(() => loc.click({ timeout: 4000 }).then(() => true), 60000))) throw new Error(`could not tap ${loc}`);
@@ -245,6 +261,9 @@ const DESK = { viewport: { width: 1380, height: 860 } },
   PHONE = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 };
 const A = await player('Anna', process.env.SWAP ? PHONE : DESK), // one desktop, one phone; SWAP=1: the creator is on the phone
   B = await player('Bruno', process.env.SWAP ? DESK : PHONE);
+const keyA = await key(`anna${stamp}@fab.test`),
+  keyB = await key(`bruno${stamp}@fab.test`),
+  stranger = await key(`mallory${stamp}@fab.test`, true); // a third account with the link
 let hitChoice = 0,
   retreats = 0;
 
@@ -280,6 +299,8 @@ for (const game of GAMES) {
     await until(() => B.page.evaluate((v) => window.__fab.game().game === v || (v === 'bulge' && !window.__fab.game().game), game)),
     'it is the same volume, not another table',
   );
+  const seatB = CREATOR_SEAT[game] ? 'german' : 'allied',
+    stored0 = { units: await raw(`games/${id}/state/units`), priv: await raw(`games/${id}/priv/${seatB}`) }; // what the creator's browser wrote, and could have kept
   await B.page.locator('.seatbar button.primary').first().click({ timeout: 30000 });
   check(await until(async () => (await look(B.page)).me), 'the second player is seated');
 
@@ -320,6 +341,43 @@ for (const game of GAMES) {
   };
   check(await settle('after sitting'), 'after sitting: the screens agree and hidden blocks stay hidden');
 
+  /* audit, finding 5: the creator's browser made the list of blocks and the first codes. Once the joiner has sat, its hidden blocks stand in other places of the stored list, and the table is locked to the two accounts */
+  {
+    const [kept, now] = await B.page.evaluate(
+      ([units, priv]) => {
+        const F = window.__fab,
+          by = new Map(Object.keys(priv.secrets).map((k) => [F.E.alias(priv.salt, decodeURIComponent(k)), decodeURIComponent(k)]));
+        return [
+          Object.keys(units)
+            .sort()
+            .map((k) => by.get(JSON.parse(units[k]).id) ?? null), // the block the creator's browser knew to be in each place
+          F.settled().units.map((u) => u.id),
+        ];
+      },
+      [stored0.units, stored0.priv],
+    );
+    const places = kept.flatMap((x, i) => (x ? [i] : [])),
+      still = places.filter((i) => now[i] === kept[i]).length;
+    if (places.length < 6)
+      console.log(
+        `  note the joiner has ${places.length} hidden blocks when it sits (the others are off the map, open to all): nothing to change places. A block that goes face-down later keeps its place`,
+      );
+    else
+      check(
+        still < places.length && JSON.stringify(places.map((i) => now[i]).sort()) === JSON.stringify(places.map((i) => kept[i]).sort()),
+        `after the joiner sat, the creator's list of places no longer names its hidden blocks (${still} of ${places.length} still in their place)`,
+      );
+    const seats = await raw(`games/${id}/seats`);
+    check(
+      await until(async () => JSON.stringify(await raw(`games/${id}/locked`)) === JSON.stringify(seats), 15000),
+      'with both seats taken the table is locked to the two accounts',
+    );
+    check(
+      !(await writeAs(stranger, 'PUT', `games/${id}/members/${stranger.uid}`, true)),
+      'a third account cannot make itself a member of the game',
+    );
+  }
+
   /* the chat: the second player, just seated, writes; the creator reads it (only the two players may) */
   await B.page.locator('.chatbtn').first().click({ timeout: 15000 });
   await B.page.fill('#chat-in', `hello ${game}`);
@@ -350,7 +408,7 @@ for (const game of GAMES) {
   let ok = true,
     stuck = 0,
     fought = 0;
-  for (let n = 0; n < BATTLES && ok && (n < 2 || !hitChoice || !retreats); n++) {
+  for (let n = 0; n < BATTLES && ok && (fought < 2 || !hitChoice || !retreats); n++) {
     const att = n % 2 ? A : B,
       def = att === A ? B : A,
       v = await look(att.page);
@@ -512,6 +570,76 @@ for (const game of GAMES) {
     );
   }
 
+  /* audit, findings 4 and 7: what a modified browser writes to switch the other player's Rules check off or to break their screen */
+  {
+    await settle('before the audit checks');
+    const lastBy = await raw(`games/${id}/state/by`),
+      notLast = lastBy === keyA.uid ? keyB : keyA,
+      unit0 = await raw(`games/${id}/state/units/0000`);
+    check(
+      !(await writeAs(notLast, 'PATCH', `games/${id}/state`, { 'units/0000': unit0 })) &&
+        (await writeAs(notLast, 'PATCH', `games/${id}/state`, { 'units/0000': unit0, by: notLast.uid })),
+      "a change of the game without its writer's id is refused by the database; with it, it is taken",
+    );
+    await settle('after a write past the app');
+    const restoreOn = async (victim, cheat, what) => {
+      // the victim's check holds the change back and its board keeps the legal game; "Restore it for both" puts it back, and the other screen says so
+      const ok =
+        (await until(async () => (await look(victim.page)).held, 20000)) &&
+        (await victim.page
+          .locator('.seatbar.audit button', { hasText: 'Restore it for both' })
+          .click({ timeout: 15000 })
+          .then(
+            () => true,
+            () => false,
+          )) && // prettier-ignore
+        (await until(() => cheat.page.locator('.seatbar.audit', { hasText: 'put the game back' }).count(), 20000));
+      await cheat.page
+        .locator('.seatbar.audit button', { hasText: 'OK' })
+        .click({ timeout: 15000 })
+        .catch(() => {});
+      check(ok && (await settle(what)), what);
+    };
+    /* a false restore: dice un-rolled, marked "the rules check restored this" with the cheat's own words */
+    const rolls = JSON.parse((await look(B.page)).json).rolls;
+    await play(A.page, (E, g) => {
+      g.rolls--;
+      g.restored = { t: Date.now(), why: ['nothing to see here'] };
+    });
+    check(
+      (await until(async () => (await look(B.page)).held, 20000)) &&
+        JSON.parse((await look(B.page)).json).rolls === rolls &&
+        !(await B.page.locator('.seatbar', { hasText: 'nothing to see here' }).count()),
+      'a change marked as a restore, to a position the other player never held, is held back by the Rules check',
+    );
+    await restoreOn(B, A, 'the real restore, to the position both held, is taken by the other screen');
+    /* a volume the app does not know (the receiving page used to reload for ever) */
+    await B.page.evaluate(() => void (window.__stay = 1));
+    await writeAs(keyA, 'PATCH', `games/${id}/state`, { 'f/game': '"nosuchvolume"', by: keyA.uid });
+    check(
+      (await until(async () => (await look(B.page)).held, 20000)) && (await B.page.evaluate(() => window.__stay === 1)),
+      'a game changed to an unknown volume is held back; the page does not reload',
+    );
+    await restoreOn(B, A, 'and the game is restored from the screen that held it back');
+    /* values that are no game data (the listener used to stop for good) */
+    const sameBefore = (await look(B.page)).same;
+    await writeAs(keyA, 'PATCH', `games/${id}/state`, { 'f/junk': '{no json', by: keyA.uid });
+    await writeAs(keyA, 'PATCH', `games/${id}/reveals`, { junk: '{no json', junk2: 'null' });
+    check(
+      (await until(() => B.page.evaluate(() => /cannot read/.test(window.__fab.online.error)), 20000)) &&
+        (await look(B.page)).same === sameBefore,
+      'a value that is no game data is reported, and the last good game stays on screen',
+    );
+    await fetch(`${DB}/games/${id}/state/f/junk.json?ns=${NS}`, { method: 'DELETE', headers: { Authorization: 'Bearer owner' } });
+    for (const k of ['junk', 'junk2'])
+      await fetch(`${DB}/games/${id}/reveals/${k}.json?ns=${NS}`, { method: 'DELETE', headers: { Authorization: 'Bearer owner' } });
+    for (const x of [A, B]) await x.page.evaluate(() => void (window.__fab.online.error = ''));
+    const v = await look(B.page),
+      w = v.actor === v.me || v.actor === 'both' ? B : A;
+    await play(w.page, (E, g) => void g.log.push('play goes on'));
+    check(await settle('after the bad values were removed'), 'once it is removed, play goes on');
+  }
+
   /* a reload: the page builds the same game again from the database */
   const before = (await look(B.page)).same;
   await B.page.reload({ waitUntil: 'domcontentloaded' });
@@ -587,6 +715,12 @@ if (GAMES.length === 3) {
   await A.page.goto(BASE, { waitUntil: 'domcontentloaded' });
   check(await until(() => A.page.locator('.matchrow', { hasText: 'This screen' }).count(), 30000), 'the games list marks it "This screen"');
   check((await raw(`games/${id}/priv`)) === null, 'no private block records are kept for it');
+  check(
+    !!(await until(async () => (await raw(`games/${id}/locked`))?.german, 15000)) &&
+      !(await writeAs(stranger, 'PUT', `games/${id}/seats/allied`, stranger.uid)) &&
+      (await raw(`games/${id}/seats/allied`)) === null,
+    'its empty seat cannot be taken by another account (the table is locked when it is made)',
+  );
 }
 
 /* signing out on the home page works at once, without a reload (owner's issue #1) */

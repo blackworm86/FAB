@@ -58,18 +58,33 @@ describe('referee-lite: checking what the other browser wrote', () => {
     next.log = [...prev.log];
     expect(E.auditChange(prev, next, prev.phasing).join()).toMatch(/went back/);
   });
-  it("a restore (the other player's rules check put the game back) is not flagged as going back", () => {
+  it("a restore (the other player's rules check put the game back) is the position held before; the marker alone switches no check off", () => {
     const { g } = playChecked(5, 30),
       back = structuredClone(g);
     const now = structuredClone(g);
     now.turn = g.turn + 1; // the change the check refused
     back.restored = { t: 1, why: ['The dice counter went backwards: rolls were undone.'] };
+    back.log.push('a line more');
     expect(E.isRestore(now, back)).toBe(true);
-    expect(E.auditChange(now, back, g.phasing)).toEqual([]);
-    const again = structuredClone(back);
-    again.turn = g.turn - 1; // the same restore marker again is an ordinary write
-    expect(E.isRestore(back, again)).toBe(false);
-    expect(E.auditChange(back, again, g.phasing).join()).toMatch(/went back/);
+    expect(E.samePosition(g, back)).toBe(true); // what the receiving browser asks before it takes it as a restore
+    expect(E.samePosition(now, back)).toBe(false);
+    const cheat = structuredClone(back); // a modified browser writes the marker on a position of its own making
+    cheat.rolls = g.rolls - 1;
+    expect(E.samePosition(g, cheat)).toBe(false);
+    expect(E.auditChange(g, cheat, g.phasing).join()).toMatch(/dice counter/);
+    expect(E.auditChange(now, back, g.phasing).join()).toMatch(/went back/); // (audit, finding 4: the marker used to return "no problem")
+  });
+  it('the same position whatever the order of its fields and the codes and places of hidden blocks', () => {
+    const g = E.newGame(6),
+      pub = JSON.parse(E.toPublic(g, 'allied', 's1', new Map())) as E.Game,
+      other = JSON.parse(E.toPublic(g, 'allied', 's2', new Map())) as E.Game,
+      at = other.units.flatMap((u, i) => (E.isPlaceholder(u) ? [i] : []));
+    expect(at.length).toBeGreaterThan(10);
+    const [a, b] = [at.find((i) => other.units[i].area !== other.units[at[0]].area)!, at[0]];
+    [other.units[a], other.units[b]] = [other.units[b], other.units[a]]; // two hidden blocks change places
+    expect(E.samePosition(pub, Object.fromEntries(Object.entries(other).reverse()) as unknown as E.Game)).toBe(true);
+    other.units[a].area = other.units[b].area;
+    expect(E.samePosition(pub, other)).toBe(false);
   });
   it('flags a change by the side that was not supposed to act', () => {
     const g = E.newGame(6);
