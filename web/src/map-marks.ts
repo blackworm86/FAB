@@ -106,7 +106,8 @@ function placeAreaTags() {
       const p = pieceScreen(u.id);
       if (p) under.set(u.area, Math.max(under.get(u.area) ?? -1e9, p.y - r.top + p.rad * 0.8));
     }
-  const thin = innerWidth < 700 && tagPpu < TAG_NEAR, // phone, zoomed out: labels that would sit on another one step aside (design review 16 Nov)
+  const tagShown: { id: number; d: HTMLElement; px: number; py: number }[] = [],
+    thin = innerWidth < 700 && tagPpu < TAG_NEAR, // phone, zoomed out: labels that would sit on another one step aside (design review 16 Nov)
     shown: { id: number; d: HTMLElement; px: number; py: number; k: number }[] = [];
   for (const [id, d] of tagEls) {
     const c = center(id);
@@ -121,8 +122,15 @@ function placeAreaTags() {
     d.style.display = v.z < 1 || pin ? '' : 'none'; // every area keeps its label at every tilt and zoom (owner's issue #15)
     d.style.transform = `translate(${px.toFixed(1)}px, ${py.toFixed(1)}px) translate(-50%, -50%)`;
     d.classList.toggle('hov', hov);
+    if (d.style.display === '') tagShown.push({ id, d, px, py });
     if (thin && d.style.display === '') shown.push({ id, d, px, py, k: hov || pin ? 3 : by != null ? 2 : 1 });
   }
+  if (innerWidth < 700 && badgeBoxes.length)
+    for (const t of tagShown) {
+      const w = tagW.get(t.id) ?? t.d.offsetWidth ?? 80,
+        q = { x0: t.px - w / 2, x1: t.px + w / 2, y0: t.py - 11, y1: t.py + 11 };
+      if (badgeBoxes.some((o) => q.x0 < o.x1 && q.x1 > o.x0 && q.y0 < o.y1 && q.y1 > o.y0)) t.d.style.display = 'none';
+    } // phone: a label under a move badge steps aside (the badge is what matters while a block is selected)
   if (thin) {
     const kept: { x0: number; x1: number; y0: number; y1: number }[] = [];
     for (const t of shown.sort((a, b) => b.k - a.k)) {
@@ -135,6 +143,7 @@ function placeAreaTags() {
   }
 }
 const tagW = new Map<number, number>();
+let badgeBoxes: { x0: number; x1: number; y0: number; y1: number }[] = [];
 canvas.addEventListener('pointermove', (e) => {
   if (labelMode === 'off' || e.buttons) return;
   const a = pick(e).area ?? null;
@@ -712,6 +721,7 @@ export function placeBadges() {
   placeBubbles();
   const r = canvas.getBoundingClientRect(),
     v = new THREE.Vector3();
+  badgeBoxes = [];
   const dockBottom = (document.querySelector('#ui .mapdock')?.getBoundingClientRect().bottom ?? r.top) - r.top, // the Layer bar and map tools: move badges stay below them
     cardTop = innerWidth < 700 ? (document.querySelector('#ui .c-dispatch')?.getBoundingClientRect().top ?? r.bottom) - r.top : r.height, // and, on the phone, above the block card
     placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
@@ -759,11 +769,12 @@ export function placeBadges() {
           sy += ey * 2 * h;
           free = true;
         } // neighbouring areas' badges sit side by side instead of piling up (design review 16 Nov, phone)
-      if (!free && out && innerWidth < 700) {
+      if (!free && innerWidth < 700) {
         d.style.display = 'none';
         continue;
-      } // phone: an off-screen destination with no room left at the edge is not drawn (its area is still green)
+      } // phone: a destination with no room left for its badge is not drawn (its area is still green): badges never overlap
       placed.push({ x0: sx - w, x1: sx + w, y0: sy - h, y1: sy + h });
+      badgeBoxes.push({ x0: sx - hw, x1: sx + hw, y0: sy - hh, y1: sy + hh });
       d.classList.toggle('edge', out || sy !== sy0);
     } // a destination off screen keeps its tag at the edge, so no "no supply" warning is missed
     d.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -50%)`;

@@ -250,9 +250,10 @@
   .feed .fl2 {
     font-size: 11.5px;
     padding: 3px 8px;
-    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis; /* one short line that fades, never a card over the map (design review 16 Nov; owner, 15 Nov) */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2; /* at most two short lines that fade, ending in … never a card over the map (design review 16 Nov; owner, 15 Nov) */
   }
 }
 .rdet {
