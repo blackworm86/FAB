@@ -7,7 +7,7 @@ import { spawn } from 'node:child_process';
 import { mkdtempSync, copyFileSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { playTurn } from './online-turn.mjs';
+import { playTurn, played } from './online-turn.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..'),
   FIREBASE = join(ROOT, 'tools/rules-test/node_modules/.bin/firebase'),
@@ -139,7 +139,7 @@ const look = (p) =>
         .filter((u) => u.side === me && !E.visibleTo(g, u, foe) && !(b && b.area === u.area && u.up === u.area))
         .map((u) => u.id), // (blocks of an open battle stay shown until it closes)
       json: JSON.stringify(g),
-      held: !!document.querySelector('.seatbar.audit'),
+      held: document.querySelector('.seatbar.audit')?.textContent.replace(/\s+/g, ' ').slice(0, 300) ?? '', // what the Rules check says it holds back
       same: JSON.stringify({
         t: g.turn,
         ph: g.phase,
@@ -346,7 +346,15 @@ for (const game of GAMES) {
           console.log(`       ${k}: ${A.name} ${JSON.stringify(x[k]).slice(0, 160)} | ${B.name} ${JSON.stringify(y[k]).slice(0, 160)}`);
     }
     if (/saving|NOT SAVED/.test(a.sync + b.sync)) check(false, `${what}: saved (${A.name} "${a.sync}", ${B.name} "${b.sync}")`);
-    if (a.held || b.held) check(false, `${what}: no change held back by the Rules check`);
+    if (a.held || b.held) {
+      /* what differs between the game each screen shows (the held change is the one the other wrote) */
+      const [x, y] = await Promise.all([A.page, B.page].map((q) => q.evaluate(() => structuredClone(window.__fab.game()))));
+      for (const k of Object.keys({ ...x, ...y }).filter((k) => k !== 'log' && JSON.stringify(x[k]) !== JSON.stringify(y[k]))) {
+        const d = k === 'units' ? x.units.map((u, i) => [JSON.stringify(u), JSON.stringify(y.units[i])]).filter(([p, q]) => p !== q) : [[JSON.stringify(x[k]), JSON.stringify(y[k])]]; // prettier-ignore
+        for (const [p, q] of d.slice(0, 3)) console.log(`       held, ${k}: ${A.name} ${p?.slice(0, 260)} | ${B.name} ${q?.slice(0, 260)}`);
+      }
+    }
+    if (a.held || b.held) check(false, `${what}: no change held back by the Rules check (${A.name}: "${a.held}"; ${B.name}: "${b.held}")`);
     for (const [where, ids] of leaks) check(false, `${what}: hidden blocks stay hidden (${ids.slice(0, 4).join(', ')} ${where})`);
     return false;
   };
@@ -666,8 +674,9 @@ for (const game of GAMES) {
   check(await settle('after the reload'), 'after the reload: the screens agree and hidden blocks stay hidden');
 }
 if (GAMES.length === 3) {
+  check(played.choice > 0, `a hit choice was played with the screen's own buttons (${played.choice} over the three volumes)`);
   console.log(
-    `  note hit choices played: ${hitChoice}, retreats played: ${retreats} (they depend on the dice; a run without one says nothing is wrong)`,
+    `  note retreats played with the screens: ${played.retreat} (they depend on the dice; a run without one says nothing is wrong)`,
   );
 }
 /* hot-seat: two players on one screen, saved online under one account (owner's decision, 15 November 2026) */

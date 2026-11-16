@@ -8,6 +8,21 @@
 const STOP = { bulge: 'combat', sicily: 'admin', golan73: 'admin' };
 const HAND = Number(process.env.HAND ?? 1); // battles of the turn played with the screen's buttons; the ones after go by the battle part's shortcut (quicker)
 const ORDER = ['reinforcement', 'admin', 'movement', 'strategic', 'combat', 'reaction', 'btMove', 'btCombat', 'supply'];
+/** What was played with the screen's own buttons (not by the shortcut), over every volume: the test asks for a hit choice at the end. */
+export const played = { choice: 0, retreat: 0 };
+/** The dice record and the hit count as a screen draws them, with the dice the game holds (newest first). */
+const shown = (p) =>
+  p.evaluate(() => {
+    const b = window.__fab.settled().battle;
+    return (
+      b && {
+        dom: [...document.querySelectorAll('.rrec .rr')].map((r) => [[...r.querySelectorAll('.faces i')].map((i) => i.firstChild.textContent).join(','), r.querySelector(':scope > b')?.textContent]), // prettier-ignore
+        game: [...b.rolls].reverse().map((r) => r.dice.join(',')),
+        title: document.querySelector('.c-ledger h3')?.textContent ?? null,
+        pending: b.pending,
+      }
+    );
+  });
 const MINUTES = 15; // a turn that takes longer is reported, and the test goes on with its other parts
 
 /** What a screen shows and what its player could press now. */
@@ -28,6 +43,9 @@ const see = (p) =>
       over: g.over ?? null,
       stage: b?.stage ?? null,
       pointDone: !!b?.attPointDone,
+      nrolls: b?.rolls.length ?? 0,
+      retreatUnit: b?.retreat?.queue[0] ?? null,
+      retreatFrom: g.units.find((u) => u.id === b?.retreat?.queue[0])?.area ?? null,
       blow: !!g.pendingBlow,
       step: document.querySelector('.phpill')?.title ?? '', // "Turn 1, German player turn: Combat (step 5 of 8)"
       go: [...document.querySelectorAll('.c-bar.b .bacts button.go:not([disabled])')].map((x) => x.textContent.trim()),
@@ -47,6 +65,7 @@ const see = (p) =>
           ? g.units.filter((u) => u.box === 'airborne_assault' && u.side === me).map((u) => [u.id, E.sicily.airDropTargets(g, u.id)])
           : [],
       retreat: b?.stage === 'retreat' ? E.retreatOptions(g, b) : [],
+      sea: E.SEA,
       cut: g.units
         .filter((u) => u.area != null && u.unsupplied)
         .map((u) => `${u.side}:${u.area}`)
@@ -185,8 +204,12 @@ export async function playTurn({ A, B, game, settle, check, play, battleStep, sl
     battles = 0,
     inBattle = false,
     mv = null,
-    arr = null;
-  const shortcuts = [],
+    arr = null,
+    pend = null,
+    skipped = 0,
+    compared = 0;
+  const checked = new Set(),
+    shortcuts = [],
     v0 = await see(A.page),
     turn0 = v0.turn;
   for (let n = 0; n < 900; n++) {
@@ -222,9 +245,31 @@ export async function playTurn({ A, B, game, settle, check, play, battleStep, sl
     if (Date.now() - t0 > MINUTES * 60000) return check(false, `the turn is played within ${MINUTES} minutes (it stopped at "${a.step}")`);
 
     if (!!a.stage !== inBattle && (inBattle = !!a.stage)) battles++;
-    const quickly = inBattle && battles > HAND;
+    const quickly = inBattle && battles > HAND && played.choice > 0; // (by hand until a hit choice has been played on a screen)
     /* dice read on a screen: their Continue first, whoever acts next */
     const reading = [A, B].find((p) => /^Continue/.test(view(p).go[0] ?? ''));
+    /* a hit to choose: the same dice and hits on both screens (a screen that watches the other's roll draws them only after its dice have tumbled, which the slow
+     * software 3D can take minutes: they are compared at the first moment both screens show them, while the battle lasts), and the player can choose */
+    const ck = `${battles}|${a.stage}|${a.nrolls}`;
+    if (!reading && /Choice$|^attFirst$/.test(a.stage ?? '') && !checked.has(ck)) {
+      checked.add(ck);
+      const what = `battle ${battles} of the turn, ${a.stage}`;
+      if (pend) skipped++; // (a new choice came before the screens showed the last one's dice)
+      pend = { what, stage: a.stage };
+      const can = await until(async () => { const v = await see(seat(a.actor).page); return v.rows || v.go.length || v.panel.length; }, 8000); // prettier-ignore
+      check(!!can, `${what}: ${seat(a.actor).name} has a way to choose on the screen (a row or a button)`);
+    }
+    if (pend) {
+      const [x, y] = [await shown(A.page), await shown(B.page)];
+      if (x && y && x.dom.length === x.game.length && y.dom.length === y.game.length) {
+        const ok = JSON.stringify(x.dom) === JSON.stringify(y.dom) && x.dom.map((r) => r[0]).join('|') === x.game.join('|');
+        check(ok, `${pend.what}: both screens show the same ${x.game.length} dice rolls and their hits${ok ? '' : ` (${A.name}: ${JSON.stringify(x)}; ${B.name}: ${JSON.stringify(y)})`}`); // prettier-ignore
+        if (ok && a.stage === pend.stage && /Choice$/.test(pend.stage))
+          check(x.title === y.title && new RegExp(`${x.pending} hits? to take`).test(x.title ?? ''), `${pend.what}: both screens say "${x.title}"`); // prettier-ignore
+        pend = null;
+        compared++;
+      } else if (!/Choice$|^attFirst$/.test(a.stage ?? '') || a.stage !== pend.stage) (pend = null), skipped++; // the choice is made and the record is no longer on a screen that had not drawn it
+    }
     let who = reading ?? null,
       did = reading ? await press(reading, 'Continue') : null;
     if (!did && quickly && !(a.stage === 'setup' && a.pointDone)) {
@@ -286,17 +331,27 @@ export async function playTurn({ A, B, game, settle, check, play, battleStep, sl
       did = `shortcut ${r}`;
     } else if (a.stage && did !== 'Continue' && !quickly) pressed++;
     idle = 0;
-    if (did !== 'Continue' && (a.stage?.endsWith('Choice') || a.stage === 'attFirst')) seen('choice');
-    if (did !== 'Continue' && a.stage === 'retreat') seen('retreat');
+    const byHand = !/^(Continue|shortcut)/.test(did);
+    if (did !== 'Continue' && (a.stage?.endsWith('Choice') || a.stage === 'attFirst')) seen('choice'), byHand && played.choice++;
+    if (did !== 'Continue' && a.stage === 'retreat') seen('retreat'), byHand && played.retreat++;
     const what = `${a.step.replace(/ \(step.*/, '')}${a.stage ? `, battle step ${a.stage}` : ''}: ${who.name} "${did}"`;
     same = what === last ? same + 1 : 0;
     last = what;
     if (same > 12) return check(false, `the turn goes on after ${what} (pressed ${same} times, nothing changed)`);
     if (process.env.VERBOSE) console.log(`       ${Math.round((Date.now() - t0) / 1000)}s ${what}`);
     if (!(await settle(what))) return false;
+    if (a.stage === 'retreat' && a.retreatUnit && did !== 'Continue') {
+      /* the block that retreated (its own screen knows it): it stands in one of the areas the screen offered, or is at sea; the settle above showed the other screen the same */
+      const r = await who.page.evaluate(([id, from, o, sea]) => { const u = window.__fab.game().units.find((x) => x.id === id); return u && u.area !== from ? o.includes(u.area ?? sea) : null; }, [a.retreatUnit, a.retreatFrom, a.retreat, a.sea]); // prettier-ignore
+      if (r !== null) check(r, `battle ${battles} of the turn: the retreat lands in an area the screen offered (${a.retreat})`);
+    }
     if (process.env.VERBOSE) console.log(`       ${Math.round((Date.now() - t0) / 1000)}s settled`);
   }
   if (tapsSent) note(`${tapsSent} map taps were sent to a spot that was off the screen or under a panel, as the same tap`);
+  if (compared + skipped)
+    note(
+      `dice shown on both screens at a hit choice: ${compared} compared, ${skipped} not compared (a screen had not drawn them before the choice was made)`,
+    );
   note(
     `battles of the turn: ${pressed} steps played with the screen's own buttons${shortcuts.length ? `, ${shortcuts.length} by the shortcut (${[...new Set(shortcuts)].join(', ')}: nothing to press was found)` : ''}; who wins and who is cut off depend on the dice`,
   );
