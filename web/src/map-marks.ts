@@ -722,6 +722,13 @@ export function placeBadges() {
   const r = canvas.getBoundingClientRect(),
     v = new THREE.Vector3();
   badgeBoxes = [];
+  const pieceBoxes: { x0: number; x1: number; y0: number; y1: number }[] = [];
+  if (selUnit && innerWidth < 700)
+    for (const u of g.units) {
+      const ps = pieceScreen(u.id);
+      if (ps)
+        pieceBoxes.push({ x0: ps.x - r.left - ps.rad, x1: ps.x - r.left + ps.rad, y0: ps.y - r.top - ps.rad, y1: ps.y - r.top + ps.rad });
+    } // every block on the screen: a number never sits on one
   const dockBottom = (document.querySelector('#ui .mapdock')?.getBoundingClientRect().bottom ?? r.top) - r.top, // the Layer bar and map tools: move badges stay below them
     cardTop = innerWidth < 700 ? (document.querySelector('#ui .c-dispatch')?.getBoundingClientRect().top ?? r.bottom) - r.top : r.height, // and, on the phone, above the block card
     placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
@@ -743,16 +750,49 @@ export function placeBadges() {
       hh = d.offsetHeight / 2 + 6,
       out = sx < hw || sx > r.width - hw || sy < hh || sy > r.height - hh;
     if (keep && innerWidth < 700) {
-      // phone: a plain number in its own area, a little above the label; one whose area is off the screen sits at the nearest edge, so none is dropped (owner, 16 Nov)
-      sy -= 12;
+      // phone: a plain number inside its own area, under the area's pieces like the labels, never on a block or on another number; an area off the screen shows its number when the player pans to it (owner, 16 Nov)
+      let by = sy - 12;
+      for (const u of g.units)
+        if (u.area === id) {
+          const ps = pieceScreen(u.id);
+          if (ps) by = Math.max(by, ps.y - r.top + ps.rad * 0.8 + 38);
+        }
+      sy = by;
       const dr = document.querySelector('#ui .mapdock')?.getBoundingClientRect(),
+        w = hw - 3,
+        h = hh - 3,
         top = hh + 4,
-        bot = cardTop - hh - 4;
-      sx = Math.min(r.width - hw, Math.max(hw, sx));
-      sy = Math.min(bot, Math.max(top, sy));
-      if (dr && sx - hw < dr.right - r.left && sy < dockBottom + hh) sy = dockBottom + hh; // not under the Layers and Deselect buttons
-      badgeBoxes.push({ x0: sx - hw, x1: sx + hw, y0: sy - hh, y1: sy + hh });
-      d.classList.toggle('edge', out);
+        bot = cardTop - hh - 4,
+        hit = (x: number, y: number) =>
+          badgeBoxes.some((o) => x - w < o.x1 && x + w > o.x0 && y - h < o.y1 && y + h > o.y0) ||
+          pieceBoxes.some((o) => x - w < o.x1 && x + w > o.x0 && y - h < o.y1 && y + h > o.y0);
+      let ok = !out && sx - hw >= 0 && sx + hw <= r.width;
+      if (ok) {
+        const y0 = sy,
+          x0 = sx;
+        ok = false;
+        for (const [dx, dy] of [
+          [0, 0],
+          [0, 2 * h],
+          [2 * w, 0],
+          [-2 * w, 0],
+          [0, 4 * h],
+          [2 * w, 2 * h],
+          [-2 * w, 2 * h],
+        ])
+          if (!hit(x0 + dx, y0 + dy)) {
+            sx = x0 + dx;
+            sy = y0 + dy;
+            ok = true;
+            break;
+          }
+      }
+      if (!ok || sy < top || sy > bot || (dr && sx - hw < dr.right - r.left && sy - hh < dockBottom)) {
+        d.style.display = 'none';
+        continue;
+      }
+      badgeBoxes.push({ x0: sx - w, x1: sx + w, y0: sy - h, y1: sy + h });
+      d.classList.remove('edge');
     } else if (keep) {
       const top = Math.max(hh, dockBottom + hh),
         bot = Math.min(r.height, cardTop) - hh;

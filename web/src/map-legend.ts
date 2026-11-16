@@ -115,6 +115,10 @@ const swatch = (bg: string, border = '#0006') =>
 const GAME: Row[] = [
   [swatch('#c8e86a'), 'Your block can move there'],
   [swatch('#e7b04a'), 'Stop there, or selected'],
+  [
+    '<b style="color:#e7b04a">4</b>',
+    'Move cost in MP: brass = must stop there, a drop = uses fuel, ! = out of supply there (a badge on a desktop)',
+  ],
   [swatch('#d1432f'), 'A battle: must fight (filled) or may fight (outline)'],
   [
     `<svg viewBox="0 0 30 30" width="22" height="22" aria-hidden="true"><rect x="3" y="6" width="24" height="18" rx="3" fill="#d8d4c0" stroke="#0006" stroke-width="1.6"/><path d="M6 24L18 6M13 24L25 6M20 24L27 13.5" stroke="#23251a" stroke-width="3"/></svg>`,
