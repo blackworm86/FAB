@@ -347,12 +347,24 @@ for (const game of GAMES) {
     }
     if (/saving|NOT SAVED/.test(a.sync + b.sync)) check(false, `${what}: saved (${A.name} "${a.sync}", ${B.name} "${b.sync}")`);
     if (a.held || b.held) {
-      /* what differs between the game each screen shows (the held change is the one the other wrote) */
-      const [x, y] = await Promise.all([A.page, B.page].map((q) => q.evaluate(() => structuredClone(window.__fab.game()))));
-      for (const k of Object.keys({ ...x, ...y }).filter((k) => k !== 'log' && JSON.stringify(x[k]) !== JSON.stringify(y[k]))) {
-        const d = k === 'units' ? x.units.map((u, i) => [JSON.stringify(u), JSON.stringify(y.units[i])]).filter(([p, q]) => p !== q) : [[JSON.stringify(x[k]), JSON.stringify(y[k])]]; // prettier-ignore
-        for (const [p, q] of d.slice(0, 3)) console.log(`       held, ${k}: ${A.name} ${p?.slice(0, 260)} | ${B.name} ${q?.slice(0, 260)}`);
-      }
+      /* what the held change would change: take it on the holding screen and print what differs (the screen is not used again after this failure) */
+      const q = a.held ? A.page : B.page;
+      const d = await q.evaluate(async () => {
+        const x = structuredClone(window.__fab.game());
+        [...document.querySelectorAll('button')].find((e) => /Accept their change/.test(e.textContent))?.click();
+        await new Promise((r) => setTimeout(r, 1500));
+        const y = structuredClone(window.__fab.game()),
+          out = [],
+          cmp = (p, u, v) => {
+            if (JSON.stringify(u) === JSON.stringify(v)) return;
+            if (u && v && typeof u === 'object' && typeof v === 'object' && p.split('.').length < 4)
+              for (const k of new Set([...Object.keys(u), ...Object.keys(v)])) k !== 'log' && cmp(`${p}.${k}`, u[k], v[k]); // prettier-ignore
+            else out.push(`${p}: ${JSON.stringify(u)?.slice(0, 90)} -> ${JSON.stringify(v)?.slice(0, 90)}`);
+          };
+        cmp('g', x, y);
+        return out.slice(0, 14);
+      });
+      for (const l of d) console.log(`       held, ${l}`);
     }
     if (a.held || b.held) check(false, `${what}: no change held back by the Rules check (${A.name}: "${a.held}"; ${B.name}: "${b.held}")`);
     for (const [where, ids] of leaks) check(false, `${what}: hidden blocks stay hidden (${ids.slice(0, 4).join(', ')} ${where})`);
