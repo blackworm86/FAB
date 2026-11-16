@@ -130,7 +130,7 @@ export async function playTurn({ A, B, game, settle, check, play, battleStep, sl
         for (let i = 0; i < 60; i++) {
           if (!(await click(p, p.page.locator('.dchip', { hasText: 'Can move' })))) break;
           await sleep(100);
-          if (await p.page.evaluate((n) => document.querySelector('.c-dispatch')?.textContent.startsWith(n) ?? false, m.name)) break; // the chip goes through my blocks: until the card names this one
+          if (await p.page.evaluate((n) => document.querySelector('.c-dispatch h3')?.textContent === n, m.name)) break; // the chip goes through my blocks: until the card names this one (its h3: a warning box can come before the name)
         }
         /* the chip selects it; a tap on the block itself brings it and its lit areas into view (a tap on a stack picks the next block: until the card names this one) */
         let named = false;
@@ -139,27 +139,34 @@ export async function playTurn({ A, B, game, settle, check, play, battleStep, sl
           if (q && (await p.page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.tagName === 'CANVAS', [q.x, q.y])))
             await p.page.mouse.click(q.x, q.y);
           await sleep(500);
-          if ((named = await p.page.evaluate((n) => document.querySelector('.c-dispatch')?.textContent.startsWith(n) ?? false, m.name)))
-            break;
+          if ((named = await p.page.evaluate((n) => document.querySelector('.c-dispatch h3')?.textContent === n, m.name))) break;
         }
-        /* the camera may still be gliding while the tap is made and the tap then lands on a neighbour: any move of this block counts, the next area is tried otherwise */
+        /* the camera may still be gliding while the tap is made and the tap then lands on a neighbour: any move of this block counts, the next area is tried otherwise.
+         * A move across a bridge only asks the other side whether it blows it: the block stands where it was until that is answered (the turn's loop does it), and the question counts as the move. */
+        const moved = () =>
+          until(
+            () =>
+              p.page.evaluate(
+                ([i, f]) => {
+                  const g = window.__fab.game();
+                  return g.units.find((u) => u.id === i)?.area !== f || g.pendingBlow?.unit === i;
+                },
+                [m.id, m.from],
+              ),
+            3000,
+            150,
+          );
         for (const a of m.to.slice(0, 4))
-          if (
-            (await mapTap(p, a)) &&
-            (await until(
-              () => p.page.evaluate(([i, f]) => window.__fab.game().units.find((u) => u.id === i)?.area !== f, [m.id, m.from]),
-              3000,
-              150,
-            ))
-          )
+          if ((await mapTap(p, a)) && (await moved()))
             return {
               attack: await p.page.evaluate((i) => {
                 const g = window.__fab.game(),
-                  u = g.units.find((x) => x.id === i);
-                return g.units.some((x) => x.area === u.area && x.side !== u.side);
+                  u = g.units.find((x) => x.id === i),
+                  to = g.pendingBlow?.unit === i ? g.pendingBlow.path.at(-1) : u.area;
+                return g.units.some((x) => x.area === to && x.side !== u.side);
               }, m.id),
-            }; // an attack when the area it stands in now holds the enemy // prettier-ignore
-        trace.push(`${m.name} ${attack ? 'attack' : 'move'} to ${m.to.slice(0, 4)}${named ? '' : ' (card never named it)'}`);
+            }; // an attack when the area it stands in (or crosses into) holds the enemy // prettier-ignore
+        trace.push(`${m.name} ${attack ? 'attack' : 'move'} to ${m.to.slice(0, 4)}${named ? '' : ' (card never named it)'}: ${(await p.page.evaluate(() => document.querySelector('#ui')?.innerText.replace(/\s+/g, ' ').slice(0, 250))) ?? ''}`); // prettier-ignore
       }
     return null;
   };
