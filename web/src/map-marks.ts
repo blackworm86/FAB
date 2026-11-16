@@ -6,7 +6,7 @@ import { ico } from './icons';
 import { esc, nm } from './util';
 import { btn } from './ui-kit';
 import { type Tgt } from './chit-play';
-import { $, areaName, LAB, MAP, MH, MW, S, toWorld, VOL } from './page';
+import { $, areaName, LAB, MAP, MH, MW, POLE, S, toWorld, VOL } from './page';
 import { areaPick, g, selArea, selUnit } from './game-state';
 import { board, cam, canvas, scene } from './scene';
 import { diorama, REL, setFocusOn, show3d } from './map3d';
@@ -707,6 +707,7 @@ export function placeBadges() {
     const r = canvas.getBoundingClientRect(),
       v = new THREE.Vector3();
     fxLayer.place((area, unit) => {
+      if (!POLE.has(area)) return { x: 0, y: 0, cx: 0, cy: 0, rad: 0, visible: false }; // an area with no spot on the map: nothing to anchor to
       const ps = unit ? pieceScreen(unit) : null,
         c = center(area);
       v.set(c.x, 0, c.z).project(cam);

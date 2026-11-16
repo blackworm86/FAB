@@ -29,7 +29,7 @@ export function diffFx(a: ReturnType<typeof snap>, x: E.Game): Fx[] {
       out.push({ area: o.area, unit: u.id, icon: 'xbold', head: 'ELIMINATED', text: o.name, cls: 'elim' });
     else if (u.str < o.str)
       out.push({
-        area: u.area ?? o.area ?? 0,
+        area: u.area ?? o.area ?? ba ?? -1,
         unit: u.id,
         icon: 'burst',
         head: `−${o.str - u.str} STEP`,
@@ -39,8 +39,22 @@ export function diffFx(a: ReturnType<typeof snap>, x: E.Game): Fx[] {
     if (u.area != null && o.area != null && u.area !== o.area)
       out.push(
         u.area === ba
-          ? { area: u.area, unit: u.id, icon: 'plus', head: 'REINFORCES', text: `${u.name} → ${E.areas.get(u.area)!.name}`, cls: 'ret' } // moved into the battle (Reinforce SA), not out of it
-          : { area: u.area, unit: u.id, icon: 'back', head: 'RETREATS', text: `${u.name} → ${E.areas.get(u.area)!.name}`, cls: 'ret' },
+          ? {
+              area: u.area,
+              unit: u.id,
+              icon: 'plus',
+              head: 'REINFORCES',
+              text: `${u.name} → ${E.areas.get(u.area)?.name ?? ''}`,
+              cls: 'ret',
+            } // moved into the battle (Reinforce SA), not out of it
+          : {
+              area: u.area,
+              unit: u.id,
+              icon: 'back',
+              head: 'RETREATS',
+              text: `${u.name} → ${E.areas.get(u.area)?.name ?? ''}`,
+              cls: 'ret',
+            },
       );
     if (u.area != null && u.disorder > o.dis)
       out.push({ area: u.area, unit: u.id, icon: 'disorder', head: 'DISORDERED', text: u.name, cls: 'dis' });
@@ -50,12 +64,19 @@ export function diffFx(a: ReturnType<typeof snap>, x: E.Game): Fx[] {
       out.push({ area: ba, icon: 'xbold', head: 'ASSET LOST', text: c.name, cls: 'elim' });
   for (const f of new Set(a.fw))
     if (!x.fieldWorks.includes(f))
-      out.push({ area: f, icon: 'nogear', head: 'FIELD WORKS REMOVED', text: E.areas.get(f)!.name, cls: 'fw' });
+      out.push({ area: f, icon: 'nogear', head: 'FIELD WORKS REMOVED', text: E.areas.get(f)?.name ?? '', cls: 'fw' });
   for (const [k, v] of Object.entries(x.control))
     if (a.ctl[+k] !== v)
-      out.push({ area: +k, icon: 'flag', head: `${tr(nm(v as E.Side)).toUpperCase()} CONTROL`, text: E.areas.get(+k)!.name, cls: 'cap' });
+      out.push({
+        area: +k,
+        icon: 'flag',
+        head: `${tr(nm(v as E.Side)).toUpperCase()} CONTROL`,
+        text: E.areas.get(+k)?.name ?? '',
+        cls: 'cap',
+      });
   const seenFx = new Set<string>();
   return out.filter((f) => {
+    if (!E.areas.has(f.area)) return false; // no spot on the map (a box, the sea, a unit with no area): no pop-up, rather than a throw in the layer (Golan online test)
     const k = `${f.head}|${f.text}|${f.area}`;
     if (seenFx.has(k)) return false;
     seenFx.add(k);
