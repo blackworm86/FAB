@@ -13,7 +13,19 @@
           ".read": "auth != null && auth.uid === $uid",
           "$id": {
             ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && auth.uid === $uid",
-            ".validate": "newData.hasChildren(['title', 'game', 'created']) && newData.child('title').isString() && newData.child('title').val().length <= 80"
+            ".validate": "$id.length <= 40 && newData.hasChildren(['title', 'game', 'created'])",
+            "title": {
+              ".validate": "newData.isString() && newData.val().length <= 80"
+            },
+            "game": {
+              ".validate": "newData.isString() && newData.val().length <= 20"
+            },
+            "created": {
+              ".validate": "newData.isNumber()"
+            },
+            "$other": {
+              ".validate": false
+            }
           }
         }
       }
@@ -23,19 +35,45 @@
         ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && !newData.exists() && (data.child('meta/owner').val() === auth.uid || root.child('admins').child(auth.uid).exists())",
         "meta": {
           ".read": "auth != null",
-          ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && !data.exists() && newData.child('owner').val() === auth.uid",
-          ".validate": "newData.hasChildren(['title', 'game', 'owner', 'created']) && newData.child('title').isString() && newData.child('title').val().length <= 80"
+          ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && !data.exists() && newData.child('owner').val() === auth.uid && $id.matches(/^[a-z0-9]{10}$/)",
+          ".validate": "newData.hasChildren(['title', 'game', 'owner', 'created'])",
+          "title": {
+            ".validate": "newData.isString() && newData.val().length <= 80"
+          },
+          "game": {
+            ".validate": "newData.isString() && newData.val().length <= 20"
+          },
+          "owner": {
+            ".validate": true
+          },
+          "created": {
+            ".validate": "newData.isNumber()"
+          },
+          "split": {
+            ".validate": "newData.isBoolean()"
+          },
+          "hotseat": {
+            ".validate": "newData.isBoolean()"
+          },
+          "opts": {
+            "$k": {
+              ".validate": "$k.length <= 30 && (newData.isBoolean() || newData.isNumber() || (newData.isString() && newData.val().length <= 60))"
+            }
+          },
+          "$other": {
+            ".validate": false
+          }
         },
         "members": {
           ".read": "auth != null",
           "$uid": {
-            ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && auth.uid === $uid",
+            ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && auth.uid === $uid && (!newData.exists() || newData.parent().parent().child('meta/owner').val() === auth.uid || newData.parent().parent().child('seats/german').val() === auth.uid || newData.parent().parent().child('seats/allied').val() === auth.uid)",
             ".validate": "newData.val() === true"
           }
         },
         "seats": {
           ".read": "auth != null",
-          ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && newData.parent().child('meta').exists() && (root.child('admins').child(auth.uid).exists() || ((newData.child('german').val() === data.child('german').val() || (newData.child('german').val() === auth.uid && !data.child('german').exists()) || (data.child('german').val() === auth.uid && !newData.child('german').exists())) && (newData.child('allied').val() === data.child('allied').val() || (newData.child('allied').val() === auth.uid && !data.child('allied').exists()) || (data.child('allied').val() === auth.uid && !newData.child('allied').exists()))))",
+          ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && newData.parent().child('meta').exists() && (root.child('admins').child(auth.uid).exists() || ((newData.child('german').val() === data.child('german').val() || (newData.child('german').val() === auth.uid && !data.child('german').exists() && (!data.parent().child('locked').exists() || data.parent().child('locked/german').val() === auth.uid)) || (data.child('german').val() === auth.uid && !newData.child('german').exists())) && (newData.child('allied').val() === data.child('allied').val() || (newData.child('allied').val() === auth.uid && !data.child('allied').exists() && (!data.parent().child('locked').exists() || data.parent().child('locked/allied').val() === auth.uid)) || (data.child('allied').val() === auth.uid && !newData.child('allied').exists()))))",
           ".validate": "!newData.child('german').exists() || !newData.child('allied').exists() || newData.child('german').val() !== newData.child('allied').val()",
           "german": {
             ".validate": "newData.isString()"
@@ -54,6 +92,20 @@
             ".validate": "($side === 'german' || $side === 'allied') && newData.isString() && newData.val().length <= 60"
           }
         },
+        "locked": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && (root.child('admins').child(auth.uid).exists() || (!data.exists() && newData.exists() && (root.child('games').child($id).child('seats/german').val() === auth.uid || root.child('games').child($id).child('seats/allied').val() === auth.uid)))",
+          ".validate": "newData.child('german').val() === root.child('games').child($id).child('seats/german').val() && newData.child('allied').val() === root.child('games').child($id).child('seats/allied').val()",
+          "german": {
+            ".validate": "newData.isString()"
+          },
+          "allied": {
+            ".validate": "newData.isString()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
         "state": {
           ".read": "auth != null",
           ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && (root.child('admins').child(auth.uid).exists() || (!data.exists() && root.child('games').child($id).child('meta/owner').val() === auth.uid) || (data.exists() && newData.exists() && (root.child('games').child($id).child('seats/german').val() === auth.uid || root.child('games').child($id).child('seats/allied').val() === auth.uid)))",
@@ -61,14 +113,54 @@
             ".validate": "newData.val() === auth.uid"
           },
           "f": {
-            ".validate": "!data.child('over').exists() || newData.child('over').exists() || root.child('admins').child(auth.uid).exists()"
+            ".validate": "!data.child('over').exists() || newData.child('over').exists() || root.child('admins').child(auth.uid).exists()",
+            "$k": {
+              ".validate": "$k.length <= 40 && newData.isString() && newData.val().length <= 200000 && ($k === 'log' || newData.parent().parent().child('by').val() === auth.uid)"
+            }
+          },
+          "rev": {
+            ".validate": "newData.isNumber() && newData.parent().child('by').val() === auth.uid"
+          },
+          "units": {
+            ".validate": "newData.parent().child('by').val() === auth.uid",
+            "$k": {
+              ".validate": "$k.length <= 8 && newData.isString() && newData.val().length <= 4000"
+            }
+          },
+          "chits": {
+            ".validate": "newData.parent().child('by').val() === auth.uid",
+            "$k": {
+              ".validate": "$k.length <= 8 && newData.isString() && newData.val().length <= 4000"
+            }
+          },
+          "$other": {
+            ".validate": false
           }
         },
         "priv": {
           "$side": {
             ".read": "auth != null && root.child('games').child($id).child('seats').child($side).val() === auth.uid",
             ".write": "auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && (root.child('admins').child(auth.uid).exists() || (!data.exists() && root.child('games').child($id).child('meta/owner').val() === auth.uid) || (data.exists() && newData.exists() && root.child('games').child($id).child('seats').child($side).val() === auth.uid))",
-            ".validate": "($side === 'german' || $side === 'allied') && newData.hasChildren(['salt'])"
+            ".validate": "($side === 'german' || $side === 'allied') && newData.hasChildren(['salt'])",
+            "salt": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            },
+            "secrets": {
+              "$k": {
+                ".validate": "$k.length <= 100 && newData.isString() && newData.val().length <= 4000"
+              }
+            },
+            "epoch": {
+              "$k": {
+                ".validate": "$k.length <= 100 && newData.isNumber()"
+              }
+            },
+            "fresh": {
+              ".validate": "newData.isBoolean()"
+            },
+            "$other": {
+              ".validate": false
+            }
           }
         },
         "reveals": {

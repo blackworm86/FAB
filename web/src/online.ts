@@ -1,7 +1,7 @@
 /** Online play. Everything of one game lives in the Firebase Realtime Database under `games/{id}` (see store-rtdb.ts and database.rules.json):
  *  the shared game as many small values, each seat's private block details, and the reveals. A browser works out its own moves with the rules engine
  *  and writes only what changed. The seat decides who may act. In development (`?dev=1`) a seat switch lets one tab play both sides. */
-import { setRandom, SplitSeat, VOLUME, type Game, type Side, type Priv, type Reveals } from '../../engine/src';
+import { samePosition, setRandom, SplitSeat, VOLUME, type Game, type Side, type Priv, type Reveals } from '../../engine/src';
 import { rtdbStore } from './store-rtdb';
 
 export interface Seats {
@@ -131,6 +131,7 @@ export const online = {
   error: '',
   sync: 'connecting' as string,
   ready: false,
+  /** Whose change the game now arriving carries: the other account's id, '?' when the last writer is unknown or this account's id stands on a game this browser did not write, this account's id only for its own write. */
   lastBy: '',
   chat: [] as ChatMsg[],
   devSeat: 'both' as DevSeat,
@@ -169,7 +170,15 @@ let store: Store | null = null,
   lastReveals: Reveals = {},
   pubDoc: StateDoc | null = null,
   lastJson = '',
-  base = ''; // the shared game the local one was last built from or saved as: a move is written as its difference from this
+  base = '', // the shared game the local one was last built from or saved as: a move is written as its difference from this
+  foreign = '', // who else wrote since the last game shown (see online.lastBy)
+  held: string[] = []; // the positions this browser held since the other player's last accepted change: a restore is taken only back to one of these
+/** The table accepted the game that arrived. When it carries a change of the other player, the positions before it can no longer be restored to. */
+export const keepLegal = (g: Game) => {
+  if (!held.length || (online.lastBy !== online.uid && online.lastBy !== '?')) held = [JSON.stringify(g)];
+};
+/** Did this browser hold this position (whatever the restore marker and the codes of hidden blocks) since the other player's last accepted change? */
+export const heldBefore = (g: Game) => held.some((h) => samePosition(JSON.parse(h) as Game, g));
 let writing = false,
   failures = 0,
   queued: Game | null = null,
@@ -213,6 +222,8 @@ function rebuild() {
   const sp = mySeat(),
     g0 = JSON.parse(pubDoc.json) as Game;
   base = pubDoc.json;
+  online.lastBy = foreign || online.uid;
+  foreign = '';
   if (!sp) {
     onRemote(g0);
     return;
@@ -220,7 +231,7 @@ function rebuild() {
   const game = sp.open(g0);
   online.enemyAlias = sp.enemyAlias;
   onRemote(game);
-  if (sp.priv && sp.stale(game)) void push(game); // the other seat's move hid one of our revealed blocks: withdraw its reveal now, not at our next move
+  if (sp.priv && sp.stale(game)) void push(game, false); // the other seat's move hid one of our revealed blocks: withdraw its reveal now, not at our next move
 }
 const savedLater = () => {
   writing = false;
@@ -359,18 +370,24 @@ export async function startOnline(
     online.sync = `received ${new Date().toLocaleTimeString()}`;
     onChange();
     online.rev = Math.max(online.rev, d.rev);
-    online.lastBy = d.by ?? '';
     pubDoc = d;
-    if (d.json === lastJson) return;
+    if (d.json === lastJson) return; // exactly what this browser last wrote or showed
+    // anything else may be somebody else's change, whatever id stands on it: a write may leave the id of the writer before it (a modified browser on rules without the `by` check; the log), and while a save of ours is on its way the other player's change arrives under our id
+    foreign = d.by && d.by !== online.uid ? d.by : foreign || '?';
     lastJson = d.json;
     rebuild();
   }, fail);
 }
 
-/** Write this seat's private details when they changed, then the shared game with this seat's hidden blocks hidden again. Quick bursts are coalesced into one write at a time. */
-export async function push(g: Game) {
+/** Write this seat's private details when they changed, then the shared game with this seat's hidden blocks hidden again. Quick bursts are coalesced into one write at a time.
+ *  `own`: a position this player made (a move), kept for heldBefore. */
+export async function push(g: Game, own = true) {
   const sp = mySeat();
   if (online.mode !== 'remote' || !store || !(sp || (online.hotseat && online.mySide()))) return;
+  if (own && !online.hotseat) {
+    const j = JSON.stringify(g);
+    if (held.at(-1) !== j) held = [...held, j].slice(-12);
+  }
   if (sp && !sp.priv) {
     online.sync = 'NOT SAVED: your private block details have not loaded';
     queued = g;

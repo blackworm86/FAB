@@ -71,4 +71,34 @@ describe('online: two seats on one table', () => {
     expect(A.g.units.find((u) => u.id === theirs.id)).toBeUndefined();
     expect(A.g.units.filter((u) => u.side === 'allied' && u.disorder === 2)).toHaveLength(1); // and B's change arrived as a placeholder
   });
+  it('the Rules check cannot be switched off: a game under my id that I did not write is not mine, and a restore counts only back to a position I held (audit, finding 4)', async () => {
+    mem.clear();
+    const A = await tab('german'),
+      B = await tab('allied'),
+      copy = (g: E.Game) => JSON.parse(JSON.stringify(g)) as E.Game,
+      move = (g: E.Game, side: E.Side) => {
+        const x = copy(g);
+        x.units.find((u) => u.side === side && u.area != null && !u.garrison && !u.disorder)!.disorder = 1;
+        x.rolls++; // (a hidden block's own change is no change of position for the other seat)
+        return x;
+      },
+      marked = (g: E.Game): E.Game => ({ ...copy(g), restored: { t: 7, why: ['says the other browser'] } });
+    const b0 = copy(B.g);
+    await A.O.push(move(A.g, 'german'));
+    expect(B.O.online.lastBy).toBe('u-german'); // the other player's change: checked by the table
+    B.O.keepLegal(B.g); // (the table accepted it)
+    const b1 = copy(B.g);
+    await B.O.push(move(B.g, 'allied'));
+    // a modified browser writes the game again and leaves my id on it (no writer sent)
+    const doc = JSON.parse(mem.get('fab-fake-pub')!) as { json: string },
+      pub = JSON.parse(doc.json) as E.Game;
+    pub.rolls += 3;
+    mem.set('fab-fake-pub', JSON.stringify({ ...doc, json: JSON.stringify(pub), by: 'u-allied' }));
+    win.dispatchEvent(new StorageEv('storage', { key: 'fab-fake-pub' }));
+    expect(B.g.rolls).toBe(pub.rolls);
+    expect(B.O.online.lastBy).not.toBe(B.O.online.uid);
+    expect(B.O.heldBefore(marked(b1))).toBe(true); // back to before my own move: what the other player's check may restore
+    expect(B.O.heldBefore(marked(b0))).toBe(false); // back to before THEIR accepted move: not a restore
+    expect(B.O.heldBefore(marked(B.g))).toBe(false); // nor a position of their own making
+  });
 });

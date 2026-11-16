@@ -68,6 +68,25 @@ describe('split hidden blocks (no server)', () => {
     const foe = game.units.find((u) => u.side === 'allied' && u.area === area && !u.garrison)!;
     expect(isPlaceholder(foe)).toBe(false);
   });
+  it("a reveal written by the other seat that names one of this seat's own blocks is ignored (audit, finding 6)", () => {
+    const g = newGame(5),
+      priv: Priv = { salt: SG, secrets: secretsOf(g, 'german') },
+      pub = JSON.parse(toPublic(JSON.parse(toPublic(g, 'german', SG, new Map())) as Game, 'allied', SA, new Map())) as Game,
+      honest = JSON.stringify(compose(pub, priv, {}).game),
+      mine = g.units.filter((u) => u.side === 'german' && u.area != null && !u.garrison),
+      shown = g.units.find((u) => u.side === 'german' && pub.units.some((x) => x.id === u.id))!, // one of my blocks everybody sees: it stands in the shared copy under its own id
+      foe = pub.units.find((u) => u.side === 'allied' && isPlaceholder(u))!,
+      fake = {
+        ...revealsIn(g, 'german', mine[0].area!, SG)[Object.keys(revealsIn(g, 'german', mine[0].area!, SG))[0]],
+        str: 1,
+        name: 'Rewritten',
+      };
+    expect(shown).toBeTruthy();
+    // under an enemy block's code, naming my block: it used to give me a second block with that id and the false details
+    expect(JSON.stringify(compose(pub, priv, { [foe.id]: { ...fake, id: mine[1].id } }).game)).toBe(honest);
+    // under my own block's id, naming anything: it used to rename my block on my screen and then in my private record
+    expect(JSON.stringify(compose(pub, priv, { [shown.id]: { ...fake, id: 'X1' } }).game)).toBe(honest);
+  });
 });
 
 describe('reveals stay current', () => {

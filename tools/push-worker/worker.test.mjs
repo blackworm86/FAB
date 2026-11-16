@@ -88,9 +88,11 @@ test('only real push services are accepted as endpoints', () => {
 test('subscribe, then notify the opponent at a shared table: one push, throttled for a minute; strangers are refused', async () => {
   const kv = new Map(),
     pushes = [];
+  let writes = 0;
   const SUBS = {
     get: async (k, type) => (kv.has(k) ? (type === 'json' ? JSON.parse(kv.get(k)) : kv.get(k)) : null),
     put: async (k, v) => {
+      writes++;
       kv.set(k, v);
     },
   };
@@ -121,6 +123,12 @@ test('subscribe, then notify the opponent at a shared table: one push, throttled
     u3 = await token({ sub: 'u3' });
   assert.equal((await call('/subscribe', { idToken: u2, sub: { endpoint: 'https://fcm.googleapis.com/fcm/send/dev-u2' } })).status, 200);
   assert.equal((await call('/subscribe', { idToken: u2, sub: { endpoint: 'https://evil.example/hook' } })).status, 400);
+  // the free plan stores 1,000 values a day: asking again for what is already kept, or notifying a player with no device, stores nothing (audit, finding 10)
+  assert.equal(writes, 1);
+  assert.equal((await call('/subscribe', { idToken: u2, sub: { endpoint: 'https://fcm.googleapis.com/fcm/send/dev-u2' } })).status, 200);
+  assert.equal((await call('/unsubscribe', { idToken: u2, endpoint: 'https://fcm.googleapis.com/fcm/send/other' })).status, 200);
+  assert.equal((await call('/notify', { idToken: u2, table: 't1' })).body.sent, 0);
+  assert.equal(writes, 1);
   const n = await call('/notify', { idToken: u1, table: 't1' });
   assert.equal(n.status, 200);
   assert.equal(n.body.sent, 1);

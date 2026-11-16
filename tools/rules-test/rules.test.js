@@ -1,6 +1,6 @@
 // The database rules decide who may take a seat, write the game and read each side's secrets. Run: npm test (Firebase emulator, needs Java).
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { ref, set, get, update, remove } from 'firebase/database';
+import { ref, set, get, update, remove, increment } from 'firebase/database';
 import { readFileSync } from 'node:fs';
 import { beforeAll, beforeEach, afterAll, describe, it } from 'vitest';
 
@@ -22,7 +22,7 @@ beforeEach(async () => {
 
 describe('creating a game', () => {
   it('the creator writes meta, the private records and the first state, in that order', async () => {
-    const db = user('carol'), P = (p) => ref(db, `games/new/${p}`);
+    const db = user('carol'), P = (p) => ref(db, `games/newgame001/${p}`);
     await assertSucceeds(set(P('meta'), { title: 'Mine', game: 'bulge', owner: 'carol', created: 2 }));
     await assertSucceeds(set(P('priv/german'), { salt: 'x' })); await assertSucceeds(set(P('priv/allied'), { salt: 'y' }));
     await assertSucceeds(set(P('state'), { rev: 1, by: 'carol', f: {} }));
@@ -34,7 +34,7 @@ describe('creating a game', () => {
   });
   it('meta cannot be rewritten or claimed for someone else', async () => {
     await assertFails(set(ref(user('alice'), `games/${G}/meta`), { ...meta, title: 'changed' }));
-    await assertFails(set(ref(user('mallory'), 'games/g3/meta'), { ...meta, owner: 'alice' }));
+    await assertFails(set(ref(user('mallory'), 'games/g300000000/meta'), { ...meta, owner: 'alice' }));
   });
 });
 
@@ -58,12 +58,12 @@ describe('seats and factions', () => {
     await assertFails(set(ref(user('bob'), `games/${G}/seatNames/german`), 'Bob'));
   });
   it('a Golan game uses the same two seats (german = Israel, allied = Syria) and the same flow', async () => {
-    const db = user('dave'), P = (p) => ref(db, `games/golan/${p}`);
+    const db = user('dave'), P = (p) => ref(db, `games/golan00001/${p}`);
     await assertSucceeds(set(P('meta'), { title: 'Golan', game: 'golan73', owner: 'dave', created: 3, opts: { scenario: 'badr' } }));
     await assertSucceeds(set(P('priv/german'), { salt: 'x' })); await assertSucceeds(set(P('priv/allied'), { salt: 'y' }));
     await assertSucceeds(set(P('state'), { rev: 1, by: 'dave', f: { phasing: 'israeli' } }));
-    await assertSucceeds(update(P('seats'), { german: 'dave' })); await assertSucceeds(update(ref(user('erin'), 'games/golan/seats'), { allied: 'erin' }));
-    await assertFails(update(ref(user('erin'), 'games/golan/seats'), { syrian: 'erin' }));
+    await assertSucceeds(update(P('seats'), { german: 'dave' })); await assertSucceeds(update(ref(user('erin'), 'games/golan00001/seats'), { allied: 'erin' }));
+    await assertFails(update(ref(user('erin'), 'games/golan00001/seats'), { syrian: 'erin' }));
   });
   it('seats need an existing game', async () => { await assertFails(set(ref(user('bob'), 'games/nogame/seats'), { german: 'bob' })); });
 });
@@ -108,7 +108,7 @@ describe('the game and its secrets', () => {
 
 describe('the app\'s own flows (as web/src/store-rtdb.ts writes them)', () => {
   it('createMatch: one combined update for meta, seat, membership and game list, then name, private records, state', async () => {
-    const db = user('carol'), id = 'made';
+    const db = user('carol'), id = 'made000001';
     await assertSucceeds(update(ref(db, '/'), { [`games/${id}/meta`]: { title: 'T', game: 'bulge', opts: { scenario: 'intro', fuel: true }, owner: 'carol', created: 3, split: true }, [`games/${id}/members/carol`]: true, [`games/${id}/seats/german`]: 'carol', [`users/carol/games/${id}`]: { title: 'T', game: 'bulge', created: 3 } }));
     await assertSucceeds(set(ref(db, `games/${id}/seatNames/german`), 'Carol'));
     await assertSucceeds(set(ref(db, `games/${id}/priv/german`), { salt: 'a', secrets: {} })); await assertSucceeds(set(ref(db, `games/${id}/priv/allied`), { salt: 'b', secrets: {} }));
@@ -199,5 +199,90 @@ describe('the replay journal (4.1): each seat records its own blocks; readable o
     await admin((d) => set(ref(d, 'admins/root'), true));
     await assertSucceeds(update(ref(user('root'), `games/${G}/state`), { 'f/over': null, rev: 2, by: 'root' }));
     await assertSucceeds(update(ref(user('alice'), `games/${G}/state`), { 'f/turn': '"2"', rev: 3, by: 'alice' }));      // everyday moves are unaffected
+  });
+});
+
+describe('the audit of 15 November 2026: what a modified browser or a stranger may no longer write', () => {
+  const both = () => admin((d) => Promise.all([set(ref(d, `games/${G}/seats/allied`), 'bob'), set(ref(d, `games/${G}/state`), { rev: 1, by: 'alice', f: { turn: '1' }, units: { '0001': '{}', '0002': '{}' }, chits: { '0001': '{}', '0002': '{}' } })]));
+  const S = (uid, p = '') => ref(user(uid), `games/${G}/state${p}`);
+  it('4: every change of the game carries its writer, so the other browser never takes it for its own (alice wrote last, bob writes)', async () => {
+    await both();
+    await assertFails(set(S('bob', '/units/0001'), '{"area":1}'));
+    await assertFails(update(S('bob'), { 'units/0001': '{"area":1}' }));
+    await assertFails(remove(S('bob', '/units/0002')));
+    await assertFails(remove(S('bob', '/chits/0001')));
+    await assertFails(set(S('bob', '/f/turn'), '9'));
+    await assertFails(set(S('bob', '/rev'), 99));
+    await assertSucceeds(update(S('bob'), { 'units/0001': '{"area":1}', 'f/turn': '2', rev: increment(1), by: 'bob' }));
+    await assertSucceeds(set(S('alice', '/f/log'), '["a line"]'));                          // the log alone is added through a transaction, without the writer
+    await assertSucceeds(update(S('alice'), { 'units/0002': null, rev: increment(1), by: 'alice' }));
+  });
+  it('4, 5: the first to sit rewrites its blocks, the writer and its private record in one update (changeSalt)', async () => {
+    await both();
+    await assertSucceeds(update(ref(user('bob'), '/'), { [`games/${G}/state/units/0001`]: '{"id":"h1"}', [`games/${G}/state/units/0002`]: '{"id":"h2"}', [`games/${G}/state/rev`]: increment(1), [`games/${G}/state/by`]: 'bob', [`games/${G}/priv/allied`]: { salt: 'n'.repeat(24), secrets: { A1: '{}' } } }));
+  });
+  it('5: once both seats are taken the table is locked to the two accounts: a seat left empty is kept for its player', async () => {
+    await both();
+    const L = (uid) => ref(user(uid), `games/${G}/locked`), seats = (uid) => ref(user(uid), `games/${G}/seats`);
+    await assertFails(set(L('mallory'), { german: 'alice', allied: 'bob' }));
+    await assertFails(set(L('bob'), { german: 'alice', allied: 'mallory' }));
+    await assertFails(set(L('bob'), true));
+    await assertSucceeds(set(L('bob'), { german: 'alice', allied: 'bob' }));
+    await assertFails(set(L('alice'), { german: 'alice', allied: 'bob' }));                 // once
+    await assertFails(remove(L('alice')));
+    await assertSucceeds(get(L('alice')));
+    await assertSucceeds(update(seats('bob'), { allied: null }));                            // bob leaves his seat…
+    await assertFails(update(seats('mallory'), { allied: 'mallory' }));                      // …a stranger cannot take it and read the Allied blocks
+    await assertFails(set(seats('alice'), { allied: 'alice' }));                             // nor can the other player change sides
+    await assertSucceeds(update(seats('bob'), { allied: 'bob' }));                           // bob comes back
+    await assertSucceeds(update(seats('bob'), { allied: null }));
+    await assertSucceeds(remove(L('root')));                                                 // an admin makes room for another player
+    await assertSucceeds(update(seats('mallory'), { allied: 'mallory' }));
+  });
+  it('5: a hot-seat game is locked when it is made (createMatch): nobody takes its empty seat', async () => {
+    const db = user('carol'), id = 'hotseat001';
+    await assertSucceeds(update(ref(db, '/'), { [`games/${id}/meta`]: { title: 'T', game: 'bulge', opts: { scenario: 'intro', fuel: true }, owner: 'carol', created: 3, hotseat: true }, [`games/${id}/members/carol`]: true, [`games/${id}/seats/german`]: 'carol', [`users/carol/games/${id}`]: { title: 'T', game: 'bulge', created: 3 } }));
+    await assertSucceeds(set(ref(db, `games/${id}/seatNames/german`), 'Carol'));
+    await assertSucceeds(set(ref(db, `games/${id}/locked`), { german: 'carol' }));
+    await assertSucceeds(set(ref(db, `games/${id}/state`), { f: { turn: '1' }, units: { '0000': '{}' }, chits: {}, rev: 1, by: 'carol' }));
+    await assertFails(update(ref(user('mallory'), `games/${id}/seats`), { allied: 'mallory' }));
+    await assertSucceeds(update(ref(db, `games/${id}/seats`), { german: null }));           // its player may leave and come back
+    await assertSucceeds(update(ref(db, `games/${id}/seats`), { german: 'carol' }));
+  });
+  it('8: a game card holds only what the app writes, in sizes the app writes; the game id is one the app makes', async () => {
+    const card = { title: 'T', game: 'bulge', opts: { scenario: 'intro', fuel: true, bid: 2 }, owner: 'mallory', created: 3, split: true };
+    const M = (id) => ref(user('mallory'), `games/${id}/meta`);
+    await assertFails(set(M('fill000001'), { ...card, junk: 'x'.repeat(1000) }));
+    await assertFails(set(M('fill000001'), { ...card, title: 'x'.repeat(81) }));
+    await assertFails(set(M('fill000001'), { ...card, game: 'x'.repeat(21) }));
+    await assertFails(set(M('fill000001'), { ...card, created: 'x'.repeat(1000) }));
+    await assertFails(set(M('fill000001'), { ...card, opts: { scenario: { deep: 'x'.repeat(1000) } } }));
+    await assertFails(set(M('fill000001'), { ...card, opts: { scenario: 'x'.repeat(61) } }));
+    await assertFails(set(M('main'), card));
+    await assertFails(set(M('x'.repeat(200)), card));
+    await assertSucceeds(set(M('fill000001'), card));
+  });
+  it('8: a games-list entry, membership, the game and a private record have limits too', async () => {
+    await both();
+    const mine = { title: 'T', game: 'bulge', created: 1 };
+    await assertFails(set(ref(user('mallory'), `users/mallory/games/${G}`), { ...mine, junk: 'x'.repeat(1000) }));
+    await assertFails(set(ref(user('mallory'), `users/mallory/games/${G}`), { ...mine, game: 'x'.repeat(21) }));
+    await assertFails(set(ref(user('mallory'), `users/mallory/games/${'x'.repeat(41)}`), mine));
+    await assertFails(set(ref(user('mallory'), `games/${G}/members/mallory`), true));       // not seated, not the owner: no membership (it opens the replay record once the game is over)
+    await assertSucceeds(set(ref(user('bob'), `games/${G}/members/bob`), true));
+    await assertSucceeds(remove(ref(user('bob'), `games/${G}/members/bob`)));               // leaveMatch
+    await assertSucceeds(set(ref(user('alice'), `games/${G}/members/alice`), true));        // the owner, seated or not
+    await assertFails(update(S('bob'), { junk: 'x', by: 'bob' }));
+    await assertFails(update(S('bob'), { 'units/0001': 'x'.repeat(4001), by: 'bob' }));
+    await assertFails(update(S('bob'), { 'units/000000001': '{}', by: 'bob' }));
+    await assertFails(update(S('bob'), { 'units/0001': { deep: 'x' }, by: 'bob' }));
+    await assertFails(update(S('bob'), { ['f/' + 'k'.repeat(41)]: '1', by: 'bob' }));
+    const P = ref(user('bob'), `games/${G}/priv/allied`);
+    await assertFails(set(P, { salt: 's', junk: 'x'.repeat(1000) }));
+    await assertFails(set(P, { salt: 's', secrets: { A1: 'x'.repeat(4001) } }));
+    await assertFails(set(P, { salt: 's', epoch: { A1: 'x' } }));
+    await assertSucceeds(set(P, { salt: 's'.repeat(24), secrets: { A1: '{}', 'TF%2E1': '{}' }, epoch: { A1: 2 } }));   // setPriv
+    await assertSucceeds(set(ref(user('carol'), 'games/priv000001/meta'), { title: 'T', game: 'bulge', owner: 'carol', created: 2, split: true }));
+    await assertSucceeds(set(ref(user('carol'), 'games/priv000001/priv/german'), { salt: 's'.repeat(24), secrets: { G1: '{}' }, fresh: true }));   // createMatch
   });
 });

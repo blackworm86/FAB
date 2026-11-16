@@ -38,9 +38,21 @@ describe('the first player to sit changes the salt', () => {
     expect(r.priv.salt).not.toBe(sp.allied.salt);
     expect(r.priv.fresh).toBeUndefined();
     const after = compose(JSON.parse(r.pub), r.priv, {}).game;
-    expect(JSON.stringify(after.units.map((u) => [u.id, u.area, u.name]))).toBe(
-      JSON.stringify(before.units.map((u) => [u.id, u.area, u.name])),
-    ); // same game for the joiner
+    const rows = (x: typeof g) => x.units.map((u) => JSON.stringify([u.id, u.area, u.name]));
+    expect(rows(after).sort()).toEqual(rows(before).sort()); // same game for the joiner
+    // the creator's browser built the list and could keep which place holds which block: the joiner's hidden blocks changed places among themselves, nothing else moved
+    const hid = (x: typeof g) => x.units.map((u) => u.side === 'allied' && u.name === 'Hidden block'),
+      was = JSON.parse(sp.pub) as typeof g,
+      now = JSON.parse(r.pub) as typeof g,
+      moved = rows(after).filter((v, i) => v !== rows(before)[i]).length;
+    expect(hid(now)).toEqual(hid(was));
+    expect(moved).toBeGreaterThan(hid(was).filter(Boolean).length / 2);
+    expect(rows(after).filter((v, i) => !hid(was)[i] && v !== rows(before)[i])).toEqual([]);
+    const { auditChange, samePosition } = await import('../src');
+    was.phase = now.phase = 'movement'; // the creator already plays its turn when the joiner sits: the rewritten list is no move
+    was.phasing = now.phasing = 'german';
+    expect(samePosition(was, now)).toBe(true);
+    expect(auditChange(was, now, 'allied')).toEqual([]);
     const old = compose(JSON.parse(r.pub), sp.allied, {}).game; // the creator's old salt finds none of the joiner's blocks
     const mine = Object.keys(sp.allied.secrets),
       hiddenNow = new Set((JSON.parse(r.pub) as typeof g).units.filter((u) => u.name === 'Hidden block').map((u) => u.id));

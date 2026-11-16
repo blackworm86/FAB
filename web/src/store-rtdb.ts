@@ -138,7 +138,8 @@ export async function rtdbStore(table: string): Promise<Store | null> {
       (e) => err(msg(e)),
     );
   };
-  let lastTree: Tree | null = null;
+  let lastTree: Tree | null = null,
+    badState = false;
   return {
     get uid() {
       return account.uid;
@@ -156,9 +157,20 @@ export async function rtdbStore(table: string): Promise<Store | null> {
             next(null);
             return;
           }
-          const v = s.val() as { rev?: number; by?: string; f?: Tree['f']; units?: Tree['units']; chits?: Tree['chits'] };
-          lastTree = { f: v.f ?? {}, units: v.units ?? {}, chits: v.chits ?? {} };
-          next({ rev: v.rev ?? 0, json: JSON.stringify(clean(fromTree(lastTree))), by: v.by });
+          const v = s.val() as { rev?: number; by?: string; f?: Tree['f']; units?: Tree['units']; chits?: Tree['chits'] },
+            tree = { f: v.f ?? {}, units: v.units ?? {}, chits: v.chits ?? {} };
+          let json: string;
+          try {
+            json = JSON.stringify(clean(fromTree(tree)));
+          } catch {
+            // a value that is no game data (a modified browser; audit, finding 7): it used to stop this listener for good. Said once; the last good game stays on screen
+            if (!badState) err('The shared game holds a value this site cannot read. Your screen keeps the last good game.');
+            badState = true;
+            return;
+          }
+          badState = false;
+          lastTree = tree;
+          next({ rev: v.rev ?? 0, json, by: v.by });
         },
         (e) => err(msg(e)),
       );
@@ -187,7 +199,20 @@ export async function rtdbStore(table: string): Promise<Store | null> {
         });
       }
     },
-    watchSeats: watchSeatNodes,
+    watchSeats: (next, err) => {
+      let tried = '';
+      watchSeatNodes((s) => {
+        next(s);
+        // Both seats are taken: the table is locked to these two accounts, once (the rules then give a seat only to the account named here), so nobody can sit in a seat
+        // a player left, read that side's blocks and leave (audit, finding 5). One read per opened table, a write once per game; refused, and ignored, until the rules are published.
+        const pair = `${s.german}|${s.allied}`;
+        if (!s.german || !s.allied || !seatOf(s) || tried === pair) return;
+        tried = pair;
+        void rt
+          .runTransaction(G('locked'), (cur: unknown) => (cur ? undefined : { german: s.german, allied: s.allied }))
+          .catch(() => undefined);
+      }, err);
+    },
     watchConnected: (next) => {
       rt.onValue(R('.info/connected'), (s) => next(!!s.val()));
     },
@@ -235,7 +260,21 @@ export async function rtdbStore(table: string): Promise<Store | null> {
     watchReveals: (next: (r: Reveals) => void) => {
       rt.onValue(
         G('reveals'),
-        (s) => next(clean(dec(s.val()))),
+        (s) =>
+          next(
+            clean(
+              Object.fromEntries(
+                Object.entries((s.val() ?? {}) as Record<string, string>).flatMap(([k, v]) => {
+                  try {
+                    const r = JSON.parse(v) as Reveals[string] | null;
+                    return r && typeof r.id === 'string' ? [[dk(k), r]] : [];
+                  } catch {
+                    return []; // not a reveal (a modified browser): left out, the others still count
+                  }
+                }),
+              ),
+            ),
+          ),
         () => next({}),
       );
     },
@@ -333,12 +372,13 @@ export async function rtdbStore(table: string): Promise<Store | null> {
         }
         return '';
       } catch (e) {
-        return msg(e);
+        return /permission/i.test(msg(e)) ? 'You cannot take this seat: the table is kept for its two players.' : msg(e);
       }
     },
     async freeSeat(side: Side) {
       try {
         await rt.update(G(''), { [`seats/${side}`]: null, [`seatNames/${side}`]: null });
+        await rt.remove(G('locked')).catch(() => undefined); // the admin makes room for another player: the table locks again when both seats are taken
         return '';
       } catch (e) {
         return msg(e);
@@ -362,6 +402,7 @@ export async function rtdbStore(table: string): Promise<Store | null> {
             [`users/${uid}/games/${id}`]: { title: m.title, game: m.game, created },
           });
           await rt.set(R(P('seatNames/german')), name);
+          await rt.set(R(P('locked')), { german: uid }).catch(() => undefined); // nobody may take the empty seat and write this game (refused, and ignored, until the rules are published)
           await rt.set(R(P('state')), { ...toTree(JSON.parse(stateJson) as Game), rev: 1, by: uid });
           return id;
         }

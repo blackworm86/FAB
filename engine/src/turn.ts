@@ -290,7 +290,6 @@ const clock = (g: Game) =>
  *  `writer` is the side whose account wrote the change (null: an admin or unknown). Returns plain-language problems, empty when all is well. */
 export function auditChange(prev: Game, next: Game, writer: Side | null): string[] {
   const out: string[] = [];
-  if (isRestore(prev, next)) return []; // a restore is reported on its own (restoreNote)
   if (next.turn === 1 && next.log.length < prev.log.length && clock(next) < clock(prev)) return ['The game was restarted.'];
   if (clock(next) < clock(prev)) out.push(`The game went back from turn ${prev.turn} ${prev.phase} to turn ${next.turn} ${next.phase}.`);
   if (next.rolls < prev.rolls) out.push('The dice counter went backwards: rolls were undone.');
@@ -299,28 +298,42 @@ export function auditChange(prev: Game, next: Game, writer: Side | null): string
   if (a && b && a.area === b.area && JSON.stringify(b.rolls.slice(0, a.rolls.length)) !== JSON.stringify(a.rolls))
     out.push('Dice already rolled in this battle were changed.');
   const actor = actorOf(prev);
-  const hid = (u?: Unit) => !!u && u.name === 'Hidden block',
-    bare = (g: Game, o: Game) => {
-      let j = JSON.stringify({
-        ...g,
-        log: [],
-        checks: g.checks?.map((c) => ({ ...c, who: '' })), // the unit's name is masked when its block is hidden; the dice stay compared
-        revealed: null,
-        units: g.units.map((u, i) => (hid(u) || hid(o.units[i]) ? { side: u.side, area: u.area } : u)),
-      });
-      g.units.forEach((u, i) => {
-        if (hid(u) || hid(o.units[i])) j = j.split(JSON.stringify(u.id)).join(`"#${i}"`); // its name elsewhere in the game too (a battle's record): the owner hides a block again whenever the rules do, also out of turn
-      });
-      return j;
-    }; // a hidden block re-coded or hidden again is not a move
-  if (writer && actor !== 'both' && actor !== writer && bare(next, prev) !== bare(prev, next))
+  if (writer && actor !== 'both' && actor !== writer && !samePosition(prev, next))
     out.push(
       `The ${CUR.sideName[writer] ?? writer} player changed the game while it was the ${CUR.sideName[actor] ?? actor} player's turn to act.`,
     );
   return out;
 }
+const hid = (u?: Unit) => !!u && u.name === 'Hidden block';
+/** A game without what is no move: the log, the restore marker, the order of its fields (the database sorts them), and every block hidden in `g` or in `o`,
+ *  which counts only as its side and area wherever it stands in the list: its owner re-codes it or hides it again whenever the rules do, also out of turn,
+ *  and the first player to sit shuffles the places of its hidden blocks (rotateSalt). */
+const bare = (g: Game, o: Game) => {
+  const h = (u: Unit, i: number) => hid(u) || hid(o.units[i]),
+    tag = (u: Unit) => `#${u.side}:${u.area}`;
+  let j = JSON.stringify(
+    Object.fromEntries(
+      Object.entries({
+        ...g,
+        log: [],
+        checks: g.checks?.map((c) => ({ ...c, who: '' })), // the unit's name is masked when its block is hidden; the dice stay compared
+        revealed: null,
+        restored: null,
+        units: g.units.filter((u, i) => !h(u, i)),
+        hidden: g.units.filter(h).map(tag).sort(),
+      }).sort(([a], [b]) => (a < b ? -1 : 1)),
+    ),
+  );
+  g.units.forEach((u, i) => {
+    if (h(u, i)) j = j.split(JSON.stringify(u.id)).join(JSON.stringify(tag(u))); // its name elsewhere in the game too (a battle's record)
+  });
+  return j;
+};
+/** True when the two games are the same position, whatever the log, the restore marker and the codes and places of hidden blocks. */
+export const samePosition = (a: Game, b: Game) => bare(a, b) === bare(b, a);
 
-/** True when `next` is a restore: the other player's rules check put the game back to the last legal position. */
+/** True when `next` carries a new restore marker: the other player's rules check says it put the game back to the last legal position.
+ *  Anybody can write the marker: the receiving browser takes it as a restore only for a position it held before (samePosition); otherwise auditChange checks it like any change. */
 export const isRestore = (prev: Game, next: Game) => !!next.restored && next.restored.t !== prev.restored?.t;
 
 /** The areas scoring for `side` now, as the volume's scenario counts them. */

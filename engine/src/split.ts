@@ -140,7 +140,8 @@ export function compose(pub: Game, priv: Priv | null, reveals: Reveals): { game:
     }
   const present = new Set(pub.units.map((u) => u.id));
   for (const [a, r] of Object.entries(reveals))
-    if (!pairs.some(([x]) => x === a)) {
+    if (!pairs.some(([x]) => x === a) && !(priv && (r.id in priv.secrets || a in priv.secrets))) {
+      // (never a reveal that names one of this seat's own blocks: the other seat can write reveals too, and it would rewrite the block here and then in the private record)
       pairs.push([a, r.id]);
       details.set(r.id, r);
       if (present.has(a)) enemyAlias.set(r.id, a); // only a block that stands in the shared copy under this code: it is written back the same way
@@ -196,14 +197,21 @@ export function initSplit(full: Game, saltGerman: string, saltAllied: string): {
 }
 
 /** The first player to sit at a seat changes its salt: the table's creator made it and could decode every opaque id of that seat's blocks from then on.
+ *  It also shuffles the places of this seat's hidden blocks in the stored list among themselves: the creator's browser built the list and could keep which place holds which block.
  *  Returns the seat's new private document and the shared copy written again with the new ids; null when it is not fresh or an older id is already out (a reveal). */
 export function rotateSalt(pub: string, priv: Priv, reveals: Reveals, salt: string): { pub: string; priv: Priv } | null {
   if (!priv.fresh || Object.keys(reveals).length) return null;
   const game = compose(JSON.parse(pub) as Game, priv, reveals).game,
     side = game.units.find((u) => priv.secrets[u.id])?.side;
   if (!side) return null;
-  const next: Priv = { salt, secrets: secretsOf(game, side) };
-  return { pub: toPublic(game, side, next, new Map()), priv: next };
+  const next: Priv = { salt, secrets: secretsOf(game, side) },
+    out = JSON.parse(toPublic(game, side, next, new Map())) as Game,
+    at = out.units.flatMap((u, i) => (u.side === side && isPlaceholder(u) ? [i] : []));
+  for (let k = at.length - 1; k > 0; k--) {
+    const j = secureInt(k + 1);
+    [out.units[at[k]], out.units[at[j]]] = [out.units[at[j]], out.units[at[k]]];
+  }
+  return { pub: JSON.stringify(out), priv: next };
 }
 
 /** One seat's side of the split protocol: everything online.ts needs, with no network in it, so two seats can be played against each other in a test. */
