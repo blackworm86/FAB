@@ -397,7 +397,7 @@ export function sicilyPanel(g: Game, ctx: PanelCtx): string {
           (E.isArty(x) || E.isBattleAsset(x)),
       );
       out.push(
-        `<div class="volpanel"><b>${ctx.ico('warn')} Fading Italian Morale (17.21c)</b><span>${nm(sd)}: pick ${V.moralePick[sd]} Italian asset${V.moralePick[sd] > 1 ? 's' : ''} in the Axis Available Box to eliminate.</span><div class="row">${pool.map((x) => ctx.btn(esc(x.name), () => S.pickMoraleLoss(live(), sd, x.id))).join('')}</div></div>`,
+        `<div class="volpanel pick"><b>${ctx.ico('warn')} Fading Italian Morale (17.21c)</b><span>${nm(sd)}: pick ${V.moralePick[sd]} Italian asset${V.moralePick[sd] > 1 ? 's' : ''} in the Axis Available Box to eliminate.</span><div class="lossrows">${pool.map((x) => ctx.btn(`<span class="usepic">${ctx.chit(x)}</span><span class="usename"><b>${esc(x.name)}</b><small>${esc(x.kind.replace(/_/g, ' '))}</small></span><i class="lossn"></i>`, () => S.pickMoraleLoss(live(), sd, x.id), 'lossrow')).join('')}</div></div>`, // a list of rows like the step losses (design review 16 Nov, item 4)
       );
     }
   if (b && b.stage === 'setup') {

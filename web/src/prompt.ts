@@ -202,8 +202,16 @@ function cannotMove(id: string) {
             : 'no area it may enter now';
   return `<b>${esc(u.name)} cannot move:</b> ${why}. Tap another block.`;
 }
+/** Sicily 17.21c: the side that must pick Italian assets to eliminate, as far as this screen is concerned. */
+const moraleSide = () => {
+  if (g.game !== 'sicily' || g.phase !== 'admin') return null;
+  const m = E.sicily.state(g).moralePick;
+  return m ? ((['axis', 'allied'] as const).find((s) => m[s] > 0 && mine(s) && !(s === 'allied' && m.axis)) ?? null) : null;
+};
 function promptText() {
   const b = g.battle;
+  const ms = moraleSide();
+  if (ms) return `<b>${nm(ms)}: pick the Italian assets to eliminate</b>${gx(' Tap a row above (17.21c).')}`; // the answer is in the tray; the red button waits
   if (rollView?.pos) return gx('<b>Read the dice:</b> green hits, salmon misses. Then continue.', '<b>Read the dice,</b> then continue.');
   if (areaPick) return `<b>${esc(areaPick.label)}</b>, or tap elsewhere to cancel.`;
   if (endArmed && g.game === 'sicily' && g.phase === 'movement') {
@@ -362,6 +370,8 @@ export function primary(): { label: string; fn: () => void; dis?: boolean } | nu
   const b = g.battle;
   if (rollView?.pos && !rollView.remote) return { label: 'Continue', fn: () => endRoll() }; // the dice have landed: one clear step on, the report stays readable until then
   if (g.over || g.pendingBlow || rollView) return null;
+  if (moraleSide())
+    return { label: 'Pick the assets above', fn: () => say('Pick the Italian assets to eliminate first (17.21c)'), dis: true };
   if (g.phase === 'supply' && g.supplyPending && !b && mine(g.phasing)) {
     const n = E.supplyChecks(g).length;
     return { label: n ? `Roll ${n} supply check${n > 1 ? 's' : ''}` : 'Continue', fn: () => act(() => E.rollSupply(g)) };
