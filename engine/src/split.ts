@@ -252,6 +252,10 @@ export class SplitSeat {
     const want = this.wanted(g);
     return Object.entries(this.reveals).some(([a, r]) => !(a in want) && g.units.some((u) => u.id === r.id && u.side === this.side));
   }
+  /** True when the shared copy shows one of this seat's blocks that the rules hide: the other seat's move put it on the map (the end of a reinforcement step places the blocks left in the tray), so this seat must write it hidden again. */
+  exposed(pub: Game): boolean {
+    return pub.units.some((u) => u.side === this.side && !isPlaceholder(u) && !visibleTo(pub, u, 'spectator'));
+  }
   /** The reveals this seat has to publish now (battle area once both point units are designated, an Intelligence target); they count as published from here on. */
   due(g: Game): Reveals {
     if (!this.priv) return {};

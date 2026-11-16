@@ -1,7 +1,7 @@
 # online · 16 November 2026
 
 Doing: nothing in hand once the audit work below is on main.
-Next: the turn's steps before combat in the online test (reinforcements, movement, supply), which it still skips; then whole turns of Sicily and Golan online.
+Next: nothing in hand. The online test now plays whole turns of all three volumes through the screens (docs/ONLINE.md §7).
 Waiting for the owner: to publish `database.rules.json` once (the audit changes below; steps sent to the project-management session); to redeploy the push relay (`tools/push-worker`) when convenient; to retest issues #1, #2, #3; to decide whether hidden blocks should change place in the stored list at every hide (finding 5, the part left).
 Last checked: 16 Nov, on the audit commit: rules test 40, engine 460, web 80, push relay 4, `npm run online` all passed on three volumes + hot-seat.
 Files in hand: none.
