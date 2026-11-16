@@ -381,30 +381,7 @@ export function decisionBubble(): string {
       .filter((x) => x.ok)
       .map((x, i) => `<i class="lossnum" data-pc="${x.id}">${i + 1}</i>`)
       .join(''); // losses: the list above the bar; the same numbers on the map, no bubble (interaction system)
-  if (!b || rollView || !['attChoice', 'defChoice'].includes(b.stage)) return '';
-  const who = b.stage === 'loss' && b.loss ? b.loss.side : b.stage === 'defChoice' ? other(b.attacker) : b.attacker;
-  const tg =
-    b.stage === 'loss'
-      ? E.lossOptions(g, b)
-      : b.stage === 'attFirst'
-        ? [b.attPoint, ...b.assets[b.attacker].filter((x) => E.isBattleAsset(E.chit(g, x)))]
-        : E.unitsIn(g, b.area, who)
-            .map((u) => u.id)
-            .concat(b.assets[who].filter((x) => E.isBattleAsset(E.chit(g, x))));
-  const at = `data-area="${b.area}" data-tg="${tg.join(',')}"`; // placed off the area by placeBubbles, with a line to each block it is about
-  if (!allowed()) return `<div class="mapbubble wait" ${at}><b>${nm(who)} decides…</b></div>`;
-  if (b.stage === 'loss') {
-    const n = b.loss?.left ?? 0;
-    return `<div class="mapbubble" ${at}><b class="hits" title="${n} step loss${n > 1 ? 'es' : ''} to place">${n}<small>loss${n > 1 ? 'es' : ''}</small></b><span>Tap a glowing block or asset to take the next one</span><div class="row">${btn(`${ico('check')}<span>Suggested</span>`, () => E.autoLosses(g, g.battle!), '', false, 'Place the rest in the suggested order: battle assets first, then the point unit, then the weakest block')}</div></div>`;
-  }
-  if (b.stage === 'attFirst')
-    return `<div class="mapbubble" ${at}><b>${b.pending} hit${b.pending > 1 ? 's' : ''}</b><span>Tap the point unit or an asset to take the first loss</span></div>`;
-  const hint = '<span class="choosebelow">Choose in the bar below ↓</span>'; // the choices are in the bar, under the thumb (design review, problem 2)
-  if (b.stage === 'attChoice')
-    return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b><span class="fwnote">${b.pending + 1} hits rolled, 1 already taken: ${b.pending} left</span>${hint}</div>`;
-  if (b.stage !== 'defChoice') return '';
-  const fw = g.log.slice(-4).some((l) => / field works absorb 1 hit$/.test(l)); // the ledger shows the hits rolled; field works took one before the choice
-  return `<div class="mapbubble" ${at}><b class="hits" title="${b.pending} hit${b.pending > 1 ? 's' : ''}">${b.pending}<small>hit${b.pending > 1 ? 's' : ''}</small></b>${fw ? `<span class="fwnote">${b.pending + 1} rolled − 1 absorbed by field works</span>` : ''}${hint}</div>`;
+  return ''; // the hit choice: the count once in the report, the choices in the bar, no box on the map (design review 16 Nov, problem 3)
 }
 /** A retreat destination by name: an area, or the sea (Sicily 14.28). */
 export const retName = (a: number) => (a === E.SEA ? 'sea' : areaName(a));

@@ -232,8 +232,15 @@ export function ledger() {
   if (b.stage === 'done')
     return `<div class="c-ledger tight aar"><div class="lh"><h3>Battle over · ${esc(areaName(b.area))}</h3></div><p class="resline">${esc(b.result ?? '')}</p>${g.log.slice(-30).some((l) => l.endsWith(`A Ghost is revealed in ${areaName(b.area)} and removed (15.7)`)) ? '<p class="hint gx">The ghost was removed when it was revealed (15.7): no die did it.</p>' : ''}${battleFx.length ? `<div class="aarfx">${battleFx.map(fxRow).join('')}</div>` : '<p class="hint">No losses on either side.</p>'}${rollRecord(b, true)}</div>`;
   if (b.stage.endsWith('Choice')) {
-    const sd = b.stage === 'attChoice' ? b.attacker : other(b.attacker); // the bubble on the table holds the choice; the report keeps the dice that caused it
-    return `<div class="c-ledger tight"><div class="lh"><h3 class="${sd}">${nm(sd)} ${b.pending} hit${b.pending === 1 ? '' : 's'} to take</h3></div>${rollRecord(b, true)}</div>`;
+    const sd = b.stage === 'attChoice' ? b.attacker : other(b.attacker),
+      n = b.pending,
+      why =
+        b.stage === 'attChoice'
+          ? `${n + 1} rolled − 1 already taken = `
+          : g.log.slice(-4).some((l) => / field works absorb 1 hit$/.test(l))
+            ? `${n + 1} rolled − 1 absorbed by field works = `
+            : ''; // the hit count, said once (design review 16 Nov): the choices are the bar's buttons
+    return `<div class="c-ledger tight"><div class="lh"><h3 class="${sd}">${nm(sd)}: ${why}${n} hit${n === 1 ? '' : 's'} to take</h3></div>${rollRecord(b, true)}</div>`;
   }
   if (b.stage === 'retreat' && b.retreat) return ''; // the lit areas on the table are the choice
   if (STAGE_NAME[b.stage]) {
